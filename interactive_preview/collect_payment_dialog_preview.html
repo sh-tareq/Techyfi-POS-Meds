@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Techyfi POS — Collect Payment Dialog Redesign & Interactive Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #059669;
+      --primary-gradient: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      --primary-hover: #047857;
+      --primary-light: #ECFDF5;
+      --indigo: #6366F1;
+      --indigo-gradient: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+      --bkash: #E2136E;
+      --nagad: #F7941D;
+      --rocket: #8C3494;
+      --bank: #2563EB;
+      --card: #6366F1;
+      --cash: #10B981;
+      
+      --bg-dark: #070B14;
+      --surface-dark: #0F172A;
+      --card-dark: #141E33;
+      --border-dark: rgba(255, 255, 255, 0.1);
+      --text-dark-main: #F8FAFC;
+      --text-dark-muted: #94A3B8;
+
+      --bg-light: #F1F5F9;
+      --surface-light: #FFFFFF;
+      --card-light: #F8FAFC;
+      --border-light: rgba(0, 0, 0, 0.08);
+      --text-light-main: #0F172A;
+      --text-light-muted: #64748B;
+
+      --font-en: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-bn: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-en);
+      background: radial-gradient(circle at 50% 0%, #172554 0%, #070B14 70%, #020617 100%);
+      color: var(--text-dark-main);
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    body.light-theme {
+      background: radial-gradient(circle at 50% 0%, #E2E8F0 0%, #F1F5F9 60%, #E2E8F0 100%);
+      color: var(--text-light-main);
+    }
+
+    body.lang-bn {
+      font-family: var(--font-bn);
+    }
+
+    /* Top Navigation Header */
+    .top-header {
+      width: 100%;
+      max-width: 1400px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding: 16px 24px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-dark);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    body.light-theme .top-header {
+      background: rgba(255, 255, 255, 0.88);
+      border-color: var(--border-light);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-badge {
+      background: var(--primary-gradient);
+      color: #FFF;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+    }
+
+    .brand-title h1 {
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(to right, #FFFFFF, #94A3B8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    body.light-theme .brand-title h1 {
+      background: linear-gradient(to right, #0F172A, #334155);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* App Language Setting Simulator Pills */
+    .lang-setting-box {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    body.light-theme .lang-setting-box {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .lang-setting-btn {
+      padding: 6px 14px;
+      border-radius: 9px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-dark-muted);
+      transition: all 0.2s;
+    }
+
+    body.light-theme .lang-setting-btn {
+      color: var(--text-light-muted);
+    }
+
+    .lang-setting-btn.active {
+      background: var(--primary-gradient);
+      color: #FFF;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+    }
+
+    .pill-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: inherit;
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.light-theme .pill-btn {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .pill-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      transform: translateY(-1px);
+    }
+
+    body.light-theme .pill-btn:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    /* Mode Banner Switcher */
+    .view-mode-bar {
+      width: 100%;
+      max-width: 1400px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 12px 20px;
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid var(--border-dark);
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+    }
+
+    body.light-theme .view-mode-bar {
+      background: rgba(255, 255, 255, 0.7);
+      border-color: var(--border-light);
+    }
+
+    .view-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .view-tab-btn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-dark-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    body.light-theme .view-tab-btn {
+      color: var(--text-light-muted);
+    }
+
+    .view-tab-btn.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: #FFF;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    body.light-theme .view-tab-btn.active {
+      background: #FFFFFF;
+      color: #0F172A;
+      border-color: rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .size-indicator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dark-muted);
+    }
+
+    body.light-theme .size-indicator {
+      color: var(--text-light-muted);
+    }
+
+    /* Main Container */
+    .main-container {
+      width: 100%;
+      max-width: 1400px;
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      align-items: flex-start;
+      margin-bottom: 30px;
+    }
+
+    /* Emulator Column */
+    .emulator-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .col-header-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pill-current {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #F87171;
+    }
+
+    .pill-proposed {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34D399;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+    }
+
+    /* Phone Frame */
+    .phone-frame {
+      position: relative;
+      width: 390px;
+      height: 780px;
+      background: #020617;
+      border-radius: 46px;
+      padding: 10px;
+      box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255, 255, 255, 0.12);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.light-theme .phone-frame {
+      background: #0F172A;
+      box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.25), 0 0 0 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .phone-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #0B0F19;
+      border-radius: 36px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.light-theme .phone-inner {
+      background: #F8FAFC;
+    }
+
+    /* Phone Status Bar */
+    .phone-status-bar {
+      height: 38px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 22px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: #94A3B8;
+      z-index: 10;
+    }
+
+    /* POS Backdrop */
+    .pos-backdrop {
+      flex: 1;
+      padding: 16px;
+      background: linear-gradient(180deg, #1E1B4B 0%, #0F172A 100%);
+      opacity: 0.35;
+      filter: blur(3px);
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    body.light-theme .pos-backdrop {
+      background: linear-gradient(180deg, #E0E7FF 0%, #F1F5F9 100%);
+      opacity: 0.45;
+    }
+
+    .pos-dummy-header {
+      height: 36px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+    }
+
+    .pos-dummy-card {
+      height: 100px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+    }
+
+    .pos-dummy-list {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+    }
+
+    /* Modal Overlay */
+    .dialog-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+
+    /* --- COMPARISON STYLES --- */
+
+    /* 1. CURRENT SQUEEZED MODAL (What user has right now) */
+    .modal-current {
+      width: 84%; /* Constrained narrow width */
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: 14px 14px;
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    body.light-theme .modal-current {
+      background: #FFFFFF;
+      border-color: rgba(0, 0, 0, 0.08);
+      box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.15);
+    }
+
+    .current-cramped-notice {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px dashed rgba(239, 68, 68, 0.35);
+      color: #F87171;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    /* 2. PROPOSED EXPANDED & SPACIOUS MODAL (High-Visibility) */
+    .modal-proposed {
+      width: 95%; /* Expanded High Visibility full-width */
+      background: #0F172A;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 26px;
+      padding: 20px 18px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.light-theme .modal-proposed {
+      background: #FFFFFF;
+      border-color: rgba(16, 185, 129, 0.3);
+      box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+
+    .modal-proposed::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 15%;
+      right: 15%;
+      height: 2.5px;
+      background: linear-gradient(90deg, transparent, #10B981, transparent);
+      opacity: 0.9;
+    }
+
+    /* Header Section */
+    .d-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .d-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .wallet-3d-box {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #10B981 0%, #047857 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 14px -2px rgba(16, 185, 129, 0.4);
+      animation: pulseGlow 3s infinite ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); box-shadow: 0 6px 14px -2px rgba(16, 185, 129, 0.4); }
+      50% { transform: scale(1.04); box-shadow: 0 8px 20px 0 rgba(16, 185, 129, 0.6); }
+    }
+
+    .d-title-group h3 {
+      font-size: 17px;
+      font-weight: 800;
+      color: #F8FAFC;
+      letter-spacing: -0.2px;
+    }
+
+    body.light-theme .d-title-group h3 {
+      color: #0F172A;
+    }
+
+    .d-title-group span {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #94A3B8;
+    }
+
+    body.light-theme .d-title-group span {
+      color: #64748B;
+    }
+
+    .btn-close-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94A3B8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    body.light-theme .btn-close-circle {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-close-circle:hover {
+      background: rgba(239, 68, 68, 0.18);
+      color: #EF4444;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    /* Customer & Balance Hero Card */
+    .customer-hero-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    body.light-theme .customer-hero-card {
+      background: linear-gradient(135deg, #F8FAFC 0%, #EEF2F6 100%);
+      border-color: rgba(0, 0, 0, 0.06);
+    }
+
+    .cust-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .cust-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #F43F5E, #BE123C);
+      color: #FFF;
+      font-weight: 800;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(244, 63, 94, 0.35);
+    }
+
+    .cust-meta {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cust-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #F8FAFC;
+    }
+
+    body.light-theme .cust-name {
+      color: #0F172A;
+    }
+
+    .cust-phone {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #94A3B8;
+      font-family: var(--mono);
+    }
+
+    .cust-balance-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .balance-label {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #F87171;
+    }
+
+    .balance-amount {
+      font-size: 17px;
+      font-weight: 800;
+      font-family: var(--mono);
+      color: #FCA5A5;
+    }
+
+    /* Hero Amount Input Section */
+    .amount-input-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .input-label-tag {
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94A3B8;
+    }
+
+    body.light-theme .input-label-tag {
+      color: #64748B;
+    }
+
+    .status-badge {
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .status-badge.full {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10B981;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .status-badge.partial {
+      background: rgba(245, 158, 11, 0.15);
+      color: #F59E0B;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .status-badge.overpaid {
+      background: rgba(239, 68, 68, 0.15);
+      color: #EF4444;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+
+    /* High Visibility Input Box (Enlarged from 40dp to 54dp) */
+    .hero-amount-box {
+      height: 54px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 2px solid rgba(16, 185, 129, 0.5);
+      border-radius: 16px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+      transition: all 0.2s;
+    }
+
+    body.light-theme .hero-amount-box {
+      background: #F8FAFC;
+      border-color: rgba(16, 185, 129, 0.6);
+    }
+
+    .hero-amount-box:focus-within {
+      border-color: #10B981;
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25);
+    }
+
+    .hero-amount-box.error {
+      border-color: #EF4444;
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25);
+    }
+
+    .hero-taka-sign {
+      font-size: 22px;
+      font-weight: 800;
+      color: #10B981;
+      user-select: none;
+    }
+
+    .hero-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--mono);
+      font-size: 24px;
+      font-weight: 800;
+      color: #F8FAFC;
+      letter-spacing: 0.5px;
+    }
+
+    body.light-theme .hero-input {
+      color: #0F172A;
+    }
+
+    .btn-clear-amount {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #94A3B8;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+
+    .btn-clear-amount:hover {
+      background: rgba(239, 68, 68, 0.2);
+      color: #EF4444;
+    }
+
+    /* Percentage Preset Chips */
+    .presets-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .preset-pill {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 6px 4px;
+      text-align: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      transition: all 0.2s;
+    }
+
+    body.light-theme .preset-pill {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .preset-pill:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .preset-pill.active {
+      background: rgba(16, 185, 129, 0.18);
+      border-color: #10B981;
+      color: #10B981;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    }
+
+    .preset-pill.full-pill {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #34D399;
+    }
+
+    .preset-pill.full-pill.active {
+      background: #10B981;
+      color: #FFF;
+    }
+
+    .preset-pct {
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .preset-val {
+      font-size: 10px;
+      font-weight: 600;
+      font-family: var(--mono);
+      opacity: 0.85;
+    }
+
+    /* Quick Cash Addons Row (+100, +500, +1000) */
+    .quick-addons-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .addon-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #94A3B8;
+      text-transform: uppercase;
+    }
+
+    .addon-btn {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px dashed rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: #CBD5E1;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    body.light-theme .addon-btn {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: rgba(0, 0, 0, 0.08);
+      color: #475569;
+    }
+
+    .addon-btn:hover {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: #10B981;
+      color: #10B981;
+    }
+
+    /* Dynamic Settlement Preview Banner */
+    .settlement-status-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.25s;
+    }
+
+    body.light-theme .settlement-status-banner {
+      background: #F1F5F9;
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .settlement-status-banner.full {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #10B981;
+    }
+
+    .settlement-status-banner.partial {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.35);
+      color: #F59E0B;
+    }
+
+    .settlement-status-banner.overpaid {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #EF4444;
+    }
+
+    .banner-rem-val {
+      font-family: var(--mono);
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    /* Payment Channels Grid (Comfortable 54dp Touch Targets) */
+    .payment-channels-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .channels-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+    }
+
+    .channel-tile {
+      height: 54px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1.5px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 4px 2px;
+    }
+
+    body.light-theme .channel-tile {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .channel-tile:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .channel-tile.active {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .channel-tile.active[data-channel="Cash"] {
+      border-color: #10B981;
+      background: rgba(16, 185, 129, 0.18);
+      color: #10B981;
+    }
+
+    .channel-tile.active[data-channel="bKash"] {
+      border-color: #E2136E;
+      background: rgba(226, 19, 110, 0.18);
+      color: #E2136E;
+    }
+
+    .channel-tile.active[data-channel="Nagad"] {
+      border-color: #F7941D;
+      background: rgba(247, 148, 29, 0.18);
+      color: #F7941D;
+    }
+
+    .channel-tile.active[data-channel="Rocket"] {
+      border-color: #8C3494;
+      background: rgba(140, 52, 148, 0.18);
+      color: #8C3494;
+    }
+
+    .channel-tile.active[data-channel="Card"] {
+      border-color: #6366F1;
+      background: rgba(99, 102, 241, 0.18);
+      color: #6366F1;
+    }
+
+    .channel-tile.active[data-channel="Bank"] {
+      border-color: #2563EB;
+      background: rgba(37, 99, 235, 0.18);
+      color: #2563EB;
+    }
+
+    .channel-tile span {
+      font-size: 10px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    /* Note Input Container */
+    .note-input-container {
+      height: 44px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    body.light-theme .note-input-container {
+      background: rgba(0, 0, 0, 0.02);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .note-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #F8FAFC;
+    }
+
+    body.light-theme .note-input {
+      color: #0F172A;
+    }
+
+    /* Bottom Action Buttons */
+    .dialog-actions-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .btn-cancel {
+      flex: 1;
+      height: 48px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #94A3B8;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    body.light-theme .btn-cancel {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.08);
+      color: #64748B;
+    }
+
+    .btn-cancel:hover {
+      background: rgba(239, 68, 68, 0.12);
+      color: #EF4444;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-save-payment {
+      flex: 2;
+      height: 48px;
+      border-radius: 14px;
+      background: var(--primary-gradient);
+      border: none;
+      color: #FFF;
+      font-size: 14.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+      transition: all 0.2s;
+    }
+
+    .btn-save-payment:hover {
+      transform: translateY(-1.5px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+    }
+
+    .btn-save-payment:disabled {
+      opacity: 0.5;
+      pointer-events: none;
+      box-shadow: none;
+    }
+
+    /* Right Side Details & Improvements Panel */
+    .improvements-panel {
+      flex: 1;
+      max-width: 520px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid var(--border-dark);
+      border-radius: 24px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    body.light-theme .improvements-panel {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: var(--border-light);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+    }
+
+    .panel-section-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #F8FAFC;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    body.light-theme .panel-section-title {
+      color: #0F172A;
+    }
+
+    .feature-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      transition: all 0.2s;
+    }
+
+    body.light-theme .feature-card {
+      background: rgba(0, 0, 0, 0.02);
+      border-color: rgba(0, 0, 0, 0.06);
+    }
+
+    .feature-card:hover {
+      border-color: rgba(16, 185, 129, 0.4);
+      transform: translateX(3px);
+    }
+
+    .feature-icon-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10B981;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .feature-text h4 {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #F8FAFC;
+      margin-bottom: 3px;
+    }
+
+    body.light-theme .feature-text h4 {
+      color: #0F172A;
+    }
+
+    .feature-text p {
+      font-size: 12px;
+      color: #94A3B8;
+      line-height: 1.45;
+    }
+
+    body.light-theme .feature-text p {
+      color: #64748B;
+    }
+
+    /* Interactive Live Sandbox Controls */
+    .sandbox-controls {
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    body.light-theme .sandbox-controls {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    .ctrl-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .ctrl-select {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: inherit;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      outline: none;
+      cursor: pointer;
+    }
+
+    body.light-theme .ctrl-select {
+      background: #FFFFFF;
+      border-color: rgba(0, 0, 0, 0.12);
+    }
+
+    /* Floating Live Toast */
+    .live-toast {
+      position: fixed;
+      bottom: 24px;
+      background: #059669;
+      color: #FFF;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 999;
+    }
+
+    .live-toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="dark-theme">
+
+  <!-- Top Navigation Header -->
+  <header class="top-header">
+    <div class="brand-title">
+      <span class="brand-badge">UI/UX Lab</span>
+      <div>
+        <h1>Techyfi POS — Collect Payment Dialog Redesign</h1>
+      </div>
+    </div>
+    <div class="header-controls">
+      <!-- Simulated App Language Settings Control -->
+      <div class="lang-setting-box" title="Simulate App Language from Settings">
+        <span style="font-size: 11px; font-weight: 700; color: #94A3B8; padding-left: 6px;">App Language:</span>
+        <button class="lang-setting-btn active" id="btnAppLangEN" onclick="setAppLanguage('en')">English</button>
+        <button class="lang-setting-btn" id="btnAppLangBN" onclick="setAppLanguage('bn')">বাংলা (Bangla)</button>
+      </div>
+
+      <button class="pill-btn" onclick="toggleTheme()" id="btnTheme">
+        <span id="themeIcon">☀️</span> <span id="themeLabel">Light Mode</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- View Mode Switcher -->
+  <div class="view-mode-bar">
+    <div class="view-tabs">
+      <button class="view-tab-btn active" id="tabCompare" onclick="setViewMode('compare')">
+        <span>⚖️</span> Side-by-Side Comparison (Current vs Proposed)
+      </button>
+      <button class="view-tab-btn" id="tabProposedOnly" onclick="setViewMode('proposed')">
+        <span>📱</span> Proposed High-Visibility Modal Only
+      </button>
+      <button class="view-tab-btn" id="tabCurrentOnly" onclick="setViewMode('current')">
+        <span>📦</span> Current Squeezed Modal Only
+      </button>
+    </div>
+    <div class="size-indicator">
+      <span>Window Width:</span>
+      <strong id="windowWidthBadge" style="color: #10B981;">Expanded 95% (High Visibility)</strong>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- Column 1: CURRENT SQUEEZED DIALOG (Before) -->
+    <div class="emulator-col" id="colCurrent">
+      <div class="col-header-pill pill-current">
+        <span>⚠️ Current Compact / Squeezed (84% Width)</span>
+      </div>
+
+      <div class="phone-frame">
+        <div class="phone-inner">
+          <div class="phone-status-bar">
+            <span>1:08</span>
+            <span>LTE 100%</span>
+          </div>
+          <div class="pos-backdrop">
+            <div class="pos-dummy-header"></div>
+            <div class="pos-dummy-card"></div>
+            <div class="pos-dummy-list"></div>
+          </div>
+
+          <!-- Squeezed Modal Overlay -->
+          <div class="dialog-overlay">
+            <div class="modal-current">
+              <div class="current-cramped-notice">
+                Squeezed 84% width · Cramped 40dp inputs · Small 9sp text
+              </div>
+
+              <!-- Header -->
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="width: 26px; height: 26px; border-radius: 8px; background: #059669; display: flex; align-items: center; justify-content: center; font-size: 14px;">👛</div>
+                  <div>
+                    <div style="font-size: 14px; font-weight: 800;">Collect Payment</div>
+                    <div style="font-size: 9.5px; color: #94A3B8;">Due Repayment Voucher</div>
+                  </div>
+                </div>
+                <div style="font-size: 14px; color: #94A3B8; cursor: pointer;">✕</div>
+              </div>
+
+              <!-- Customer Card -->
+              <div style="background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="width: 28px; height: 28px; border-radius: 8px; background: #E11D48; color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;">R</div>
+                  <div>
+                    <div style="font-size: 12px; font-weight: 700;">Rizwana Apa</div>
+                    <div style="font-size: 9.5px; color: #94A3B8;">01703305515</div>
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 8.5px; color: #F87171; font-weight: 800;">UNPAID BALANCE</div>
+                  <div style="font-size: 13px; font-weight: 800; color: #FCA5A5;">৳8,030</div>
+                </div>
+              </div>
+
+              <!-- Amount Input -->
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94A3B8; margin-bottom: 4px;">
+                  <span>AMOUNT RECEIVED</span>
+                  <span style="color: #10B981;">Full Settlement</span>
+                </div>
+                <div style="height: 38px; border: 1.2px solid #059669; border-radius: 10px; display: flex; align-items: center; padding: 0 8px; gap: 6px;">
+                  <span style="color: #10B981; font-weight: 800; font-size: 15px;">৳</span>
+                  <span style="font-family: var(--mono); font-weight: 800; font-size: 15px;">8030.0</span>
+                </div>
+              </div>
+
+              <!-- Percentage Chips -->
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+                <div style="background: rgba(255,255,255,0.05); padding: 3px; border-radius: 6px; text-align: center; font-size: 9px; font-weight: 700;">25%<br><span style="font-size: 8px; color: #94A3B8;">৳2,008</span></div>
+                <div style="background: rgba(255,255,255,0.05); padding: 3px; border-radius: 6px; text-align: center; font-size: 9px; font-weight: 700;">50%<br><span style="font-size: 8px; color: #94A3B8;">৳4,015</span></div>
+                <div style="background: rgba(255,255,255,0.05); padding: 3px; border-radius: 6px; text-align: center; font-size: 9px; font-weight: 700;">75%<br><span style="font-size: 8px; color: #94A3B8;">৳6,023</span></div>
+                <div style="background: #059669; color: #fff; padding: 3px; border-radius: 6px; text-align: center; font-size: 9px; font-weight: 700;">100%<br><span style="font-size: 8px; opacity: 0.9;">৳8,030</span></div>
+              </div>
+
+              <!-- Status -->
+              <div style="background: rgba(16, 185, 129, 0.12); padding: 5px 8px; border-radius: 8px; display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #10B981;">
+                <span>✨ Balance Fully Settled</span>
+                <span>Remaining: ৳0</span>
+              </div>
+
+              <!-- Channels -->
+              <div>
+                <div style="font-size: 9.5px; color: #94A3B8; font-weight: 700; margin-bottom: 4px;">PAYMENT CHANNEL</div>
+                <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px;">
+                  <div style="background: rgba(16, 185, 129, 0.15); border: 1.2px solid #10B981; border-radius: 6px; padding: 3px; text-align: center; font-size: 8.5px; font-weight: 700; color: #10B981;">💵<br>Cash</div>
+                  <div style="background: rgba(255,255,255,0.04); border-radius: 6px; padding: 3px; text-align: center; font-size: 8.5px; font-weight: 700;">bKash</div>
+                  <div style="background: rgba(255,255,255,0.04); border-radius: 6px; padding: 3px; text-align: center; font-size: 8.5px; font-weight: 700;">Nagad</div>
+                  <div style="background: rgba(255,255,255,0.04); border-radius: 6px; padding: 3px; text-align: center; font-size: 8.5px; font-weight: 700;">Rocket</div>
+                  <div style="background: rgba(255,255,255,0.04); border-radius: 6px; padding: 3px; text-align: center; font-size: 8.5px; font-weight: 700;">Card</div>
+                  <div style="background: rgba(255,255,255,0.04); border-radius: 6px; padding: 3px; text-align: center; font-size: 8.5px; font-weight: 700;">Bank</div>
+                </div>
+              </div>
+
+              <!-- Note -->
+              <div style="height: 34px; background: rgba(255,255,255,0.04); border-radius: 8px; display: flex; align-items: center; padding: 0 8px; font-size: 10px; color: #94A3B8;">
+                📝 Reference Or Note (Optional)
+              </div>
+
+              <!-- Actions -->
+              <div style="display: flex; gap: 6px;">
+                <div style="flex: 1; height: 38px; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700;">Cancel</div>
+                <div style="flex: 1.5; height: 38px; background: #059669; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 800;">✔ Save ৳8,030</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 2: PROPOSED REDESIGNED & EXPANDED DIALOG (Interactive) -->
+    <div class="emulator-col" id="colProposed">
+      <div class="col-header-pill pill-proposed">
+        <span>✨ Proposed Expanded High-Visibility (95% Width · Full Ergonomics)</span>
+      </div>
+
+      <div class="phone-frame">
+        <div class="phone-inner">
+          <div class="phone-status-bar">
+            <span>1:08</span>
+            <span>LTE 100%</span>
+          </div>
+          <div class="pos-backdrop">
+            <div class="pos-dummy-header"></div>
+            <div class="pos-dummy-card"></div>
+            <div class="pos-dummy-list"></div>
+          </div>
+
+          <!-- Proposed Spacious Modal Overlay -->
+          <div class="dialog-overlay">
+            <div class="modal-proposed" id="interactiveModal">
+              
+              <!-- 1. Header with 3D Wallet Icon + Title + Close (Clean: No manual language toggle here) -->
+              <div class="d-header">
+                <div class="d-header-left">
+                  <div class="wallet-3d-box">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                      <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                      <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+                    </svg>
+                  </div>
+                  <div class="d-title-group">
+                    <h3 id="txtDialogTitle">Collect Payment</h3>
+                    <span id="txtDialogSubtitle">Due Repayment Voucher</span>
+                  </div>
+                </div>
+
+                <div class="d-header-right">
+                  <div class="btn-close-circle" onclick="onCloseClick()" title="Close dialog">
+                    ✕
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Customer & Outstanding Balance Hero Card -->
+              <div class="customer-hero-card">
+                <div class="cust-left">
+                  <div class="cust-avatar" id="avatarInitial">R</div>
+                  <div class="cust-meta">
+                    <span class="cust-name" id="dispCustName">Rizwana Apa</span>
+                    <span class="cust-phone" id="dispCustPhone">01703305515</span>
+                  </div>
+                </div>
+                <div class="cust-balance-col">
+                  <span class="balance-label" id="txtUnpaidBalanceLabel">UNPAID BALANCE</span>
+                  <span class="balance-amount" id="dispCustDue">৳8,030</span>
+                </div>
+              </div>
+
+              <!-- 3. High-Visibility Hero Amount Box -->
+              <div class="amount-input-wrapper">
+                <div class="input-header-row">
+                  <span class="input-label-tag" id="txtAmountReceivedLabel">Amount Received</span>
+                  <span class="status-badge full" id="statusBadge">Full Settlement</span>
+                </div>
+
+                <div class="hero-amount-box" id="heroAmountBox">
+                  <span class="hero-taka-sign">৳</span>
+                  <input type="text" class="hero-input" id="mainAmountInput" value="8030" oninput="onInputAmountChange()" />
+                  <button class="btn-clear-amount" onclick="clearInputAmount()" title="Clear amount">✕</button>
+                </div>
+              </div>
+
+              <!-- 4. Percentage Preset Chips -->
+              <div class="presets-row">
+                <div class="preset-pill" id="chip25" onclick="applyPreset(0.25)">
+                  <span class="preset-pct" id="label25">25%</span>
+                  <span class="preset-val" id="val25">৳2,008</span>
+                </div>
+                <div class="preset-pill" id="chip50" onclick="applyPreset(0.50)">
+                  <span class="preset-pct" id="label50">50%</span>
+                  <span class="preset-val" id="val50">৳4,015</span>
+                </div>
+                <div class="preset-pill" id="chip75" onclick="applyPreset(0.75)">
+                  <span class="preset-pct" id="label75">75%</span>
+                  <span class="preset-val" id="val75">৳6,023</span>
+                </div>
+                <div class="preset-pill full-pill active" id="chip100" onclick="applyPreset(1.00)">
+                  <span class="preset-pct" id="label100">100% Full</span>
+                  <span class="preset-val" id="val100">৳8,030</span>
+                </div>
+              </div>
+
+              <!-- 5. Quick Cash Add-on Shortcut Row (+100, +500, +1000) -->
+              <div class="quick-addons-row">
+                <span class="addon-label" id="txtQuickAddonsLabel">Quick Add:</span>
+                <button class="addon-btn" onclick="addAmount(100)" id="btnAdd100">+100</button>
+                <button class="addon-btn" onclick="addAmount(500)" id="btnAdd500">+500</button>
+                <button class="addon-btn" onclick="addAmount(1000)" id="btnAdd1000">+1,000</button>
+                <button class="addon-btn" onclick="addAmount(2000)" id="btnAdd2000">+2,000</button>
+              </div>
+
+              <!-- 6. Dynamic Settlement Status Banner -->
+              <div class="settlement-status-banner full" id="settlementBanner">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span id="bannerIcon">✨</span>
+                  <span id="bannerText">Balance Fully Settled</span>
+                </div>
+                <span class="banner-rem-val" id="bannerRemVal">Remaining: ৳0</span>
+              </div>
+
+              <!-- 7. Branded Payment Channels (54dp Ergonomic Grid) -->
+              <div class="payment-channels-section">
+                <div class="input-label-tag" id="txtPaymentChannelLabel" style="margin-bottom: 2px;">Payment Channel</div>
+                <div class="channels-grid">
+                  
+                  <div class="channel-tile active" data-channel="Cash" onclick="selectChannel('Cash', this)">
+                    <span style="font-size: 18px;">💵</span>
+                    <span id="txtChCash">Cash</span>
+                  </div>
+
+                  <div class="channel-tile" data-channel="bKash" onclick="selectChannel('bKash', this)">
+                    <div style="background: #FFF; border-radius: 3px; padding: 1px 4px; display: flex; align-items: center;">
+                      <span style="color: #E2136E; font-weight: 800; font-size: 11px;">bKash</span>
+                    </div>
+                    <span>bKash</span>
+                  </div>
+
+                  <div class="channel-tile" data-channel="Nagad" onclick="selectChannel('Nagad', this)">
+                    <div style="background: #FFF; border-radius: 3px; padding: 1px 4px; display: flex; align-items: center;">
+                      <span style="color: #F7941D; font-weight: 800; font-size: 11px;" id="badgeNagad">Nagad</span>
+                    </div>
+                    <span id="txtChNagad">Nagad</span>
+                  </div>
+
+                  <div class="channel-tile" data-channel="Rocket" onclick="selectChannel('Rocket', this)">
+                    <div style="background: #8C3494; border-radius: 3px; padding: 1px 4px; display: flex; align-items: center;">
+                      <span style="color: #FFF; font-weight: 800; font-size: 11px;" id="badgeRocket">Rocket</span>
+                    </div>
+                    <span id="txtChRocket">Rocket</span>
+                  </div>
+
+                  <div class="channel-tile" data-channel="Card" onclick="selectChannel('Card', this)">
+                    <span style="font-size: 17px;">💳</span>
+                    <span id="txtChCard">Card</span>
+                  </div>
+
+                  <div class="channel-tile" data-channel="Bank" onclick="selectChannel('Bank', this)">
+                    <span style="font-size: 17px;">🏛️</span>
+                    <span id="txtChBank">Bank</span>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- 8. Reference Note Input (44dp Ergonomic) -->
+              <div class="note-input-container">
+                <span>📝</span>
+                <input type="text" class="note-input" id="inputNote" placeholder="Reference Or Note (Optional)" />
+              </div>
+
+              <!-- 9. Dual Action Buttons -->
+              <div class="dialog-actions-row">
+                <button class="btn-cancel" onclick="onCloseClick()" id="btnCancel">Cancel</button>
+                <button class="btn-save-payment" onclick="onSavePaymentClick()" id="btnSavePayment">
+                  <span>✔</span> <span id="btnSaveLabel">Save ৳8,030</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 3: Summary of Proposed Improvements & Live Lab Controls -->
+    <aside class="improvements-panel">
+      <div class="panel-section-title">
+        <span>🚀</span> Proposed Improvements & Controls
+      </div>
+
+      <!-- Live Sandbox Test Controls -->
+      <div class="sandbox-controls">
+        <div class="ctrl-row">
+          <span>Test Customer:</span>
+          <select class="ctrl-select" id="selCustomer" onchange="onCustomerChange(this.value)">
+            <option value="rizwana">Rizwana Apa (৳8,030) [User Screenshot]</option>
+            <option value="shohid">Shohid Bhai (৳8,275)</option>
+            <option value="riad">Riad Bhai (৳7,710)</option>
+            <option value="large">Big Due Trader (৳35,000)</option>
+          </select>
+        </div>
+
+        <div class="ctrl-row">
+          <span>App Language Setting:</span>
+          <select class="ctrl-select" id="selAppLang" onchange="setAppLanguage(this.value)">
+            <option value="en">English (Default)</option>
+            <option value="bn">Bangla (বাঙালি দোকান মোড)</option>
+          </select>
+        </div>
+
+        <div class="ctrl-row">
+          <span>Window Width:</span>
+          <select class="ctrl-select" id="selWidth" onchange="setModalWidth(this.value)">
+            <option value="95">95% Full-Width (Proposed - High Visibility)</option>
+            <option value="90">90% Medium</option>
+            <option value="84">84% Squeezed (Current)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Improvements Breakdown -->
+      <div class="feature-card-list">
+        
+        <div class="feature-card">
+          <div class="feature-icon-badge">📐</div>
+          <div class="feature-text">
+            <h4>Expanded Window Size (95% Full Width)</h4>
+            <p>Disables Android's default boxed-in dialog constraint (<code>usePlatformDefaultWidth = false</code>), expanding the card to 95% width with generous touch clearance and breathing room.</p>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-badge">🇬🇧</div>
+          <div class="feature-text">
+            <h4>100% Pure English When App Language is English</h4>
+            <p>As requested, all titles, labels, placeholders, and buttons remain in clean English when app language is set to English. No awkward mixed translations.</p>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-badge">🇧🇩</div>
+          <div class="feature-text">
+            <h4>Automatic Bangla Only When App Language is Bangla</h4>
+            <p>When the user chooses Bangla in the app's settings, all strings automatically switch to authentic Bangladeshi dokan phrasing (<code>টাকা জমা গ্রহণ</code>, <code>বর্তমান বাকি</code>, <code>জমার পরিমাণ</code>, <code>সম্পূর্ণ পরিশোধ</code>, <code>নগদ</code>).</p>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-badge">৳</div>
+          <div class="feature-text">
+            <h4>54dp Hero Amount Container</h4>
+            <p>Upgraded from 40dp to 54dp height with bold 24sp monospace digits, radiant emerald accents, and an instant clear (<code>✕</code>) button.</p>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-badge">⚡</div>
+          <div class="feature-text">
+            <h4>Quick Rounding Add-on Pills</h4>
+            <p>Convenient <code>+100</code>, <code>+500</code>, <code>+1,000</code>, <code>+2,000</code> shortcuts for rapid retail counter cash handling.</p>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-badge">💳</div>
+          <div class="feature-text">
+            <h4>Ergonomic 54dp Payment Channels</h4>
+            <p>Six large touch targets (Cash, bKash, Nagad, Rocket, Card, Bank) adhering to $\ge 48\text{dp}$ touch ergonomics with crisp brand badges.</p>
+          </div>
+        </div>
+
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- Live Toast Notification -->
+  <div class="live-toast" id="liveToast">
+    <span>✅ Payment of ৳8,030 recorded successfully!</span>
+  </div>
+
+  <script>
+    // State
+    let currentDue = 8030;
+    let currentCustomer = 'Rizwana Apa';
+    let currentPhone = '01703305515';
+    let appLanguage = 'en'; // Defaults to 100% English
+    let currentTheme = 'dark';
+    let selectedMethod = 'Cash';
+
+    const customerData = {
+      rizwana: { name: 'Rizwana Apa', phone: '01703305515', due: 8030, initial: 'R' },
+      shohid: { name: 'Shohid Bhai', phone: '01913794909', due: 8275, initial: 'S' },
+      riad: { name: 'Riad Bhai', phone: '01916188881', due: 7710, initial: 'R' },
+      large: { name: 'Haji Traders', phone: '01711223344', due: 35000, initial: 'H' }
+    };
+
+    function formatTaka(val) {
+      if (appLanguage === 'bn') {
+        const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        const formatted = Number(val).toLocaleString('en-IN');
+        return '৳' + formatted.split('').map(c => bnDigits[c] !== undefined ? bnDigits[c] : c).join('');
+      }
+      return '৳' + Number(val).toLocaleString('en-IN');
+    }
+
+    function onCustomerChange(key) {
+      const c = customerData[key];
+      if (!c) return;
+      currentDue = c.due;
+      currentCustomer = c.name;
+      currentPhone = c.phone;
+      document.getElementById('avatarInitial').innerText = c.initial;
+      document.getElementById('dispCustName').innerText = c.name;
+      document.getElementById('dispCustPhone').innerText = c.phone;
+      document.getElementById('dispCustDue').innerText = formatTaka(currentDue);
+      
+      // Update preset chips
+      document.getElementById('val25').innerText = formatTaka(Math.round(currentDue * 0.25));
+      document.getElementById('val50').innerText = formatTaka(Math.round(currentDue * 0.50));
+      document.getElementById('val75').innerText = formatTaka(Math.round(currentDue * 0.75));
+      document.getElementById('val100').innerText = formatTaka(currentDue);
+
+      applyPreset(1.00);
+      showToast(`Switched customer to ${c.name} (${formatTaka(c.due)})`);
+    }
+
+    function setModalWidth(pct) {
+      const modal = document.getElementById('interactiveModal');
+      modal.style.width = pct + '%';
+      document.getElementById('windowWidthBadge').innerText = `${pct}% Width (${pct == 95 ? 'Expanded · Proposed' : (pct == 84 ? 'Squeezed · Current' : 'Medium')})`;
+      document.getElementById('selWidth').value = pct;
+    }
+
+    function setViewMode(mode) {
+      const colCurrent = document.getElementById('colCurrent');
+      const colProposed = document.getElementById('colProposed');
+      const tabCompare = document.getElementById('tabCompare');
+      const tabProposed = document.getElementById('tabProposedOnly');
+      const tabCurrent = document.getElementById('tabCurrentOnly');
+
+      tabCompare.classList.remove('active');
+      tabProposed.classList.remove('active');
+      tabCurrent.classList.remove('active');
+
+      if (mode === 'compare') {
+        colCurrent.style.display = 'flex';
+        colProposed.style.display = 'flex';
+        tabCompare.classList.add('active');
+      } else if (mode === 'proposed') {
+        colCurrent.style.display = 'none';
+        colProposed.style.display = 'flex';
+        tabProposed.classList.add('active');
+      } else if (mode === 'current') {
+        colCurrent.style.display = 'flex';
+        colProposed.style.display = 'none';
+        tabCurrent.classList.add('active');
+      }
+    }
+
+    function onInputAmountChange() {
+      const input = document.getElementById('mainAmountInput');
+      const val = parseFloat(input.value) || 0;
+      const amountBox = document.getElementById('heroAmountBox');
+      const statusBadge = document.getElementById('statusBadge');
+      const banner = document.getElementById('settlementBanner');
+      const bannerIcon = document.getElementById('bannerIcon');
+      const bannerText = document.getElementById('bannerText');
+      const bannerRemVal = document.getElementById('bannerRemVal');
+      const btnSave = document.getElementById('btnSavePayment');
+      const btnSaveLabel = document.getElementById('btnSaveLabel');
+
+      // Clear preset active highlights
+      document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('active'));
+
+      if (val === currentDue) {
+        document.getElementById('chip100').classList.add('active');
+      } else if (val === Math.round(currentDue * 0.75)) {
+        document.getElementById('chip75').classList.add('active');
+      } else if (val === Math.round(currentDue * 0.50)) {
+        document.getElementById('chip50').classList.add('active');
+      } else if (val === Math.round(currentDue * 0.25)) {
+        document.getElementById('chip25').classList.add('active');
+      }
+
+      if (val > currentDue) {
+        amountBox.classList.add('error');
+        statusBadge.className = 'status-badge overpaid';
+        statusBadge.innerText = appLanguage === 'bn' ? 'অতিরিক্ত টাকা' : 'Invalid / Overpaid';
+        
+        banner.className = 'settlement-status-banner overpaid';
+        bannerIcon.innerText = '⚠️';
+        bannerText.innerText = appLanguage === 'bn' ? 'মোট বাকির চেয়ে বেশি দেওয়া হয়েছে!' : 'Exceeds Total Due!';
+        bannerRemVal.innerText = '+' + formatTaka(val - currentDue);
+
+        btnSave.disabled = true;
+        btnSaveLabel.innerText = appLanguage === 'bn' ? 'সঠিক পরিমাণ লিখুন' : 'Invalid Amount';
+      } else if (val === currentDue && currentDue > 0) {
+        amountBox.classList.remove('error');
+        statusBadge.className = 'status-badge full';
+        statusBadge.innerText = appLanguage === 'bn' ? 'সম্পূর্ণ পরিশোধ' : 'Full Settlement';
+
+        banner.className = 'settlement-status-banner full';
+        bannerIcon.innerText = '✨';
+        bannerText.innerText = appLanguage === 'bn' ? 'বাকি সম্পূর্ণ পরিশোধ হবে' : 'Balance Fully Settled';
+        bannerRemVal.innerText = appLanguage === 'bn' ? 'অবশিষ্ট বাকি: ৳০' : 'Remaining: ৳0';
+
+        btnSave.disabled = false;
+        btnSaveLabel.innerText = (appLanguage === 'bn' ? 'জমা সংরক্ষণ করুন ' : 'Save ') + formatTaka(val);
+      } else {
+        amountBox.classList.remove('error');
+        statusBadge.className = 'status-badge partial';
+        statusBadge.innerText = appLanguage === 'bn' ? 'আংশিক জমা' : 'Partial Repayment';
+
+        banner.className = 'settlement-status-banner partial';
+        bannerIcon.innerText = '⏳';
+        bannerText.innerText = appLanguage === 'bn' ? 'আংশিক জমা গৃহীত হবে' : 'Partial Repayment';
+        bannerRemVal.innerText = (appLanguage === 'bn' ? 'অবশিষ্ট বাকি: ' : 'Remaining: ') + formatTaka(Math.max(0, currentDue - val));
+
+        btnSave.disabled = (val <= 0);
+        btnSaveLabel.innerText = (appLanguage === 'bn' ? 'জমা সংরক্ষণ করুন ' : 'Save ') + formatTaka(val);
+      }
+    }
+
+    function applyPreset(pct) {
+      const val = Math.round(currentDue * pct);
+      document.getElementById('mainAmountInput').value = val;
+      onInputAmountChange();
+    }
+
+    function addAmount(delta) {
+      const input = document.getElementById('mainAmountInput');
+      const val = parseFloat(input.value) || 0;
+      input.value = Math.min(currentDue, val + delta);
+      onInputAmountChange();
+    }
+
+    function clearInputAmount() {
+      document.getElementById('mainAmountInput').value = '0';
+      onInputAmountChange();
+    }
+
+    function selectChannel(ch, elem) {
+      selectedMethod = ch;
+      document.querySelectorAll('.channel-tile').forEach(t => t.classList.remove('active'));
+      elem.classList.add('active');
+      showToast(`Selected channel: ${ch}`);
+    }
+
+    function setAppLanguage(lang) {
+      appLanguage = lang;
+      document.getElementById('btnAppLangEN').classList.toggle('active', lang === 'en');
+      document.getElementById('btnAppLangBN').classList.toggle('active', lang === 'bn');
+      document.getElementById('selAppLang').value = lang;
+
+      if (lang === 'bn') {
+        document.body.classList.add('lang-bn');
+        document.getElementById('txtDialogTitle').innerText = 'টাকা জমা গ্রহণ';
+        document.getElementById('txtDialogSubtitle').innerText = 'বাকি পরিশোধের ভাউচার';
+        document.getElementById('txtUnpaidBalanceLabel').innerText = 'বর্তমান মোট বাকি';
+        document.getElementById('txtAmountReceivedLabel').innerText = 'জমার পরিমাণ';
+        document.getElementById('label25').innerText = '২৫%';
+        document.getElementById('label50').innerText = '৫০%';
+        document.getElementById('label75').innerText = '৭৫%';
+        document.getElementById('label100').innerText = '১০০% সম্পূর্ণ';
+        document.getElementById('txtQuickAddonsLabel').innerText = 'সহজ যোগ:';
+        document.getElementById('btnAdd100').innerText = '+১০০';
+        document.getElementById('btnAdd500').innerText = '+৫০০';
+        document.getElementById('btnAdd1000').innerText = '+১,০০০';
+        document.getElementById('btnAdd2000').innerText = '+২,০০০';
+        document.getElementById('txtPaymentChannelLabel').innerText = 'পেমেন্ট মাধ্যম';
+        document.getElementById('txtChCash').innerText = 'নগদ';
+        document.getElementById('badgeNagad').innerText = 'নগদ';
+        document.getElementById('badgeRocket').innerText = 'রকেট';
+        document.getElementById('txtChNagad').innerText = 'নগদ';
+        document.getElementById('txtChRocket').innerText = 'রকেট';
+        document.getElementById('txtChCard').innerText = 'কার্ড';
+        document.getElementById('txtChBank').innerText = 'ব্যাংক';
+        document.getElementById('inputNote').placeholder = 'রেফারেন্স বা ভাউচার নোট (ঐচ্ছিক)';
+        document.getElementById('btnCancel').innerText = 'বাতিল';
+        showToast('App Language switched to Bangla (বাংলা)');
+      } else {
+        // 100% PURE ENGLISH
+        document.body.classList.remove('lang-bn');
+        document.getElementById('txtDialogTitle').innerText = 'Collect Payment';
+        document.getElementById('txtDialogSubtitle').innerText = 'Due Repayment Voucher';
+        document.getElementById('txtUnpaidBalanceLabel').innerText = 'UNPAID BALANCE';
+        document.getElementById('txtAmountReceivedLabel').innerText = 'Amount Received';
+        document.getElementById('label25').innerText = '25%';
+        document.getElementById('label50').innerText = '50%';
+        document.getElementById('label75').innerText = '75%';
+        document.getElementById('label100').innerText = '100% Full';
+        document.getElementById('txtQuickAddonsLabel').innerText = 'Quick Add:';
+        document.getElementById('btnAdd100').innerText = '+100';
+        document.getElementById('btnAdd500').innerText = '+500';
+        document.getElementById('btnAdd1000').innerText = '+1,000';
+        document.getElementById('btnAdd2000').innerText = '+2,000';
+        document.getElementById('txtPaymentChannelLabel').innerText = 'Payment Channel';
+        document.getElementById('txtChCash').innerText = 'Cash';
+        document.getElementById('badgeNagad').innerText = 'Nagad';
+        document.getElementById('badgeRocket').innerText = 'Rocket';
+        document.getElementById('txtChNagad').innerText = 'Nagad';
+        document.getElementById('txtChRocket').innerText = 'Rocket';
+        document.getElementById('txtChCard').innerText = 'Card';
+        document.getElementById('txtChBank').innerText = 'Bank';
+        document.getElementById('inputNote').placeholder = 'Reference Or Note (Optional)';
+        document.getElementById('btnCancel').innerText = 'Cancel';
+        showToast('App Language switched to English (100% Pure English Mode)');
+      }
+
+      // Reformat numbers
+      document.getElementById('dispCustDue').innerText = formatTaka(currentDue);
+      document.getElementById('val25').innerText = formatTaka(Math.round(currentDue * 0.25));
+      document.getElementById('val50').innerText = formatTaka(Math.round(currentDue * 0.50));
+      document.getElementById('val75').innerText = formatTaka(Math.round(currentDue * 0.75));
+      document.getElementById('val100').innerText = formatTaka(currentDue);
+
+      onInputAmountChange();
+    }
+
+    function toggleTheme() {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.body.classList.toggle('light-theme', currentTheme === 'light');
+      document.getElementById('themeIcon').innerText = currentTheme === 'light' ? '🌙' : '☀️';
+      document.getElementById('themeLabel').innerText = currentTheme === 'light' ? 'Dark Mode' : 'Light Mode';
+    }
+
+    function onSavePaymentClick() {
+      const val = parseFloat(document.getElementById('mainAmountInput').value) || 0;
+      if (val <= 0 || val > currentDue) return;
+      showToast(`🎉 ${formatTaka(val)} successfully received via ${selectedMethod}! Triggering Receipt...`);
+    }
+
+    function onCloseClick() {
+      showToast('Dismiss dialog clicked');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('liveToast');
+      t.innerHTML = `<span>${msg}</span>`;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // Initialize on load with English as requested
+    setAppLanguage('en');
+    onCustomerChange('rizwana');
+  </script>
+</body>
+</html>

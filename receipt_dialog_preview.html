@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS - Enhanced Receipt Dialog UI/UX Interactive Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #059669;
+      --primary-dark: #047857;
+      --primary-light: #10B981;
+      --primary-bg: #ECFDF5;
+      --accent: #D97706;
+      --accent-light: #F59E0B;
+      --bg: #0B1120;
+      --surface: #1E293B;
+      --surface-card: #1E293B;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --border: #334155;
+      --phone-w: 395px;
+      --phone-h: 840px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', 'Hind Siliguri', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #1E293B 0%, #0B1120 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 60px;
+    }
+
+    /* Top Control Bar */
+    .header-panel {
+      max-width: 1100px;
+      width: 100%;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34D399;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #FFFFFF 30%, #94A3B8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 760px;
+      margin: 0 auto 16px;
+      line-height: 1.5;
+    }
+
+    /* Interactive Toolbar */
+    .toolbar-container {
+      max-width: 1100px;
+      width: 100%;
+      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px 20px;
+      margin-bottom: 28px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #94A3B8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .toggle-switch-btn {
+      background: #0F172A;
+      border: 1px solid var(--border);
+      color: #CBD5E1;
+      padding: 7px 14px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toggle-switch-btn:hover {
+      border-color: #64748B;
+      color: #FFFFFF;
+    }
+
+    .toggle-switch-btn.active {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      border-color: #10B981;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+    }
+
+    /* Main Showcase Stage */
+    .showcase-stage {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 36px;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .device-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .device-label {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .device-label .tag {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    .tag-new {
+      background: #065F46;
+      color: #6EE7B7;
+      border: 1px solid rgba(110, 231, 183, 0.3);
+    }
+
+    /* Phone Shell */
+    .phone-frame {
+      width: var(--phone-w);
+      height: var(--phone-h);
+      background: #000000;
+      border-radius: 48px;
+      padding: 12px;
+      box-shadow: 0 25px 65px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.12);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .screen-container {
+      width: 100%;
+      height: 100%;
+      background: #F1F5F9;
+      border-radius: 38px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .status-bar {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #1E293B;
+      z-index: 10;
+    }
+
+    .camera-cutout {
+      width: 84px;
+      height: 22px;
+      background: #000000;
+      border-radius: 12px;
+      margin: 0 auto;
+    }
+
+    /* POS Background (Complete Sale Screen Behind Scrim) */
+    .pos-backdrop {
+      flex: 1;
+      background: #64748B;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pos-appbar {
+      height: 52px;
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      gap: 12px;
+      font-weight: 700;
+      color: #0F172A;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* Modal Scrim */
+    .modal-scrim {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      z-index: 20;
+    }
+
+    /* ===================================================
+       NEW ENHANCED DIALOG (SPACIOUS, 3D ICONS, DUAL LANGUAGE)
+       =================================================== */
+    .dialog-new {
+      width: 95%; /* 95% screen width */
+      height: 88%; /* 88% screen height */
+      background: #FFFFFF;
+      border-radius: 28px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      position: relative;
+    }
+
+    /* Modal Top Bar */
+    .dialog-new-header {
+      padding: 13px 18px 10px;
+      background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+      border-bottom: 1px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* 3D Animated Receipt Header Icon */
+    .header-icon-3d {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+      position: relative;
+      animation: floatSmooth 3.5s ease-in-out infinite;
+    }
+
+    @keyframes floatSmooth {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    .header-badge {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      background: #15803D;
+      color: white;
+      border: 2px solid white;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      font-size: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+    }
+
+    .header-title-block h2 {
+      font-size: 15.5px;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.2;
+    }
+
+    .header-title-block .subtext {
+      font-size: 11px;
+      color: #64748B;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .subtext .live-dot {
+      width: 6px;
+      height: 6px;
+      background: #10B981;
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-btn-round {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid #E2E8F0;
+      background: #FFFFFF;
+      color: #64748B;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 14px;
+    }
+
+    .icon-btn-round:hover {
+      background: #F1F5F9;
+      color: #0F172A;
+      border-color: #CBD5E1;
+    }
+
+    /* ===================================================
+       PART 1: PHOTOREALISTIC 3D ANIMATED SUMMARY RIBBON
+       (Matches user Image 1 with 3D icons)
+       =================================================== */
+    .summary-ribbon-container {
+      padding: 6px 12px;
+      background: #FFFFFF;
+      flex-shrink: 0;
+    }
+
+    .summary-ribbon {
+      background: #E8F8F5; /* Matches user Image 1 mint card */
+      border-radius: 16px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid #D1FAE5;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.06);
+    }
+
+    .ribbon-card-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ribbon-texts {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ribbon-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748B;
+      line-height: 1.2;
+      margin-bottom: 2px;
+    }
+
+    .ribbon-val {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.2;
+    }
+
+    .ribbon-val.green {
+      color: #059669;
+      font-size: 18px;
+    }
+
+    /* 3D Icon: Gold Revenue / Coin Stack */
+    .icon-3d-stack {
+      width: 32px;
+      height: 32px;
+      position: relative;
+      perspective: 200px;
+      flex-shrink: 0;
+      animation: coinFloat 3s ease-in-out infinite;
+    }
+
+    @keyframes coinFloat {
+      0%, 100% { transform: translateY(0) rotateY(0deg); }
+      50% { transform: translateY(-2.5px) rotateY(6deg); }
+    }
+
+    .coin-3d-disc {
+      position: absolute;
+      width: 28px;
+      height: 14px;
+      border-radius: 50%;
+      left: 2px;
+    }
+
+    .coin-layer-1 {
+      bottom: 2px;
+      background: linear-gradient(135deg, #B45309 0%, #78350F 100%);
+      box-shadow: 0 4px 6px rgba(120, 53, 15, 0.4);
+    }
+
+    .coin-layer-2 {
+      bottom: 6px;
+      background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    }
+
+    .coin-layer-3 {
+      bottom: 10px;
+      background: linear-gradient(135deg, #FDE68A 0%, #F59E0B 70%, #B45309 100%);
+      border: 1px solid #FEF08A;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .coin-layer-3::after {
+      content: '৳';
+      font-size: 8px;
+      font-weight: 900;
+      color: #78350F;
+    }
+
+    /* 3D Icon: Banknote / Payment Note */
+    .icon-3d-cash {
+      width: 32px;
+      height: 32px;
+      position: relative;
+      flex-shrink: 0;
+      perspective: 200px;
+      animation: noteSway 3.2s ease-in-out infinite;
+    }
+
+    @keyframes noteSway {
+      0%, 100% { transform: rotate(-4deg) translateY(0); }
+      50% { transform: rotate(4deg) translateY(-2px); }
+    }
+
+    .banknote-mesh {
+      width: 29px;
+      height: 18px;
+      background: linear-gradient(135deg, #34D399 0%, #059669 100%);
+      border-radius: 4px;
+      position: absolute;
+      top: 7px;
+      left: 1px;
+      border: 1.2px solid #A7F3D0;
+      box-shadow: 0 4px 8px rgba(5, 150, 105, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 2px;
+    }
+
+    .banknote-circle {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 1px dashed rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* 3D Icon: Paid Status Seal */
+    .icon-3d-paid-seal {
+      background: linear-gradient(135deg, #10B981 0%, #047857 100%);
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(16, 185, 129, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+      border: 1px solid #34D399;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      letter-spacing: 0.5px;
+      animation: pulseGreen 2.5s infinite;
+    }
+
+    @keyframes pulseGreen {
+      0%, 100% { box-shadow: 0 4px 10px rgba(16, 185, 129, 0.35); }
+      50% { box-shadow: 0 4px 16px rgba(16, 185, 129, 0.65); }
+    }
+
+    .seal-checkmark-orb {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      color: #047857;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8.5px;
+      font-weight: 900;
+    }
+
+    /* ===================================================
+       EXPANSIVE RECEIPT VIEWPORT & CONTROLS
+       =================================================== */
+    .receipt-viewport-new {
+      flex: 1; /* Generously takes remaining vertical space */
+      background: #0F172A; /* Slate navy */
+      position: relative;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 14px 12px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: inset 0 3px 8px rgba(0,0,0,0.5);
+    }
+
+    /* Viewport Floating Controls Bar */
+    .viewport-floating-bar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 12px;
+      gap: 6px;
+    }
+
+    /* 80mm / 58mm Roll Toggle */
+    .chip-toggle {
+      background: rgba(30, 41, 59, 0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 2.5px;
+      display: flex;
+      gap: 2px;
+    }
+
+    .chip-opt {
+      background: transparent;
+      border: none;
+      color: #94A3B8;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .chip-opt.active {
+      background: #10B981;
+      color: #FFFFFF;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+    }
+
+    /* ===================================================
+       USER IMAGE 4: EXACT [ EN | বাং ] PILL TOGGLE
+       =================================================== */
+    .lang-toggle-wrapper {
+      position: relative;
+    }
+
+    .lang-pill-container {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 9999px;
+      padding: 2.5px 3px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      position: relative;
+    }
+
+    .lang-pill-btn {
+      background: transparent;
+      border: none;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      z-index: 2;
+    }
+
+    .lang-pill-btn.active {
+      background: #10B981;
+      color: #FFFFFF;
+      box-shadow: 0 2px 5px rgba(16, 185, 129, 0.4);
+    }
+
+    .zoom-btn {
+      background: rgba(30, 41, 59, 0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #CBD5E1;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3.5px 8px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .zoom-btn:hover {
+      background: #334155;
+      color: #fff;
+    }
+
+    /* ===================================================
+       AUTHENTIC ESC/POS THERMAL RECEIPT CANVAS
+       (Strictly matches BillPdfGenerator.kt layout)
+       =================================================== */
+    .thermal-paper {
+      background: #FFFFFF;
+      color: #000000;
+      width: 100%;
+      max-width: 320px; /* 80mm printable width standard */
+      padding: 18px 14px 22px;
+      border-radius: 4px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+      font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+      font-size: 11px;
+      line-height: 1.35;
+      letter-spacing: -0.15px;
+      position: relative;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-sizing: border-box;
+    }
+
+    .thermal-paper.roll-58mm {
+      max-width: 250px;
+      font-size: 9.5px;
+      padding: 14px 10px 18px;
+    }
+
+    .thermal-paper.zoomed {
+      transform: scale(1.18);
+      transform-origin: top center;
+      margin-bottom: 60px;
+    }
+
+    /* Store Header (Centered) */
+    .rcpt-header {
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .rcpt-store-title {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      color: #000000;
+      line-height: 1.25;
+      margin-bottom: 2px;
+    }
+
+    .rcpt-header-sub {
+      font-size: 10px;
+      font-weight: 400;
+      color: #000000;
+      line-height: 1.35;
+    }
+
+    /* Authentic Monospace ESC/POS Dividers */
+    .rcpt-divider-double,
+    .rcpt-divider-single {
+      font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+      font-size: 11px;
+      line-height: 1.2;
+      color: #000000;
+      white-space: nowrap;
+      overflow: hidden;
+      text-align: center;
+      margin: 4px 0;
+      user-select: none;
+    }
+
+    .thermal-paper.roll-58mm .rcpt-divider-double,
+    .thermal-paper.roll-58mm .rcpt-divider-single {
+      font-size: 9.5px;
+    }
+
+    /* Metadata lines (Left-aligned) */
+    .rcpt-meta-block {
+      margin: 4px 0;
+    }
+
+    .rcpt-line {
+      font-size: 10.5px;
+      line-height: 1.45;
+      color: #000000;
+      white-space: pre;
+    }
+
+    .thermal-paper.roll-58mm .rcpt-line {
+      font-size: 9.5px;
+    }
+
+    /* Item Table Header & Rows (Matching Canvas X offsets) */
+    .rcpt-table-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 700;
+      font-size: 10.5px;
+      color: #000000;
+      padding: 1px 0;
+    }
+
+    .thermal-paper.roll-58mm .rcpt-table-header {
+      font-size: 9.5px;
+    }
+
+    .rcpt-col-item {
+      flex: 1;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rcpt-col-qty {
+      width: 36px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .rcpt-col-price {
+      width: 48px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .rcpt-col-total {
+      width: 48px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .rcpt-item-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      line-height: 1.35;
+      color: #000000;
+    }
+
+    .thermal-paper.roll-58mm .rcpt-item-row {
+      font-size: 9.5px;
+    }
+
+    .rcpt-item-subline {
+      font-size: 10.5px;
+      color: #000000;
+      line-height: 1.3;
+      padding-left: 2px;
+    }
+
+    .thermal-paper.roll-58mm .rcpt-item-subline {
+      font-size: 9.5px;
+    }
+
+    /* Subtotal / Financial Rows */
+    .rcpt-row-between {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      line-height: 1.45;
+      color: #000000;
+    }
+
+    .thermal-paper.roll-58mm .rcpt-row-between {
+      font-size: 9.5px;
+    }
+
+    .rcpt-row-grand {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #000000;
+      line-height: 1.3;
+      margin: 2px 0;
+    }
+
+    .thermal-paper.roll-58mm .rcpt-row-grand {
+      font-size: 12px;
+    }
+
+    /* Payment Info block */
+    .rcpt-payment-block {
+      margin: 4px 0;
+    }
+
+    /* Footer Section */
+    .rcpt-footer-block {
+      text-align: center;
+      margin-top: 6px;
+    }
+
+    .rcpt-thank-you {
+      font-size: 11px;
+      font-weight: 700;
+      color: #000000;
+      line-height: 1.4;
+    }
+
+    .thermal-paper.roll-58mm .rcpt-thank-you {
+      font-size: 9.5px;
+    }
+
+    /* Watermark Pill Tag matching Canvas */
+    .rcpt-pill-watermark {
+      display: inline-block;
+      background: #1A1A1A;
+      color: #FFFFFF;
+      font-size: 9.5px;
+      font-weight: 700;
+      border-radius: 12px;
+      padding: 3px 12px;
+      margin-top: 8px;
+      letter-spacing: 0.3px;
+    }
+
+    /* ===================================================
+       BOTTOM ERGONOMIC ACTION DECK
+       =================================================== */
+    .dialog-new-bottom {
+      padding: 10px 14px 14px;
+      background: #FFFFFF;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+
+    .btn-hero-print {
+      width: 100%;
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 14px;
+      padding: 12px 18px;
+      font-size: 14px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+      transition: all 0.15s ease;
+    }
+
+    .btn-hero-print:hover {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(5, 150, 105, 0.45);
+    }
+
+    .deck-secondary-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.25fr;
+      gap: 8px;
+    }
+
+    .btn-action-sub {
+      background: #F8FAFC;
+      border: 1px solid #CBD5E1;
+      color: #334155;
+      padding: 8px 6px;
+      border-radius: 12px;
+      font-size: 11.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-action-sub:hover {
+      background: #F1F5F9;
+      border-color: #94A3B8;
+      color: #0F172A;
+    }
+
+    .btn-action-sub.accent-green {
+      background: #ECFDF5;
+      border-color: #6EE7B7;
+      color: #065F46;
+    }
+
+    .btn-action-sub.accent-orange {
+      background: #FFFBEB;
+      border-color: #FDE68A;
+      color: #92400E;
+    }
+
+    /* ===================================================
+       PART 2: PHOTOREALISTIC 3D ANIMATED BOTTOM ACTIONS
+       =================================================== */
+    .deck-overflow-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 3px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .deck-overflow-left {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .action-pill-3d {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 3px 5px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      color: #475569;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .action-pill-3d:hover {
+      background: #F1F5F9;
+      transform: translateY(-1px);
+    }
+
+    .action-pill-3d.btn-edit-accent {
+      color: #D97706; /* Matches user Image 2 & 3 amber Edit */
+    }
+
+    .action-pill-3d.btn-edit-accent:hover {
+      background: #FFFBEB;
+      color: #B45309;
+    }
+
+    .action-pill-3d.btn-return-accent {
+      color: #4F46E5; /* Matches user Image 3 purple Return items */
+    }
+
+    .action-pill-3d.btn-return-accent:hover {
+      background: #EEF2FF;
+      color: #3730A3;
+    }
+
+    .action-pill-3d.btn-delete-accent {
+      color: #DC2626; /* Matches user Image 3 red Delete */
+    }
+
+    .action-pill-3d.btn-delete-accent:hover {
+      background: #FEF2F2;
+      color: #991B1B;
+    }
+
+    .action-pill-3d.btn-done-accent {
+      color: #059669; /* Matches user Image 2 & 3 emerald Done */
+      font-weight: 800;
+      margin-left: auto;
+      flex-shrink: 0;
+      padding: 3px 6px;
+    }
+
+    .action-pill-3d.btn-done-accent:hover {
+      background: #ECFDF5;
+      color: #047857;
+    }
+
+    /* 3D Stylus / Pen (Edit) */
+    .icon-3d-edit {
+      width: 13px;
+      height: 13px;
+      position: relative;
+      perspective: 100px;
+      flex-shrink: 0;
+    }
+
+    .stylus-barrel {
+      width: 4px;
+      height: 11px;
+      background: linear-gradient(135deg, #F59E0B 0%, #D97706 70%, #78350F 100%);
+      border-radius: 1.5px 1.5px 1px 1px;
+      transform: rotate(45deg);
+      box-shadow: 1px 1px 3px rgba(180, 83, 9, 0.4);
+      position: relative;
+    }
+
+    .stylus-barrel::after {
+      content: '';
+      position: absolute;
+      bottom: -2.5px;
+      left: 0.5px;
+      width: 0;
+      height: 0;
+      border-left: 1.5px solid transparent;
+      border-right: 1.5px solid transparent;
+      border-top: 3px solid #FDE68A;
+    }
+
+    /* 3D Return Box (Return Items) */
+    .icon-3d-return {
+      width: 13px;
+      height: 13px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .return-box-mesh {
+      width: 10px;
+      height: 8.5px;
+      background: linear-gradient(135deg, #818CF8 0%, #4F46E5 100%);
+      border-radius: 2px;
+      box-shadow: 0 1px 3px rgba(79, 70, 229, 0.35);
+      position: absolute;
+      bottom: 1.5px;
+      left: 1.5px;
+    }
+
+    .return-arrow-arc {
+      position: absolute;
+      top: -1px;
+      left: 0.5px;
+      font-size: 8.5px;
+      color: #4338CA;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    /* 3D Shredder / Trash Bin (Delete) */
+    .icon-3d-trash {
+      width: 13px;
+      height: 13px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .trash-can-body {
+      width: 8.5px;
+      height: 8.5px;
+      background: linear-gradient(180deg, #F87171 0%, #DC2626 100%);
+      border-radius: 1px 1px 2px 2px;
+      position: absolute;
+      bottom: 1px;
+      left: 2px;
+      box-shadow: 0 1px 3px rgba(220, 38, 38, 0.35);
+      border-top: 1px solid #FEE2E2;
+    }
+
+    .trash-can-lid {
+      width: 11.5px;
+      height: 2px;
+      background: linear-gradient(90deg, #EF4444, #B91C1C);
+      border-radius: 1px;
+      position: absolute;
+      top: 1.5px;
+      left: 0.5px;
+      transition: transform 0.2s ease;
+    }
+
+    .action-pill-3d:hover .trash-can-lid {
+      transform: translateY(-1.5px) rotate(-15deg);
+    }
+
+    /* 3D Launch Orb (Done) */
+    .icon-3d-done {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #34D399 0%, #059669 100%);
+      box-shadow: 0 1.5px 4px rgba(5, 150, 105, 0.4);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      font-size: 7.5px;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+
+
+    /* Toast Notification in Mock */
+    .mock-toast {
+      position: absolute;
+      bottom: 85px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      color: #FFFFFF;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+      z-index: 50;
+      white-space: nowrap;
+    }
+
+    .mock-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ===================================================
+       SIDE-BY-SIDE VERIFICATION: ENGLISH BASELINE VS BANGLA TWIN
+       =================================================== */
+    .side-by-side-section {
+      max-width: 1100px;
+      width: 100%;
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 28px;
+      margin-top: 36px;
+    }
+
+    .side-by-side-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .side-by-side-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .comparison-card {
+      background: #0F172A;
+      border: 1px solid #334155;
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .comparison-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #1E293B;
+    }
+
+    .comparison-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .comparison-tag {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .tag-untouched {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93C5FD;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+
+    .tag-twin {
+      background: rgba(16, 185, 129, 0.2);
+      color: #6EE7B7;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    /* Specs and Comparison Matrix */
+    .specs-panel {
+      max-width: 1100px;
+      width: 100%;
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 28px;
+      margin-top: 36px;
+    }
+
+    .specs-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .specs-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    .specs-table th, .specs-table td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .specs-table th {
+      color: #94A3B8;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11.5px;
+      letter-spacing: 0.5px;
+    }
+
+    .specs-table td {
+      color: #E2E8F0;
+    }
+
+    .badge-diff {
+      font-weight: 700;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .diff-old { background: rgba(239, 68, 68, 0.2); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .diff-new { background: rgba(16, 185, 129, 0.2); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+      margin-top: 24px;
+    }
+
+    .feature-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .feature-card h4 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #34D399;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature-card p {
+      font-size: 13px;
+      color: #94A3B8;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <div class="header-panel">
+    <div class="badge-pill">✨ UI/UX Interactive Specification & Confirmation</div>
+    <h1>Techyfi POS — Receipt Summary Dialog Overhaul</h1>
+    <p class="subtitle">
+      Featuring Photorealistic 3D Animated Icons on Financial Metric Ribbons and Action Deck, plus an Isolated <strong>EN / বাং</strong> Receipt Language Switcher with Authentic Bangladeshi Retail Phrasing.
+    </p>
+  </div>
+
+  <!-- Interactive Test Controls -->
+  <div class="toolbar-container">
+    <div class="toolbar-group">
+      <span class="toolbar-label">Receipt Roll:</span>
+      <button id="ctl80" class="toggle-switch-btn active" onclick="setRollWidth('80mm')">🖨️ 80mm Wide</button>
+      <button id="ctl58" class="toggle-switch-btn" onclick="setRollWidth('58mm')">🖨️ 58mm Standard</button>
+    </div>
+
+    <div class="toolbar-group">
+      <span class="toolbar-label">Receipt Language:</span>
+      <button id="ctlLangEn" class="toggle-switch-btn active" onclick="setReceiptLang('EN')">🇬🇧 English Receipt</button>
+      <button id="ctlLangBn" class="toggle-switch-btn" onclick="setReceiptLang('BN')">🇧🇩 বাংলা রশিদ</button>
+    </div>
+
+    <div class="toolbar-group">
+      <span class="toolbar-label">App UI Language:</span>
+      <button id="ctlAppEn" class="toggle-switch-btn active" onclick="setAppLanguage('EN')">English UI</button>
+      <button id="ctlAppBn" class="toggle-switch-btn" onclick="setAppLanguage('BN')">বাংলা UI</button>
+    </div>
+
+    <div class="toolbar-group">
+      <span class="toolbar-label">Zoom View:</span>
+      <button id="ctlZoom" class="toggle-switch-btn" onclick="toggleZoom()">🔍 Inspect 1.2x</button>
+    </div>
+  </div>
+
+  <!-- Showcase Stage -->
+  <div class="showcase-stage">
+    
+    <div class="device-wrapper">
+      <div class="device-label">
+        <span class="tag tag-new">PROPOSED ARCHITECTURE</span>
+        <span>Interactive Confirmation Model</span>
+      </div>
+
+      <div class="phone-frame">
+        <div class="screen-container">
+          
+          <!-- Status Bar -->
+          <div class="status-bar">
+            <span>7:11 AM</span>
+            <div class="camera-cutout"></div>
+            <span>99% 🔋</span>
+          </div>
+
+          <!-- POS Background Behind Dialog -->
+          <div class="pos-backdrop">
+            <div class="pos-appbar">
+              <span>←</span>
+              <span id="appBarTitle">Complete Sale</span>
+            </div>
+
+            <!-- Modal Scrim -->
+            <div class="modal-scrim">
+              <div id="dialogNew" class="dialog-new">
+
+                <!-- 1. Header with 3D Receipt Icon & Controls -->
+                <div class="dialog-new-header">
+                  <div class="header-left">
+                    <div class="header-icon-3d">
+                      🧾
+                      <div class="header-badge">✓</div>
+                    </div>
+                    <div class="header-title-block">
+                      <h2 id="uiDialogTitle">Sale Completed Successfully!</h2>
+                      <div class="subtext">
+                        <span class="live-dot"></span>
+                        <span id="uiRollSubtitle">80 mm Thermal Receipt Preview</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="header-actions">
+                    <button class="icon-btn-round" title="Toggle Zoom" onclick="toggleZoom()">🔍</button>
+                    <button class="icon-btn-round" title="Close" onclick="showToast('✓ Dialog Dismissed')">✕</button>
+                  </div>
+                </div>
+
+                <!-- 2. PART 1: PHOTOREALISTIC 3D ANIMATED METRICS RIBBON (Matches user Image 1) -->
+                <div class="summary-ribbon-container">
+                  <div class="summary-ribbon">
+                    <!-- Total Column with 3D Gold Coin Stack -->
+                    <div class="ribbon-card-item">
+                      <div class="icon-3d-stack" title="Revenue Vault">
+                        <div class="coin-3d-disc coin-layer-1"></div>
+                        <div class="coin-3d-disc coin-layer-2"></div>
+                        <div class="coin-3d-disc coin-layer-3"></div>
+                      </div>
+                      <div class="ribbon-texts">
+                        <span class="ribbon-label" id="uiLabelTotal">Total</span>
+                        <span class="ribbon-val green">৳550</span>
+                      </div>
+                    </div>
+
+                    <!-- Payment Method with 3D Currency Note -->
+                    <div class="ribbon-card-item">
+                      <div class="icon-3d-cash" title="Cash Settlement">
+                        <div class="banknote-mesh">
+                          <div class="banknote-circle"></div>
+                        </div>
+                      </div>
+                      <div class="ribbon-texts">
+                        <span class="ribbon-label" id="uiLabelMethod">Payment Method</span>
+                        <span class="ribbon-val" id="uiValMethod">Cash</span>
+                      </div>
+                    </div>
+
+                    <!-- 3D Paid Seal -->
+                    <div class="icon-3d-paid-seal" id="uiStatusSeal">
+                      <div class="seal-checkmark-orb">✓</div>
+                      <span id="uiValStatus">PAID</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 3. EXPANSIVE RECEIPT VIEWPORT -->
+                <div class="receipt-viewport-new" id="receiptViewport">
+                  
+                  <!-- Viewport Floating Controls Bar with Exact [ EN | বাং ] Pill -->
+                  <div class="viewport-floating-bar">
+                    <!-- 80mm / 58mm Chips -->
+                    <div class="chip-toggle">
+                      <button id="chip80" class="chip-opt active" onclick="setRollWidth('80mm')">80mm</button>
+                      <button id="chip58" class="chip-opt" onclick="setRollWidth('58mm')">58mm</button>
+                    </div>
+
+                    <!-- USER IMAGE 4: EXACT EN / বাং PILL TOGGLE -->
+                    <div class="lang-toggle-wrapper" title="Change receipt print language only">
+                      <div class="lang-pill-container">
+                        <button id="pillEn" class="lang-pill-btn active" onclick="setReceiptLang('EN')">EN</button>
+                        <button id="pillBn" class="lang-pill-btn" onclick="setReceiptLang('BN')">বাং</button>
+                      </div>
+                    </div>
+
+                    <!-- Zoom Inspector -->
+                    <button class="zoom-btn" onclick="toggleZoom()">
+                      <span id="zoomIcon">🔎</span> <span id="zoomText">Zoom 1.2x</span>
+                    </button>
+                  </div>
+
+                  <!-- THERMAL PAPER CANVAS (Dynamic English / Bengali, Strictly 1:1 with BillPdfGenerator.kt) -->
+                  <div class="thermal-paper" id="thermalPaper">
+                    
+                    <!-- Store Header (Centered, bold title) -->
+                    <div class="rcpt-header">
+                      <div class="rcpt-store-title" id="rcptStoreName">M/S AL KAWSAR STORE</div>
+                      <div class="rcpt-header-sub" id="rcptAddress">121 WEST KAFRUL, TALTOLA, DHAKA</div>
+                      <div class="rcpt-header-sub" id="rcptPhone">01711352148 | 01712-650307</div>
+                    </div>
+
+                    <!-- Double Divider: ========================================== -->
+                    <div class="rcpt-divider-double" id="rcptDiv1">==========================================</div>
+
+                    <!-- Metadata Rows (Left-aligned, monospace) -->
+                    <div class="rcpt-meta-block">
+                      <div class="rcpt-line" id="rcptInvoiceLabel">Invoice  : #649</div>
+                      <div class="rcpt-line" id="rcptDateLabel">Date     : 04-Sep-2026 07:11 AM</div>
+                      <div class="rcpt-line" id="rcptCashierLabel">Cashier  : Kawsar Ahmed</div>
+                    </div>
+
+                    <!-- Single Divider: ------------------------------------------ -->
+                    <div class="rcpt-divider-single" id="rcptDiv2">------------------------------------------</div>
+
+                    <!-- Product Table Header (Monospace columns) -->
+                    <div class="rcpt-table-header">
+                      <span class="rcpt-col-item" id="thItem">Item</span>
+                      <span class="rcpt-col-qty" id="thQty">Qty</span>
+                      <span class="rcpt-col-price" id="thPrice">Price</span>
+                      <span class="rcpt-col-total" id="thTotal">Total</span>
+                    </div>
+
+                    <!-- Single Divider: ------------------------------------------ -->
+                    <div class="rcpt-divider-single" id="rcptDiv3">------------------------------------------</div>
+
+                    <!-- Product Items (Monospace multi-line wrapping) -->
+                    <div class="rcpt-items-block" id="rcptItemsBlock">
+                      <div class="rcpt-item-row">
+                        <span class="rcpt-col-item" id="rcptItem1">প্রাণ হট টমেটো সস ৩</span>
+                        <span class="rcpt-col-qty" id="rcptQty1">1</span>
+                        <span class="rcpt-col-price" id="rcptPrice1">550</span>
+                        <span class="rcpt-col-total" id="rcptTotal1">550</span>
+                      </div>
+                      <div class="rcpt-item-subline" id="rcptItem1Sub">কেজি</div>
+                    </div>
+
+                    <!-- Single Divider: ------------------------------------------ -->
+                    <div class="rcpt-divider-single" id="rcptDiv4">------------------------------------------</div>
+
+                    <!-- Subtotal -->
+                    <div class="rcpt-row-between">
+                      <span id="rcptSubtotalLabel">Subtotal</span>
+                      <span id="rcptSubtotalVal">৳550</span>
+                    </div>
+
+                    <!-- Double Divider: ========================================== -->
+                    <div class="rcpt-divider-double" id="rcptDiv5">==========================================</div>
+
+                    <!-- Grand Total (Bold, larger font) -->
+                    <div class="rcpt-row-grand">
+                      <span id="rcptGrandLabel">GRAND TOTAL</span>
+                      <span id="rcptGrandVal">৳550</span>
+                    </div>
+
+                    <!-- Double Divider: ========================================== -->
+                    <div class="rcpt-divider-double" id="rcptDiv6">==========================================</div>
+
+                    <!-- Payment Details (Left-aligned, monospace) -->
+                    <div class="rcpt-payment-block">
+                      <div class="rcpt-line" id="rcptMethodLabel">Payment Method : Cash</div>
+                      <div class="rcpt-line" id="rcptPaidLabel">Paid           : ৳550</div>
+                      <div class="rcpt-line" id="rcptChangeLabel">Change         : ৳0</div>
+                      <div class="rcpt-line" id="rcptStatusLabel">Status         : PAID</div>
+                    </div>
+
+                    <!-- Single Divider: ------------------------------------------ -->
+                    <div class="rcpt-divider-single" id="rcptDiv7">------------------------------------------</div>
+
+                    <!-- Footer & Watermark -->
+                    <div class="rcpt-footer-block">
+                      <div class="rcpt-thank-you" id="rcptFooter">Thank you for shopping with us!</div>
+                      <div class="rcpt-pill-watermark" id="rcptPowered">Powered by Techyfi POS</div>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- 4. ERGONOMIC BOTTOM ACTION DECK -->
+                <div class="dialog-new-bottom">
+                  <!-- Hero Action: Print -->
+                  <button class="btn-hero-print" id="btnHeroPrint" onclick="showToast('🖨️ Printing receipt...')">
+                    <span style="font-size: 18px;">🖨️</span>
+                    <span id="btnHeroPrintText">Print (80 mm)</span>
+                  </button>
+
+                  <!-- Secondary Actions -->
+                  <div class="deck-secondary-row">
+                    <button class="btn-action-sub accent-green" id="btnShare" onclick="showToast('📤 Sharing invoice...')">
+                      <span>📤</span> <span id="btnShareText">Share</span>
+                    </button>
+                    <button class="btn-action-sub" id="btnSave" onclick="showToast('💾 Receipt saved to Gallery/PDF')">
+                      <span>💾</span> <span id="btnSaveText">Save</span>
+                    </button>
+                    <button class="btn-action-sub accent-orange" id="btnRepeat" onclick="showToast('🛒 Added items back to Cart')">
+                      <span>🛒</span> <span id="btnRepeatText">Add to Cart Again</span>
+                    </button>
+                  </div>
+
+                  <!-- PART 2: PHOTOREALISTIC 3D ANIMATED ACTION ROW (Matches user Image 2 & 3) -->
+                  <div class="deck-overflow-row">
+                    <div class="deck-overflow-left">
+                      <!-- 3D Stylus Pen (Edit) -->
+                      <button class="action-pill-3d btn-edit-accent" id="btnEdit" onclick="showToast('✏️ Opening Sale Editor...')">
+                        <div class="icon-3d-edit">
+                          <div class="stylus-barrel"></div>
+                        </div>
+                        <span id="btnEditText">Edit</span>
+                      </button>
+
+                      <!-- 3D Return Box (Return Items) -->
+                      <button class="action-pill-3d btn-return-accent" id="btnReturn" onclick="showToast('↩️ Opening Return / Refund Flow...')">
+                        <div class="icon-3d-return">
+                          <div class="return-box-mesh"></div>
+                          <div class="return-arrow-arc">↩</div>
+                        </div>
+                        <span id="btnReturnText">Return items</span>
+                      </button>
+
+                      <!-- 3D Shredder / Trash (Delete) -->
+                      <button class="action-pill-3d btn-delete-accent" id="btnDelete" onclick="showToast('🗑️ Delete / Void confirmation opened')">
+                        <div class="icon-3d-trash">
+                          <div class="trash-can-lid"></div>
+                          <div class="trash-can-body"></div>
+                        </div>
+                        <span id="btnDeleteText">Delete</span>
+                      </button>
+                    </div>
+
+                    <!-- 3D Launch Orb (Done ➜) -->
+                    <button class="action-pill-3d btn-done-accent" id="btnDone" onclick="showToast('✓ Completed — Next Customer')">
+                      <span id="btnDoneText">Done</span>
+                      <div class="icon-3d-done">➔</div>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Interactive Toast Inside Mock -->
+                <div id="mockToast" class="mock-toast">
+                  <span id="toastText">Action triggered!</span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================================================
+       SIDE-BY-SIDE VERIFICATION: ENGLISH BASELINE VS BANGLA TWIN
+       =================================================== -->
+  <div class="side-by-side-section">
+    <div class="specs-title">
+      <span>⚖️</span> Direct Side-by-Side Proof: Existing English Baseline vs Exact Bangla Twin
+    </div>
+    <p style="color: #94A3B8; font-size: 13.5px; margin-bottom: 8px;">
+      The current English receipt is <strong>100% preserved and untouched</strong> (zero layout, font, or spacing changes, strictly matching <code style="color:#38BDF8;">BillPdfGenerator.kt</code>). The Bangla receipt is an <strong>exact 1:1 structural twin</strong> where only visible static labels are translated into natural Bangladeshi retail Bengali while all dynamic data (product names, invoice #649, phone, date, quantities, prices, and ৳550 totals) remains 100% identical.
+    </p>
+
+    <div class="side-by-side-grid">
+      <!-- 1. ENGLISH BASELINE (UNTOUCHED) -->
+      <div class="comparison-card">
+        <div class="comparison-header">
+          <div class="comparison-title">
+            <span>🇬🇧</span> Current English Receipt (100% Untouched Baseline)
+          </div>
+          <span class="comparison-tag tag-untouched">100% Untouched</span>
+        </div>
+
+        <div class="thermal-paper" style="width: 100%; max-width: 320px; box-shadow: none;">
+          <!-- Store Header -->
+          <div class="rcpt-header">
+            <div class="rcpt-store-title">M/S AL KAWSAR STORE</div>
+            <div class="rcpt-header-sub">121 WEST KAFRUL, TALTOLA, DHAKA</div>
+            <div class="rcpt-header-sub">01711352148 | 01712-650307</div>
+          </div>
+
+          <div class="rcpt-divider-double">==========================================</div>
+
+          <!-- Metadata Rows -->
+          <div class="rcpt-meta-block">
+            <div class="rcpt-line">Invoice  : #649</div>
+            <div class="rcpt-line">Date     : 04-Sep-2026 07:11 AM</div>
+            <div class="rcpt-line">Cashier  : Kawsar Ahmed</div>
+          </div>
+
+          <div class="rcpt-divider-single">------------------------------------------</div>
+
+          <!-- Product Table Header -->
+          <div class="rcpt-table-header">
+            <span class="rcpt-col-item">Item</span>
+            <span class="rcpt-col-qty">Qty</span>
+            <span class="rcpt-col-price">Price</span>
+            <span class="rcpt-col-total">Total</span>
+          </div>
+
+          <div class="rcpt-divider-single">------------------------------------------</div>
+
+          <!-- Product Items -->
+          <div class="rcpt-items-block">
+            <div class="rcpt-item-row">
+              <span class="rcpt-col-item">প্রাণ হট টমেটো সস ৩</span>
+              <span class="rcpt-col-qty">1</span>
+              <span class="rcpt-col-price">550</span>
+              <span class="rcpt-col-total">550</span>
+            </div>
+            <div class="rcpt-item-subline">কেজি</div>
+          </div>
+
+          <div class="rcpt-divider-single">------------------------------------------</div>
+
+          <!-- Subtotal -->
+          <div class="rcpt-row-between">
+            <span>Subtotal</span>
+            <span>৳550</span>
+          </div>
+
+          <div class="rcpt-divider-double">==========================================</div>
+
+          <!-- Grand Total -->
+          <div class="rcpt-row-grand">
+            <span>GRAND TOTAL</span>
+            <span>৳550</span>
+          </div>
+
+          <div class="rcpt-divider-double">==========================================</div>
+
+          <!-- Payment Details -->
+          <div class="rcpt-payment-block">
+            <div class="rcpt-line">Payment Method : Cash</div>
+            <div class="rcpt-line">Paid           : ৳550</div>
+            <div class="rcpt-line">Change         : ৳0</div>
+            <div class="rcpt-line">Status         : PAID</div>
+          </div>
+
+          <div class="rcpt-divider-single">------------------------------------------</div>
+
+          <!-- Footer & Watermark -->
+          <div class="rcpt-footer-block">
+            <div class="rcpt-thank-you">Thank you for shopping with us!</div>
+            <div class="rcpt-pill-watermark">Powered by Techyfi POS</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. BANGLA TWIN (EXACT 1:1 STRUCTURAL TWIN) -->
+      <div class="comparison-card">
+        <div class="comparison-header">
+          <div class="comparison-title">
+            <span>🇧🇩</span> Bangla Receipt (Exact 1:1 Twin)
+          </div>
+          <span class="comparison-tag tag-twin">Exact 1:1 Twin</span>
+        </div>
+
+        <div class="thermal-paper" style="width: 100%; max-width: 320px; box-shadow: none;">
+          <!-- Store Header -->
+          <div class="rcpt-header">
+            <div class="rcpt-store-title">M/S AL KAWSAR STORE</div>
+            <div class="rcpt-header-sub">121 WEST KAFRUL, TALTOLA, DHAKA</div>
+            <div class="rcpt-header-sub">01711352148 | 01712-650307</div>
+          </div>
+
+          <div class="rcpt-divider-double">==========================================</div>
+
+          <!-- Metadata Rows -->
+          <div class="rcpt-meta-block">
+            <div class="rcpt-line">চালান নং : #649</div>
+            <div class="rcpt-line">তারিখ   : 04-Sep-2026 07:11 AM</div>
+            <div class="rcpt-line">ক্যাশিয়ার : Kawsar Ahmed</div>
+          </div>
+
+          <div class="rcpt-divider-single">------------------------------------------</div>
+
+          <!-- Product Table Header -->
+          <div class="rcpt-table-header">
+            <span class="rcpt-col-item">আইটেম</span>
+            <span class="rcpt-col-qty">পরিমাণ</span>
+            <span class="rcpt-col-price">দর</span>
+            <span class="rcpt-col-total">মোট</span>
+          </div>
+
+          <div class="rcpt-divider-single">------------------------------------------</div>
+
+          <!-- Product Items -->
+          <div class="rcpt-items-block">
+            <div class="rcpt-item-row">
+              <span class="rcpt-col-item">প্রাণ হট টমেটো সস ৩</span>
+              <span class="rcpt-col-qty">1</span>
+              <span class="rcpt-col-price">550</span>
+              <span class="rcpt-col-total">550</span>
+            </div>
+            <div class="rcpt-item-subline">কেজি</div>
+          </div>
+
+          <div class="rcpt-divider-single">------------------------------------------</div>
+
+          <!-- Subtotal -->
+          <div class="rcpt-row-between">
+            <span>উপমোট</span>
+            <span>৳550</span>
+          </div>
+
+          <div class="rcpt-divider-double">==========================================</div>
+
+          <!-- Grand Total -->
+          <div class="rcpt-row-grand">
+            <span>সর্বমোট</span>
+            <span>৳550</span>
+          </div>
+
+          <div class="rcpt-divider-double">==========================================</div>
+
+          <!-- Payment Details -->
+          <div class="rcpt-payment-block">
+            <div class="rcpt-line">পরিশোধের মাধ্যম : নগদ</div>
+            <div class="rcpt-line">জমা           : ৳550</div>
+            <div class="rcpt-line">ফেরত          : ৳0</div>
+            <div class="rcpt-line">অবস্থা         : পরিশোধিত</div>
+          </div>
+
+          <div class="rcpt-divider-single">------------------------------------------</div>
+
+          <!-- Footer & Watermark -->
+          <div class="rcpt-footer-block">
+            <div class="rcpt-thank-you">আমাদের সাথে কেনাকাটা করার জন্য ধন্যবাদ!</div>
+            <div class="rcpt-pill-watermark">Powered by Techyfi POS</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Specifications & Technical Confirmation Table -->
+  <div class="specs-panel">
+    <div class="specs-title">
+      <span>📐</span> UI/UX Architecture & Technical Implementation Mapping
+    </div>
+
+    <table class="specs-table">
+      <thead>
+        <tr>
+          <th>Requirement Area</th>
+          <th>Previous State</th>
+          <th>New Implementation</th>
+          <th>Confirmation Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Transaction Summary Ribbon</strong></td>
+          <td><span class="badge-diff diff-old">Plain text labels</span></td>
+          <td><span class="badge-diff diff-new">Photorealistic 3D Animated Icons</span></td>
+          <td>3D Gold Coin Stack (`Realistic3DGoldCoinsIcon`) for Total, 3D Currency Note for Cash, and 3D Emerald Seal for PAID.</td>
+        </tr>
+        <tr>
+          <td><strong>Bottom Action Bar</strong></td>
+          <td><span class="badge-diff diff-old">Flat unicode emojis (✏️, ↩, 🗑️)</span></td>
+          <td><span class="badge-diff diff-new">Photorealistic 3D Animated Icons</span></td>
+          <td>3D Stylus Pen (`Realistic3DEditIcon`), 3D Parcel with Curved Return Ribbon (`Realistic3DReturnBoxIcon`), 3D Metallic Shredder/Trash, 3D Launch Orb (`Realistic3DForwardArrowIcon`).</td>
+        </tr>
+        <tr>
+          <td><strong>EN / বাং Toggle Switch</strong></td>
+          <td><span class="badge-diff diff-old">Not Available</span></td>
+          <td><span class="badge-diff diff-new">Sliding Pill Toggle [ EN | বাং ]</span></td>
+          <td>Contextually placed in receipt toolbar. <strong>Only alters receipt language</strong>; window and app UI strictly retain English.</td>
+        </tr>
+        <tr>
+          <td><strong>Bengali Phrasing Engine</strong></td>
+          <td><span class="badge-diff diff-old">English hardcoded text</span></td>
+          <td><span class="badge-diff diff-new">Natural Bangladeshi Retail Bengali</span></td>
+          <td>Uses standard Dhaka retail terms: <em>চালান নং</em>, <em>তারিখ</em>, <em>ক্যাশিয়ার</em>, <em>পণ্য / বিবরণ</em>, <em>পরিমাণ</em>, <em>দর</em>, <em>সর্বমোট</em>, <em>পরিশোধিত</em>, <em>ফেরত</em>.</td>
+        </tr>
+        <tr>
+          <td><strong>App Language Hierarchy</strong></td>
+          <td><span class="badge-diff diff-old">No separation</span></td>
+          <td><span class="badge-diff diff-new">Strict Locale Isolation</span></td>
+          <td>Interface elements only render in Bengali if app-level language is Bengali in Settings. Flipping EN/বাং toggle on the dialog never touches the window.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <h4><span>💎</span> Photorealistic 3D Icons</h4>
+        <p>Built with multi-layer radial gradients, specular highlights, and physics-inspired hover/float micro-animations matching the Techyfi POS design system.</p>
+      </div>
+      <div class="feature-card">
+        <h4><span>🎯</span> Isolated Language Scope</h4>
+        <p>The <strong>EN / বাং</strong> switch modifies only the thermal JPEG/PDF generation parameters without altering the app configuration or resetting the activity.</p>
+      </div>
+      <div class="feature-card">
+        <h4><span>🇧🇩</span> Authentic Retail Phrasing</h4>
+        <p>Guaranteed natural Bangladeshi terminology rather than robotic literal translations (e.g. <em>সর্বমোট</em> instead of <em>গ্র্যান্ড মোট</em>, <em>ফেরত</em> instead of <em>পরিবর্তন</em>).</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let currentRoll = '80mm';
+    let currentReceiptLang = 'EN';
+    let currentAppLang = 'EN';
+    let isZoomed = false;
+
+    // Exact 1:1 Dictionaries — English receipt is 100% untouched; Bangla receipt is an exact twin translating ONLY visible labels
+    const ENGLISH_RECEIPT = {
+      storeName: 'M/S AL KAWSAR STORE',
+      address: '121 WEST KAFRUL, TALTOLA, DHAKA',
+      phone: '01711352148 | 01712-650307',
+      invoiceLabel: 'Invoice  : #649',
+      dateLabel: 'Date     : 04-Sep-2026 07:11 AM',
+      cashierLabel: 'Cashier  : Kawsar Ahmed',
+      thItem: 'Item',
+      thQty: 'Qty',
+      thPrice: 'Price',
+      thTotal: 'Total',
+      item1: 'প্রাণ হট টমেটো সস ৩',
+      item1Sub: 'কেজি',
+      qty1: '1',
+      price1: '550',
+      total1: '550',
+      subtotalLabel: 'Subtotal',
+      subtotalVal: '৳550',
+      grandLabel: 'GRAND TOTAL',
+      grandVal: '৳550',
+      methodLabel: 'Payment Method : Cash',
+      paidLabel: 'Paid           : ৳550',
+      changeLabel: 'Change         : ৳0',
+      statusLabel: 'Status         : PAID',
+      footer: 'Thank you for shopping with us!',
+      poweredBy: 'Powered by Techyfi POS'
+    };
+
+    const BENGALI_RECEIPT = {
+      storeName: 'M/S AL KAWSAR STORE', // Brand / store name untouched
+      address: '121 WEST KAFRUL, TALTOLA, DHAKA', // Address untouched
+      phone: '01711352148 | 01712-650307', // Phone untouched
+      invoiceLabel: 'চালান নং : #649', // Only label translated; invoice number '#649' untouched
+      dateLabel: 'তারিখ   : 04-Sep-2026 07:11 AM', // Only label translated; date/time format untouched
+      cashierLabel: 'ক্যাশিয়ার : Kawsar Ahmed', // Only label translated; cashier name untouched
+      thItem: 'আইটেম', // Natural retail term matching Bangladeshi grocery stores
+      thQty: 'পরিমাণ',
+      thPrice: 'দর',
+      thTotal: 'মোট',
+      item1: 'প্রাণ হট টমেটো সস ৩', // Dynamic product name untouched
+      item1Sub: 'কেজি',
+      qty1: '1', // Dynamic quantity untouched
+      price1: '550', // Dynamic price untouched
+      total1: '550', // Dynamic line total untouched
+      subtotalLabel: 'উপমোট', // Natural retail twin for Subtotal
+      subtotalVal: '৳550', // Amount format untouched
+      grandLabel: 'সর্বমোট', // Authentic retail term
+      grandVal: '৳550', // Amount format untouched
+      methodLabel: 'পরিশোধের মাধ্যম : নগদ', // Natural payment method phrasing
+      paidLabel: 'জমা           : ৳550', // Natural retail term
+      changeLabel: 'ফেরত          : ৳0', // Natural retail term
+      statusLabel: 'অবস্থা         : পরিশোধিত', // Natural status phrasing
+      footer: 'আমাদের সাথে কেনাকাটা করার জন্য ধন্যবাদ!',
+      poweredBy: 'Powered by Techyfi POS'
+    };
+
+    function setRollWidth(roll) {
+      currentRoll = roll;
+      const paper = document.getElementById('thermalPaper');
+      const btnText = document.getElementById('btnHeroPrintText');
+      const subtitle = document.getElementById('uiRollSubtitle');
+      
+      // Update toggle chips
+      document.getElementById('chip80').classList.toggle('active', roll === '80mm');
+      document.getElementById('chip58').classList.toggle('active', roll === '58mm');
+      document.getElementById('ctl80').classList.toggle('active', roll === '80mm');
+      document.getElementById('ctl58').classList.toggle('active', roll === '58mm');
+
+      const dDouble = (roll === '58mm') ? '================================' : '==========================================';
+      const dSingle = (roll === '58mm') ? '--------------------------------' : '------------------------------------------';
+      ['rcptDiv1', 'rcptDiv5', 'rcptDiv6'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = dDouble;
+      });
+      ['rcptDiv2', 'rcptDiv3', 'rcptDiv4', 'rcptDiv7'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = dSingle;
+      });
+
+      if (roll === '58mm') {
+        paper.classList.add('roll-58mm');
+        btnText.innerText = (currentAppLang === 'BN') ? 'রশিদ প্রিন্ট করুন (৫৮ মিমি)' : 'Print (58 mm)';
+        subtitle.innerText = (currentAppLang === 'BN') ? '৫৮ মিমি থার্মাল রশিদ প্রিভিউ' : '58 mm Thermal Receipt Preview';
+      } else {
+        paper.classList.remove('roll-58mm');
+        btnText.innerText = (currentAppLang === 'BN') ? 'রশিদ প্রিন্ট করুন (৮০ মিমি)' : 'Print (80 mm)';
+        subtitle.innerText = (currentAppLang === 'BN') ? '৮০ মিমি থার্মাল রশিদ প্রিভিউ' : '80 mm Thermal Receipt Preview';
+      }
+      showToast(`Switched roll width to ${roll}`);
+    }
+
+    function setReceiptLang(lang) {
+      currentReceiptLang = lang;
+
+      // Update [ EN | বাং ] Pill Toggle
+      document.getElementById('pillEn').classList.toggle('active', lang === 'EN');
+      document.getElementById('pillBn').classList.toggle('active', lang === 'BN');
+      document.getElementById('ctlLangEn').classList.toggle('active', lang === 'EN');
+      document.getElementById('ctlLangBn').classList.toggle('active', lang === 'BN');
+
+      const dict = (lang === 'BN') ? BENGALI_RECEIPT : ENGLISH_RECEIPT;
+
+      // Update ONLY Receipt Contents (Window interface stays unaffected!)
+      document.getElementById('rcptStoreName').innerText = dict.storeName;
+      document.getElementById('rcptAddress').innerText = dict.address;
+      document.getElementById('rcptPhone').innerText = dict.phone;
+      document.getElementById('rcptInvoiceLabel').innerText = dict.invoiceLabel;
+      document.getElementById('rcptDateLabel').innerText = dict.dateLabel;
+      document.getElementById('rcptCashierLabel').innerText = dict.cashierLabel;
+      document.getElementById('thItem').innerText = dict.thItem;
+      document.getElementById('thQty').innerText = dict.thQty;
+      document.getElementById('thPrice').innerText = dict.thPrice;
+      document.getElementById('thTotal').innerText = dict.thTotal;
+      document.getElementById('rcptItem1').innerText = dict.item1;
+      document.getElementById('rcptItem1Sub').innerText = dict.item1Sub;
+      document.getElementById('rcptQty1').innerText = dict.qty1;
+      document.getElementById('rcptPrice1').innerText = dict.price1;
+      document.getElementById('rcptTotal1').innerText = dict.total1;
+      document.getElementById('rcptSubtotalLabel').innerText = dict.subtotalLabel;
+      document.getElementById('rcptSubtotalVal').innerText = dict.subtotalVal;
+      document.getElementById('rcptGrandLabel').innerText = dict.grandLabel;
+      document.getElementById('rcptGrandVal').innerText = dict.grandVal;
+      document.getElementById('rcptMethodLabel').innerText = dict.methodLabel;
+      document.getElementById('rcptPaidLabel').innerText = dict.paidLabel;
+      document.getElementById('rcptChangeLabel').innerText = dict.changeLabel;
+      document.getElementById('rcptStatusLabel').innerText = dict.statusLabel;
+      document.getElementById('rcptFooter').innerText = dict.footer;
+      document.getElementById('rcptPowered').innerText = dict.poweredBy;
+
+      showToast(lang === 'BN' ? '🇧🇩 Receipt language set to Bangla (Window stays English)' : '🇬🇧 Receipt language set to English');
+    }
+
+    function setAppLanguage(lang) {
+      currentAppLang = lang;
+      document.getElementById('ctlAppEn').classList.toggle('active', lang === 'EN');
+      document.getElementById('ctlAppBn').classList.toggle('active', lang === 'BN');
+
+      if (lang === 'BN') {
+        // Entire UI translates to Bangla
+        document.getElementById('appBarTitle').innerText = 'বিক্রয় সম্পন্ন করুন';
+        document.getElementById('uiDialogTitle').innerText = 'বিক্রয় সফলভাবে সম্পন্ন হয়েছে!';
+        document.getElementById('uiRollSubtitle').innerText = `${currentRoll === '58mm' ? '৫৮ মিমি' : '৮০ মিমি'} থার্মাল রশিদ প্রিভিউ`;
+        document.getElementById('uiLabelTotal').innerText = 'মোট টাকা';
+        document.getElementById('uiLabelMethod').innerText = 'পরিশোধের মাধ্যম';
+        document.getElementById('uiValMethod').innerText = 'নগদ';
+        document.getElementById('uiValStatus').innerText = 'পরিশোধিত';
+        document.getElementById('btnHeroPrintText').innerText = `রশিদ প্রিন্ট করুন (${currentRoll === '58mm' ? '৫৮ মিমি' : '৮০ মিমি'})`;
+        document.getElementById('btnShareText').innerText = 'শেয়ার';
+        document.getElementById('btnSaveText').innerText = 'সংরক্ষণ';
+        document.getElementById('btnRepeatText').innerText = 'পুনরায় কার্টে যুক্ত করুন';
+        document.getElementById('btnEditText').innerText = 'সম্পাদনা';
+        document.getElementById('btnReturnText').innerText = 'পণ্য ফেরত';
+        document.getElementById('btnDeleteText').innerText = 'মুছুন';
+        document.getElementById('btnDoneText').innerText = 'সম্পন্ন';
+        showToast('App Language set to Bangla (Global Setting)');
+      } else {
+        // App UI returns to English
+        document.getElementById('appBarTitle').innerText = 'Complete Sale';
+        document.getElementById('uiDialogTitle').innerText = 'Sale Completed Successfully!';
+        document.getElementById('uiRollSubtitle').innerText = `${currentRoll} Thermal Receipt Preview`;
+        document.getElementById('uiLabelTotal').innerText = 'Total';
+        document.getElementById('uiLabelMethod').innerText = 'Payment Method';
+        document.getElementById('uiValMethod').innerText = 'Cash';
+        document.getElementById('uiValStatus').innerText = 'PAID';
+        document.getElementById('btnHeroPrintText').innerText = `Print (${currentRoll === '58mm' ? '58 mm' : '80 mm'})`;
+        document.getElementById('btnShareText').innerText = 'Share';
+        document.getElementById('btnSaveText').innerText = 'Save';
+        document.getElementById('btnRepeatText').innerText = 'Add to Cart Again';
+        document.getElementById('btnEditText').innerText = 'Edit';
+        document.getElementById('btnReturnText').innerText = 'Return items';
+        document.getElementById('btnDeleteText').innerText = 'Delete';
+        document.getElementById('btnDoneText').innerText = 'Done';
+        showToast('App Language set to English');
+      }
+    }
+
+    function toggleZoom() {
+      isZoomed = !isZoomed;
+      const paper = document.getElementById('thermalPaper');
+      const zoomText = document.getElementById('zoomText');
+      const ctlZoom = document.getElementById('ctlZoom');
+      
+      paper.classList.toggle('zoomed', isZoomed);
+      ctlZoom.classList.toggle('active', isZoomed);
+      zoomText.innerText = isZoomed ? 'Reset 1.0x' : 'Zoom 1.2x';
+      showToast(isZoomed ? '🔍 Zoomed In (1.2x Inspect)' : '🔎 Zoom Reset (1.0x)');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('mockToast');
+      const text = document.getElementById('toastText');
+      text.innerText = msg;
+      toast.classList.add('show');
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2200);
+    }
+  </script>
+</body>
+</html>

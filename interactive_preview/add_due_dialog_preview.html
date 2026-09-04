@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Techyfi POS — Add Customer Due Dialog Redesign</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0B111E;
+      --card-bg: #131D31;
+      --surface: #1E293B;
+      --surface-light: #F8FAFC;
+      --primary: #0284C7;
+      --primary-glow: rgba(2, 132, 199, 0.4);
+      --emerald: #10B981;
+      --emerald-glow: rgba(16, 185, 129, 0.35);
+      --amber: #F59E0B;
+      --amber-glow: rgba(245, 158, 11, 0.35);
+      --rose: #F43F5E;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(2, 132, 199, 0.3);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background: #070B14;
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 60px;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Background Glow */
+    .ambient-glow {
+      position: fixed;
+      top: -150px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(2, 132, 199, 0.22) 0%, rgba(16, 185, 129, 0.12) 50%, transparent 70%);
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Header Nav */
+    header {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      max-width: 960px;
+      margin-bottom: 24px;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(2, 132, 199, 0.15);
+      border: 1px solid rgba(2, 132, 199, 0.4);
+      padding: 5px 14px;
+      border-radius: 9999px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #38BDF8;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.6px;
+      background: linear-gradient(135deg, #FFFFFF 30%, #94A3B8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    header p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    /* Main Container */
+    .preview-container {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 32px;
+      max-width: 1220px;
+      width: 100%;
+    }
+
+    /* Device Simulator */
+    .device-frame {
+      width: 395px;
+      background: #000;
+      border-radius: 46px;
+      padding: 11px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.15), 0 0 40px rgba(2, 132, 199, 0.2);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .screen {
+      background: #0B1120;
+      border-radius: 36px;
+      height: 780px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      user-select: none;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      height: 38px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #94A3B8;
+      z-index: 20;
+    }
+
+    .camera-cutout {
+      width: 12px;
+      height: 12px;
+      background: #000;
+      border-radius: 50%;
+    }
+
+    /* Screen Dim Overlay (Modal Backdrop) */
+    .modal-backdrop {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      position: relative;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* ============================================================
+       REDESIGNED DIALOG CARD
+       ============================================================ */
+    .dialog-card {
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 26px;
+      width: 100%;
+      box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      padding: 16px 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .light-theme .dialog-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.15), 0 0 0 1px #E2E8F0;
+    }
+
+    @keyframes scaleUp {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* 1. Header Bar */
+    .dialog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon-container {
+      position: relative;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-titles h3 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #F8FAFC;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .light-theme .header-titles h3 {
+      color: #0F172A;
+    }
+
+    .header-titles .subtitle {
+      font-size: 10px;
+      font-weight: 700;
+      color: #F59E0B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .close-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94A3B8;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .light-theme .close-btn {
+      background: #F1F5F9;
+      border-color: #E2E8F0;
+      color: #64748B;
+    }
+
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #FFF;
+      transform: scale(1.08);
+    }
+
+    /* 2. Customer Capsule (For Existing Customer) */
+    .customer-capsule {
+      background: linear-gradient(135deg, rgba(2, 132, 199, 0.12) 0%, rgba(30, 41, 59, 0.6) 100%);
+      border: 1px solid rgba(2, 132, 199, 0.25);
+      border-radius: 14px;
+      padding: 9px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .light-theme .customer-capsule {
+      background: linear-gradient(135deg, #F0F9FF 0%, #F8FAFC 100%);
+      border-color: #BAE6FD;
+    }
+
+    .capsule-left {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .avatar-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+      color: #FFF;
+      font-weight: 900;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35);
+    }
+
+    .customer-info .name {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #F8FAFC;
+    }
+
+    .light-theme .customer-info .name {
+      color: #0F172A;
+    }
+
+    .customer-info .phone {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #94A3B8;
+      font-weight: 600;
+    }
+
+    .capsule-right {
+      text-align: right;
+    }
+
+    .capsule-right .lbl {
+      font-size: 8.5px;
+      font-weight: 700;
+      color: #94A3B8;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .capsule-right .val {
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 900;
+      color: #F59E0B;
+    }
+
+    /* New Customer Input Mode */
+    .new-customer-box {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .compact-field {
+      position: relative;
+      flex: 1;
+    }
+
+    .compact-field input {
+      width: 100%;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 0 10px 0 30px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #F8FAFC;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .light-theme .compact-field input {
+      background: #F8FAFC;
+      border-color: #CBD5E1;
+      color: #0F172A;
+    }
+
+    .compact-field input:focus {
+      border-color: #0284C7;
+      box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+    }
+
+    .compact-field .field-icon {
+      position: absolute;
+      left: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: #94A3B8;
+      pointer-events: none;
+    }
+
+    /* 3. Hero Due Amount Box */
+    .amount-input-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1.5px solid rgba(245, 158, 11, 0.3);
+      border-radius: 16px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .light-theme .amount-input-card {
+      background: #FFFBEB;
+      border-color: #FDE68A;
+    }
+
+    .amount-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .amount-header-row label {
+      font-size: 9.5px;
+      font-weight: 800;
+      color: #F59E0B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .amount-hero-wrapper {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .currency-symbol {
+      font-size: 22px;
+      font-weight: 900;
+      color: #F59E0B;
+    }
+
+    .hero-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+      color: #F8FAFC;
+      outline: none;
+      letter-spacing: -0.5px;
+    }
+
+    .light-theme .hero-input {
+      color: #0F172A;
+    }
+
+    /* Quick Increment Chips */
+    .chips-row {
+      display: flex;
+      gap: 5px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .chips-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: #E2E8F0;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .light-theme .chip-btn {
+      background: #FFFFFF;
+      border-color: #CBD5E1;
+      color: #334155;
+    }
+
+    .chip-btn:hover {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: #F59E0B;
+      color: #FBBF24;
+      transform: translateY(-1px);
+    }
+
+    .chip-btn.clear {
+      color: #F43F5E;
+      border-color: rgba(244, 63, 94, 0.3);
+    }
+
+    .chip-btn.clear:hover {
+      background: rgba(244, 63, 94, 0.15);
+      border-color: #F43F5E;
+    }
+
+    /* 4. Live Balance Matrix & Credit Limit Pill */
+    .balance-preview-strip {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .light-theme .balance-preview-strip {
+      background: #F8FAFC;
+      border-color: #E2E8F0;
+    }
+
+    .balance-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .balance-row .lbl {
+      color: #94A3B8;
+      font-weight: 600;
+    }
+
+    .balance-row .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 800;
+      color: #F8FAFC;
+    }
+
+    .light-theme .balance-row .val {
+      color: #0F172A;
+    }
+
+    .balance-row .val.highlight {
+      color: #F43F5E;
+      font-size: 12px;
+    }
+
+    /* Credit Limit Bar */
+    .credit-bar-container {
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+
+    .credit-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10B981, #F59E0B);
+      border-radius: 9999px;
+      transition: width 0.3s ease, background 0.3s ease;
+    }
+
+    .credit-bar-fill.overlimit {
+      background: #F43F5E;
+    }
+
+    /* 5. Optional Reference Note & Credit Limit Input */
+    .secondary-inputs {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 6px;
+    }
+
+    .mini-input-box {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 10px;
+      padding: 5px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .light-theme .mini-input-box {
+      background: #F8FAFC;
+      border-color: #E2E8F0;
+    }
+
+    .mini-input-box label {
+      font-size: 8.5px;
+      font-weight: 700;
+      color: #94A3B8;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .mini-input-box input {
+      background: transparent;
+      border: none;
+      font-size: 11px;
+      font-weight: 700;
+      color: #F8FAFC;
+      outline: none;
+    }
+
+    .light-theme .mini-input-box input {
+      color: #0F172A;
+    }
+
+    /* 6. Action Buttons Bar (Symmetric & Single-Line) */
+    .dialog-actions {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .dialog-btn {
+      height: 40px;
+      border-radius: 12px;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+    }
+
+    .dialog-btn.cancel {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #94A3B8;
+    }
+
+    .light-theme .dialog-btn.cancel {
+      background: #F1F5F9;
+      border-color: #CBD5E1;
+      color: #475569;
+    }
+
+    .dialog-btn.cancel:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #FFF;
+    }
+
+    .dialog-btn.submit {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #FFF;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+
+    .dialog-btn.submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+    }
+
+    /* ============================================================
+       RIGHT PANEL: CONTROLS & COMPARISON
+       ============================================================ */
+    .controls-panel {
+      flex: 1;
+      min-width: 320px;
+      max-width: 580px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+    }
+
+    .panel-card h2 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #FFF;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Toggle Mode Switcher */
+    .mode-switch-group {
+      display: flex;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border);
+      padding: 4px;
+      border-radius: 12px;
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mode-btn.active {
+      background: var(--primary);
+      color: #FFF;
+      box-shadow: 0 3px 10px rgba(2, 132, 199, 0.4);
+    }
+
+    /* Comparison Table */
+    .comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .comp-table th, .comp-table td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .comp-table th {
+      color: #94A3B8;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .comp-table .bad {
+      color: #FDA4AF;
+    }
+
+    .comp-table .good {
+      color: #6EE7B7;
+      font-weight: 700;
+    }
+
+    /* 3D Icons Showcase */
+    .icons-showcase {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .icon-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .icon-card:hover {
+      background: rgba(255, 255, 255, 0.07);
+      transform: translateY(-2px);
+      border-color: rgba(2, 132, 199, 0.3);
+    }
+
+    .icon-card span {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #0F172A;
+      border: 1px solid #10B981;
+      color: #FFF;
+      padding: 10px 20px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* 3D Animated Floating Effects */
+    .floating-anim {
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-4px) rotate(2deg); }
+    }
+
+    .pulse-glow {
+      animation: pulseGlow 2.5s infinite;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.4)); }
+      50% { filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.8)); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-glow"></div>
+
+  <header>
+    <div class="badge-pill">✨ UI/UX Redesign & Interactive Lab</div>
+    <h1>Add Customer Due Dialog Redesign</h1>
+    <p>Compact form factor with customer profile capsule, quick incremental amount chips, real-time balance calculations, and photorealistic 3D icons.</p>
+  </header>
+
+  <div class="preview-container">
+
+    <!-- LEFT: Interactive Device Simulator -->
+    <div class="device-frame">
+      <div class="screen" id="phoneScreen">
+        
+        <!-- Status Bar -->
+        <div class="status-bar">
+          <span>8:00</span>
+          <div class="camera-cutout"></div>
+          <div style="display:flex; gap: 4px; align-items: center;">
+            <svg width="14" height="10" viewBox="0 0 14 10" fill="#94A3B8"><path d="M1 8h2v2H1V8zm4-3h2v5H5V5zm4-3h2v8H9V2zm4-2h1v10h-1V0z"/></svg>
+            <svg width="16" height="9" viewBox="0 0 16 9" fill="#94A3B8"><rect x="1" y="1" width="12" height="7" rx="2" stroke="#94A3B8" stroke-width="1.2" fill="none"/><rect x="3" y="3" width="7" height="3" rx="1" fill="#10B981"/><path d="M14 3h1v3h-1z"/></svg>
+          </div>
+        </div>
+
+        <!-- Dimmed Modal Backdrop -->
+        <div class="modal-backdrop">
+          
+          <!-- DIALOG CARD -->
+          <div class="dialog-card" id="dialogCard">
+            
+            <!-- 1. Header with 3D Animated Khata & Close -->
+            <div class="dialog-header">
+              <div class="header-left">
+                <div class="icon-container floating-anim">
+                  <!-- 3D Gold Khata Book SVG -->
+                  <svg width="32" height="32" viewBox="0 0 36 36" fill="none">
+                    <rect x="4" y="4" width="26" height="28" rx="5" fill="url(#khataCoverGrad)" />
+                    <rect x="4" y="4" width="6" height="28" rx="2" fill="#78350F" />
+                    <circle cx="20" cy="18" r="6.5" fill="url(#khataGoldGrad)" class="pulse-glow" />
+                    <path d="M18.5 14.5V21.5M15 18H22" stroke="#78350F" stroke-width="1.8" stroke-linecap="round" />
+                    <rect x="28" y="6" width="2" height="24" rx="1" fill="#FEF3C7" />
+                    <defs>
+                      <linearGradient id="khataCoverGrad" x1="4" y1="4" x2="30" y2="32" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#F59E0B" />
+                        <stop offset="0.5" stop-color="#D97706" />
+                        <stop offset="1" stop-color="#92400E" />
+                      </linearGradient>
+                      <linearGradient id="khataGoldGrad" x1="13.5" y1="11.5" x2="26.5" y2="24.5" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FEF08A" />
+                        <stop offset="1" stop-color="#F59E0B" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="header-titles">
+                  <h3 id="dialogTitle">Add Due to Customer</h3>
+                  <div class="subtitle" id="dialogSubtitle">Digital Khata Credit</div>
+                </div>
+              </div>
+
+              <div class="close-btn" onclick="showToast('Close dialog simulation')">✕</div>
+            </div>
+
+            <!-- 2. Customer Profile Capsule (Existing Mode) OR Inputs (New Mode) -->
+            <div id="customerCapsuleSection">
+              <div class="customer-capsule">
+                <div class="capsule-left">
+                  <div class="avatar-circle" id="dispAvatar">H</div>
+                  <div class="customer-info">
+                    <div class="name" id="dispName">HasanStore</div>
+                    <div class="phone" id="dispPhone">01711002233</div>
+                  </div>
+                </div>
+                <div class="capsule-right">
+                  <div class="lbl">Current Due</div>
+                  <div class="val" id="dispCurrDue">৳2,500</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- New Customer Fields (Hidden when Preset) -->
+            <div id="newCustomerFields" class="new-customer-box" style="display: none;">
+              <div class="input-row">
+                <div class="compact-field">
+                  <span class="field-icon">👤</span>
+                  <input type="text" id="inpNewName" placeholder="Customer Name *" value="Rahim Enterprise" oninput="updateLiveCalculation()" />
+                </div>
+                <div class="compact-field">
+                  <span class="field-icon">📱</span>
+                  <input type="tel" id="inpNewPhone" placeholder="Phone Number *" value="01812345678" oninput="updateLiveCalculation()" />
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Hero Due Amount Input Box -->
+            <div class="amount-input-card">
+              <div class="amount-header-row">
+                <label>
+                  <span>💰</span> New Due Amount (৳) *
+                </label>
+                <span style="font-size: 9px; font-weight: 700; color: #94A3B8;">Enter or Tap Preset</span>
+              </div>
+
+              <div class="amount-hero-wrapper">
+                <span class="currency-symbol">৳</span>
+                <input type="number" id="inpAmount" class="hero-input" placeholder="0" value="1500" oninput="updateLiveCalculation()" />
+              </div>
+
+              <!-- Quick Increment Chips -->
+              <div class="chips-row">
+                <button class="chip-btn" onclick="addAmount(500)">+৳500</button>
+                <button class="chip-btn" onclick="addAmount(1000)">+৳1,000</button>
+                <button class="chip-btn" onclick="addAmount(2000)">+৳2,000</button>
+                <button class="chip-btn" onclick="addAmount(5000)">+৳5,000</button>
+                <button class="chip-btn clear" onclick="clearAmount()">Clear</button>
+              </div>
+            </div>
+
+            <!-- 4. Real-time Balance Matrix & Credit Limit Bar -->
+            <div class="balance-preview-strip">
+              <div class="balance-row">
+                <span class="lbl">Previous Due</span>
+                <span class="val" id="rowPrevDue">৳2,500</span>
+              </div>
+              <div class="balance-row">
+                <span class="lbl">New Unpaid Credit</span>
+                <span class="val" style="color: #F59E0B;" id="rowAddedDue">+৳1,500</span>
+              </div>
+              <div class="balance-row" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 4px;">
+                <span class="lbl" style="font-weight: 800; color: #F8FAFC;">Updated Outstanding</span>
+                <span class="val highlight" id="rowTotalDue">৳4,000</span>
+              </div>
+
+              <!-- Credit Limit Utilization Bar -->
+              <div style="display: flex; justify-content: space-between; font-size: 8.5px; font-weight: 700; color: #94A3B8; margin-top: 2px;">
+                <span>Credit Limit: <strong id="lblCreditLimit">৳10,000</strong></span>
+                <span id="lblLimitStatus" style="color: #10B981;">40% Used (Safe)</span>
+              </div>
+              <div class="credit-bar-container">
+                <div class="credit-bar-fill" id="creditFill" style="width: 40%;"></div>
+              </div>
+            </div>
+
+            <!-- 5. Secondary Utility Inputs (Reference Note & Optional Limit) -->
+            <div class="secondary-inputs">
+              <div class="mini-input-box">
+                <label>📝 Reference / Note (Optional)</label>
+                <input type="text" id="inpNote" placeholder="e.g., Memo #104, Goods" />
+              </div>
+              <div class="mini-input-box">
+                <label>💳 Credit Limit (৳)</label>
+                <input type="number" id="inpLimit" placeholder="10000" value="10000" oninput="updateLiveCalculation()" />
+              </div>
+            </div>
+
+            <!-- 6. Bottom Action Buttons Bar -->
+            <div class="dialog-actions">
+              <button class="dialog-btn cancel" onclick="showToast('Cancelled')">
+                Cancel
+              </button>
+              <button class="dialog-btn submit" onclick="triggerSaveAnim()">
+                <!-- 3D Checkmark Icon -->
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" fill="#FFF" />
+                  <path d="M8 12L11 15L16 9" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span id="btnSubmitText">Save Due (৳4,000)</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT: Interactive Controls & UX Breakdown -->
+    <div class="controls-panel">
+      
+      <!-- Preset Mode Selector -->
+      <div class="panel-card">
+        <h2>🎮 Interactive Mode Simulator</h2>
+        
+        <div class="mode-switch-group">
+          <button class="mode-btn active" id="btnModeExisting" onclick="switchCustomerMode(true)">
+            Existing Customer (HasanStore)
+          </button>
+          <button class="mode-btn" id="btnModeNew" onclick="switchCustomerMode(false)">
+            New Customer Form
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <button class="chip-btn" onclick="toggleTheme()" style="padding: 8px 12px; font-size: 11.5px; justify-content: center; display: flex; align-items: center; gap: 6px;">
+            🌓 <span id="lblTheme">Light Theme</span>
+          </button>
+          <button class="chip-btn" onclick="loadTestPreset('OverLimit')" style="padding: 8px 12px; font-size: 11.5px; justify-content: center; display: flex; align-items: center; gap: 6px; color: #FDA4AF; border-color: rgba(244,63,94,0.4);">
+            🚨 Test Limit Breach (৳12,000)
+          </button>
+        </div>
+      </div>
+
+      <!-- UX Improvements Summary -->
+      <div class="panel-card">
+        <h2>💡 Key UI/UX Improvements</h2>
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Before (Current)</th>
+              <th>Redesigned (Proposed)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Customer Info</strong></td>
+              <td class="bad">2 large read-only text fields wasting ~80px vertical space</td>
+              <td class="good">Sleek 1-line capsule with avatar, name, phone & balance</td>
+            </tr>
+            <tr>
+              <td><strong>Amount Entry</strong></td>
+              <td class="bad">Small text field with manual typing only</td>
+              <td class="good">Hero typography + 1-tap quick chips (+500, +1k, +2k, +5k)</td>
+            </tr>
+            <tr>
+              <td><strong>Balance Feedback</strong></td>
+              <td class="bad">No preview of new total due or limit</td>
+              <td class="good">Live Khata calculation matrix + credit gauge bar</td>
+            </tr>
+            <tr>
+              <td><strong>Visual Polish</strong></td>
+              <td class="bad">Flat icons, basic outlines, generic styling</td>
+              <td class="good">Photorealistic 3D icons, soft glow, glassmorphic layout</td>
+            </tr>
+            <tr>
+              <td><strong>Submit Button</strong></td>
+              <td class="bad">"Save Due Record" (generic)</td>
+              <td class="good">Dynamic "Save Due (৳4,000)" with 3D checkmark</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 3D Animated Icons Showcase -->
+      <div class="panel-card">
+        <h2>✨ Photorealistic 3D Icons Suite</h2>
+        <div class="icons-showcase">
+          
+          <div class="icon-card">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" class="floating-anim">
+              <rect x="4" y="4" width="26" height="28" rx="5" fill="url(#icKhata)" />
+              <rect x="4" y="4" width="6" height="28" rx="2" fill="#78350F" />
+              <circle cx="20" cy="18" r="6" fill="#FEF08A" />
+              <path d="M18.5 15V21M15.5 18H21.5" stroke="#78350F" stroke-width="1.6" stroke-linecap="round" />
+              <defs><linearGradient id="icKhata" x1="4" y1="4" x2="30" y2="32"><stop stop-color="#F59E0B"/><stop offset="1" stop-color="#92400E"/></linearGradient></defs>
+            </svg>
+            <span>3D Khata Ledger</span>
+          </div>
+
+          <div class="icon-card">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+              <path d="M18 4L6 8V17C6 24 11 30 18 32C25 30 30 24 30 17V8L18 4Z" fill="url(#icShield)" />
+              <rect x="11" y="14" width="14" height="9" rx="2" fill="#FFFFFF" />
+              <circle cx="15" cy="18.5" r="1.5" fill="#0284C7" />
+              <line x1="18" y1="18.5" x2="23" y2="18.5" stroke="#0284C7" stroke-width="1.5" stroke-linecap="round" />
+              <defs><linearGradient id="icShield" x1="6" y1="4" x2="30" y2="32"><stop stop-color="#38BDF8"/><stop offset="1" stop-color="#0284C7"/></linearGradient></defs>
+            </svg>
+            <span>3D Credit Shield</span>
+          </div>
+
+          <div class="icon-card">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+              <circle cx="18" cy="18" r="14" fill="url(#icTaka)" />
+              <circle cx="18" cy="18" r="11" stroke="#FDE68A" stroke-width="1.2" stroke-dasharray="2 2" />
+              <text x="18" y="23" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="16" fill="#FFF" text-anchor="middle">৳</text>
+              <defs><linearGradient id="icTaka" x1="4" y1="4" x2="32" y2="32"><stop stop-color="#10B981"/><stop offset="1" stop-color="#047857"/></linearGradient></defs>
+            </svg>
+            <span>3D Taka Coin</span>
+          </div>
+
+          <div class="icon-card">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+              <rect x="5" y="5" width="26" height="26" rx="8" fill="url(#icSuccess)" />
+              <path d="M11 18L16 23L25 13" stroke="#FFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+              <defs><linearGradient id="icSuccess" x1="5" y1="5" x2="31" y2="31"><stop stop-color="#34D399"/><stop offset="1" stop-color="#059669"/></linearGradient></defs>
+            </svg>
+            <span>3D Save Action</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <span>⚡</span>
+    <span id="toastText">Action triggered</span>
+  </div>
+
+  <script>
+    let isExistingCustomer = true;
+    let initialDue = 2500;
+
+    function switchCustomerMode(existing) {
+      isExistingCustomer = existing;
+      document.getElementById('btnModeExisting').classList.toggle('active', existing);
+      document.getElementById('btnModeNew').classList.toggle('active', !existing);
+      
+      const capsule = document.getElementById('customerCapsuleSection');
+      const newFields = document.getElementById('newCustomerFields');
+      const title = document.getElementById('dialogTitle');
+
+      if (existing) {
+        capsule.style.display = 'block';
+        newFields.style.display = 'none';
+        title.innerText = 'Add Due to Customer';
+        initialDue = 2500;
+      } else {
+        capsule.style.display = 'none';
+        newFields.style.display = 'block';
+        title.innerText = 'Add Customer Due';
+        initialDue = 0;
+      }
+
+      updateLiveCalculation();
+      showToast('Switched to ' + (existing ? 'Existing Customer' : 'New Customer') + ' mode');
+    }
+
+    function addAmount(val) {
+      const inp = document.getElementById('inpAmount');
+      const curr = parseFloat(inp.value) || 0;
+      inp.value = curr + val;
+      updateLiveCalculation();
+      showToast('Added +৳' + val.toLocaleString());
+    }
+
+    function clearAmount() {
+      document.getElementById('inpAmount').value = '';
+      updateLiveCalculation();
+      showToast('Amount cleared');
+    }
+
+    function updateLiveCalculation() {
+      const added = parseFloat(document.getElementById('inpAmount').value) || 0;
+      const limit = parseFloat(document.getElementById('inpLimit').value) || 10000;
+      const prev = initialDue;
+      const total = prev + added;
+
+      document.getElementById('dispCurrDue').innerText = '৳' + prev.toLocaleString();
+      document.getElementById('rowPrevDue').innerText = '৳' + prev.toLocaleString();
+      document.getElementById('rowAddedDue').innerText = '+৳' + added.toLocaleString();
+      document.getElementById('rowTotalDue').innerText = '৳' + total.toLocaleString();
+      document.getElementById('lblCreditLimit').innerText = '৳' + limit.toLocaleString();
+      document.getElementById('btnSubmitText').innerText = 'Save Due (৳' + total.toLocaleString() + ')';
+
+      // Credit limit percentage
+      const pct = limit > 0 ? Math.min(Math.round((total / limit) * 100), 100) : 0;
+      const bar = document.getElementById('creditFill');
+      const status = document.getElementById('lblLimitStatus');
+      
+      bar.style.width = pct + '%';
+
+      if (total > limit && limit > 0) {
+        bar.classList.add('overlimit');
+        status.innerText = Math.round((total / limit) * 100) + '% (Limit Exceeded!)';
+        status.style.color = '#F43F5E';
+      } else if (pct >= 80) {
+        bar.classList.remove('overlimit');
+        status.innerText = pct + '% Used (High)';
+        status.style.color = '#F59E0B';
+      } else {
+        bar.classList.remove('overlimit');
+        status.innerText = pct + '% Used (Safe)';
+        status.style.color = '#10B981';
+      }
+    }
+
+    function loadTestPreset(type) {
+      if (type === 'OverLimit') {
+        document.getElementById('inpAmount').value = '10000';
+        document.getElementById('inpLimit').value = '8000';
+        updateLiveCalculation();
+        showToast('🚨 Simulated Credit Limit breach test');
+      }
+    }
+
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light-theme');
+      document.getElementById('phoneScreen').classList.toggle('light', isLight);
+      document.getElementById('lblTheme').innerText = isLight ? 'Dark Theme' : 'Light Theme';
+    }
+
+    function showToast(text) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastText').innerText = text;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2400);
+    }
+
+    function triggerSaveAnim() {
+      const card = document.getElementById('dialogCard');
+      card.style.transform = 'scale(0.97)';
+      setTimeout(() => {
+        card.style.transform = 'scale(1)';
+        showToast('✅ Due record successfully saved to Digital Khata!');
+      }, 200);
+    }
+
+    // Initialize
+    updateLiveCalculation();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS — Interactive Feature & UI/UX Preview Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #0B0F19;
+      --bg-surface: #111827;
+      --bg-card: #1F2937;
+      --bg-card-hover: #263345;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(99, 102, 241, 0.4);
+      --primary: #6366F1;
+      --primary-gradient: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --info: #06B6D4;
+      --text-main: #F9FAFB;
+      --text-muted: #9CA3AF;
+      --text-subtle: #6B7280;
+      --phone-width: 380px;
+      --phone-height: 760px;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+      --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Ambient Header */
+    header {
+      background: rgba(17, 24, 39, 0.8);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 16px 32px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--primary-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: var(--radius-full);
+      background: rgba(99, 102, 241, 0.15);
+      color: #A5B4FC;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .stat-pill .count {
+      color: var(--success);
+      font-weight: 700;
+    }
+
+    /* Main Workspace Layout */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 32px;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 32px;
+      width: 100%;
+      flex: 1;
+    }
+
+    @media (max-width: 1200px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left Column: Feature Review & Controls */
+    .controls-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(31, 41, 55, 0.8) 0%, rgba(17, 24, 39, 0.9) 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-banner::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-title {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, #FFFFFF, #CBD5E1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 700px;
+    }
+
+    /* Category Filter Tabs */
+    .category-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .tab-btn {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      background: var(--bg-card);
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 2px 10px rgba(99, 102, 241, 0.4);
+    }
+
+    /* Feature Cards List */
+    .features-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-card.highlighted {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, rgba(31, 41, 55, 0.9) 0%, rgba(99, 102, 241, 0.05) 100%);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      gap: 12px;
+    }
+
+    .card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .feature-icon {
+      font-size: 22px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .feature-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .feature-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .badge-high { background: rgba(239, 68, 68, 0.15); color: #FCA5A5; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-rec { background: rgba(16, 185, 129, 0.15); color: #6EE7B7; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-ui { background: rgba(6, 182, 212, 0.15); color: #67E8F9; border: 1px solid rgba(6, 182, 212, 0.3); }
+    .badge-biz { background: rgba(245, 158, 11, 0.15); color: #FCD34D; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-test {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-test:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #FFFFFF;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--text-muted);
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+      background-color: white;
+    }
+
+    .card-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .card-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 12px;
+    }
+
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metric-label {
+      color: var(--text-subtle);
+      font-weight: 500;
+    }
+
+    .metric-val {
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    /* Right Column: Interactive Phone Simulator */
+    .simulator-panel {
+      position: sticky;
+      top: 96px;
+      height: fit-content;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .phone-frame {
+      width: var(--phone-width);
+      height: var(--phone-height);
+      background: #000000;
+      border-radius: 44px;
+      border: 10px solid #1E293B;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), var(--shadow-glow);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Phone Status Bar */
+    .phone-status-bar {
+      height: 36px;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94A3B8;
+      background: #0F172A;
+      z-index: 20;
+    }
+
+    .camera-punch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #020617;
+      border: 1px solid #334155;
+    }
+
+    /* Phone Content Screen */
+    .phone-screen {
+      flex: 1;
+      background: #0F172A;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .phone-screen::-webkit-scrollbar {
+      width: 0px;
+    }
+
+    /* App Bar inside Simulator */
+    .sim-app-bar {
+      padding: 14px 16px;
+      background: #1E293B;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sim-app-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #F8FAFC;
+    }
+
+    .sim-view-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Dynamic Content Container inside phone */
+    .sim-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+    }
+
+    /* Mock Components */
+    .mock-card {
+      background: #1E293B;
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .mock-card-header {
+      font-size: 12px;
+      font-weight: 700;
+      color: #94A3B8;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Smart Tender Chips Component */
+    .tender-chips-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .tender-chip {
+      background: #334155;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #F8FAFC;
+      padding: 8px 4px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tender-chip:hover {
+      background: var(--primary);
+    }
+
+    .tender-chip.exact {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: #10B981;
+      color: #34D399;
+    }
+
+    /* Margin Calculator Component */
+    .margin-calc-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px dashed rgba(99, 102, 241, 0.4);
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 8px;
+    }
+
+    .margin-stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 4px 0;
+    }
+
+    .margin-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.2);
+      color: #34D399;
+    }
+
+    /* Aging Dues Component */
+    .aging-pill-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .aging-pill {
+      border-radius: 8px;
+      padding: 8px 4px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+
+    .aging-pill.green { background: rgba(16, 185, 129, 0.15); color: #34D399; border-color: rgba(16, 185, 129, 0.3); }
+    .aging-pill.amber { background: rgba(245, 158, 11, 0.15); color: #FBBF24; border-color: rgba(245, 158, 11, 0.3); }
+    .aging-pill.red { background: rgba(239, 68, 68, 0.15); color: #F87171; border-color: rgba(239, 68, 68, 0.3); }
+
+    .aging-val {
+      font-size: 13px;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+
+    /* Hourly Heatmap Component */
+    .heatmap-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      height: 70px;
+      padding: 8px 0;
+    }
+
+    .heat-bar-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+
+    .heat-bar {
+      width: 100%;
+      background: linear-gradient(to top, #6366F1, #A5B4FC);
+      border-radius: 3px;
+      transition: height 0.3s ease;
+    }
+
+    .heat-bar.peak {
+      background: linear-gradient(to top, #EF4444, #F87171);
+    }
+
+    .heat-label {
+      font-size: 8.5px;
+      color: #64748B;
+      font-weight: 600;
+    }
+
+    /* Phone Bottom Navigation */
+    .phone-nav-bar {
+      height: 60px;
+      background: #1E293B;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #94A3B8;
+      cursor: pointer;
+      transition: color 0.15s ease;
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+    }
+
+    .nav-icon {
+      font-size: 18px;
+    }
+
+    /* Simulator Controls Footer */
+    .sim-controls {
+      display: flex;
+      gap: 8px;
+      width: var(--phone-width);
+    }
+
+    .btn-sim-action {
+      flex: 1;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 10px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .btn-sim-action:hover {
+      background: var(--bg-card);
+      border-color: var(--primary);
+    }
+
+    /* Confirmation Box */
+    .confirmation-banner {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+    }
+
+    .confirm-text h4 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #34D399;
+      margin-bottom: 4px;
+    }
+
+    .confirm-text p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .btn-confirm-all {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: white;
+      border: none;
+      padding: 10px 22px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .btn-confirm-all:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">T</div>
+      <div>
+        <div class="brand-title">Techyfi POS — System Improvement Hub</div>
+        <div style="font-size: 11px; color: var(--text-muted);">Comprehensive UI/UX & Functional Review</div>
+      </div>
+      <span class="brand-badge">Interactive Preview</span>
+    </div>
+    <div class="header-actions">
+      <div class="stat-pill">
+        <span>Suggested Features:</span>
+        <span class="count" id="activeCount">12/12</span>
+      </div>
+      <div class="stat-pill">
+        <span>Status:</span>
+        <span style="color: #60A5FA; font-weight: 700;">Awaiting User Confirmation</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace">
+
+    <!-- Left Column: Feature Controls & Review -->
+    <div class="controls-panel">
+
+      <div class="hero-banner">
+        <h1 class="hero-title">Proposed Enhancements & Features</h1>
+        <p class="hero-desc">
+          Review each recommended feature, live UI/UX improvement, and operational intelligence tool below. Toggle any item ON or OFF to see its live simulation on the mobile POS terminal on the right.
+        </p>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="category-tabs">
+        <button class="tab-btn active" onclick="filterCategory('all', this)">All Enhancements (12)</button>
+        <button class="tab-btn" onclick="filterCategory('checkout', this)">⚡ Fast Checkout (3)</button>
+        <button class="tab-btn" onclick="filterCategory('inventory', this)">📦 Inventory & Profit (2)</button>
+        <button class="tab-btn" onclick="filterCategory('dues', this)">📒 Dues & CRM (2)</button>
+        <button class="tab-btn" onclick="filterCategory('analytics', this)">📊 Financial & BI (2)</button>
+        <button class="tab-btn" onclick="filterCategory('suppliers', this)">🚚 Suppliers & Ledger (2)</button>
+        <button class="tab-btn" onclick="filterCategory('uiux', this)">✨ UI/UX Polish (1)</button>
+      </div>
+
+      <!-- Feature Cards List -->
+      <div class="features-list" id="featuresList">
+
+        <!-- 1. Smart Cash Tender -->
+        <div class="feature-card highlighted" data-cat="checkout" id="feat-tender">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">💵</div>
+              <div>
+                <div class="feature-title">Smart Cash Tender & Denomination Chips</div>
+                <div class="feature-tags">
+                  <span class="badge badge-high">High Impact</span>
+                  <span class="badge badge-rec">Recommended</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('checkout')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('tender', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            Quick-tap denomination chips (<code>Exact ৳Total</code>, <code>+৳50</code>, <code>+৳100</code>, <code>+৳500</code>, <code>+৳1000</code>) during Cash checkout. Eliminates manual typing on numpad and calculates change return with color-coded live feedback.
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Checkout Speedup</span>
+              <span class="metric-val">+45% faster cash tender</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">CartScreen.kt (Cash Mode)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Scanner Audio Beep & Continuous Mode -->
+        <div class="feature-card highlighted" data-cat="checkout" id="feat-scanner-audio">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">🔊</div>
+              <div>
+                <div class="feature-title">Scanner Audio Beep & Continuous Scan Mode</div>
+                <div class="feature-tags">
+                  <span class="badge badge-rec">Recommended</span>
+                  <span class="badge badge-ui">Hardware Ergonomics</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('scanner')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('scanner-audio', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            Adds crisp audio feedback (ToneGenerator / SoundPool beep) on successful barcode detection and adds a "Continuous Scan" toggle for rapid high-volume multi-item checkout without UI modal lag.
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Audio Latency</span>
+              <span class="metric-val">&lt; 15ms Instant Beep</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">ScannerScreen.kt</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Speed-Dial Favorites for Non-Barcoded Items -->
+        <div class="feature-card highlighted" data-cat="checkout" id="feat-speeddial">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">⚡</div>
+              <div>
+                <div class="feature-title">Speed-Dial Quick Items Drawer on Scanner View</div>
+                <div class="feature-tags">
+                  <span class="badge badge-ui">UI Ergonomics</span>
+                  <span class="badge badge-rec">Store Favorite</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('scanner')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('speeddial', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            Pull-up quick access bar on the camera scanner screen for frequent non-barcoded goods (loose cigarettes, chai, bakery buns, mineral water, shopping bags) for 1-tap cart addition without switching tabs.
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Cashier Ergonomics</span>
+              <span class="metric-val">Zero Tab-Switching</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">ScannerScreen.kt Bottom Bar</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Live Margin & Markup % Calculator -->
+        <div class="feature-card highlighted" data-cat="inventory" id="feat-margin-calc">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">📈</div>
+              <div>
+                <div class="feature-title">Live Profit Margin & Markup % Calculator</div>
+                <div class="feature-tags">
+                  <span class="badge badge-biz">Financial Intelligence</span>
+                  <span class="badge badge-rec">Recommended</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('inventory')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('margin-calc', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            When entering Buying Price and Selling Price in Add/Edit Product dialog, automatically calculates live Markup %, Gross Margin %, and Unit Profit with color-coded safety badges (warns if pricing at a loss).
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Loss Prevention</span>
+              <span class="metric-val">Real-time Warning Badge</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">ProductsScreen.kt Dialogs</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Expiry Countdown & Expiry Badges -->
+        <div class="feature-card highlighted" data-cat="inventory" id="feat-expiry-badges">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">⏳</div>
+              <div>
+                <div class="feature-title">Near-Expiry & Low-Stock Intelligence Badges</div>
+                <div class="feature-tags">
+                  <span class="badge badge-high">Stock Safety</span>
+                  <span class="badge badge-rec">Recommended</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('inventory')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('expiry-badges', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            Adds smart badge indicators on product items expiring within 7, 15, or 30 days (e.g. <code>⚠️ Expiring in 12 days</code>) plus a dedicated "Expiring Soon" filter tab in Products Screen.
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Waste Reduction</span>
+              <span class="metric-val">Early Clearance Alerts</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">ProductsScreen.kt List & Filter</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Due Aging Analysis -->
+        <div class="feature-card highlighted" data-cat="dues" id="feat-due-aging">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">📅</div>
+              <div>
+                <div class="feature-title">Due Aging Analysis (Current vs Overdue Khata)</div>
+                <div class="feature-tags">
+                  <span class="badge badge-biz">Cash Flow Safety</span>
+                  <span class="badge badge-high">High Priority</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('dues')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('due-aging', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            Splits outstanding customer credit into aging brackets: <code>&lt; 7 Days</code> (Normal), <code>7 - 30 Days</code> (Follow-up), and <code>&gt; 30 Days</code> (Overdue Alert). Enables store owners to prioritize urgent collections.
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Collection Recovery</span>
+              <span class="metric-val">+30% faster recovery</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">DuesScreen.kt Top Header</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. Customer Repayment Ledger -->
+        <div class="feature-card highlighted" data-cat="dues" id="feat-repay-ledger">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">📑</div>
+              <div>
+                <div class="feature-title">Customer Repayment History Timeline</div>
+                <div class="feature-tags">
+                  <span class="badge badge-biz">Audit Trail</span>
+                  <span class="badge badge-rec">Recommended</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('dues')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('repay-ledger', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            Maintains a dedicated chronological log of every due installment collected (Timestamp, Amount Paid, Cashier, Method, Balance Remaining) accessible in the Customer Dossier Sheet.
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Dispute Prevention</span>
+              <span class="metric-val">100% Transparent Records</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">CustomerDossierSheet.kt</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8. Real Net Business P&L -->
+        <div class="feature-card highlighted" data-cat="analytics" id="feat-net-pl">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">📊</div>
+              <div>
+                <div class="feature-title">Real Net Profit & Loss (P&L) Statement</div>
+                <div class="feature-tags">
+                  <span class="badge badge-biz">Accounting Accuracy</span>
+                  <span class="badge badge-high">High Priority</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('reports')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('net-pl', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            Complete financial intelligence formula: <code>Net Profit = Gross Sales - Returns & Discounts - Cost of Goods Sold (COGS) - Operational Expenses</code>. Displays clear financial health cards on Sales Reports.
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Formula Completeness</span>
+              <span class="metric-val">Includes Rent, Utility, Wages</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">SalesReportScreen.kt</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 9. Hourly Peak Rush Heatmap -->
+        <div class="feature-card highlighted" data-cat="analytics" id="feat-peak-heatmap">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">⏰</div>
+              <div>
+                <div class="feature-title">Hourly Sales & Rush Hour Heatmap</div>
+                <div class="feature-tags">
+                  <span class="badge badge-ui">Visual BI</span>
+                  <span class="badge badge-rec">Recommended</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('reports')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('peak-heatmap', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            Visual 24-hour bar chart displaying transaction density by hour of the day (e.g. 10 AM - 12 PM morning rush, 6 PM - 9 PM evening peak) to help merchants optimize inventory stocking and cashier shifts.
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Staffing Optimization</span>
+              <span class="metric-val">Live Peak Hour Detection</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">SalesReportScreen.kt</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 10. Supplier Purchase Invoices & Debts -->
+        <div class="feature-card highlighted" data-cat="suppliers" id="feat-supplier-debts">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">🚚</div>
+              <div>
+                <div class="feature-title">Supplier Purchase Invoices & Accounts Payable</div>
+                <div class="feature-tags">
+                  <span class="badge badge-biz">Vendor Ledger</span>
+                  <span class="badge badge-rec">Recommended</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('suppliers')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('supplier-debts', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            Record supplier delivery bills with Paid vs Due amounts. Tracks total vendor debt (Accounts Payable) so store owners know exactly how much they owe wholesalers alongside what customers owe them.
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Vendor Reconciliation</span>
+              <span class="metric-val">Tracks Total Supplier Debt</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">SuppliersScreen.kt</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 11. Register Discrepancy Reason -->
+        <div class="feature-card highlighted" data-cat="suppliers" id="feat-dayclose-reason">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">🧾</div>
+              <div>
+                <div class="feature-title">Day Close Cash Discrepancy Note & Reason</div>
+                <div class="feature-tags">
+                  <span class="badge badge-biz">Cash Audit</span>
+                  <span class="badge badge-rec">Recommended</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('dayclose')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('dayclose-reason', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            When counted cash differs from expected cash during Day Close, prompts for a reason (e.g. "Rounding change", "Tips taken", "Calculation mistake") and stores it in the closing audit record.
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Audit Completeness</span>
+              <span class="metric-val">Zero Unexplained Shortages</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">RegisterCloseScreen.kt</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 12. Receipt Live Visualizer in Settings -->
+        <div class="feature-card highlighted" data-cat="uiux" id="feat-receipt-preview">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="feature-icon">🖨️</div>
+              <div>
+                <div class="feature-title">Receipt Template Live Visualizer in Settings</div>
+                <div class="feature-tags">
+                  <span class="badge badge-ui">UI Polish</span>
+                  <span class="badge badge-rec">Recommended</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-test" onclick="simulateScreen('settings')">▶ Test in Sim</button>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="toggleFeature('receipt-preview', this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="card-desc">
+            Real-time interactive 58mm/80mm thermal receipt paper preview inside Settings. As the merchant types header text, footer greetings, or toggles tax/barcode, the preview renders the exact print output immediately.
+          </p>
+          <div class="card-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Setup Confidence</span>
+              <span class="metric-val">Instant WYSIWYG Feedback</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Screen</span>
+              <span class="metric-val">SettingsScreen.kt</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- User Confirmation Action Box -->
+      <div class="confirmation-banner">
+        <div class="confirm-text">
+          <h4>Ready for Your Review & Confirmation</h4>
+          <p>Confirm the approved feature set above to proceed with safe, modular implementation.</p>
+        </div>
+        <button class="btn-confirm-all" onclick="alert('Confirmed! Ready to implement approved features into the Android codebase upon your approval.')">✓ Confirm Selection</button>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Interactive Phone Simulator -->
+    <div class="simulator-panel">
+      
+      <div class="phone-frame">
+        <!-- Status Bar -->
+        <div class="phone-status-bar">
+          <span>1:55 PM</span>
+          <div class="camera-punch"></div>
+          <span>📶 🔋 98%</span>
+        </div>
+
+        <!-- Screen Area -->
+        <div class="phone-screen" id="phoneScreen">
+          <!-- Dynamic Content Rendered by JS -->
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="phone-nav-bar">
+          <div class="nav-item active" id="nav-sell" onclick="simulateScreen('scanner')">
+            <span class="nav-icon">📱</span>
+            <span>Sell</span>
+          </div>
+          <div class="nav-item" id="nav-cart" onclick="simulateScreen('checkout')">
+            <span class="nav-icon">🛒</span>
+            <span>Cart</span>
+          </div>
+          <div class="nav-item" id="nav-products" onclick="simulateScreen('inventory')">
+            <span class="nav-icon">📦</span>
+            <span>Stock</span>
+          </div>
+          <div class="nav-item" id="nav-dues" onclick="simulateScreen('dues')">
+            <span class="nav-icon">📋</span>
+            <span>Dues</span>
+          </div>
+          <div class="nav-item" id="nav-more" onclick="simulateScreen('reports')">
+            <span class="nav-icon">⚡</span>
+            <span>More</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Screen Switcher -->
+      <div class="sim-controls">
+        <button class="btn-sim-action" onclick="simulateScreen('checkout')">🛒 Checkout</button>
+        <button class="btn-sim-action" onclick="simulateScreen('inventory')">📦 Products</button>
+        <button class="btn-sim-action" onclick="simulateScreen('dues')">📋 Dues</button>
+        <button class="btn-sim-action" onclick="simulateScreen('reports')">📊 Analytics</button>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    // Feature Active States
+    const featureState = {
+      'tender': true,
+      'scanner-audio': true,
+      'speeddial': true,
+      'margin-calc': true,
+      'expiry-badges': true,
+      'due-aging': true,
+      'repay-ledger': true,
+      'net-pl': true,
+      'peak-heatmap': true,
+      'supplier-debts': true,
+      'dayclose-reason': true,
+      'receipt-preview': true
+    };
+
+    let currentSimScreen = 'checkout';
+    let tenderedAmount = 500;
+    const grandTotal = 430;
+
+    function toggleFeature(id, isChecked) {
+      featureState[id] = isChecked;
+      const card = document.getElementById('feat-' + id);
+      if (card) {
+        if (isChecked) card.classList.add('highlighted');
+        else card.classList.remove('highlighted');
+      }
+      updateActiveCount();
+      renderSimulator(currentSimScreen);
+    }
+
+    function updateActiveCount() {
+      const active = Object.values(featureState).filter(Boolean).length;
+      document.getElementById('activeCount').innerText = `${active}/12`;
+    }
+
+    function filterCategory(cat, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      document.querySelectorAll('.feature-card').forEach(card => {
+        if (cat === 'all' || card.dataset.cat === cat) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function simulateScreen(screen) {
+      currentSimScreen = screen;
+      
+      // Update nav highlights
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      if (screen === 'scanner') document.getElementById('nav-sell').classList.add('active');
+      else if (screen === 'checkout') document.getElementById('nav-cart').classList.add('active');
+      else if (screen === 'inventory') document.getElementById('nav-products').classList.add('active');
+      else if (screen === 'dues') document.getElementById('nav-dues').classList.add('active');
+      else document.getElementById('nav-more').classList.add('active');
+
+      renderSimulator(screen);
+    }
+
+    function addTender(amount) {
+      if (amount === 'exact') tenderedAmount = grandTotal;
+      else tenderedAmount += amount;
+      renderSimulator('checkout');
+    }
+
+    function renderSimulator(screen) {
+      const container = document.getElementById('phoneScreen');
+
+      if (screen === 'checkout') {
+        const changeDue = tenderedAmount - grandTotal;
+        const changeColor = changeDue >= 0 ? '#34D399' : '#F87171';
+
+        container.innerHTML = `
+          <div class="sim-app-bar">
+            <span class="sim-app-title">🛒 Checkout & Payment</span>
+            <span class="sim-view-badge">Cart View</span>
+          </div>
+          <div class="sim-body">
+            
+            <!-- Order Summary -->
+            <div class="mock-card">
+              <div class="mock-card-header">
+                <span>Cart (3 items)</span>
+                <span style="color: #60A5FA;">Customer: Rahim</span>
+              </div>
+              <div style="font-size: 13px; display: flex; justify-content: space-between; padding: 4px 0;">
+                <span>1x Basmati Rice 5kg</span>
+                <span style="font-weight: 700;">৳350</span>
+              </div>
+              <div style="font-size: 13px; display: flex; justify-content: space-between; padding: 4px 0;">
+                <span>2x Fresh Milk 500ml</span>
+                <span style="font-weight: 700;">৳80</span>
+              </div>
+              <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 8px; padding-top: 8px; display: flex; justify-content: space-between; font-size: 15px; font-weight: 800;">
+                <span>Total Payable:</span>
+                <span style="color: #818CF8;">৳${grandTotal}</span>
+              </div>
+            </div>
+
+            <!-- Payment Method: Cash -->
+            <div class="mock-card">
+              <div class="mock-card-header">
+                <span>Payment Method</span>
+                <span style="color: #34D399;">● Cash</span>
+              </div>
+
+              ${featureState['tender'] ? `
+                <div style="font-size: 11.5px; color: #94A3B8; margin-bottom: 4px;">Smart Tender Shortcuts:</div>
+                <div class="tender-chips-grid">
+                  <div class="tender-chip exact" onclick="addTender('exact')">Exact (৳${grandTotal})</div>
+                  <div class="tender-chip" onclick="addTender(50)">+ ৳50</div>
+                  <div class="tender-chip" onclick="addTender(100)">+ ৳100</div>
+                  <div class="tender-chip" onclick="addTender(500)">৳500 Note</div>
+                  <div class="tender-chip" onclick="addTender(1000)">৳1000 Note</div>
+                  <div class="tender-chip" onclick="tenderedAmount=0; renderSimulator('checkout')">Clear</div>
+                </div>
+              ` : `
+                <div style="font-size: 11px; color: #64748B; font-style: italic; padding: 6px 0;">Standard numpad input only (Smart tender chips disabled).</div>
+              `}
+
+              <div style="background: rgba(0,0,0,0.4); border-radius: 8px; padding: 10px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-size: 10.5px; color: #94A3B8;">CASH RECEIVED</div>
+                  <div style="font-size: 18px; font-weight: 800; color: #F8FAFC;">৳${tenderedAmount}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 10.5px; color: #94A3B8;">${changeDue >= 0 ? 'CHANGE RETURN' : 'DUE / SHORT'}</div>
+                  <div style="font-size: 18px; font-weight: 800; color: ${changeColor};">
+                    ${changeDue >= 0 ? '৳' + changeDue : '-৳' + Math.abs(changeDue)}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Complete Sale Button -->
+            <button style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(16,185,129,0.3); margin-top: auto;">
+              ✓ Complete Sale (৳${grandTotal})
+            </button>
+
+          </div>
+        `;
+      } 
+      else if (screen === 'scanner') {
+        container.innerHTML = `
+          <div class="sim-app-bar">
+            <span class="sim-app-title">📱 Fast Barcode Sell</span>
+            <span class="sim-view-badge">Viewfinder</span>
+          </div>
+          <div class="sim-body" style="padding: 10px;">
+            
+            <!-- Viewfinder Mock -->
+            <div style="height: 220px; background: #020617; border-radius: 16px; border: 2px solid #334155; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;">
+              <div style="width: 180px; height: 100px; border: 2px dashed #10B981; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <div style="width: 100%; height: 2px; background: #EF4444; box-shadow: 0 0 8px #EF4444; animation: pulse 1.5s infinite;"></div>
+              </div>
+              <div style="position: absolute; bottom: 12px; font-size: 11px; color: #94A3B8; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px;">
+                ${featureState['scanner-audio'] ? '🔊 Audio Beep Enabled • Continuous Active' : '🔇 Audio Beep Disabled'}
+              </div>
+            </div>
+
+            ${featureState['speeddial'] ? `
+              <!-- Speed Dial Favorites -->
+              <div class="mock-card" style="margin-top: 8px;">
+                <div class="mock-card-header">
+                  <span>⚡ Speed-Dial Items (Non-Barcoded)</span>
+                  <span style="color: #60A5FA;">1-Tap Add</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                  <div style="background: #334155; border-radius: 8px; padding: 8px 4px; text-align: center; cursor: pointer;">
+                    <div style="font-size: 14px;">☕</div>
+                    <div style="font-size: 11px; font-weight: 700;">Chai</div>
+                    <div style="font-size: 10px; color: #34D399;">৳10</div>
+                  </div>
+                  <div style="background: #334155; border-radius: 8px; padding: 8px 4px; text-align: center; cursor: pointer;">
+                    <div style="font-size: 14px;">💧</div>
+                    <div style="font-size: 11px; font-weight: 700;">Water 500ml</div>
+                    <div style="font-size: 10px; color: #34D399;">৳15</div>
+                  </div>
+                  <div style="background: #334155; border-radius: 8px; padding: 8px 4px; text-align: center; cursor: pointer;">
+                    <div style="font-size: 14px;">🥖</div>
+                    <div style="font-size: 11px; font-weight: 700;">Bun</div>
+                    <div style="font-size: 10px; color: #34D399;">৳20</div>
+                  </div>
+                </div>
+              </div>
+            ` : `
+              <div style="font-size: 11px; color: #64748B; font-style: italic; padding: 12px; text-align: center;">Speed-dial drawer disabled.</div>
+            `}
+
+            <!-- Active Cart Mini Bar -->
+            <div style="background: #1E293B; border-radius: 12px; padding: 12px; margin-top: auto; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.06);">
+              <div>
+                <div style="font-size: 11px; color: #94A3B8;">CURRENT SALE</div>
+                <div style="font-size: 16px; font-weight: 800; color: #F8FAFC;">৳430 <span style="font-size: 11px; font-weight: 500; color: #94A3B8;">(3 items)</span></div>
+              </div>
+              <button onclick="simulateScreen('checkout')" style="background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
+                Review Cart →
+              </button>
+            </div>
+
+          </div>
+        `;
+      }
+      else if (screen === 'inventory') {
+        container.innerHTML = `
+          <div class="sim-app-bar">
+            <span class="sim-app-title">📦 Product Catalog & Pricing</span>
+            <span class="sim-view-badge">Stock Hub</span>
+          </div>
+          <div class="sim-body">
+            
+            <!-- Live Margin Calculator Preview -->
+            ${featureState['margin-calc'] ? `
+              <div class="mock-card">
+                <div class="mock-card-header">
+                  <span>Add Product Intelligence</span>
+                  <span class="margin-badge">+28.5% Margin</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                  <div style="background: #0F172A; padding: 8px; border-radius: 6px;">
+                    <div style="font-size: 10px; color: #94A3B8;">BUYING (COST)</div>
+                    <div style="font-size: 14px; font-weight: 700;">৳250.00</div>
+                  </div>
+                  <div style="background: #0F172A; padding: 8px; border-radius: 6px;">
+                    <div style="font-size: 10px; color: #94A3B8;">SELLING PRICE</div>
+                    <div style="font-size: 14px; font-weight: 700; color: #34D399;">৳350.00</div>
+                  </div>
+                </div>
+                <div class="margin-calc-box">
+                  <div class="margin-stat-row">
+                    <span style="color: #94A3B8;">Unit Profit:</span>
+                    <span style="color: #34D399; font-weight: 700;">+ ৳100.00 / unit</span>
+                  </div>
+                  <div class="margin-stat-row">
+                    <span style="color: #94A3B8;">Markup Percentage:</span>
+                    <span style="color: #60A5FA; font-weight: 700;">+40.0% Markup</span>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Product Items with Expiry Badges -->
+            <div class="mock-card">
+              <div class="mock-card-header">
+                <span>Inventory Items</span>
+                <span style="color: #94A3B8;">42 Total</span>
+              </div>
+
+              <!-- Item 1 -->
+              <div style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700;">
+                  <span>Basmati Rice 5kg</span>
+                  <span>৳350</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #94A3B8; margin-top: 2px;">
+                  <span>Stock: 18 pcs</span>
+                  ${featureState['expiry-badges'] ? '<span style="color: #F87171; font-weight: 700;">⚠️ Expiring in 14 days</span>' : ''}
+                </div>
+              </div>
+
+              <!-- Item 2 -->
+              <div style="padding: 8px 0;">
+                <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700;">
+                  <span>Soybean Oil 2L</span>
+                  <span>৳380</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #94A3B8; margin-top: 2px;">
+                  <span>Stock: 5 pcs (Low)</span>
+                  ${featureState['expiry-badges'] ? '<span style="color: #34D399; font-weight: 600;">Exp: Dec 2027</span>' : ''}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        `;
+      }
+      else if (screen === 'dues') {
+        container.innerHTML = `
+          <div class="sim-app-bar">
+            <span class="sim-app-title">📒 Customer Dues (Bakir Khata)</span>
+            <span class="sim-view-badge">CRM Ledger</span>
+          </div>
+          <div class="sim-body">
+            
+            ${featureState['due-aging'] ? `
+              <!-- Due Aging Summary Header -->
+              <div class="mock-card">
+                <div class="mock-card-header">
+                  <span>Dues Aging Health</span>
+                  <span style="color: #F87171; font-weight: 700;">Total ৳14,500</span>
+                </div>
+                <div class="aging-pill-row">
+                  <div class="aging-pill green">
+                    <div>&lt; 7 Days</div>
+                    <div class="aging-val">৳4,200</div>
+                  </div>
+                  <div class="aging-pill amber">
+                    <div>7-30 Days</div>
+                    <div class="aging-val">৳6,800</div>
+                  </div>
+                  <div class="aging-pill red">
+                    <div>&gt; 30 Days</div>
+                    <div class="aging-val">৳3,500</div>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Customer Dossier Repayment Log Preview -->
+            ${featureState['repay-ledger'] ? `
+              <div class="mock-card">
+                <div class="mock-card-header">
+                  <span>Rahim — Repayment Log</span>
+                  <span style="color: #34D399;">Due: ৳500</span>
+                </div>
+                <div style="font-size: 11px; color: #94A3B8; display: flex; flex-direction: column; gap: 6px;">
+                  <div style="background: #0F172A; padding: 6px 8px; border-radius: 6px; display: flex; justify-content: space-between;">
+                    <span>01 Sep 2026 (Cash)</span>
+                    <span style="color: #34D399; font-weight: 700;">- ৳1,000 paid</span>
+                  </div>
+                  <div style="background: #0F172A; padding: 6px 8px; border-radius: 6px; display: flex; justify-content: space-between;">
+                    <span>25 Aug 2026 (bKash)</span>
+                    <span style="color: #34D399; font-weight: 700;">- ৳500 paid</span>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+          </div>
+        `;
+      }
+      else if (screen === 'reports') {
+        container.innerHTML = `
+          <div class="sim-app-bar">
+            <span class="sim-app-title">📊 Financial & Sales BI</span>
+            <span class="sim-view-badge">Analytics</span>
+          </div>
+          <div class="sim-body">
+            
+            ${featureState['net-pl'] ? `
+              <!-- Real Net P&L Summary -->
+              <div class="mock-card">
+                <div class="mock-card-header">
+                  <span>Comprehensive P&L Statement</span>
+                  <span style="color: #34D399; font-weight: 700;">This Month</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0;">
+                  <span style="color: #94A3B8;">Gross Sales Revenue:</span>
+                  <span style="font-weight: 700;">৳125,400</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0;">
+                  <span style="color: #94A3B8;">Cost of Goods Sold (COGS):</span>
+                  <span style="color: #F87171; font-weight: 700;">- ৳92,000</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0;">
+                  <span style="color: #94A3B8;">Shop Expenses (Rent/Bills):</span>
+                  <span style="color: #F87171; font-weight: 700;">- ৳14,500</span>
+                </div>
+                <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 800;">
+                  <span>Real Net Profit:</span>
+                  <span style="color: #34D399;">+ ৳18,900</span>
+                </div>
+              </div>
+            ` : ''}
+
+            ${featureState['peak-heatmap'] ? `
+              <!-- Peak Rush Heatmap -->
+              <div class="mock-card">
+                <div class="mock-card-header">
+                  <span>Hourly Peak Rush Heatmap</span>
+                  <span style="color: #EF4444; font-weight: 700;">Peak: 7 PM</span>
+                </div>
+                <div class="heatmap-bars">
+                  <div class="heat-bar-col"><div class="heat-bar" style="height: 20%;"></div><span class="heat-label">10a</span></div>
+                  <div class="heat-bar-col"><div class="heat-bar" style="height: 45%;"></div><span class="heat-label">12p</span></div>
+                  <div class="heat-bar-col"><div class="heat-bar" style="height: 30%;"></div><span class="heat-label">2p</span></div>
+                  <div class="heat-bar-col"><div class="heat-bar" style="height: 55%;"></div><span class="heat-label">4p</span></div>
+                  <div class="heat-bar-col"><div class="heat-bar peak" style="height: 95%;"></div><span class="heat-label">7p</span></div>
+                  <div class="heat-bar-col"><div class="heat-bar peak" style="height: 80%;"></div><span class="heat-label">9p</span></div>
+                </div>
+              </div>
+            ` : ''}
+
+          </div>
+        `;
+      }
+      else {
+        container.innerHTML = `
+          <div class="sim-app-bar">
+            <span class="sim-app-title">⚙️ Settings & Hardware</span>
+            <span class="sim-view-badge">Config</span>
+          </div>
+          <div class="sim-body">
+            <div class="mock-card">
+              <div class="mock-card-header">
+                <span>Receipt Paper Preview (58mm)</span>
+                <span style="color: #34D399;">Live WYSIWYG</span>
+              </div>
+              <div style="background: #FFFFFF; color: #000000; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 10px; line-height: 1.4; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+                <div style="text-align: center; font-weight: bold; font-size: 12px;">TECHYFI POS STORE</div>
+                <div style="text-align: center; font-size: 9px; color: #4B5563;">Dhanmondi, Dhaka • 01711223344</div>
+                <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+                <div>1x Basmati Rice 5kg .... ৳350</div>
+                <div>2x Fresh Milk 500ml .... ৳80</div>
+                <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold;"><span>TOTAL:</span><span>৳430.00</span></div>
+                <div style="display: flex; justify-content: space-between;"><span>PAID (Cash):</span><span>৳500.00</span></div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold;"><span>CHANGE:</span><span>৳70.00</span></div>
+                <div style="text-align: center; margin-top: 8px; font-size: 8.5px;">*** Thank you for shopping! ***</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Initialize Simulator
+    renderSimulator('checkout');
+  </script>
+</body>
+</html>

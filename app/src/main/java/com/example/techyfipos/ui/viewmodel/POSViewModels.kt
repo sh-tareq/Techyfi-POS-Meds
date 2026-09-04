@@ -1,0 +1,3500 @@
+package com.example.techyfipos.ui.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.example.techyfipos.data.DataRepository
+import com.example.techyfipos.data.BackupImportMode
+import com.example.techyfipos.data.AppPermissions
+import com.example.techyfipos.data.AppRoles
+import com.example.techyfipos.data.db.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import android.content.Context
+import com.example.techyfipos.utils.parseExpiryDateToMillis
+
+// Cart Item Wrapper
+data class CartItem(
+    val product: Product,
+    val quantity: Double = 1.0,
+    val note: String? = null
+)
+
+enum class CartBarcodeStatus {
+    ADDED,
+    STOCK_LIMIT,
+    NOT_FOUND
+}
+
+/** The active price tier used in the cart and checkout. */
+enum class PriceMode {
+    /** Use sellingPrice (default retail / discounted price) */
+    DISCOUNTED,
+    /** Use mrpPrice (Maximum Retail Price); falls back to sellingPrice if mrpPrice == 0 */
+    MRP,
+    /** Use wholesalePrice; falls back to sellingPrice if wholesalePrice == 0 */
+    WHOLESALE
+}
+
+data class CartBarcodeResult(
+    val barcode: String,
+    val productName: String? = null,
+    val quantityInCart: Double = 0.0,
+    val grandTotal: Double = 0.0,
+    val status: CartBarcodeStatus
+)
+
+internal fun calculateDiscountValue(
+    subtotal: Double,
+    discountAmount: Double,
+    isPercentage: Boolean
+): Double {
+    val safeSubtotal = subtotal.coerceAtLeast(0.0)
+    val safeAmount = discountAmount.coerceAtLeast(0.0)
+    val calculated = if (isPercentage) {
+        safeSubtotal * safeAmount.coerceAtMost(100.0) / 100.0
+    } else {
+        safeAmount
+    }
+    return calculated.coerceIn(0.0, safeSubtotal)
+}
+
+/** Quick Sale / ad-hoc cart items use a synthetic, never-persisted product with this barcode prefix. */
+internal fun isSyntheticSaleBarcode(barcode: String): Boolean =
+    barcode.startsWith("CUSTOM-") || barcode.startsWith("ADHOC-")
+
+/**
+ * Estimated cost basis for a sold line item whose product record can no longer be found (deleted
+ * product, or a synthetic Quick Sale item that was never persisted). Quick Sale items are pure
+ * margin (delivery fees, service charges, etc.) with a real cost of 0 — guessing 70% of the sale
+ * price for them would silently understate reported profit, so only genuinely-deleted products
+ * fall back to the heuristic guess.
+ */
+internal fun fallbackPurchasePrice(barcode: String, price: Double): Double =
+    if (isSyntheticSaleBarcode(barcode)) 0.0 else price * 0.7
+
+internal data class HeldCartPayload(
+    val items: List<CartItem>,
+    val customerName: String = "",
+    val customerPhone: String = "",
+    val discountAmount: Double = 0.0,
+    val isPercentageDiscount: Boolean = false,
+    val priceMode: PriceMode = PriceMode.DISCOUNTED,
+    val paymentMethod: String = "Cash",
+    val walletPhone: String = "",
+    val cardType: String = "Visa",
+    val cardLastFour: String = "",
+    val amountPaid: Double = 0.0,
+    val isSplitPayment: Boolean = false,
+    val splitPayments: List<SplitPaymentEntry> = emptyList(),
+    val loyaltyPhone: String? = null,
+    val loyaltyDiscount: Double = 0.0
+)
+
+/** Versioned payload stored inside HeldCart.itemsJson. Legacy array-only carts remain readable. */
+internal fun encodeHeldCartPayload(payload: HeldCartPayload): String = JSONObject().apply {
+    put("version", 2)
+    put("customerName", payload.customerName)
+    put("customerPhone", payload.customerPhone)
+    put("discountAmount", payload.discountAmount)
+    put("isPercentageDiscount", payload.isPercentageDiscount)
+    put("priceMode", payload.priceMode.name)
+    put("paymentMethod", payload.paymentMethod)
+    put("walletPhone", payload.walletPhone)
+    put("cardType", payload.cardType)
+    put("cardLastFour", payload.cardLastFour)
+    put("amountPaid", payload.amountPaid)
+    put("isSplitPayment", payload.isSplitPayment)
+    put("loyaltyPhone", payload.loyaltyPhone ?: "")
+    put("loyaltyDiscount", payload.loyaltyDiscount)
+    put("items", JSONArray().apply {
+        payload.items.forEach { item ->
+            put(JSONObject().apply {
+                put("barcode", item.product.barcode)
+                put("quantity", item.quantity)
+                put("note", item.note ?: "")
+                if (isSyntheticSaleBarcode(item.product.barcode)) {
+                    put("name", item.product.name)
+                    put("category", item.product.category)
+                    put("purchasePrice", item.product.purchasePrice)
+                    put("sellingPrice", item.product.sellingPrice)
+                    put("unit", item.product.unit)
+                    put("wholesalePrice", item.product.wholesalePrice)
+                    put("mrpPrice", item.product.mrpPrice)
+                    put("discountedPrice", item.product.discountedPrice)
+                }
+            })
+        }
+    })
+    put("splitPayments", JSONArray().apply {
+        payload.splitPayments.forEach { payment ->
+            put(JSONObject().apply {
+                put("method", payment.method)
+                put("amount", payment.amount)
+                put("walletPhone", payment.walletPhone ?: "")
+                put("cardType", payment.cardType ?: "")
+                put("cardLastFour", payment.cardLastFour ?: "")
+                put("referenceNote", payment.referenceNote ?: "")
+            })
+        }
+    })
+}.toString()
+
+internal fun decodeHeldCartPayload(json: String): HeldCartPayload {
+    val root = json.trim()
+    val objectPayload = root.startsWith("{")
+    val objectJson = if (objectPayload) JSONObject(root) else null
+    val itemArray = objectJson?.optJSONArray("items") ?: JSONArray(root)
+    val items = buildList {
+        for (index in 0 until itemArray.length()) {
+            val item = itemArray.getJSONObject(index)
+            val barcode = item.optString("barcode").trim()
+            if (barcode.isBlank()) continue
+            val synthetic = isSyntheticSaleBarcode(barcode) && item.has("name")
+            val snapshot = if (synthetic) {
+                Product(
+                    barcode = barcode,
+                    name = item.optString("name", "Quick Sale"),
+                    category = item.optString("category", "Quick Sale"),
+                    purchasePrice = item.optDouble("purchasePrice", 0.0),
+                    sellingPrice = item.optDouble("sellingPrice", item.optDouble("price", 0.0)),
+                    stockQty = Double.MAX_VALUE,
+                    reorderLevel = 0,
+                    unit = item.optString("unit", "Pcs"),
+                    wholesalePrice = item.optDouble("wholesalePrice", 0.0),
+                    mrpPrice = item.optDouble("mrpPrice", 0.0),
+                    discountedPrice = item.optDouble("discountedPrice", 0.0)
+                )
+            } else {
+                // A placeholder is resolved against the current product row during restore.
+                Product(barcode, "", "", 0.0, 0.0, 0.0, 0)
+            }
+            add(
+                CartItem(
+                    product = snapshot,
+                    quantity = item.optDouble("quantity", 1.0).coerceAtLeast(0.0),
+                    note = item.optString("note").takeIf(String::isNotBlank)
+                )
+            )
+        }
+    }
+    val split = objectJson?.optJSONArray("splitPayments")?.let { array ->
+        buildList {
+            for (index in 0 until array.length()) {
+                val item = array.getJSONObject(index)
+                add(
+                    SplitPaymentEntry(
+                        method = item.optString("method", "Cash"),
+                        amount = item.optDouble("amount", 0.0),
+                        walletPhone = item.optString("walletPhone").takeIf(String::isNotBlank),
+                        cardType = item.optString("cardType").takeIf(String::isNotBlank),
+                        cardLastFour = item.optString("cardLastFour").takeIf(String::isNotBlank),
+                        referenceNote = item.optString("referenceNote").takeIf(String::isNotBlank)
+                    )
+                )
+            }
+        }
+    }.orEmpty()
+    return HeldCartPayload(
+        items = items,
+        customerName = objectJson?.optString("customerName", "") ?: "",
+        customerPhone = objectJson?.optString("customerPhone", "") ?: "",
+        discountAmount = objectJson?.optDouble("discountAmount", 0.0) ?: 0.0,
+        isPercentageDiscount = objectJson?.optBoolean("isPercentageDiscount", false) ?: false,
+        priceMode = objectJson?.optString("priceMode")
+            ?.let { runCatching { PriceMode.valueOf(it) }.getOrNull() } ?: PriceMode.DISCOUNTED,
+        paymentMethod = objectJson?.optString("paymentMethod", "Cash") ?: "Cash",
+        walletPhone = objectJson?.optString("walletPhone", "") ?: "",
+        cardType = objectJson?.optString("cardType", "Visa") ?: "Visa",
+        cardLastFour = objectJson?.optString("cardLastFour", "") ?: "",
+        amountPaid = objectJson?.optDouble("amountPaid", 0.0) ?: 0.0,
+        isSplitPayment = objectJson?.optBoolean("isSplitPayment", false) ?: false,
+        splitPayments = split,
+        loyaltyPhone = objectJson?.optString("loyaltyPhone")?.takeIf(String::isNotBlank),
+        loyaltyDiscount = objectJson?.optDouble("loyaltyDiscount", 0.0) ?: 0.0
+    )
+}
+
+class CartViewModel(private val repository: DataRepository) : ViewModel() {
+    private val saleCompletionMutex = kotlinx.coroutines.sync.Mutex()
+    private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
+    val cartItems: StateFlow<List<CartItem>> = _cartItems.asStateFlow()
+
+    val discountAmount = MutableStateFlow(0.0)
+    val isPercentageDiscount = MutableStateFlow(false)
+    val paymentMethod = MutableStateFlow("Cash") // "Cash", "bKash", "Nagad", "Rocket", "Card", "Due"
+    val customerName = MutableStateFlow("")
+    val customerPhone = MutableStateFlow("")
+    val walletPhone = MutableStateFlow("")
+    val cardType = MutableStateFlow("Visa")
+    val cardLastFour = MutableStateFlow("")
+    private val _manualCashierName = MutableStateFlow<String?>(null)
+    val cashierName: StateFlow<String> = combine(
+        repository.cashierNameFlow,
+        _manualCashierName
+    ) { defaultCashier, manual ->
+        if (!manual.isNullOrBlank()) {
+            manual
+        } else if (defaultCashier.isNotBlank()) {
+            defaultCashier
+        } else {
+            "Admin"
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, "")
+
+    fun setCashierName(name: String) {
+        _manualCashierName.value = name.takeIf { it.isNotBlank() }
+    }
+
+    val amountPaid = MutableStateFlow(0.0) // Cash received
+
+    // Price mode (MRP / DISCOUNTED / WHOLESALE)
+    val priceMode = MutableStateFlow(PriceMode.DISCOUNTED)
+
+    fun setPriceMode(mode: PriceMode) {
+        priceMode.value = mode
+    }
+
+    // Loyalty points state
+    val loyaltyDiscount = MutableStateFlow(0.0)
+    val loyaltyCustomer = MutableStateFlow<CustomerLoyalty?>(null)
+
+    // Customer Auto-Fill, Resolution and Suggestions
+    val resolvedCustomer = MutableStateFlow<CustomerLookupResult?>(null)
+    val isAutoFilledName = MutableStateFlow(false)
+    val customerSuggestions = MutableStateFlow<List<CustomerLookupResult>>(emptyList())
+
+    private var customerLookupJob: Job? = null
+
+    fun onCustomerPhoneChanged(phone: String) {
+        customerPhone.value = phone
+        val clean = phone.trim()
+        customerLookupJob?.cancel()
+        if (clean.isBlank()) {
+            resolvedCustomer.value = null
+            customerSuggestions.value = emptyList()
+            if (isAutoFilledName.value) {
+                customerName.value = ""
+                isAutoFilledName.value = false
+            }
+            lookupLoyalty("")
+            return
+        }
+
+        lookupLoyalty(clean)
+
+        // Cancelling any lookup already in flight (above) keeps an old, slower-to-resolve keystroke
+        // from overwriting resolvedCustomer after a newer one has already landed — otherwise the
+        // "Master Customer Profile" card can freeze on a stale due/balance that no longer matches
+        // what a fresh read (e.g. the credit-limit check at Complete Sale) would return.
+        customerLookupJob = viewModelScope.launch(Dispatchers.IO) {
+            val resolved = repository.resolveCustomerDetails(clean)
+            resolvedCustomer.value = resolved
+            if (resolved != null && resolved.name.isNotBlank()) {
+                if (customerName.value.isBlank() || isAutoFilledName.value) {
+                    customerName.value = resolved.name
+                    isAutoFilledName.value = true
+                }
+            }
+
+            if (clean.length >= 3) {
+                customerSuggestions.value = repository.searchCustomerSuggestions(clean)
+            } else {
+                customerSuggestions.value = emptyList()
+            }
+        }
+    }
+
+    /** Re-resolves the current phone against the DB so a due/balance shown earlier in the cart
+     * session (e.g. before a payment was collected elsewhere) doesn't go stale by the time the
+     * cashier reaches Complete Sale. */
+    fun refreshResolvedCustomer() {
+        val phone = customerPhone.value
+        if (phone.isNotBlank()) {
+            onCustomerPhoneChanged(phone)
+        }
+    }
+
+    fun onCustomerNameChanged(name: String) {
+        customerName.value = name
+        if (resolvedCustomer.value?.name != name) {
+            isAutoFilledName.value = false
+        }
+        val clean = name.trim()
+        if (clean.length >= 2 && customerPhone.value.isBlank()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                customerSuggestions.value = repository.searchCustomerSuggestions(clean)
+            }
+        }
+    }
+
+    fun selectCustomerSuggestion(suggestion: CustomerLookupResult) {
+        customerPhone.value = suggestion.phone
+        customerName.value = suggestion.name
+        isAutoFilledName.value = true
+        resolvedCustomer.value = suggestion
+        customerSuggestions.value = emptyList()
+        lookupLoyalty(suggestion.phone)
+    }
+
+    fun clearCustomerDetails() {
+        customerPhone.value = ""
+        customerName.value = ""
+        isAutoFilledName.value = false
+        resolvedCustomer.value = null
+        customerSuggestions.value = emptyList()
+        lookupLoyalty("")
+    }
+
+    fun lookupLoyalty(phone: String) {
+        val clean = phone.trim()
+        if (clean.isBlank()) {
+            loyaltyCustomer.value = null
+            loyaltyDiscount.value = 0.0
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val customer = repository.getLoyaltyByPhone(clean)
+            loyaltyCustomer.value = customer
+        }
+    }
+
+    fun applyLoyaltyDiscount(discount: Double) {
+        val availablePoints = loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0
+        val payableBeforeLoyalty = (subtotal.value - discountValue.value + taxValue.value).coerceAtLeast(0.0)
+        loyaltyDiscount.value = discount
+            .takeIf(Double::isFinite)
+            ?.coerceIn(0.0, minOf(availablePoints, payableBeforeLoyalty))
+            ?: 0.0
+    }
+
+    suspend fun getCustomerDue(phone: String): CustomerDue? = repository.getCustomerDueByPhone(phone)
+
+    suspend fun getCustomerCreditAccount(phone: String): CustomerDue? =
+        repository.getCustomerCreditAccount(phone)
+
+    suspend fun authorizeCreditLimitOverride(pin: String, phone: String): Boolean =
+        repository.authorizeCreditLimitOverride(pin, phone)
+
+    /**
+     * Loads a past sale's items (looked up fresh by barcode, so current stock/price applies) plus
+     * its customer details into the cart, for "Edit" (void + rebuild) and "Add to Cart Again" on a
+     * historical receipt. If a product was deleted (or was a Quick Sale line), an ad-hoc snapshot
+     * product is reconstructed from the immutable SaleItem so void-for-edit can never lose a line.
+     * Returns the number of lines that couldn't be re-added.
+     */
+    suspend fun loadFromPastSale(saleWithItems: SaleWithItems, replaceCart: Boolean): Int {
+        if (replaceCart) clearCart()
+        var skipped = 0
+        for (item in saleWithItems.items) {
+            val product = repository.getProductByBarcode(item.productBarcode)
+            val cartProduct = product ?: Product(
+                barcode = item.productBarcode.takeIf(::isSyntheticSaleBarcode)
+                    ?: "ADHOC-REPLAY-${saleWithItems.sale.id}-${item.id}",
+                name = item.productName,
+                category = "Historical sale",
+                purchasePrice = item.purchasePriceAtSale ?: fallbackPurchasePrice(item.productBarcode, item.price),
+                sellingPrice = item.price,
+                stockQty = item.quantity,
+                reorderLevel = 0,
+                unit = "Pcs",
+                wholesalePrice = item.price,
+                mrpPrice = item.price,
+                discountedPrice = item.price
+            )
+            addToCart(cartProduct, item.quantity)
+            if (_cartItems.value.none { it.product.barcode == cartProduct.barcode }) skipped++
+        }
+        val sale = saleWithItems.sale
+        customerName.value = sale.customerName ?: ""
+        customerPhone.value = sale.customerPhone ?: ""
+        // Split payments aren't reconstructed (the original component breakdown isn't guaranteed
+        // to still make sense against current prices/stock) — default back to Cash for Split.
+        paymentMethod.value = sale.paymentMethod.takeIf { it != "Split" } ?: "Cash"
+        return skipped
+    }
+
+    suspend fun verifyPin(pin: String): Boolean = repository.verifyPin(pin) != null
+
+    // Split Payment state
+    val isSplitPayment = MutableStateFlow(false)
+    val splitPayments = MutableStateFlow<List<SplitPaymentEntry>>(emptyList())
+
+    fun setSplitPayments(list: List<SplitPaymentEntry>) {
+        splitPayments.value = list
+    }
+
+    fun addSplitPayment(entry: SplitPaymentEntry) {
+        splitPayments.value = splitPayments.value + entry
+    }
+
+    fun removeSplitPayment(index: Int) {
+        val current = splitPayments.value.toMutableList()
+        if (index in current.indices) {
+            current.removeAt(index)
+            splitPayments.value = current
+        }
+    }
+
+    fun getSplitPaymentsJson(): String? {
+        if (!isSplitPayment.value || splitPayments.value.isEmpty()) return null
+        val arr = org.json.JSONArray()
+        splitPayments.value.forEach { sp ->
+            val obj = org.json.JSONObject().apply {
+                put("method", sp.method)
+                put("amount", sp.amount)
+                if (!sp.walletPhone.isNullOrBlank()) put("walletPhone", sp.walletPhone)
+                if (!sp.cardType.isNullOrBlank()) put("cardType", sp.cardType)
+                if (!sp.cardLastFour.isNullOrBlank()) put("cardLastFour", sp.cardLastFour)
+            }
+            arr.put(obj)
+        }
+        return arr.toString()
+    }
+
+    // Held Carts
+    val allHeldCarts: StateFlow<List<HeldCart>> = repository.allHeldCarts
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val heldCartCount: StateFlow<Int> = repository.heldCartCount
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
+    fun holdCurrentCart(title: String? = null, note: String? = null) {
+        val items = _cartItems.value
+        if (items.isEmpty()) return
+
+        val payloadJson = encodeHeldCartPayload(
+            HeldCartPayload(
+                items = items,
+                priceMode = priceMode.value,
+                paymentMethod = paymentMethod.value,
+                walletPhone = walletPhone.value,
+                cardType = cardType.value,
+                cardLastFour = cardLastFour.value,
+                amountPaid = amountPaid.value,
+                isSplitPayment = isSplitPayment.value,
+                splitPayments = splitPayments.value,
+                loyaltyPhone = loyaltyCustomer.value?.phone,
+                loyaltyDiscount = loyaltyDiscount.value
+            )
+        )
+
+        val effectiveTitle = if (!title.isNullOrBlank()) {
+            title.trim()
+        } else if (customerName.value.isNotBlank()) {
+            customerName.value.trim()
+        } else {
+            "Cart #${System.currentTimeMillis() % 10000}"
+        }
+
+        val heldCart = HeldCart(
+            title = effectiveTitle,
+            customerName = customerName.value.takeIf { it.isNotBlank() },
+            customerPhone = customerPhone.value.takeIf { it.isNotBlank() },
+            itemsJson = payloadJson,
+            discountAmount = discountAmount.value,
+            isPercentageDiscount = isPercentageDiscount.value,
+            timestamp = System.currentTimeMillis(),
+            note = note?.takeIf { it.isNotBlank() }
+        )
+
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.insertHeldCart(heldCart)
+            _cartItems.value = emptyList()
+            discountAmount.value = 0.0
+            isPercentageDiscount.value = false
+            customerName.value = ""
+            customerPhone.value = ""
+            walletPhone.value = ""
+            cardLastFour.value = ""
+            amountPaid.value = 0.0
+            isSplitPayment.value = false
+            splitPayments.value = emptyList()
+            priceMode.value = PriceMode.DISCOUNTED
+            loyaltyDiscount.value = 0.0
+            loyaltyCustomer.value = null
+            persistCartSnapshot(emptyList())
+        }
+    }
+
+    data class RestoreResult(val restoredLines: Int, val unavailableLines: Int, val retainedHeldCart: Boolean)
+
+    fun restoreHeldCart(heldCart: HeldCart, onResult: (RestoreResult) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val payload = decodeHeldCartPayload(heldCart.itemsJson)
+                val restored = mutableListOf<CartItem>()
+                val remaining = mutableListOf<CartItem>()
+                var unavailable = 0
+                payload.items.forEach { heldItem ->
+                    val barcode = heldItem.product.barcode
+                    val product = if (isSyntheticSaleBarcode(barcode) && heldItem.product.name.isNotBlank()) {
+                        heldItem.product
+                    } else {
+                        repository.getProductByBarcode(barcode) ?: run {
+                            unavailable++; remaining += heldItem; return@forEach
+                        }
+                    }
+                    val cappedQuantity = heldItem.quantity.coerceAtMost(product.stockQty)
+                    if (cappedQuantity <= 0.0) { unavailable++; remaining += heldItem; return@forEach }
+                    if (cappedQuantity < heldItem.quantity) {
+                        unavailable++
+                        remaining += heldItem.copy(quantity = heldItem.quantity - cappedQuantity)
+                    }
+                    restored.add(CartItem(product, cappedQuantity, heldItem.note))
+                }
+                _cartItems.value = restored
+                discountAmount.value = heldCart.discountAmount
+                isPercentageDiscount.value = heldCart.isPercentageDiscount
+                customerName.value = heldCart.customerName ?: ""
+                customerPhone.value = heldCart.customerPhone ?: ""
+                priceMode.value = payload.priceMode
+                paymentMethod.value = payload.paymentMethod
+                walletPhone.value = payload.walletPhone
+                cardType.value = payload.cardType
+                cardLastFour.value = payload.cardLastFour
+                amountPaid.value = payload.amountPaid
+                isSplitPayment.value = payload.isSplitPayment
+                splitPayments.value = payload.splitPayments
+                loyaltyCustomer.value = payload.loyaltyPhone?.let { repository.getLoyaltyByPhone(it) }
+                loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(
+                    loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0
+                )
+                persistCartSnapshot(restored)
+                if (unavailable == 0) repository.deleteHeldCart(heldCart.id) else {
+                    repository.insertHeldCart(heldCart.copy(
+                        title = "${heldCart.title} · unavailable items",
+                        customerName = null, customerPhone = null,
+                        discountAmount = 0.0, isPercentageDiscount = false,
+                        itemsJson = encodeHeldCartPayload(HeldCartPayload(items = remaining))
+                    ))
+                }
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    onResult(RestoreResult(restored.size, unavailable, unavailable > 0))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                kotlinx.coroutines.withContext(Dispatchers.Main) { onResult(RestoreResult(0, 1, true)) }
+            }
+        }
+    }
+
+    fun deleteHeldCart(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteHeldCart(id)
+        }
+    }
+
+    // Calculated fields
+    val subtotal: StateFlow<Double> = combine(_cartItems, priceMode) { items, mode ->
+        items.sumOf { item -> effectivePrice(item.product, mode) * item.quantity }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    /** Savings compared to the default sellingPrice (only positive when mode gives a lower price). */
+    val priceModesSavings: StateFlow<Double> = combine(_cartItems, priceMode) { items, mode ->
+        val retailTotal = items.sumOf { it.product.sellingPrice * it.quantity }
+        val modeTotal   = items.sumOf { item -> effectivePrice(item.product, mode) * item.quantity }
+        (retailTotal - modeTotal).coerceAtLeast(0.0)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    // Keep legacy name as alias so any other callers keep compiling
+    val wholesaleSavings: StateFlow<Double> get() = priceModesSavings
+
+    val discountValue: StateFlow<Double> = combine(subtotal, discountAmount, isPercentageDiscount) { sub, disc, isPct ->
+        calculateDiscountValue(sub, disc, isPct)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val taxSettings: StateFlow<com.example.techyfipos.data.InvoiceSettingsData> = repository.invoiceSettingsDataFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, com.example.techyfipos.data.InvoiceSettingsData())
+
+    val taxValue: StateFlow<Double> = combine(subtotal, discountValue, taxSettings) { sub, discVal, settings ->
+        if (settings.taxEnabled && settings.taxRate > 0.0) {
+            val taxableBase = (sub - discVal).coerceAtLeast(0.0)
+            if (settings.taxInclusive) {
+                // MRP Inclusive: Extract VAT component
+                taxableBase * (settings.taxRate / (100.0 + settings.taxRate))
+            } else {
+                // Add-on Exclusive VAT
+                taxableBase * settings.taxRate / 100.0
+            }
+        } else {
+            0.0
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val grandTotal: StateFlow<Double> = combine(subtotal, discountValue, taxValue, loyaltyDiscount, taxSettings) { sub, discVal, tax, loyaltyDisc, settings ->
+        val base = (sub - discVal).coerceAtLeast(0.0)
+        val withTax = if (settings.taxEnabled && !settings.taxInclusive) {
+            base + tax
+        } else {
+            base
+        }
+        (withTax - loyaltyDisc).coerceAtLeast(0.0)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val changeAmount: StateFlow<Double> = combine(grandTotal, amountPaid) { total, paid ->
+        (paid - total).coerceAtLeast(0.0)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    init {
+        // Restore whatever was in the cart before the app was last closed.
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            restoreCartSnapshot()
+        }
+        viewModelScope.launch {
+            merge(
+                _cartItems.map { Unit }, discountAmount.map { Unit }, isPercentageDiscount.map { Unit },
+                customerName.map { Unit }, customerPhone.map { Unit }, priceMode.map { Unit },
+                paymentMethod.map { Unit }, walletPhone.map { Unit }, cardType.map { Unit },
+                cardLastFour.map { Unit }, amountPaid.map { Unit }, isSplitPayment.map { Unit },
+                splitPayments.map { Unit }, loyaltyDiscount.map { Unit }, loyaltyCustomer.map { Unit }
+            ).collectLatest {
+                kotlinx.coroutines.delay(100)
+                persistCartSnapshot(_cartItems.value)
+            }
+        }
+    }
+
+    private suspend fun restoreCartSnapshot() {
+        val json = repository.getCartSnapshot()
+        if (json.isBlank()) return
+        try {
+            val payload = decodeHeldCartPayload(json)
+            val restored = mutableListOf<CartItem>()
+            payload.items.forEach { saved ->
+                val barcode = saved.product.barcode
+                if (isSyntheticSaleBarcode(barcode)) restored.add(saved)
+                else {
+                    val product = repository.getProductByBarcode(barcode) ?: return@forEach
+                    val cappedQuantity = saved.quantity.coerceAtMost(product.stockQty)
+                    if (cappedQuantity <= 0.0) return@forEach
+                    restored.add(CartItem(product, cappedQuantity, saved.note))
+                }
+            }
+            _cartItems.value = restored
+            customerName.value = payload.customerName
+            customerPhone.value = payload.customerPhone
+            discountAmount.value = payload.discountAmount
+            isPercentageDiscount.value = payload.isPercentageDiscount
+            priceMode.value = payload.priceMode
+            paymentMethod.value = payload.paymentMethod
+            walletPhone.value = payload.walletPhone
+            cardType.value = payload.cardType
+            cardLastFour.value = payload.cardLastFour
+            amountPaid.value = payload.amountPaid
+            isSplitPayment.value = payload.isSplitPayment
+            splitPayments.value = payload.splitPayments
+            loyaltyCustomer.value = payload.loyaltyPhone?.let { repository.getLoyaltyByPhone(it) }
+            loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun persistCartSnapshot(items: List<CartItem>) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
+            try {
+                repository.saveCartSnapshot(encodeHeldCartPayload(HeldCartPayload(
+                    items = items, customerName = customerName.value, customerPhone = customerPhone.value,
+                    discountAmount = discountAmount.value, isPercentageDiscount = isPercentageDiscount.value,
+                    priceMode = priceMode.value, paymentMethod = paymentMethod.value, walletPhone = walletPhone.value,
+                    cardType = cardType.value, cardLastFour = cardLastFour.value, amountPaid = amountPaid.value,
+                    isSplitPayment = isSplitPayment.value, splitPayments = splitPayments.value,
+                    loyaltyPhone = loyaltyCustomer.value?.phone, loyaltyDiscount = loyaltyDiscount.value
+                )))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun addCustomItem(title: String, price: Double, quantity: Double = 1.0, note: String? = null, unit: String = "Pcs") {
+        val cleanTitle = title.trim().ifBlank { "Custom Item" }
+        val cleanPrice = price.coerceAtLeast(0.0)
+        // A UUID suffix (rather than a timestamp alone) guarantees no two quick-sale items ever
+        // collide on barcode, even when added within the same millisecond.
+        val customBarcode = "CUSTOM-${System.currentTimeMillis()}-${java.util.UUID.randomUUID().toString().take(8)}"
+        val product = Product(
+            barcode = customBarcode,
+            name = cleanTitle,
+            category = "Custom",
+            purchasePrice = 0.0,
+            sellingPrice = cleanPrice,
+            stockQty = 999999.0,
+            reorderLevel = 0,
+            unit = unit.ifBlank { "Pcs" },
+            wholesalePrice = cleanPrice
+        )
+        val current = _cartItems.value.toMutableList()
+        current.add(CartItem(product, quantity.coerceAtLeast(0.01), note?.takeIf { it.isNotBlank() }))
+        _cartItems.value = current
+        persistCartSnapshot(current)
+    }
+
+    fun updateItemNote(index: Int, note: String?) {
+        val current = _cartItems.value.toMutableList()
+        if (index in current.indices) {
+            current[index] = current[index].copy(note = note?.takeIf { it.isNotBlank() })
+            _cartItems.value = current
+            persistCartSnapshot(current)
+        }
+    }
+
+    fun addToCart(product: Product, quantity: Double = 1.0): Boolean {
+        if (!quantity.isFinite() || quantity <= 0.0) return false
+        val currentList = _cartItems.value.toMutableList()
+        val index = currentList.indexOfFirst { it.product.barcode == product.barcode }
+        val isSynthetic = isSyntheticSaleBarcode(product.barcode)
+        val currentQuantity = currentList.getOrNull(index)?.quantity ?: 0.0
+        if (!isSynthetic && currentQuantity + quantity > product.stockQty + 0.000001) return false
+        val added = if (index != -1) {
+            currentList[index] = currentList[index].copy(quantity = currentList[index].quantity + quantity)
+            _cartItems.value = currentList
+            true
+        } else {
+            currentList.add(CartItem(product, quantity))
+            _cartItems.value = currentList
+            true
+        }
+        if (added) {
+            persistCartSnapshot(_cartItems.value)
+        }
+        return added
+    }
+
+    /** Looks up a hardware-scanned barcode and updates the live cart atomically. */
+    suspend fun addBarcodeToCart(barcode: String): CartBarcodeResult {
+        val normalizedBarcode = barcode.trim()
+        val product = repository.getProductByBarcode(normalizedBarcode)
+            ?: return CartBarcodeResult(
+                barcode = normalizedBarcode,
+                status = CartBarcodeStatus.NOT_FOUND
+            )
+
+        val added = addToCart(product)
+        val quantity = _cartItems.value
+            .firstOrNull { it.product.barcode == product.barcode }
+            ?.quantity ?: 0.0
+        return CartBarcodeResult(
+            barcode = normalizedBarcode,
+            productName = product.name,
+            quantityInCart = quantity,
+            grandTotal = getGrandTotal(),
+            status = if (added) CartBarcodeStatus.ADDED else CartBarcodeStatus.STOCK_LIMIT
+        )
+    }
+
+    fun updateQuantity(product: Product, newQty: Double) {
+        if (newQty <= 0.0) {
+            removeFromCart(product)
+            return
+        }
+        val currentList = _cartItems.value.toMutableList()
+        val index = currentList.indexOfFirst { it.product.barcode == product.barcode }
+        if (index != -1) {
+            val safeQuantity = if (isSyntheticSaleBarcode(product.barcode)) {
+                newQty
+            } else {
+                newQty.coerceAtMost(product.stockQty)
+            }
+            if (safeQuantity <= 0.0) {
+                removeFromCart(product)
+                return
+            }
+            currentList[index] = currentList[index].copy(quantity = safeQuantity)
+            _cartItems.value = currentList
+            persistCartSnapshot(currentList)
+        }
+    }
+
+    fun removeFromCart(product: Product) {
+        val currentList = _cartItems.value.filter { it.product.barcode != product.barcode }
+        _cartItems.value = currentList
+        persistCartSnapshot(currentList)
+    }
+
+    fun getGrandTotal(): Double {
+        val mode = priceMode.value
+        val sub = _cartItems.value.sumOf { effectivePrice(it.product, mode) * it.quantity }
+        val discVal = calculateDiscountValue(sub, discountAmount.value, isPercentageDiscount.value)
+        val settings = taxSettings.value
+        val taxVal = if (settings.taxEnabled && settings.taxRate > 0.0) {
+            val base = (sub - discVal).coerceAtLeast(0.0)
+            if (settings.taxInclusive) {
+                base * (settings.taxRate / (100.0 + settings.taxRate))
+            } else {
+                base * settings.taxRate / 100.0
+            }
+        } else {
+            0.0
+        }
+        val base = (sub - discVal).coerceAtLeast(0.0)
+        return if (settings.taxEnabled && !settings.taxInclusive) {
+            (base + taxVal).coerceAtLeast(0.0)
+        } else {
+            base.coerceAtLeast(0.0)
+        }
+    }
+
+    fun setDiscountAmount(amount: Double) {
+        discountAmount.value = amount.coerceAtLeast(0.0)
+    }
+
+    fun toggleDiscountUnit() {
+        isPercentageDiscount.value = !isPercentageDiscount.value
+    }
+
+    fun clearCart() {
+        _cartItems.value = emptyList()
+        discountAmount.value = 0.0
+        isPercentageDiscount.value = false
+        paymentMethod.value = "Cash"
+        customerName.value = ""
+        customerPhone.value = ""
+        walletPhone.value = ""
+        cardType.value = "Visa"
+        cardLastFour.value = ""
+        _manualCashierName.value = null
+        amountPaid.value = 0.0
+        isSplitPayment.value = false
+        splitPayments.value = emptyList()
+        priceMode.value = PriceMode.DISCOUNTED
+        persistCartSnapshot(emptyList())
+    }
+
+    /** Resolves the effective unit price for a product given the active price mode. */
+    private fun effectivePrice(product: Product, mode: PriceMode): Double = when (mode) {
+        PriceMode.MRP        -> if (product.mrpPrice > 0) product.mrpPrice else product.sellingPrice
+        PriceMode.WHOLESALE  -> if (product.wholesalePrice > 0) product.wholesalePrice else product.sellingPrice
+        PriceMode.DISCOUNTED -> product.sellingPrice
+    }
+
+    /** Public accessor so UI (cart rows, receipt line items) can display the same price mode-aware unit price used for the cart total. */
+    fun effectivePriceFor(item: CartItem): Double = effectivePrice(item.product, priceMode.value)
+
+    suspend fun completeSale(): Long = saleCompletionMutex.withLock {
+        if (_cartItems.value.isEmpty()) {
+            throw IllegalStateException("Cart is empty")
+        }
+        val mode = priceMode.value
+        val itemsToSave = _cartItems.value.map {
+            val chargedPrice = effectivePrice(it.product, mode)
+            Triple(it.product.copy(sellingPrice = chargedPrice), it.quantity, it.note)
+        }
+        val settings = taxSettings.value
+        
+        var splitJson: String? = null
+        val methodToSave: String
+        if (isSplitPayment.value && splitPayments.value.isNotEmpty()) {
+            methodToSave = "Split"
+            val array = JSONArray()
+            splitPayments.value.forEach { sp ->
+                array.put(JSONObject().apply {
+                    put("method", sp.method)
+                    put("amount", sp.amount)
+                    if (!sp.walletPhone.isNullOrBlank()) put("walletPhone", sp.walletPhone)
+                    if (!sp.cardType.isNullOrBlank()) put("cardType", sp.cardType)
+                    if (!sp.cardLastFour.isNullOrBlank()) put("cardLastFour", sp.cardLastFour)
+                    if (!sp.referenceNote.isNullOrBlank()) put("referenceNote", sp.referenceNote)
+                })
+            }
+            splitJson = array.toString()
+        } else {
+            methodToSave = paymentMethod.value
+        }
+
+        val redeemedCustomer = loyaltyCustomer.value
+        val payableBeforeLoyalty = if (settings.taxEnabled && !settings.taxInclusive) {
+            (subtotal.value - discountValue.value + taxValue.value).coerceAtLeast(0.0)
+        } else {
+            (subtotal.value - discountValue.value).coerceAtLeast(0.0)
+        }
+        val appliedLoyaltyPoints = if (redeemedCustomer != null) {
+            loyaltyDiscount.value
+                .coerceIn(0.0, minOf(redeemedCustomer.pointsBalance.toDouble(), payableBeforeLoyalty))
+                .toInt()
+        } else {
+            0
+        }
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = subtotal.value,
+            discountAmount = discountAmount.value,
+            isPercentage = isPercentageDiscount.value,
+            grandTotal = grandTotal.value,
+            paymentMethod = methodToSave,
+            customerName = customerName.value.takeIf { it.isNotBlank() },
+            customerPhone = customerPhone.value.takeIf { it.isNotBlank() },
+            amountPaid = if (methodToSave == "Split") splitPayments.value.firstOrNull { it.method == "Cash" }?.amount ?: 0.0 else amountPaid.value,
+            walletPhone = walletPhone.value.takeIf { it.isNotBlank() },
+            cardType = cardType.value.takeIf { paymentMethod.value == "Card" },
+            cardLastFour = cardLastFour.value.takeIf { it.isNotBlank() },
+            cartItemsWithNotes = itemsToSave,
+            taxRate = if (settings.taxEnabled) settings.taxRate else 0.0,
+            taxAmount = taxValue.value,
+            splitPaymentJson = splitJson,
+            loyaltyPhone = redeemedCustomer?.phone,
+            loyaltyPointsToRedeem = appliedLoyaltyPoints
+        )
+
+        clearCart()
+        return@withLock saleId
+    }
+}
+
+data class AddedProductConfirmation(
+    val barcode: String,
+    val productName: String,
+    val price: Double,
+    val stockQty: Double,
+    val grandTotal: Double,
+    val isSuccess: Boolean,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+class ScannerViewModel(private val repository: DataRepository) : ViewModel() {
+    private val _isSellMode = MutableStateFlow(true)
+    val isSellMode: StateFlow<Boolean> = _isSellMode.asStateFlow()
+
+    private val _scannedProduct = MutableStateFlow<Product?>(null)
+    val scannedProduct: StateFlow<Product?> = _scannedProduct.asStateFlow()
+
+    private val _scannedBarcode = MutableStateFlow<String?>(null)
+    val scannedBarcode: StateFlow<String?> = _scannedBarcode.asStateFlow()
+
+    private val _addedProductConfirmation = MutableStateFlow<AddedProductConfirmation?>(null)
+    val addedProductConfirmation: StateFlow<AddedProductConfirmation?> = _addedProductConfirmation.asStateFlow()
+
+    val torchEnabled = MutableStateFlow(false)
+    val showManualDialog = MutableStateFlow(false)
+
+    fun dismissAddedConfirmation() {
+        _addedProductConfirmation.value = null
+    }
+
+    // The barcode currently "locked" as in-view. A locked barcode is ignored on
+    // repeat detections; it only unlocks once the camera has seen empty frames
+    // (the code left the frame) for MISS_FRAMES_TO_UNLOCK consecutive frames AND
+    // at least MIN_MISS_DURATION_MS has passed. The time gate matters because a
+    // shaky hand or motion blur can cause several consecutive "no barcode" frames
+    // in well under a second while the code is still physically in view — a pure
+    // frame-count debounce unlocks during that blur and double-adds on the next
+    // successful read.
+    private var lockedBarcode: String? = null
+    private var missFrameCount: Int = 0
+    private var lastDetectionTime: Long = 0
+    private var lastAcceptedBarcode: String? = null
+    private var lastAcceptedTime: Long = 0L
+
+    fun setMode(isSell: Boolean) {
+        _isSellMode.value = isSell
+        clearScanned()
+    }
+
+    // Called every camera frame in which no barcode was detected at all.
+    fun onNoBarcodeInFrame() {
+        if (lockedBarcode == null) return
+        missFrameCount++
+        val elapsed = System.currentTimeMillis() - lastDetectionTime
+        if (missFrameCount >= MISS_FRAMES_TO_UNLOCK && elapsed >= MIN_MISS_DURATION_MS) {
+            lockedBarcode = null
+            missFrameCount = 0
+        }
+    }
+
+    fun unlockBarcode() {
+        lockedBarcode = null
+        missFrameCount = 0
+    }
+
+    fun onBarcodeScanned(
+        barcode: String,
+        cartViewModel: CartViewModel,
+        onSoundVibrate: () -> Unit,
+        onShowSnackbar: (String, Double, Double, Double, Boolean) -> Unit,
+        fromHardwareScanner: Boolean = false
+    ) {
+        val now = System.currentTimeMillis()
+        // The camera and a HID scanner can report the same visible code almost
+        // simultaneously. Treat that as one scan while still allowing deliberate,
+        // repeated hardware trigger presses after the short guard window.
+        if (barcode == lastAcceptedBarcode && now - lastAcceptedTime < CROSS_SOURCE_DUPLICATE_WINDOW_MS) {
+            return
+        }
+        // Same code still in view (or re-shown before it fully left frame): ignore.
+        if (!fromHardwareScanner && barcode == lockedBarcode) {
+            missFrameCount = 0
+            lastDetectionTime = now
+            return
+        }
+        lockedBarcode = barcode
+        missFrameCount = 0
+        lastDetectionTime = now
+        lastAcceptedBarcode = barcode
+        lastAcceptedTime = now
+
+        onSoundVibrate()
+
+        viewModelScope.launch {
+            val product = repository.getProductByBarcode(barcode)
+            if (product != null) {
+                if (_isSellMode.value) {
+                    val added = cartViewModel.addToCart(product)
+                    _addedProductConfirmation.value = AddedProductConfirmation(
+                        barcode = product.barcode,
+                        productName = product.name,
+                        price = product.sellingPrice,
+                        stockQty = product.stockQty,
+                        grandTotal = cartViewModel.getGrandTotal(),
+                        isSuccess = added
+                    )
+                    onShowSnackbar(product.name, product.sellingPrice, product.stockQty, cartViewModel.getGrandTotal(), added)
+                } else {
+                    _scannedProduct.value = product
+                }
+            } else {
+                _scannedBarcode.value = barcode
+                _scannedProduct.value = null
+            }
+        }
+    }
+
+    fun quickAdjustStock(product: Product, delta: Double) {
+        viewModelScope.launch {
+            try {
+                val updated = repository.adjustProductStock(product.barcode, delta)
+                if (updated != null) {
+                    _scannedProduct.value = updated
+                }
+            } catch (e: DataRepository.UnauthorizedException) {
+                android.util.Log.w("ScannerViewModel", "Stock adjustment denied: ${e.message}")
+            }
+        }
+    }
+
+    fun setStockQty(product: Product, newQty: Double) {
+        viewModelScope.launch {
+            try {
+                val updated = product.copy(stockQty = newQty.coerceAtLeast(0.0))
+                repository.updateProduct(updated)
+                if (_scannedProduct.value != null) {
+                    _scannedProduct.value = updated
+                }
+            } catch (e: DataRepository.UnauthorizedException) {
+                android.util.Log.w("ScannerViewModel", "Stock update denied: ${e.message}")
+            }
+        }
+    }
+
+    fun saveStockQty(product: Product, newQty: Double) {
+        viewModelScope.launch {
+            try {
+                val updated = product.copy(stockQty = newQty.coerceAtLeast(0.0))
+                repository.updateProduct(updated)
+            } catch (e: DataRepository.UnauthorizedException) {
+                android.util.Log.w("ScannerViewModel", "Stock save denied: ${e.message}")
+            }
+        }
+        clearScanned()
+    }
+
+    fun clearScanned() {
+        _scannedProduct.value = null
+        _scannedBarcode.value = null
+        lockedBarcode = null
+        missFrameCount = 0
+    }
+
+    companion object {
+        // Consecutive empty-detection frames required before a barcode is
+        // considered "out of sight" and eligible to scan again.
+        private const val MISS_FRAMES_TO_UNLOCK = 6
+        // Minimum time with no detection before unlocking, regardless of frame
+        // count — guards against motion blur/hand shake producing several
+        // "no barcode" frames in quick succession while still pointed at the code.
+        private const val MIN_MISS_DURATION_MS = 700L
+        private const val CROSS_SOURCE_DUPLICATE_WINDOW_MS = 450L
+    }
+}
+
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    val products: StateFlow<List<Product>> = _searchQuery
+        .flatMapLatest { query ->
+            if (query.isBlank()) {
+                repository.allProducts
+            } else {
+                repository.searchProducts(query)
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val allProducts: StateFlow<List<Product>> = repository.allProducts
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val allAlerts: StateFlow<InventoryAlertsData> = allProducts.map { products ->
+        val now = System.currentTimeMillis()
+        val expired = mutableListOf<Product>()
+        val expiringSoon = mutableListOf<Product>()
+        val lowStock = mutableListOf<Product>()
+
+        val in30Days = now + (30L * 24 * 60 * 60 * 1000)
+
+        for (p in products) {
+            // Check stock (out-of-stock products are reported separately, not as "low stock")
+            if (p.stockQty > 0.0 && p.stockQty <= p.reorderLevel) {
+                lowStock.add(p)
+            }
+            // Check expiry
+            if (!p.expiryDate.isNullOrBlank()) {
+                val expDate = parseExpiryDateToMillis(p.expiryDate)
+                if (expDate != null) {
+                    if (expDate <= now) {
+                        expired.add(p)
+                    } else if (expDate <= in30Days) {
+                        expiringSoon.add(p)
+                    }
+                }
+            }
+        }
+        InventoryAlertsData(
+            expiredProducts = expired,
+            expiringSoonProducts = expiringSoon,
+            lowStockProducts = lowStock
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), InventoryAlertsData())
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    suspend fun getProductByBarcode(barcode: String): Product? {
+        return repository.getProductByBarcode(barcode)
+    }
+
+    /** Re-tags every product carrying [oldCategory] to [newCategory] so a category-manager rename doesn't orphan existing inventory. */
+    suspend fun renameCategory(oldCategory: String, newCategory: String) {
+        repository.renameProductCategory(oldCategory, newCategory)
+    }
+
+    suspend fun addProduct(product: Product): Boolean {
+        return try {
+            val existing = repository.getProductByBarcode(product.barcode)
+            if (existing != null) {
+                false // Duplicate
+            } else {
+                repository.insertProduct(product)
+                true
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun updateProduct(
+        oldBarcode: String,
+        updatedProduct: Product,
+        adjustment: InventoryAdjustment? = null
+    ): Result<Unit> =
+        runCatching { repository.replaceProductBarcode(oldBarcode, updatedProduct, adjustment) }
+
+    fun updateProduct(product: Product) {
+        viewModelScope.launch {
+            repository.updateProduct(product)
+        }
+    }
+
+    val allInventoryAdjustments: StateFlow<List<InventoryAdjustment>> = repository.allInventoryAdjustments
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Standalone audit entry with no paired stock mutation (e.g. logging the initial stock a brand-new product was created with). */
+    fun recordInventoryAdjustment(
+        productBarcode: String,
+        productName: String,
+        previousStock: Double,
+        newStock: Double,
+        difference: Double,
+        reason: String,
+        note: String? = null
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.recordInventoryAdjustment(
+                    InventoryAdjustment(
+                        productBarcode = productBarcode,
+                        productName = productName,
+                        previousStock = previousStock,
+                        newStock = newStock,
+                        difference = difference,
+                        reason = reason,
+                        note = note
+                    )
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("ProductsViewModel", "Failed to record inventory adjustment", e)
+            }
+        }
+    }
+
+    /** Updates the product and writes its audit row atomically, so the two can never diverge if this coroutine is cancelled partway through. */
+    fun updateProductWithAdjustment(
+        updatedProduct: Product,
+        previousStock: Double,
+        newStock: Double,
+        difference: Double,
+        reason: String,
+        note: String? = null
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.updateProductWithInventoryAdjustment(
+                    updatedProduct,
+                    InventoryAdjustment(
+                        productBarcode = updatedProduct.barcode,
+                        productName = updatedProduct.name,
+                        previousStock = previousStock,
+                        newStock = newStock,
+                        difference = difference,
+                        reason = reason,
+                        note = note
+                    )
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("ProductsViewModel", "Failed to update product with inventory adjustment", e)
+            }
+        }
+    }
+
+    fun deleteProduct(product: Product, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = runCatching { repository.deleteProduct(product) }
+            onResult(result)
+        }
+    }
+
+    suspend fun exportProductsToExcel(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val products = repository.allProducts.first()
+        return@withContext try {
+            val buffer = java.io.ByteArrayOutputStream()
+            com.example.techyfipos.utils.ExcelHelper.exportProducts(products, buffer)
+            outputStream.write(buffer.toByteArray())
+            outputStream.flush()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun importProductsFromExcel(inputStream: java.io.InputStream): com.example.techyfipos.utils.ExcelHelper.ImportResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val result = com.example.techyfipos.utils.ExcelHelper.importProducts(inputStream)
+        if (result.importedProducts.isNotEmpty()) {
+            repository.upsertProducts(result.importedProducts, result.presentFields)
+        }
+        result
+    }
+}
+
+data class InventoryAlertsData(
+    val expiredProducts: List<Product> = emptyList(),
+    val expiringSoonProducts: List<Product> = emptyList(),
+    val lowStockProducts: List<Product> = emptyList()
+) {
+    val totalCount: Int get() = expiredProducts.size + expiringSoonProducts.size + lowStockProducts.size
+}
+
+class SalesViewModel(private val repository: DataRepository) : ViewModel() {
+    val salesWithItems: StateFlow<List<SaleWithItems>> = repository.allSalesWithItems
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val allReturns: StateFlow<List<com.example.techyfipos.data.db.Return>> = repository.allReturns
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    private val allReturnItems: StateFlow<List<com.example.techyfipos.data.db.ReturnItem>> = repository.allReturnItems
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Current outstanding due for a customer — used to show the live "Total Due" on a reopened historical receipt, since that figure isn't stored on the Sale row itself. */
+    suspend fun getCustomerDue(phone: String) = repository.getCustomerDueByPhone(phone)
+
+    val salesSummary: StateFlow<Triple<Double, Double, Int>> = salesWithItems.map { list ->
+        // Today start timestamp
+        val calendar = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val todayStart = calendar.timeInMillis
+        val todaySalesList = list.filter { it.sale.timestamp >= todayStart }
+
+        val totalSales = todaySalesList.sumOf { it.sale.grandTotal }
+        var totalProfit = 0.0
+        for (swi in todaySalesList) {
+            val itemsProfit = swi.items.sumOf { item ->
+                // Look up purchase price in products if possible, or fall back to 80% of selling price
+                // Since Room contains products we can fetch, but in offline we just query.
+                // We'll calculate profit as: sum of item quantity * (sellingPrice - purchasePrice)
+                // We can query products in background, or we could also save purchasePrice in SaleItem.
+                // Let's assume we fetch products by barcode. To keep it simple and offline-first without blocking flow,
+                // we'll fetch the products for this sale from database. Let's do it reactively.
+                0.0
+            }
+            // For simple profit calculation, let's load all products first or load it inside repository.
+            // Let's query profit from a repo method if it's cleaner, or we can just fetch products map.
+        }
+
+        // To make profit calculation correct: we need purchasePrice * qty.
+        // Let's write a database query or calculate it. We'll refine profit calculation.
+        Triple(totalSales, 0.0, todaySalesList.size)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Triple(0.0, 0.0, 0))
+
+    // Real profit flow
+    val todayProfit: StateFlow<Double> = salesWithItems.map { list ->
+        val calendar = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val todayStart = calendar.timeInMillis
+        val todaySalesList = list.filter { it.sale.timestamp >= todayStart }
+        
+        var profitSum = 0.0
+        for (swi in todaySalesList) {
+            for (item in swi.items) {
+                val prod = repository.getProductByBarcode(item.productBarcode)
+                val purchase = prod?.purchasePrice ?: fallbackPurchasePrice(item.productBarcode, item.price)
+                profitSum += (item.price - purchase) * item.quantity
+            }
+        }
+        profitSum
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    /** Aggregates sales within [startMillis, endMillis) for the reports screen. */
+    suspend fun buildReport(startMillis: Long, endMillis: Long, sourceList: List<SaleWithItems>? = null): SalesReportData = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val rawList = sourceList ?: salesWithItems.value
+        val list = rawList.filter { it.sale.timestamp in startMillis until endMillis }
+        val totalExpenses = repository.getExpensesBetween(startMillis, endMillis).first()
+            .filter { it.type == "EXPENSE" }
+            .sumOf { it.amount }
+        val totalRevenue = list.sumOf { it.sale.grandTotal }
+        val totalDiscount = list.sumOf {
+            calculateDiscountValue(it.sale.subtotal, it.sale.discountAmount, it.sale.isPercentageDiscount)
+        }
+        val totalTax = list.sumOf { it.sale.taxAmount }
+
+        // Reports are sale-cohort based: every return belonging to a sale in this range is applied,
+        // even if the return happened later. This keeps the headline and every breakdown on the
+        // same basis and prevents a return for an older invoice making today's revenue negative.
+        val salesByIdAll = salesWithItems.value.associateBy { it.sale.id }
+        val salesByIdInPeriod = list.associateBy { it.sale.id }
+        val returnsInPeriod = allReturns.value.filter { it.saleId in salesByIdInPeriod }
+        val totalRefunds = returnsInPeriod.sumOf { it.refundAmount }
+
+        // Returns must reduce every breakdown they touched originally (product rankings, payment
+        // mix, item counts, tax, daily/hourly), not just the headline revenue/profit figures —
+        // otherwise a heavily-returned product still looks like a best-seller and the sub-totals
+        // stop adding up to the headline numbers. Each return is attributed back to the day/hour/
+        // payment-method bucket of the ORIGINAL sale (where the revenue was first counted), not the
+        // day the return happened.
+        var refundedProfit = 0.0
+        var refundedTax = 0.0
+        val returnedQtyByBarcode = mutableMapOf<String, Double>()
+        val returnedRevenueByBarcode = mutableMapOf<String, Double>()
+        val returnedAmountByPaymentMethod = mutableMapOf<String, Double>()
+        val returnedByDay = mutableMapOf<Long, Pair<Double, Double>>() // dayStart -> (revenue, profit)
+        val returnedByHour = mutableMapOf<Int, Triple<Double, Double, Double>>() // hour -> (revenue, profit, itemsSold)
+        for (ret in returnsInPeriod) {
+            val originalSaleAll = salesByIdAll[ret.saleId]
+            val originalSaleItems = originalSaleAll?.items.orEmpty()
+            val itemsForThisReturn = allReturnItems.value.filter { it.returnId == ret.id }
+            var returnedCost = 0.0
+            for (item in itemsForThisReturn) {
+                val matchingSaleItem = originalSaleItems.firstOrNull { it.productBarcode == item.productBarcode }
+                val purchase = matchingSaleItem?.purchasePriceAtSale
+                    ?: repository.getProductByBarcode(item.productBarcode)?.purchasePrice
+                    ?: fallbackPurchasePrice(item.productBarcode, item.price)
+                returnedCost += purchase * item.quantity
+            }
+            // Profit reversed is the net revenue actually reversed minus the returned inventory's
+            // cost. This correctly accounts for sale-level discounts and tax.
+            val retTaxPortion = if (originalSaleAll != null && originalSaleAll.sale.grandTotal > 0.0) {
+                ret.refundAmount / originalSaleAll.sale.grandTotal * originalSaleAll.sale.taxAmount
+            } else 0.0
+            val thisReturnProfit = (ret.refundAmount - retTaxPortion) - returnedCost
+            refundedProfit += thisReturnProfit
+
+            // Only adjust the period's own breakdowns when the original sale is itself part of
+            // this period (and thus already contributing to these same maps) — otherwise there is
+            // no existing bucket to subtract from.
+            val originalSaleInPeriod = salesByIdInPeriod[ret.saleId] ?: continue
+            val rawReturnedValue = itemsForThisReturn.sumOf { it.price * it.quantity }
+            for (item in itemsForThisReturn) {
+                val rawItemValue = item.price * item.quantity
+                val itemRevenue = if (rawReturnedValue > 0.0) {
+                    ret.refundAmount * rawItemValue / rawReturnedValue
+                } else 0.0
+                returnedQtyByBarcode[item.productBarcode] = (returnedQtyByBarcode[item.productBarcode] ?: 0.0) + item.quantity
+                returnedRevenueByBarcode[item.productBarcode] = (returnedRevenueByBarcode[item.productBarcode] ?: 0.0) + itemRevenue
+            }
+            val paymentKey = originalSaleInPeriod.sale.paymentMethod.ifBlank { "Other" }
+            returnedAmountByPaymentMethod[paymentKey] = (returnedAmountByPaymentMethod[paymentKey] ?: 0.0) + ret.refundAmount
+            if (originalSaleInPeriod.sale.grandTotal > 0.0) {
+                refundedTax += ret.refundAmount / originalSaleInPeriod.sale.grandTotal * originalSaleInPeriod.sale.taxAmount
+            }
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = originalSaleInPeriod.sale.timestamp }
+            val dayStart = (cal.clone() as java.util.Calendar).apply {
+                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+            val returnedQtyThisReturn = itemsForThisReturn.sumOf { it.quantity }
+            val existingDay = returnedByDay[dayStart] ?: (0.0 to 0.0)
+            returnedByDay[dayStart] = (existingDay.first + ret.refundAmount) to (existingDay.second + thisReturnProfit)
+            val existingHour = returnedByHour[hour] ?: Triple(0.0, 0.0, 0.0)
+            returnedByHour[hour] = Triple(
+                existingHour.first + ret.refundAmount,
+                existingHour.second + thisReturnProfit,
+                existingHour.third + returnedQtyThisReturn
+            )
+        }
+        val totalReturnedQty = returnedQtyByBarcode.values.sum()
+
+        var profitSum = 0.0
+        val productTotals = linkedMapOf<String, ProductReportData>()
+        val paymentTotals = linkedMapOf<String, PaymentReportData>()
+        val dailyTotals = sortedMapOf<Long, DailyReportData>()
+        val hourlyTotals = (0..23).associateWith { hour ->
+            val hourLabel = when (hour) {
+                0 -> "12 AM"
+                in 1..11 -> "$hour AM"
+                12 -> "12 PM"
+                else -> "${hour - 12} PM"
+            }
+            val startHourStr = when (hour) {
+                0 -> "12:00 AM"
+                in 1..9 -> "0$hour:00 AM"
+                in 10..11 -> "$hour:00 AM"
+                12 -> "12:00 PM"
+                in 13..21 -> "0${hour - 12}:00 PM"
+                else -> "${hour - 12}:00 PM"
+            }
+            val nextHour = (hour + 1) % 24
+            val endHourStr = when (nextHour) {
+                0 -> "12:00 AM"
+                in 1..9 -> "0$nextHour:00 AM"
+                in 10..11 -> "$nextHour:00 AM"
+                12 -> "12:00 PM"
+                in 13..21 -> "0${nextHour - 12}:00 PM"
+                else -> "${nextHour - 12}:00 PM"
+            }
+            HourlyReportData(
+                hour = hour,
+                hourLabel = hourLabel,
+                timeSlotLabel = "$startHourStr – $endHourStr",
+                revenue = 0.0,
+                profit = 0.0,
+                transactionCount = 0,
+                itemsSold = 0.0
+            )
+        }.toMutableMap()
+        val productCosts = mutableMapOf<String, Double>()
+        var itemsSold = 0.0
+
+        for (swi in list) {
+            val cal = java.util.Calendar.getInstance().apply {
+                timeInMillis = swi.sale.timestamp
+            }
+            val dayStart = (cal.clone() as java.util.Calendar).apply {
+                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+            var saleProfit = 0.0
+            var saleItemsQty = 0.0
+            val isTaxInclusive = swi.sale.taxAmount > 0.0 && swi.sale.taxRate > 0.0 && kotlin.math.abs(swi.sale.subtotal - swi.sale.grandTotal) < 0.01
+            for (item in swi.items) {
+                // The cost recorded at the moment of this exact sale, when available, so editing a
+                // product's current purchase price (or deleting it) later never changes what a past
+                // report shows. Older rows written before this field existed fall back to a live
+                // lookup / estimate, same as before.
+                val purchase = item.purchasePriceAtSale ?: productCosts.getOrPut(item.productBarcode) {
+                    repository.getProductByBarcode(item.productBarcode)?.purchasePrice
+                        ?: fallbackPurchasePrice(item.productBarcode, item.price)
+                }
+                val effectivePrice = if (isTaxInclusive) item.price / (1.0 + swi.sale.taxRate / 100.0) else item.price
+                val itemProfit = (effectivePrice - purchase) * item.quantity
+                val itemRevenue = item.price * item.quantity
+                saleProfit += itemProfit
+                saleItemsQty += item.quantity
+                itemsSold += item.quantity
+
+                val existingProduct = productTotals[item.productBarcode]
+                productTotals[item.productBarcode] = ProductReportData(
+                    barcode = item.productBarcode,
+                    name = item.productName,
+                    quantity = (existingProduct?.quantity ?: 0.0) + item.quantity,
+                    revenue = (existingProduct?.revenue ?: 0.0) + itemRevenue
+                )
+            }
+            profitSum += saleProfit
+
+            val paymentKey = swi.sale.paymentMethod.ifBlank { "Other" }
+            val existingPayment = paymentTotals[paymentKey]
+            paymentTotals[paymentKey] = PaymentReportData(
+                method = paymentKey,
+                transactionCount = (existingPayment?.transactionCount ?: 0) + 1,
+                amount = (existingPayment?.amount ?: 0.0) + swi.sale.grandTotal
+            )
+
+            val existingDay = dailyTotals[dayStart]
+            dailyTotals[dayStart] = DailyReportData(
+                timestamp = dayStart,
+                revenue = (existingDay?.revenue ?: 0.0) + swi.sale.grandTotal,
+                profit = (existingDay?.profit ?: 0.0) + saleProfit,
+                transactionCount = (existingDay?.transactionCount ?: 0) + 1
+            )
+
+            val existingHour = hourlyTotals[hour]
+            if (existingHour != null) {
+                hourlyTotals[hour] = existingHour.copy(
+                    revenue = existingHour.revenue + swi.sale.grandTotal,
+                    profit = existingHour.profit + saleProfit,
+                    transactionCount = existingHour.transactionCount + 1,
+                    itemsSold = existingHour.itemsSold + saleItemsQty
+                )
+            }
+        }
+
+        // Apply the return adjustments computed above to every breakdown they touched originally.
+        returnedQtyByBarcode.forEach { (barcode, qty) ->
+            val existing = productTotals[barcode] ?: return@forEach
+            productTotals[barcode] = existing.copy(
+                quantity = (existing.quantity - qty).coerceAtLeast(0.0),
+                revenue = (existing.revenue - (returnedRevenueByBarcode[barcode] ?: 0.0)).coerceAtLeast(0.0)
+            )
+        }
+        returnedAmountByPaymentMethod.forEach { (method, amount) ->
+            val existing = paymentTotals[method] ?: return@forEach
+            paymentTotals[method] = existing.copy(amount = (existing.amount - amount).coerceAtLeast(0.0))
+        }
+        returnedByDay.forEach { (day, revenueProfit) ->
+            val existing = dailyTotals[day] ?: return@forEach
+            dailyTotals[day] = existing.copy(
+                revenue = (existing.revenue - revenueProfit.first).coerceAtLeast(0.0),
+                profit = existing.profit - revenueProfit.second
+            )
+        }
+        returnedByHour.forEach { (hour, adjustment) ->
+            val existing = hourlyTotals[hour] ?: return@forEach
+            hourlyTotals[hour] = existing.copy(
+                revenue = (existing.revenue - adjustment.first).coerceAtLeast(0.0),
+                profit = existing.profit - adjustment.second,
+                itemsSold = (existing.itemsSold - adjustment.third).coerceAtLeast(0.0)
+            )
+        }
+
+        val totalLoyaltyDiscount = list.sumOf { it.sale.loyaltyPointsRedeemed.toDouble() }
+        val grossMargin = profitSum - refundedProfit
+        SalesReportData(
+            transactionCount = list.size,
+            totalRevenue = totalRevenue - totalRefunds,
+            totalDiscount = totalDiscount,
+            totalTax = (totalTax - refundedTax).coerceAtLeast(0.0),
+            totalProfit = grossMargin,
+            totalExpenses = totalExpenses,
+            totalLoyaltyDiscount = totalLoyaltyDiscount,
+            netProfit = grossMargin - totalDiscount - totalLoyaltyDiscount - totalExpenses,
+            totalRefunds = totalRefunds,
+            itemsSold = (itemsSold - totalReturnedQty).coerceAtLeast(0.0),
+            topProducts = productTotals.values.sortedByDescending { it.revenue },
+            paymentBreakdown = paymentTotals.values.sortedByDescending { it.amount },
+            dailyBreakdown = dailyTotals.values.toList(),
+            hourlyBreakdown = hourlyTotals.values.toList()
+        )
+    }
+
+    fun deleteSale(saleId: Long) {
+        viewModelScope.launch {
+            try {
+                repository.deleteSale(saleId)
+            } catch (error: Exception) {
+                android.util.Log.e("SalesViewModel", "Unable to delete sale", error)
+            }
+        }
+    }
+
+    /** Suspend variant so a caller (e.g. "Edit sale") can wait for the void to finish before rebuilding the cart. Returns true on success. */
+    suspend fun deleteSaleAndAwait(saleId: Long): Boolean = try {
+        repository.deleteSale(saleId)
+        true
+    } catch (error: Exception) {
+        android.util.Log.e("SalesViewModel", "Unable to delete sale", error)
+        false
+    }
+
+    suspend fun getReturnedQuantities(saleId: Long): Map<String, Double> {
+        return repository.getReturnedQuantities(saleId)
+    }
+
+    fun processReturn(
+        saleId: Long,
+        lines: List<ReturnLine>,
+        refundMethod: String,
+        note: String? = null,
+        restock: Boolean = true,
+        onComplete: (Boolean, Double) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val refundTotal = repository.processReturn(saleId, lines, refundMethod, note, restock)
+                onComplete(true, refundTotal)
+            } catch (error: Exception) {
+                android.util.Log.e("SalesViewModel", "Unable to process return", error)
+                onComplete(false, 0.0)
+            }
+        }
+    }
+
+    suspend fun exportSalesReportToExcel(
+        report: SalesReportData,
+        dateRangeLabel: String,
+        outputStream: java.io.OutputStream
+    ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            val buffer = java.io.ByteArrayOutputStream()
+            com.example.techyfipos.utils.ExcelHelper.exportSalesReport(report, dateRangeLabel, buffer)
+            outputStream.write(buffer.toByteArray())
+            outputStream.flush()
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("SalesViewModel", "Failed to export sales report", e)
+            false
+        }
+    }
+}
+
+data class SalesReportData(
+    val transactionCount: Int,
+    val totalRevenue: Double,
+    val totalDiscount: Double,
+    val totalTax: Double = 0.0,
+    val totalProfit: Double,
+    val totalExpenses: Double = 0.0,
+    val totalLoyaltyDiscount: Double = 0.0,
+    val netProfit: Double = totalProfit,
+    val totalRefunds: Double = 0.0,
+    val itemsSold: Double = 0.0,
+    val topProducts: List<ProductReportData> = emptyList(),
+    val paymentBreakdown: List<PaymentReportData> = emptyList(),
+    val dailyBreakdown: List<DailyReportData> = emptyList(),
+    val hourlyBreakdown: List<HourlyReportData> = emptyList()
+)
+
+data class HourlyReportData(
+    val hour: Int,
+    val hourLabel: String,
+    val timeSlotLabel: String,
+    val revenue: Double,
+    val profit: Double,
+    val transactionCount: Int,
+    val itemsSold: Double
+)
+
+data class ProductReportData(
+    val barcode: String,
+    val name: String,
+    val quantity: Double,
+    val revenue: Double
+)
+
+data class PaymentReportData(
+    val method: String,
+    val transactionCount: Int,
+    val amount: Double
+)
+
+data class DailyReportData(
+    val timestamp: Long,
+    val revenue: Double,
+    val profit: Double,
+    val transactionCount: Int
+)
+
+enum class DuesAuditType {
+    REPAYMENT,
+    CREDIT_SALE,
+    RETURN_ADJUSTMENT,
+    MANUAL_DUE
+}
+
+data class DuesAuditEntry(
+    val id: String,
+    val type: DuesAuditType,
+    val customerPhone: String,
+    val customerName: String,
+    val amount: Double,
+    val timestamp: Long,
+    val channelOrMethod: String,
+    val note: String? = null,
+    val referenceId: String? = null
+)
+
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+class DuesViewModel(private val repository: DataRepository) : ViewModel() {
+    val duesList: StateFlow<List<CustomerDue>> = repository.allOutstandingDues
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val totalOutstandingDue: StateFlow<Double> = duesList
+        .map { list -> list.sumOf { it.outstandingAmount } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val allDuesList: StateFlow<List<CustomerDue>> = repository.allDues
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val totalRepaidAmount: StateFlow<Double> = repository.allDuePayments
+        .map { list -> list.sumOf { it.amountPaid } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val allDuePayments: StateFlow<List<DuePayment>> = repository.allDuePayments
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allScheduledReminders: StateFlow<List<ScheduledDueReminder>> = repository.allScheduledDueReminders
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allDueReminderLogs: StateFlow<List<com.example.techyfipos.data.db.DueReminderLog>> = repository.allDueReminderLogs
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun logReminder(
+        customerPhone: String,
+        customerName: String,
+        dueAmount: Double,
+        channel: String,
+        messageText: String = "",
+        status: String = "SENT"
+    ) {
+        viewModelScope.launch {
+            repository.logDueReminder(
+                com.example.techyfipos.data.db.DueReminderLog(
+                    customerPhone = customerPhone,
+                    customerName = customerName,
+                    dueAmount = dueAmount,
+                    channel = channel,
+                    messageText = messageText,
+                    timestamp = System.currentTimeMillis(),
+                    status = status
+                )
+            )
+        }
+    }
+
+    fun deleteReminderLog(id: Long) {
+        viewModelScope.launch {
+            repository.deleteDueReminderLog(id)
+        }
+    }
+
+    fun clearAllReminderLogs() {
+        viewModelScope.launch {
+            repository.clearDueReminderLogs()
+        }
+    }
+
+    val allDuesAuditEntries: StateFlow<List<DuesAuditEntry>> = kotlinx.coroutines.flow.combine(
+        repository.allDuePayments,
+        repository.allSales,
+        repository.allReturns,
+        repository.allDues,
+        repository.allDueCharges
+    ) { payments, sales, returns, dues, charges ->
+        val customerNameMap = dues.associate { it.customerPhone to it.customerName }
+        val list = mutableListOf<DuesAuditEntry>()
+
+        // 1. Repayments
+        payments.forEach { p ->
+            val name = customerNameMap[p.customerPhone] ?: p.customerPhone
+            list.add(
+                DuesAuditEntry(
+                    id = "payment_${p.id}",
+                    type = DuesAuditType.REPAYMENT,
+                    customerPhone = p.customerPhone,
+                    customerName = name,
+                    amount = p.amountPaid,
+                    timestamp = p.timestamp,
+                    channelOrMethod = p.paymentMethod,
+                    note = p.referenceNote,
+                    referenceId = "#PAY-${p.id}"
+                )
+            )
+        }
+
+        // 2. Credit Sales (where paymentMethod is Due or grandTotal > amountPaid)
+        sales.filter { s ->
+            val due = (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
+            s.paymentMethod.equals("Due", ignoreCase = true) || due > 0.001
+        }.forEach { s ->
+            val due = if (s.paymentMethod.equals("Due", ignoreCase = true)) s.grandTotal else (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
+            val phone = s.customerPhone ?: ""
+            val name = s.customerName ?: (customerNameMap[phone] ?: phone)
+            list.add(
+                DuesAuditEntry(
+                    id = "sale_${s.id}",
+                    type = DuesAuditType.CREDIT_SALE,
+                    customerPhone = phone,
+                    customerName = name,
+                    amount = due,
+                    timestamp = s.timestamp,
+                    channelOrMethod = s.paymentMethod,
+                    note = "Invoice #INV-${s.id}",
+                    referenceId = "#INV-${s.id}"
+                )
+            )
+        }
+
+        // 3. Return Due Adjustments (dueAdjustmentAmount > 0)
+        returns.filter { it.dueAdjustmentAmount > 0.0 }.forEach { r ->
+            val linkedSale = sales.firstOrNull { it.id == r.saleId }
+            val phone = linkedSale?.customerPhone ?: ""
+            val name = linkedSale?.customerName ?: (customerNameMap[phone] ?: phone)
+            list.add(
+                DuesAuditEntry(
+                    id = "return_${r.id}",
+                    type = DuesAuditType.RETURN_ADJUSTMENT,
+                    customerPhone = phone,
+                    customerName = name,
+                    amount = r.dueAdjustmentAmount,
+                    timestamp = r.timestamp,
+                    channelOrMethod = r.refundMethod,
+                    note = r.note ?: "Settled against due",
+                    referenceId = if (linkedSale != null) "#INV-${linkedSale.id}" else "#RET-${r.id}"
+                )
+            )
+        }
+
+        // 4. Manual Due Charges
+        charges.forEach { c ->
+            val name = customerNameMap[c.customerPhone] ?: c.customerPhone
+            list.add(
+                DuesAuditEntry(
+                    id = "charge_${c.id}",
+                    type = DuesAuditType.MANUAL_DUE,
+                    customerPhone = c.customerPhone,
+                    customerName = name,
+                    amount = c.amount,
+                    timestamp = c.timestamp,
+                    channelOrMethod = c.reason,
+                    note = c.note ?: "Manual Due Added",
+                    referenceId = "#CHG-${c.id}"
+                )
+            )
+        }
+
+        list.sortedByDescending { it.timestamp }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val customerDebtOriginTimestamps: StateFlow<Map<String, Long>> = kotlinx.coroutines.flow.combine(
+        repository.allDues,
+        repository.allSales,
+        repository.allDueCharges,
+        repository.allDuePayments
+    ) { dues, sales, charges, payments ->
+        val paymentsByPhone = payments.groupBy { it.customerPhone }
+            .mapValues { (_, pList) -> pList.sumOf { it.amountPaid } }
+
+        val debtsByPhone = mutableMapOf<String, MutableList<Pair<Long, Double>>>()
+
+        sales.filter { s ->
+            val due = (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
+            s.paymentMethod.equals("Due", ignoreCase = true) || due > 0.001
+        }.forEach { s ->
+            val due = if (s.paymentMethod.equals("Due", ignoreCase = true)) s.grandTotal else (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
+            val phone = s.customerPhone
+            if (!phone.isNullOrBlank() && due > 0.0) {
+                debtsByPhone.getOrPut(phone) { mutableListOf() }.add(Pair(s.timestamp, due))
+            }
+        }
+
+        charges.filter { it.amount > 0.0 }.forEach { c ->
+            debtsByPhone.getOrPut(c.customerPhone) { mutableListOf() }.add(Pair(c.timestamp, c.amount))
+        }
+
+        val resultMap = mutableMapOf<String, Long>()
+        dues.filter { it.outstandingAmount > 0.0 }.forEach { due ->
+            val phone = due.customerPhone
+            var remainingPayment = paymentsByPhone[phone] ?: 0.0
+            val debtList = debtsByPhone[phone]?.sortedBy { it.first } ?: emptyList()
+
+            var oldestUnpaidTimestamp: Long? = null
+            for ((ts, debtAmt) in debtList) {
+                if (remainingPayment >= debtAmt) {
+                    remainingPayment -= debtAmt
+                } else {
+                    oldestUnpaidTimestamp = ts
+                    break
+                }
+            }
+            resultMap[phone] = oldestUnpaidTimestamp ?: due.updatedAt
+        }
+        resultMap
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    fun cancelScheduledReminder(context: Context, phone: String) {
+        viewModelScope.launch {
+            repository.cancelScheduledDueReminder(context, phone)
+        }
+    }
+
+    private val _selectedCustomer = MutableStateFlow<CustomerDue?>(null)
+    val selectedCustomer: StateFlow<CustomerDue?> = _selectedCustomer.asStateFlow()
+
+    val selectedCustomerPayments: StateFlow<List<DuePayment>> = _selectedCustomer
+        .flatMapLatest { customer ->
+            if (customer == null) flowOf(emptyList())
+            else repository.getPaymentsForCustomer(customer.customerPhone)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val selectedCustomerCharges: StateFlow<List<com.example.techyfipos.data.db.DueCharge>> = _selectedCustomer
+        .flatMapLatest { customer ->
+            if (customer == null) flowOf(emptyList())
+            else repository.getChargesForCustomer(customer.customerPhone)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun selectCustomer(customer: CustomerDue?) {
+        _selectedCustomer.value = customer
+    }
+
+    fun recordPayment(
+        phone: String,
+        amount: Double,
+        paymentMethod: String = "Cash",
+        referenceNote: String? = null,
+        onComplete: (Boolean) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.recordDuePayment(phone, amount, paymentMethod, referenceNote)
+                val fresh = repository.getCustomerDueByPhone(phone)
+                if (fresh != null) {
+                    _selectedCustomer.value = fresh
+                } else {
+                    val current = _selectedCustomer.value
+                    if (current != null && current.customerPhone == phone) {
+                        val updatedDue = (current.outstandingAmount - amount).coerceAtLeast(0.0)
+                        _selectedCustomer.value = current.copy(outstandingAmount = updatedDue)
+                    }
+                }
+                onComplete(true)
+            } catch (error: Exception) {
+                android.util.Log.e("DuesViewModel", "Unable to record due payment", error)
+                onComplete(false)
+            }
+        }
+    }
+
+    fun updateCustomerCreditLimit(phone: String, creditLimit: Double, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.updateCustomerCreditLimit(phone, creditLimit)
+                val fresh = repository.getCustomerDueByPhone(phone)
+                if (fresh != null) {
+                    _selectedCustomer.value = fresh
+                }
+                onComplete(true)
+            } catch (error: Exception) {
+                android.util.Log.e("DuesViewModel", "Unable to update credit limit", error)
+                onComplete(false)
+            }
+        }
+    }
+
+    fun addOrUpdateDue(
+        name: String,
+        phone: String,
+        amount: Double,
+        creditLimit: Double = 0.0,
+        note: String? = null,
+        onComplete: (Boolean) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                val cleanPhone = phone.trim()
+                val cleanName = name.trim()
+                if (amount > 0.0) {
+                    // Recorded as a charge (debit) so it shows up in Transaction History, not just
+                    // as an invisible bump to the aggregate balance.
+                    repository.addManualDueCharge(cleanPhone, cleanName, amount, creditLimit.takeIf { it > 0.0 }, note)
+                } else {
+                    val existing = repository.getCustomerDueByPhone(cleanPhone)
+                    val updated = existing?.copy(
+                        customerName = if (cleanName.isNotBlank()) cleanName else existing.customerName,
+                        creditLimit = if (creditLimit > 0) creditLimit else existing.creditLimit,
+                        updatedAt = System.currentTimeMillis()
+                    ) ?: com.example.techyfipos.data.db.CustomerDue(
+                        customerName = cleanName,
+                        customerPhone = cleanPhone,
+                        outstandingAmount = 0.0,
+                        creditLimit = creditLimit.coerceAtLeast(0.0),
+                        updatedAt = System.currentTimeMillis()
+                    )
+                    repository.upsertCustomerDue(updated)
+                }
+                val fresh = repository.getCustomerDueByPhone(cleanPhone)
+                if (fresh != null && _selectedCustomer.value?.customerPhone == fresh.customerPhone) {
+                    _selectedCustomer.value = fresh
+                }
+                onComplete(true)
+            } catch (error: Exception) {
+                android.util.Log.e("DuesViewModel", "Unable to add/update customer due", error)
+                onComplete(false)
+            }
+        }
+    }
+
+    /** Reverses a mistakenly recorded collection — restores the amount to the outstanding balance
+     * and removes it from Transaction History. */
+    fun deletePayment(phone: String, paymentId: Long, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.deleteDuePayment(paymentId, phone)
+                val fresh = repository.getCustomerDueByPhone(phone)
+                if (fresh != null) {
+                    _selectedCustomer.value = fresh
+                }
+                onComplete(true)
+            } catch (error: Exception) {
+                android.util.Log.e("DuesViewModel", "Unable to delete due payment", error)
+                onComplete(false)
+            }
+        }
+    }
+
+    fun deleteCharge(phone: String, chargeId: Long, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.deleteDueCharge(chargeId, phone)
+                val fresh = repository.getCustomerDueByPhone(phone)
+                if (fresh != null) {
+                    _selectedCustomer.value = fresh
+                }
+                onComplete(true)
+            } catch (error: Exception) {
+                android.util.Log.e("DuesViewModel", "Unable to delete due charge", error)
+                onComplete(false)
+            }
+        }
+    }
+
+    fun deleteCustomerDue(phone: String) {
+        viewModelScope.launch {
+            repository.deleteCustomerDue(phone)
+            if (_selectedCustomer.value?.customerPhone == phone) {
+                _selectedCustomer.value = null
+            }
+        }
+    }
+
+    suspend fun exportDuesToExcel(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        return@withContext try {
+            val dues = repository.allDues.first()
+            val payments = repository.allDuePayments.first()
+            val reminders = repository.allScheduledDueReminders.first()
+            val sales = repository.allSales.first()
+            val returns = repository.allReturns.first()
+            val charges = repository.allDueCharges.first()
+            val buffer = java.io.ByteArrayOutputStream()
+            com.example.techyfipos.utils.ExcelHelper.exportComprehensiveDues(
+                duesList = dues,
+                paymentsList = payments,
+                remindersList = reminders,
+                salesList = sales,
+                returnsList = returns,
+                chargesList = charges,
+                outputStream = buffer
+            )
+            outputStream.write(buffer.toByteArray())
+            outputStream.flush()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun exportCustomerStatementToExcel(customer: CustomerDue, outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        return@withContext try {
+            val payments = repository.getPaymentsForCustomer(customer.customerPhone).first()
+            val charges = repository.getDueChargesForCustomer(customer.customerPhone).first()
+            val sales = repository.allSales.first()
+            val buffer = java.io.ByteArrayOutputStream()
+            com.example.techyfipos.utils.ExcelHelper.exportCustomerStatementExcel(
+                customer = customer,
+                paymentsList = payments,
+                salesList = sales,
+                dueChargesList = charges,
+                outputStream = buffer
+            )
+            outputStream.write(buffer.toByteArray())
+            outputStream.flush()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+}
+
+class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
+    val language: StateFlow<String> = repository.languageFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "en")
+
+    val themeMode: StateFlow<String> = repository.themeModeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "SYSTEM")
+
+    val shopName: StateFlow<String> = repository.shopNameFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "My Shop")
+
+    val shopAddress: StateFlow<String> = repository.shopAddressFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val shopPhone: StateFlow<String> = repository.shopPhoneFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val shopLogoUri: StateFlow<String> = repository.shopLogoUriFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val facebookUrl: StateFlow<String> = repository.facebookUrlFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val qrCodeInfo: StateFlow<String> = repository.qrCodeInfoFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val cashierName: StateFlow<String> = repository.cashierNameFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Admin")
+
+    val invoiceSettingsData: StateFlow<com.example.techyfipos.data.InvoiceSettingsData> = repository.invoiceSettingsDataFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.techyfipos.data.InvoiceSettingsData())
+
+    val autoBackup: StateFlow<Boolean> = repository.autoBackupFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val localAutoBackup: StateFlow<Boolean> = repository.localAutoBackupFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val autoBackupFrequency: StateFlow<String> = repository.autoBackupFrequencyFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "DAILY")
+
+    val driveAutoBackupFrequency: StateFlow<String> = repository.driveAutoBackupFrequencyFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "DAILY")
+
+    val lastLocalBackupTimestamp: StateFlow<Long> = repository.lastLocalBackupTimestampFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    val lastDriveBackupTimestamp: StateFlow<Long> = repository.lastDriveBackupTimestampFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    val driveRetentionCount: StateFlow<Int> = repository.driveRetentionCountFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
+
+    val driveNetworkPolicy: StateFlow<String> = repository.driveNetworkPolicyFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "WIFI_ONLY")
+
+    val driveBackupTime: StateFlow<String> = repository.driveBackupTimeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "02:00")
+
+    private val _driveBackups = MutableStateFlow<List<com.example.techyfipos.utils.GoogleDriveHelper.DriveBackupFile>>(emptyList())
+    val driveBackups: StateFlow<List<com.example.techyfipos.utils.GoogleDriveHelper.DriveBackupFile>> = _driveBackups.asStateFlow()
+
+    private val _isLoadingBackups = MutableStateFlow(false)
+    val isLoadingBackups: StateFlow<Boolean> = _isLoadingBackups.asStateFlow()
+
+    fun saveLanguage(lang: String) {
+        viewModelScope.launch {
+            repository.saveLanguage(lang)
+        }
+    }
+
+    fun saveThemeMode(mode: String) {
+        viewModelScope.launch {
+            repository.saveThemeMode(mode)
+        }
+    }
+
+    fun saveShopInfo(name: String, address: String, phone: String) {
+        viewModelScope.launch {
+            repository.saveShopInfo(name, address, phone)
+        }
+    }
+
+    fun saveInvoiceSettings(logoUri: String, facebookUrl: String, qrCodeInfo: String, cashierName: String) {
+        viewModelScope.launch {
+            repository.saveInvoiceSettings(logoUri, facebookUrl, qrCodeInfo, cashierName)
+        }
+    }
+
+    fun saveInvoiceSettingsData(settings: com.example.techyfipos.data.InvoiceSettingsData) {
+        viewModelScope.launch {
+            repository.saveInvoiceSettingsData(settings)
+        }
+    }
+
+    fun resetFactoryDefaults(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            repository.resetFactoryDefaults()
+            onComplete()
+        }
+    }
+
+    fun previewDuplicateDueLedgers(onResult: (List<DataRepository.DuplicateDueLedgerGroup>) -> Unit) {
+        viewModelScope.launch {
+            onResult(repository.previewDuplicatePhoneDueLedgers())
+        }
+    }
+
+    fun mergeDuplicateDueLedgers(onComplete: (Int) -> Unit) {
+        viewModelScope.launch {
+            val merged = repository.mergeDuplicatePhoneDueLedgers()
+            onComplete(merged)
+        }
+    }
+
+    fun saveAutoBackup(enabled: Boolean, frequency: String, context: Context) {
+        viewModelScope.launch {
+            repository.saveAutoBackup(enabled, frequency)
+            val netPolicy = repository.driveNetworkPolicyFlow.first()
+            com.example.techyfipos.utils.AutoBackupScheduler.scheduleDriveBackup(
+                context,
+                enabled,
+                frequency,
+                networkPolicy = netPolicy,
+                forceUpdate = true
+            )
+            if (enabled) {
+                com.example.techyfipos.utils.AutoBackupScheduler.performImmediateBackupIfDue(context, force = true)
+            }
+        }
+    }
+
+    fun saveDriveSettings(
+        enabled: Boolean,
+        frequency: String,
+        networkPolicy: String,
+        retentionCount: Int,
+        context: Context
+    ) {
+        viewModelScope.launch {
+            repository.saveAutoBackup(enabled, frequency)
+            repository.saveDriveNetworkPolicy(networkPolicy)
+            repository.saveDriveRetentionCount(retentionCount)
+            com.example.techyfipos.utils.AutoBackupScheduler.scheduleDriveBackup(
+                context,
+                enabled,
+                frequency,
+                networkPolicy = networkPolicy,
+                forceUpdate = true
+            )
+        }
+    }
+
+    fun saveLocalAutoBackup(enabled: Boolean, frequency: String, context: Context) {
+        viewModelScope.launch {
+            repository.saveLocalAutoBackup(enabled, frequency)
+            com.example.techyfipos.utils.AutoBackupScheduler.scheduleLocalBackup(context, enabled, frequency, forceUpdate = true)
+            if (enabled) {
+                com.example.techyfipos.utils.AutoBackupScheduler.performImmediateBackupIfDue(context, force = true)
+            }
+        }
+    }
+
+    suspend fun backupDatabase(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val tempFile = File.createTempFile("backup", ".json")
+        try {
+            val ok = repository.exportBackup(tempFile)
+            if (ok && tempFile.exists()) {
+                tempFile.inputStream().use { input -> input.copyTo(outputStream) }
+                true
+            } else false
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    suspend fun restoreDatabase(
+        inputStream: java.io.InputStream,
+        mode: BackupImportMode = BackupImportMode.REPLACE
+    ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val tempFile = File.createTempFile("restore", ".json")
+        try {
+            tempFile.outputStream().use { output -> inputStream.copyTo(output) }
+            repository.importBackup(tempFile, mode)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    // Excel Actions
+    //
+    // Each export first builds the full workbook into an in-memory buffer, then copies the
+    // complete bytes to the destination stream in one shot. Writing POI's multi-step zip/XML
+    // output directly into the SAF-provided stream left a 0-byte file behind whenever that
+    // stream got interrupted partway through (observed intermittently in production); building
+    // in memory first means the destination is only ever touched with the finished, complete file.
+    suspend fun exportProductsToExcel(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val products = repository.allProducts.first()
+        return@withContext try {
+            val buffer = java.io.ByteArrayOutputStream()
+            com.example.techyfipos.utils.ExcelHelper.exportProducts(products, buffer)
+            outputStream.write(buffer.toByteArray())
+            outputStream.flush()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun generateTemplate(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        return@withContext try {
+            val buffer = java.io.ByteArrayOutputStream()
+            com.example.techyfipos.utils.ExcelHelper.generateProductsTemplate(buffer)
+            outputStream.write(buffer.toByteArray())
+            outputStream.flush()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun importProductsFromExcel(inputStream: java.io.InputStream): com.example.techyfipos.utils.ExcelHelper.ImportResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val result = com.example.techyfipos.utils.ExcelHelper.importProducts(inputStream)
+        if (result.importedProducts.isNotEmpty()) {
+            repository.upsertProducts(result.importedProducts, result.presentFields)
+        }
+        result
+    }
+
+    suspend fun exportSalesReport(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val sales = repository.allSalesWithItems.first()
+        val products = repository.allProducts.first()
+        val returns = repository.allReturns.first()
+        val returnItems = repository.allReturnItems.first()
+        val purchasePrices = products.associate { it.barcode to it.purchasePrice }
+        return@withContext try {
+            val buffer = java.io.ByteArrayOutputStream()
+            com.example.techyfipos.utils.ExcelHelper.exportSales(sales, purchasePrices, returns, returnItems, buffer)
+            outputStream.write(buffer.toByteArray())
+            outputStream.flush()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun exportDuesReport(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val dues = repository.allOutstandingDues.first()
+        return@withContext try {
+            val buffer = java.io.ByteArrayOutputStream()
+            com.example.techyfipos.utils.ExcelHelper.exportDues(dues, buffer)
+            outputStream.write(buffer.toByteArray())
+            outputStream.flush()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun exportExpensesReport(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val expenses = repository.allExpenses.first()
+        return@withContext try {
+            val buffer = java.io.ByteArrayOutputStream()
+            com.example.techyfipos.utils.ExcelHelper.exportExpenses(expenses, buffer)
+            outputStream.write(buffer.toByteArray())
+            outputStream.flush()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    // Google Drive Actions
+    fun fetchDriveBackups(driveService: com.google.api.services.drive.Drive) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            _isLoadingBackups.value = true
+            val list = com.example.techyfipos.utils.GoogleDriveHelper.listBackups(driveService)
+            _driveBackups.value = list
+            _isLoadingBackups.value = false
+        }
+    }
+
+    suspend fun backupToDriveEncrypted(
+        context: Context,
+        connection: com.example.techyfipos.utils.GoogleDriveHelper.DriveConnection
+    ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val tempEncryptedFile = File(context.cacheDir, "manual_enc_backup_${System.currentTimeMillis()}.enc")
+        try {
+            val meta = com.example.techyfipos.utils.BackupPackageManager.createEncryptedBackupPackage(
+                context = context,
+                destinationFile = tempEncryptedFile,
+                accountIdOrPassphrase = connection.accountId
+            )
+            if (meta != null && tempEncryptedFile.exists()) {
+                val driveService = com.example.techyfipos.utils.GoogleDriveHelper.getDriveService(connection)
+                val retention = repository.driveRetentionCountFlow.first()
+                val uploadResult = com.example.techyfipos.utils.GoogleDriveBackupManager.uploadEncryptedBackup(
+                    driveService = driveService,
+                    localEncryptedFile = tempEncryptedFile,
+                    isAutoBackup = false,
+                    retentionCount = retention
+                )
+                if (uploadResult.isSuccess) {
+                    repository.saveLastDriveBackupTimestamp(System.currentTimeMillis())
+                    fetchDriveBackups(driveService)
+                    return@withContext true
+                }
+            }
+            false
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        } finally {
+            tempEncryptedFile.delete()
+        }
+    }
+
+    suspend fun restoreFromDriveEncrypted(
+        context: Context,
+        connection: com.example.techyfipos.utils.GoogleDriveHelper.DriveConnection,
+        fileId: String
+    ): com.example.techyfipos.utils.BackupPackageManager.RestoreResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        repository.requireOwnerSession()
+        val tempEncryptedFile = File(context.cacheDir, "download_restore_${System.currentTimeMillis()}.enc")
+        try {
+            val driveService = com.example.techyfipos.utils.GoogleDriveHelper.getDriveService(connection)
+            val downloaded = com.example.techyfipos.utils.GoogleDriveBackupManager.downloadBackup(
+                driveService = driveService,
+                fileId = fileId,
+                destinationFile = tempEncryptedFile
+            )
+            if (!downloaded || !tempEncryptedFile.exists()) {
+                return@withContext com.example.techyfipos.utils.BackupPackageManager.RestoreResult(
+                    isSuccess = false,
+                    message = "Could not download backup file from Google Drive."
+                )
+            }
+
+            val result = com.example.techyfipos.utils.BackupPackageManager.restoreEncryptedBackupPackage(
+                context = context,
+                encryptedFile = tempEncryptedFile,
+                accountIdOrPassphrase = connection.accountId
+            )
+            result
+        } catch (e: Exception) {
+            e.printStackTrace()
+            com.example.techyfipos.utils.BackupPackageManager.RestoreResult(
+                isSuccess = false,
+                message = "Restore error: ${e.localizedMessage ?: "Unknown"}"
+            )
+        } finally {
+            tempEncryptedFile.delete()
+        }
+    }
+
+    suspend fun inspectDriveBackup(
+        context: Context,
+        connection: com.example.techyfipos.utils.GoogleDriveHelper.DriveConnection,
+        fileId: String
+    ): com.example.techyfipos.utils.BackupPackageManager.BackupMetadata? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val tempEncryptedFile = File(context.cacheDir, "inspect_${System.currentTimeMillis()}.enc")
+        try {
+            val driveService = com.example.techyfipos.utils.GoogleDriveHelper.getDriveService(connection)
+            val downloaded = com.example.techyfipos.utils.GoogleDriveBackupManager.downloadBackup(
+                driveService = driveService,
+                fileId = fileId,
+                destinationFile = tempEncryptedFile
+            )
+            if (downloaded && tempEncryptedFile.exists()) {
+                return@withContext com.example.techyfipos.utils.BackupPackageManager.readMetadataFromEncryptedPackage(
+                    context = context,
+                    encryptedFile = tempEncryptedFile,
+                    accountIdOrPassphrase = connection.accountId
+                )
+            }
+            null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            tempEncryptedFile.delete()
+        }
+    }
+
+    suspend fun restoreFromDrive(
+        driveService: com.google.api.services.drive.Drive,
+        fileId: String,
+        cacheDir: File
+    ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val tempFile = File(cacheDir, "temp_drive_restore.json")
+        val downloadSuccess = com.example.techyfipos.utils.GoogleDriveHelper.downloadBackup(driveService, fileId, tempFile)
+        if (downloadSuccess && tempFile.exists()) {
+            val restoreSuccess = repository.importBackup(tempFile)
+            tempFile.delete()
+            return@withContext restoreSuccess
+        }
+        return@withContext false
+    }
+}
+
+/** Role-based access: "OWNER" (master), "MANAGER" (store operations), "CASHIER" (frontline sales) */
+class AuthViewModel(private val repository: DataRepository) : ViewModel() {
+    val users: StateFlow<List<User>> = repository.allUsers
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _currentUser = MutableStateFlow<User?>(null)
+    val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
+
+    private fun setCurrentUser(user: User?) {
+        _currentUser.value = user
+        repository.setSessionUser(user)
+    }
+
+    val isOwner: StateFlow<Boolean> = _currentUser
+        .map { it?.role == AppRoles.OWNER }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val isManager: StateFlow<Boolean> = _currentUser
+        .map { it?.role == AppRoles.MANAGER }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val isSupervisor: StateFlow<Boolean> = _currentUser
+        .map { it?.let { u -> AppPermissions.isSupervisor(u) } == true }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val activePermissions: StateFlow<Set<String>> = _currentUser
+        .map { u -> AppPermissions.getEffectivePermissions(u) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    val maxDiscountPercent: StateFlow<Double> = _currentUser
+        .map { it?.maxDiscountPercent ?: 10.0 }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 10.0)
+
+    fun hasPermission(permissionKey: String): Boolean {
+        return AppPermissions.hasPermission(_currentUser.value, permissionKey)
+    }
+
+    suspend fun hasAnyUsers(): Boolean = repository.hasAnyUsers()
+
+    fun createOwnerAccount(name: String, pin: String, onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                if (repository.hasAnyUsers()) {
+                    onComplete(false)
+                    return@launch
+                }
+                val id = repository.createUser(
+                    name = name.ifBlank { "Owner" },
+                    pin = pin,
+                    role = AppRoles.OWNER,
+                    customPermissions = null,
+                    maxDiscount = 100.0
+                )
+                setCurrentUser(
+                    User(
+                        id = id,
+                        name = name.ifBlank { "Owner" },
+                        pinHash = "",
+                        role = AppRoles.OWNER,
+                        customPermissions = null,
+                        isActive = true,
+                        maxDiscountPercent = 100.0
+                    )
+                )
+                onComplete(true)
+            } catch (error: Exception) {
+                android.util.Log.e("AuthViewModel", "Unable to create owner account", error)
+                onComplete(false)
+            }
+        }
+    }
+
+    fun addStaff(
+        name: String,
+        pin: String,
+        role: String = AppRoles.CASHIER,
+        customPermissions: Set<String>? = null,
+        maxDiscount: Double = 10.0,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                if (!repository.isSessionOwner()) {
+                    onComplete(false, "Owner privileges required")
+                    return@launch
+                }
+                repository.createUser(
+                    name = name.trim(),
+                    pin = pin,
+                    role = role,
+                    customPermissions = customPermissions,
+                    maxDiscount = maxDiscount
+                )
+                onComplete(true, null)
+            } catch (error: Exception) {
+                android.util.Log.e("AuthViewModel", "Unable to add staff", error)
+                onComplete(false, error.message ?: "Could not add staff")
+            }
+        }
+    }
+
+    fun addCashier(name: String, pin: String, onComplete: (Boolean) -> Unit) {
+        addStaff(name = name, pin = pin, role = AppRoles.CASHIER) { success, _ -> onComplete(success) }
+    }
+
+    fun updateStaff(
+        userId: Long,
+        name: String,
+        pin: String?,
+        role: String,
+        customPermissions: Set<String>?,
+        isActive: Boolean,
+        maxDiscount: Double,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                if (!repository.isSessionOwner()) {
+                    onComplete(false, "Owner privileges required")
+                    return@launch
+                }
+                repository.updateStaff(
+                    userId = userId,
+                    newName = name,
+                    newPin = pin,
+                    newRole = role,
+                    customPermissions = customPermissions,
+                    isActive = isActive,
+                    maxDiscount = maxDiscount
+                )
+                // If editing current logged-in user, refresh currentUser state
+                if (_currentUser.value?.id == userId) {
+                    val updated = _currentUser.value?.copy(
+                        name = name.trim(),
+                        role = role,
+                        customPermissions = AppPermissions.serializePermissions(customPermissions),
+                        isActive = isActive,
+                        maxDiscountPercent = maxDiscount
+                    )
+                    setCurrentUser(updated)
+                }
+                onComplete(true, null)
+            } catch (error: Exception) {
+                android.util.Log.e("AuthViewModel", "Unable to update staff", error)
+                onComplete(false, error.message ?: "Could not update staff")
+            }
+        }
+    }
+
+    fun updateCashier(userId: Long, newName: String, newPin: String?, onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                if (!repository.isSessionOwner()) {
+                    onComplete(false)
+                    return@launch
+                }
+                repository.updateCashier(userId, newName, newPin)
+                onComplete(true)
+            } catch (error: Exception) {
+                android.util.Log.e("AuthViewModel", "Unable to update cashier", error)
+                onComplete(false)
+            }
+        }
+    }
+
+    fun setStaffActive(userId: Long, isActive: Boolean, onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                if (!repository.isSessionOwner()) {
+                    onComplete(false)
+                    return@launch
+                }
+                repository.setStaffActive(userId, isActive)
+                onComplete(true)
+            } catch (error: Exception) {
+                android.util.Log.e("AuthViewModel", "Unable to toggle staff status", error)
+                onComplete(false)
+            }
+        }
+    }
+
+    fun updateStaffPermissions(userId: Long, permissions: Set<String>?, onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                if (!repository.isSessionOwner()) {
+                    onComplete(false)
+                    return@launch
+                }
+                repository.updateStaffPermissions(userId, permissions)
+                if (_currentUser.value?.id == userId) {
+                    val updated = _currentUser.value?.copy(
+                        customPermissions = AppPermissions.serializePermissions(permissions)
+                    )
+                    setCurrentUser(updated)
+                }
+                onComplete(true)
+            } catch (error: Exception) {
+                android.util.Log.e("AuthViewModel", "Unable to update permissions", error)
+                onComplete(false)
+            }
+        }
+    }
+
+    fun verifySupervisorPin(pin: String, onResult: (User?) -> Unit) {
+        viewModelScope.launch {
+            val supervisor = repository.verifySupervisorPin(pin)
+            onResult(supervisor)
+        }
+    }
+
+    fun deleteUser(user: User, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            if (user.role == AppRoles.OWNER && repository.getOwnerCount() <= 1) {
+                onComplete(false)
+                return@launch
+            }
+            try {
+                repository.deleteUser(user)
+                onComplete(true)
+            } catch (error: Exception) {
+                android.util.Log.e("AuthViewModel", "Unable to delete user", error)
+                onComplete(false)
+            }
+        }
+    }
+
+    fun attemptLogin(pin: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val user = repository.verifyPin(pin)
+            if (user != null && !user.isActive) {
+                onResult(false, "This account is deactivated. Contact store owner.")
+                return@launch
+            }
+            setCurrentUser(user)
+            val lockSeconds = (repository.loginLockRemainingMillis() + 999L) / 1000L
+            val message = if (user == null && lockSeconds > 0L) {
+                "Too many attempts. Try again in $lockSeconds seconds."
+            } else null
+            onResult(user != null, message)
+        }
+    }
+
+    fun resetOwnerPinAfterDeviceCredential(pin: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            onResult(repository.resetOwnerPinAfterDeviceCredential(pin))
+        }
+    }
+
+    fun logout() {
+        setCurrentUser(null)
+    }
+}
+
+private val REGISTER_CLOSE_DIGITAL_METHODS = setOf("bkash", "nagad", "rocket", "card", "bank", "mfs", "digital")
+
+/** Cash/digital portion of a sale's grandTotal, apportioning a Split sale's components from `splitPaymentJson` instead of dropping it entirely. Due portions count toward neither (not yet collected). */
+internal fun splitCashAndDigitalAmounts(sale: Sale): Pair<Double, Double> {
+    val nonSplitMethod = sale.paymentMethod.trim()
+    if (sale.paymentMethod != "Split" || sale.splitPaymentJson.isNullOrBlank()) {
+        return when {
+            nonSplitMethod.equals("Cash", ignoreCase = true) -> sale.grandTotal to 0.0
+            REGISTER_CLOSE_DIGITAL_METHODS.contains(nonSplitMethod.lowercase()) -> 0.0 to sale.grandTotal
+            else -> 0.0 to 0.0
+        }
+    }
+    return try {
+        val arr = JSONArray(sale.splitPaymentJson)
+        var cash = 0.0
+        var digital = 0.0
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            val amount = obj.optDouble("amount", 0.0)
+            val method = obj.optString("method", "").trim().lowercase()
+            when {
+                method == "cash" -> cash += amount
+                REGISTER_CLOSE_DIGITAL_METHODS.contains(method) -> digital += amount
+            }
+        }
+        cash to digital
+    } catch (e: Exception) {
+        0.0 to 0.0
+    }
+}
+
+internal fun calculateSaleDueAmount(sale: Sale): Double {
+    if (sale.paymentMethod == "Due") {
+        return (sale.grandTotal - sale.amountPaid).coerceAtLeast(0.0)
+    }
+    if (sale.paymentMethod != "Split" || sale.splitPaymentJson.isNullOrBlank()) return 0.0
+    return try {
+        val arr = JSONArray(sale.splitPaymentJson)
+        (0 until arr.length()).sumOf { index ->
+            arr.getJSONObject(index).takeIf {
+                it.optString("method", "").equals("Due", ignoreCase = true)
+            }?.optDouble("amount", 0.0) ?: 0.0
+        }.coerceAtLeast(0.0)
+    } catch (_: Exception) {
+        0.0
+    }
+}
+
+internal fun cashRefundAmount(refund: Return, sale: Sale?): Double = when {
+    refund.refundMethod.startsWith("Cash") -> refund.externalRefundAmount
+    refund.refundMethod.startsWith("Original method") && sale != null -> {
+        val (cashPortion, _) = splitCashAndDigitalAmounts(sale)
+        val originalCollected = (sale.grandTotal - calculateSaleDueAmount(sale)).coerceAtLeast(0.0)
+        if (originalCollected > 0.0) {
+            refund.externalRefundAmount * (cashPortion / originalCollected).coerceIn(0.0, 1.0)
+        } else 0.0
+    }
+    else -> 0.0
+}
+
+class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
+    val allExpenses: StateFlow<List<Expense>> = repository.allExpenses
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val registerShiftState: StateFlow<RegisterShiftState?> = repository.registerShiftState
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private fun todayStartMillis(): Long = java.util.Calendar.getInstance().apply {
+        set(java.util.Calendar.HOUR_OF_DAY, 0)
+        set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0)
+        set(java.util.Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val todayExpenses: StateFlow<List<Expense>> = combine(allExpenses, registerShiftState) { list, shift ->
+        val start = shift?.startedAt?.takeIf { it > 0L } ?: todayStartMillis()
+        list.filter { it.timestamp >= start }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val totalCashIn: StateFlow<Double> = todayExpenses.map { list ->
+        list.filter { it.type == "CASH_IN" && it.paymentSource == "Cash" }.sumOf { it.amount }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val totalCashOut: StateFlow<Double> = todayExpenses.map { list ->
+        list.filter { it.type == "EXPENSE" && it.paymentSource == "Cash" }.sumOf { it.amount }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val allSales: StateFlow<List<Sale>> = repository.allSales
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val allReturns: StateFlow<List<Return>> = repository.allReturns
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val allDuePayments: StateFlow<List<com.example.techyfipos.data.db.DuePayment>> = repository.allDuePayments
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val allSupplierPayments: StateFlow<List<com.example.techyfipos.data.db.SupplierPayment>> = repository.allSupplierPayments
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val totalCashSales: StateFlow<Double> = combine(allSales, registerShiftState) { sales, shift ->
+        val start = shift?.startedAt?.takeIf { it > 0L } ?: todayStartMillis()
+        sales.filter { it.timestamp >= start }.sumOf { splitCashAndDigitalAmounts(it).first }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val totalDigitalSales: StateFlow<Double> = combine(allSales, registerShiftState) { sales, shift ->
+        val start = shift?.startedAt?.takeIf { it > 0L } ?: todayStartMillis()
+        sales.filter { it.timestamp >= start }.sumOf { splitCashAndDigitalAmounts(it).second }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val totalDueCashCollected: StateFlow<Double> = combine(allDuePayments, registerShiftState) { payments, shift ->
+        val start = shift?.startedAt?.takeIf { it > 0L } ?: todayStartMillis()
+        payments.filter { it.timestamp >= start && it.paymentMethod.equals("Cash", ignoreCase = true) }
+            .sumOf { it.amountPaid }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val totalSupplierCashPaid: StateFlow<Double> = combine(allSupplierPayments, registerShiftState) { payments, shift ->
+        val start = shift?.startedAt?.takeIf { it > 0L } ?: todayStartMillis()
+        payments.filter { it.timestamp >= start && it.paymentMethod.equals("Cash", ignoreCase = true) }
+            .sumOf { it.amountPaid }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    // "Cash" refunds always take physical cash out of the drawer. "Original method" refunds are
+    // apportioned by the original sale's cash fraction — for a plain Cash sale that's 100%, for a
+    // plain digital sale it's 0%, and for a Split sale it's whatever fraction of that sale was
+    // actually paid in cash (parsed from splitPaymentJson via splitCashAndDigitalAmounts).
+    // "Store credit" never affects the drawer.
+    val totalCashRefunds: StateFlow<Double> = combine(allReturns, allSales, registerShiftState) { returns, sales, shift ->
+        val start = shift?.startedAt?.takeIf { it > 0L } ?: todayStartMillis()
+        val salesById = sales.associateBy { it.id }
+        returns.filter { it.timestamp >= start }
+            .sumOf { refund -> cashRefundAmount(refund, salesById[refund.saleId]) }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val netDrawerCash: StateFlow<Double> = combine(
+        combine(totalCashSales, totalCashIn, totalCashOut, totalCashRefunds) { sales, cIn, cOut, cRef ->
+            sales + cIn - cOut - cRef
+        },
+        combine(totalDueCashCollected, totalSupplierCashPaid, registerShiftState) { dueCash, supplierCash, shift ->
+            (shift?.startingFloat ?: 0.0) + dueCash - supplierCash
+        }
+    ) { salesNet, shiftNet ->
+        (salesNet + shiftNet).coerceAtLeast(0.0)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val liveDrawerCash: StateFlow<Double> = netDrawerCash
+
+    fun recordExpense(
+        title: String,
+        category: String,
+        amount: Double,
+        paymentSource: String = "Cash",
+        note: String? = null
+    ) {
+        addExpense(title, category, "EXPENSE", amount, paymentSource, note)
+    }
+
+    fun recordCashIn(
+        title: String,
+        amount: Double,
+        paymentSource: String = "Cash",
+        note: String? = null
+    ) {
+        addExpense(title, "Cash In", "CASH_IN", amount, paymentSource, note)
+    }
+
+    fun deleteExpense(expense: Expense, onResult: (Result<Unit>) -> Unit = {}) {
+        deleteExpense(expense.id, onResult)
+    }
+
+    fun addExpense(
+        title: String,
+        category: String,
+        type: String,
+        amount: Double,
+        paymentSource: String = "Cash",
+        note: String? = null,
+        cashierName: String = "Admin"
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.insertExpense(
+                Expense(
+                    title = title.trim(),
+                    category = category,
+                    type = type,
+                    amount = amount,
+                    paymentSource = paymentSource,
+                    note = note?.takeIf { it.isNotBlank() },
+                    timestamp = System.currentTimeMillis(),
+                    cashierName = cashierName
+                )
+            )
+        }
+    }
+
+    fun deleteExpense(id: Long, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) { repository.deleteExpense(id) }
+            }
+            onResult(result)
+        }
+    }
+
+    fun updateExpense(expense: Expense, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) { repository.updateExpense(expense) }
+            }
+            onResult(result)
+        }
+    }
+
+    suspend fun exportExpensesReport(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val expenses = repository.allExpenses.first()
+        return@withContext try {
+            val buffer = java.io.ByteArrayOutputStream()
+            com.example.techyfipos.utils.ExcelHelper.exportExpenses(expenses, buffer)
+            outputStream.write(buffer.toByteArray())
+            outputStream.flush()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+}
+
+class SupplierViewModel(private val repository: DataRepository) : ViewModel() {
+    val allProducts: StateFlow<List<Product>> = repository.allProducts
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allSuppliers: StateFlow<List<Supplier>> = repository.allSuppliers
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allPurchaseInvoices: StateFlow<List<PurchaseInvoice>> = repository.allPurchaseInvoices
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allSupplierPayments: StateFlow<List<SupplierPayment>> = repository.allSupplierPayments
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val totalSupplierDue: StateFlow<Double> = allSuppliers.map { list ->
+        list.sumOf { it.totalDue }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    fun addSupplier(
+        name: String,
+        companyName: String,
+        phone: String,
+        address: String? = null,
+        notes: String? = null,
+        onResult: (Result<Long>) -> Unit = {}
+    ) {
+        upsertSupplier(name, companyName, phone, address, notes, onResult = onResult)
+    }
+
+    fun recordPurchase(
+        supplierId: Long,
+        invoiceNumber: String,
+        totalAmount: Double,
+        paidAmount: Double,
+        itemsSummary: String,
+        paymentMethod: String = "Cash",
+        note: String? = null,
+        stockLines: List<PurchaseStockLine> = emptyList(),
+        onResult: (Result<Long>) -> Unit = {}
+    ) {
+        receiveStockIn(supplierId, invoiceNumber, totalAmount, paidAmount, itemsSummary, paymentMethod, note, stockLines, onResult)
+    }
+
+    fun paySupplierDue(
+        supplier: Supplier,
+        amountPaid: Double,
+        paymentMethod: String = "Cash",
+        referenceNote: String? = null,
+        onResult: (Result<Long>) -> Unit = {}
+    ) {
+        paySupplierDue(supplier.id, amountPaid, paymentMethod, referenceNote, onResult)
+    }
+
+    fun upsertSupplier(
+        name: String,
+        companyName: String,
+        phone: String,
+        address: String? = null,
+        notes: String? = null,
+        id: Long = 0,
+        onResult: (Result<Long>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    repository.upsertSupplier(
+                        Supplier(
+                            id = id,
+                            name = name.trim(),
+                            companyName = companyName.trim(),
+                            phone = phone.trim(),
+                            address = address?.takeIf { it.isNotBlank() },
+                            notes = notes?.takeIf { it.isNotBlank() }
+                        )
+                    )
+                }
+            }
+            onResult(result)
+        }
+    }
+
+    fun updateSupplier(supplier: Supplier, onResult: (Result<Long>) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    repository.upsertSupplier(supplier)
+                }
+            }
+            onResult(result)
+        }
+    }
+
+    fun deleteSupplier(supplier: Supplier) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteSupplier(supplier)
+        }
+    }
+
+    fun receiveStockIn(
+        supplierId: Long,
+        invoiceNumber: String,
+        totalAmount: Double,
+        paidAmount: Double,
+        itemsSummary: String,
+        paymentMethod: String = "Cash",
+        note: String? = null,
+        stockLines: List<PurchaseStockLine> = emptyList(),
+        onResult: (Result<Long>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    repository.recordPurchaseInvoice(
+                        supplierId = supplierId,
+                        invoiceNumber = invoiceNumber.trim(),
+                        totalAmount = totalAmount,
+                        paidAmount = paidAmount,
+                        itemsSummary = itemsSummary.trim(),
+                        paymentMethod = paymentMethod,
+                        note = note,
+                        stockLines = stockLines
+                    )
+                }
+            }
+            onResult(result)
+        }
+    }
+
+    fun paySupplierDue(
+        supplierId: Long,
+        amountPaid: Double,
+        paymentMethod: String = "Cash",
+        referenceNote: String? = null,
+        onResult: (Result<Long>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    repository.recordSupplierPayment(supplierId, amountPaid, paymentMethod, referenceNote)
+                }
+            }
+            onResult(result)
+        }
+    }
+}
+
+class RegisterClosingViewModel(private val repository: DataRepository) : ViewModel() {
+    val allClosings: StateFlow<List<RegisterClosing>> = repository.allRegisterClosings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val shiftState: StateFlow<RegisterShiftState?> = repository.registerShiftState
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    fun updateStartingFloat(amount: Double) {
+        viewModelScope.launch(Dispatchers.IO) { repository.updateRegisterShiftStartingFloat(amount) }
+    }
+
+    fun closeRegister(
+        startingFloat: Double,
+        cashSales: Double,
+        digitalSales: Double,
+        cashIn: Double,
+        cashOut: Double,
+        cashRefunds: Double,
+        shiftStartedAt: Long,
+        expectedCash: Double,
+        actualCountedCash: Double,
+        notes: String? = null,
+        onResult: (Result<Long>) -> Unit = {}
+    ) {
+        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        val variance = actualCountedCash - expectedCash
+        viewModelScope.launch {
+            val result = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    repository.insertRegisterClosing(RegisterClosing(
+                    date = dateStr,
+                    startingFloat = startingFloat,
+                    cashSales = cashSales,
+                    digitalSales = digitalSales,
+                    cashIn = cashIn,
+                    cashOut = cashOut,
+                    cashRefunds = cashRefunds,
+                    shiftStartedAt = shiftStartedAt,
+                    expectedCash = expectedCash,
+                    actualCountedCash = actualCountedCash,
+                    variance = variance,
+                    notes = notes,
+                    timestamp = System.currentTimeMillis()
+                    ))
+                }
+            }
+            onResult(result)
+        }
+    }
+}
+
+class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
+    val allMembers: StateFlow<List<CustomerLoyalty>> = repository.allLoyaltyMembers
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allTransactions: StateFlow<List<LoyaltyTransaction>> = repository.allLoyaltyTransactions
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun upsertMember(phone: String, name: String, tier: String = "Silver") {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.upsertLoyalty(
+                CustomerLoyalty(
+                    phone = phone.trim(),
+                    name = name.trim(),
+                    tier = tier
+                )
+            )
+        }
+    }
+
+    fun addPoints(phone: String, pts: Int, spend: Double, reason: String = "Manual points adjustment") {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.addLoyaltyPoints(phone.trim(), pts, spend, reason)
+        }
+    }
+
+    fun redeemPoints(phone: String, pts: Int, reason: String = "Manual redemption") {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.redeemLoyaltyPoints(phone.trim(), pts, reason)
+        }
+    }
+
+    fun deactivateMember(phone: String) {
+        viewModelScope.launch(Dispatchers.IO) { repository.setLoyaltyMemberActive(phone, false) }
+    }
+
+    fun deleteMember(phone: String) {
+        viewModelScope.launch(Dispatchers.IO) { repository.deleteLoyaltyMember(phone) }
+    }
+
+    fun transactionsForCustomer(phone: String): Flow<List<LoyaltyTransaction>> {
+        return repository.getLoyaltyTransactionsForCustomer(phone)
+    }
+}
+
+enum class CustomerFilterSegment {
+    ALL,
+    WITH_DUES,
+    VIP,
+    FREQUENT,
+    WHOLESALE,
+    RECENT
+}
+
+enum class CustomerSortOption {
+    RECENT_VISIT,
+    LIFETIME_SPEND,
+    HIGHEST_DUE,
+    ORDERS_COUNT,
+    NAME_ASC
+}
+
+data class CustomerDossierData(
+    val customer: Customer,
+    val topProducts: List<CustomerProductPurchaseSummary>,
+    val sales: List<SaleWithItems>,
+    val duePayments: List<DuePayment>,
+    val loyaltyTransactions: List<LoyaltyTransaction>
+)
+
+class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
+    val allCustomers: StateFlow<List<Customer>> = repository.allCustomers
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val searchQuery = MutableStateFlow("")
+    val selectedFilter = MutableStateFlow(CustomerFilterSegment.ALL)
+    val selectedSort = MutableStateFlow(CustomerSortOption.RECENT_VISIT)
+
+    val selectedCustomerDossier = MutableStateFlow<CustomerDossierData?>(null)
+    val isLoadingDossier = MutableStateFlow(false)
+
+    val filteredCustomers: StateFlow<List<Customer>> = combine(
+        allCustomers,
+        searchQuery,
+        selectedFilter,
+        selectedSort
+    ) { customers, query, filter, sort ->
+        val q = query.trim().lowercase()
+        val searched = if (q.isBlank()) customers else {
+            customers.filter {
+                it.name.lowercase().contains(q) ||
+                it.phone.contains(q) ||
+                (it.address?.lowercase()?.contains(q) == true) ||
+                (it.notes?.lowercase()?.contains(q) == true) ||
+                (it.tag.lowercase().contains(q))
+            }
+        }
+
+        val filtered = when (filter) {
+            CustomerFilterSegment.ALL -> searched
+            CustomerFilterSegment.WITH_DUES -> searched.filter { it.totalDue > 0 }
+            CustomerFilterSegment.VIP -> searched.filter { it.tag.equals("VIP", ignoreCase = true) || it.loyaltyTier.equals("Gold", ignoreCase = true) || it.loyaltyTier.equals("Platinum", ignoreCase = true) || it.lifetimeSpent >= 20000.0 }
+            CustomerFilterSegment.FREQUENT -> searched.filter { it.totalOrders >= 5 }
+            CustomerFilterSegment.WHOLESALE -> searched.filter { it.tag.equals("Wholesale", ignoreCase = true) }
+            CustomerFilterSegment.RECENT -> {
+                val sevenDaysAgo = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000)
+                searched.filter { (it.lastPurchaseDate ?: it.updatedAt) >= sevenDaysAgo }
+            }
+        }
+
+        when (sort) {
+            CustomerSortOption.RECENT_VISIT -> filtered.sortedByDescending { it.lastPurchaseDate ?: it.updatedAt }
+            CustomerSortOption.LIFETIME_SPEND -> filtered.sortedByDescending { it.lifetimeSpent }
+            CustomerSortOption.HIGHEST_DUE -> filtered.sortedByDescending { it.totalDue }
+            CustomerSortOption.ORDERS_COUNT -> filtered.sortedByDescending { it.totalOrders }
+            CustomerSortOption.NAME_ASC -> filtered.sortedBy { it.name.lowercase() }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // KPI Metrics
+    val totalCustomersCount: StateFlow<Int> = allCustomers.map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val totalDuesAmount: StateFlow<Double> = allCustomers.map { it.sumOf { c -> c.totalDue } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val vipCustomersCount: StateFlow<Int> = allCustomers.map {
+        it.count { c -> c.tag.equals("VIP", ignoreCase = true) || c.loyaltyTier in listOf("Gold", "Platinum") || c.lifetimeSpent >= 20000.0 }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val repeatCustomersPercent: StateFlow<Int> = allCustomers.map {
+        if (it.isEmpty()) 0 else {
+            val repeatCount = it.count { c -> c.totalOrders > 1 }
+            ((repeatCount.toDouble() / it.size.toDouble()) * 100).toInt()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    fun loadCustomerDossier(phone: String) {
+        isLoadingDossier.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val customer = repository.getCustomerByPhone(phone)
+                if (customer != null) {
+                    val topProducts = repository.getTopProductsForCustomer(phone, 15)
+                    val sales = repository.getCustomerSalesWithItemsOnce(phone)
+                    val duePayments = repository.getPaymentsForCustomer(phone).firstOrNull() ?: emptyList()
+                    val loyaltyTransactions = repository.getLoyaltyTransactionsForCustomer(phone).firstOrNull() ?: emptyList()
+
+                    selectedCustomerDossier.value = CustomerDossierData(
+                        customer = customer,
+                        topProducts = topProducts,
+                        sales = sales,
+                        duePayments = duePayments,
+                        loyaltyTransactions = loyaltyTransactions
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isLoadingDossier.value = false
+            }
+        }
+    }
+
+    fun clearDossier() {
+        selectedCustomerDossier.value = null
+    }
+
+    fun upsertCustomer(
+        phone: String,
+        name: String,
+        email: String? = null,
+        address: String? = null,
+        notes: String? = null,
+        tag: String = "Retail",
+        creditLimit: Double = 0.0,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val cleanPhone = phone.trim()
+                val cleanName = name.trim()
+                if (cleanPhone.isBlank()) {
+                    onError("Phone number cannot be empty")
+                    return@launch
+                }
+                if (cleanName.isBlank()) {
+                    onError("Customer name cannot be empty")
+                    return@launch
+                }
+                val existing = repository.getCustomerByPhone(cleanPhone)
+                val customer = (existing ?: Customer(phone = cleanPhone, name = cleanName)).copy(
+                    phone = cleanPhone,
+                    name = cleanName,
+                    email = email?.trim()?.takeIf { it.isNotBlank() },
+                    address = address?.trim()?.takeIf { it.isNotBlank() },
+                    notes = notes?.trim()?.takeIf { it.isNotBlank() },
+                    tag = tag,
+                    creditLimit = creditLimit.coerceAtLeast(0.0),
+                    updatedAt = System.currentTimeMillis()
+                )
+                repository.upsertCustomer(customer)
+                if (selectedCustomerDossier.value?.customer?.phone == cleanPhone) {
+                    loadCustomerDossier(cleanPhone)
+                }
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Failed to save customer")
+            }
+        }
+    }
+
+    fun archiveCustomer(phone: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                repository.archiveCustomer(phone)
+                clearDossier()
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Failed to delete customer")
+            }
+        }
+    }
+
+    suspend fun exportCustomersExcel(outputStream: java.io.OutputStream): Boolean {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                com.example.techyfipos.utils.ExcelHelper.exportCustomers(allCustomers.value, outputStream)
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+    }
+}
+
+
+class POSViewModelFactory(private val repository: DataRepository) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return when {
+            modelClass.isAssignableFrom(ScannerViewModel::class.java) -> ScannerViewModel(repository) as T
+            modelClass.isAssignableFrom(CartViewModel::class.java) -> CartViewModel(repository) as T
+            modelClass.isAssignableFrom(ProductsViewModel::class.java) -> ProductsViewModel(repository) as T
+            modelClass.isAssignableFrom(SalesViewModel::class.java) -> SalesViewModel(repository) as T
+            modelClass.isAssignableFrom(DuesViewModel::class.java) -> DuesViewModel(repository) as T
+            modelClass.isAssignableFrom(SettingsViewModel::class.java) -> SettingsViewModel(repository) as T
+            modelClass.isAssignableFrom(AuthViewModel::class.java) -> AuthViewModel(repository) as T
+            modelClass.isAssignableFrom(ExpenseViewModel::class.java) -> ExpenseViewModel(repository) as T
+            modelClass.isAssignableFrom(SupplierViewModel::class.java) -> SupplierViewModel(repository) as T
+            modelClass.isAssignableFrom(RegisterClosingViewModel::class.java) -> RegisterClosingViewModel(repository) as T
+            modelClass.isAssignableFrom(LoyaltyViewModel::class.java) -> LoyaltyViewModel(repository) as T
+            modelClass.isAssignableFrom(CustomerViewModel::class.java) -> CustomerViewModel(repository) as T
+            else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+        }
+    }
+}

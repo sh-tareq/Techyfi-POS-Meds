@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Techyfi POS — Thermal Printer Friendly Money Receipt Lab & Redesign</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0B0F19;
+      --card-bg: rgba(22, 28, 45, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #10B981;
+      --primary-gradient: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      --blue-gradient: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+      --amber-gradient: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+      --purple-gradient: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      --bangla: 'Hind Siliguri', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.12) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(139, 92, 246, 0.08) 0px, transparent 50%);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 80px;
+      overflow-x: hidden;
+    }
+
+    body.light-theme {
+      --bg: #F1F5F9;
+      --card-bg: rgba(255, 255, 255, 0.88);
+      --card-border: rgba(0, 0, 0, 0.08);
+      --text: #0F172A;
+      --text-muted: #64748B;
+      background-color: #F8FAFC;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.08) 0px, transparent 50%);
+    }
+
+    /* Lab Header */
+    .header {
+      text-align: center;
+      max-width: 960px;
+      margin-bottom: 24px;
+    }
+
+    .badge-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #10B981;
+      padding: 5px 14px;
+      border-radius: 9999px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, #FFFFFF 30%, #94A3B8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    body.light-theme .header h1 {
+      background: linear-gradient(135deg, #0F172A 30%, #475569 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 8px 16px;
+      border-radius: 18px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .pill-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: inherit;
+      padding: 7px 13px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.light-theme .pill-btn {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .pill-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .pill-btn.active {
+      background: var(--primary-gradient);
+      border-color: #10B981;
+      color: #FFF;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Main Grid Layout (3-Column / Responsive) */
+    .main-layout {
+      width: 100%;
+      max-width: 1360px;
+      display: grid;
+      grid-template-columns: 390px 420px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 1200px) {
+      .main-layout {
+        grid-template-columns: 390px 1fr;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+    }
+
+    /* Phone Emulator Frame */
+    .emulator-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 390px;
+    }
+
+    .phone-frame {
+      background: #000;
+      border-radius: 44px;
+      padding: 10px;
+      box-shadow: 
+        0 25px 60px -15px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        0 0 0 4px #1E293B;
+      position: relative;
+    }
+
+    .phone-screen {
+      background: #0F172A;
+      border-radius: 34px;
+      height: 740px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    .phone-screen.light {
+      background: #F1F5F9;
+    }
+
+    /* Phone Status Bar */
+    .phone-status-bar {
+      height: 28px;
+      padding: 0 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #94A3B8;
+      z-index: 110;
+    }
+
+    /* Modal Backdrop */
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.72);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      z-index: 100;
+    }
+
+    /* In-App Dialog Card */
+    .receipt-dialog {
+      width: 100%;
+      max-width: 355px;
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 22px;
+      padding: 14px 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 
+        0 24px 50px -12px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 0 30px rgba(16, 185, 129, 0.15);
+      animation: dialogPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .phone-screen.light .receipt-dialog {
+      background: #FFFFFF;
+      border-color: rgba(0, 0, 0, 0.09);
+      box-shadow: 
+        0 24px 50px -12px rgba(0, 0, 0, 0.18),
+        0 0 0 1px rgba(0, 0, 0, 0.05),
+        0 0 30px rgba(16, 185, 129, 0.1);
+    }
+
+    @keyframes dialogPop {
+      0% { transform: scale(0.92) translateY(10px); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    /* Dialog Header */
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .header-icon-box {
+      width: 32px;
+      height: 32px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
+    }
+
+    .header-texts h3 {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #F8FAFC;
+      letter-spacing: -0.2px;
+    }
+
+    .phone-screen.light .header-texts h3 {
+      color: #0F172A;
+    }
+
+    .header-texts span {
+      font-size: 9.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .close-icon-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .phone-screen.light .close-icon-btn {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.08);
+      color: #64748B;
+    }
+
+    .close-icon-btn:hover {
+      background: rgba(239, 68, 68, 0.2);
+      color: #EF4444;
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    /* On-Screen Scrollable Voucher Preview Container */
+    .dialog-voucher-scroll {
+      max-height: 480px;
+      overflow-y: auto;
+      border-radius: 12px;
+      padding-right: 2px;
+    }
+
+    .dialog-voucher-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .dialog-voucher-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+
+    /* Thermal Receipt Card (Used in Dialog & Standalone 58mm/80mm) */
+    .thermal-paper-slip {
+      background: #FFFFFF;
+      color: #000000;
+      border-radius: 10px;
+      padding: 16px 14px 14px;
+      position: relative;
+      box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 1);
+      border: 1px solid #E2E8F0;
+      font-family: 'JetBrains Mono', 'Hind Siliguri', 'Courier New', monospace;
+      overflow: hidden;
+      line-height: 1.35;
+    }
+
+    .thermal-paper-slip.bangla-mode {
+      font-family: 'Hind Siliguri', 'JetBrains Mono', sans-serif;
+    }
+
+    /* Sawtooth / Serrated Paper Tear-Off Edge */
+    .tear-edge-top, .tear-edge-bottom {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      background-size: 8px 8px;
+    }
+
+    .tear-edge-top {
+      top: 0;
+      background: radial-gradient(circle, transparent, transparent 3px, #FFFFFF 3px);
+      background-size: 8px 8px;
+      background-position: 0 -4px;
+    }
+
+    .tear-edge-bottom {
+      bottom: 0;
+      background: radial-gradient(circle, transparent, transparent 3px, #111827 3.5px);
+      background-size: 8px 8px;
+      background-position: 0 4px;
+    }
+
+    .phone-screen.light .tear-edge-bottom {
+      background: radial-gradient(circle, transparent, transparent 3px, #FFFFFF 3.5px);
+      background-size: 8px 8px;
+      background-position: 0 4px;
+    }
+
+    /* Thermal Typography & Elements */
+    .thermal-header-center {
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .t-shop-name {
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.4px;
+      color: #000000;
+      text-transform: uppercase;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    .t-shop-sub {
+      font-size: 9.5px;
+      font-weight: 600;
+      color: #333333;
+      margin-top: 1px;
+    }
+
+    .t-banner-box {
+      margin: 6px auto;
+      border: 1.5px solid #000000;
+      padding: 3px 8px;
+      display: inline-block;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      background: #000000;
+      color: #FFFFFF;
+      border-radius: 3px;
+    }
+
+    .t-banner-box.inverted {
+      background: #FFFFFF;
+      color: #000000;
+      border: 1.5px dashed #000000;
+    }
+
+    .t-divider-dashed {
+      border-bottom: 1.2px dashed #000000;
+      margin: 6px 0;
+    }
+
+    .t-divider-double {
+      border-bottom: 2.5px double #000000;
+      margin: 7px 0;
+    }
+
+    .t-grid-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: #111111;
+      margin-bottom: 2px;
+    }
+
+    .t-label {
+      font-weight: 600;
+      color: #333333;
+    }
+
+    .t-value {
+      font-weight: 800;
+      color: #000000;
+      text-align: right;
+      font-family: 'Hind Siliguri', 'Plus Jakarta Sans', monospace;
+    }
+
+    .t-highlight-box {
+      border: 1.5px solid #000000;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin: 5px 0;
+      background: #FAFAFA;
+    }
+
+    .t-highlight-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .t-hero-amount {
+      font-size: 14px;
+      font-weight: 900;
+      color: #000000;
+      font-family: 'Hind Siliguri', 'Plus Jakarta Sans', monospace;
+    }
+
+    .t-stamp-settled {
+      border: 1.8px solid #000000;
+      border-radius: 6px;
+      padding: 4px 10px;
+      margin: 7px auto 4px;
+      text-align: center;
+      font-size: 9.5px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      display: block;
+      width: fit-content;
+      color: #000000;
+    }
+
+    /* Dual Signature Lines */
+    .t-signatures-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 20px;
+      padding-top: 4px;
+    }
+
+    .t-sig-box {
+      text-align: center;
+      width: 45%;
+    }
+
+    .t-sig-line {
+      border-bottom: 1px dotted #000000;
+      margin-bottom: 3px;
+      height: 12px;
+    }
+
+    .t-sig-label {
+      font-size: 8px;
+      font-weight: 700;
+      color: #222222;
+      text-transform: uppercase;
+    }
+
+    /* Footer & Barcode/QR */
+    .t-footer-block {
+      text-align: center;
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .t-thanks {
+      font-size: 9px;
+      font-weight: 800;
+      color: #000000;
+    }
+
+    .t-powered {
+      font-size: 7.5px;
+      font-weight: 600;
+      color: #555555;
+    }
+
+    .t-barcode-img {
+      margin-top: 4px;
+      width: 150px;
+      height: 28px;
+    }
+
+    .t-qr-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 5px;
+    }
+
+    /* Quick Action Buttons (Bottom Bar of Dialog) */
+    .dialog-action-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .quick-copy-bar {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 9px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .phone-screen.light .quick-copy-bar {
+      background: #F8FAFC;
+      border-color: rgba(0, 0, 0, 0.12);
+    }
+
+    .quick-copy-bar:hover {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: #10B981;
+    }
+
+    .quick-copy-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .quick-copy-badge {
+      font-size: 8.5px;
+      font-weight: 800;
+      color: #10B981;
+      background: rgba(16, 185, 129, 0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .actions-3grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+
+    .action-btn {
+      border: none;
+      border-radius: 11px;
+      padding: 8px 4px;
+      font-size: 10.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .action-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .action-btn.print {
+      background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+      color: #FFF;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+    }
+
+    .action-btn.share {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #FFF;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+
+    .action-btn.save {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1.2px solid rgba(255, 255, 255, 0.12);
+      color: var(--text);
+    }
+
+    .phone-screen.light .action-btn.save {
+      background: #F8FAFC;
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #0F172A;
+    }
+
+    /* 2nd Column: Dedicated Thermal Roll Showcase & Simulation */
+    .thermal-station-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .thermal-station-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 20px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .station-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .station-title-row h2 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #F8FAFC;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    body.light-theme .station-title-row h2 {
+      color: #0F172A;
+    }
+
+    .paper-size-pill {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #10B981;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 800;
+      font-family: var(--mono);
+    }
+
+    /* Realistic 3D Thermal Printer Rig */
+    .printer-hardware-box {
+      background: #1E293B;
+      border: 2px solid #334155;
+      border-radius: 16px;
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    }
+
+    body.light-theme .printer-hardware-box {
+      background: #E2E8F0;
+      border-color: #CBD5E1;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    }
+
+    .printer-slot {
+      height: 10px;
+      background: #090D16;
+      border-radius: 5px;
+      border: 1px solid #475569;
+      margin-bottom: -4px;
+      position: relative;
+      z-index: 5;
+      box-shadow: inset 0 2px 6px #000;
+    }
+
+    .printer-paper-feed {
+      position: relative;
+      background: #FFFFFF;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      margin: 0 auto;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .printer-paper-feed.w-58mm {
+      width: 280px;
+    }
+
+    .printer-paper-feed.w-80mm {
+      width: 360px;
+    }
+
+    /* Print Animation State */
+    .printer-paper-feed.printing {
+      animation: paperRollOut 1.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    @keyframes paperRollOut {
+      0% { max-height: 0; opacity: 0; transform: translateY(-30px); }
+      100% { max-height: 800px; opacity: 1; transform: translateY(0); }
+    }
+
+    /* 3rd Column: Interactive Controls & Settings */
+    .control-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .settings-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 18px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .settings-card h3 {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #F8FAFC;
+    }
+
+    body.light-theme .settings-card h3 {
+      color: #0F172A;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .form-group.full-width {
+      grid-column: span 2;
+    }
+
+    .form-group label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .form-group input, .form-group select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 600;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    body.light-theme .form-group input, body.light-theme .form-group select {
+      background: #FFFFFF;
+      border-color: #CBD5E1;
+      color: #0F172A;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+      border-color: #10B981;
+    }
+
+    /* Switch Toggles */
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    body.light-theme .toggle-row {
+      border-color: rgba(0,0,0,0.05);
+    }
+
+    .toggle-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    body.light-theme .toggle-label {
+      color: #0F172A;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255,255,255,0.15);
+      border-radius: 34px;
+      transition: .2s;
+    }
+
+    body.light-theme .toggle-slider {
+      background-color: #CBD5E1;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: .2s;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: #10B981;
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(16px);
+    }
+
+    /* SMS/WhatsApp Template Output Box */
+    .sms-preview-box {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 12px;
+      font-family: 'Hind Siliguri', var(--font), var(--mono), monospace;
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: #A7F3D0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      user-select: all;
+    }
+
+    body.light-theme .sms-preview-box {
+      background: #F8FAFC;
+      border-color: #E2E8F0;
+      color: #065F46;
+    }
+
+    /* Toast Notification */
+    .toast-msg {
+      position: fixed;
+      bottom: 24px;
+      background: #10B981;
+      color: #FFFFFF;
+      font-weight: 800;
+      font-size: 12px;
+      padding: 10px 20px;
+      border-radius: 30px;
+      box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 999;
+    }
+
+    .toast-msg.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast-msg">✨ Action Executed Successfully!</div>
+
+  <!-- Lab Header -->
+  <div class="header">
+    <div class="badge-tag">🖨️ ESC/POS Thermal Printing & Money Receipt Lab</div>
+    <h1>Thermal Printer Friendly Receipt Redesign</h1>
+    <p>High-contrast, 203/300 DPI thermal roll optimized layout with dual 58mm/80mm width support, bilingual templates, QR verification, and signature audit lines.</p>
+  </div>
+
+  <!-- Top Controls Bar -->
+  <div class="controls-bar">
+    <button class="pill-btn active" id="btn-mode-58" onclick="setPaperSize('58mm')">
+      <span>📄 58mm (2-Inch Mini)</span>
+    </button>
+    <button class="pill-btn" id="btn-mode-80" onclick="setPaperSize('80mm')">
+      <span>📜 80mm (3-Inch Standard)</span>
+    </button>
+    <button class="pill-btn" id="btn-status-full" onclick="setPaymentStatus('full')">
+      <span>✅ Paid in Full</span>
+    </button>
+    <button class="pill-btn" id="btn-status-partial" onclick="setPaymentStatus('partial')">
+      <span>⏳ Partial Repayment</span>
+    </button>
+    <button class="pill-btn" id="btn-lang-en" onclick="setLanguage('en')">
+      <span>🇬🇧 English</span>
+    </button>
+    <button class="pill-btn" id="btn-lang-bn" onclick="setLanguage('bn')">
+      <span>🇧🇩 বাংলা</span>
+    </button>
+    <button class="pill-btn" onclick="toggleTheme()">
+      <span id="theme-icon">☀️ Light Mode</span>
+    </button>
+  </div>
+
+  <!-- Main 3-Column Studio Layout -->
+  <div class="main-layout">
+
+    <!-- Column 1: Live Mobile App Dialog Preview -->
+    <div class="emulator-wrapper">
+      <div class="phone-frame">
+        <div class="phone-screen" id="phone-screen">
+          <div class="phone-status-bar">
+            <span>8:28</span>
+            <span>📶 🔋 100%</span>
+          </div>
+
+          <!-- Dialog Overlay -->
+          <div class="modal-overlay">
+            <div class="receipt-dialog">
+
+              <!-- Dialog Header -->
+              <div class="dialog-header">
+                <div class="header-left">
+                  <div class="header-icon-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z" fill="#10B981"/>
+                    </svg>
+                  </div>
+                  <div class="header-texts">
+                    <h3 id="dlg-title">Money Receipt • Due Repayment</h3>
+                    <span id="dlg-subtitle">DUE REPAYMENT VOUCHER</span>
+                  </div>
+                </div>
+                <div class="close-icon-btn" onclick="showToast('Close Dialog triggered')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Scrollable In-App Voucher Preview -->
+              <div class="dialog-voucher-scroll">
+                <div class="thermal-paper-slip" id="dialog-slip">
+                  <!-- Generated dynamically via JS -->
+                </div>
+              </div>
+
+              <!-- Action Buttons Bar -->
+              <div class="dialog-action-bar">
+                <div class="quick-copy-bar" onclick="copyReceiptText()">
+                  <div class="quick-copy-left">
+                    <span>📋 Copy Receipt Text (SMS / WA)</span>
+                  </div>
+                  <span class="quick-copy-badge">TAP TO COPY</span>
+                </div>
+
+                <div class="actions-3grid">
+                  <button class="action-btn print" onclick="simulatePrint()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                      <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    <span>Print Slip</span>
+                  </button>
+
+                  <button class="action-btn share" onclick="showToast('📤 Sharing High-Res Thermal JPEG via WhatsApp/Messenger')">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <circle cx="18" cy="5" r="3"></circle>
+                      <circle cx="6" cy="12" r="3"></circle>
+                      <circle cx="18" cy="19" r="3"></circle>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                    <span>Share Slip</span>
+                  </button>
+
+                  <button class="action-btn save" onclick="showToast('💾 Receipt Voucher JPEG Saved to Downloads')">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Save Slip</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 2: Dedicated Physical Thermal Roll Simulation Station -->
+    <div class="thermal-station-wrapper">
+      <div class="thermal-station-card">
+        <div class="station-title-row">
+          <h2>
+            <span>🖨️ Thermal Roll Output</span>
+          </h2>
+          <span class="paper-size-pill" id="current-paper-pill">58mm ESC/POS</span>
+        </div>
+
+        <div class="printer-hardware-box">
+          <div class="printer-slot"></div>
+          <div class="printer-paper-feed w-58mm" id="printer-paper-feed">
+            <div class="thermal-paper-slip" id="thermal-station-slip">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; display: flex; gap: 8px;">
+          <button class="action-btn print" style="flex: 1; flex-direction: row; padding: 10px; font-size: 12px;" onclick="simulatePrint()">
+            <span>⚡ Simulate Thermal Print Feed</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SMS & WhatsApp Format Preview -->
+      <div class="settings-card">
+        <h3>💬 SMS & WhatsApp Message Preview</h3>
+        <div class="sms-preview-box" id="sms-text-box"></div>
+      </div>
+    </div>
+
+    <!-- Column 3: Customization Lab & Field Controls -->
+    <div class="control-panel">
+      <div class="settings-card">
+        <h3>⚙️ Voucher Live Configurator</h3>
+        
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Shop Name</label>
+            <input type="text" id="cfg-shop-name" value="TECHYFI GADGET STORE" oninput="updateReceiptData()" />
+          </div>
+
+          <div class="form-group full-width">
+            <label>Shop Address & Phone</label>
+            <input type="text" id="cfg-shop-sub" value="Shop #42, Jamuna Future Park • 01711-000000" oninput="updateReceiptData()" />
+          </div>
+
+          <div class="form-group">
+            <label>Customer Name</label>
+            <input type="text" id="cfg-cust-name" value="RahimStore" oninput="updateReceiptData()" />
+          </div>
+
+          <div class="form-group">
+            <label>Customer Phone</label>
+            <input type="text" id="cfg-cust-phone" value="01812345678" oninput="updateReceiptData()" />
+          </div>
+
+          <div class="form-group">
+            <label>Previous Due (৳)</label>
+            <input type="number" id="cfg-prev-due" value="5000" oninput="updateReceiptData()" />
+          </div>
+
+          <div class="form-group">
+            <label>Amount Collected (৳)</label>
+            <input type="number" id="cfg-paid-amt" value="5000" oninput="updateReceiptData()" />
+          </div>
+
+          <div class="form-group">
+            <label>Payment Method</label>
+            <select id="cfg-channel" onchange="updateReceiptData()">
+              <option value="Cash">Cash (নগদ)</option>
+              <option value="bKash" selected>bKash (বিকাশ)</option>
+              <option value="Nagad">Nagad (নগদ)</option>
+              <option value="Rocket">Rocket (রকেট)</option>
+              <option value="Card">POS Card (কার্ড)</option>
+              <option value="Bank">Bank Transfer (ব্যাংক)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Trx ID / Ref Note</label>
+            <input type="text" id="cfg-trx-id" value="TRX-982310" oninput="updateReceiptData()" />
+          </div>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <div class="toggle-row">
+            <span class="toggle-label">Include Shop Header & Address</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-show-shop" checked onchange="updateReceiptData()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label">Dual Signature Lines (Customer & Seal)</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-show-sigs" checked onchange="updateReceiptData()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label">Scannable QR Code Verification</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-show-qr" checked onchange="updateReceiptData()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <span class="toggle-label">1D Barcode Line</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-show-barcode" checked onchange="updateReceiptData()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thermal Printing Best Practices Guide -->
+      <div class="settings-card">
+        <h3>💡 Thermal POS Engineering Best Practices</h3>
+        <ul style="font-size: 12px; color: var(--text-muted); line-height: 1.6; padding-left: 18px; display: flex; flex-direction: column; gap: 6px;">
+          <li><strong>Pure Monochrome Contrast:</strong> 1-bit high-contrast black on white ensures zero dithering artifacts on 203 DPI print heads.</li>
+          <li><strong>ESC/POS Standard Column Widths:</strong> 32 characters for 58mm rolls, 48 characters for 80mm rolls.</li>
+          <li><strong>Dual Signature Audit:</strong> Provides physical legal receipt acknowledgment for Bangladeshi retail credit/khata records.</li>
+          <li><strong>High-DPI JPEG Generation:</strong> Renders 300 DPI image for crystal-clear WhatsApp sharing without pixelation.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentPaperSize = '58mm';
+    let currentStatus = 'full';
+    let currentLang = 'en';
+
+    function setPaperSize(size) {
+      currentPaperSize = size;
+      document.getElementById('btn-mode-58').classList.toggle('active', size === '58mm');
+      document.getElementById('btn-mode-80').classList.toggle('active', size === '80mm');
+      
+      const feed = document.getElementById('printer-paper-feed');
+      feed.className = `printer-paper-feed w-${size}`;
+      document.getElementById('current-paper-pill').textContent = `${size} ESC/POS`;
+      updateReceiptData();
+    }
+
+    function setPaymentStatus(status) {
+      currentStatus = status;
+      document.getElementById('btn-status-full').classList.toggle('active', status === 'full');
+      document.getElementById('btn-status-partial').classList.toggle('active', status === 'partial');
+
+      if (status === 'full') {
+        document.getElementById('cfg-prev-due').value = 5000;
+        document.getElementById('cfg-paid-amt').value = 5000;
+      } else {
+        document.getElementById('cfg-prev-due').value = 5000;
+        document.getElementById('cfg-paid-amt').value = 3500;
+      }
+      updateReceiptData();
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.getElementById('btn-lang-en').classList.toggle('active', lang === 'en');
+      document.getElementById('btn-lang-bn').classList.toggle('active', lang === 'bn');
+      
+      if (lang === 'bn') {
+        document.getElementById('dlg-title').textContent = 'টাকা গ্রহণ রশিদ • বাকি পরিশোধ';
+        document.getElementById('dlg-subtitle').textContent = 'ডিজিটাল খাতা পরিশোধ ভাউচার';
+      } else {
+        document.getElementById('dlg-title').textContent = 'Money Receipt • Due Repayment';
+        document.getElementById('dlg-subtitle').textContent = 'DUE REPAYMENT VOUCHER';
+      }
+      updateReceiptData();
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('light-theme');
+      document.getElementById('phone-screen').classList.toggle('light');
+      const isLight = document.body.classList.contains('light-theme');
+      document.getElementById('theme-icon').textContent = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2400);
+    }
+
+    function formatTaka(val) {
+      return '৳ ' + Number(val).toLocaleString('en-IN');
+    }
+
+    function formatTakaBn(val) {
+      const digits = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
+      const en = Number(val).toLocaleString('en-IN');
+      return '৳ ' + en.replace(/[0-9]/g, d => digits[d] || d);
+    }
+
+    function generateReceiptHTML(isBangla, widthMode) {
+      const shopName = document.getElementById('cfg-shop-name').value;
+      const shopSub = document.getElementById('cfg-shop-sub').value;
+      const custName = document.getElementById('cfg-cust-name').value;
+      const custPhone = document.getElementById('cfg-cust-phone').value;
+      const prevDue = Number(document.getElementById('cfg-prev-due').value) || 0;
+      const paidAmt = Number(document.getElementById('cfg-paid-amt').value) || 0;
+      const channel = document.getElementById('cfg-channel').value;
+      const trxId = document.getElementById('cfg-trx-id').value;
+
+      const showShop = document.getElementById('cfg-show-shop').checked;
+      const showSigs = document.getElementById('cfg-show-sigs').checked;
+      const showQr = document.getElementById('cfg-show-qr').checked;
+      const showBarcode = document.getElementById('cfg-show-barcode').checked;
+
+      const remaining = Math.max(0, prevDue - paidAmt);
+      const isSettled = remaining === 0 && paidAmt > 0;
+
+      const tDate = isBangla ? '০২ সেপ্টেম্বর ২০২৬, ০৮:২৮ অপরাহ্ন' : '02 Sep 2026, 08:28 PM';
+      const tVoucher = 'REC-820404';
+
+      let html = '';
+
+      // Header
+      if (showShop) {
+        html += `
+          <div class="thermal-header-center">
+            <div class="t-shop-name">${shopName}</div>
+            <div class="t-shop-sub">${shopSub}</div>
+            <div class="t-banner-box">${isBangla ? '★ টাকা গ্রহণ রশিদ ★' : '★ MONEY RECEIPT • DUE REPAYMENT ★'}</div>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="thermal-header-center">
+            <div class="t-banner-box">${isBangla ? '★ টাকা গ্রহণ রশিদ ★' : '★ MONEY RECEIPT • DUE REPAYMENT ★'}</div>
+          </div>
+        `;
+      }
+
+      html += `<div class="t-divider-dashed"></div>`;
+
+      // Meta Block
+      html += `
+        <div class="t-grid-row">
+          <span class="t-label">${isBangla ? 'তারিখ ও সময়:' : 'Date:'}</span>
+          <span class="t-value">${tDate}</span>
+        </div>
+        <div class="t-grid-row">
+          <span class="t-label">${isBangla ? 'ভাউচার নং:' : 'Voucher #:'}</span>
+          <span class="t-value">${tVoucher}</span>
+        </div>
+        <div class="t-grid-row">
+          <span class="t-label">${isBangla ? 'গ্রাহক:' : 'Customer:'}</span>
+          <span class="t-value">${custName}</span>
+        </div>
+        <div class="t-grid-row">
+          <span class="t-label">${isBangla ? 'মোবাইল:' : 'Phone:'}</span>
+          <span class="t-value">${custPhone}</span>
+        </div>
+      `;
+
+      if (trxId.trim().length > 0) {
+        html += `
+          <div class="t-grid-row">
+            <span class="t-label">${isBangla ? 'ট্রানজেকশন আইডি:' : 'Trx ID / Ref:'}</span>
+            <span class="t-value">${trxId}</span>
+          </div>
+        `;
+      }
+
+      html += `<div class="t-divider-dashed"></div>`;
+
+      // Financial Calculation Block
+      html += `
+        <div class="t-grid-row">
+          <span class="t-label">${isBangla ? 'পূর্বের বাকি:' : 'Previous Due:'}</span>
+          <span class="t-value">${isBangla ? formatTakaBn(prevDue) : formatTaka(prevDue)}</span>
+        </div>
+
+        <div class="t-highlight-box">
+          <div class="t-highlight-row">
+            <div>
+              <span style="font-size: 9.5px; font-weight: 800; display: block;">${isBangla ? 'আদায়কৃত টাকা' : 'AMOUNT COLLECTED'}</span>
+              <span style="font-size: 8.5px; font-weight: 700; color: #555;">[ ${channel} ]</span>
+            </div>
+            <span class="t-hero-amount">${isBangla ? formatTakaBn(paidAmt) : formatTaka(paidAmt)}</span>
+          </div>
+        </div>
+
+        <div class="t-grid-row" style="margin-top: 4px;">
+          <span class="t-label" style="font-weight: 800; color: #000;">${isBangla ? 'বর্তমান অবশিষ্ট বাকি:' : 'Remaining Due:'}</span>
+          <span class="t-value" style="font-size: 11px; font-weight: 900;">
+            ${isSettled 
+              ? (isBangla ? '৳ ০ (পরিশোধিত ✓)' : '৳ 0 (Fully Settled ✓)')
+              : (isBangla ? formatTakaBn(remaining) : formatTaka(remaining))}
+          </span>
+        </div>
+      `;
+
+      html += `<div class="t-divider-double"></div>`;
+
+      // Status Badge
+      if (isSettled) {
+        html += `<div class="t-stamp-settled">✔ ${isBangla ? 'সম্পূর্ণ পরিশোধিত ও সমন্বয়কৃত' : 'PAID IN FULL & SETTLED'}</div>`;
+      } else {
+        html += `<div class="t-stamp-settled" style="border-style: dashed;">⏳ ${isBangla ? 'আংশিক পরিশোধ গৃহীত' : 'PARTIAL PAYMENT RECEIVED'}</div>`;
+      }
+
+      // Dual Signatures
+      if (showSigs) {
+        html += `
+          <div class="t-signatures-row">
+            <div class="t-sig-box">
+              <div class="t-sig-line"></div>
+              <div class="t-sig-label">${isBangla ? 'গ্রাহকের স্বাক্ষর' : 'Customer Signature'}</div>
+            </div>
+            <div class="t-sig-box">
+              <div class="t-sig-line"></div>
+              <div class="t-sig-label">${isBangla ? 'আদায়কারীর স্বাক্ষর' : 'Authorized Seal'}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Footer
+      html += `
+        <div class="t-footer-block">
+          <div class="t-thanks">*** ${isBangla ? 'ধন্যবাদ! পুনরায় স্বাগতম' : 'Thank you for your payment!'} ***</div>
+          <div class="t-powered">Techyfi POS • Smart Store System</div>
+      `;
+
+      if (showQr) {
+        html += `
+          <div class="t-qr-container">
+            <svg width="42" height="42" viewBox="0 0 33 33" fill="#000000">
+              <rect x="0" y="0" width="11" height="11" fill="#000"/>
+              <rect x="2" y="2" width="7" height="7" fill="#fff"/>
+              <rect x="4" y="4" width="3" height="3" fill="#000"/>
+              <rect x="22" y="0" width="11" height="11" fill="#000"/>
+              <rect x="24" y="2" width="7" height="7" fill="#fff"/>
+              <rect x="26" y="4" width="3" height="3" fill="#000"/>
+              <rect x="0" y="22" width="11" height="11" fill="#000"/>
+              <rect x="2" y="24" width="7" height="7" fill="#fff"/>
+              <rect x="4" y="26" width="3" height="3" fill="#000"/>
+              <rect x="14" y="2" width="4" height="4" fill="#000"/>
+              <rect x="14" y="14" width="5" height="5" fill="#000"/>
+              <rect x="24" y="14" width="4" height="4" fill="#000"/>
+              <rect x="14" y="24" width="5" height="5" fill="#000"/>
+              <rect x="24" y="24" width="5" height="5" fill="#000"/>
+            </svg>
+            <span style="font-size: 7.5px; font-weight: 700; color: #444; text-align: left;">
+              ${isBangla ? 'যাচাই করতে<br>স্ক্যান করুন' : 'Scan to Verify<br>Receipt Slip'}
+            </span>
+          </div>
+        `;
+      }
+
+      if (showBarcode) {
+        html += `
+          <svg class="t-barcode-img" viewBox="0 0 200 35">
+            <rect x="10" y="0" width="3" height="30" fill="#000"/>
+            <rect x="15" y="0" width="2" height="30" fill="#000"/>
+            <rect x="20" y="0" width="5" height="30" fill="#000"/>
+            <rect x="28" y="0" width="2" height="30" fill="#000"/>
+            <rect x="33" y="0" width="4" height="30" fill="#000"/>
+            <rect x="40" y="0" width="6" height="30" fill="#000"/>
+            <rect x="50" y="0" width="2" height="30" fill="#000"/>
+            <rect x="55" y="0" width="5" height="30" fill="#000"/>
+            <rect x="63" y="0" width="3" height="30" fill="#000"/>
+            <rect x="70" y="0" width="6" height="30" fill="#000"/>
+            <rect x="80" y="0" width="2" height="30" fill="#000"/>
+            <rect x="86" y="0" width="4" height="30" fill="#000"/>
+            <rect x="94" y="0" width="7" height="30" fill="#000"/>
+            <rect x="105" y="0" width="3" height="30" fill="#000"/>
+            <rect x="112" y="0" width="5" height="30" fill="#000"/>
+            <rect x="120" y="0" width="2" height="30" fill="#000"/>
+            <rect x="126" y="0" width="6" height="30" fill="#000"/>
+            <rect x="135" y="0" width="3" height="30" fill="#000"/>
+            <rect x="142" y="0" width="5" height="30" fill="#000"/>
+            <rect x="150" y="0" width="2" height="30" fill="#000"/>
+            <rect x="156" y="0" width="6" height="30" fill="#000"/>
+            <rect x="165" y="0" width="4" height="30" fill="#000"/>
+            <rect x="172" y="0" width="5" height="30" fill="#000"/>
+            <rect x="180" y="0" width="3" height="30" fill="#000"/>
+          </svg>
+        `;
+      }
+
+      html += `</div>`;
+
+      return html;
+    }
+
+    function updateReceiptData() {
+      const isBangla = (currentLang === 'bn');
+      const dialogSlip = document.getElementById('dialog-slip');
+      const stationSlip = document.getElementById('thermal-station-slip');
+
+      dialogSlip.className = `thermal-paper-slip ${isBangla ? 'bangla-mode' : ''}`;
+      stationSlip.className = `thermal-paper-slip ${isBangla ? 'bangla-mode' : ''}`;
+
+      const generated = generateReceiptHTML(isBangla, currentPaperSize);
+      dialogSlip.innerHTML = generated;
+      stationSlip.innerHTML = generated;
+
+      updateSMSPreview();
+    }
+
+    function updateSMSPreview() {
+      const isBangla = (currentLang === 'bn');
+      const shopName = document.getElementById('cfg-shop-name').value;
+      const custName = document.getElementById('cfg-cust-name').value;
+      const prevDue = Number(document.getElementById('cfg-prev-due').value) || 0;
+      const paidAmt = Number(document.getElementById('cfg-paid-amt').value) || 0;
+      const channel = document.getElementById('cfg-channel').value;
+      const remaining = Math.max(0, prevDue - paidAmt);
+
+      let text = '';
+      if (isBangla) {
+        text = `[${shopName}]\nটাকা প্রাপ্তি স্বীকার রসিদ #REC-820404\nগ্রাহক: ${custName}\nপূর্বের বাকি: ৳${prevDue}\nআদায়: ৳${paidAmt} (${channel})\nবর্তমান বাকি: ৳${remaining}${remaining === 0 ? ' (সম্পূর্ণ পরিশোধিত)' : ''}\nধন্যবাদ!`;
+      } else {
+        text = `[${shopName}]\nMoney Receipt #REC-820404\nCustomer: ${custName}\nPrevious Due: ৳${prevDue}\nPaid Amount: ৳${paidAmt} via ${channel}\nRemaining Due: ৳${remaining}${remaining === 0 ? ' (Paid in Full)' : ''}\nThank you!`;
+      }
+
+      document.getElementById('sms-text-box').textContent = text;
+    }
+
+    function copyReceiptText() {
+      const text = document.getElementById('sms-text-box').textContent;
+      navigator.clipboard.writeText(text);
+      showToast('📋 Receipt Text Copied to Clipboard!');
+    }
+
+    function simulatePrint() {
+      const feed = document.getElementById('printer-paper-feed');
+      feed.classList.remove('printing');
+      void feed.offsetWidth; // Trigger reflow
+      feed.classList.add('printing');
+      showToast('🖨️ Printing 203 DPI ESC/POS Slip...');
+    }
+
+    // Initial render
+    window.addEventListener('DOMContentLoaded', () => {
+      updateReceiptData();
+    });
+  </script>
+</body>
+</html>

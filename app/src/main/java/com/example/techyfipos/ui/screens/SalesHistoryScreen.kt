@@ -1,0 +1,1499 @@
+package com.example.techyfipos.ui.screens
+
+import com.example.techyfipos.data.AppPermissions
+import com.example.techyfipos.ui.viewmodel.AuthViewModel
+import com.example.techyfipos.data.db.getFormattedPaymentMethod
+import com.example.techyfipos.ui.viewmodel.calculateDiscountValue
+import android.widget.Toast
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.techyfipos.R
+import com.example.techyfipos.data.db.SaleWithItems
+import com.example.techyfipos.ui.components.*
+import com.example.techyfipos.ui.viewmodel.CartViewModel
+import com.example.techyfipos.ui.viewmodel.SalesViewModel
+import com.example.techyfipos.ui.viewmodel.SettingsViewModel
+import com.example.techyfipos.utils.*
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+
+private enum class HistoryReportPeriod(val label: String) {
+    TODAY("Today"),
+    WEEK("This Week"),
+    MONTH("This Month"),
+    YEAR("This Year"),
+    ALL_TIME("All Time"),
+    CUSTOM("Custom")
+}
+
+private fun startOfDay(millis: Long): Long = Calendar.getInstance().apply {
+    timeInMillis = millis
+    set(Calendar.HOUR_OF_DAY, 0)
+    set(Calendar.MINUTE, 0)
+    set(Calendar.SECOND, 0)
+    set(Calendar.MILLISECOND, 0)
+}.timeInMillis
+
+private fun endOfDay(millis: Long): Long = Calendar.getInstance().apply {
+    timeInMillis = millis
+    set(Calendar.HOUR_OF_DAY, 23)
+    set(Calendar.MINUTE, 59)
+    set(Calendar.SECOND, 59)
+    set(Calendar.MILLISECOND, 999)
+}.timeInMillis
+
+private fun rangeForPeriod(period: HistoryReportPeriod, customStart: Long, customEnd: Long): Pair<Long, Long> {
+    val now = System.currentTimeMillis()
+    return when (period) {
+        HistoryReportPeriod.TODAY -> startOfDay(now) to endOfDay(now) + 1
+        HistoryReportPeriod.WEEK -> {
+            val cal = Calendar.getInstance().apply { timeInMillis = now }
+            while (cal.get(Calendar.DAY_OF_WEEK) != cal.firstDayOfWeek) {
+                cal.add(Calendar.DAY_OF_MONTH, -1)
+            }
+            startOfDay(cal.timeInMillis) to now + 1
+        }
+        HistoryReportPeriod.MONTH -> {
+            val cal = Calendar.getInstance().apply { timeInMillis = now; set(Calendar.DAY_OF_MONTH, 1) }
+            startOfDay(cal.timeInMillis) to now + 1
+        }
+        HistoryReportPeriod.YEAR -> {
+            val cal = Calendar.getInstance().apply { timeInMillis = now; set(Calendar.DAY_OF_YEAR, 1) }
+            startOfDay(cal.timeInMillis) to now + 1
+        }
+        HistoryReportPeriod.ALL_TIME -> 0L to Long.MAX_VALUE
+        HistoryReportPeriod.CUSTOM -> startOfDay(customStart) to endOfDay(customEnd) + 1
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SalesHistoryScreen(
+    salesViewModel: SalesViewModel,
+    settingsViewModel: SettingsViewModel? = null,
+    cartViewModel: CartViewModel? = null,
+    authViewModel: AuthViewModel? = null,
+    isOwner: Boolean = true,
+    isSupervisor: Boolean = false,
+    activePermissions: Set<String> = emptySet(),
+    onBack: () -> Unit,
+    onNavigateToReport: () -> Unit,
+    onNavigateToCart: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val salesWithItems by salesViewModel.salesWithItems.collectAsStateWithLifecycle()
+    var returnTarget by remember { mutableStateOf<SaleWithItems?>(null) }
+    var returnAlreadyReturned by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
+
+    var showSupervisorAuthDialog by remember { mutableStateOf(false) }
+    var pendingSupervisorAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var pendingSupervisorDesc by remember { mutableStateOf("") }
+
+    val canReturn = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_PROCESS)
+    val canDelete = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
+
+    var selectedPeriod by remember { mutableStateOf(HistoryReportPeriod.ALL_TIME) }
+    val now = remember { System.currentTimeMillis() }
+    var customStart by remember { mutableStateOf(now) }
+    var customEnd by remember { mutableStateOf(now) }
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
+    var selectedSaleDetail by remember { mutableStateOf<SaleWithItems?>(null) }
+    var deleteTarget by remember { mutableStateOf<SaleWithItems?>(null) }
+    var deleteInProgress by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var showFilters by remember { mutableStateOf(false) }
+    var selectedPayments by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var customerFilter by remember { mutableStateOf("All") }
+    var minimumTotal by remember { mutableStateOf("") }
+    var maximumTotal by remember { mutableStateOf("") }
+    var sortOrder by remember { mutableStateOf("Newest first") }
+    var showSortMenu by remember { mutableStateOf(false) }
+
+    var draftPayments by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var draftCustomerFilter by remember { mutableStateOf("All") }
+    var draftMinimumTotal by remember { mutableStateOf("") }
+    var draftMaximumTotal by remember { mutableStateOf("") }
+
+    val (rangeStart, rangeEnd) = remember(selectedPeriod, customStart, customEnd) {
+        rangeForPeriod(selectedPeriod, customStart, customEnd)
+    }
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
+    val dateFilteredSales = remember(salesWithItems, rangeStart, rangeEnd) {
+        salesWithItems.filter { it.sale.timestamp in rangeStart until rangeEnd }
+    }
+
+    val filteredSales = remember(
+        dateFilteredSales, searchQuery, selectedPayments, customerFilter,
+        minimumTotal, maximumTotal, sortOrder
+    ) {
+        val query = searchQuery.trim().lowercase()
+        val minimum = minimumTotal.toDoubleOrNull()
+        val maximum = maximumTotal.toDoubleOrNull()
+        dateFilteredSales.filter { saleWithItems ->
+            val sale = saleWithItems.sale
+            val matchesSearch = query.isBlank() ||
+                sale.id.toString().contains(query) ||
+                sale.customerName?.lowercase()?.contains(query) == true ||
+                sale.customerPhone?.lowercase()?.contains(query) == true ||
+                sale.paymentMethod.lowercase().contains(query) ||
+                saleWithItems.items.any {
+                    it.productName.lowercase().contains(query) || it.productBarcode.lowercase().contains(query)
+                }
+            val matchesPayment = selectedPayments.isEmpty() || sale.paymentMethod in selectedPayments
+            val isWalkIn = sale.customerName.isNullOrBlank() && sale.customerPhone.isNullOrBlank()
+            val matchesCustomer = when (customerFilter) {
+                "Saved customer" -> !isWalkIn
+                "Walk-in" -> isWalkIn
+                else -> true
+            }
+            matchesSearch && matchesPayment && matchesCustomer &&
+                (minimum == null || sale.grandTotal >= minimum) &&
+                (maximum == null || sale.grandTotal <= maximum)
+        }.let { matches ->
+            when (sortOrder) {
+                "Highest total" -> matches.sortedByDescending { it.sale.grandTotal }
+                "Lowest total" -> matches.sortedBy { it.sale.grandTotal }
+                else -> matches.sortedByDescending { it.sale.timestamp }
+            }
+        }
+    }
+
+    val historyProfit by produceState(initialValue = 0.0 to 0.0, filteredSales) {
+        val report = salesViewModel.buildReport(0L, Long.MAX_VALUE, filteredSales)
+        value = report.totalProfit to (if (report.totalRevenue != 0.0) report.totalProfit / report.totalRevenue * 100.0 else 0.0)
+    }
+
+    val resultTotal = filteredSales.sumOf { it.sale.grandTotal }
+    val resultItems = filteredSales.sumOf { sale -> sale.items.sumOf { it.quantity } }
+    val cashCount = filteredSales.count { it.sale.paymentMethod.equals("Cash", ignoreCase = true) }
+    val cashSplitPercent = if (filteredSales.isNotEmpty()) ((cashCount.toDouble() / filteredSales.size) * 100).toInt() else 0
+    val filterCount = selectedPayments.size +
+        (if (customerFilter != "All") 1 else 0) +
+        (if (minimumTotal.isNotBlank() || maximumTotal.isNotBlank()) 1 else 0)
+    val dateRangeLabel = when (selectedPeriod) {
+        HistoryReportPeriod.ALL_TIME -> "All recorded sales"
+        else -> {
+            val startText = dateFormat.format(Date(rangeStart))
+            val endText = dateFormat.format(Date((rangeEnd - 1).coerceAtMost(System.currentTimeMillis())))
+            if (startText == endText) startText else "$startText – $endText"
+        }
+    }
+
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = { Text("History", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    FilledTonalButton(
+                        onClick = onNavigateToReport,
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Realistic3DAnalyticsIcon(size = 18.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Reports", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // 💎 Compact Unified Sticky Toolbar (~76dp total)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Row 1: Search Field + Quick Date Pill + 3D Filter Funnel
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            androidx.compose.foundation.text.BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.weight(1f),
+                                decorationBox = { innerTextField ->
+                                    if (searchQuery.isBlank()) {
+                                        Text(
+                                            "Search invoice, customer...",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            )
+                            if (searchQuery.isNotBlank()) {
+                                IconButton(
+                                    onClick = { searchQuery = "" },
+                                    modifier = Modifier.size(20.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Clear",
+                                        tint = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Quick Date Pill Button (opens Date Range Picker)
+                    Surface(
+                        onClick = {
+                            customStart = if (selectedPeriod == HistoryReportPeriod.ALL_TIME) now else rangeStart
+                            customEnd = if (selectedPeriod == HistoryReportPeriod.ALL_TIME) now else (rangeEnd - 1)
+                            showStartPicker = true
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFEEF2FF),
+                        border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
+                        modifier = Modifier.height(42.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Realistic3DCalendarIcon(size = 16.dp)
+                            Text(
+                                text = when (selectedPeriod) {
+                                    HistoryReportPeriod.ALL_TIME -> "All Time"
+                                    HistoryReportPeriod.TODAY -> "Today"
+                                    HistoryReportPeriod.WEEK -> "This Week"
+                                    HistoryReportPeriod.MONTH -> "This Month"
+                                    HistoryReportPeriod.YEAR -> "This Year"
+                                    HistoryReportPeriod.CUSTOM -> dateRangeLabel
+                                },
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF4338CA),
+                                maxLines = 1
+                            )
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = Color(0xFF4338CA),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    // 3D Filter Funnel Button with Badge
+                    BadgedBox(
+                        badge = {
+                            if (filterCount > 0) Badge { Text(filterCount.toString()) }
+                        }
+                    ) {
+                        FilledTonalIconButton(
+                            onClick = {
+                                draftPayments = selectedPayments
+                                draftCustomerFilter = customerFilter
+                                draftMinimumTotal = minimumTotal
+                                draftMaximumTotal = maximumTotal
+                                showFilters = true
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.size(42.dp)
+                        ) {
+                            Realistic3DFilterIcon(size = 18.dp)
+                        }
+                    }
+                }
+
+                // Row 2: Micro Period Chips + Count & Sort Toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        listOf(
+                            HistoryReportPeriod.ALL_TIME to "All",
+                            HistoryReportPeriod.TODAY to "Today",
+                            HistoryReportPeriod.WEEK to "Week",
+                            HistoryReportPeriod.MONTH to "Month",
+                            HistoryReportPeriod.YEAR to "Year"
+                        ).forEach { (period, label) ->
+                            val isSelected = selectedPeriod == period
+                            Surface(
+                                onClick = { selectedPeriod = period },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                border = if (isSelected) null else BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                modifier = Modifier.height(26.dp)
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontSize = 10.5.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "${filteredSales.size} sales",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Box {
+                            TextButton(
+                                onClick = { showSortMenu = true },
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                modifier = Modifier.height(26.dp)
+                            ) {
+                                Text(
+                                    text = "Sort ▾",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                                listOf("Newest first", "Highest total", "Lowest total").forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option) },
+                                        onClick = { sortOrder = option; showSortMenu = false },
+                                        leadingIcon = if (sortOrder == option) {
+                                            { Icon(Icons.Default.Check, null) }
+                                        } else null
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                thickness = 0.8.dp
+            )
+
+            if (filteredSales.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Realistic3DEmptyReceiptIcon(size = 68.dp)
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        if (salesWithItems.isEmpty()) stringResource(R.string.no_sales) else "No transactions match these filters",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Sales recorded through the Sell screen or barcode scanner will appear here with real-time receipts.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                    if (searchQuery.isNotBlank() || filterCount > 0) {
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = {
+                            searchQuery = ""
+                            selectedPayments = emptySet()
+                            customerFilter = "All"
+                            minimumTotal = ""
+                            maximumTotal = ""
+                        }) { Text("Clear search and filters") }
+                    }
+                }
+            } else {
+                val groupedSales = remember(filteredSales) { groupSalesByDay(filteredSales) }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
+                        .padding(horizontal = 14.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // 💎 In-Feed Executive Revenue Summary Card (Scrolls away with list)
+                    item(key = "revenue_summary") {
+                        HistoryRevenueSummaryCard(
+                            periodLabel = if (selectedPeriod == HistoryReportPeriod.CUSTOM) "Selected Dates" else selectedPeriod.label,
+                            totalRevenue = resultTotal,
+                            transactionCount = filteredSales.size,
+                            itemCount = resultItems,
+                            cashSplitPercent = cashSplitPercent,
+                            grossMargin = historyProfit.first,
+                            marginPercent = historyProfit.second,
+                            isOwner = isOwner,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        )
+                    }
+
+                    groupedSales.forEach { (dateHeader, salesInGroup) ->
+                        item(key = "header_$dateHeader") {
+                            Text(
+                                text = dateHeader,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
+                            )
+                        }
+                        items(salesInGroup, key = { it.sale.id }) { saleWithItems ->
+                            SaleCard(
+                                saleWithItems = saleWithItems,
+                                onClick = { selectedSaleDetail = saleWithItems }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (selectedSaleDetail != null) {
+        val sale = selectedSaleDetail!!
+        SaleDetailDialog(
+            saleWithItems = sale,
+            settingsViewModel = settingsViewModel,
+            salesViewModel = salesViewModel,
+            cartViewModel = cartViewModel,
+            authViewModel = authViewModel,
+            isOwner = isOwner,
+            isSupervisor = isSupervisor,
+            activePermissions = activePermissions,
+            onDismiss = { selectedSaleDetail = null },
+            onReturn = {
+                selectedSaleDetail = null
+                scope.launch {
+                    returnAlreadyReturned = salesViewModel.getReturnedQuantities(sale.sale.id)
+                    returnTarget = sale
+                }
+            },
+            onDelete = {
+                deleteTarget = sale
+                selectedSaleDetail = null
+            },
+            onRequestSupervisorElevation = { desc, action ->
+                pendingSupervisorDesc = desc
+                pendingSupervisorAction = action
+                showSupervisorAuthDialog = true
+            },
+            onNavigateToCart = onNavigateToCart
+        )
+    }
+
+    if (showSupervisorAuthDialog && authViewModel != null) {
+        SupervisorAuthDialog(
+            title = stringResource(R.string.users_supervisor_auth_title),
+            actionDescription = pendingSupervisorDesc.ifBlank { stringResource(R.string.users_supervisor_auth_desc) },
+            authViewModel = authViewModel,
+            onDismiss = {
+                showSupervisorAuthDialog = false
+                pendingSupervisorAction = null
+            },
+            onAuthorized = { supervisor ->
+                showSupervisorAuthDialog = false
+                val action = pendingSupervisorAction
+                pendingSupervisorAction = null
+                action?.invoke()
+            }
+        )
+    }
+
+    deleteTarget?.let { target ->
+        val deletedMessage = stringResource(R.string.sales_history_invoice_deleted, target.sale.id)
+        val deleteFailedMessage = stringResource(R.string.sales_history_invoice_delete_failed)
+        AlertDialog(
+            onDismissRequest = { if (!deleteInProgress) deleteTarget = null },
+            title = { Text(stringResource(R.string.sales_history_delete_invoice_title)) },
+            text = { Text(stringResource(R.string.sales_history_delete_invoice_message, target.sale.id)) },
+            confirmButton = {
+                Button(
+                    enabled = !deleteInProgress,
+                    onClick = {
+                        deleteInProgress = true
+                        scope.launch {
+                            val deleted = salesViewModel.deleteSaleAndAwait(target.sale.id)
+                            deleteInProgress = false
+                            if (deleted) deleteTarget = null
+                            Toast.makeText(
+                                context,
+                                if (deleted) deletedMessage else deleteFailedMessage,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    if (deleteInProgress) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !deleteInProgress, onClick = { deleteTarget = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    returnTarget?.let { sale ->
+        ReturnItemsDialog(
+            saleWithItems = sale,
+            alreadyReturned = returnAlreadyReturned,
+            onDismiss = { returnTarget = null },
+            onConfirm = { lines, refundMethod, note, restock ->
+                salesViewModel.processReturn(sale.sale.id, lines, refundMethod, note, restock) { success, refundTotal ->
+                    returnTarget = null
+                    Toast.makeText(
+                        context,
+                        if (success) "Returned · refunded ${formatTaka(refundTotal)}" else "Could not process the return",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        )
+    }
+
+    if (showStartPicker) {
+        val state = rememberDatePickerState(initialSelectedDateMillis = customStart)
+        DatePickerDialog(
+            onDismissRequest = { showStartPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let {
+                        customStart = it
+                    }
+                    showStartPicker = false
+                    showEndPicker = true
+                }) { Text("Next") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStartPicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = state, title = { Text("Select start date", Modifier.padding(24.dp, 16.dp)) })
+        }
+    }
+
+    if (showEndPicker) {
+        val state = rememberDatePickerState(initialSelectedDateMillis = customEnd)
+        DatePickerDialog(
+            onDismissRequest = { showEndPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let {
+                        customEnd = it
+                        selectedPeriod = HistoryReportPeriod.CUSTOM
+                    }
+                    showEndPicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndPicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = state, title = { Text("Select end date", Modifier.padding(24.dp, 16.dp)) })
+        }
+    }
+
+    if (showFilters) {
+        ModalBottomSheet(onDismissRequest = { showFilters = false }) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
+                Text("Filter Transactions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(16.dp))
+                Text("Payment Method", fontWeight = FontWeight.SemiBold)
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due").forEach { method ->
+                        FilterChip(
+                            selected = method in draftPayments,
+                            onClick = {
+                                draftPayments = if (method in draftPayments) draftPayments - method else draftPayments + method
+                            },
+                            label = { Text(method) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Text("Customer", fontWeight = FontWeight.SemiBold)
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    listOf("All", "Saved customer", "Walk-in").forEachIndexed { index, option ->
+                        SegmentedButton(
+                            selected = draftCustomerFilter == option,
+                            onClick = { draftCustomerFilter = option },
+                            shape = SegmentedButtonDefaults.itemShape(index, 3),
+                            label = { Text(option, fontSize = 11.sp) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Sale Total", fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = draftMinimumTotal,
+                        onValueChange = { draftMinimumTotal = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                        label = { Text("Minimum ৳") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = draftMaximumTotal,
+                        onValueChange = { draftMaximumTotal = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                        label = { Text("Maximum ৳") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(Modifier.height(18.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            draftPayments = emptySet()
+                            draftCustomerFilter = "All"
+                            draftMinimumTotal = ""
+                            draftMaximumTotal = ""
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Reset") }
+                    Button(
+                        onClick = {
+                            selectedPayments = draftPayments
+                            customerFilter = draftCustomerFilter
+                            minimumTotal = draftMinimumTotal
+                            maximumTotal = draftMaximumTotal
+                            showFilters = false
+                        },
+                        modifier = Modifier.weight(2f)
+                    ) { Text("Apply Filters") }
+                }
+            }
+        }
+    }
+}
+
+private fun groupSalesByDay(sales: List<SaleWithItems>): Map<String, List<SaleWithItems>> {
+    val formatter = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault())
+    return sales.groupBy { formatter.format(Date(it.sale.timestamp)) }
+}
+
+@Composable
+private fun HistoryRevenueSummaryCard(
+    periodLabel: String,
+    totalRevenue: Double,
+    transactionCount: Int,
+    itemCount: Double,
+    cashSplitPercent: Int,
+    grossMargin: Double,
+    marginPercent: Double,
+    isOwner: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    var isCollapsed by rememberSaveable { mutableStateOf(false) }
+    // Profit/margin is owner-only elsewhere in the app; a cashier session can never switch into
+    // margin mode here even if this state were somehow set.
+    var showMarginMode by remember { mutableStateOf(false) }
+    val canShowMargin = isOwner && showMarginMode
+    val avgOrderValue = if (transactionCount > 0) totalRevenue / transactionCount else 0.0
+    val estGrossMargin = grossMargin
+
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (isCollapsed) 0f else 180f,
+        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+        label = "chevronRotation"
+    )
+
+    Surface(
+        modifier = modifier.animateContentSize(),
+        shape = RoundedCornerShape(20.dp),
+        color = Color(0xFF1E1B4B),
+        shadowElevation = if (isCollapsed) 3.dp else 6.dp,
+        border = BorderStroke(1.dp, Color(0x33C7D2FE))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFF1E1B4B),
+                            Color(0xFF312E81),
+                            Color(0xFF4338CA)
+                        ),
+                        start = Offset(0f, 0f),
+                        end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                    )
+                )
+                .padding(horizontal = 16.dp, vertical = if (isCollapsed) 10.dp else 16.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Top Row: Tag with 3D Vault Icon, Compact Amount (when collapsed), Metric Switch & Collapse/Expand Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { isCollapsed = !isCollapsed },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Realistic3DVaultIcon(size = 18.dp)
+                        Text(
+                            text = "REVENUE SUMMARY",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.6.sp,
+                            color = Color(0xFFC7D2FE)
+                        )
+                        if (isCollapsed) {
+                            Text(
+                                text = "•",
+                                fontSize = 11.sp,
+                                color = Color(0xFF818CF8)
+                            )
+                            Text(
+                                text = if (showMarginMode) formatTaka(estGrossMargin) else formatTaka(totalRevenue),
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Interactive Switch Pill (owner-only: cashiers never see the margin toggle)
+                        if (isOwner) {
+                            Surface(
+                                onClick = { showMarginMode = !showMarginMode },
+                                shape = RoundedCornerShape(20.dp),
+                                color = Color.White.copy(alpha = 0.16f),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = if (canShowMargin) "Net Margin" else "Total Revenue",
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.SwapVert,
+                                        contentDescription = "Switch metric",
+                                        tint = Color(0xFFC7D2FE),
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Collapse / Expand Toggle Button
+                        Surface(
+                            onClick = { isCollapsed = !isCollapsed },
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.16f),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isCollapsed) "Expand Revenue Summary" else "Collapse Revenue Summary",
+                                    tint = Color.White,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .rotate(chevronRotation)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Collapsible Body with AnimatedVisibility
+                AnimatedVisibility(
+                    visible = !isCollapsed,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Middle Row: Amount & Stat Badge
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = if (canShowMargin) formatTaka(estGrossMargin) else formatTaka(totalRevenue),
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White,
+                                    letterSpacing = (-0.6).sp
+                                )
+                                Text(
+                                    text = if (canShowMargin) "Gross Margin Rate: ${String.format(java.util.Locale.US, "%.1f", marginPercent)}%"
+                                           else "AOV (Avg Ticket): ${formatTaka(avgOrderValue)}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFFA5B4FC)
+                                )
+                            }
+
+                            // Margin badge is owner-only; a cashier session never sees profit figures here.
+                            if (isOwner) {
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color.Black.copy(alpha = 0.25f),
+                                    border = BorderStroke(1.dp, Color(0x33A5B4FC))
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        horizontalAlignment = Alignment.End
+                                    ) {
+                                        Text(
+                                            text = "+${formatTaka(estGrossMargin)}",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF34D399)
+                                        )
+                                        Text(
+                                            text = "Est. Margin (${String.format(java.util.Locale.US, "%.1f", marginPercent)}%)",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(0xFFC7D2FE)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Footer Row: Transactions, Units, Cash Split
+                        HorizontalDivider(
+                            color = Color.White.copy(alpha = 0.15f),
+                            thickness = 0.8.dp
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Invoices: ",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFC7D2FE)
+                                )
+                                Text(
+                                    text = "$transactionCount",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(3.dp)
+                                    .background(Color.White.copy(alpha = 0.4f), CircleShape)
+                            )
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Units: ",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFC7D2FE)
+                                )
+                                val itemStr = if (itemCount % 1.0 == 0.0) itemCount.toLong().toString() else String.format(Locale.US, "%.2f", itemCount).trimEnd('0').trimEnd('.')
+                                Text(
+                                    text = "$itemStr Items",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(3.dp)
+                                    .background(Color.White.copy(alpha = 0.4f), CircleShape)
+                            )
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Cash Split: ",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFC7D2FE)
+                                )
+                                Text(
+                                    text = "$cashSplitPercent% Cash",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun Payment3DBadge(
+    paymentMethod: String,
+    modifier: Modifier = Modifier
+) {
+    val isCash = paymentMethod.equals("Cash", ignoreCase = true)
+    val isBkash = paymentMethod.contains("bKash", ignoreCase = true)
+    val isNagad = paymentMethod.contains("Nagad", ignoreCase = true)
+    val isRocket = paymentMethod.contains("Rocket", ignoreCase = true)
+    val isCard = paymentMethod.contains("Card", ignoreCase = true)
+    val isDue = paymentMethod.contains("Due", ignoreCase = true)
+
+    val bgColor = when {
+        isCash -> Color(0xFFECFDF5)
+        isBkash -> Color(0xFFFDF2F8)
+        isNagad -> Color(0xFFFFF7ED)
+        isRocket -> Color(0xFFFAF5FF)
+        isCard -> Color(0xFFEFF6FF)
+        isDue -> Color(0xFFFEF2F2)
+        else -> MaterialTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = when {
+        isCash -> Color(0xFF047857)
+        isBkash -> Color(0xFFBE185D)
+        isNagad -> Color(0xFFC2410C)
+        isRocket -> Color(0xFF7E22CE)
+        isCard -> Color(0xFF1D4ED8)
+        isDue -> Color(0xFFB91C1C)
+        else -> MaterialTheme.colorScheme.onSecondaryContainer
+    }
+    val borderColor = when {
+        isCash -> Color(0xFFA7F3D0)
+        isBkash -> Color(0xFFFBCFE8)
+        isNagad -> Color(0xFFFED7AA)
+        isRocket -> Color(0xFFE9D5FF)
+        isCard -> Color(0xFFBFDBFE)
+        isDue -> Color(0xFFFECACA)
+        else -> Color.Transparent
+    }
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = bgColor,
+        border = BorderStroke(1.dp, borderColor)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            when {
+                isCash -> Realistic3DCashIcon(size = 14.dp)
+                isBkash -> Realistic3DMobileWalletIcon(primaryColor = Color(0xFFBE185D), secondaryColor = Color(0xFFDB2777), size = 14.dp)
+                isNagad -> Realistic3DMobileWalletIcon(primaryColor = Color(0xFFC2410C), secondaryColor = Color(0xFFEA580C), size = 14.dp)
+                isRocket -> Realistic3DMobileWalletIcon(primaryColor = Color(0xFF7E22CE), secondaryColor = Color(0xFFA855F7), size = 14.dp)
+                isCard -> Realistic3DCardIcon(size = 14.dp)
+                isDue -> Text("⚠️", fontSize = 11.sp)
+                else -> Text("💳", fontSize = 11.sp)
+            }
+            Text(
+                text = paymentMethod,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = contentColor
+            )
+        }
+    }
+}
+
+@Composable
+fun SaleCard(
+    saleWithItems: SaleWithItems,
+    onClick: () -> Unit
+) {
+    val timeFormatter = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
+    val saleTime = remember(saleWithItems.sale.timestamp) {
+        timeFormatter.format(Date(saleWithItems.sale.timestamp))
+    }
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 9.dp)
+        ) {
+            // Top Row: Invoice #, 3D Payment Badge, and Amount
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "#${saleWithItems.sale.id}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    // 3D Payment Badge
+                    Payment3DBadge(paymentMethod = saleWithItems.sale.paymentMethod)
+                }
+                Text(
+                    text = formatTaka(saleWithItems.sale.grandTotal),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 15.sp,
+                    color = if (saleWithItems.sale.paymentMethod == "Due") Color(0xFFDC2626) else MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Middle Row: Customer Info with Avatar & Time & Items Count
+            val customerName = saleWithItems.sale.customerName?.takeIf { it.isNotBlank() }
+            val customerPhone = saleWithItems.sale.customerPhone?.takeIf { it.isNotBlank() }
+            val isWalkIn = customerName == null && customerPhone == null
+            val totalUnits = saleWithItems.items.sumOf { it.quantity }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    // Customer Avatar Initial
+                    Box(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isWalkIn) MaterialTheme.colorScheme.surfaceVariant
+                                else MaterialTheme.colorScheme.primaryContainer
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (isWalkIn) "W" else customerName?.firstOrNull()?.uppercase() ?: "C",
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isWalkIn) MaterialTheme.colorScheme.onSurfaceVariant
+                            else MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    Text(
+                        text = when {
+                            customerName != null && customerPhone != null -> "$customerName ($customerPhone)"
+                            customerName != null -> customerName
+                            customerPhone != null -> "Customer: $customerPhone"
+                            else -> "Walk-in"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val totalUnitsStr = if (totalUnits % 1.0 == 0.0) totalUnits.toLong().toString() else String.format(Locale.US, "%.2f", totalUnits).trimEnd('0').trimEnd('.')
+                    Text(
+                        text = "$totalUnitsStr items",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "•",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Text(
+                        text = saleTime,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+
+            if (saleWithItems.items.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                // Item Pills Summary (single compact row)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    saleWithItems.items.take(2).forEach { item ->
+                        Surface(
+                            shape = RoundedCornerShape(5.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Text(
+                                    text = item.productName,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                val qStr = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
+                                Text(
+                                    text = "x$qStr",
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                    if (saleWithItems.items.size > 2) {
+                        Surface(
+                            shape = RoundedCornerShape(5.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ) {
+                            Text(
+                                text = "+${saleWithItems.items.size - 2} more",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SaleDetailDialog(
+    saleWithItems: SaleWithItems,
+    settingsViewModel: SettingsViewModel? = null,
+    salesViewModel: SalesViewModel? = null,
+    cartViewModel: CartViewModel? = null,
+    authViewModel: AuthViewModel? = null,
+    isOwner: Boolean = true,
+    isSupervisor: Boolean = false,
+    activePermissions: Set<String> = emptySet(),
+    onDismiss: () -> Unit,
+    onReturn: (() -> Unit)? = null,
+    onDelete: () -> Unit,
+    onRequestSupervisorElevation: ((actionDesc: String, action: () -> Unit) -> Unit)? = null,
+    onNavigateToCart: (() -> Unit)? = null
+) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val resources = LocalResources.current
+    var showEditConfirm by remember { mutableStateOf(false) }
+
+    val canReturn = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_PROCESS)
+    val canDelete = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
+    val canEdit = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
+
+    // BillData.totalOutstandingDue isn't stored on the Sale row — it's only meaningful at the
+    // moment of checkout — so reopening an old Due invoice from History must re-fetch the
+    // customer's current balance live, rather than showing a stale/zero value.
+    val hasDuePortion = remember(saleWithItems) {
+        val method = saleWithItems.sale.paymentMethod.trim()
+        method.equals("Due", ignoreCase = true) || (
+            method.equals("Split", ignoreCase = true) && !saleWithItems.sale.splitPaymentJson.isNullOrBlank() &&
+                try {
+                    val arr = org.json.JSONArray(saleWithItems.sale.splitPaymentJson)
+                    (0 until arr.length()).any { i ->
+                        val obj = arr.getJSONObject(i)
+                        obj.optString("method").equals("Due", ignoreCase = true) && obj.optDouble("amount", 0.0) > 0.0
+                    }
+                } catch (e: Exception) { false }
+            )
+    }
+    val liveOutstandingDue by produceState(initialValue = 0.0, saleWithItems, hasDuePortion) {
+        val phone = saleWithItems.sale.customerPhone
+        value = if (hasDuePortion && !phone.isNullOrBlank() && salesViewModel != null) {
+            salesViewModel.getCustomerDue(phone)?.outstandingAmount ?: 0.0
+        } else 0.0
+    }
+    val shopName = settingsViewModel?.shopName?.collectAsStateWithLifecycle(initialValue = "Techyfi POS")?.value ?: "Techyfi POS"
+    val shopAddress = settingsViewModel?.shopAddress?.collectAsStateWithLifecycle(initialValue = "Dhaka, Bangladesh")?.value ?: "Dhaka, Bangladesh"
+    val shopPhone = settingsViewModel?.shopPhone?.collectAsStateWithLifecycle(initialValue = "01700000000")?.value ?: "01700000000"
+    val shopLogoUri = settingsViewModel?.shopLogoUri?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
+    val facebookUrl = settingsViewModel?.facebookUrl?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
+    val qrCodeInfo = settingsViewModel?.qrCodeInfo?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
+    val cashierName = settingsViewModel?.cashierName?.collectAsStateWithLifecycle(initialValue = "Admin")?.value ?: "Admin"
+    val invoiceSettingsData = settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle(initialValue = com.example.techyfipos.data.InvoiceSettingsData())?.value ?: com.example.techyfipos.data.InvoiceSettingsData()
+
+    val billData = remember(saleWithItems, shopName, shopAddress, shopPhone, shopLogoUri, facebookUrl, qrCodeInfo, cashierName, invoiceSettingsData, liveOutstandingDue) {
+        BillData(
+            saleId = saleWithItems.sale.id,
+            timestampMillis = saleWithItems.sale.timestamp,
+            shopName = shopName,
+            shopAddress = shopAddress,
+            shopPhone = shopPhone,
+            items = saleWithItems.items.map { item ->
+                BillLineItem(
+                    name = item.productName,
+                    quantity = item.quantity,
+                    unitPrice = item.price,
+                    lineTotal = item.price * item.quantity,
+                    note = item.note
+                )
+            },
+            subtotal = saleWithItems.sale.subtotal,
+            discountValue = calculateDiscountValue(
+                saleWithItems.sale.subtotal,
+                saleWithItems.sale.discountAmount,
+                saleWithItems.sale.isPercentageDiscount
+            ),
+            grandTotal = saleWithItems.sale.grandTotal,
+            paymentMethod = saleWithItems.sale.paymentMethod,
+            customerName = saleWithItems.sale.customerName ?: "",
+            customerPhone = saleWithItems.sale.customerPhone ?: "",
+            amountPaid = saleWithItems.sale.amountPaid,
+            changeAmount = (saleWithItems.sale.amountPaid - saleWithItems.sale.grandTotal).coerceAtLeast(0.0),
+            walletPhone = saleWithItems.sale.walletPhone ?: "",
+            cardType = saleWithItems.sale.cardType ?: "",
+            cardLastFour = saleWithItems.sale.cardLastFour ?: "",
+            splitPaymentJson = saleWithItems.sale.splitPaymentJson,
+            logoUri = shopLogoUri,
+            facebookUrl = facebookUrl,
+            qrCodeInfo = qrCodeInfo,
+            cashierName = saleWithItems.sale.performedByName?.takeIf { it.isNotBlank() } ?: cashierName,
+            settingsData = invoiceSettingsData,
+            taxLabel = invoiceSettingsData.taxLabel,
+            taxValue = saleWithItems.sale.taxAmount,
+            totalOutstandingDue = liveOutstandingDue
+        )
+    }
+
+    ReceiptSummaryDialog(
+        bill = billData,
+        title = "Invoice #${saleWithItems.sale.id}",
+        onDismiss = onDismiss,
+        onReturn = if (onReturn != null) {
+            {
+                if (canReturn) {
+                    onReturn()
+                } else if (onRequestSupervisorElevation != null) {
+                    onRequestSupervisorElevation("Authorize Return for Invoice #${saleWithItems.sale.id}") {
+                        onReturn()
+                    }
+                }
+            }
+        } else null,
+        onDelete = {
+            if (canDelete) {
+                onDelete()
+                onDismiss()
+            } else if (onRequestSupervisorElevation != null) {
+                onRequestSupervisorElevation("Authorize Delete for Invoice #${saleWithItems.sale.id}") {
+                    onDelete()
+                    onDismiss()
+                }
+            }
+        },
+        onAddToCartAgain = if (cartViewModel != null) {
+            {
+                scope.launch {
+                    val skipped = cartViewModel.loadFromPastSale(saleWithItems, replaceCart = false)
+                    if (skipped > 0) {
+                        Toast.makeText(context, resources.getString(R.string.cart_add_to_cart_again_skipped_toast, skipped), Toast.LENGTH_LONG).show()
+                    }
+                    onDismiss()
+                    onNavigateToCart?.invoke()
+                }
+            }
+        } else null,
+        onEdit = if (cartViewModel != null) {
+            {
+                if (canEdit) {
+                    showEditConfirm = true
+                } else if (onRequestSupervisorElevation != null) {
+                    onRequestSupervisorElevation("Authorize Edit for Invoice #${saleWithItems.sale.id}") {
+                        showEditConfirm = true
+                    }
+                }
+            }
+        } else null
+    )
+
+    if (showEditConfirm) {
+        AlertDialog(
+            onDismissRequest = { showEditConfirm = false },
+            title = { Text(stringResource(R.string.cart_edit_sale_confirm_title)) },
+            text = { Text(stringResource(R.string.cart_edit_sale_confirm_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showEditConfirm = false
+                        scope.launch {
+                            val voided = salesViewModel?.deleteSaleAndAwait(saleWithItems.sale.id) ?: false
+                            if (voided && cartViewModel != null) {
+                                val skipped = cartViewModel.loadFromPastSale(saleWithItems, replaceCart = true)
+                                if (skipped > 0) {
+                                    Toast.makeText(context, resources.getString(R.string.cart_add_to_cart_again_skipped_toast, skipped), Toast.LENGTH_LONG).show()
+                                }
+                                onDismiss()
+                                onNavigateToCart?.invoke()
+                            } else {
+                                Toast.makeText(context, resources.getString(R.string.sales_history_void_for_edit_failed), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
+                ) { Text(stringResource(R.string.cart_edit_sale_confirm_button)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditConfirm = false }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
+    }
+}
