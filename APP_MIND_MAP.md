@@ -86,6 +86,10 @@ mindmap
       Accessibility & Ergonomic Touch Architecture
         Minimum 48dp touch target sizing enforced across icon buttons, chips, and steppers
         High-contrast Material 3 surfaces adhering to WCAG AA guidelines
+        Responsive Zero-Cutoff Top AppBars on Compact Phone Screens
+          Customers Screen: Consolidates Table/Cards view switcher, Excel export, and CSV export into an overflow [ ⋮ ] menu, providing ample width for "Customer Database & CRM" title
+          Register Close Screen: Adapts [ 📋 X-Report ] and [ 🖨️ Z-Report ] into compact badge chips [ 📋 X ] and [ 🖨️ Z ] on narrow phone screens (< 440dp) to prevent "Day Start & Close" title truncation
+          Products Screen: Consolidates Excel import/export, batch selection mode, and stock audit history into an overflow [ ⋮ ] menu, while retaining the Alert Bell and compact Cart capsule, ensuring the "Products" title never truncates
     Selling workflow
       Selling Form Factors
         Phone POS Terminal

@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +60,8 @@ fun CustomersScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isTablet = configuration.screenWidthDp >= 600
     val customers by customerViewModel.filteredCustomers.collectAsStateWithLifecycle()
     val totalCount by customerViewModel.totalCustomersCount.collectAsStateWithLifecycle()
     val totalDues by customerViewModel.totalDuesAmount.collectAsStateWithLifecycle()
@@ -115,19 +118,21 @@ fun CustomersScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    Column(modifier = Modifier.padding(end = 2.dp)) {
                         Text(
                             text = stringResource(R.string.customers_screen_title),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
+                            fontSize = if (isTablet) 17.sp else 15.sp,
                             maxLines = 1,
                             softWrap = false,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = stringResource(R.string.customers_count_subtitle, totalCount),
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontSize = if (isTablet) 11.5.sp else 10.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 },
@@ -140,111 +145,219 @@ fun CustomersScreen(
                     }
                 },
                 actions = {
-                    // View Toggle Button (Table vs Cards)
-                    IconButton(
-                        onClick = { customerViewModel.isTableView.value = !isTableView },
-                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isTableView) Icons.Default.ViewAgenda else Icons.Default.TableChart,
-                            contentDescription = if (isTableView) stringResource(R.string.customer_view_cards) else stringResource(R.string.customer_view_table),
-                            tint = if (isTableView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Sort Menu
-                    Box {
+                    if (isTablet) {
+                        // Tablet mode: Show full tool deck side-by-side
                         IconButton(
-                            onClick = { showSortMenu = true },
+                            onClick = { customerViewModel.isTableView.value = !isTableView },
                             modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort")
+                            Icon(
+                                imageVector = if (isTableView) Icons.Default.ViewAgenda else Icons.Default.TableChart,
+                                contentDescription = if (isTableView) stringResource(R.string.customer_view_cards) else stringResource(R.string.customer_view_table),
+                                tint = if (isTableView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        DropdownMenu(
-                            expanded = showSortMenu,
-                            onDismissRequest = { showSortMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.customer_sort_recent)) },
-                                onClick = {
-                                    customerViewModel.selectedSort.value = CustomerSortOption.RECENT_VISIT
-                                    showSortMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.customer_sort_lifetime_spend)) },
-                                onClick = {
-                                    customerViewModel.selectedSort.value = CustomerSortOption.LIFETIME_SPEND
-                                    showSortMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.customer_sort_highest_due)) },
-                                onClick = {
-                                    customerViewModel.selectedSort.value = CustomerSortOption.HIGHEST_DUE
-                                    showSortMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.customer_sort_orders_count)) },
-                                onClick = {
-                                    customerViewModel.selectedSort.value = CustomerSortOption.ORDERS_COUNT
-                                    showSortMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.customer_sort_loyalty)) },
-                                onClick = {
-                                    customerViewModel.selectedSort.value = CustomerSortOption.LOYALTY_POINTS
-                                    showSortMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.customer_sort_name)) },
-                                onClick = {
-                                    customerViewModel.selectedSort.value = CustomerSortOption.NAME_ASC
-                                    showSortMenu = false
-                                }
-                            )
+
+                        // Sort Menu
+                        Box {
+                            IconButton(
+                                onClick = { showSortMenu = true },
+                                modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort")
+                            }
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_recent)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.RECENT_VISIT
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_lifetime_spend)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.LIFETIME_SPEND
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_highest_due)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.HIGHEST_DUE
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_orders_count)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.ORDERS_COUNT
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_loyalty)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.LOYALTY_POINTS
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_name)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.NAME_ASC
+                                        showSortMenu = false
+                                    }
+                                )
+                            }
+                        }
+
+                        // Export Menu (Excel / CSV)
+                        Box {
+                            IconButton(
+                                onClick = { showExportMenu = true },
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.customer_export_title))
+                            }
+                            DropdownMenu(
+                                expanded = showExportMenu,
+                                onDismissRequest = { showExportMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_export_excel_option)) },
+                                    leadingIcon = { Text("📊", fontSize = 16.sp) },
+                                    onClick = {
+                                        showExportMenu = false
+                                        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+                                        exportCustomersExcelLauncher.launch("customers-$dateStr.xlsx")
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_export_csv_option)) },
+                                    leadingIcon = { Text("📄", fontSize = 16.sp) },
+                                    onClick = {
+                                        showExportMenu = false
+                                        exportCustomerCsv(context, customers)
+                                    }
+                                )
+                            }
+                        }
+                    } else {
+                        // Phone mode: Consolidated Actions to guarantee zero title truncation
+                        // 1. Sort Menu
+                        Box {
+                            IconButton(
+                                onClick = { showSortMenu = true },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort", modifier = Modifier.size(20.dp))
+                            }
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_recent)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.RECENT_VISIT
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_lifetime_spend)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.LIFETIME_SPEND
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_highest_due)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.HIGHEST_DUE
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_orders_count)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.ORDERS_COUNT
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_loyalty)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.LOYALTY_POINTS
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_name)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.NAME_ASC
+                                        showSortMenu = false
+                                    }
+                                )
+                            }
+                        }
+
+                        // 2. Overflow Menu (View Switcher & Export Tools)
+                        var showPhoneMoreMenu by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(
+                                onClick = { showPhoneMoreMenu = true },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More Options", modifier = Modifier.size(20.dp))
+                            }
+                            DropdownMenu(
+                                expanded = showPhoneMoreMenu,
+                                onDismissRequest = { showPhoneMoreMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(if (isTableView) stringResource(R.string.customer_view_cards) else stringResource(R.string.customer_view_table)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            if (isTableView) Icons.Default.ViewAgenda else Icons.Default.TableChart,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    },
+                                    onClick = {
+                                        showPhoneMoreMenu = false
+                                        customerViewModel.isTableView.value = !isTableView
+                                    }
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_export_excel_option)) },
+                                    leadingIcon = { Text("📊", fontSize = 16.sp) },
+                                    onClick = {
+                                        showPhoneMoreMenu = false
+                                        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+                                        exportCustomersExcelLauncher.launch("customers-$dateStr.xlsx")
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_export_csv_option)) },
+                                    leadingIcon = { Text("📄", fontSize = 16.sp) },
+                                    onClick = {
+                                        showPhoneMoreMenu = false
+                                        exportCustomerCsv(context, customers)
+                                    }
+                                )
+                            }
                         }
                     }
 
-                    // Export Menu (Excel / CSV)
-                    Box {
-                        IconButton(
-                            onClick = { showExportMenu = true },
-                            modifier = Modifier.size(38.dp)
-                        ) {
-                            Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.customer_export_title))
-                        }
-                        DropdownMenu(
-                            expanded = showExportMenu,
-                            onDismissRequest = { showExportMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.customer_export_excel_option)) },
-                                leadingIcon = { Text("📊", fontSize = 16.sp) },
-                                onClick = {
-                                    showExportMenu = false
-                                    val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
-                                    exportCustomersExcelLauncher.launch("customers-$dateStr.xlsx")
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.customer_export_csv_option)) },
-                                leadingIcon = { Text("📄", fontSize = 16.sp) },
-                                onClick = {
-                                    showExportMenu = false
-                                    exportCustomerCsv(context, customers)
-                                }
-                            )
-                        }
-                    }
-
-                    // Add Customer Button
+                    // Add Customer Button (Shared between Phone & Tablet)
                     FilledIconButton(
                         onClick = { showAddCustomerDialog = true },
-                        modifier = Modifier.padding(end = 6.dp).size(36.dp),
+                        modifier = Modifier.padding(end = 4.dp).size(36.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary

@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -270,18 +271,22 @@ fun DayStartCloseScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    Column(modifier = Modifier.padding(end = 4.dp)) {
                         Text(
                             text = stringResource(R.string.register_close_screen_title),
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 18.sp,
-                            maxLines = 1
+                            fontSize = if (isTablet) 18.sp else 15.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = stringResource(R.string.register_close_screen_subtitle),
-                            fontSize = 11.5.sp,
+                            fontSize = if (isTablet) 11.5.sp else 10.5.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 },
@@ -291,9 +296,10 @@ fun DayStartCloseScreen(
                     }
                 },
                 actions = {
+                    val showFullReportLabel = isTablet || configuration.screenWidthDp >= 440
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.padding(end = 8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(if (showFullReportLabel) 6.dp else 4.dp),
+                        modifier = Modifier.padding(end = if (showFullReportLabel) 8.dp else 4.dp)
                     ) {
                         // Mid-Shift X-Report Action
                         Surface(
@@ -304,13 +310,16 @@ fun DayStartCloseScreen(
                             shadowElevation = 2.dp
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                                modifier = Modifier.padding(
+                                    horizontal = if (showFullReportLabel) 9.dp else 7.dp,
+                                    vertical = if (showFullReportLabel) 6.dp else 5.dp
+                                ),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(if (showFullReportLabel) 4.dp else 2.dp)
                             ) {
-                                Text("📋", fontSize = 12.sp)
+                                Text("📋", fontSize = if (showFullReportLabel) 12.sp else 11.sp)
                                 Text(
-                                    text = "X-Report",
+                                    text = if (showFullReportLabel) "X-Report" else "X",
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -327,13 +336,16 @@ fun DayStartCloseScreen(
                             shadowElevation = 3.dp
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                                modifier = Modifier.padding(
+                                    horizontal = if (showFullReportLabel) 9.dp else 7.dp,
+                                    vertical = if (showFullReportLabel) 6.dp else 5.dp
+                                ),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                horizontalArrangement = Arrangement.spacedBy(if (showFullReportLabel) 5.dp else 3.dp)
                             ) {
-                                Realistic3DRegisterAuditZReportIcon(size = 16.dp)
+                                Realistic3DRegisterAuditZReportIcon(size = if (showFullReportLabel) 16.dp else 14.dp)
                                 Text(
-                                    text = "Z-Report",
+                                    text = if (showFullReportLabel) "Z-Report" else "Z",
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White

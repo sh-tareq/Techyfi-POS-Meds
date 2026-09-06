@@ -86,6 +86,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.res.painterResource
@@ -181,6 +182,8 @@ fun ProductsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isTablet = configuration.screenWidthDp >= 600
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -645,19 +648,21 @@ fun ProductsScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             var showExcelMenu by remember { mutableStateOf(false) }
+            var showMorePhoneMenu by remember { mutableStateOf(false) }
             TopAppBar(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(start = 2.dp)
                     ) {
-                        Realistic3DProductsBoxIcon(size = 24.dp)
-                        Spacer(Modifier.width(6.dp))
+                        Realistic3DProductsBoxIcon(size = if (isTablet) 24.dp else 20.dp)
+                        Spacer(Modifier.width(if (isTablet) 6.dp else 4.dp))
                         Text(
                             stringResource(R.string.products),
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 18.sp,
+                            fontSize = if (isTablet) 18.sp else 16.sp,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             softWrap = false,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -669,101 +674,195 @@ fun ProductsScreen(
                     }
                 },
                 actions = {
-                    // Quick Excel Tools Dropdown
-                    Box {
+                    if (isTablet) {
+                        // Quick Excel Tools Dropdown
+                        Box {
+                            IconButton(
+                                onClick = { showExcelMenu = true },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Description,
+                                    contentDescription = "Excel Tools",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showExcelMenu,
+                                onDismissRequest = { showExcelMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.products_import_excel), fontWeight = FontWeight.SemiBold) },
+                                    leadingIcon = { Icon(Icons.Default.FileUpload, null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = {
+                                        showExcelMenu = false
+                                        importExcelLauncher.launch(
+                                            arrayOf(
+                                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                                "application/vnd.ms-excel",
+                                                "application/octet-stream"
+                                            )
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.products_export_excel), fontWeight = FontWeight.SemiBold) },
+                                    leadingIcon = { Icon(Icons.Default.FileDownload, null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = {
+                                        showExcelMenu = false
+                                        val cleanDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+                                        exportExcelLauncher.launch("products-$cleanDate.xlsx")
+                                    }
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.products_batch_print_labels), fontWeight = FontWeight.SemiBold) },
+                                    leadingIcon = { Icon(Icons.Default.Print, null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = {
+                                        showExcelMenu = false
+                                        showBatchPrintDialog = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (batchSelectMode) "Exit Batch Selection" else "Batch Operations (Select)", fontWeight = FontWeight.SemiBold) },
+                                    leadingIcon = { Icon(Icons.Default.Checklist, null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = {
+                                        showExcelMenu = false
+                                        batchSelectMode = !batchSelectMode
+                                        if (!batchSelectMode) selectedBarcodes.clear()
+                                    }
+                                )
+                            }
+                        }
+
+                        // Batch Selection Toggle Button
                         IconButton(
-                            onClick = { showExcelMenu = true },
+                            onClick = {
+                                batchSelectMode = !batchSelectMode
+                                if (!batchSelectMode) selectedBarcodes.clear()
+                            },
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Description,
-                                contentDescription = "Excel Tools",
-                                tint = MaterialTheme.colorScheme.primary,
+                                imageVector = if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
+                                contentDescription = "Batch Operations",
+                                tint = if (batchSelectMode) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
-                        DropdownMenu(
-                            expanded = showExcelMenu,
-                            onDismissRequest = { showExcelMenu = false }
+
+                        // 3D Metal Clipboard Ledger for Stock Audit
+                        IconButton(
+                            onClick = { showStockAuditHistoryModal = true },
+                            modifier = Modifier.size(36.dp)
                         ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.products_import_excel), fontWeight = FontWeight.SemiBold) },
-                                leadingIcon = { Icon(Icons.Default.FileUpload, null, tint = MaterialTheme.colorScheme.primary) },
-                                onClick = {
-                                    showExcelMenu = false
-                                    importExcelLauncher.launch(
-                                        arrayOf(
-                                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                            "application/vnd.ms-excel",
-                                            "application/octet-stream"
-                                        )
+                            Realistic3DClipboardDuesIcon(size = 22.dp)
+                        }
+                    } else {
+                        // Phone Mode Overflow Menu: consolidates Excel tools, batch mode, and stock audit history
+                        Box {
+                            IconButton(
+                                onClick = { showMorePhoneMenu = true },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "More Tools",
+                                        tint = if (batchSelectMode) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(22.dp)
                                     )
+                                    if (batchSelectMode) {
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .offset(x = 2.dp, y = (-2).dp)
+                                                .background(Color(0xFF10B981), CircleShape)
+                                                .size(8.dp)
+                                        )
+                                    }
                                 }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.products_export_excel), fontWeight = FontWeight.SemiBold) },
-                                leadingIcon = { Icon(Icons.Default.FileDownload, null, tint = MaterialTheme.colorScheme.primary) },
-                                onClick = {
-                                    showExcelMenu = false
-                                    val cleanDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
-                                    exportExcelLauncher.launch("products-$cleanDate.xlsx")
-                                }
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.products_batch_print_labels), fontWeight = FontWeight.SemiBold) },
-                                leadingIcon = { Icon(Icons.Default.Print, null, tint = MaterialTheme.colorScheme.primary) },
-                                onClick = {
-                                    showExcelMenu = false
-                                    showBatchPrintDialog = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(if (batchSelectMode) "Exit Batch Selection" else "Batch Operations (Select)", fontWeight = FontWeight.SemiBold) },
-                                leadingIcon = { Icon(Icons.Default.Checklist, null, tint = MaterialTheme.colorScheme.primary) },
-                                onClick = {
-                                    showExcelMenu = false
-                                    batchSelectMode = !batchSelectMode
-                                    if (!batchSelectMode) selectedBarcodes.clear()
-                                }
-                            )
+                            }
+                            DropdownMenu(
+                                expanded = showMorePhoneMenu,
+                                onDismissRequest = { showMorePhoneMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (batchSelectMode) "Exit Batch Selection" else "Batch Operations (Select)",
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (batchSelectMode) Color(0xFF10B981) else Color.Unspecified
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
+                                            null,
+                                            tint = if (batchSelectMode) Color(0xFF10B981) else MaterialTheme.colorScheme.primary
+                                        )
+                                    },
+                                    onClick = {
+                                        showMorePhoneMenu = false
+                                        batchSelectMode = !batchSelectMode
+                                        if (!batchSelectMode) selectedBarcodes.clear()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Stock Audit History", fontWeight = FontWeight.SemiBold) },
+                                    leadingIcon = { Realistic3DClipboardDuesIcon(size = 20.dp) },
+                                    onClick = {
+                                        showMorePhoneMenu = false
+                                        showStockAuditHistoryModal = true
+                                    }
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.products_import_excel), fontWeight = FontWeight.SemiBold) },
+                                    leadingIcon = { Icon(Icons.Default.FileUpload, null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = {
+                                        showMorePhoneMenu = false
+                                        importExcelLauncher.launch(
+                                            arrayOf(
+                                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                                "application/vnd.ms-excel",
+                                                "application/octet-stream"
+                                            )
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.products_export_excel), fontWeight = FontWeight.SemiBold) },
+                                    leadingIcon = { Icon(Icons.Default.FileDownload, null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = {
+                                        showMorePhoneMenu = false
+                                        val cleanDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+                                        exportExcelLauncher.launch("products-$cleanDate.xlsx")
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.products_batch_print_labels), fontWeight = FontWeight.SemiBold) },
+                                    leadingIcon = { Icon(Icons.Default.Print, null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = {
+                                        showMorePhoneMenu = false
+                                        showBatchPrintDialog = true
+                                    }
+                                )
+                            }
                         }
                     }
 
-                    // Batch Selection Toggle Button
-                    IconButton(
-                        onClick = {
-                            batchSelectMode = !batchSelectMode
-                            if (!batchSelectMode) selectedBarcodes.clear()
-                        },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
-                            contentDescription = "Batch Operations",
-                            tint = if (batchSelectMode) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    // 3D Metal Clipboard Ledger for Stock Audit
-                    IconButton(
-                        onClick = { showStockAuditHistoryModal = true },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Realistic3DClipboardDuesIcon(size = 22.dp)
-                    }
-
-                    // 3D Ringing Brass Bell for Inventory Alerts with Non-Clipping Badge
+                    // 3D Ringing Brass Bell for Inventory Alerts with Non-Clipping Badge (Present on both phone and tablet)
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 2.dp)
-                            .size(38.dp),
+                            .size(36.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         IconButton(
                             onClick = { showInventoryAlertsModal = true },
-                            modifier = Modifier.size(38.dp)
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Realistic3DBrassAlertBellIcon(size = 22.dp)
                         }
@@ -792,9 +891,9 @@ fun ProductsScreen(
                         }
                     }
 
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(2.dp))
 
-                    // 3D Indigo Cart Capsule with Tap & Add Animations
+                    // 3D Indigo Cart Capsule with Tap & Add Animations (Responsive width for phone/tablet)
                     Surface(
                         onClick = {
                             cartAnimKey = System.currentTimeMillis()
@@ -806,7 +905,7 @@ fun ProductsScreen(
                         contentColor = Color.White,
                         shadowElevation = 2.dp,
                         modifier = Modifier
-                            .padding(end = 8.dp)
+                            .padding(end = if (isTablet) 8.dp else 4.dp)
                             .height(36.dp)
                             .graphicsLayer {
                                 scaleX = cartPressScale * cartCapsuleBounceScale.value
@@ -815,7 +914,7 @@ fun ProductsScreen(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 10.dp)
+                            modifier = Modifier.padding(horizontal = if (isTablet) 10.dp else 8.dp)
                         ) {
                             Box(
                                 modifier = Modifier.graphicsLayer {
@@ -827,10 +926,12 @@ fun ProductsScreen(
                             ) {
                                 Realistic3DSupermarketCartIcon(size = 17.dp)
                             }
-                            Spacer(Modifier.width(6.dp))
-                            Text(stringResource(R.string.cart), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            if (cartUnitCount > 0) {
+                            if (isTablet) {
                                 Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.cart), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                            if (cartUnitCount > 0) {
+                                Spacer(Modifier.width(if (isTablet) 6.dp else 4.dp))
                                 Box(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier
