@@ -12,12 +12,9 @@ import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 fun formatTaka(amount: Double): String {
-    val rounded = Math.round(amount * 100.0) / 100.0
-    val hasPaisa = Math.abs(rounded - Math.round(rounded)) > 0.001
-    val pattern = if (hasPaisa) "#,##0.00" else "#,##0"
-    val formatter = DecimalFormat(pattern, DecimalFormatSymbols(Locale.US))
-    val formatted = formatter.format(rounded)
-    return "৳$formatted"
+    val isNegative = amount < 0.0
+    val absFormatted = MoneyUtils.formatBanglaGrouping(Math.abs(amount))
+    return if (isNegative) "-৳$absFormatted" else "৳$absFormatted"
 }
 
 fun beepAndVibrate(context: Context) {
@@ -162,3 +159,34 @@ fun parseExpiryDateToMillis(rawDate: String?): Long? {
     return null
 }
 
+/**
+ * Automatically and seamlessly restarts the application after a database restore.
+ * Rebinds the application repository, clears ViewModelStore to wipe stale memory states,
+ * and relaunches the MainActivity with a fresh task so the user immediately sees all
+ * restored data without needing to manually kill and reopen the app.
+ */
+fun restartApp(context: Context) {
+    try {
+        val appContext = context.applicationContext
+        (appContext as? com.example.techyfipos.TechyfiPOSApplication)?.reloadRepositoryAfterDatabaseRestore()
+        val activity = (context as? android.app.Activity) ?: com.example.techyfipos.MainActivity.currentActivity?.get()
+        (activity as? androidx.activity.ComponentActivity)?.viewModelStore?.clear()
+
+        val intent = appContext.packageManager.getLaunchIntentForPackage(appContext.packageName)?.apply {
+            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        }
+        if (intent != null) {
+            if (activity != null) {
+                activity.finish()
+                activity.startActivity(intent)
+            } else {
+                appContext.startActivity(intent)
+            }
+        } else {
+            activity?.recreate()
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        (context as? android.app.Activity)?.recreate()
+    }
+}

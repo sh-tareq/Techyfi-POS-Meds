@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-04 (app version 2.6.18-V04-09-2026, build `Techyfi-POS-Final-V04-09-2026.apk`; versionCode 220893; DB schema version 23)
+Last updated: 2026-09-06 (app version 2.6.28-V06-09-2026, build `Techyfi-POS-Final-V06-09-2026.apk` / `Techyfi-POS-Final-V18.apk`; versionCode 220907; DB schema version 25)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -14,6 +14,7 @@ mindmap
           Owner name
           4-digit PIN with confirmation step
         Returning launch requires PIN
+        Adaptive layout with width-constrained numpad (<= 380dp) & scroll-safe container (prevents bottom row cutoffs)
         Multi-Tier Role-Based Access Control (RBAC)
           Admin / Owner
             Full master access across all screens, ledgers, settings, and danger zone
@@ -27,38 +28,75 @@ mindmap
             Max discount limit (default 10%, supervisor PIN required for higher)
             Cost valuations, profit margins, danger zone, and settings locked
           Supervisor PIN Elevation
-            Privileged cashier operations (discounts > cap, cart void, returns, credit limit bypass) prompt for Manager/Owner PIN elevation without switching session
+            Privileged cashier operations (discounts > cap, cart void, returns, credit limit bypass, negative inventory) prompt for Manager/Owner PIN elevation without switching session
+            Scoped Single-Use Elevation Tokens (phone, maxAmount, cartHash, auto-expiry)
           Granular 28-Permission Matrix across 8 Categories
             Sales & Checkout, Returns & Refunds, Inventory & Catalog, Cash & Register, Customers & Dues, Suppliers, Staff & Security, System Settings
           Repository-enforced mutation security
             Mutations check authenticated user permissions and active status
             PINs must be unique across all accounts
-      English and Bengali localization
-        Resource-backed core operations include Suppliers, Expenses/Petty Cash, Split Payment, Loyalty, Held Carts, Inventory Alerts, and Register Close
-      3D Animated Bottom navigation
-        Sell
-        Products (Executive Valuation, High-Density List, 2-Column Grid, Code Generator)
-        History
-        Dues (Customer-Centric Ledger, Date Filters, Reminder Logs)
-        More Operations Hub
-          Sales Report
-          Expenses
-          Suppliers
-          Settings (58mm/80mm Thermal Roll, Shop Identity, Logo, QR, Backups)
-          Register Close (Day Close)
-            Owner only
-          Customer Loyalty
-            Owner only
-            Search members
-            Add member
-            Add or redeem points
-          Customer Hub (CRM Dossier)
-            Owner & Cashier
-            360° Customer Profile (Top Products, Invoices, Dues, Loyalty)
-            Segment Filters (VIP, Repeat, Dues, Frequent, Wholesale)
-            Cross-linked from Cart, Dues, and Loyalty
+      Adaptive Layout Resolution Engine
+        Breakpoints & Form Factor Detection
+          Compact Phone (< 600dp)
+          Medium/Expanded Tablet (>= 600dp, e.g. 10"-12" counter POS tablets)
+        Policy Modes (Configurable in Settings)
+          AUTO: Dynamic Responsive Detection (Default)
+          TABLET: Force Tablet Mode (NavigationRail & Split Terminal)
+          PHONE: Force Phone Mode (Bottom Navigation & Single Column)
+        Orientation & Configuration Change Resilience
+          android:screenOrientation="unspecified"
+          Fluid runtime rotation between Portrait and Landscape without session or cart loss
+      Dual Persistent Navigation Shells
+        Phone Shell (< 600dp or Phone Mode)
+          3D Animated Bottom Navigation (4 Tabs: Sell, Products, History, More Hub)
+          More Operations Hub Bottom Sheet with Dual View Mode Switcher
+            Interactive Material 3 Segmented Toggle: List View [ ☰ ] vs Grid View [ ⊞ ]
+            Zero-Cutoff 2-Line Subheadings (11sp / 14sp line height, no ellipsis truncation)
+            2-Column Compact Grid Tiles with Status Badges + 1-Column Full-Width Featured Settings Banner
+            Full-Width Row Cards with 42dp Icon Container, Title, 2-Line Subtitle, Status Pill, and Chevron
+            Scroll-safe layout with preserved view mode preference via rememberSaveable
+        Tablet Shell (>= 600dp or Tablet Mode)
+          Ergonomic Left-Docked NavigationRail (84dp Width, 8 Core Domains)
+            Official App Logo Header & Outlet Home Shortcut (Electric T Mark)
+            1. Sell Mode (Dual-Pane Split Cashier Terminal)
+            2. Products Catalog & Inventory Valuation
+            3. Sales History & Invoices Ledger
+            4. Dues & Customer Khata
+            5. Expenses & Petty Cash Disbursements
+            6. Analytics & P&L Reports
+            7. System Settings & Hardware Peripherals (3D Animated Category Icons & Isolated Subpage Scroll)
+            8. More Operations Hub Dialog (House for Day Start & Close, Suppliers, Customer Loyalty, CRM)
+              Interactive Material 3 Segmented Toggle: List View [ ☰ ] vs Grid View [ ⊞ ]
+              Expanded 760dp Max-Width Dialog Constraint eliminating all title truncation
+              2-Column Horizontal Cards in Grid Mode (354dp per card) with Zero-Cutoff 2-Line Subheadings
+              Executive Full-Width Ledger Rows in List Mode with generous touch padding
+              Persistent rememberSaveable view state & bilingual accessibility labels
+      Bilingual Localization Engine & Strict Language Separation
+        Zero Hardcoded Bilingual Slash Strings (Clean 100% English vs 100% Natural Retail Bangla)
+        Android Resource-Backed Strings (res/values/strings.xml & res/values-bn/strings.xml)
+        Dynamic Runtime Switching via LocaleWrapper & LocalConfiguration
+        Bengali Sans-Serif font rendering eliminates complex conjunct glyph clipping (যুক্তাক্ষর)
     Selling workflow
-      Scanner
+      Selling Form Factors
+        Phone POS Terminal
+          Top camera scanner viewfinder
+          Manual barcode entry
+          Category chips
+          Sell vs Stock check mode
+        Tablet POS Split Terminal (TabletSplitTerminal)
+          Left Catalog & Scanner Pane (58% Width)
+            Fast search bar & barcode toggle
+            Category filter chips
+            Adaptive 3-5 column product grid (135dp minSize)
+            Live stock badges & tap-to-add haptic feedback
+            Collapsible PIP Camera Preview (Torch & Pause controls)
+          Right Live Cart Pane (42% Width)
+            Pinned live cart with items count badge
+            Interactive line steppers ([-] qty [+]) & delete
+            Hold Cart & Clear Cart actions
+            Grand Total BDT (৳) summary banner
+            Emerald Green Checkout CTA Button
+      Scanner Engine & Hardware Interception
         Camera barcode scan
         Simultaneous hardware scanner input without a source switch
           USB
@@ -66,6 +104,7 @@ mindmap
           POS terminal laser gun
         Camera and hardware input share duplicate protection
           Hardware/USB/Bluetooth input completes a scan on Enter, or after a short idle pause for scanners with no terminator key configured
+          Hardware scanner burst interception (<38ms inter-key delta) bypasses focused text input fields
           Duplicate-scan guard is centralized so Sell, Cart, and Products screens all benefit
         Manual barcode entry
         Sell mode
@@ -92,6 +131,8 @@ mindmap
             0.25-unit steppers instead of whole-number steppers for those units
             Manual decimal entry dialog with quick-add buttons and quantity presets, values rounded to 2 decimals
             Mirrored in the Scanner screen's scan-and-adjust stepper
+          Ergonomic 38dp Stepper Buttons with minimum interactive touch padding (>= 48dp target)
+          Negative Inventory Policy: enforces stock sufficiency unless enabled in Settings or elevated by Supervisor PIN
         Enter quantity manually
         Remove product
         Clear cart
@@ -178,6 +219,10 @@ mindmap
             Shows the customer's previous balance, this sale's new due, and resulting total before confirmation
             Full Due treats amount paid as zero; Split treats only non-Due allocations as paid, so confirmation and receipt balances match the ledger
             Credit-limit overage is blocked with a dedicated warning
+          Store Credit
+            Customer must be selected with positive credit balance (from returns or overpayments)
+            Redeems balance directly against checkout total
+            Displays available store credit and automatic balance deduction
           Split payment
             Combine two or more methods in one sale
               Cash
@@ -537,6 +582,8 @@ mindmap
         Google Drive Cloud Integration
           Isolated appDataFolder sandbox
           drive.appdata scope
+          Pre-flight Google Drive connection testing with live diagnostic status
+          Auto-backup failure alert notifications on dedicated channel ('techyfi_backup_alerts')
           Current Google Identity Services AuthorizationClient flow
             OpenID and email scopes identify the Google account
             Stable Google subject ID remains the encryption identity across devices
@@ -557,6 +604,9 @@ mindmap
           Network policy Wi-Fi Unmetered vs Any Connected
         Local Backup & Restore
           Local JSON and encrypted SQLite backup
+          Encrypted Standalone Vault (.posenc)
+            Password-protected AES-256-GCM + PBKDF2WithHmacSHA256 standalone local backup export and import
+            Secure binary envelope format ('POSENC1') with 128-bit tag and 12-byte IV
           Portable JSON restore normalizes every phone-keyed row on import (dues, duePayments, dueCharges, customerLoyalty, loyaltyTransactions, scheduledDueReminders, dueReminderLogs, customers) so re-importing an older backup can't reintroduce a split (raw-phone vs. normalized-phone) ledger — see Repair Duplicate Customer Ledgers in Data management for cleaning up ledgers already split before this fix
           Encrypted SQLite restore includes all 19 Room tables
             Products
@@ -599,6 +649,7 @@ mindmap
       Today's sales summary
         Cash sales
         Digital sales
+        Sales by Payment Method breakdown (bKash, Nagad, Rocket, Card, Due)
         Cash in (+ float)
         Cash out (expenses)
         Cash refunds (returns that took cash out of the drawer today)
@@ -696,6 +747,8 @@ mindmap
         RegisterShiftState
           Singleton row (id=1) tracking the currently open shift's startedAt and startingFloat
           Consumed by Register Close to compute shiftStartedAt
+        SaleAuditLog
+          Immutable audit record of every voided or deleted sale: invoiceNo, cashierName, deletedAt, totalAmount, paymentMethod, reason
         ProductDao
         SaleDao
         CustomerDueDao
@@ -712,24 +765,27 @@ mindmap
         ScheduledDueReminderDao
         DueReminderLogDao
         CustomerDao
+        SaleAuditLogDao
         Database migrations
-          Current schema version 23
+          Current schema version 25
           Migration 11→12: adds sale_items.note, customer_dues.creditLimit; creates inventory_adjustments table
           Migration 12→13: converts products.stockQty, sale_items.quantity, return_items.quantity from INTEGER to REAL (full table rebuild) — the DB-level enabler of fractional quantities
           Migration 13→14: adds products.mrpPrice and products.discountedPrice (default 0.0) — backs the Price Mode selector
           Migration 14→15: creates purchase_invoice_items and supplier_payments with supplier/invoice cascade relationships
-          Migration 15→16: creates scheduled_due_reminders for persistent pending-reminder tracking and cancellation
+          Migration 15→16: creates scheduled_due_reminders for persistent persistent-reminder tracking and cancellation
           Migration 17→18: adds returns.externalRefundAmount/dueAdjustmentAmount, backfilling legacy proportional due-reduction so upgrades from ≤17 don't double-apply it; new returns use due-first settlement instead
           Migration 18→19: adds register_closings.cashRefunds/shiftStartedAt, scheduled_due_reminders.messageText/isRecurring, customer_loyalty.isActive, customer_dues.isArchived; creates loyalty_transactions and register_shift_state
           Migration 19→20: creates due_reminder_logs for persistent SMS/WhatsApp reminder dispatch history
           Migration 20→21: creates unified customers CRM table with 3-way automatic sync from customer_dues, customer_loyalty, and past sales contacts
           Migration 21→22: upgrades users table with role, customPermissions JSON blob, isActive boolean flag, and maxDiscountPercent cap for multi-tier RBAC
           Migration 22→23: creates due_charges (the debit side of the due ledger); backfills charge rows for existing straight-Due sales (Split-Due portions, JSON-encoded on the sale, are not backfilled but are logged going forward)
+          Migration 23→24: adds customers.storeCredit REAL NOT NULL DEFAULT 0.0; adds register_closings.bkashSales, nagadSales, rocketSales, cardSales, dueSales REAL NOT NULL DEFAULT 0.0
+          Migration 24→25: creates sale_audit_logs table (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, invoiceNo TEXT NOT NULL, cashierName TEXT NOT NULL, deletedAt INTEGER NOT NULL, totalAmount REAL NOT NULL, paymentMethod TEXT NOT NULL, reason TEXT NOT NULL)
           Explicit migrations preserve existing business data
           BundledSQLiteDriver supplies consistent SQLite capabilities across supported Android versions
       Preferences
         SettingsDataStore
-        Invoice settings (58mm / 80mm roll width, shop identity, logo, QR links, footer notes, showDueReceiptLogo, showDueReceiptCustomNotes, dueReceiptCustomTitle, dueReceiptCustomNotes)
+        Invoice settings (58mm / 80mm roll width, directBluetoothPrintEnabled, directBluetoothPrinterAddress, allowNegativeInventory, showDueReceiptVerificationQr, shop identity, logo, QR links, footer notes, showDueReceiptLogo, showDueReceiptCustomNotes, dueReceiptCustomTitle, dueReceiptCustomNotes)
         Shop settings
         CategoryItem list, QuickSalePreset list, DueTemplate list, Note presets list
           Plain Kotlin data classes with hand-rolled JSON (de)serialization, persisted as JSON strings inside Preferences DataStore — not Room tables
@@ -745,12 +801,17 @@ mindmap
       Contact picker
       Printing
         Android System Print service for every receipt (58mm and 80mm thermal roll sizing)
+        Direct Bluetooth Raw ESC/POS SPP thermal raster printing (auto-reconnect, 58mm/80mm, paired device picker)
+        Thermal receipt memory optimization (RGB_565 bitmap configuration + explicit recycling prevents OOM)
+        100% Bangla numeral consistency on Bengali receipts and vouchers
+        Wholesale customer savings breakdown banner
+        Due Repayment Money Receipt verification QR code embedding
         Android System Print service for every product label
-        Printer selection belongs to installed Android print services
       Android Downloads
       File sharing
       QR generation
       Excel files
+        EAN-13 barcodes and 11-digit Bangladeshi mobile numbers preserve leading zeros during parsing
         Apache POI and XMLBeans reflection metadata protected from R8
           Spreadsheet schemas
           Extended workbook properties
@@ -851,21 +912,22 @@ mindmap
 ## Current Android package
 
 - Application ID: `com.techyfi.pos`
-- Version code: `220889`
-- Version name: `2.6.14-V02-09-2026`
+- Version code: `220907`
+- Version name: `2.6.28-V06-09-2026`
 - Upgrade rule: retain the same application ID and signing identity, and always increase the version code.
 - Signing SHA-1: `D6:7B:BD:1C:48:92:D4:FC:7F:D5:1F:D1:CB:22:79:B5:6F:C8:AD:9C` (this is the project's default AGP debug keystore at `~/.android/debug.keystore` — intentionally reused as the production signing key for this app; do not regenerate or replace it, or updates will stop installing over the existing app). **Not suitable for a real Google Play release as-is** — a debug keystore with a universally-known password must never be the production signing key, and this same certificate's SHA-1 is what Google Cloud Console has registered for the Google Drive OAuth client (no explicit client ID in code — the Identity Services Authorization API resolves it by package name + this certificate). Enrolling in Play App Signing would re-sign the app with a different certificate and silently break Drive backup/restore for Play-installed copies unless that new certificate is also added to the OAuth client first.
-- Database version: `22` (v15→16 reminder tracking, v16→17 immutable `purchasePriceAtSale` cost-snapshot for historical margin reports, v17→18 return refund-splitting/due-first settlement, v18→19 register-shift-state/loyalty-audit-trail/soft-delete, v19→20 due reminder log history, v20→21 unified customers CRM table, and v21→22 users table RBAC roles/permissions/caps are explicitly tested)
-- Current build: `Techyfi-POS-Final-V02-09-2026.apk` (versionCode 220889) — includes Smart Cash Tender denomination chips, Real-Time Change Due/Shortage calculator, Live Profit Margin/Markup Intelligence with Loss Alert warning, Customer Due Aging Analysis breakdown, Register Day Close Discrepancy Reason Note audit trail, and Thermal Printer Friendly Money Receipt / Due Repayment Voucher Redesign with 80mm/58mm switch, shop logo toggle, custom terms/notice block, and live interactive bilingual preview in Settings.
+- Database version: `25` (v15→16 reminder tracking, v16→17 immutable `purchasePriceAtSale` cost-snapshot for historical margin reports, v17→18 return refund-splitting/due-first settlement, v18→19 register-shift-state/loyalty-audit-trail/soft-delete, v19→20 due reminder log history, v20→21 unified customers CRM table, v21→22 users table RBAC roles/permissions/caps, and v24→25 `sale_audit_logs` table are explicitly tested)
+- Current build: `Techyfi-POS-Final-V06-09-2026.apk` (versionCode 220907) — includes Store Operations & Tools (More Hub) dual view mode switcher (interactive Material 3 segmented List vs Grid toggle for both Phone and Tablet), zero-cutoff 2-line wrapped subheadings, 760dp expanded tablet dialog geometry, Settings 3D holographic animated category icons, isolated subpage scroll states, customer CRM dossier sheet, and dynamic loyalty settings.
 - This is the project's only mind map and the single source of truth for architecture, workflows, limitations, business rules, release metadata, and verification history.
 
 ## Primary code map
 
-- Navigation and app shell: `app/src/main/java/com/example/techyfipos/Navigation.kt`
+- Navigation and app shell: `app/src/main/java/com/example/techyfipos/Navigation.kt` (includes phone bottom nav, tablet navigation rail, and `MoreOperationsHubSheet` with List/Grid toggle)
 - Screens: `app/src/main/java/com/example/techyfipos/ui/screens/`
 - ViewModels: `app/src/main/java/com/example/techyfipos/ui/viewmodel/POSViewModels.kt`
 - Repository: `app/src/main/java/com/example/techyfipos/data/DataRepository.kt`
 - Room database, DAOs, and entities: `app/src/main/java/com/example/techyfipos/data/db/`
+- Standardized money utilities: `app/src/main/java/com/example/techyfipos/utils/MoneyUtils.kt` (Banker's rounding `HALF_EVEN` & Bangladeshi Lakh-Crore digit grouping)
 - Backup encryption engine: `app/src/main/java/com/example/techyfipos/utils/BackupEncryptionHelper.kt`
 - Backup packaging & rollback manager: `app/src/main/java/com/example/techyfipos/utils/BackupPackageManager.kt`
 - Google Drive API manager: `app/src/main/java/com/example/techyfipos/utils/GoogleDriveBackupManager.kt`
@@ -873,16 +935,20 @@ mindmap
 - Automatic backup WorkManager: `app/src/main/java/com/example/techyfipos/utils/AutoBackupWorker.kt`
 - Backup scheduler: `app/src/main/java/com/example/techyfipos/utils/AutoBackupScheduler.kt`
 - Receipt generation: `app/src/main/java/com/example/techyfipos/utils/BillPdfGenerator.kt` (standard 80mm thermal bills, 80mm/58mm thermal Money Receipt vouchers, and PDF invoice generators)
+- Thermal printer architecture & byte formatting: `app/src/main/java/com/example/techyfipos/printer/`
 - Excel import and export: `app/src/main/java/com/example/techyfipos/utils/ExcelHelper.kt`
 - PIN lock / first-run setup: `app/src/main/java/com/example/techyfipos/ui/screens/LockScreen.kt`
 - Staff management: `app/src/main/java/com/example/techyfipos/ui/screens/ManageUsersScreen.kt`
 - Auth session/roles: `AuthViewModel` in `app/src/main/java/com/example/techyfipos/ui/viewmodel/POSViewModels.kt`
 - Expenses: `app/src/main/java/com/example/techyfipos/ui/screens/ExpensesScreen.kt`
 - Suppliers: `app/src/main/java/com/example/techyfipos/ui/screens/SuppliersScreen.kt`
+- Customer CRM & Khata Dossier: `app/src/main/java/com/example/techyfipos/ui/screens/CustomersScreen.kt` and `app/src/main/java/com/example/techyfipos/ui/screens/CustomerDossierSheet.kt`
 - Hold cart, split payment, loyalty redemption UI: `app/src/main/java/com/example/techyfipos/ui/components/AdvancedPosFeatures.kt`
 - Stock check mode components: `app/src/main/java/com/example/techyfipos/ui/components/StockCheckComponents.kt`
 - Invoice/shop settings storage: `app/src/main/java/com/example/techyfipos/data/SettingsDataStore.kt`, `data/InvoiceSettings.kt` (includes `InvoiceSettingsData` with Money Receipt customization fields)
 - Settings screen & live preview: `app/src/main/java/com/example/techyfipos/ui/screens/SettingsScreen.kt` (includes `MoneyReceiptVoucherSettings` composable with interactive thermal slip canvas)
+- Settings 3D animated holographic icons: `app/src/main/java/com/example/techyfipos/ui/components/Settings3DIcons.kt`
+- Loyalty program settings & calculator: `app/src/main/java/com/example/techyfipos/utils/LoyaltySettingsHelper.kt`
 - Backup schema compatibility: `app/src/main/java/com/example/techyfipos/data/BackupCompatibility.kt`
 - Hardware/USB/Bluetooth scanner input handling: `app/src/main/java/com/example/techyfipos/utils/HardwareBarcodeScanner.kt`
 - Register Close (day-end cash reconciliation) screen, including both the cash-count and P&L Z-Report dialogs, the share-format picker, and CSV builder: `app/src/main/java/com/example/techyfipos/ui/screens/RegisterCloseScreen.kt`
@@ -1097,6 +1163,180 @@ mindmap
     - Version bumped to `220893` (`versionName: 2.6.18-V04-09-2026`).
     - Signed using debug certificate configuration for seamless continuous in-place APK upgrade.
 
+## V05-09-2026 (v2.6.20) Sale Mode MRP Pricing, Subtotal Alignment & Thermal Receipt Redesign (2026-09-05)
+
+- Final artifact: `Techyfi-POS-Final-V05-09-2026.apk`, versionCode `220895`, versionName `2.6.20-V05-09-2026`.
+- Verified file locations:
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V05-09-2026.apk`
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/app/build/outputs/apk/final/Techyfi-POS-Final-V05-09-2026.apk`
+- Features & Architectural Upgrades in this Build:
+  - **Cart & Complete Sale MRP Subtotal Alignment (`CartScreen.kt`)**:
+    - In Sale Mode (`PriceMode.DISCOUNTED` with MRP savings), the pricing summary `Subtotal` row displays `mrpSubtotal` (e.g. `৳640`), followed by `Sale Savings: -৳70` and `Grand Total: ৳570`.
+    - Eliminates arithmetic confusion where a discounted subtotal previously appeared as `Subtotal 570 - Savings 70 = Grand Total 570`.
+    - Perfectly mirrors the **Customer Savings Breakdown** hero card (`Original MRP Subtotal: ৳640`, `Store Sale Discount: -৳70`, `Total Customer Savings: ৳70 (11%)`).
+  - **Thermal Receipts MRP Pricing Table & Sublines (`BillPdfGenerator.kt`)**:
+    - Table column `Price` displays the item's **MRP Price** (`550`, `90` / `৫৫০`, `৯০`).
+    - Table column `Total` displays the item's **MRP Line Total** (`550`, `90` / `৫৫০`, `৯০`).
+    - When item-wise discount display is enabled (`showItemWiseMrpDiscount`), an authentic subline renders the store's offered price and customer savings:
+      - English: `  Offer: ৳500 (Save ৳50)`
+      - Bangla: `  অফার: ৳৫০০ (সাশ্রয় ৳৫০)` (with localized Bengali digits)
+    - When toggled to `Without Item-by-Item`, the subline is omitted for a clean single-line slip.
+    - Receipt `Subtotal` displays `mrpSubtotal` (`৳640`), followed by `MRP Discount: -৳70` / `এমআরপি সাশ্রয় (ছাড়): -৳70`, and `GRAND TOTAL: ৳570` / `সর্বমোট: ৳570`.
+    - Zero price mode tags (`[SALE MODE]`, `[MRP MODE]`, etc.) appear on the receipt.
+  - **Interactive HTML Preview Prototype (`sale_mrp_discount_preview.html`)**:
+    - Prototype updated in lockstep: initial DOM and reactive recomputations reflect MRP prices, offer sublines, and MRP subtotals.
+  - **Continuous In-Place Update Compatibility**:
+    - Version bumped to `220895` (`versionName: 2.6.20-V05-09-2026`).
+    - Signed with established debug keystore identity, verified installing cleanly over existing versions via `adb install -r` without data loss.
+
+## V06-09-2026 (v2.6.21) Phase 1, Phase 2 & Phase 3 Comprehensive Architecture Upgrades (2026-09-06)
+
+- Final artifact: `Techyfi-POS-Final-V06-09-2026.apk`, versionCode `220896`, versionName `2.6.21-V06-09-2026`.
+- Verified file locations:
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V06-09-2026.apk`
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/app/build/outputs/apk/release/app-release.apk`
+- Features & Architectural Upgrades in this Build:
+  - **Phase 1: Critical & High Priority Core Enhancements**:
+    - **Google Drive Backup Failure Alerts & Diagnostic Pre-Flight**:
+      - Added automated failure notifications on dedicated Android notification channel (`"techyfi_backup_alerts"`) with tap intent directing to `MainActivity`.
+      - Added manual "Test Drive Connection Status" pre-flight verification button in Backup Settings.
+    - **Single-Use Scoped Elevation Tokens for Credit Limit Overrides**:
+      - Replaced global boolean override flags with `CreditOverrideToken(phone, maxAmount, cartHash, expiresAt)`.
+      - Scoped strictly to the customer phone and verified amount, auto-invalidated after checkout.
+    - **Store Credit Returns Tracking & Checkout Redemption**:
+      - Added `Customer.storeCredit` (Room schema migration 23→24).
+      - Return cash refunds exceeding initial tender can be diverted directly to customer store credit balance.
+      - Cart Screen dynamically exposes `"Store Credit"` payment tender chip when customer has positive credit balance; validates sufficiency and records deductions.
+    - **Direct Bluetooth Raw ESC/POS SPP Thermal Printing Driver**:
+      - Built native raster ESC/POS driver (`EscPosPrinterDriver.kt`) for direct SPP socket printing to 58mm/80mm Bluetooth printers alongside the Android System Print service.
+      - Includes paired device picker dialog and MAC address persistence.
+    - **Excel Import EAN-13 & Phone Leading-Zero Preservation**:
+      - Enhanced workbook cell parsing in `ExcelHelper.kt` to preserve leading zeros on EAN-13 barcodes and 11-digit Bangladeshi mobile numbers.
+    - **Register Shift Closing Provider Breakdown**:
+      - Added `bkashSales`, `nagadSales`, `rocketSales`, `cardSales`, `dueSales` columns to `register_closings` table (Room migration 23→24).
+      - Added "Sales By Payment Method" provider breakdown card on Register Close Screen.
+  - **Phase 2: Medium Priority Architectural Improvements**:
+    - **Thermal Receipt Bitmap Memory Optimization**:
+      - Upgraded receipt rendering in `BillPdfGenerator.kt` to `Bitmap.Config.RGB_565` (50% memory saving) and added explicit `.recycle()` on temporary monochrome bitmaps to prevent peak billing OOM crashes.
+    - **Negative Inventory Policy Setting & Supervisor Elevation**:
+      - Added `allowNegativeInventory` setting in `InvoiceSettingsData` with toggle in Settings.
+      - Enforced during checkout; if negative stock occurs and setting is disabled, prompts supervisor PIN authorization dialog.
+    - **Hardware Barcode Scanner Rapid Timing Burst Interception**:
+      - Implemented Window key dispatch interception for keystroke bursts with inter-key delta < 38ms, routing directly to scan handling even when an input field is focused.
+    - **Batch Product Operations in Inventory**:
+      - Added multi-select mode in `ProductsScreen.kt` supporting bulk price adjustments (flat or %), category reassignment, and bulk deletion.
+    - **Wi-Fi Only POS Terminal Fallback for Due Reminders**:
+      - Checked `TelephonyManager.simState == SIM_STATE_READY` before invoking SMS manager, gracefully preventing crashes on cellular-less Wi-Fi tablets.
+    - **Encrypted Local Backup Standalone Vault (`.posenc`)**:
+      - Implemented password-protected AES-256-GCM + PBKDF2WithHmacSHA256 (`POSENC1` envelope format) standalone backup export and import.
+  - **Phase 3: Polish & Localization**:
+    - **100% Consistent Bangla Numerals on Bengali Receipts**:
+      - Standardized all thermal receipts and vouchers to use localized Bengali numerals via `toBanglaDigits` and `formatTakaBn`.
+    - **Wholesale Savings Breakdown**:
+      - Receipts display an emerald savings banner when wholesale pricing discounts apply.
+    - **Due Repayment Money Receipt Verification QR Code**:
+      - Generates authentic verification QR code payload on payment receipts.
+    - **Ergonomic Touch Targets**:
+      - Cart stepper buttons enlarged from 32dp to 38dp with touch padding exceeding the 48dp guideline.
+
+## V06-09-2026 Pass 1 Audit Fixes: Financial, Cash Drawer & Shift Reconciliation (M1 - M10)
+
+- Final artifact: `Techyfi-POS-Final-V1.apk`, versionCode `220896`, versionName `2.6.21-V06-09-2026`.
+- Verified file locations:
+  - `/Users/shahidulhaque/App Dev/Techyfi POS Gemini/Techyfi-POS-Final-V1.apk`
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V1.apk`
+- Database Schema Version: `25` (added `sale_audit_logs` table via `MIGRATION_24_25`).
+- Fixes implemented:
+  - **[M1] Due Down Payments in Cash Drawer & Cash Sales**: Captured partial down payments on Due sales into `Sale.amountPaid` and included in `liveDrawerCash` and cash sales reconciliation.
+  - **[M2] Store Credit Treated as Non-Cash**: Excluded non-cash store credit and voucher tenders from liquid physical cash drawer calculations.
+  - **[M3] Sale Deletion Audit Logging & Return History Protection**: Created `SaleAuditLog` entity, `SaleAuditLogDao`, and required void/cancellation reason dialog; blocked deletion of sales that have active returns.
+  - **[M4 & M9] Standardized Money Utilities & Bangladeshi Lakh-Crore Digit Grouping**: Created `MoneyUtils.kt` with Banker's Rounding `HALF_EVEN` and Bangladeshi comma grouping (`৳1,00,000.00`) applied across thermal receipts, PDF, and UI.
+  - **[M5] Shift Time Scope for Z-Report & X-Report**: Scoped financial figures strictly between active `shiftStartedAt` and closing timestamp.
+  - **[M6] Digital Due Repayments in Shift Reconciliation**: Aggregated non-cash due collections (bKash, Nagad, Card) into digital shift sales and provider totals on register close.
+  - **[M7] Historical Closing Inspection & Double-Tap Debounce**: Added `HistoricalClosingDetailDialog` to inspect past shift breakdowns, over/short variances, and shift notes; debounced register close submission.
+  - **[M8] Non-Negative Price & Stock Validation**: Sanitized and clamped Excel product import and manual forms to `>= 0.0`.
+  - **[M10] Unclamping Live Drawer Cash**: Removed artificial `.coerceAtLeast(0.0)` clamp on `liveDrawerCash` so cash drawer deficits accurately match physical reality and expected cash.
+
+## V06-09-2026 Pass 2 Audit Fixes: General Operations, Concurrency, Security & UI/UX (G1 - G10)
+
+- Final artifact: `Techyfi-POS-Final-V2.apk`, versionCode `220896`, versionName `2.6.21-V06-09-2026`.
+- Verified file locations:
+  - `/Users/shahidulhaque/App Dev/Techyfi POS Gemini/Techyfi-POS-Final-V2.apk`
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/app/build/outputs/apk/release/app-release.apk`
+- Fixes implemented:
+  - **[G1] Supplier Cash Outflows Linked to Expenses & Cash Drawer**:
+    - Automatically records an `Expense` with category `"Supplier Payment"` and `paymentSource = "Cash"` when recording cash purchase invoices or cash supplier due payments in `DataRepository.kt`.
+    - Added Bengali & English localization (`🚚 Supplier Payment` / `🚚 মহাজন / সাপ্লায়ার পেমেন্ট`) in `strings.xml`, `values-bn/strings.xml`, `ExpensesScreen.kt`, and `AdvancedPosFeatures.kt`.
+  - **[G2] Profit Calculation N+1 Query Elimination & Accurate Historical Cost**:
+    - Prioritizes `item.purchasePriceAtSale` in `todayProfit` to preserve historical profit margins against future cost changes.
+    - Batch-fetches missing legacy product barcodes in a single database lookup map, eliminating N+1 roundtrips.
+  - **[G3] Factory Reset Session Teardown**:
+    - Factory reset routine invokes `onLogout()`, purges in-memory session state in `DataRepository`, and clears the backstack to lock the app into initial setup.
+  - **[G4] Removal of Plaintext JSON Backups from External Storage**:
+    - `AutoBackupWorker` stops writing unencrypted JSON backups to public external storage and automatically cleans up legacy plaintext `.json` files; backups are retained exclusively in encrypted app-private storage.
+  - **[G5] Dynamic Loyalty Settings Integration**:
+    - Synchronized `DataRepository` and `CartViewModel` with user-configured `LoyaltyProgramSettings` (`takaPerPoint`, `pointCashValue`, `minRedeemPoints`, `maxBillPercentPayable`) instead of hardcoded 100/1 constants.
+  - **[G6] Orientation & Configuration Resilience (Upgraded in V3)**:
+    - Initially locked to portrait, then upgraded in V3 to `android:screenOrientation="unspecified"` with `android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|uiMode"` to allow responsive tablet landscape counter operation without destroying active session state.
+  - **[G7] Thermal PDF/JPEG Offloaded from Main Thread**:
+    - Converted `receiptBitmap` in `CartScreen.kt` to `produceState<ImageBitmap?>` on `Dispatchers.IO`, and offloaded `withPdf` and `withJpeg` generation to `Dispatchers.IO` to eliminate UI thread lag on receipt preview dialog opening.
+  - **[G8] Excel Product Import Error Handling**:
+    - Added `runCatching` with localized error toasts in `ProductsScreen.kt` to notify cashiers/owners of invalid or corrupted spreadsheet formats.
+  - **[G9] Customer Duplicate Detection O(N) Optimization**:
+    - Refactored `CustomerViewModel.findDuplicatePairs` from $O(N^2)$ pairwise comparisons to an $O(N)$ hash map grouping by normalized phone number.
+  - **[G10] UI/UX Polish, Bengali Typography & Touch Targets**:
+    - Linked `RegisterCloseScreen` to dynamic authenticated cashier (`Cashier: Owner`) and dynamic shift counter (`Shift #2`).
+    - Standardized `BillPdfGenerator.kt` Bengali canvas rendering to Sans-Serif (`Typeface.SANS_SERIF`) to prevent vertical clipping of complex conjuncts (যুক্তাক্ষর).
+    - Added supervisor permission bypass for stock checking in `ScannerScreen.kt` and `Navigation.kt`.
+    - Ensured all expense filter chips have $\ge 44\text{dp}$ touch targets.
+  - **[V3] Phone & Tablet Adaptive Architecture & Layout Controls**:
+    - Auto-detect policy (`screenWidthDp >= 600dp`) and manual override (AUTO, TABLET, PHONE) in Settings.
+    - Tablet Left Persistent `NavigationRail` (84dp width) with 8+ operational domains vs Phone Bottom `NavigationBar` (4 tabs).
+    - Dual-Pane Tablet Split Cashier Terminal (`TabletSplitTerminal` in `ScannerScreen.kt`): Left 58% Catalog & Camera PIP + Right 42% Pinned Live Cart with steppers, Grand Total, and Checkout.
+    - Widescreen geometry constraints: PIN pad (`widthIn(max = 380.dp)`), products catalog (`GridCells.Adaptive(minSize = 160.dp)`), denomination counter dialog (`widthIn(max = 560.dp)`).
+  - **[V4] Bilingual Localization Engine & Zero-Slash Language Separation**:
+    - Clean, complete separation between English and Bangla across all POS screens and split cashier terminal components.
+    - 100% elimination of hardcoded bilingual slash strings (`" / "`) in `ScannerScreen.kt` and UI composables.
+    - Added 16+ dedicated string resources in `res/values/strings.xml` and `res/values-bn/strings.xml` for POS split terminal.
+    - Natural Bengali retail terminology adhering to the `bangla-language` guidelines (`চলমান বিল`, `পণ্য বা বারকোড খুঁজুন…`, `সব`, `সর্বমোট:`, `বিল ও পরিশোধ ➔`, `০টি পণ্য`, `স্টক নেই`, `কার্টে কোনো পণ্য নেই`).
+  - **[V5] Navigation Rail App Logo & More Hub Optimization**:
+    - Added official Techyfi POS app logo (`R.drawable.ic_pos_launcher_round`) to the top of the tablet `NavigationRail` with an active outlet indicator.
+    - Moved Day Start and Day Close register operations into the centralized `More Hub` (`/more_hub`) under "Cash Register & Shifts", decluttering the primary tablet rail down to 8 core operational domains.
+  - **[V6] Seamless Automatic App Restart on Backup Restore & Large-Scale Catalog Ingestion**:
+    - Implemented `restartApp(context)` in `AppUtils.kt`: rebinds database DAOs (`TechyfiPOSApplication.reloadRepositoryAfterDatabaseRestore()`), completely flushes stale `ComponentActivity.viewModelStore` instances, and relaunches `MainActivity` with `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_CLEAR_TASK`.
+    - Integrated automatic restart into all restore entrypoints: Local JSON REPLACE, Local JSON MERGE, Encrypted Standalone Vault (`.posenc`), Google Drive Cloud Restore, and headless automated intent restore (`RESTORE_BACKUP_PATH`).
+    - Successfully validated with full retail production backup `techyfi-pos-backup-2026-09-02.json`: restored 621 inventory SKUs (৳10,93,650.60 catalog valuation), 642 sales transactions (৳7,46,697.40 revenue), 25 customer khata dues, and custom store profiles automatically rebooting into the terminal without requiring manual user intervention.
+  - **[V7] Material 3 Window Insets Safe Area & System Bars Ergonomics Engine (VersionCode 220900)**:
+    - Resolved critical top status bar overlap (clock, date, mute, Wi-Fi, cellular, battery icons) and bottom taskbar/navigation bar cutoff (`Checkout ➔` button, Grand Total, and bottom catalog items).
+    - Fixed root cause in `Navigation.kt`: replaced zero-inset tablet override (`PaddingValues(0.dp)`) with dynamic window insets derived from `Scaffold`'s `innerPadding` (`innerPadding.calculateTopPadding()`, `bottomPadding()`, `startPadding()`, `endPadding()`).
+    - Added safe insets padding to the tablet `NavigationRail` top header logo (`topInset + 6.dp`) and bottom scroll column (`bottomInset + 8.dp`), ensuring ergonomic touch targets ($\ge 48\text{dp}$) on both 3-button navigation and gesture taskbars.
+    - Verified live on Pixel Tablet (`emulator-5554`, 2560x1600): confirmed zero overlap on `Live Cart` title and `3 items` badge, clear margin around the top search field, and fully visible `Grand Total` + `Checkout ➔` buttons above the system navigation bar.
+  - **[V8] Camera Viewfinder Cutout Mask & Universal Barcode Recognition (VersionCode 220901)**:
+    - Eliminated opaque black mark obstructing the camera preview in `ScannerScreen.kt`: replaced broken `BlendMode.SrcOut` drawing with hardware-safe `PathFillType.EvenOdd` cutout scrim (outer rect + inner rounded rect), leaving the viewfinder area 100% crystal clear.
+    - Fixed viewfinder viewport geometry: responsive scaling ensures scan box never overflows banner camera previews on wide tablet layouts (`boxHeight = minOf(height * 0.78f, width * 0.75f, 260.dp)`).
+    - Replaced rigid bounding-box coordinate rejection with `isBarcodeInVisiblePreview`, ensuring any barcode visible in the preview window decodes immediately without false drops.
+  - **[V9] Backup & Restore Top Scroll Alignment & Subpage Scroll Isolation (VersionCode 220902)**:
+    - Resolved critical scroll jump where opening "Backup & Restore" opened scrolled down past the Google Drive cloud status card, landing directly on lower sync switches.
+    - Root cause: The settings content `Column` in `SettingsScreen.kt` previously utilized a single unkeyed `rememberScrollState()`. Navigating from the Settings Home menu (scrolled down to ~800px to reach the "Backup & Restore" row) caused `OptimizedBackupSettings` to inherit the ~800px scroll offset, immediately hiding the dark-blue Google Drive Connected Account Card and telemetry hub.
+    - Solution: Isolated the scroll state into `homeScrollState` (preserving user scroll position on the main settings list) and `subpageScrollState = key(settingsPage) { rememberScrollState() }`, accompanied by a `LaunchedEffect(settingsPage)` that unconditionally executes `currentScrollState.scrollTo(0)` for any sub-screen.
+    - Verified live on `emulator-5554`: Backup & Restore opens reliably at the absolute top (offset 0), prominently displaying `<- Backup & Restore`, `Protect your business data`, and the full Google Drive Connected Hub without any auto-scrolling. Pressing Back cleanly restores the user's exact scroll position on the main Settings list.
+  - **[V10 - V15] Settings 3D Animated Holographic Icons & Subpage Navigation Isolation (VersionCode 220903 - 220905)**:
+    - Designed high-fidelity canvas-drawn 3D icons (`Settings3DIcons.kt`) with isometric lighting, depth gradients, and glowing accents across all Settings categories (Store Profile, Cloud Backup & Google Drive, Thermal Printer & Hardware, Barcode Scanner, Tax & Discounts, Danger Zone, Staff RBAC, and Language).
+    - Subpage Scroll Isolation: Isolated settings home scroll state from subpage scroll states (`key(settingsPage) { rememberScrollState() }`), guaranteeing that entering any subpage opens smoothly at the absolute top (y=0).
+  - **[V16 - V17] Customer CRM Dossier, Loyalty Redesign & 58mm/80mm Thermal Receipt Enhancements (VersionCode 220906)**:
+    - Customer CRM & Khata Dossier: Interactive customer detail sheet (`CustomerDossierSheet.kt`) with purchase history, khata ledger, direct WhatsApp/SMS reminders, credit limit alerts, and VIP loyalty status.
+    - Repayment Receipt Zoom & Width Preview: Multi-width thermal printing preview (58mm, 80mm, PDF, Canvas) with verified verification QR code and zero text distortion.
+  - **[V18 - V06-09-2026] Store Operations More Hub Dual View Mode & Zero-Cutoff Subheadings (VersionCode 220907)**:
+    - Subheading & Title Cutoff Elimination: Upgraded all operation cards in `Navigation.kt` to support 2-line wrapped subtitles (`maxLines = 2`, `fontSize = 11.sp`, `lineHeight = 14.sp`), eliminating unsightly ellipsis clipping across Phone and Tablet.
+    - Expanded dialog constraint ceiling to `widthIn(max = 760.dp)` on tablet, providing 354dp per card in the 2-column grid so long titles ("Day Start & Close", "Customer Loyalty") render 100% visible.
+    - Interactive Material 3 Segmented Toggle `[ ☰ List ] [ ⊞ Grid ]` integrated directly into the header row next to the close button on both Phone bottom sheet and Tablet dialog, backed by `rememberSaveable`.
+    - Phone Grid view with 2-column compact tiles and 1-column full-width featured Settings banner; Phone List view with 42dp icon, title, 2-line subtitle, status pill, and chevron.
+    - Tablet Grid view with horizontal 2-column layout and Tablet List view with full-width ledger rows.
+    - Bilingual string resources in `res/values/strings.xml` and `res/values-bn/strings.xml` (`more_view_list_cd`, `more_view_grid_cd`, `লিস্ট ভিউতে পরিবর্তন করুন`, `গ্রিড ভিউতে পরিবর্তন করুন`).
+    - Verified on live Android emulator across all 4 modes (Tablet Grid, Tablet List, Phone Grid, Phone List) with zero ellipsis and zero truncation.
+    - Delivered and verified as an update APK: `Techyfi-POS-Final-V06-09-2026.apk` with incremented `versionCode = 220907`.
+
 ## Maintenance note
 
 Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace.
+

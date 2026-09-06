@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import com.example.techyfipos.R
 import com.example.techyfipos.utils.formatTaka
 
@@ -427,6 +428,8 @@ fun FinancialMarginCard(
     purchasePrice: Double,
     sellingPrice: Double,
     quantity: Double,
+    mrpPrice: Double = 0.0,
+    wholesalePrice: Double = 0.0,
     modifier: Modifier = Modifier
 ) {
     val profit = sellingPrice - purchasePrice
@@ -434,6 +437,7 @@ fun FinancialMarginCard(
         ((profit / purchasePrice) * 100).toInt()
     } else 0
     val totalAssetVal = (quantity * purchasePrice).coerceAtLeast(0.0)
+    val qtyDisplay = if (quantity % 1.0 == 0.0) "${quantity.toInt()}" else "$quantity"
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -441,65 +445,148 @@ fun FinancialMarginCard(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Price & Margin Row
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // 4-Tier Price Grid: Purchase, Selling, MRP, Wholesale
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Purchase
-                Column(horizontalAlignment = Alignment.Start) {
+                // 1. Purchase
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        "Purchase",
+                        stringResource(R.string.stock_check_purchase),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold
                     )
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         formatTaka(purchasePrice),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
                 Box(
                     modifier = Modifier
                         .width(1.dp)
-                        .height(26.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant)
+                        .height(24.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                 )
 
-                // Selling
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // 2. Selling
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        "Selling",
+                        stringResource(R.string.stock_check_selling),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold
                     )
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         formatTaka(sellingPrice),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = Color(0xFF059669)
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 13.sp,
+                        color = Color(0xFF059669),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
                 Box(
                     modifier = Modifier
                         .width(1.dp)
-                        .height(26.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant)
+                        .height(24.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                 )
 
-                // Profit Margin Pill
-                Column(horizontalAlignment = Alignment.End) {
+                // 3. MRP
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        "Unit Margin",
+                        stringResource(R.string.stock_check_mrp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        if (mrpPrice > 0.0) formatTaka(mrpPrice) else "—",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = if (mrpPrice > 0.0) Color(0xFF7C3AED) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(24.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                )
+
+                // 4. Wholesale
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        stringResource(R.string.stock_check_wholesale),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        if (wholesalePrice > 0.0) formatTaka(wholesalePrice) else "—",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = if (wholesalePrice > 0.0) Color(0xFFD97706) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                thickness = 0.8.dp
+            )
+
+            // Performance & Valuation Row: Unit Margin and Total Asset Worth
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Unit Margin Pill
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.stock_check_unit_margin),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 10.sp,
@@ -512,35 +599,32 @@ fun FinancialMarginCard(
                     ) {
                         Text(
                             text = "${if (profit >= 0) "+" else ""}${formatTaka(profit)} (${marginPercent}%)",
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (profit >= 0) Color(0xFF065F46) else Color(0xFFDC2626),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
-            }
 
-            // Asset Valuation footer line
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Total Asset Worth ($quantity units)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 11.sp
-                )
-                Text(
-                    formatTaka(totalAssetVal),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF4338CA)
-                )
+                // Total Asset Worth
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.stock_check_asset_worth, qtyDisplay),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.sp
+                    )
+                    Text(
+                        formatTaka(totalAssetVal),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF4338CA)
+                    )
+                }
             }
         }
     }

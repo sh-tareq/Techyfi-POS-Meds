@@ -70,14 +70,20 @@ data class InvoiceSettingsData(
     val cashDrawerKickEnabled: Boolean = true,
     // MAC address of the paired Bluetooth (SPP) receipt printer the cash-drawer ESC/POS pulse is sent to.
     val cashDrawerPrinterAddress: String = "",
+    val directBluetoothPrintEnabled: Boolean = false,
+    val directBluetoothPrinterAddress: String = "",
+    val allowNegativeInventory: Boolean = false,
     val decimalQuantitiesEnabled: Boolean = true,
     val paperRollWidthMm: Int = 80,
+    val showMrpDiscountInSaleMode: Boolean = true,
+    val showItemWiseMrpDiscount: Boolean = true,
     // Money Receipt & Due Repayment Voucher Settings
     val showDueReceiptLogo: Boolean = true,
     val showDueReceiptHeader: Boolean = true,
     val showDueReceiptSignatures: Boolean = true,
     val showDueReceiptBarcode: Boolean = true,
     val showDueReceiptQr: Boolean = false,
+    val showDueReceiptVerificationQr: Boolean = true,
     val showDueReceiptCustomNotes: Boolean = false,
     val dueReceiptCustomTitle: String = "Notice & Terms",
     val dueReceiptCustomNotes: String = "Received with thanks. All credit adjustments are final. Keep this slip for record.",
@@ -136,13 +142,19 @@ data class InvoiceSettingsData(
             put("taxInclusive", taxInclusive)
             put("cashDrawerKickEnabled", cashDrawerKickEnabled)
             put("cashDrawerPrinterAddress", cashDrawerPrinterAddress)
+            put("directBluetoothPrintEnabled", directBluetoothPrintEnabled)
+            put("directBluetoothPrinterAddress", directBluetoothPrinterAddress)
+            put("allowNegativeInventory", allowNegativeInventory)
             put("decimalQuantitiesEnabled", decimalQuantitiesEnabled)
             put("paperRollWidthMm", paperRollWidthMm)
+            put("showMrpDiscountInSaleMode", showMrpDiscountInSaleMode)
+            put("showItemWiseMrpDiscount", showItemWiseMrpDiscount)
             put("showDueReceiptLogo", showDueReceiptLogo)
             put("showDueReceiptHeader", showDueReceiptHeader)
             put("showDueReceiptSignatures", showDueReceiptSignatures)
             put("showDueReceiptBarcode", showDueReceiptBarcode)
             put("showDueReceiptQr", showDueReceiptQr)
+            put("showDueReceiptVerificationQr", showDueReceiptVerificationQr)
             put("showDueReceiptCustomNotes", showDueReceiptCustomNotes)
             put("dueReceiptCustomTitle", dueReceiptCustomTitle)
             put("dueReceiptCustomNotes", dueReceiptCustomNotes)
@@ -217,13 +229,19 @@ data class InvoiceSettingsData(
                     taxInclusive = json.optBoolean("taxInclusive", false),
                     cashDrawerKickEnabled = json.optBoolean("cashDrawerKickEnabled", true),
                     cashDrawerPrinterAddress = json.optString("cashDrawerPrinterAddress", ""),
+                    directBluetoothPrintEnabled = json.optBoolean("directBluetoothPrintEnabled", false),
+                    directBluetoothPrinterAddress = json.optString("directBluetoothPrinterAddress", ""),
+                    allowNegativeInventory = json.optBoolean("allowNegativeInventory", false),
                     decimalQuantitiesEnabled = json.optBoolean("decimalQuantitiesEnabled", true),
                     paperRollWidthMm = json.optInt("paperRollWidthMm", 80),
+                    showMrpDiscountInSaleMode = json.optBoolean("showMrpDiscountInSaleMode", true),
+                    showItemWiseMrpDiscount = json.optBoolean("showItemWiseMrpDiscount", true),
                     showDueReceiptLogo = json.optBoolean("showDueReceiptLogo", true),
                     showDueReceiptHeader = json.optBoolean("showDueReceiptHeader", true),
                     showDueReceiptSignatures = json.optBoolean("showDueReceiptSignatures", true),
                     showDueReceiptBarcode = json.optBoolean("showDueReceiptBarcode", true),
                     showDueReceiptQr = json.optBoolean("showDueReceiptQr", false),
+                    showDueReceiptVerificationQr = json.optBoolean("showDueReceiptVerificationQr", true),
                     showDueReceiptCustomNotes = json.optBoolean("showDueReceiptCustomNotes", false),
                     dueReceiptCustomTitle = json.optString("dueReceiptCustomTitle", fallback.dueReceiptCustomTitle),
                     dueReceiptCustomNotes = json.optString("dueReceiptCustomNotes", fallback.dueReceiptCustomNotes),

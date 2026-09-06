@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Techyfi POS — Sale Mode MRP Discount & Receipt Display Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0B1120;
+      --surface-dark: #1E293B;
+      --surface-card: #0F172A;
+      --surface-border: rgba(255, 255, 255, 0.08);
+      --surface-border-light: rgba(255, 255, 255, 0.15);
+      
+      --pos-bg: #FFFFFF;
+      --pos-surface: #FFFFFF;
+      --pos-card-border: #E2E8F0;
+      --pos-border-light: #F1F5F9;
+      --pos-text: #0F172A;
+      --pos-text-secondary: #64748B;
+      --pos-text-muted: #94A3B8;
+      
+      --primary: #10B981;
+      --primary-hover: #059669;
+      --primary-bg: #ECFDF5;
+      --primary-border: #A7F3D0;
+      --primary-text: #065F46;
+
+      --complete-btn-bg: #229966;
+      --complete-btn-hover: #1b8055;
+      
+      --amber: #D97706;
+      --amber-bg: #FEF3C7;
+      --amber-border: #FDE68A;
+      --amber-text: #92400E;
+      
+      --blue: #2563EB;
+      --blue-bg: #EFF6FF;
+      --blue-border: #BFDBFE;
+      --blue-text: #1D4ED8;
+
+      --purple: #7C3AED;
+      --purple-bg: #F3E8FF;
+      --purple-border: #E9D5FF;
+      --purple-text: #6B21A8;
+      
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-bn: 'Hind Siliguri', sans-serif;
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --radius-full: 9999px;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+      --shadow-3d: 0 20px 35px -8px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: #F8FAFC;
+      font-family: var(--font-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Studio Header */
+    .studio-header {
+      background: linear-gradient(180deg, #131E35 0%, #0B1120 100%);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #10B981 0%, #047857 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+
+    .brand-text h1 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-text p {
+      font-size: 13px;
+      color: #94A3B8;
+      font-weight: 500;
+    }
+
+    .version-pill {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34D399;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: var(--radius-full);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-action {
+      background: var(--surface-dark);
+      border: 1px solid var(--surface-border);
+      color: #F1F5F9;
+      padding: 9px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-action:hover {
+      background: #334155;
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-action.btn-primary {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      border: none;
+      color: #FFFFFF;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-action.btn-primary:hover {
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+    }
+
+    /* Main Layout */
+    .studio-workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 28px;
+      padding: 24px;
+      max-width: 1700px;
+      margin: 0 auto;
+      width: 100%;
+      align-items: start;
+    }
+
+    /* Phone Mockup Column */
+    .phone-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    @media (max-width: 959px) {
+      .studio-workspace {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+      .phone-container {
+        position: static;
+        margin-bottom: 24px;
+      }
+      .workspace-right {
+        width: 100%;
+        max-width: 800px;
+      }
+    }
+
+    .phone-mockup {
+      width: 410px;
+      height: 870px;
+      background: #000000;
+      border-radius: 48px;
+      box-shadow: 0 0 0 10px #1E293B, 0 0 0 12px #334155, var(--shadow-3d);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      border: 4px solid #0f172a;
+    }
+
+    /* Notch / Island */
+    .phone-notch {
+      width: 120px;
+      height: 25px;
+      background: #000000;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .phone-notch .camera {
+      width: 10px;
+      height: 10px;
+      background: #111827;
+      border-radius: 50%;
+      border: 1px solid #1f2937;
+    }
+
+    .phone-screen {
+      flex: 1;
+      background: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      color: #0F172A;
+      position: relative;
+      font-family: var(--font-main);
+    }
+
+    /* POS Header inside Phone */
+    .pos-top-bar {
+      padding: 34px 18px 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #FFFFFF;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      border-bottom: 1px solid #F1F5F9;
+    }
+
+    .pos-back-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      font-size: 20px;
+      color: #0F172A;
+      cursor: pointer;
+    }
+
+    .pos-top-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: #0F172A;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Screen Content */
+    .pos-content {
+      padding: 14px 16px 85px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Purple Cart Summary Banner from User Screenshot */
+    .cart-summary-banner {
+      background: #EDE9FE;
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #DDD6FE;
+    }
+
+    .cart-summary-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #3B0764;
+    }
+
+    .cart-review-btn {
+      background: transparent;
+      border: none;
+      color: #059669;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* NEW UX FEATURE: Header Savings Callout Pill */
+    .header-savings-pill {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #FFFFFF;
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+      animation: pulseGlow 3s infinite ease-in-out;
+      transition: all 0.3s ease;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3); }
+      50% { box-shadow: 0 4px 16px rgba(16, 185, 129, 0.6); }
+    }
+
+    /* Price Mode Selector Row */
+    .price-mode-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 0;
+    }
+
+    .mode-label-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748B;
+    }
+
+    .mode-chips-container {
+      background: #F1F5F9;
+      padding: 3px;
+      border-radius: 20px;
+      display: flex;
+      gap: 3px;
+      border: 1px solid #E2E8F0;
+    }
+
+    .mode-chip {
+      padding: 5px 11px;
+      border-radius: 16px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #64748B;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .mode-chip.active.mode-sale {
+      background: #FFFFFF;
+      color: #059669;
+      border-color: #10B981;
+      box-shadow: 0 1px 4px rgba(16, 185, 129, 0.2);
+    }
+
+    .mode-chip.active.mode-mrp {
+      background: #FFFFFF;
+      color: #2563EB;
+      border-color: #3B82F6;
+      box-shadow: 0 1px 4px rgba(37, 99, 235, 0.2);
+    }
+
+    .mode-chip.active.mode-bulk {
+      background: #FFFFFF;
+      color: #D97706;
+      border-color: #F59E0B;
+      box-shadow: 0 1px 4px rgba(217, 119, 6, 0.2);
+    }
+
+    /* Inputs Row: Cashier & Discount */
+    .inputs-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .pos-input-box {
+      border: 1.5px solid #CBD5E1;
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      height: 54px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      background: #FFFFFF;
+    }
+
+    .pos-input-box.active {
+      border-color: #10B981;
+    }
+
+    .pos-input-label {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pos-input-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .pos-input-content input {
+      border: none;
+      outline: none;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0F172A;
+      width: 100%;
+      background: transparent;
+      font-family: inherit;
+    }
+
+    .pos-unit-toggle {
+      background: #EDE9FE;
+      border: 1px solid #DDD6FE;
+      color: #7C3AED;
+      padding: 3px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    /* Payment Split/Single Switcher */
+    .method-type-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .method-tab-btn {
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #E2E8F0;
+      background: #F8FAFC;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .method-tab-btn.active {
+      background: #EDE9FE;
+      color: #6B21A8;
+      border-color: #C4B5FD;
+    }
+
+    /* Payment Method Chips */
+    .payment-method-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #0F172A;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .payment-chips-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    .pay-chip {
+      padding: 9px 6px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid #E2E8F0;
+      background: #FFFFFF;
+      font-size: 12px;
+      font-weight: 700;
+      color: #1E293B;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .pay-chip.selected {
+      border-color: #10B981;
+      background: #ECFDF5;
+      color: #065F46;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15);
+    }
+
+    /* Customer details accordion */
+    .customer-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #059669;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+
+    /* Quick Cash Row */
+    .quick-cash-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .quick-chip {
+      flex: 1;
+      padding: 7px 4px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #CBD5E1;
+      background: #FFFFFF;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #0F172A;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .quick-chip.exact {
+      border-color: #10B981;
+      color: #059669;
+      background: #ECFDF5;
+    }
+
+    /* Cash Received Box */
+    .cash-received-box {
+      border: 1.5px solid #94A3B8;
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cash-received-box input {
+      border: none;
+      outline: none;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: #0F172A;
+      width: 100%;
+    }
+
+    /* NEW UX FEATURE: Customer Savings Breakdown Hero Card */
+    .savings-hero-card {
+      background: linear-gradient(135deg, #ECFDF5 0%, #F0FDF4 100%);
+      border: 1.5px dashed #10B981;
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.1);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .savings-hero-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .savings-title-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #065F46;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .savings-badge {
+      background: #10B981;
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .savings-breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #047857;
+      font-weight: 600;
+    }
+
+    .savings-breakdown-row.strike-mrp {
+      color: #64748B;
+      font-size: 11.5px;
+    }
+
+    .savings-breakdown-row.total-benefit {
+      padding-top: 6px;
+      border-top: 1px dashed rgba(16, 185, 129, 0.4);
+      font-weight: 800;
+      font-size: 13px;
+      color: #064E3B;
+    }
+
+    /* Pricing Summary Box */
+    .pricing-summary {
+      border-top: 1px solid #E2E8F0;
+      padding-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .summary-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #64748B;
+      font-weight: 600;
+    }
+
+    .summary-line.grand-total-line {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0F172A;
+      margin-top: 4px;
+      padding-top: 6px;
+      border-top: 1px solid #F1F5F9;
+    }
+
+    .summary-line.grand-total-line .amount {
+      color: #059669;
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    /* Fixed Complete Sale Bottom Bar inside Phone */
+    .pos-bottom-dock {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 16px 20px 16px;
+      background: #FFFFFF;
+      border-top: 1px solid #F1F5F9;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-complete-sale {
+      width: 100%;
+      height: 52px;
+      background: var(--complete-btn-bg);
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(34, 153, 102, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .btn-complete-sale:hover {
+      background: var(--complete-btn-hover);
+      transform: translateY(-1px);
+    }
+
+    /* Control Panel & Live Receipts Column */
+    .workspace-right {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .panel-card {
+      background: var(--surface-card);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .panel-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-desc {
+      font-size: 13.5px;
+      color: #94A3B8;
+      line-height: 1.5;
+    }
+
+    /* Receipt Preview Container */
+    .receipts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .receipt-paper {
+      background: #FFFFFF;
+      color: #000000;
+      border-radius: 4px;
+      padding: 24px 18px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.45;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      position: relative;
+      border-top: 4px solid #10B981;
+    }
+
+    .receipt-paper.bn-receipt {
+      font-family: var(--font-bn);
+      font-size: 13px;
+    }
+
+    .receipt-paper::after {
+      content: "";
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      right: 0;
+      height: 8px;
+      background: radial-gradient(circle, transparent, transparent 50%, #0F172A 50%, #0F172A 100%);
+      background-size: 12px 12px;
+    }
+
+    .receipt-header {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .receipt-store-title {
+      font-size: 15px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .receipt-store-sub {
+      font-size: 11px;
+      color: #334155;
+    }
+
+    .receipt-divider {
+      border: none;
+      border-top: 1px dashed #000000;
+      margin: 8px 0;
+    }
+
+    .receipt-double-divider {
+      border: none;
+      border-top: 2px solid #000000;
+      margin: 8px 0;
+    }
+
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+    }
+
+    .receipt-highlight-box {
+      background: #F1F5F9;
+      border: 1.5px solid #000000;
+      padding: 8px 10px;
+      margin: 10px 0;
+      text-align: center;
+      font-weight: 800;
+      border-radius: 2px;
+    }
+
+    .receipt-highlight-box.savings-banner {
+      background: #ECFDF5;
+      border-color: #059669;
+      color: #065F46;
+    }
+
+    /* Interactive Switch Controls */
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+    }
+
+    .control-label {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .control-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-desc {
+      font-size: 12px;
+      color: #94A3B8;
+    }
+
+    /* Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #334155;
+      transition: .3s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #10B981;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+
+    /* Feature Comparison Cards */
+    .feature-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+    }
+
+    .feature-card.highlight {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.04);
+    }
+
+    .feature-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      width: fit-content;
+    }
+
+    .feature-badge.emerald {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34D399;
+    }
+
+    .feature-badge.blue {
+      background: rgba(37, 99, 235, 0.15);
+      color: #60A5FA;
+    }
+
+    .feature-badge.amber {
+      background: rgba(217, 119, 6, 0.15);
+      color: #FBBF24;
+    }
+
+    .feature-card h4 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+
+    .feature-card p {
+      font-size: 13px;
+      color: #94A3B8;
+      line-height: 1.45;
+    }
+
+    /* Cart Review Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #FFFFFF;
+      color: #0F172A;
+      width: 100%;
+      max-width: 440px;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-3d);
+      animation: modalSlideUp 0.25s ease-out;
+    }
+
+    @keyframes modalSlideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      background: #F8FAFC;
+      border-bottom: 1px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #64748B;
+    }
+
+    .modal-body {
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+
+    .review-item-card {
+      padding: 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid #E2E8F0;
+      background: #F8FAFC;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .item-main-details h5 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0F172A;
+    }
+
+    .item-price-comparison {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      font-size: 12px;
+    }
+
+    .strike-price {
+      text-decoration: line-through;
+      color: #94A3B8;
+      font-weight: 600;
+    }
+
+    .sale-price-tag {
+      color: #059669;
+      font-weight: 800;
+    }
+
+    .item-save-badge {
+      background: #ECFDF5;
+      color: #047857;
+      border: 1px solid #A7F3D0;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 10.5px;
+      font-weight: 800;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Studio Header -->
+  <header class="studio-header">
+    <div class="brand-group">
+      <div class="brand-icon">🏷️</div>
+      <div class="brand-text">
+        <h1>Techyfi POS — Sale Mode MRP Discount Prototype <span class="version-pill">Interactive Review</span></h1>
+        <p>Live interactive demo & verification for MRP Savings display in Sale mode & Receipts</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-action" onclick="switchLanguage()">
+        <span id="lang-btn-text">🌐 বাংলা সংস্করণ</span>
+      </button>
+      <button class="btn-action btn-primary" onclick="openReviewModal()">
+        <span>👁️ View Review Dialog</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="studio-workspace">
+
+    <!-- Left Column: Interactive Android Mobile Screen -->
+    <div class="phone-container">
+      <div class="phone-mockup">
+        <div class="phone-notch">
+          <div class="camera"></div>
+        </div>
+
+        <div class="phone-screen" id="phone-screen">
+          
+          <!-- POS Top Bar -->
+          <div class="pos-top-bar">
+            <button class="pos-back-btn">←</button>
+            <div class="pos-top-title">💳 Complete Sale</div>
+          </div>
+
+          <!-- POS Screen Content -->
+          <div class="pos-content">
+
+            <!-- Cart Summary Purple Banner (from uploaded screenshot) -->
+            <div class="cart-summary-banner">
+              <div class="cart-summary-left">
+                <span>🛍️</span>
+                <span id="cart-summary-text">2 products • 2 units • ৳400</span>
+              </div>
+              <button class="cart-review-btn" onclick="openReviewModal()">
+                👁️ Review
+              </button>
+            </div>
+
+            <!-- PROPOSED UX ENHANCEMENT: Header Savings Pill (Activates ONLY in Sale Mode) -->
+            <div class="header-savings-pill" id="header-savings-pill">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span>🎉</span>
+                <span id="header-pill-text">Customer Saves ৳100 (20%) vs MRP!</span>
+              </div>
+              <span style="font-size: 10px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px;">Sale Benefit</span>
+            </div>
+
+            <!-- Price Mode Selector Row (Exact from Screenshot) -->
+            <div class="price-mode-row">
+              <div class="mode-label-group">
+                <span>💰</span>
+                <span>Price Mode</span>
+              </div>
+              <div class="mode-chips-container">
+                <button class="mode-chip active mode-sale" id="chip-sale" onclick="setPriceMode('Sale')">
+                  🏷️ Sale
+                </button>
+                <button class="mode-chip mode-mrp" id="chip-mrp" onclick="setPriceMode('MRP')">
+                  💹 MRP
+                </button>
+                <button class="mode-chip mode-bulk" id="chip-bulk" onclick="setPriceMode('Bulk')">
+                  📦 Bulk
+                </button>
+              </div>
+            </div>
+
+            <!-- Cashier and Discount Inputs -->
+            <div class="inputs-row">
+              <!-- Cashier -->
+              <div class="pos-input-box">
+                <span class="pos-input-label">Cashier</span>
+                <div class="pos-input-content">
+                  <span style="font-size: 14px;">💼</span>
+                  <input type="text" value="Kawsar Ahmed" readonly style="cursor: pointer;" title="Select cashier" />
+                  <span style="font-size: 12px; color: #64748B;">▼</span>
+                </div>
+              </div>
+
+              <!-- Discount -->
+              <div class="pos-input-box active">
+                <span class="pos-input-label">Discount</span>
+                <div class="pos-input-content">
+                  <input type="number" id="discount-input" value="0" min="0" oninput="onDiscountChanged()" placeholder="0" />
+                  <button class="pos-unit-toggle" id="discount-unit-btn" onclick="toggleDiscountUnit()">
+                    <span id="discount-unit-label">৳</span> ⇄
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Single / Split Payment Switcher -->
+            <div class="method-type-tabs">
+              <button class="method-tab-btn active">💳 Single Method</button>
+              <button class="method-tab-btn">💸 Split Payment</button>
+            </div>
+
+            <!-- Payment Method Chips -->
+            <div class="payment-method-section">
+              <div class="section-title">
+                <span>💳</span>
+                <span>Payment Method</span>
+              </div>
+              <div class="payment-chips-grid">
+                <button class="pay-chip selected" onclick="selectPaymentMethod(this, 'Cash')">💵 Cash</button>
+                <button class="pay-chip" onclick="selectPaymentMethod(this, 'bKash')"><span style="color: #D12053; font-weight: 800;">bKash</span></button>
+                <button class="pay-chip" onclick="selectPaymentMethod(this, 'Nagad')"><span style="color: #F7941D; font-weight: 800;">Nagad</span></button>
+                <button class="pay-chip" onclick="selectPaymentMethod(this, 'Rocket')"><span style="color: #8C3494; font-weight: 800;">Rocket</span></button>
+                <button class="pay-chip" onclick="selectPaymentMethod(this, 'Card')">💳 Card</button>
+                <button class="pay-chip" onclick="selectPaymentMethod(this, 'Due')">⏳ Due (বাকি)</button>
+              </div>
+            </div>
+
+            <!-- Customer Details Accordion -->
+            <div class="customer-toggle-row">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span>👤</span>
+                <span>Add customer details</span>
+              </div>
+              <span>▼</span>
+            </div>
+
+            <!-- Quick Cash Buttons -->
+            <div class="quick-cash-row">
+              <button class="quick-chip exact" onclick="setQuickCash('exact')">⚡ Exact</button>
+              <button class="quick-chip" onclick="setQuickCash(50)">+৳50</button>
+              <button class="quick-chip" onclick="setQuickCash(100)">+৳100</button>
+              <button class="quick-chip" onclick="setQuickCash(500)">+৳500</button>
+              <button class="quick-chip" onclick="setQuickCash(1000)">+৳1000</button>
+            </div>
+
+            <!-- Cash Received Input Box -->
+            <div class="cash-received-box">
+              <span style="color: #059669; font-weight: 800; font-size: 16px;">৳</span>
+              <input type="number" id="cash-received-input" placeholder="Cash Received (৳)" value="400" />
+            </div>
+
+            <!-- PROPOSED UX ENHANCEMENT: Dedicated Customer Savings Hero Card (Activates ONLY in Sale Mode) -->
+            <div class="savings-hero-card" id="savings-hero-card">
+              <div class="savings-hero-header">
+                <div class="savings-title-group">
+                  <span>✨</span>
+                  <span>Customer Savings Breakdown</span>
+                </div>
+                <span class="savings-badge" id="hero-badge-pct">20% OFF</span>
+              </div>
+              
+              <div class="savings-breakdown-row strike-mrp">
+                <span>Original MRP Subtotal:</span>
+                <span id="hero-mrp-total">৳500.00</span>
+              </div>
+
+              <div class="savings-breakdown-row">
+                <span>🏷️ Store Sale Discount:</span>
+                <span id="hero-sale-discount" style="font-weight: 800; color: #059669;">-৳100.00</span>
+              </div>
+
+              <div class="savings-breakdown-row" id="hero-extra-discount-row" style="display: none;">
+                <span>🎟️ Extra Added Discount:</span>
+                <span id="hero-extra-discount-val" style="color: #DC2626; font-weight: 800;">-৳0.00</span>
+              </div>
+
+              <div class="savings-breakdown-row total-benefit">
+                <span>🎉 Total Customer Savings:</span>
+                <span id="hero-total-savings" style="font-size: 14px; font-weight: 900; color: #065F46;">৳100.00</span>
+              </div>
+
+              <!-- Item-by-Item vs Without Item-by-Item Switcher inside Phone Screen -->
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 2px; padding-top: 8px; border-top: 1px dashed rgba(16, 185, 129, 0.35);">
+                <span style="font-size: 11px; font-weight: 800; color: #065F46;">Receipt Breakdown:</span>
+                <div style="display: flex; gap: 4px; background: rgba(16, 185, 129, 0.15); padding: 2px; border-radius: 6px;">
+                  <button id="phone-btn-itemized" onclick="setItemByItemDiscount(true)" style="padding: 3px 8px; font-size: 10.5px; font-weight: 800; border-radius: 4px; border: none; cursor: pointer; background: #10B981; color: white;">🏷️ Item-by-Item</button>
+                  <button id="phone-btn-summary" onclick="setItemByItemDiscount(false)" style="padding: 3px 8px; font-size: 10.5px; font-weight: 700; border-radius: 4px; border: none; cursor: pointer; background: transparent; color: #065F46;">🧾 Without Item</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mode Inactive Notice (Shown in MRP / Bulk Mode) -->
+            <div id="mode-inactive-banner" style="display: none; padding: 10px 14px; background: #F1F5F9; border-radius: var(--radius-sm); border: 1px solid #E2E8F0; font-size: 11.5px; color: #64748B;">
+              <span id="mode-inactive-text">ℹ️ MRP Mode active: Items billed at full Maximum Retail Price (no MRP discount).</span>
+            </div>
+
+            <!-- Pricing Summaries -->
+            <div class="pricing-summary">
+              <div class="summary-line">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span>🧾</span>
+                  <span id="subtotal-label">Subtotal</span>
+                </div>
+                <span id="subtotal-val" style="font-weight: 800; color: #0F172A;">৳500</span>
+              </div>
+
+              <!-- Sale Mode Savings Line Item in Summary -->
+              <div class="summary-line" id="summary-savings-row" style="color: #059669; font-weight: 700;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span>🏷️</span>
+                  <span>MRP Savings (Sale Mode)</span>
+                </div>
+                <span id="summary-savings-val">-৳100</span>
+              </div>
+
+              <!-- Manual Extra Discount Line Item -->
+              <div class="summary-line" id="summary-manual-discount-row" style="display: none; color: #DC2626; font-weight: 700;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span>🎟️</span>
+                  <span>Additional Discount</span>
+                </div>
+                <span id="summary-manual-discount-val">-৳0</span>
+              </div>
+
+              <!-- Grand Total -->
+              <div class="summary-line grand-total-line">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span>💵</span>
+                  <span>Grand Total</span>
+                </div>
+                <span class="amount" id="grand-total-val">৳400</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Docked Complete Sale Button -->
+          <div class="pos-bottom-dock">
+            <button class="btn-complete-sale" onclick="simulateCompleteSale()">
+              <span>💳 Complete Sale</span>
+              <span>➡️</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Control Dashboard & Live Thermal Receipts -->
+    <div class="workspace-right">
+
+      <!-- Configuration & Live Interactive Toggles -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">⚙️ Interactive Mode & Receipt Settings</div>
+            <p class="panel-desc">Test how changing price modes and discount inputs dynamically controls receipt and UI behavior.</p>
+          </div>
+          <span class="feature-badge emerald">Real-time Reactive</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Toggle 1: Show MRP Savings on Receipt -->
+          <div class="control-row">
+            <div class="control-label">
+              <span class="control-name">
+                <span>🖨️</span>
+                <span>Print MRP Savings on Thermal Receipt</span>
+              </span>
+              <span class="control-desc">When enabled, the customer's receipt prints the MRP savings and a celebratory "YOU SAVED" banner (activates only in Sale mode).</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggle-receipt-savings" checked onchange="updateReceipts()">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- NEW Toggle: Item-by-Item Discount vs Without Item-by-Item -->
+          <div class="control-row" style="background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.3);">
+            <div class="control-label">
+              <span class="control-name">
+                <span>📑</span>
+                <span>Discount Presentation Style</span>
+              </span>
+              <span class="control-desc">Switch between showing discounts on each individual item line vs showing discount only in the summary total without item-by-item lines.</span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-action" id="btn-itemized" onclick="setItemByItemDiscount(true)" style="background: #10B981; color: white;">🏷️ Item-by-Item</button>
+              <button class="btn-action" id="btn-summary-only" onclick="setItemByItemDiscount(false)">🧾 Without Item-by-Item</button>
+            </div>
+          </div>
+
+          <!-- Toggle 3: Receipt Width (80mm vs 58mm) -->
+          <div class="control-row">
+            <div class="control-label">
+              <span class="control-name">
+                <span>📏</span>
+                <span>Paper Width Format</span>
+              </span>
+              <span class="control-desc">Toggle between standard 80mm POS thermal roll (42 cols) and compact 58mm roll (32 cols).</span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-action" id="btn-roll-80" onclick="setRollWidth(80)" style="background: #10B981; color: white;">80mm</button>
+              <button class="btn-action" id="btn-roll-58" onclick="setRollWidth(58)">58mm</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Receipts Preview (English & Bengali) -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">🧾 Live Customer Thermal Receipts Preview</div>
+            <p class="panel-desc">Authentic Bangladeshi supermarket thermal receipt output with exact calculations for Shwapno/Agora/Techyfi standards.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-action" onclick="printReceiptMock()">🖨️ Print Test Slip</button>
+          </div>
+        </div>
+
+        <div class="receipts-grid">
+          
+          <!-- English Thermal Receipt -->
+          <div class="receipt-paper" id="receipt-en">
+            <div class="receipt-header">
+              <div class="receipt-store-title">TECHYFI SUPERSTORE</div>
+              <div class="receipt-store-sub">Dhanmondi 27, Dhaka - 1209</div>
+              <div class="receipt-store-sub">Phone: 01700-000000</div>
+              <div class="receipt-store-sub">facebook.com/techyfi</div>
+            </div>
+
+            <hr class="receipt-double-divider" />
+            <div class="receipt-row">
+              <span>Invoice : #10482</span>
+              <span>Date: Sep 5, 2026</span>
+            </div>
+            <div class="receipt-row">
+              <span>Cashier : Kawsar Ahmed</span>
+            </div>
+            <hr class="receipt-divider" />
+
+            <div class="receipt-row" style="font-weight: bold;">
+              <span style="flex: 2;">Item</span>
+              <span style="flex: 1; text-align: center;">Qty</span>
+              <span style="flex: 1; text-align: right;">Price</span>
+              <span style="flex: 1; text-align: right;">Total</span>
+            </div>
+            <hr class="receipt-divider" />
+
+            <!-- Line Items -->
+            <div id="rcpt-en-items">
+              <div class="receipt-row">
+                <span style="flex: 2;">1. Polo T-Shirt (L)</span>
+                <span style="flex: 1; text-align: center;">1</span>
+                <span style="flex: 1; text-align: right;" id="rcpt-en-p1-price">৳250</span>
+                <span style="flex: 1; text-align: right;" id="rcpt-en-p1-total">৳250</span>
+              </div>
+              <div class="receipt-row" style="font-size: 10.5px; color: #64748B;" id="rcpt-en-p1-sub">
+                <span>&nbsp;&nbsp;Offer: ৳200 (Save ৳50)</span>
+              </div>
+
+              <div class="receipt-row" style="margin-top: 4px;">
+                <span style="flex: 2;">2. Denim Jeans (32)</span>
+                <span style="flex: 1; text-align: center;">1</span>
+                <span style="flex: 1; text-align: right;" id="rcpt-en-p2-price">৳250</span>
+                <span style="flex: 1; text-align: right;" id="rcpt-en-p2-total">৳250</span>
+              </div>
+              <div class="receipt-row" style="font-size: 10.5px; color: #64748B;" id="rcpt-en-p2-sub">
+                <span>&nbsp;&nbsp;Offer: ৳200 (Save ৳50)</span>
+              </div>
+            </div>
+
+            <hr class="receipt-divider" />
+
+            <!-- Subtotal & Discount Lines -->
+            <div class="receipt-row">
+              <span id="rcpt-en-subtotal-lbl">Subtotal:</span>
+              <span id="rcpt-en-subtotal-val">৳500.00</span>
+            </div>
+
+            <div class="receipt-row" id="rcpt-en-mrp-discount-row" style="color: #059669; font-weight: bold;">
+              <span>MRP Discount:</span>
+              <span id="rcpt-en-mrp-discount-val">-৳100.00</span>
+            </div>
+
+            <div class="receipt-row" id="rcpt-en-manual-discount-row" style="display: none; color: #DC2626;">
+              <span>Additional Discount:</span>
+              <span id="rcpt-en-manual-discount-val">-৳0.00</span>
+            </div>
+
+            <hr class="receipt-double-divider" />
+            <div class="receipt-row" style="font-size: 14px; font-weight: 900;">
+              <span>GRAND TOTAL:</span>
+              <span id="rcpt-en-grand-total">৳400.00</span>
+            </div>
+            <hr class="receipt-double-divider" />
+
+            <!-- CELEBRATORY DELIGHT SAVINGS BANNER (Sale Mode Only) -->
+            <div class="receipt-highlight-box savings-banner" id="rcpt-en-savings-banner">
+              *** YOU SAVED: ৳100.00 (20%) vs MRP ***
+            </div>
+
+            <div class="receipt-row">
+              <span>Payment Method:</span>
+              <span id="rcpt-en-pay-method">Cash</span>
+            </div>
+            <div class="receipt-row">
+              <span>Paid Amount:</span>
+              <span id="rcpt-en-paid">৳400.00</span>
+            </div>
+            <div class="receipt-row">
+              <span>Status:</span>
+              <span>PAID</span>
+            </div>
+
+            <hr class="receipt-divider" />
+            <div style="text-align: center; font-size: 11px; margin-top: 6px;">
+              Thank You For Shopping With Us!<br />
+              Please Visit Again
+            </div>
+            <div style="text-align: center; font-size: 9.5px; color: #64748B; margin-top: 4px;">
+              Powered by Techyfi POS
+            </div>
+          </div>
+
+          <!-- Bengali Thermal Receipt (Natural Bangladeshi Phrasing) -->
+          <div class="receipt-paper bn-receipt" id="receipt-bn">
+            <div class="receipt-header">
+              <div class="receipt-store-title" style="font-family: var(--font-bn); font-size: 18px;">টেকিফাই সুপারস্টোর</div>
+              <div class="receipt-store-sub">ধানমন্ডি ২৭, ঢাকা - ১২০৯</div>
+              <div class="receipt-store-sub">ফোন: ০১৭০০-০০০০০০</div>
+              <div class="receipt-store-sub">facebook.com/techyfi</div>
+            </div>
+
+            <hr class="receipt-double-divider" />
+            <div class="receipt-row">
+              <span>চালান নং : #১০৪৮২</span>
+              <span>তারিখ: ৫ সেপ্টেম্বর, ২০২৬</span>
+            </div>
+            <div class="receipt-row">
+              <span>ক্যাশিয়ার : কাওসার আহমেদ</span>
+            </div>
+            <hr class="receipt-divider" />
+
+            <div class="receipt-row" style="font-weight: bold;">
+              <span style="flex: 2;">পণ্য</span>
+              <span style="flex: 1; text-align: center;">পরিমাণ</span>
+              <span style="flex: 1; text-align: right;">দর</span>
+              <span style="flex: 1; text-align: right;">মোট</span>
+            </div>
+            <hr class="receipt-divider" />
+
+            <!-- Line Items BN -->
+            <div id="rcpt-bn-items">
+              <div class="receipt-row">
+                <span style="flex: 2;">১. পোলো টি-শার্ট (L)</span>
+                <span style="flex: 1; text-align: center;">১</span>
+                <span style="flex: 1; text-align: right;" id="rcpt-bn-p1-price">৳২৫০</span>
+                <span style="flex: 1; text-align: right;" id="rcpt-bn-p1-total">৳২৫০</span>
+              </div>
+              <div class="receipt-row" style="font-size: 11px; color: #64748B;" id="rcpt-bn-p1-sub">
+                <span>&nbsp;&nbsp;অফার: ৳২০০ (সাশ্রয় ৳৫০)</span>
+              </div>
+
+              <div class="receipt-row" style="margin-top: 4px;">
+                <span style="flex: 2;">২. ডেনিম জিন্স (৩২)</span>
+                <span style="flex: 1; text-align: center;">১</span>
+                <span style="flex: 1; text-align: right;" id="rcpt-bn-p2-price">৳২৫০</span>
+                <span style="flex: 1; text-align: right;" id="rcpt-bn-p2-total">৳২৫০</span>
+              </div>
+              <div class="receipt-row" style="font-size: 11px; color: #64748B;" id="rcpt-bn-p2-sub">
+                <span>&nbsp;&nbsp;অফার: ৳২০০ (সাশ্রয় ৳৫০)</span>
+              </div>
+            </div>
+
+            <hr class="receipt-divider" />
+
+            <!-- Subtotal & Discount Lines BN -->
+            <div class="receipt-row">
+              <span id="rcpt-bn-subtotal-lbl">উপমোট:</span>
+              <span id="rcpt-bn-subtotal-val">৳৫০০.০০</span>
+            </div>
+
+            <div class="receipt-row" id="rcpt-bn-mrp-discount-row" style="color: #059669; font-weight: bold;">
+              <span>এমআরপি সাশ্রয় (ছাড়):</span>
+              <span id="rcpt-bn-mrp-discount-val">-৳১০০.০০</span>
+            </div>
+
+            <div class="receipt-row" id="rcpt-bn-manual-discount-row" style="display: none; color: #DC2626;">
+              <span>অতিরিক্ত বিশেষ ছাড়:</span>
+              <span id="rcpt-bn-manual-discount-val">-৳০.০০</span>
+            </div>
+
+            <hr class="receipt-double-divider" />
+            <div class="receipt-row" style="font-size: 16px; font-weight: 900;">
+              <span>সর্বমোট:</span>
+              <span id="rcpt-bn-grand-total">৳৪০০.০০</span>
+            </div>
+            <hr class="receipt-double-divider" />
+
+            <!-- CELEBRATORY DELIGHT SAVINGS BANNER BN -->
+            <div class="receipt-highlight-box savings-banner" id="rcpt-bn-savings-banner">
+              *** আপনি সাশ্রয় করেছেন: ৳১০০.০০ (২০%) ***
+            </div>
+
+            <div class="receipt-row">
+              <span>পরিশোধ মাধ্যম :</span>
+              <span id="rcpt-bn-pay-method">নগদ (Cash)</span>
+            </div>
+            <div class="receipt-row">
+              <span>জমা            :</span>
+              <span id="rcpt-bn-paid">৳৪০০.০০</span>
+            </div>
+            <div class="receipt-row">
+              <span>অবস্থা         :</span>
+              <span>পরিশোধিত</span>
+            </div>
+
+            <hr class="receipt-divider" />
+            <div style="text-align: center; font-size: 12px; margin-top: 6px;">
+              আমাদের সাথে কেনাকাটা করার জন্য ধন্যবাদ!<br />
+              আবার আসবেন
+            </div>
+            <div style="text-align: center; font-size: 10px; color: #64748B; margin-top: 4px;">
+              পাওয়ার্ড বাই Techyfi POS
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Recommended UX & UI Enhancements Overview -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">💡 Proposed UX & UI Enhancements for Confirmation</div>
+            <p class="panel-desc">We analyzed modern retail workflows (Shwapno, Agora, Unimart) and designed these 4 enhancements to maximize customer delight and cashier speed.</p>
+          </div>
+          <span class="feature-badge blue">Design System Ready</span>
+        </div>
+
+        <div class="feature-cards-grid">
+          
+          <div class="feature-card highlight">
+            <span class="feature-badge emerald">Feature 1 • Instant Delight</span>
+            <h4>🎉 Real-time Header Savings Pill</h4>
+            <p>Directly on the checkout screen header, cashiers immediately see the green pill badge: <strong>"Customer Saves ৳100 (20%) vs MRP"</strong>. This empowers cashiers to verbally tell customers their exact savings before completing payment.</p>
+          </div>
+
+          <div class="feature-card highlight">
+            <span class="feature-badge emerald">Feature 2 • Value Transparency</span>
+            <h4>✨ Customer Savings Breakdown Card</h4>
+            <p>An emerald-bordered card clearly separates <strong>MRP Total (৳500)</strong>, <strong>Sale Subtotal (৳400)</strong>, and <strong>Total Customer Savings (৳100)</strong>. Automatically factors in any extra manual discount entered.</p>
+          </div>
+
+          <div class="feature-card">
+            <span class="feature-badge amber">Feature 3 • Strict Mode Isolation</span>
+            <h4>🛡️ Strict Sale Mode Activation Only</h4>
+            <p>In <strong>MRP Mode</strong>, customer pays full MRP — all savings pills and banners are completely hidden. In <strong>Bulk Mode</strong>, wholesale discounts are shown instead. Never causes misleading discount claims.</p>
+          </div>
+
+          <div class="feature-card">
+            <span class="feature-badge blue">Feature 4 • High-Impact Receipt</span>
+            <h4>🧾 Celebratory Receipt Delight Banner</h4>
+            <p>Prints an eye-catching banner: <code>*** আপনি সাশ্রয় করেছেন: ৳১০০.০০ (২০%) ***</code> right below the Grand Total on thermal slips, proven to increase repeat shopper loyalty.</p>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Cart Review Modal (Replicating "👁️ Review" click in POS) -->
+  <div class="modal-overlay" id="review-modal" onclick="closeReviewModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>🛍️</span>
+          <h3>Cart Items Review (Price Mode Analysis)</h3>
+        </div>
+        <button class="modal-close-btn" onclick="closeReviewModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        
+        <div class="review-item-card">
+          <div class="item-main-details">
+            <h5>1. Polo T-Shirt (Navy Blue, L)</h5>
+            <div class="item-price-comparison" id="modal-p1-comp">
+              <span class="strike-price" id="modal-p1-mrp">MRP ৳250</span>
+              <span>➔</span>
+              <span class="sale-price-tag" id="modal-p1-price">৳200</span>
+              <span class="item-save-badge" id="modal-p1-badge">Save ৳50 (20%)</span>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 13px; font-weight: 700;">1 pcs</div>
+            <div style="font-size: 14px; font-weight: 800; color: #059669;" id="modal-p1-total">৳200</div>
+          </div>
+        </div>
+
+        <div class="review-item-card">
+          <div class="item-main-details">
+            <h5>2. Denim Jeans (Slim Fit, 32)</h5>
+            <div class="item-price-comparison" id="modal-p2-comp">
+              <span class="strike-price" id="modal-p2-mrp">MRP ৳250</span>
+              <span>➔</span>
+              <span class="sale-price-tag" id="modal-p2-price">৳200</span>
+              <span class="item-save-badge" id="modal-p2-badge">Save ৳50 (20%)</span>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 13px; font-weight: 700;">1 pcs</div>
+            <div style="font-size: 14px; font-weight: 800; color: #059669;" id="modal-p2-total">৳200</div>
+          </div>
+        </div>
+
+        <div style="padding: 12px; background: #ECFDF5; border-radius: var(--radius-md); border: 1px dashed #10B981; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 13px; font-weight: 800; color: #065F46;">Total Savings in this Cart:</span>
+          <span style="font-size: 15px; font-weight: 900; color: #059669;" id="modal-total-savings">৳100 (20%)</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    const state = {
+      priceMode: 'Sale', // 'Sale', 'MRP', 'Bulk'
+      paperWidth: 80, // 80 or 58
+      showReceiptSavings: true,
+      itemByItemDiscount: true, // true = item-by-item discount, false = without item-by-item discount
+      discountUnit: 'taka', // 'taka' or 'percent'
+      discountAmount: 0,
+      paymentMethod: 'Cash',
+      items: [
+        { name: 'Polo T-Shirt (L)', nameBn: 'পোলো টি-শার্ট (L)', qty: 1, mrp: 250, salePrice: 200, wholesalePrice: 175 },
+        { name: 'Denim Jeans (32)', nameBn: 'ডেনিম জিন্স (৩২)', qty: 1, mrp: 250, salePrice: 200, wholesalePrice: 185 }
+      ]
+    };
+
+    function toBnNum(num) {
+      const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+      return String(num).replace(/[0-9]/g, d => bnDigits[d]);
+    }
+
+    function formatTaka(val) {
+      return '৳' + Math.round(val);
+    }
+
+    function formatTakaDec(val) {
+      return '৳' + val.toFixed(2);
+    }
+
+    function formatTakaBn(val) {
+      return '৳' + toBnNum(Math.round(val));
+    }
+
+    function formatTakaBnDec(val) {
+      return '৳' + toBnNum(val.toFixed(2));
+    }
+
+    // Calculations
+    function computeCart() {
+      const mrpTotal = state.items.reduce((acc, it) => acc + (it.mrp * it.qty), 0);
+      const saleTotal = state.items.reduce((acc, it) => acc + (it.salePrice * it.qty), 0);
+      const wholesaleTotal = state.items.reduce((acc, it) => acc + (it.wholesalePrice * it.qty), 0);
+
+      let currentSubtotal = 0;
+      let mrpSavings = 0;
+      let wholesaleSavings = 0;
+
+      if (state.priceMode === 'Sale') {
+        currentSubtotal = saleTotal;
+        mrpSavings = Math.max(0, mrpTotal - saleTotal);
+      } else if (state.priceMode === 'MRP') {
+        currentSubtotal = mrpTotal;
+        mrpSavings = 0; // Strictly 0 in MRP mode!
+      } else if (state.priceMode === 'Bulk') {
+        currentSubtotal = wholesaleTotal;
+        wholesaleSavings = Math.max(0, saleTotal - wholesaleTotal);
+        mrpSavings = 0; // Strictly 0 in Bulk mode!
+      }
+
+      // Manual Discount
+      let manualDiscountVal = 0;
+      if (state.discountUnit === 'percent') {
+        manualDiscountVal = (currentSubtotal * state.discountAmount) / 100;
+      } else {
+        manualDiscountVal = state.discountAmount;
+      }
+      manualDiscountVal = Math.min(manualDiscountVal, currentSubtotal);
+
+      const grandTotal = Math.max(0, currentSubtotal - manualDiscountVal);
+      const totalCustomerSavings = mrpSavings + manualDiscountVal;
+      const savingsPct = mrpTotal > 0 ? Math.round((totalCustomerSavings / mrpTotal) * 100) : 0;
+      const mrpDiscountOnlyPct = mrpTotal > 0 ? Math.round((mrpSavings / mrpTotal) * 100) : 0;
+
+      return {
+        mrpTotal,
+        saleTotal,
+        wholesaleTotal,
+        currentSubtotal,
+        mrpSavings,
+        wholesaleSavings,
+        manualDiscountVal,
+        grandTotal,
+        totalCustomerSavings,
+        savingsPct,
+        mrpDiscountOnlyPct
+      };
+    }
+
+    // Render Phone Screen & Receipts
+    function render() {
+      const calc = computeCart();
+
+      // 1. Update Mode Chips
+      document.getElementById('chip-sale').className = `mode-chip mode-sale ${state.priceMode === 'Sale' ? 'active' : ''}`;
+      document.getElementById('chip-mrp').className = `mode-chip mode-mrp ${state.priceMode === 'MRP' ? 'active' : ''}`;
+      document.getElementById('chip-bulk').className = `mode-chip mode-bulk ${state.priceMode === 'Bulk' ? 'active' : ''}`;
+
+      // 2. Header Cart Summary
+      document.getElementById('cart-summary-text').innerText = `2 products • 2 units • ${formatTaka(calc.currentSubtotal)}`;
+
+      // 3. Header Savings Pill & Hero Card (ONLY in Sale Mode)
+      const headerPill = document.getElementById('header-savings-pill');
+      const heroCard = document.getElementById('savings-hero-card');
+      const modeInactiveBanner = document.getElementById('mode-inactive-banner');
+      const summarySavingsRow = document.getElementById('summary-savings-row');
+
+      if (state.priceMode === 'Sale' && calc.mrpSavings > 0) {
+        headerPill.style.display = 'flex';
+        heroCard.style.display = 'flex';
+        modeInactiveBanner.style.display = 'none';
+        summarySavingsRow.style.display = 'flex';
+
+        // Update Pill Text
+        document.getElementById('header-pill-text').innerText = `Customer Saves ${formatTaka(calc.totalCustomerSavings)} (${calc.savingsPct}%) vs MRP!`;
+
+        // Update Hero Card
+        document.getElementById('hero-badge-pct').innerText = `${calc.savingsPct}% OFF`;
+        document.getElementById('hero-mrp-total').innerText = formatTakaDec(calc.mrpTotal);
+        document.getElementById('hero-sale-discount').innerText = `-${formatTakaDec(calc.mrpSavings)}`;
+        
+        if (calc.manualDiscountVal > 0) {
+          document.getElementById('hero-extra-discount-row').style.display = 'flex';
+          document.getElementById('hero-extra-discount-val').innerText = `-${formatTakaDec(calc.manualDiscountVal)}`;
+        } else {
+          document.getElementById('hero-extra-discount-row').style.display = 'none';
+        }
+
+        document.getElementById('hero-total-savings').innerText = `${formatTakaDec(calc.totalCustomerSavings)} (${calc.savingsPct}% Total Saved)`;
+
+        // Update Summary Row
+        document.getElementById('summary-savings-val').innerText = `-${formatTaka(calc.mrpSavings)}`;
+
+      } else {
+        // HIDE in MRP or Bulk Mode!
+        headerPill.style.display = 'none';
+        heroCard.style.display = 'none';
+        summarySavingsRow.style.display = 'none';
+        modeInactiveBanner.style.display = 'block';
+
+        if (state.priceMode === 'MRP') {
+          document.getElementById('mode-inactive-text').innerText = 'ℹ️ MRP Mode active: Items billed at full Maximum Retail Price (no MRP discount).';
+        } else if (state.priceMode === 'Bulk') {
+          document.getElementById('mode-inactive-text').innerText = `📦 Wholesale Bulk Mode: Wholesale rate applied (Bulk savings ${formatTaka(calc.wholesaleSavings)}). MRP retail discount inactive.`;
+        }
+      }
+
+      // 4. Manual Discount Row in Summary
+      const manualDiscRow = document.getElementById('summary-manual-discount-row');
+      if (calc.manualDiscountVal > 0) {
+        manualDiscRow.style.display = 'flex';
+        document.getElementById('summary-manual-discount-val').innerText = `-${formatTaka(calc.manualDiscountVal)}`;
+      } else {
+        manualDiscRow.style.display = 'none';
+      }
+
+      // 5. Subtotal and Grand Total in Phone
+      document.getElementById('subtotal-label').innerText = state.priceMode === 'Bulk' ? 'Subtotal (Wholesale)' : (state.priceMode === 'MRP' ? 'Subtotal (MRP)' : 'Subtotal');
+      const effectiveCartSubtotal = (state.priceMode === 'Sale' && calc.mrpSavings > 0) ? calc.mrpSubtotal : calc.currentSubtotal;
+      document.getElementById('subtotal-val').innerText = formatTaka(effectiveCartSubtotal);
+      document.getElementById('grand-total-val').innerText = formatTaka(calc.grandTotal);
+      document.getElementById('cash-received-input').value = Math.round(calc.grandTotal);
+
+      // 6. Update Thermal Receipts
+      updateReceipts();
+    }
+
+    function updateReceipts() {
+      const calc = computeCart();
+      const showSavingsOnSlip = state.showReceiptSavings && state.priceMode === 'Sale' && calc.mrpSavings > 0;
+
+      // English Slip
+      const itemUnitPrice = state.priceMode === 'Sale' ? 200 : (state.priceMode === 'MRP' ? 250 : 180);
+      const displayPriceEn = showSavingsOnSlip ? 250 : itemUnitPrice;
+      document.getElementById('rcpt-en-p1-price').innerText = formatTaka(displayPriceEn);
+      document.getElementById('rcpt-en-p1-total').innerText = formatTaka(displayPriceEn);
+      document.getElementById('rcpt-en-p2-price').innerText = formatTaka(displayPriceEn);
+      document.getElementById('rcpt-en-p2-total').innerText = formatTaka(displayPriceEn);
+
+      const showItemSub = state.priceMode === 'Sale' && state.itemByItemDiscount;
+      document.getElementById('rcpt-en-p1-sub').style.display = showItemSub ? 'flex' : 'none';
+      document.getElementById('rcpt-en-p2-sub').style.display = showItemSub ? 'flex' : 'none';
+      if (showItemSub) {
+        document.getElementById('rcpt-en-p1-sub').innerHTML = '<span>&nbsp;&nbsp;Offer: ৳200 (Save ৳50)</span>';
+        document.getElementById('rcpt-en-p2-sub').innerHTML = '<span>&nbsp;&nbsp;Offer: ৳200 (Save ৳50)</span>';
+      }
+
+      document.getElementById('rcpt-en-subtotal-lbl').innerText = 'Subtotal:';
+      const effectiveSubtotalEn = showSavingsOnSlip ? calc.mrpSubtotal : calc.currentSubtotal;
+      document.getElementById('rcpt-en-subtotal-val').innerText = formatTakaDec(effectiveSubtotalEn);
+
+      // Discount rows on EN receipt
+      const mrpDiscRowEn = document.getElementById('rcpt-en-mrp-discount-row');
+      const bannerEn = document.getElementById('rcpt-en-savings-banner');
+
+      if (showSavingsOnSlip) {
+        mrpDiscRowEn.style.display = 'flex';
+        mrpDiscRowEn.children[1].innerText = `-${formatTakaDec(calc.mrpSavings)}`;
+        bannerEn.style.display = 'block';
+        bannerEn.innerText = `*** YOU SAVED: ${formatTakaDec(calc.totalCustomerSavings)} (${calc.savingsPct}%) vs MRP ***`;
+      } else {
+        mrpDiscRowEn.style.display = 'none';
+        bannerEn.style.display = 'none';
+      }
+
+      const manualDiscRowEn = document.getElementById('rcpt-en-manual-discount-row');
+      if (calc.manualDiscountVal > 0) {
+        manualDiscRowEn.style.display = 'flex';
+        manualDiscRowEn.children[1].innerText = `-${formatTakaDec(calc.manualDiscountVal)}`;
+      } else {
+        manualDiscRowEn.style.display = 'none';
+      }
+
+      document.getElementById('rcpt-en-grand-total').innerText = formatTakaDec(calc.grandTotal);
+      document.getElementById('rcpt-en-paid').innerText = formatTakaDec(calc.grandTotal);
+      document.getElementById('rcpt-en-pay-method').innerText = state.paymentMethod;
+
+      // Bengali Slip
+      const displayPriceBn = showSavingsOnSlip ? 250 : itemUnitPrice;
+      document.getElementById('rcpt-bn-p1-price').innerText = formatTakaBn(displayPriceBn);
+      document.getElementById('rcpt-bn-p1-total').innerText = formatTakaBn(displayPriceBn);
+      document.getElementById('rcpt-bn-p2-price').innerText = formatTakaBn(displayPriceBn);
+      document.getElementById('rcpt-bn-p2-total').innerText = formatTakaBn(displayPriceBn);
+
+      document.getElementById('rcpt-bn-p1-sub').style.display = showItemSub ? 'flex' : 'none';
+      document.getElementById('rcpt-bn-p2-sub').style.display = showItemSub ? 'flex' : 'none';
+      if (showItemSub) {
+        document.getElementById('rcpt-bn-p1-sub').innerHTML = '<span>&nbsp;&nbsp;অফার: ৳২০০ (সাশ্রয় ৳৫০)</span>';
+        document.getElementById('rcpt-bn-p2-sub').innerHTML = '<span>&nbsp;&nbsp;অফার: ৳২০০ (সাশ্রয় ৳৫০)</span>';
+      }
+
+      document.getElementById('rcpt-bn-subtotal-lbl').innerText = 'উপমোট:';
+      const effectiveSubtotalBn = showSavingsOnSlip ? calc.mrpSubtotal : calc.currentSubtotal;
+      document.getElementById('rcpt-bn-subtotal-val').innerText = formatTakaBnDec(effectiveSubtotalBn);
+
+      const mrpDiscRowBn = document.getElementById('rcpt-bn-mrp-discount-row');
+      const bannerBn = document.getElementById('rcpt-bn-savings-banner');
+
+      if (showSavingsOnSlip) {
+        mrpDiscRowBn.style.display = 'flex';
+        mrpDiscRowBn.children[1].innerText = `-${formatTakaBnDec(calc.mrpSavings)}`;
+        bannerBn.style.display = 'block';
+        bannerBn.innerText = `*** আপনি সাশ্রয় করেছেন: ${formatTakaBnDec(calc.totalCustomerSavings)} (${toBnNum(calc.savingsPct)}%) ***`;
+      } else {
+        mrpDiscRowBn.style.display = 'none';
+        bannerBn.style.display = 'none';
+      }
+
+      const manualDiscRowBn = document.getElementById('rcpt-bn-manual-discount-row');
+      if (calc.manualDiscountVal > 0) {
+        manualDiscRowBn.style.display = 'flex';
+        manualDiscRowBn.children[1].innerText = `-${formatTakaBnDec(calc.manualDiscountVal)}`;
+      } else {
+        manualDiscRowBn.style.display = 'none';
+      }
+
+      document.getElementById('rcpt-bn-grand-total').innerText = formatTakaBnDec(calc.grandTotal);
+      document.getElementById('rcpt-bn-paid').innerText = formatTakaBnDec(calc.grandTotal);
+      document.getElementById('rcpt-bn-pay-method').innerText = state.paymentMethod === 'Cash' ? 'নগদ (Cash)' : state.paymentMethod;
+    }
+
+    // Handlers
+    function setItemByItemDiscount(enable) {
+      state.itemByItemDiscount = enable;
+
+      // Settings panel buttons
+      const btnItem = document.getElementById('btn-itemized');
+      const btnSumm = document.getElementById('btn-summary-only');
+      if (btnItem && btnSumm) {
+        btnItem.style.background = enable ? '#10B981' : '';
+        btnItem.style.color = enable ? 'white' : '';
+        btnSumm.style.background = !enable ? '#10B981' : '';
+        btnSumm.style.color = !enable ? 'white' : '';
+      }
+
+      // Phone Hero card buttons
+      const pItem = document.getElementById('phone-btn-itemized');
+      const pSumm = document.getElementById('phone-btn-summary');
+      if (pItem && pSumm) {
+        pItem.style.background = enable ? '#10B981' : 'transparent';
+        pItem.style.color = enable ? 'white' : '#065F46';
+        pItem.style.fontWeight = enable ? '800' : '700';
+
+        pSumm.style.background = !enable ? '#10B981' : 'transparent';
+        pSumm.style.color = !enable ? 'white' : '#065F46';
+        pSumm.style.fontWeight = !enable ? '800' : '700';
+      }
+
+      // Review modal comparison
+      const m1 = document.getElementById('modal-p1-comp');
+      const m2 = document.getElementById('modal-p2-comp');
+      if (m1 && m2) {
+        m1.style.display = enable ? 'flex' : 'none';
+        m2.style.display = enable ? 'flex' : 'none';
+      }
+
+      updateReceipts();
+    }
+
+    function setPriceMode(mode) {
+      state.priceMode = mode;
+      render();
+    }
+
+    function toggleDiscountUnit() {
+      state.discountUnit = state.discountUnit === 'taka' ? 'percent' : 'taka';
+      document.getElementById('discount-unit-label').innerText = state.discountUnit === 'taka' ? '৳' : '%';
+      render();
+    }
+
+    function onDiscountChanged() {
+      const val = parseFloat(document.getElementById('discount-input').value) || 0;
+      state.discountAmount = Math.max(0, val);
+      render();
+    }
+
+    function selectPaymentMethod(elem, method) {
+      document.querySelectorAll('.pay-chip').forEach(el => el.classList.remove('selected'));
+      elem.classList.add('selected');
+      state.paymentMethod = method;
+      render();
+    }
+
+    function setQuickCash(type) {
+      const calc = computeCart();
+      if (type === 'exact') {
+        document.getElementById('cash-received-input').value = Math.round(calc.grandTotal);
+      } else {
+        const cur = parseFloat(document.getElementById('cash-received-input').value) || Math.round(calc.grandTotal);
+        document.getElementById('cash-received-input').value = cur + type;
+      }
+    }
+
+    function setRollWidth(w) {
+      state.paperWidth = w;
+      document.getElementById('btn-roll-80').style.background = w === 80 ? '#10B981' : '';
+      document.getElementById('btn-roll-80').style.color = w === 80 ? 'white' : '';
+      document.getElementById('btn-roll-58').style.background = w === 58 ? '#10B981' : '';
+      document.getElementById('btn-roll-58').style.color = w === 58 ? 'white' : '';
+
+      const slips = document.querySelectorAll('.receipt-paper');
+      slips.forEach(s => {
+        if (w === 58) {
+          s.style.width = '270px';
+          s.style.fontSize = '11px';
+        } else {
+          s.style.width = '100%';
+          s.style.fontSize = '12px';
+        }
+      });
+    }
+
+    function openReviewModal() {
+      document.getElementById('review-modal').classList.add('active');
+    }
+
+    function closeReviewModal(e) {
+      if (!e || e.target.id === 'review-modal' || e.target.classList.contains('modal-close-btn')) {
+        document.getElementById('review-modal').classList.remove('active');
+      }
+    }
+
+    function switchLanguage() {
+      const bnReceipt = document.getElementById('receipt-bn');
+      const enReceipt = document.getElementById('receipt-en');
+      const btnText = document.getElementById('lang-btn-text');
+
+      if (bnReceipt.style.order === '-1') {
+        bnReceipt.style.order = '1';
+        enReceipt.style.order = '-1';
+        btnText.innerText = '🌐 বাংলা সংস্করণ';
+      } else {
+        bnReceipt.style.order = '-1';
+        enReceipt.style.order = '1';
+        btnText.innerText = '🌐 English Receipt';
+      }
+    }
+
+    function printReceiptMock() {
+      const calc = computeCart();
+      alert(`🖨️ Thermal Print Signal Sent!\n\nShop: TECHYFI SUPERSTORE\nPrice Mode: ${state.priceMode}\nGrand Total: ${formatTakaDec(calc.grandTotal)}\n${state.priceMode === 'Sale' ? `MRP Savings Printed: ${formatTakaDec(calc.totalCustomerSavings)} (${calc.savingsPct}%)` : 'No MRP discount on receipt'}`);
+    }
+
+    function simulateCompleteSale() {
+      const calc = computeCart();
+      let msg = `✅ Sale Completed Successfully!\n\nPrice Mode: ${state.priceMode}\nSubtotal: ${formatTakaDec(calc.currentSubtotal)}\n`;
+      if (state.priceMode === 'Sale') {
+        msg += `Customer MRP Savings: ${formatTakaDec(calc.totalCustomerSavings)} (${calc.savingsPct}% OFF)\n`;
+      }
+      msg += `Grand Total: ${formatTakaDec(calc.grandTotal)}\nPayment: ${state.paymentMethod}\n\nReceipt will print automatically.`;
+      alert(msg);
+    }
+
+    // Initialize
+    render();
+  </script>
+</body>
+</html>

@@ -134,6 +134,7 @@ fun SalesHistoryScreen(
     var showEndPicker by remember { mutableStateOf(false) }
     var selectedSaleDetail by remember { mutableStateOf<SaleWithItems?>(null) }
     var deleteTarget by remember { mutableStateOf<SaleWithItems?>(null) }
+    var deleteReason by remember { mutableStateOf("") }
     var deleteInProgress by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showFilters by remember { mutableStateOf(false) }
@@ -604,18 +605,39 @@ fun SalesHistoryScreen(
         val deletedMessage = stringResource(R.string.sales_history_invoice_deleted, target.sale.id)
         val deleteFailedMessage = stringResource(R.string.sales_history_invoice_delete_failed)
         AlertDialog(
-            onDismissRequest = { if (!deleteInProgress) deleteTarget = null },
+            onDismissRequest = {
+                if (!deleteInProgress) {
+                    deleteTarget = null
+                    deleteReason = ""
+                }
+            },
             title = { Text(stringResource(R.string.sales_history_delete_invoice_title)) },
-            text = { Text(stringResource(R.string.sales_history_delete_invoice_message, target.sale.id)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(stringResource(R.string.sales_history_delete_invoice_message, target.sale.id))
+                    OutlinedTextField(
+                        value = deleteReason,
+                        onValueChange = { deleteReason = it },
+                        label = { Text("Cancellation / Void Reason") },
+                        placeholder = { Text("e.g. Customer cancelled order") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
             confirmButton = {
                 Button(
                     enabled = !deleteInProgress,
                     onClick = {
                         deleteInProgress = true
                         scope.launch {
-                            val deleted = salesViewModel.deleteSaleAndAwait(target.sale.id)
+                            val reason = deleteReason.ifBlank { "Invoice #${target.sale.id} Deleted" }
+                            val deleted = salesViewModel.deleteSaleAndAwait(target.sale.id, reason)
                             deleteInProgress = false
-                            if (deleted) deleteTarget = null
+                            if (deleted) {
+                                deleteTarget = null
+                                deleteReason = ""
+                            }
                             Toast.makeText(
                                 context,
                                 if (deleted) deletedMessage else deleteFailedMessage,
@@ -630,7 +652,10 @@ fun SalesHistoryScreen(
                 }
             },
             dismissButton = {
-                TextButton(enabled = !deleteInProgress, onClick = { deleteTarget = null }) {
+                TextButton(enabled = !deleteInProgress, onClick = {
+                    deleteTarget = null
+                    deleteReason = ""
+                }) {
                     Text(stringResource(R.string.cancel))
                 }
             }
@@ -1475,7 +1500,7 @@ private fun SaleDetailDialog(
                     onClick = {
                         showEditConfirm = false
                         scope.launch {
-                            val voided = salesViewModel?.deleteSaleAndAwait(saleWithItems.sale.id) ?: false
+                            val voided = salesViewModel?.deleteSaleAndAwait(saleWithItems.sale.id, "Voided for Edit") ?: false
                             if (voided && cartViewModel != null) {
                                 val skipped = cartViewModel.loadFromPastSale(saleWithItems, replaceCart = true)
                                 if (skipped > 0) {

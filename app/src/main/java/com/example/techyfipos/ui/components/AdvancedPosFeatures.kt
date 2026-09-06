@@ -130,6 +130,7 @@ private fun expenseCategoryDisplayName(category: String): String = when (categor
     "Transport" -> stringResource(R.string.category_transport)
     "Shop Rent" -> stringResource(R.string.category_shop_rent)
     "Cleaning" -> stringResource(R.string.category_cleaning)
+    "Supplier Payment" -> stringResource(R.string.expense_category_supplier_payment)
     "Other" -> stringResource(R.string.category_other)
     else -> category
 }
@@ -1181,7 +1182,7 @@ fun AddExpenseDialog(
     val categories = if (isCashIn) {
         listOf("Float In", "Owner Capital", "Change Exchange", "Other")
     } else {
-        listOf("Tea & Refreshments", "Staff Meal", "Electricity (Token)", "Transport", "Shop Rent", "Cleaning", "Other")
+        listOf("Tea & Refreshments", "Staff Meal", "Electricity (Token)", "Transport", "Shop Rent", "Cleaning", "Supplier Payment", "Other")
     }
 
     val sources = listOf("Cash", "bKash", "Nagad", "Bank")

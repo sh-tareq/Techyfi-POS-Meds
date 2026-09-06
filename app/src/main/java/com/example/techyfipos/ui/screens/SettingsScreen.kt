@@ -59,6 +59,7 @@ import com.example.techyfipos.utils.printBillJpeg
 import com.example.techyfipos.utils.convertToMonochromeThresholdBitmap
 import com.example.techyfipos.utils.triggerCashDrawerKick
 import com.example.techyfipos.utils.shareReceiptAsText
+import com.example.techyfipos.utils.restartApp
 import com.example.techyfipos.R
 import com.example.techyfipos.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.Dispatchers
@@ -221,15 +222,19 @@ private fun OptimizedSettingsHome(
     paperRollWidthMm: Int = 80,
     currentLanguage: String,
     currentThemeMode: String = "SYSTEM",
+    currentLayoutMode: String = "AUTO",
     receiptConfigured: Boolean,
     driveConnected: Boolean,
     taxEnabled: Boolean,
+    allowNegativeInventory: Boolean = false,
+    onAllowNegativeInventoryChanged: (Boolean) -> Unit = {},
     cashDrawerKickEnabled: Boolean = true,
     onCashDrawerKickChanged: (Boolean) -> Unit = {},
     cashDrawerPrinterAddress: String = "",
     onCashDrawerPrinterSelected: (String) -> Unit = {},
     onLanguageSelected: (String) -> Unit,
     onThemeModeSelected: (String) -> Unit = {},
+    onLayoutModeSelected: (String) -> Unit = {},
     onExpensesClick: () -> Unit = {},
     onSuppliersClick: () -> Unit = {},
     onReceiptClick: () -> Unit,
@@ -262,7 +267,7 @@ private fun OptimizedSettingsHome(
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Realistic3DLangIcon(size = 28.dp)
+                Realistic3DLangGlobeIcon(size = 32.dp)
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(stringResource(R.string.settings_app_language_title), fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -299,7 +304,7 @@ private fun OptimizedSettingsHome(
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Realistic3DThemeIcon(size = 28.dp)
+                Realistic3DThemeEclipseIcon(size = 32.dp)
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(stringResource(R.string.settings_theme_mode_title), fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -334,6 +339,70 @@ private fun OptimizedSettingsHome(
         }
     }
 
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Realistic3DDeviceLayoutIcon(size = 32.dp)
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(stringResource(R.string.settings_ui_layout_title), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(
+                        stringResource(R.string.settings_ui_layout_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = currentLayoutMode == "AUTO",
+                    onClick = { onLayoutModeSelected("AUTO") },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                    modifier = Modifier.weight(1f)
+                ) { 
+                    Text(
+                        stringResource(R.string.settings_ui_layout_auto),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    ) 
+                }
+                SegmentedButton(
+                    selected = currentLayoutMode == "TABLET",
+                    onClick = { onLayoutModeSelected("TABLET") },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                    modifier = Modifier.weight(1f)
+                ) { 
+                    Text(
+                        stringResource(R.string.settings_ui_layout_tablet),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    ) 
+                }
+                SegmentedButton(
+                    selected = currentLayoutMode == "PHONE",
+                    onClick = { onLayoutModeSelected("PHONE") },
+                    shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                    modifier = Modifier.weight(1f)
+                ) { 
+                    Text(
+                        stringResource(R.string.settings_ui_layout_phone),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    ) 
+                }
+            }
+        }
+    }
+
     SettingsSectionLabel(stringResource(R.string.settings_section_business_setup))
     SettingsGroup {
         SettingsNavigationRow3D(
@@ -349,7 +418,7 @@ private fun OptimizedSettingsHome(
     SettingsSectionLabel(stringResource(R.string.settings_section_business_rules))
     SettingsGroup {
         SettingsNavigationRow3D(
-            icon = { Realistic3DPrinterIcon(size = 32.dp) },
+            icon = { Realistic3DTaxCalculatorIcon(size = 32.dp) },
             title = stringResource(R.string.settings_row_tax_title),
             subtitle = stringResource(R.string.settings_row_tax_subtitle),
             status = if (taxEnabled) stringResource(R.string.settings_status_on) else stringResource(R.string.settings_status_off),
@@ -358,13 +427,41 @@ private fun OptimizedSettingsHome(
         )
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
         SettingsNavigationRow3D(
-            icon = { Realistic3DGearIcon(size = 32.dp) },
+            icon = { Realistic3DStaffShieldLockIcon(size = 32.dp) },
             title = stringResource(R.string.settings_row_staff_pins_title),
             subtitle = stringResource(R.string.settings_row_staff_pins_subtitle),
             status = stringResource(R.string.settings_status_owner_only),
             statusColor = MaterialTheme.colorScheme.primary,
             onClick = onManageUsersClick
         )
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Realistic3DNegativeStockWarningIcon(size = 32.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text("Allow Negative Inventory", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(
+                        "Permit cashiers to complete sales even if an item is out of stock (0 or negative)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Switch(
+                checked = allowNegativeInventory,
+                onCheckedChange = onAllowNegativeInventoryChanged
+            )
+        }
     }
 
     SettingsSectionLabel(stringResource(R.string.settings_section_hardware_cash_drawer))
@@ -376,13 +473,20 @@ private fun OptimizedSettingsHome(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.settings_cash_drawer_kick_title), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(
-                    stringResource(R.string.settings_cash_drawer_kick_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(
+                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Realistic3DCashDrawerKickIcon(size = 32.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(stringResource(R.string.settings_cash_drawer_kick_title), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(
+                        stringResource(R.string.settings_cash_drawer_kick_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             Switch(
                 checked = cashDrawerKickEnabled,
@@ -399,13 +503,23 @@ private fun OptimizedSettingsHome(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
-                    Text(stringResource(R.string.settings_bluetooth_printer_label), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                    Text(
-                        if (cashDrawerPrinterAddress.isBlank()) stringResource(R.string.settings_bluetooth_not_paired) else cashDrawerPrinterAddress,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Realistic3DBluetoothPrinterIcon(
+                        size = 32.dp,
+                        isConnected = cashDrawerPrinterAddress.isNotBlank()
                     )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(stringResource(R.string.settings_bluetooth_printer_label), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (cashDrawerPrinterAddress.isBlank()) stringResource(R.string.settings_bluetooth_not_paired) else cashDrawerPrinterAddress,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                    }
                 }
                 Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
@@ -429,6 +543,8 @@ private fun OptimizedSettingsHome(
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                 ) {
+                    Realistic3DVoltPulseKickIcon(size = 18.dp)
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(stringResource(R.string.settings_test_kick_button), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -445,8 +561,49 @@ private fun OptimizedSettingsHome(
             onDismiss = { showPrinterPicker = false }
         )
     }
-    TextButton(onClick = onLogoutClick, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.settings_log_out_button))
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onLogoutClick),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFF43F5E).copy(alpha = 0.08f)
+        ),
+        border = BorderStroke(1.dp, Color(0xFFF43F5E).copy(alpha = 0.3f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Realistic3DLogoutVaultIcon(size = 32.dp)
+                Column {
+                    Text(
+                        text = stringResource(R.string.settings_log_out_button),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = Color(0xFFF43F5E)
+                    )
+                    Text(
+                        text = "Lock register session & return to cashier PIN entry",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                contentDescription = null,
+                tint = Color(0xFFF43F5E),
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 
     SettingsSectionLabel(stringResource(R.string.settings_section_data_management_cloud))
@@ -1339,6 +1496,76 @@ private fun ReceiptLayoutSettings(
                 }
             }
 
+            var showBtPrinterPicker by remember { mutableStateOf(false) }
+
+            if (showBtPrinterPicker) {
+                BluetoothPrinterPickerDialog(
+                    currentAddress = currentSettings.directBluetoothPrinterAddress,
+                    onSelected = { addr ->
+                        onSettingsChanged(currentSettings.copy(directBluetoothPrinterAddress = addr))
+                        showBtPrinterPicker = false
+                    },
+                    onDismiss = { showBtPrinterPicker = false }
+                )
+            }
+
+            // Direct Bluetooth ESC/POS Printing Driver
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                            Text(
+                                text = "Direct Bluetooth ESC/POS Driver",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Bypass Android Print Spooler for instant, ultra-fast thermal printing",
+                                fontSize = 10.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = currentSettings.directBluetoothPrintEnabled,
+                            onCheckedChange = { onSettingsChanged(currentSettings.copy(directBluetoothPrintEnabled = it)) }
+                        )
+                    }
+                    if (currentSettings.directBluetoothPrintEnabled) {
+                        OutlinedButton(
+                            onClick = { showBtPrinterPicker = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.Bluetooth, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (currentSettings.directBluetoothPrinterAddress.isNotBlank())
+                                    "Printer: ${currentSettings.directBluetoothPrinterAddress}"
+                                else
+                                    "Select Paired Bluetooth Thermal Printer",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.settings_show_store_address), fontSize = 13.sp)
                 Switch(checked = currentSettings.showAddress, onCheckedChange = { onSettingsChanged(currentSettings.copy(showAddress = it)) })
@@ -1362,6 +1589,21 @@ private fun ReceiptLayoutSettings(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.settings_show_discount_line), fontSize = 13.sp)
                 Switch(checked = currentSettings.showDiscount, onCheckedChange = { onSettingsChanged(currentSettings.copy(showDiscount = it)) })
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.settings_show_mrp_discount_sale_mode), fontSize = 13.sp)
+                Switch(checked = currentSettings.showMrpDiscountInSaleMode, onCheckedChange = { onSettingsChanged(currentSettings.copy(showMrpDiscountInSaleMode = it)) })
+            }
+
+            if (currentSettings.showMrpDiscountInSaleMode) {
+                Row(modifier = Modifier.fillMaxWidth().padding(start = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                        Text(stringResource(R.string.settings_show_item_wise_mrp_discount), fontSize = 12.5.sp)
+                        Text(stringResource(R.string.settings_item_by_item_discount_desc), fontSize = 11.sp, color = Color.Gray)
+                    }
+                    Switch(checked = currentSettings.showItemWiseMrpDiscount, onCheckedChange = { onSettingsChanged(currentSettings.copy(showItemWiseMrpDiscount = it)) })
+                }
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -1932,10 +2174,13 @@ private fun OptimizedBackupSettings(
     isBackingUpToDrive: Boolean,
     onLocalBackup: () -> Unit,
     onLocalRestore: () -> Unit,
+    onExportEncryptedBackup: () -> Unit = {},
+    onImportEncryptedBackup: () -> Unit = {},
     onGoogleSignIn: () -> Unit,
     onGoogleSignOut: () -> Unit,
     onDriveBackupNow: () -> Unit,
     onOpenDriveHistory: () -> Unit,
+    onTestDriveConnection: () -> Unit = {},
     onDriveSettingsChanged: (Boolean, String, String, Int) -> Unit,
     onLocalAutoBackupChanged: (Boolean, String) -> Unit
 ) {
@@ -2113,6 +2358,20 @@ private fun OptimizedBackupSettings(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(stringResource(R.string.settings_button_history), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
+                    }
+
+                    OutlinedButton(
+                        onClick = onTestDriveConnection,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(38.dp),
+                        shape = RoundedCornerShape(11.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                    ) {
+                        Icon(Icons.Default.NetworkCheck, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Test Drive Connection Status", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -2408,6 +2667,53 @@ private fun OptimizedBackupSettings(
                             Column {
                                 Text(stringResource(R.string.settings_restore_file_title), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 Text(stringResource(R.string.settings_load_local_json), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+
+                // Encrypted Backup Row (.posenc)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Column {
+                                Text("Encrypted Standalone Vault (.posenc)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text("Password protected AES-256-GCM encrypted backup file", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = onExportEncryptedBackup,
+                                modifier = Modifier.weight(1f).height(38.dp),
+                                shape = RoundedCornerShape(9.dp)
+                            ) {
+                                Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Export .posenc", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = onImportEncryptedBackup,
+                                modifier = Modifier.weight(1f).height(38.dp),
+                                shape = RoundedCornerShape(9.dp)
+                            ) {
+                                Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Import .posenc", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -2983,9 +3289,9 @@ private fun buildSettingsPreviewBill(settings: InvoiceSettingsData): BillData = 
         settings.phonePrimary
     },
     items = listOf(
-        BillLineItem("Aci Nazir 5 Kg", 1.0, 530.0, 530.0),
-        BillLineItem("Aci Suji 500 gm", 1.0, 48.0, 48.0),
-        BillLineItem("Ama 3in1 Coffee", 1.0, 10.0, 10.0)
+        BillLineItem("Aci Nazir 5 Kg", 1.0, 530.0, 530.0, mrpPrice = 580.0),
+        BillLineItem("Aci Suji 500 gm", 1.0, 48.0, 48.0, mrpPrice = 55.0),
+        BillLineItem("Ama 3in1 Coffee", 1.0, 10.0, 10.0, mrpPrice = 12.0)
     ),
     subtotal = 588.0,
     discountValue = 10.0,
@@ -2998,7 +3304,11 @@ private fun buildSettingsPreviewBill(settings: InvoiceSettingsData): BillData = 
     logoUri = settings.logoUri,
     facebookUrl = settings.facebookUrl,
     cashierName = settings.cashierName,
-    settingsData = settings
+    settingsData = settings,
+    mrpSubtotal = 647.0,
+    mrpSavings = 59.0,
+    isSaleMode = true,
+    showItemWiseMrpDiscount = settings.showItemWiseMrpDiscount
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -3020,6 +3330,7 @@ fun SettingsScreen(
 
     val currentLang by settingsViewModel.language.collectAsStateWithLifecycle()
     val currentThemeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
+    val currentLayoutMode by settingsViewModel.uiLayoutMode.collectAsStateWithLifecycle()
     val invoiceSettingsData by settingsViewModel.invoiceSettingsData.collectAsStateWithLifecycle()
     var currentSettings by remember { mutableStateOf(InvoiceSettingsData()) }
 
@@ -3099,6 +3410,29 @@ fun SettingsScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         pendingRestoreUri = uri
+    }
+
+    var pendingEncryptedExportUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingEncryptedImportUri by remember { mutableStateOf<Uri?>(null) }
+    var showEncryptedExportPasswordDialog by remember { mutableStateOf(false) }
+    var showEncryptedImportPasswordDialog by remember { mutableStateOf(false) }
+
+    val exportEncryptedBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            pendingEncryptedExportUri = uri
+            showEncryptedExportPasswordDialog = true
+        }
+    }
+
+    val importEncryptedBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            pendingEncryptedImportUri = uri
+            showEncryptedImportPasswordDialog = true
+        }
     }
 
     // Google Identity Services authorization state. Drive permission is requested independently
@@ -3382,12 +3716,22 @@ fun SettingsScreen(
             )
         }
     ) { paddingValues ->
+        val homeScrollState = rememberScrollState()
+        val subpageScrollState = key(settingsPage) { rememberScrollState() }
+        val currentScrollState = if (settingsPage == SettingsPage.HOME) homeScrollState else subpageScrollState
+
+        LaunchedEffect(settingsPage) {
+            if (settingsPage != SettingsPage.HOME) {
+                currentScrollState.scrollTo(0)
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 14.dp, vertical = 12.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(currentScrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             when (settingsPage) {
@@ -3400,6 +3744,12 @@ fun SettingsScreen(
                     receiptConfigured = currentSettings.storeName.isNotBlank(),
                     driveConnected = driveConnection != null,
                     taxEnabled = currentSettings.taxEnabled,
+                    allowNegativeInventory = currentSettings.allowNegativeInventory,
+                    onAllowNegativeInventoryChanged = { enabled ->
+                        val updated = currentSettings.copy(allowNegativeInventory = enabled)
+                        currentSettings = updated
+                        settingsViewModel.saveInvoiceSettingsData(updated)
+                    },
                     cashDrawerKickEnabled = currentSettings.cashDrawerKickEnabled,
                     onCashDrawerKickChanged = { enabled ->
                         val updated = currentSettings.copy(cashDrawerKickEnabled = enabled)
@@ -3414,6 +3764,8 @@ fun SettingsScreen(
                     },
                     onLanguageSelected = settingsViewModel::saveLanguage,
                     onThemeModeSelected = settingsViewModel::saveThemeMode,
+                    currentLayoutMode = currentLayoutMode,
+                    onLayoutModeSelected = settingsViewModel::saveUiLayoutMode,
                     onExpensesClick = onExpensesClick,
                     onSuppliersClick = onSuppliersClick,
                     onReceiptClick = { settingsPage = SettingsPage.RECEIPT },
@@ -3589,9 +3941,33 @@ fun SettingsScreen(
                     },
                     onLocalRestore = {
                         if (isOwner) {
-                            restoreLauncher.launch(arrayOf("application/json"))
+                            restoreLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain", "*/*"))
                         } else {
                             Toast.makeText(context, "Only the shop owner can restore database backups", Toast.LENGTH_LONG).show()
+                        }
+                    },
+                    onExportEncryptedBackup = {
+                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        exportEncryptedBackupLauncher.launch("techyfi-pos-encrypted-$dateStr.posenc")
+                    },
+                    onImportEncryptedBackup = {
+                        if (isOwner) {
+                            importEncryptedBackupLauncher.launch(arrayOf("*/*"))
+                        } else {
+                            Toast.makeText(context, "Only the shop owner can restore database backups", Toast.LENGTH_LONG).show()
+                        }
+                    },
+                    onTestDriveConnection = {
+                        driveConnection?.let { connection ->
+                            scope.launch {
+                                Toast.makeText(context, "Testing Google Drive connection...", Toast.LENGTH_SHORT).show()
+                                val ok = GoogleDriveHelper.testDriveConnection(context, connection.email).isSuccess
+                                Toast.makeText(
+                                    context,
+                                    if (ok) "Google Drive connection test passed!" else "Google Drive test failed. Please re-authenticate.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
                         }
                     },
                     onGoogleSignIn = { requestDriveAuthorization() },
@@ -3691,7 +4067,12 @@ fun SettingsScreen(
                             settingsViewModel.restoreDatabase(input, BackupImportMode.REPLACE)
                         } ?: false
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(context, if (ok) context.getString(R.string.restore_success) else context.getString(R.string.restore_failed), Toast.LENGTH_LONG).show()
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.restore_success), Toast.LENGTH_SHORT).show()
+                                restartApp(context)
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.restore_failed), Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
                 }) { Text(stringResource(R.string.settings_button_replace_all_data)) }
@@ -3708,7 +4089,12 @@ fun SettingsScreen(
                             settingsViewModel.restoreDatabase(input, BackupImportMode.MERGE)
                         } ?: false
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(context, if (ok) context.getString(R.string.restore_success) else context.getString(R.string.restore_failed), Toast.LENGTH_LONG).show()
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.restore_success), Toast.LENGTH_SHORT).show()
+                                restartApp(context)
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.restore_failed), Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
                 }) { Text(stringResource(R.string.settings_button_merge)) }
@@ -3941,14 +4327,7 @@ fun SettingsScreen(
                                 inspectedBackupMetadata = null
                                 Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
                                 if (result.requiresUiReload) {
-                                    // Plain activity.recreate() is a config-change-style restart: the
-                                    // ViewModelStore survives it, so viewModel() just returns the old
-                                    // CartViewModel/SalesViewModel/etc still bound to the DataRepository
-                                    // that reloadRepositoryAfterDatabaseRestore() already closed/replaced.
-                                    // Clearing the store first forces every ViewModel to be rebuilt
-                                    // against the freshly restored repository.
-                                    (activity as? androidx.activity.ComponentActivity)?.viewModelStore?.clear()
-                                    activity?.recreate()
+                                    restartApp(context)
                                 }
                             }
                         }
@@ -4144,6 +4523,7 @@ fun SettingsScreen(
                             currentSettings = InvoiceSettingsData()
                             showResetConfirmDialog = false
                             Toast.makeText(context, context.getString(R.string.settings_toast_factory_reset_done), Toast.LENGTH_LONG).show()
+                            onLogout()
                         }
                     },
                     enabled = resetAcknowledged,
@@ -4296,6 +4676,225 @@ fun SettingsScreen(
             confirmButton = {
                 Button(onClick = { importFailureDetails = null }) {
                     Text(stringResource(R.string.settings_button_ok))
+                }
+            }
+        )
+    }
+
+    if (showEncryptedExportPasswordDialog && pendingEncryptedExportUri != null) {
+        val targetUri = pendingEncryptedExportUri!!
+        var password by remember { mutableStateOf("") }
+        var confirmPassword by remember { mutableStateOf("") }
+        var passwordVisible by remember { mutableStateOf(false) }
+        var errorMessage by remember { mutableStateOf<String?>(null) }
+        var isExporting by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = {
+                if (!isExporting) {
+                    showEncryptedExportPasswordDialog = false
+                    pendingEncryptedExportUri = null
+                }
+            },
+            icon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text("Set Backup Password", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Enter a password to encrypt this backup with AES-256-GCM. You will need this exact password to restore this file.",
+                        fontSize = 12.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it; errorMessage = null },
+                        label = { Text("Password (min 4 chars)") },
+                        singleLine = true,
+                        visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it; errorMessage = null },
+                        label = { Text("Confirm Password") },
+                        singleLine = true,
+                        visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    errorMessage?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (password.length < 4) {
+                            errorMessage = "Password must be at least 4 characters"
+                            return@Button
+                        }
+                        if (password != confirmPassword) {
+                            errorMessage = "Passwords do not match"
+                            return@Button
+                        }
+                        isExporting = true
+                        scope.launch(Dispatchers.IO) {
+                            val ok = try {
+                                context.contentResolver.openOutputStream(targetUri)?.use { out ->
+                                    settingsViewModel.exportEncryptedLocalBackup(out, password)
+                                } ?: false
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                false
+                            }
+                            withContext(Dispatchers.Main) {
+                                isExporting = false
+                                showEncryptedExportPasswordDialog = false
+                                pendingEncryptedExportUri = null
+                                Toast.makeText(
+                                    context,
+                                    if (ok) "Encrypted backup saved successfully (.posenc)!" else "Failed to export encrypted backup",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    },
+                    enabled = !isExporting
+                ) {
+                    if (isExporting) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("Encrypt & Save")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showEncryptedExportPasswordDialog = false
+                        pendingEncryptedExportUri = null
+                    },
+                    enabled = !isExporting
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showEncryptedImportPasswordDialog && pendingEncryptedImportUri != null) {
+        val targetUri = pendingEncryptedImportUri!!
+        var password by remember { mutableStateOf("") }
+        var passwordVisible by remember { mutableStateOf(false) }
+        var isReplacing by remember { mutableStateOf(true) }
+        var errorMessage by remember { mutableStateOf<String?>(null) }
+        var isImporting by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = {
+                if (!isImporting) {
+                    showEncryptedImportPasswordDialog = false
+                    pendingEncryptedImportUri = null
+                }
+            },
+            icon = { Icon(Icons.Default.Key, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text("Decrypt Backup File", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Enter the password used when creating this .posenc backup file.",
+                        fontSize = 12.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it; errorMessage = null },
+                        label = { Text("Backup Password") },
+                        singleLine = true,
+                        visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = isReplacing,
+                            onClick = { isReplacing = true },
+                            label = { Text("Full Replace") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = !isReplacing,
+                            onClick = { isReplacing = false },
+                            label = { Text("Merge") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    errorMessage?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (password.isBlank()) {
+                            errorMessage = "Please enter password"
+                            return@Button
+                        }
+                        isImporting = true
+                        scope.launch(Dispatchers.IO) {
+                            val mode = if (isReplacing) BackupImportMode.REPLACE else BackupImportMode.MERGE
+                            val ok = try {
+                                context.contentResolver.openInputStream(targetUri)?.use { input ->
+                                    settingsViewModel.importEncryptedLocalBackup(input, password, mode)
+                                } ?: false
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                false
+                            }
+                            withContext(Dispatchers.Main) {
+                                isImporting = false
+                                if (ok) {
+                                    showEncryptedImportPasswordDialog = false
+                                    pendingEncryptedImportUri = null
+                                    Toast.makeText(context, "Encrypted backup restored successfully!", Toast.LENGTH_LONG).show()
+                                    restartApp(context)
+                                } else {
+                                    errorMessage = "Decryption failed: Incorrect password or corrupted file."
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isImporting
+                ) {
+                    if (isImporting) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("Decrypt & Restore")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showEncryptedImportPasswordDialog = false
+                        pendingEncryptedImportUri = null
+                    },
+                    enabled = !isImporting
+                ) {
+                    Text("Cancel")
                 }
             }
         )

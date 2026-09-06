@@ -252,6 +252,11 @@ fun ProductsScreen(
     var stockCheckProduct by remember { mutableStateOf<Product?>(null) }
     var stockNotFoundBarcode by rememberSaveable { mutableStateOf<String?>(null) }
     var showBatchPrintDialog by rememberSaveable { mutableStateOf(false) }
+    var batchSelectMode by rememberSaveable { mutableStateOf(false) }
+    val selectedBarcodes = remember { mutableStateListOf<String>() }
+    var showBulkPriceDialog by rememberSaveable { mutableStateOf(false) }
+    var showBulkCategoryDialog by rememberSaveable { mutableStateOf(false) }
+    var showBulkDeleteDialog by rememberSaveable { mutableStateOf(false) }
 
     val exportSuccessToast = stringResource(R.string.products_export_success)
     val exportExcelLauncher = rememberLauncherForActivityResult(
@@ -292,6 +297,8 @@ fun ProductsScreen(
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
+                    val errorMsg = e.localizedMessage ?: "File could not be parsed"
+                    Toast.makeText(context, "Excel Import Failed: $errorMsg", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -711,7 +718,32 @@ fun ProductsScreen(
                                     showBatchPrintDialog = true
                                 }
                             )
+                            DropdownMenuItem(
+                                text = { Text(if (batchSelectMode) "Exit Batch Selection" else "Batch Operations (Select)", fontWeight = FontWeight.SemiBold) },
+                                leadingIcon = { Icon(Icons.Default.Checklist, null, tint = MaterialTheme.colorScheme.primary) },
+                                onClick = {
+                                    showExcelMenu = false
+                                    batchSelectMode = !batchSelectMode
+                                    if (!batchSelectMode) selectedBarcodes.clear()
+                                }
+                            )
                         }
+                    }
+
+                    // Batch Selection Toggle Button
+                    IconButton(
+                        onClick = {
+                            batchSelectMode = !batchSelectMode
+                            if (!batchSelectMode) selectedBarcodes.clear()
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
+                            contentDescription = "Batch Operations",
+                            tint = if (batchSelectMode) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
 
                     // 3D Metal Clipboard Ledger for Stock Audit
@@ -1031,6 +1063,116 @@ fun ProductsScreen(
                                     Text(stringResource(R.string.products_stock_alerts_label), fontSize = 8.5.sp, color = Color(0xFFA5B4FC), fontWeight = FontWeight.Bold)
                                     Text(stringResource(R.string.products_low_out_summary, lowStockCount, outOfStockCount), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCD34D))
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ⚡ Batch Product Operations Selection Bar
+            AnimatedVisibility(
+                visible = batchSelectMode,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                    shadowElevation = 2.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val allVisibleSelected = visibleProducts.isNotEmpty() && visibleProducts.all { it.barcode in selectedBarcodes }
+                            IconButton(
+                                onClick = {
+                                    if (allVisibleSelected) {
+                                        visibleProducts.forEach { selectedBarcodes.remove(it.barcode) }
+                                    } else {
+                                        visibleProducts.forEach {
+                                            if (it.barcode !in selectedBarcodes) selectedBarcodes.add(it.barcode)
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (allVisibleSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                    contentDescription = "Select All",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Text(
+                                text = "${selectedBarcodes.size} selected",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilledTonalButton(
+                                onClick = { showBulkPriceDialog = true },
+                                enabled = selectedBarcodes.isNotEmpty() && canEdit,
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("Price %", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            FilledTonalButton(
+                                onClick = { showBulkCategoryDialog = true },
+                                enabled = selectedBarcodes.isNotEmpty() && canEdit,
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("Category", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            if (canDelete) {
+                                Button(
+                                    onClick = { showBulkDeleteDialog = true },
+                                    enabled = selectedBarcodes.isNotEmpty(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Text("Delete", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onError)
+                                }
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    batchSelectMode = false
+                                    selectedBarcodes.clear()
+                                },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Exit Selection",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
                     }
@@ -1415,8 +1557,21 @@ fun ProductsScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(visibleProducts, key = { it.barcode }) { product ->
+                            val isSelected = product.barcode in selectedBarcodes
                             ProductItemRow(
                                 product = product,
+                                isSelectionMode = batchSelectMode,
+                                isSelected = isSelected,
+                                onToggleSelect = {
+                                    if (isSelected) selectedBarcodes.remove(product.barcode)
+                                    else selectedBarcodes.add(product.barcode)
+                                },
+                                onRowClick = {
+                                    if (batchSelectMode) {
+                                        if (isSelected) selectedBarcodes.remove(product.barcode)
+                                        else selectedBarcodes.add(product.barcode)
+                                    }
+                                },
                                 onAdjustStock = { stockCheckProduct = product },
                                 onEdit = { requestEditProduct(product) },
                                 onGenerateCode = {
@@ -1434,15 +1589,28 @@ fun ProductsScreen(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
+                        columns = GridCells.Adaptive(minSize = 160.dp),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 100.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         gridItems(visibleProducts, key = { it.barcode }) { product ->
+                            val isSelected = product.barcode in selectedBarcodes
                             ProductGridCard(
                                 product = product,
+                                isSelectionMode = batchSelectMode,
+                                isSelected = isSelected,
+                                onToggleSelect = {
+                                    if (isSelected) selectedBarcodes.remove(product.barcode)
+                                    else selectedBarcodes.add(product.barcode)
+                                },
+                                onCardClick = {
+                                    if (batchSelectMode) {
+                                        if (isSelected) selectedBarcodes.remove(product.barcode)
+                                        else selectedBarcodes.add(product.barcode)
+                                    }
+                                },
                                 onAdjustStock = { stockCheckProduct = product },
                                 onEdit = { requestEditProduct(product) },
                                 onGenerateCode = {
@@ -2306,7 +2474,294 @@ fun ProductsScreen(
             onDismiss = { showStockAuditHistoryModal = false }
         )
     }
+
+    // Bulk Operation Dialogs
+    if (showBulkPriceDialog) {
+        BulkPriceAdjustmentDialog(
+            selectedCount = selectedBarcodes.size,
+            onDismiss = { showBulkPriceDialog = false },
+            onApply = { percent, fixed ->
+                scope.launch {
+                    try {
+                        val count = selectedBarcodes.size
+                        productsViewModel.bulkUpdateProductPrices(
+                            barcodes = selectedBarcodes.toList(),
+                            percentDelta = percent,
+                            fixedDelta = fixed
+                        )
+                        Toast.makeText(context, "Prices updated for $count products", Toast.LENGTH_SHORT).show()
+                        selectedBarcodes.clear()
+                        batchSelectMode = false
+                        showBulkPriceDialog = false
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Price update failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        )
+    }
+
+    if (showBulkCategoryDialog) {
+        BulkCategoryReassignmentDialog(
+            selectedCount = selectedBarcodes.size,
+            existingCategories = availableCategories,
+            onDismiss = { showBulkCategoryDialog = false },
+            onApply = { newCat ->
+                scope.launch {
+                    try {
+                        val count = selectedBarcodes.size
+                        productsViewModel.bulkUpdateProductCategory(
+                            barcodes = selectedBarcodes.toList(),
+                            newCategory = newCat
+                        )
+                        Toast.makeText(context, "Category updated for $count products", Toast.LENGTH_SHORT).show()
+                        selectedBarcodes.clear()
+                        batchSelectMode = false
+                        showBulkCategoryDialog = false
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Category update failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        )
+    }
+
+    if (showBulkDeleteDialog) {
+        BulkDeleteConfirmationDialog(
+            selectedCount = selectedBarcodes.size,
+            onDismiss = { showBulkDeleteDialog = false },
+            onConfirm = {
+                scope.launch {
+                    try {
+                        val count = selectedBarcodes.size
+                        productsViewModel.bulkDeleteProducts(selectedBarcodes.toList())
+                        Toast.makeText(context, "Deleted $count products", Toast.LENGTH_SHORT).show()
+                        selectedBarcodes.clear()
+                        batchSelectMode = false
+                        showBulkDeleteDialog = false
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Bulk delete failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        )
+    }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BulkPriceAdjustmentDialog(
+    selectedCount: Int,
+    onDismiss: () -> Unit,
+    onApply: (percentDelta: Double?, fixedDelta: Double?) -> Unit
+) {
+    var mode by remember { mutableIntStateOf(0) } // 0: Percentage, 1: Fixed Amount
+    var valueText by remember { mutableStateOf("") }
+    var isIncrease by remember { mutableStateOf(true) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Bulk Price Adjustment", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Adjust prices for $selectedCount selected product(s).",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = mode == 0,
+                        onClick = { mode = 0 },
+                        label = { Text("Percentage (%)") }
+                    )
+                    FilterChip(
+                        selected = mode == 1,
+                        onClick = { mode = 1 },
+                        label = { Text("Fixed (৳)") }
+                    )
+                }
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = isIncrease,
+                        onClick = { isIncrease = true },
+                        label = { Text("Increase (+)") }
+                    )
+                    FilterChip(
+                        selected = !isIncrease,
+                        onClick = { isIncrease = false },
+                        label = { Text("Decrease (-)") }
+                    )
+                }
+
+                if (mode == 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(5, 10, 15, 20).forEach { p ->
+                            SuggestionChip(
+                                onClick = { valueText = p.toString() },
+                                label = { Text("$p%") }
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = valueText,
+                    onValueChange = { valueText = it.filter { c -> c.isDigit() || c == '.' } },
+                    label = { Text(if (mode == 0) "Percentage (e.g. 10)" else "Amount in ৳ (e.g. 20)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val rawVal = valueText.toDoubleOrNull() ?: 0.0
+                    val factor = if (isIncrease) 1.0 else -1.0
+                    val finalVal = rawVal * factor
+                    if (mode == 0) {
+                        onApply(finalVal, null)
+                    } else {
+                        onApply(null, finalVal)
+                    }
+                },
+                enabled = valueText.toDoubleOrNull() != null && (valueText.toDoubleOrNull() ?: 0.0) > 0.0
+            ) {
+                Text("Apply to $selectedCount items")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BulkCategoryReassignmentDialog(
+    selectedCount: Int,
+    existingCategories: List<String>,
+    onDismiss: () -> Unit,
+    onApply: (newCategory: String) -> Unit
+) {
+    var selectedCat by remember { mutableStateOf(existingCategories.firstOrNull() ?: "") }
+    var isCustomCat by remember { mutableStateOf(existingCategories.isEmpty()) }
+    var customCatText by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Reassign Category", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    "Reassign category for $selectedCount product(s):",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (existingCategories.isNotEmpty()) {
+                    Text("Select existing category:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(existingCategories) { cat ->
+                            FilterChip(
+                                selected = !isCustomCat && selectedCat == cat,
+                                onClick = {
+                                    isCustomCat = false
+                                    selectedCat = cat
+                                },
+                                label = { Text(cat) }
+                            )
+                        }
+                    }
+                }
+
+                FilterChip(
+                    selected = isCustomCat,
+                    onClick = { isCustomCat = true },
+                    label = { Text("+ New Category") }
+                )
+
+                if (isCustomCat) {
+                    OutlinedTextField(
+                        value = customCatText,
+                        onValueChange = { customCatText = it },
+                        label = { Text("Enter Category Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            val targetCategory = if (isCustomCat) customCatText.trim() else selectedCat.trim()
+            Button(
+                onClick = { onApply(targetCategory) },
+                enabled = targetCategory.isNotBlank()
+            ) {
+                Text("Reassign ($selectedCount)")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun BulkDeleteConfirmationDialog(
+    selectedCount: Int,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Delete $selectedCount Products?", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        },
+        text = {
+            Text(
+                "Are you sure you want to permanently delete $selectedCount selected products? This action cannot be undone.",
+                fontSize = 13.5.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Delete $selectedCount Products", color = MaterialTheme.colorScheme.onError)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
 
 
 
@@ -2450,7 +2905,7 @@ private fun HardwareStockCheckDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Realistic3DIsometricPackageIcon(size = 46.dp)
+                    Realistic3DProductsBoxIcon(size = 46.dp)
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -2535,7 +2990,9 @@ private fun HardwareStockCheckDialog(
                 FinancialMarginCard(
                     purchasePrice = product.purchasePrice,
                     sellingPrice = product.sellingPrice,
-                    quantity = quantity
+                    quantity = quantity,
+                    mrpPrice = product.mrpPrice,
+                    wholesalePrice = product.wholesalePrice
                 )
 
                 // Date Tracking Info Row with 3D Calendar Icon
@@ -3260,7 +3717,10 @@ fun ProductItemRow(
     onGenerateCode: () -> Unit,
     onImageClick: () -> Unit,
     onDelete: () -> Unit,
-    onAddToCart: () -> Unit
+    onAddToCart: () -> Unit,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onToggleSelect: () -> Unit = {}
 ) {
     val productImage = rememberUriImagePainter(product.imageUri)
     val isOut = product.stockQty <= 0.0
@@ -3271,9 +3731,14 @@ fun ProductItemRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onRowClick() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface
+        ),
         shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+        border = BorderStroke(
+            if (isSelected) 1.5.dp else 1.dp,
+            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+        )
     ) {
         Column(
             modifier = Modifier
@@ -3290,8 +3755,15 @@ fun ProductItemRow(
                 Row(
                     modifier = Modifier.weight(1f, fill = false),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (isSelectionMode) {
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = { onToggleSelect() },
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                     if (productImage != null) {
                         Box(
                             modifier = Modifier
@@ -3516,7 +3988,10 @@ private fun ProductGridCard(
     onGenerateCode: () -> Unit,
     onImageClick: () -> Unit,
     onDelete: () -> Unit,
-    onAddToCart: () -> Unit
+    onAddToCart: () -> Unit,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onToggleSelect: () -> Unit = {}
 ) {
     val productImage = rememberUriImagePainter(product.imageUri)
     val isOut = product.stockQty <= 0.0
@@ -3528,8 +4003,13 @@ private fun ProductGridCard(
             .fillMaxWidth()
             .clickable { onCardClick() },
         shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        border = BorderStroke(
+            if (isSelected) 1.5.dp else 1.dp,
+            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
             modifier = Modifier
@@ -3537,6 +4017,19 @@ private fun ProductGridCard(
                 .padding(9.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            if (isSelectionMode) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onToggleSelect() },
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
             // Optional Thumbnail
             if (productImage != null) {
                 Box(
@@ -4552,6 +5045,10 @@ fun AddEditProductDialog(
             effectiveSelling <= 0 -> {
                 isError = true
                 Toast.makeText(context, context.getString(R.string.products_enter_valid_selling_price_warning), Toast.LENGTH_SHORT).show()
+            }
+            pPrice < 0.0 || wPrice < 0.0 || qty < 0.0 || reorder < 0 -> {
+                isError = true
+                Toast.makeText(context, "Prices and stock quantities cannot be negative", Toast.LENGTH_SHORT).show()
             }
             else -> {
                 isError = false

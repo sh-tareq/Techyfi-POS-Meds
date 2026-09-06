@@ -134,4 +134,20 @@ object GoogleDriveHelper {
     suspend fun deleteBackup(driveService: Drive, fileId: String): Boolean = withContext(Dispatchers.IO) {
         GoogleDriveBackupManager.deleteBackup(driveService, fileId)
     }
+
+    suspend fun testDriveConnection(context: Context, accountEmail: String? = null): Result<DriveConnection> =
+        withContext(Dispatchers.IO) {
+            try {
+                val conn = authorizeWithoutUi(context, accountEmail)
+                if (conn == null) {
+                    Result.failure(Exception("Google Drive authentication requires user sign-in or authorization."))
+                } else {
+                    val service = getDriveService(conn)
+                    service.about().get().setFields("user").execute()
+                    Result.success(conn)
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
 }

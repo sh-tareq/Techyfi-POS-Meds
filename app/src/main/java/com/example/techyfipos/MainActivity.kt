@@ -17,6 +17,17 @@ import com.example.techyfipos.data.SettingsDataStore
 import com.example.techyfipos.theme.TechyfiPOSTheme
 
 import android.view.KeyEvent
+import android.content.Intent
+import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import com.example.techyfipos.data.BackupImportMode
+import com.example.techyfipos.data.AppRoles
+import com.example.techyfipos.data.db.AppDatabase
+import com.example.techyfipos.utils.restartApp
 import com.example.techyfipos.utils.HardwareBarcodeScanner
 
 class MainActivity : ComponentActivity() {
@@ -27,6 +38,7 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     currentActivity = java.lang.ref.WeakReference(this)
+    handleRestoreIntent(intent)
 
     try {
       System.setProperty("javax.xml.stream.XMLInputFactory", "com.ctc.wstx.stax.WstxInputFactory")
@@ -60,14 +72,8 @@ class MainActivity : ComponentActivity() {
 
   @SuppressLint("RestrictedApi")
   override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-    // Hardware scanners behave like keyboards, but editable fields must receive
-    // their own key events. Without this guard, the global scanner buffer eats
-    // numbers typed into Discount, Received Amount, phone, and search fields.
-    if (currentFocus?.onCheckIsTextEditor() == true) {
-      HardwareBarcodeScanner.clearPendingInput()
-      return super.dispatchKeyEvent(event)
-    }
-    if (HardwareBarcodeScanner.dispatchKeyEvent(event)) {
+    val isEditor = currentFocus?.onCheckIsTextEditor() == true
+    if (HardwareBarcodeScanner.dispatchKeyEventWithEditorCheck(event, isEditor)) {
       return true
     }
     return super.dispatchKeyEvent(event)
@@ -78,5 +84,39 @@ class MainActivity : ComponentActivity() {
     // Persist a WorkManager request before the UI process can be removed.
     // The worker checks the configured daily/weekly/monthly due time.
     com.example.techyfipos.utils.AutoBackupScheduler.performImmediateBackupIfDue(this)
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    handleRestoreIntent(intent)
+  }
+
+  private fun handleRestoreIntent(intent: Intent?) {
+    val backupPath = intent?.getStringExtra("RESTORE_BACKUP_PATH") ?: return
+    intent.removeExtra("RESTORE_BACKUP_PATH")
+    val file = File(backupPath)
+    if (!file.exists()) return
+
+    val app = application as? TechyfiPOSApplication ?: return
+    lifecycleScope.launch(Dispatchers.IO) {
+      try {
+        val owner = AppDatabase.getDatabase(this@MainActivity).userDao().getActiveUsersOnce().firstOrNull { it.role == AppRoles.OWNER }
+        if (owner != null) {
+          app.repository.setSessionUser(owner)
+        }
+        val ok = app.repository.importBackup(file, BackupImportMode.REPLACE)
+        withContext(Dispatchers.Main) {
+          if (ok) {
+            Toast.makeText(this@MainActivity, "Database Restored Successfully! Restarting app...", Toast.LENGTH_SHORT).show()
+            restartApp(this@MainActivity)
+          } else {
+            Toast.makeText(this@MainActivity, "Backup Restore Failed", Toast.LENGTH_LONG).show()
+          }
+        }
+      } catch (e: Exception) {
+        e.printStackTrace()
+      }
+    }
   }
 }

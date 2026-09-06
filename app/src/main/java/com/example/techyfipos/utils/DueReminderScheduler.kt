@@ -425,6 +425,13 @@ object DueReminderScheduler {
 
     private fun trySendSmsDirectly(context: Context, phone: String, message: String): Boolean {
         return try {
+            val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager
+            val hasSim = telephonyManager != null && telephonyManager.simState == android.telephony.TelephonyManager.SIM_STATE_READY
+            if (!hasSim) {
+                Log.w(TAG, "No ready SIM card detected (Wi-Fi only POS terminal); gracefully falling back to WhatsApp/Notification")
+                return false
+            }
+
             val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
                 context,
                 android.Manifest.permission.SEND_SMS

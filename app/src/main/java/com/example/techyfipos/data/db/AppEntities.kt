@@ -141,7 +141,12 @@ data class RegisterClosing(
     val variance: Double,
     val notes: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
-    val cashierName: String = "Admin"
+    val cashierName: String = "Admin",
+    val bkashSales: Double = 0.0,
+    val nagadSales: Double = 0.0,
+    val rocketSales: Double = 0.0,
+    val cardSales: Double = 0.0,
+    val dueSales: Double = 0.0
 )
 
 @Entity(tableName = "customer_loyalty")
@@ -457,7 +462,8 @@ data class Customer(
     val lastPurchaseDate: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val storeCredit: Double = 0.0
 )
 
 data class CustomerLookupResult(
@@ -472,7 +478,8 @@ data class CustomerLookupResult(
     val lifetimeSpent: Double = 0.0,
     val totalOrders: Int = 0,
     val address: String? = null,
-    val notes: String? = null
+    val notes: String? = null,
+    val storeCredit: Double = 0.0
 )
 
 data class CustomerProductPurchaseSummary(
@@ -486,6 +493,18 @@ data class CustomerProductPurchaseSummary(
 data class CustomerContactInfo(
     val customerPhone: String,
     val customerName: String?
+)
+
+@Entity(tableName = "sale_audit_logs", indices = [Index(value = ["saleId"])])
+data class SaleAuditLog(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val saleId: Long,
+    val action: String, // "DELETED", "VOIDED_FOR_EDIT"
+    val reason: String,
+    val grandTotal: Double,
+    val paymentMethod: String,
+    val cashierName: String,
+    val timestamp: Long = System.currentTimeMillis()
 )
 
 

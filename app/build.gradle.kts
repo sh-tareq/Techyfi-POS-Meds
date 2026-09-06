@@ -14,8 +14,8 @@ android {
         applicationId = "com.techyfi.pos"
         minSdk = 24
         targetSdk = 36
-        versionCode = 220893
-        versionName = "2.6.18-V04-09-2026"
+        versionCode = 220907
+        versionName = "2.6.28-V06-09-2026"
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -76,7 +76,7 @@ tasks.register<Copy>("packageDatedReleaseApk") {
     dependsOn("assembleRelease")
     from(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))
     into(layout.buildDirectory.dir("outputs/apk/final"))
-    rename { "Techyfi-POS-Final-V04-09-2026.apk" }
+    rename { "Techyfi-POS-Final-V05-09-2026.apk" }
 }
 
 dependencies {

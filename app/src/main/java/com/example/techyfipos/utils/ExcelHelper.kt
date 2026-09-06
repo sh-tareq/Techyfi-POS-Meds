@@ -41,15 +41,42 @@ object ExcelHelper {
         val presentFields: Set<String> = emptySet()
     )
 
+    fun isValidEan13WithLeadingZero(twelveDigits: String): Boolean {
+        if (twelveDigits.length != 12 || !twelveDigits.all { it.isDigit() }) return false
+        val full13 = "0$twelveDigits"
+        var sum = 0
+        for (i in 0 until 12) {
+            val digit = full13[i] - '0'
+            val weight = if (i % 2 == 0) 1 else 3
+            sum += digit * weight
+        }
+        val check = (10 - (sum % 10)) % 10
+        return check == (full13[12] - '0')
+    }
+
+    fun preserveLeadingZeros(raw: String): String {
+        val trimmed = raw.trim()
+        // 10-digit number starting with '1' is a Bangladeshi mobile number (01X...) with leading 0 dropped by Excel
+        if (trimmed.length == 10 && trimmed.startsWith("1") && trimmed.all { it.isDigit() }) {
+            return "0$trimmed"
+        }
+        // 12-digit number that validates as an EAN-13 when prepended with '0'
+        if (trimmed.length == 12 && trimmed.all { it.isDigit() } && isValidEan13WithLeadingZero(trimmed)) {
+            return "0$trimmed"
+        }
+        return trimmed
+    }
+
     @Suppress("DEPRECATION")
     private fun getCellStringValue(cell: Cell?): String {
         if (cell == null) return ""
         return when (cell.cellType) {
-            Cell.CELL_TYPE_STRING -> cell.stringCellValue.trim()
+            Cell.CELL_TYPE_STRING -> preserveLeadingZeros(cell.stringCellValue)
             Cell.CELL_TYPE_NUMERIC -> {
                 val numValue = cell.numericCellValue
                 if (numValue == numValue.toLong().toDouble()) {
-                    numValue.toLong().toString()
+                    val str = numValue.toLong().toString()
+                    preserveLeadingZeros(str)
                 } else {
                     numValue.toString()
                 }
@@ -57,12 +84,13 @@ object ExcelHelper {
             Cell.CELL_TYPE_BOOLEAN -> cell.booleanCellValue.toString()
             Cell.CELL_TYPE_FORMULA -> {
                 try {
-                    cell.stringCellValue.trim()
+                    preserveLeadingZeros(cell.stringCellValue)
                 } catch (e: Exception) {
                     try {
                         val numValue = cell.numericCellValue
                         if (numValue == numValue.toLong().toDouble()) {
-                            numValue.toLong().toString()
+                            val str = numValue.toLong().toString()
+                            preserveLeadingZeros(str)
                         } else {
                             numValue.toString()
                         }
@@ -317,26 +345,26 @@ object ExcelHelper {
                     val category = colMap["category"]?.let { getCellStringValue(row.getCell(it)) } ?: "General"
                     
                     val pPriceStr = colMap["purchasePrice"]?.let { getCellStringValue(row.getCell(it)) } ?: "0.0"
-                    val purchasePrice = parseDouble(pPriceStr) ?: 0.0
+                    val purchasePrice = (parseDouble(pPriceStr) ?: 0.0).coerceAtLeast(0.0)
 
                     val sPriceStr = colMap["sellingPrice"]?.let { getCellStringValue(row.getCell(it)) } ?: "0.0"
                     val sellingPrice = parseDouble(sPriceStr)
-                    if (sellingPrice == null) {
+                    if (sellingPrice == null || sellingPrice < 0.0) {
                         failCount++
-                        failures.add("Row ${rowIdx + 1}: Invalid selling price format '$sPriceStr'.")
+                        failures.add("Row ${rowIdx + 1}: Invalid selling price '$sPriceStr'. Must be zero or greater.")
                         continue
                     }
 
                     val stockStr = colMap["stockQty"]?.let { getCellStringValue(row.getCell(it)) } ?: "0"
-                    val stockQty = parseDouble(stockStr) ?: 0.0
+                    val stockQty = (parseDouble(stockStr) ?: 0.0).coerceAtLeast(0.0)
 
                     val reorderStr = colMap["reorderLevel"]?.let { getCellStringValue(row.getCell(it)) } ?: "0"
-                    val reorderLevel = parseInt(reorderStr) ?: 0
+                    val reorderLevel = (parseInt(reorderStr) ?: 0).coerceAtLeast(0)
 
                     fun optionalText(field: String): String? = colMap[field]
                         ?.let { getCellStringValue(row.getCell(it)).takeIf(String::isNotBlank) }
                     fun optionalDouble(field: String): Double = colMap[field]
-                        ?.let { parseDouble(getCellStringValue(row.getCell(it))) } ?: 0.0
+                        ?.let { parseDouble(getCellStringValue(row.getCell(it))) }?.coerceAtLeast(0.0) ?: 0.0
 
                     importedList.add(
                         Product(

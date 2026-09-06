@@ -31,7 +31,8 @@ data class BillLineItem(
     val unitPrice: Double,
     val lineTotal: Double,
     val unit: String = "Pcs",
-    val note: String? = null
+    val note: String? = null,
+    val mrpPrice: Double = 0.0
 )
 
 data class BillData(
@@ -61,7 +62,12 @@ data class BillData(
     val taxLabel: String = "VAT",
     val taxValue: Double = 0.0,
     /** Customer's total outstanding balance after this sale, including any due portion just added. Only meaningful when [hasDuePortion] is true. */
-    val totalOutstandingDue: Double = 0.0
+    val totalOutstandingDue: Double = 0.0,
+    val mrpSubtotal: Double = 0.0,
+    val mrpSavings: Double = 0.0,
+    val isSaleMode: Boolean = false,
+    val showItemWiseMrpDiscount: Boolean = true,
+    val wholesaleSavings: Double = 0.0
 ) {
     /** True when this sale (fully or partially, via Split) put money on the customer's due account. */
     fun hasDuePortion(): Boolean {
@@ -242,10 +248,14 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
     sb.appendLine("------------------------------------------")
     sb.appendLine(if (isBn) "আইটেম                 পরিমাণ    দর     মোট" else "Item                 Qty   Price   Total")
     sb.appendLine("------------------------------------------")
+    val isMrpDisplay = bill.isSaleMode && bill.mrpSavings > 0.0 && settings.showMrpDiscountInSaleMode
+
     bill.items.forEach { item ->
         val qtyStr = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
-        val priceStr = formatTaka(item.unitPrice).replace("৳", "").trim()
-        val totalStr = formatTaka(item.lineTotal).replace("৳", "").trim()
+        val unitPrice = if (isMrpDisplay && item.mrpPrice > 0.0) item.mrpPrice else item.unitPrice
+        val lineTotal = if (isMrpDisplay && item.mrpPrice > 0.0) item.mrpPrice * item.quantity else item.lineTotal
+        val priceStr = formatTaka(unitPrice).replace("৳", "").trim()
+        val totalStr = formatTaka(lineTotal).replace("৳", "").trim()
 
         val nameLines = wrapItemName(item.name, 18)
         nameLines.forEachIndexed { index, line ->
@@ -255,11 +265,24 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
                 sb.appendLine(String.format(Locale.US, "%-18s", line))
             }
         }
+        if (isMrpDisplay && bill.showItemWiseMrpDiscount && item.mrpPrice > item.unitPrice) {
+            val itemSavings = (item.mrpPrice - item.unitPrice) * item.quantity
+            val itemOfferPrice = item.unitPrice
+            val mrpSubline = if (isBn) "  অফার: ${formatTaka(itemOfferPrice)} (সাশ্রয় ${formatTaka(itemSavings)})"
+                             else "  Offer: ${formatTaka(itemOfferPrice)} (Save ${formatTaka(itemSavings)})"
+            sb.appendLine(mrpSubline)
+        }
     }
     sb.appendLine("------------------------------------------")
-    sb.appendLine(if (isBn) "উপমোট: ${formatTaka(bill.subtotal)}" else "Subtotal: ${formatTaka(bill.subtotal)}")
+    val effectiveSubtotal = if (isMrpDisplay) bill.mrpSubtotal else bill.subtotal
+    sb.appendLine(if (isBn) "উপমোট: ${formatTaka(effectiveSubtotal)}" else "Subtotal: ${formatTaka(effectiveSubtotal)}")
+    if (isMrpDisplay) {
+        sb.appendLine(if (isBn) "এমআরপি সাশ্রয় (ছাড়): -${formatTaka(bill.mrpSavings)}" else "MRP Discount: -${formatTaka(bill.mrpSavings)}")
+    }
     if (settings.showDiscount && bill.discountValue > 0.0) {
-        sb.appendLine(if (isBn) "ছাড়: -${formatTaka(bill.discountValue)}" else "Discount: -${formatTaka(bill.discountValue)}")
+        val discLbl = if (isBn) (if (bill.isSaleMode && bill.mrpSavings > 0.0) "অতিরিক্ত বিশেষ ছাড়" else "ছাড়")
+                      else (if (bill.isSaleMode && bill.mrpSavings > 0.0) "Additional Discount" else "Discount")
+        sb.appendLine("$discLbl: -${formatTaka(bill.discountValue)}")
     }
     if (bill.taxValue > 0.0) {
         val taxLbl = if (isBn) (if (settings.taxInclusive) "ভ্যাট (সহ)" else bill.taxLabel.ifBlank { "কর" }) else bill.taxLabel.ifBlank { "Tax" }
@@ -268,6 +291,14 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
     sb.appendLine("==========================================")
     sb.appendLine(if (isBn) "সর্বমোট: ${formatTaka(bill.grandTotal)}" else "GRAND TOTAL: ${formatTaka(bill.grandTotal)}")
     sb.appendLine("==========================================")
+    if (bill.isSaleMode && bill.mrpSavings > 0.0 && settings.showMrpDiscountInSaleMode) {
+        val totalCustomerSavings = bill.mrpSavings + bill.discountValue
+        val pct = if (bill.mrpSubtotal > 0.0) Math.round((totalCustomerSavings / bill.mrpSubtotal) * 100).toInt() else 0
+        val pctStr = if (isBn) toBanglaDigits(pct.toString()) else "$pct"
+        sb.appendLine(if (isBn) "*** আপনি সাশ্রয় করেছেন: ${formatTaka(totalCustomerSavings)} ($pctStr%) ***"
+                      else "*** YOU SAVED: ${formatTaka(totalCustomerSavings)} ($pct%) vs MRP ***")
+        sb.appendLine("------------------------------------------")
+    }
     if (settings.showCustomerDetails && (bill.customerName.isNotBlank() || bill.customerPhone.isNotBlank())) {
         sb.appendLine(if (isBn) "গ্রাহক    : ${bill.customerName.ifBlank { "N/A" }}" else "Customer : ${bill.customerName.ifBlank { "N/A" }}")
         if (bill.customerPhone.isNotBlank()) sb.appendLine(if (isBn) "ফোন      : ${bill.customerPhone}" else "Phone    : ${bill.customerPhone}")
@@ -398,25 +429,33 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
     // 5. Items — use a temporary Paint to measure pixel widths for Bengali text wrapping
     val tempPaint = Paint().apply {
         textSize = textSizeBody
-        typeface = Typeface.MONOSPACE
+        typeface = if (isBn) Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL) else Typeface.MONOSPACE
         isAntiAlias = true
     }
     val colItemMaxWidth = if (is58) 150f else 230f // pixel width reserved for Item column
     bill.items.forEach { item ->
         val nameLines = wrapItemNameByPixelWidth(item.name, colItemMaxWidth, tempPaint)
         val noteLines = if (!item.note.isNullOrBlank()) wrapItemNameByPixelWidth("• Note: ${item.note}", colItemMaxWidth, tempPaint) else emptyList()
-        totalHeight += (nameLines.size + noteLines.size) * rowStep + 8f
+        val itemSavingsLine = if (bill.isSaleMode && bill.showItemWiseMrpDiscount && settings.showMrpDiscountInSaleMode && item.mrpPrice > item.unitPrice) 1 else 0
+        totalHeight += (nameLines.size + noteLines.size) * rowStep + (itemSavingsLine * (if (is58) 22f else 26f)) + 8f
     }
     totalHeight += 40f // Single divider
 
     // 6. Subtotal & Discount & Tax
     totalHeight += 34f
+    if (bill.isSaleMode && bill.mrpSavings > 0.0 && settings.showMrpDiscountInSaleMode) totalHeight += 34f
     if (settings.showDiscount && bill.discountValue > 0.0) totalHeight += 34f
     if (bill.taxValue > 0.0) totalHeight += 34f
     totalHeight += 40f // Double divider
 
     // 7. Grand Total
     totalHeight += 50f + 40f // Grand total + double divider
+    if (bill.isSaleMode && bill.mrpSavings > 0.0 && settings.showMrpDiscountInSaleMode) {
+        totalHeight += (if (is58) 32f else 38f) + 12f
+    }
+    if (bill.wholesaleSavings > 0.0) {
+        totalHeight += (if (is58) 32f else 38f) + 12f
+    }
 
     // 8. Customer Details
     if (settings.showCustomerDetails && (bill.customerName.isNotBlank() || bill.customerPhone.isNotBlank())) {
@@ -494,20 +533,21 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
     if (settings.showPoweredBy) totalHeight += 60f
     totalHeight += 10f // Bottom margin
 
-    val bitmap = Bitmap.createBitmap(width, totalHeight.toInt(), Bitmap.Config.ARGB_8888)
+    val bitmap = Bitmap.createBitmap(width, totalHeight.toInt(), Bitmap.Config.RGB_565)
     val canvas = Canvas(bitmap)
     canvas.drawColor(Color.WHITE)
 
     val paintText = Paint().apply {
         color = Color.BLACK
         textSize = textSizeBody
-        typeface = Typeface.MONOSPACE
+        typeface = if (isBn) Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL) else Typeface.MONOSPACE
         isAntiAlias = true
     }
 
     val paintBold = Paint(paintText).apply {
         isFakeBoldText = true
         textSize = textSizeBold
+        typeface = if (isBn) Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD) else Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
     }
 
     val paintTitle = Paint().apply {
@@ -559,9 +599,11 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
 
     // 4. Meta Info
     val dateStr = SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.US).format(Date(bill.timestampMillis))
-    canvas.drawText(String.format(Locale.US, if (isBn) "চালান নং : #%d" else "Invoice  : #%d", bill.saleId), sidePad, currentY + 20f, paintText)
+    val invIdStr = if (isBn) toBanglaDigits(bill.saleId.toString()) else bill.saleId.toString()
+    canvas.drawText(if (isBn) "চালান নং : #$invIdStr" else "Invoice  : #${bill.saleId}", sidePad, currentY + 20f, paintText)
     currentY += rowStep
-    canvas.drawText(String.format(Locale.US, if (isBn) "তারিখ    : %s" else "Date     : %s", dateStr), sidePad, currentY + 20f, paintText)
+    val effDateStr = if (isBn) toBanglaDigits(dateStr) else dateStr
+    canvas.drawText(if (isBn) "তারিখ    : $effDateStr" else "Date     : $dateStr", sidePad, currentY + 20f, paintText)
     currentY += rowStep
     val cashierVal = bill.cashierName.ifBlank { settings.cashierName }
     if (settings.showCashier) {
@@ -597,10 +639,15 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
     currentY += 35f
 
     // 6. Product Table Items — pixel-based column positioning
+    val isMrpDisplay = bill.isSaleMode && bill.mrpSavings > 0.0 && settings.showMrpDiscountInSaleMode
+
     bill.items.forEach { item ->
-        val qtyStr = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
-        val priceStr = formatTaka(item.unitPrice).replace("৳", "").trim()
-        val totalStr = formatTaka(item.lineTotal).replace("৳", "").trim()
+        val qtyStrRaw = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
+        val qtyStr = if (isBn) toBanglaDigits(qtyStrRaw) else qtyStrRaw
+        val unitPrice = if (isMrpDisplay && item.mrpPrice > 0.0) item.mrpPrice else item.unitPrice
+        val lineTotal = if (isMrpDisplay && item.mrpPrice > 0.0) item.mrpPrice * item.quantity else item.lineTotal
+        val priceStr = if (isBn) formatTakaBn(unitPrice).replace("৳", "").trim() else formatTaka(unitPrice).replace("৳", "").trim()
+        val totalStr = if (isBn) formatTakaBn(lineTotal).replace("৳", "").trim() else formatTaka(lineTotal).replace("৳", "").trim()
 
         val nameLines = wrapItemNameByPixelWidth(item.name, colItemMaxW, paintText)
         nameLines.forEachIndexed { index, line ->
@@ -626,6 +673,19 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
                 currentY += rowStep
             }
         }
+        if (isMrpDisplay && bill.showItemWiseMrpDiscount && item.mrpPrice > item.unitPrice) {
+            val itemSavings = (item.mrpPrice - item.unitPrice) * item.quantity
+            val itemOfferPrice = item.unitPrice
+            val rawSubline = if (isBn) "  অফার: ${formatTakaBn(itemOfferPrice)} (সাশ্রয় ${formatTakaBn(itemSavings)})"
+                             else "  Offer: ${formatTaka(itemOfferPrice)} (Save ${formatTaka(itemSavings)})"
+            val mrpSubline = if (isBn) toBanglaDigits(rawSubline) else rawSubline
+            val paintSubline = Paint(paintText).apply {
+                textSize = if (is58) 14f else 17f
+                color = Color.DKGRAY
+            }
+            canvas.drawText(mrpSubline, colItemX + 4f, currentY + 16f, paintSubline)
+            currentY += if (is58) 22f else 26f
+        }
         currentY += 8f
     }
 
@@ -633,22 +693,34 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
     currentY += 35f
 
     // 7. Subtotal & Discount
-    val subtotalVal = formatTaka(bill.subtotal)
+    val effectiveSubtotal = if (isMrpDisplay) bill.mrpSubtotal else bill.subtotal
+    val subtotalVal = if (isBn) formatTakaBn(effectiveSubtotal) else formatTaka(effectiveSubtotal)
     canvas.drawText(if (isBn) "উপমোট" else "Subtotal", sidePad, currentY + 20f, paintText)
     val subValW = paintText.measureText(subtotalVal)
     canvas.drawText(subtotalVal, colTotalX - subValW, currentY + 20f, paintText)
     currentY += 34f
 
+    if (isMrpDisplay) {
+        val mrpDiscVal = if (isBn) "-${formatTakaBn(bill.mrpSavings)}" else "-${formatTaka(bill.mrpSavings)}"
+        val mrpLbl = if (isBn) "এমআরপি সাশ্রয় (ছাড়)" else "MRP Discount"
+        canvas.drawText(mrpLbl, sidePad, currentY + 20f, paintText)
+        val mrpDiscValW = paintText.measureText(mrpDiscVal)
+        canvas.drawText(mrpDiscVal, colTotalX - mrpDiscValW, currentY + 20f, paintText)
+        currentY += 34f
+    }
+
     if (settings.showDiscount && bill.discountValue > 0.0) {
-        val discVal = "-${formatTaka(bill.discountValue)}"
-        canvas.drawText(if (isBn) "ছাড়" else "Discount", sidePad, currentY + 20f, paintText)
+        val discVal = if (isBn) "-${formatTakaBn(bill.discountValue)}" else "-${formatTaka(bill.discountValue)}"
+        val discLbl = if (isBn) (if (bill.isSaleMode && bill.mrpSavings > 0.0) "অতিরিক্ত বিশেষ ছাড়" else "ছাড়")
+                      else (if (bill.isSaleMode && bill.mrpSavings > 0.0) "Additional Discount" else "Discount")
+        canvas.drawText(discLbl, sidePad, currentY + 20f, paintText)
         val discValW = paintText.measureText(discVal)
         canvas.drawText(discVal, colTotalX - discValW, currentY + 20f, paintText)
         currentY += 34f
     }
 
     if (bill.taxValue > 0.0) {
-        val taxVal = formatTaka(bill.taxValue)
+        val taxVal = if (isBn) formatTakaBn(bill.taxValue) else formatTaka(bill.taxValue)
         val label = if (isBn) {
             if (settings.taxInclusive) "(ভ্যাট সহ)" else bill.taxLabel.ifBlank { "কর" }
         } else {
@@ -668,7 +740,7 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
     currentY += 35f
 
     // 8. GRAND TOTAL
-    val grandVal = formatTaka(bill.grandTotal)
+    val grandVal = if (isBn) formatTakaBn(bill.grandTotal) else formatTaka(bill.grandTotal)
     val paintGrandLabel = Paint().apply {
         color = Color.BLACK
         textSize = if (is58) 22f else 28f
@@ -683,6 +755,48 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
     canvas.drawText(grandVal, colTotalX - grandW, currentY + 25f, paintGrandVal)
     currentY += 45f
 
+    if (bill.isSaleMode && bill.mrpSavings > 0.0 && settings.showMrpDiscountInSaleMode) {
+        val totalCustomerSavings = bill.mrpSavings + bill.discountValue
+        val pct = if (bill.mrpSubtotal > 0.0) Math.round((totalCustomerSavings / bill.mrpSubtotal) * 100).toInt() else 0
+        val pctStr = if (isBn) toBanglaDigits(pct.toString()) else "$pct"
+        val bannerText = if (isBn) "*** আপনি সাশ্রয় করেছেন: ${formatTakaBn(totalCustomerSavings)} ($pctStr%) ***"
+                         else "*** YOU SAVED: ${formatTaka(totalCustomerSavings)} ($pct%) vs MRP ***"
+        val paintBanner = Paint(paintBold).apply {
+            textSize = if (is58) 14f else 17f
+            color = Color.BLACK
+        }
+        val bW = paintBanner.measureText(bannerText)
+        val bannerBoxH = if (is58) 32f else 38f
+        val bannerRect = android.graphics.RectF(sidePad, currentY + 4f, width - sidePad, currentY + 4f + bannerBoxH)
+        val paintBox = Paint().apply {
+            color = android.graphics.Color.parseColor("#F1F5F9")
+            style = Paint.Style.FILL
+        }
+        canvas.drawRoundRect(bannerRect, 6f, 6f, paintBox)
+        canvas.drawText(bannerText, (width - bW) / 2f, currentY + 4f + (bannerBoxH / 2f) + (paintBanner.textSize / 3f), paintBanner)
+        currentY += bannerBoxH + 12f
+    }
+
+    // Wholesale Savings Banner
+    if (bill.wholesaleSavings > 0.0) {
+        val wholesaleBannerText = if (isBn) "*** পাইকারি সাশ্রয়: ${formatTakaBn(bill.wholesaleSavings)} ***"
+                                  else "*** WHOLESALE SAVINGS: ${formatTaka(bill.wholesaleSavings)} ***"
+        val paintWholesale = Paint(paintBold).apply {
+            textSize = if (is58) 14f else 17f
+            color = Color.BLACK
+        }
+        val wW = paintWholesale.measureText(wholesaleBannerText)
+        val bannerBoxH = if (is58) 32f else 38f
+        val bannerRect = RectF(sidePad, currentY + 4f, width - sidePad, currentY + 4f + bannerBoxH)
+        val paintBox = Paint().apply {
+            color = Color.parseColor("#E2E8F0")
+            style = Paint.Style.FILL
+        }
+        canvas.drawRoundRect(bannerRect, 6f, 6f, paintBox)
+        canvas.drawText(wholesaleBannerText, (width - wW) / 2f, currentY + 4f + (bannerBoxH / 2f) + (paintWholesale.textSize / 3f), paintWholesale)
+        currentY += bannerBoxH + 12f
+    }
+
     canvas.drawText(doubleDivider, divX, currentY + 20f, paintText)
     currentY += 35f
 
@@ -691,7 +805,8 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
         canvas.drawText(String.format(Locale.US, if (isBn) "গ্রাহক    : %s" else "Customer : %s", bill.customerName.ifBlank { "N/A" }), sidePad, currentY + 20f, paintText)
         currentY += 30f
         if (bill.customerPhone.isNotBlank()) {
-            canvas.drawText(String.format(Locale.US, if (isBn) "ফোন      : %s" else "Phone    : %s", bill.customerPhone), sidePad, currentY + 20f, paintText)
+            val custPhoneDisp = if (isBn) toBanglaDigits(bill.customerPhone) else bill.customerPhone
+            canvas.drawText(String.format(Locale.US, if (isBn) "ফোন      : %s" else "Phone    : %s", custPhoneDisp), sidePad, currentY + 20f, paintText)
             currentY += 30f
         }
         canvas.drawText(singleDivider, divX, currentY + 20f, paintText)
@@ -708,21 +823,20 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
             currentY += 30f
         } else {
             if (bill.paymentMethod == "Cash") {
-                canvas.drawText(String.format(Locale.US, if (isBn) "জমা            : %s" else "Paid           : %s", formatTaka(bill.amountPaid)), sidePad, currentY + 20f, paintText)
+                val paidVal = if (isBn) formatTakaBn(bill.amountPaid) else formatTaka(bill.amountPaid)
+                val chgVal = if (isBn) formatTakaBn(bill.changeAmount) else formatTaka(bill.changeAmount)
+                canvas.drawText(String.format(Locale.US, if (isBn) "জমা            : %s" else "Paid           : %s", paidVal), sidePad, currentY + 20f, paintText)
                 currentY += 30f
-                canvas.drawText(String.format(Locale.US, if (isBn) "ফেরত           : %s" else "Change         : %s", formatTaka(bill.changeAmount)), sidePad, currentY + 20f, paintText)
+                canvas.drawText(String.format(Locale.US, if (isBn) "ফেরত           : %s" else "Change         : %s", chgVal), sidePad, currentY + 20f, paintText)
                 currentY += 30f
             }
             canvas.drawText(if (isBn) "অবস্থা         : পরিশোধিত" else "Status         : PAID", sidePad, currentY + 20f, paintText)
             currentY += 30f
         }
         if (bill.hasDuePortion()) {
-            // Same left-aligned "Label (padded) : value" style as Payment Method/Status directly
-            // above, using paintText (not paintBold, which is both fake-bold AND a different
-            // textSize) so the colon lines up in the same column instead of looking like a
-            // mismatched, oddly-spaced row in this block.
+            val dueVal = if (isBn) formatTakaBn(bill.totalOutstandingDue) else formatTaka(bill.totalOutstandingDue)
             canvas.drawText(
-                String.format(Locale.US, if (isBn) "মোট বাকি       : %s" else "Total Due      : %s", formatTaka(bill.totalOutstandingDue)),
+                String.format(Locale.US, if (isBn) "মোট বাকি       : %s" else "Total Due      : %s", dueVal),
                 sidePad, currentY + 20f, paintText
             )
             currentY += 30f
@@ -840,6 +954,9 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
     FileOutputStream(file).use { out ->
         bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
     }
+    logoBitmap?.recycle()
+    qrBmp?.recycle()
+    bitmap.recycle()
     return file
 }
 
@@ -1266,8 +1383,16 @@ fun generateXReportPdf(context: Context, data: SalesReportData, rangeLabel: Stri
     return outputFile
 }
 
+fun toBanglaDigits(str: String): String {
+    val digits = mapOf(
+        '0' to '০', '1' to '১', '2' to '২', '3' to '৩', '4' to '৪',
+        '5' to '৫', '6' to '৬', '7' to '৭', '8' to '৮', '9' to '৯'
+    )
+    return str.map { digits[it] ?: it }.joinToString("")
+}
+
 fun formatTakaBn(amount: Double): String {
-val digits = mapOf(
+    val digits = mapOf(
         '0' to '০', '1' to '১', '2' to '২', '3' to '৩', '4' to '৪',
         '5' to '৫', '6' to '৬', '7' to '৭', '8' to '৮', '9' to '৯'
     )
@@ -1365,7 +1490,7 @@ fun generateDueRepaymentJpeg(
         val sigBottomMargin = if (is58) 32f else 44f
         totalHeight += sigTopClearance + sigLineToLabel + sigBottomMargin // Generous clearance for seal & signature + line + labels + padding
     }
-    if (settings.showDueReceiptQr) {
+    if (settings.showDueReceiptQr || settings.showDueReceiptVerificationQr) {
         totalHeight += (if (is58) 150f else 200f) + 24f // QR Code + caption/padding
     }
     totalHeight += if (is58) 24f else 28f // Thank You
@@ -1375,7 +1500,7 @@ fun generateDueRepaymentJpeg(
     }
     totalHeight += 32f // Bottom padding
 
-    val bitmap = Bitmap.createBitmap(width, totalHeight.toInt(), Bitmap.Config.ARGB_8888)
+    val bitmap = Bitmap.createBitmap(width, totalHeight.toInt(), Bitmap.Config.RGB_565)
     val canvas = Canvas(bitmap)
     canvas.drawColor(Color.WHITE)
 
@@ -1627,9 +1752,9 @@ fun generateDueRepaymentJpeg(
     }
 
     // 8. Optional Verification QR Code
-    if (settings.showDueReceiptQr) {
+    if (settings.showDueReceiptQr || settings.showDueReceiptVerificationQr) {
         val qrSize = if (is58) 140 else 180
-        val qrContent = "REC-${voucherNo}|${customerName}|${amountPaid}|${System.currentTimeMillis()}"
+        val qrContent = "TECHYFI-VOUCHER|REC-${voucherNo}|${customerName}|${customerPhone}|PAID:${amountPaid}|DUE:${remainingDue}|TS:${timestamp}"
         val qrBmp = generateQrBitmap(qrContent, qrSize)
         if (qrBmp != null) {
             val qrLeft = (width - qrBmp.width) / 2f

@@ -725,3 +725,25 @@ suspend fun triggerCashDrawerKick(context: Context, printerAddress: String) = wi
         toast("⚠️ Could not reach the cash drawer printer")
     }
 }
+
+/**
+ * Prints receipt bitmap directly via Bluetooth ESC/POS without launching system print dialog.
+ * If direct printing fails or printer is not configured, it can fall back to standard system print.
+ */
+suspend fun printReceiptDirectBluetooth(
+    context: Context,
+    bitmap: Bitmap,
+    printerAddress: String,
+    paperRollWidthMm: Int = 80,
+    autoKickDrawer: Boolean = false
+): Boolean {
+    val dots = if (paperRollWidthMm == 58) 384 else 576
+    return com.example.techyfipos.printer.EscPosPrinterDriver.printReceiptDirect(
+        context = context,
+        printerAddress = printerAddress,
+        bitmap = bitmap,
+        paperWidthDots = dots,
+        autoKickDrawer = autoKickDrawer
+    )
+}
+

@@ -32,10 +32,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,6 +46,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.R
 import com.example.techyfipos.data.db.ReturnLine
+import com.example.techyfipos.data.db.SaleItem
 import com.example.techyfipos.data.db.SaleWithItems
 import com.example.techyfipos.ui.components.Realistic3DReturnBoxIcon
 import com.example.techyfipos.ui.viewmodel.calculateSaleDueAmount
@@ -96,6 +99,11 @@ fun ReturnItemsDialog(
     }
     var showManagePresetsDialog by remember { mutableStateOf(false) }
 
+    // Direct manual quantity input state
+    var manualInputItem by remember { mutableStateOf<SaleItem?>(null) }
+    var manualInputInitial by remember { mutableStateOf(0.0) }
+    var manualInputMax by remember { mutableStateOf(0.0) }
+
     val displayItems = remember(saleWithItems) {
         saleWithItems.items.groupBy { it.productBarcode }.map { (_, lines) ->
             lines.first().copy(quantity = lines.sumOf { it.quantity })
@@ -115,7 +123,14 @@ fun ReturnItemsDialog(
     }
     val remainingDue = (calculateSaleDueAmount(saleWithItems.sale) - alreadyRefundedEstimate).coerceAtLeast(0.0)
     val hasCustomerDue = remainingDue > 0.0
-    val customerPhone = saleWithItems.sale.customerPhone
+    val customerName = saleWithItems.sale.customerName?.trim()
+    val customerPhone = saleWithItems.sale.customerPhone?.trim()
+    val customerDisplayText = when {
+        !customerName.isNullOrBlank() && !customerPhone.isNullOrBlank() -> "$customerName • $customerPhone"
+        !customerName.isNullOrBlank() -> customerName
+        !customerPhone.isNullOrBlank() -> customerPhone
+        else -> "Walk-in Customer"
+    }
 
     // 4 Settlement Destinations: "CASH" (Default), "DUE", "MFS", "WALLET"
     var selectedSettlementDestination by remember {
@@ -224,11 +239,18 @@ fun ReturnItemsDialog(
                                 }
                             }
 
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(top = 1.dp)
+                            ) {
                                 Text(
-                                    text = if (!customerPhone.isNullOrBlank()) customerPhone else "Walk-in Customer",
+                                    text = customerDisplayText,
                                     fontSize = 11.5.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
                                 )
                                 if (hasCustomerDue) {
                                     Surface(
@@ -311,9 +333,10 @@ fun ReturnItemsDialog(
 
                         val alreadyStr = if (already % 1.0 == 0.0) already.toLong().toString() else String.format(java.util.Locale.US, "%.2f", already).trimEnd('0').trimEnd('.')
                         val soldStr = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(java.util.Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
+                        val qtyStr = if (qty <= 0.0) "0" else if (qty % 1.0 == 0.0) qty.toLong().toString() else String.format(java.util.Locale.US, "%.2f", qty).trimEnd('0').trimEnd('.')
 
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(14.dp),
                             color = if (isActive) Color(0xFFFAFAFF) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                             border = androidx.compose.foundation.BorderStroke(
                                 1.2.dp,
@@ -321,127 +344,208 @@ fun ReturnItemsDialog(
                             ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
+                                // --- TOP ROW: Product Icon, Full-Width Product Name, and Active Return Pill Badge ---
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant,
-                                        modifier = Modifier.size(34.dp)
+                                        color = if (isActive) Color(0xFFEEF2FF) else MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.size(32.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
-                                            Text("📦", fontSize = 16.sp)
+                                            Text(if (isActive) "↩️" else "📦", fontSize = 15.sp)
                                         }
                                     }
 
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = item.productName,
+                                    Text(
+                                        text = item.productName,
+                                        style = TextStyle(
+                                            fontSize = 13.5.sp,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            lineHeight = 18.sp,
+                                            platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                            lineHeightStyle = LineHeightStyle(
+                                                alignment = LineHeightStyle.Alignment.Center,
+                                                trim = LineHeightStyle.Trim.None
+                                            )
+                                        ),
+                                        color = if (isActive) Color(0xFF1E1B4B) else MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    if (isActive) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFFEEF2FF),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC7D2FE))
                                         ) {
                                             Text(
-                                                text = formatTaka(item.price),
-                                                fontWeight = FontWeight.Bold,
+                                                text = "Return: $qtyStr",
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.ExtraBold,
                                                 color = Color(0xFF4F46E5),
-                                                fontSize = 11.sp
-                                            )
-                                            Text("•", color = MaterialTheme.colorScheme.outline, fontSize = 10.sp)
-                                            Text(
-                                                text = if (already > 0.0) "$soldStr sold ($alreadyStr returned)" else "$soldStr sold",
-                                                fontSize = 11.sp,
-                                                color = if (already > 0.0) Color(0xFFE11D48) else MaterialTheme.colorScheme.onSurfaceVariant
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                             )
                                         }
                                     }
                                 }
 
-                                if (isFullyReturned) {
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant
-                                    ) {
-                                        Text(
-                                            text = "Fully Returned",
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
-                                        )
-                                    }
-                                } else {
+                                // --- BOTTOM ROW: Price & Sold Details on Left | Stepper & All Button on Right ---
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    // Price & sold metrics
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                        modifier = Modifier.weight(1f, fill = false)
                                     ) {
-                                        Surface(
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = MaterialTheme.colorScheme.surface,
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(26.dp)
-                                                        .clickable(enabled = qty > 0.0) {
-                                                            quantities = quantities + (item.productBarcode to (qty - 1.0).coerceAtLeast(0.0))
-                                                        },
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text("−", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                                                }
-
+                                        Text(
+                                            text = formatTaka(item.price),
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF4F46E5),
+                                            fontSize = 12.sp
+                                        )
+                                        Text("•", color = MaterialTheme.colorScheme.outlineVariant, fontSize = 10.sp)
+                                        Text(
+                                            text = "$soldStr sold",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        if (already > 0.0) {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Color(0xFFFFF1F2),
+                                                border = androidx.compose.foundation.BorderStroke(0.8.dp, Color(0xFFFECDD3))
+                                            ) {
                                                 Text(
-                                                    text = if (qty <= 0.0) "0" else if (qty % 1.0 == 0.0) qty.toLong().toString() else String.format(java.util.Locale.US, "%.2f", qty).trimEnd('0').trimEnd('.'),
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.ExtraBold,
-                                                    textAlign = TextAlign.Center,
-                                                    modifier = Modifier.width(28.dp)
+                                                    text = "$alreadyStr returned",
+                                                    fontSize = 9.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFFE11D48),
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                                 )
-
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(26.dp)
-                                                        .clickable(enabled = qty < maxReturnable) {
-                                                            quantities = quantities + (item.productBarcode to (qty + 1.0).coerceAtMost(maxReturnable))
-                                                        },
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text("+", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                                                }
                                             }
                                         }
+                                    }
 
+                                    // Stepper controls or Fully Returned chip
+                                    if (isFullyReturned) {
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
-                                            color = Color(0xFFEEF2FF),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC7D2FE)),
-                                            modifier = Modifier.clickable {
-                                                quantities = quantities + (item.productBarcode to maxReturnable)
-                                            }
+                                            color = MaterialTheme.colorScheme.surfaceVariant
                                         ) {
                                             Text(
-                                                text = "All",
+                                                text = "Fully Returned",
                                                 fontSize = 10.sp,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = Color(0xFF4F46E5),
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                                             )
+                                        }
+                                    } else {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                        ) {
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.surface,
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.height(30.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(30.dp)
+                                                            .clickable(enabled = qty > 0.0) {
+                                                                quantities = quantities + (item.productBarcode to (qty - 1.0).coerceAtLeast(0.0))
+                                                            },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Text(
+                                                            "−",
+                                                            fontSize = 15.sp,
+                                                            fontWeight = FontWeight.ExtraBold,
+                                                            color = if (qty > 0.0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant
+                                                        )
+                                                    }
+
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .defaultMinSize(minWidth = 30.dp)
+                                                            .clickable {
+                                                                manualInputItem = item
+                                                                manualInputInitial = qty
+                                                                manualInputMax = maxReturnable
+                                                            }
+                                                            .padding(horizontal = 3.dp),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Text(
+                                                            text = qtyStr,
+                                                            fontSize = 13.sp,
+                                                            fontWeight = FontWeight.ExtraBold,
+                                                            textAlign = TextAlign.Center,
+                                                            color = if (isActive) Color(0xFF4F46E5) else MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                    }
+
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(30.dp)
+                                                            .clickable(enabled = qty < maxReturnable) {
+                                                                quantities = quantities + (item.productBarcode to (qty + 1.0).coerceAtMost(maxReturnable))
+                                                            },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Text(
+                                                            "+",
+                                                            fontSize = 15.sp,
+                                                            fontWeight = FontWeight.ExtraBold,
+                                                            color = if (qty < maxReturnable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = if (qty == maxReturnable && maxReturnable > 0.0) Color(0xFF4F46E5) else Color(0xFFEEF2FF),
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, if (qty == maxReturnable && maxReturnable > 0.0) Color(0xFF4F46E5) else Color(0xFFC7D2FE)),
+                                                modifier = Modifier
+                                                    .height(30.dp)
+                                                    .clickable {
+                                                        quantities = quantities + (item.productBarcode to maxReturnable)
+                                                    }
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = "All",
+                                                        fontSize = 10.5.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = if (qty == maxReturnable && maxReturnable > 0.0) Color.White else Color(0xFF4F46E5)
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -781,8 +885,8 @@ fun ReturnItemsDialog(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             when (selectedSettlementDestination) {
                                 "CASH" -> {
@@ -792,12 +896,25 @@ fun ReturnItemsDialog(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text("💵 Cash Drawer Float", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Text("Active Register", fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF059669))
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFFECFDF5),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0))
+                                        ) {
+                                            Text(
+                                                "Active Register",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color(0xFF059669),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
                                     }
                                     Text(
                                         "Physical cash will be handed over to customer from till drawer.",
                                         fontSize = 10.5.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        lineHeight = 15.sp
                                     )
                                 }
                                 "DUE" -> {
@@ -806,27 +923,108 @@ fun ReturnItemsDialog(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("👤 ${if (!customerPhone.isNullOrBlank()) customerPhone else "Customer"}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        ) {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = Color(0xFFFEE2E2),
+                                                modifier = Modifier.size(22.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Person,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFFE11D48),
+                                                        modifier = Modifier.size(13.dp)
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                text = customerDisplayText,
+                                                fontSize = 11.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF881337),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
                                         Surface(
-                                            shape = RoundedCornerShape(5.dp),
-                                            color = Color(0xFFFFF1F2),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECDD3))
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color.White,
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDA4AF))
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Due Debt:",
+                                                    fontSize = 9.5.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = Color(0xFF9F1239)
+                                                )
+                                                Text(
+                                                    text = formatTaka(remainingDue),
+                                                    fontSize = 10.5.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = Color(0xFFE11D48)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    HorizontalDivider(
+                                        color = Color(0xFFFECDD3).copy(alpha = 0.6f),
+                                        thickness = 0.8.dp
+                                    )
+
+                                    Row(
+                                        verticalAlignment = Alignment.Top,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = Color(0xFFFFE4E6),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDA4AF)),
+                                            modifier = Modifier
+                                                .size(18.dp)
+                                                .padding(top = 1.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    text = "✓",
+                                                    fontSize = 10.5.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = Color(0xFFE11D48)
+                                                )
+                                            }
+                                        }
+
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                                            modifier = Modifier.weight(1f)
                                         ) {
                                             Text(
-                                                "Due Debt: ${formatTaka(remainingDue)}",
+                                                text = "Return will deduct from customer's due ledger",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF9F1239),
+                                                lineHeight = 15.sp
+                                            )
+                                            Text(
+                                                text = "Cash register drawer remains untouched (no cash payout)",
                                                 fontSize = 10.sp,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = Color(0xFFE11D48),
-                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color(0xFFBE123C),
+                                                lineHeight = 14.sp
                                             )
                                         }
                                     }
-                                    Text(
-                                        "✓ Return will deduct from customer's due ledger (retaining register cash)",
-                                        fontSize = 10.5.sp,
-                                        color = Color(0xFFBE123C),
-                                        fontWeight = FontWeight.SemiBold
-                                    )
                                 }
                                 "MFS" -> {
                                     Row(
@@ -875,12 +1073,25 @@ fun ReturnItemsDialog(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text("🪙 Store Credit Balance", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Text("Customer Wallet", fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFD97706))
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFFFFFBEB),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A))
+                                        ) {
+                                            Text(
+                                                "Customer Wallet",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color(0xFFD97706),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
                                     }
                                     Text(
                                         "Refund amount will be added to customer's account for their next purchase.",
                                         fontSize = 10.5.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        lineHeight = 15.sp
                                     )
                                 }
                             }
@@ -1052,6 +1263,20 @@ fun ReturnItemsDialog(
             }
         )
     }
+
+    // --- SUB-MODAL: DIRECT RETURN QUANTITY INPUT ---
+    if (manualInputItem != null) {
+        ManualReturnQuantityDialog(
+            item = manualInputItem!!,
+            initialQty = manualInputInitial,
+            maxReturnable = manualInputMax,
+            onDismiss = { manualInputItem = null },
+            onConfirm = { newQty ->
+                quantities = quantities + (manualInputItem!!.productBarcode to newQty)
+                manualInputItem = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -1071,17 +1296,174 @@ private fun SettlementTabButton(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(vertical = 5.dp)
+            modifier = Modifier.padding(vertical = 5.dp, horizontal = 2.dp)
         ) {
             Text(icon, fontSize = 12.sp)
             Text(
                 text = label,
                 fontSize = 10.sp,
                 fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                color = if (isSelected) Color(0xFF4F46E5) else Color(0xFF64748B)
+                color = if (isSelected) Color(0xFF4F46E5) else Color(0xFF64748B),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
+}
+
+@Composable
+private fun ManualReturnQuantityDialog(
+    item: SaleItem,
+    initialQty: Double,
+    maxReturnable: Double,
+    onDismiss: () -> Unit,
+    onConfirm: (Double) -> Unit
+) {
+    var textValue by remember {
+        mutableStateOf(
+            if (initialQty > 0.0) {
+                if (initialQty % 1.0 == 0.0) initialQty.toLong().toString()
+                else String.format(java.util.Locale.US, "%.2f", initialQty).trimEnd('0').trimEnd('.')
+            } else ""
+        )
+    }
+
+    val maxStr = if (maxReturnable % 1.0 == 0.0) maxReturnable.toLong().toString() else String.format(java.util.Locale.US, "%.2f", maxReturnable).trimEnd('0').trimEnd('.')
+    val parsedQty = textValue.toDoubleOrNull() ?: 0.0
+    val isValid = parsedQty > 0.0 && parsedQty <= maxReturnable
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Enter Return Quantity",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    text = item.productName,
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = textValue,
+                    onValueChange = { input ->
+                        if (input.isEmpty() || input.matches(Regex("""^\d*\.?\d*$"""))) {
+                            textValue = input
+                        }
+                    },
+                    label = { Text("Quantity (Max: $maxStr)") },
+                    placeholder = { Text("0") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(1.0, 2.0, 5.0).forEach { quickVal ->
+                        if (quickVal <= maxReturnable) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        val q = quickVal.coerceAtMost(maxReturnable)
+                                        textValue = if (q % 1.0 == 0.0) q.toLong().toString() else String.format(java.util.Locale.US, "%.2f", q).trimEnd('0').trimEnd('.')
+                                    }
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "+${quickVal.toInt()}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFEEF2FF),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC7D2FE)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                textValue = maxStr
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "All ($maxStr)",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF4F46E5)
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFFFF1F2),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECDD3)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                textValue = "0"
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Clear",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFE11D48)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val finalQty = (textValue.toDoubleOrNull() ?: 0.0).coerceIn(0.0, maxReturnable)
+                    onConfirm(finalQty)
+                },
+                enabled = textValue.isEmpty() || isValid || parsedQty == 0.0,
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
+            ) {
+                Text("Set Quantity", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable

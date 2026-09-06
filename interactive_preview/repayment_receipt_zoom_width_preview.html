@@ -1,0 +1,1994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Techyfi POS — Money Receipt Redesign & 3D Animated Action Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0B0F19;
+      --card-bg: rgba(22, 28, 45, 0.82);
+      --card-border: rgba(255, 255, 255, 0.09);
+      --primary: #10B981;
+      --primary-dark: #059669;
+      --primary-gradient: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      --blue-gradient: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+      --emerald-gradient: linear-gradient(135deg, #10B981 0%, #047857 100%);
+      --indigo-gradient: linear-gradient(135deg, #6366F1 0%, #4338CA 100%);
+      --amber-gradient: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --chamber-bg: #0F172A;
+      --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      --bangla: 'Hind Siliguri', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.16) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(2, 132, 199, 0.16) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(99, 102, 241, 0.09) 0px, transparent 50%);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 80px;
+      overflow-x: hidden;
+    }
+
+    /* Top Navigation / Lab Header */
+    .header {
+      text-align: center;
+      max-width: 1120px;
+      margin-bottom: 24px;
+    }
+
+    .badge-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.38);
+      color: #10B981;
+      padding: 5px 16px;
+      border-radius: 9999px;
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      box-shadow: 0 0 24px rgba(16, 185, 129, 0.25);
+    }
+
+    .header h1 {
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: -0.6px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #FFFFFF 30%, #94A3B8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 14.5px;
+      line-height: 1.6;
+    }
+
+    /* Redesign Variant Switcher Bar */
+    .variant-selector-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 8px 14px;
+      border-radius: 20px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+
+    .variant-label {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #A5B4FC;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-right: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .v-pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #CBD5E1;
+      padding: 7px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .v-pill:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #FFF;
+      transform: translateY(-1px);
+    }
+
+    .v-pill.active {
+      background: var(--primary-gradient);
+      border-color: #10B981;
+      color: #FFF;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45);
+    }
+
+    /* Top Controls Bar */
+    .top-actions-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 28px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 8px 16px;
+      border-radius: 16px;
+    }
+
+    .ctrl-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #CBD5E1;
+      padding: 6px 12px;
+      border-radius: 9px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .ctrl-pill:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #FFF;
+    }
+
+    .ctrl-pill.active {
+      background: var(--blue-gradient);
+      border-color: #0284C7;
+      color: #FFF;
+    }
+
+    /* Main 3-Column Studio Grid */
+    .studio-grid {
+      width: 100%;
+      max-width: 1440px;
+      display: grid;
+      grid-template-columns: 410px 480px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 1300px) {
+      .studio-grid {
+        grid-template-columns: 410px 1fr;
+      }
+    }
+
+    @media (max-width: 920px) {
+      .studio-grid {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+    }
+
+    /* Phone Emulator Container */
+    .phone-container {
+      width: 100%;
+      max-width: 410px;
+      position: relative;
+    }
+
+    .phone-bezel {
+      background: #020617;
+      border-radius: 46px;
+      padding: 11px;
+      box-shadow: 
+        0 25px 70px -15px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(255, 255, 255, 0.12),
+        0 0 0 4px #1E293B;
+      position: relative;
+    }
+
+    .phone-screen {
+      background: #0A0F1D;
+      border-radius: 36px;
+      height: 775px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* Android Status Bar */
+    .android-status-bar {
+      height: 28px;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #94A3B8;
+      z-index: 120;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* App Dimmed Scrim */
+    .app-scrim {
+      position: absolute;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.78);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      z-index: 100;
+    }
+
+    /* THE MONEY RECEIPT DIALOG MODAL */
+    .money-receipt-dialog {
+      width: 100%;
+      max-width: 374px;
+      background: #FFFFFF;
+      border-radius: 24px;
+      padding: 14px 13px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      box-shadow: 
+        0 24px 60px -10px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(0, 0, 0, 0.06);
+      color: #0F172A;
+      animation: dialogZoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes dialogZoomIn {
+      0% { transform: scale(0.92) translateY(12px); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    /* Dialog Header */
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-info-group {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .badge-icon-circle {
+      width: 34px;
+      height: 34px;
+      background: #10B981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      box-shadow: 0 4px 10px rgba(16, 185, 129, 0.35);
+    }
+
+    .dialog-titles h3 {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: -0.2px;
+      line-height: 1.2;
+    }
+
+    .dialog-titles span {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .header-actions-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lang-toggle-pill {
+      background: #F1F5F9;
+      border: 1px solid #CBD5E1;
+      border-radius: 999px;
+      padding: 2.5px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .lang-opt {
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 999px;
+      color: #475569;
+      transition: all 0.2s ease;
+    }
+
+    .lang-opt.active {
+      background: #10B981;
+      color: #FFFFFF;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-dialog-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #64748B;
+      transition: all 0.2s;
+    }
+
+    .btn-dialog-close:hover {
+      background: #FEE2E2;
+      color: #EF4444;
+    }
+
+    /* Sub-banner: Repaid Amount & Status */
+    .repaid-sub-banner {
+      background: #ECFDF5;
+      border: 1px solid #A7F3D0;
+      border-radius: 12px;
+      padding: 6.5px 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .repaid-amount-label {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #065F46;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .repaid-amount-label strong {
+      font-size: 13.5px;
+      color: #047857;
+    }
+
+    .repaid-status-chip {
+      background: #10B981;
+      color: #FFFFFF;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 7px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+    }
+
+    /* THERMAL DISPENSER CHAMBER */
+    .thermal-chamber {
+      background: var(--chamber-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 8px 8px 10px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      position: relative;
+    }
+
+    .chamber-header {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 6px;
+    }
+
+    .chamber-row-1 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .dispenser-active-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 8.5px;
+      font-weight: 800;
+      color: #94A3B8;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .led-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 8px #10B981;
+      animation: pulseLed 2s infinite;
+    }
+
+    @keyframes pulseLed {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .paper-roll-switcher {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .roll-btn {
+      background: transparent;
+      border: none;
+      color: #94A3B8;
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .roll-btn.active {
+      background: #059669;
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.5);
+    }
+
+    .chamber-row-2 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.28);
+      border-radius: 7px;
+      padding: 2.5px 6px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .zoom-status-label {
+      font-size: 8.5px;
+      font-weight: 700;
+      color: #64748B;
+    }
+
+    .zoom-status-label span {
+      color: #10B981;
+      font-weight: 800;
+    }
+
+    .zoom-controls-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .zoom-tool-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #CBD5E1;
+      width: 22px;
+      height: 20px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .zoom-reset-btn {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #334155;
+      color: #CBD5E1;
+      font-size: 8.5px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    /* SCROLLABLE VIEWPORT (Adjusted height to let redesigned bottom shine) */
+    .chamber-viewport {
+      height: 295px;
+      overflow-y: auto;
+      overflow-x: auto;
+      position: relative;
+      border-radius: 8px;
+      background: #020617;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 8px 4px 18px;
+    }
+
+    .chamber-viewport::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .chamber-viewport::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+
+    .receipt-paper-canvas {
+      background: #FFFFFF;
+      color: #000000;
+      border-radius: 4px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      padding: 14px 12px 14px;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      position: relative;
+      transform-origin: top center;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease;
+      user-select: text;
+    }
+
+    .receipt-paper-canvas.bangla-active {
+      font-family: 'Hind Siliguri', 'JetBrains Mono', sans-serif;
+    }
+
+    .receipt-paper-canvas.w-80mm {
+      width: 94%;
+      max-width: 320px;
+      font-size: 9.5px;
+    }
+
+    .receipt-paper-canvas.w-58mm {
+      width: 78%;
+      max-width: 250px;
+      font-size: 8.5px;
+      padding: 12px 8px 12px;
+    }
+
+    .sawtooth-edge-top {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 5px;
+      background: radial-gradient(circle, transparent 3px, #FFFFFF 3px);
+      background-size: 7px 7px;
+      background-position: 0 -4px;
+    }
+
+    .sawtooth-edge-bottom {
+      position: absolute;
+      bottom: 0; left: 0; width: 100%; height: 5px;
+      background: radial-gradient(circle, transparent 3px, #020617 3.5px);
+      background-size: 7px 7px;
+      background-position: 0 3px;
+    }
+
+    .rcpt-logo-box { text-align: center; margin-bottom: 4px; }
+    .diamond-logo { display: inline-block; width: 135px; }
+    .w-58mm .diamond-logo { width: 105px; }
+    .rcpt-store-name { text-align: center; font-size: 13px; font-weight: 900; text-transform: uppercase; font-family: 'Plus Jakarta Sans', sans-serif; }
+    .w-58mm .rcpt-store-name { font-size: 11px; }
+    .rcpt-store-address, .rcpt-store-hotline { text-align: center; font-size: 8px; color: #222; line-height: 1.35; font-weight: 500; }
+    .rcpt-voucher-banner { text-align: center; font-weight: 800; font-size: 8.5px; margin: 5px 0 3px; }
+    .dashed-divider { border-bottom: 1px dashed #000; margin: 4px 0; }
+    .rcpt-meta-row { display: flex; justify-content: space-between; font-size: 8.5px; line-height: 1.4; }
+    .w-58mm .rcpt-meta-row { font-size: 7.5px; }
+    .rcpt-meta-row .label { color: #333; }
+    .rcpt-meta-row .value { font-weight: 800; color: #000; }
+    .rcpt-hero-box { border: 1.5px solid #000; padding: 5px 8px; margin: 6px 0; text-align: center; background: #F8FAFC; }
+    .hero-amount-label { font-size: 8px; text-transform: uppercase; font-weight: 700; color: #475569; }
+    .hero-amount-val { font-size: 15px; font-weight: 900; color: #000; margin: 1px 0; font-family: 'JetBrains Mono', monospace; }
+    .w-58mm .hero-amount-val { font-size: 13px; }
+    .hero-method-badge { font-size: 7.5px; font-weight: 800; background: #000; color: #FFF; padding: 1.5px 5px; border-radius: 3px; display: inline-block; }
+    .rcpt-status-stamp { border: 1.2px dashed #000; text-align: center; padding: 3px 5px; font-size: 7.5px; font-weight: 800; margin: 5px 0; text-transform: uppercase; }
+
+    /* ========================================================= */
+    /* PHOTOREALISTIC 3D ANIMATED ICONS (MATCHING Realistic3D Suite) */
+    /* ========================================================= */
+    .icon-3d-box {
+      width: 22px;
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    /* 1. PHOTOREALISTIC 3D THERMAL PRINTER */
+    .icon-3d-printer {
+      width: 22px;
+      height: 22px;
+      position: relative;
+    }
+
+    .printer-body-3d {
+      width: 19px;
+      height: 14px;
+      background: linear-gradient(180deg, #38BDF8 0%, #0284C7 60%, #0369A1 100%);
+      border-radius: 4px;
+      position: absolute;
+      bottom: 2px;
+      left: 1.5px;
+      box-shadow: 
+        0 3px 6px rgba(0,0,0,0.35),
+        inset 0 1px 1px rgba(255,255,255,0.7),
+        inset 0 -1px 2px rgba(0,0,0,0.4);
+    }
+
+    .printer-slot-3d {
+      width: 14px;
+      height: 2px;
+      background: #0B1120;
+      border-radius: 1px;
+      position: absolute;
+      top: 2px;
+      left: 2.5px;
+    }
+
+    .printer-paper-3d {
+      width: 10px;
+      height: 9px;
+      background: #FFFFFF;
+      border-radius: 1px 1px 0 0;
+      position: absolute;
+      top: -4px;
+      left: 4.5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      animation: animPaperFeed 1.8s ease-in-out infinite alternate;
+      border-bottom: 1px dashed #94A3B8;
+    }
+
+    .printer-led-3d {
+      width: 2.5px;
+      height: 2.5px;
+      background: #4ADE80;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 2.5px;
+      right: 2.5px;
+      box-shadow: 0 0 5px #22C55E;
+      animation: animLedBlink 1.4s infinite;
+    }
+
+    @keyframes animPaperFeed {
+      0% { height: 6px; top: -2px; }
+      100% { height: 11px; top: -6px; }
+    }
+
+    @keyframes animLedBlink {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* 2. PHOTOREALISTIC 3D SUPERSONIC SHARE PLANE */
+    .icon-3d-share {
+      width: 22px;
+      height: 22px;
+      position: relative;
+    }
+
+    .share-bubble-3d {
+      width: 20px;
+      height: 20px;
+      background: linear-gradient(135deg, #34D399 0%, #10B981 50%, #059669 100%);
+      border-radius: 6px;
+      position: absolute;
+      inset: 1px;
+      box-shadow: 
+        0 3px 6px rgba(0,0,0,0.28),
+        inset 0 1px 1px rgba(255,255,255,0.65),
+        inset 0 -1px 2px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .share-plane-3d {
+      width: 12px;
+      height: 12px;
+      animation: animPlaneFloat 1.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes animPlaneFloat {
+      0% { transform: translate(-1px, 1px) rotate(-3deg); }
+      100% { transform: translate(1.5px, -1.5px) rotate(4deg); }
+    }
+
+    /* 3. PHOTOREALISTIC 3D SAVE DISK / TRAY */
+    .icon-3d-download {
+      width: 22px;
+      height: 22px;
+      position: relative;
+    }
+
+    .disk-cartridge-3d {
+      width: 20px;
+      height: 20px;
+      background: linear-gradient(180deg, #60A5FA 0%, #3B82F6 60%, #1D4ED8 100%);
+      border-radius: 5px;
+      position: absolute;
+      inset: 1px;
+      box-shadow: 
+        0 3px 6px rgba(0,0,0,0.3),
+        inset 0 1px 1.5px rgba(255,255,255,0.7),
+        inset 0 -1px 2px rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .disk-shutter-3d {
+      position: absolute;
+      top: 1.5px;
+      width: 10px;
+      height: 4px;
+      background: rgba(255,255,255,0.85);
+      border-radius: 1px;
+    }
+
+    .download-arrow-3d {
+      width: 10px;
+      height: 10px;
+      margin-top: 2px;
+      animation: animArrowBounce 1.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes animArrowBounce {
+      0% { transform: translateY(-1.5px); }
+      100% { transform: translateY(1.5px); }
+    }
+
+    /* 4. PHOTOREALISTIC 3D CLIPBOARD COPY */
+    .icon-3d-copy {
+      width: 18px;
+      height: 18px;
+      position: relative;
+    }
+
+    .clipboard-board-3d {
+      width: 15px;
+      height: 17px;
+      background: linear-gradient(135deg, #FDE68A 0%, #F59E0B 70%, #D97706 100%);
+      border-radius: 3px;
+      position: absolute;
+      top: 1px;
+      left: 1.5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+    }
+
+    .clipboard-paper-3d {
+      width: 11px;
+      height: 13px;
+      background: #FFFFFF;
+      border-radius: 2px;
+      position: absolute;
+      top: 3px;
+      left: 3.5px;
+    }
+
+    .clipboard-clip-3d {
+      width: 7px;
+      height: 3px;
+      background: #334155;
+      border-radius: 1.5px;
+      position: absolute;
+      top: 0px;
+      left: 5.5px;
+    }
+
+    /* 5. PHOTOREALISTIC 3D WHATSAPP DIRECT SEND */
+    .icon-3d-whatsapp {
+      width: 20px;
+      height: 20px;
+      background: linear-gradient(135deg, #4ADE80 0%, #22C55E 50%, #16A34A 100%);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(34, 197, 94, 0.4);
+      animation: animWaPulse 2s infinite;
+    }
+
+    @keyframes animWaPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* ========================================================= */
+    /* REDESIGNED BOTTOM ACTION DECK LAYOUT VARIANTS */
+    /* ========================================================= */
+
+    /* Container for bottom area */
+    .bottom-deck-stage {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      transition: all 0.3s ease;
+    }
+
+    /* VARIANT 1: "Compact 3D Floating Dock" (2-Row, High Ergonomics) */
+    .v1-deck {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .v1-quick-text-bar {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .v1-quick-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .v1-actions-cluster {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .v1-micro-chip {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      padding: 3px 8px;
+      border-radius: 7px;
+      font-size: 8.5px;
+      font-weight: 800;
+      color: #0284C7;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.18s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .v1-micro-chip:hover {
+      background: #0284C7;
+      color: #FFF;
+      border-color: #0284C7;
+    }
+
+    .v1-micro-chip.copy {
+      color: #059669;
+    }
+
+    .v1-micro-chip.copy:hover {
+      background: #059669;
+      color: #FFF;
+      border-color: #059669;
+    }
+
+    .v1-buttons-deck {
+      display: grid;
+      grid-template-columns: 1.3fr 1.05fr 0.95fr;
+      gap: 6px;
+    }
+
+    .v1-btn-card {
+      border: none;
+      padding: 7px 6px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .v1-btn-card:hover {
+      transform: translateY(-1.5px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+
+    .v1-btn-card:active {
+      transform: scale(0.97);
+    }
+
+    .v1-btn-card.print {
+      background: var(--blue-gradient);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    }
+
+    .v1-btn-card.share {
+      background: var(--emerald-gradient);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+    }
+
+    .v1-btn-card.save {
+      background: #FFFFFF;
+      color: #0F172A;
+      border: 1.5px solid #CBD5E1;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    /* VARIANT 2: "Unified Hero Command Deck" (Ultra-Compact -40% Height!) */
+    .v2-deck {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .v2-hero-print {
+      width: 100%;
+      background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 14px;
+      padding: 10px 14px;
+      font-size: 12.5px;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45);
+      transition: all 0.2s ease;
+    }
+
+    .v2-hero-print:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(2, 132, 199, 0.55);
+    }
+
+    .v2-hero-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .v2-hero-badge {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 2.5px 7px;
+      border-radius: 6px;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .v2-sub-actions-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+
+    .v2-sub-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 6px 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .v2-sub-card:hover {
+      background: #FFFFFF;
+      border-color: #0284C7;
+      color: #0284C7;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+    }
+
+    /* VARIANT 3: "Smart WhatsApp Express Deck" (Direct 1-Tap Customer Messaging) */
+    .v3-deck {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .v3-split-hero {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 6px;
+    }
+
+    .v3-print-btn {
+      background: var(--blue-gradient);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 12px;
+      padding: 8px 8px;
+      font-size: 11.5px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    }
+
+    .v3-whatsapp-btn {
+      background: linear-gradient(135deg, #22C55E 0%, #15803D 100%);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 12px;
+      padding: 8px 8px;
+      font-size: 11.5px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+    }
+
+    .v3-utility-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #F1F5F9;
+      border-radius: 10px;
+      padding: 4px 8px;
+      font-size: 9px;
+      font-weight: 700;
+      color: #475569;
+    }
+
+    .v3-links-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .v3-link-chip {
+      color: #0284C7;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      font-weight: 800;
+    }
+
+    .v3-link-chip:hover {
+      background: #0284C7;
+      color: #FFF;
+    }
+
+    /* Column 2: 3D Icons & UX Design Specs */
+    .spec-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .lab-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 20px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .lab-card h2 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .lab-card p.sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    /* 3D Icons Showcase Gallery */
+    .icons-showcase-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .icon-showcase-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .icon-showcase-preview {
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .icon-showcase-details h4 {
+      font-size: 12px;
+      font-weight: 800;
+      color: #F8FAFC;
+      margin-bottom: 2px;
+    }
+
+    .icon-showcase-details span {
+      font-size: 9.5px;
+      color: #94A3B8;
+      display: block;
+      line-height: 1.3;
+    }
+
+    /* Comparison Table */
+    .variant-comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-top: 10px;
+    }
+
+    .variant-comp-table th {
+      text-align: left;
+      padding: 7px 8px;
+      color: #94A3B8;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 9.5px;
+    }
+
+    .variant-comp-table td {
+      padding: 8px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      color: #E2E8F0;
+    }
+
+    .variant-comp-table tr.highlight {
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    /* Column 3: Additional Suggested Improvements */
+    .suggest-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .suggestion-box {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .suggestion-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #38BDF8;
+    }
+
+    .suggestion-desc {
+      font-size: 11px;
+      color: #94A3B8;
+      line-height: 1.5;
+    }
+
+    /* Live Toast */
+    .live-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1E293B;
+      border: 1px solid #334155;
+      color: #F8FAFC;
+      padding: 10px 22px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1000;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .live-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Lab Header -->
+  <div class="header">
+    <div class="badge-tag">
+      <span>✨ UI/UX Redesign & 3D Icon Suite Lab</span>
+    </div>
+    <h1>Compact, Intuitive Bottom Action Deck with Photorealistic 3D Icons</h1>
+    <p>
+      Redesign of the <strong>SMS / WhatsApp quick-text bar</strong> and <strong>Action Buttons Deck</strong> for the Money Receipt dialog. Features photorealistic 3D animated icons matching Techyfi POS's <code>Realistic3DIconSuite</code>, superior touch ergonomics, and 3 interactive design variants.
+    </p>
+  </div>
+
+  <!-- Interactive Variant Switcher Bar -->
+  <div class="variant-selector-bar">
+    <span class="variant-label">⚡ Select Redesign Concept:</span>
+    <button class="v-pill active" id="btn-v1" onclick="switchVariant(1)">
+      <span>🌟 Variant 1: Compact 3D Floating Dock (Recommended)</span>
+    </button>
+    <button class="v-pill" id="btn-v2" onclick="switchVariant(2)">
+      <span>🚀 Variant 2: Hero Command Deck (-40% Vertical Height)</span>
+    </button>
+    <button class="v-pill" id="btn-v3" onclick="switchVariant(3)">
+      <span>💬 Variant 3: Smart WhatsApp Express (1-Tap Send)</span>
+    </button>
+  </div>
+
+  <!-- Global Quick Actions Bar -->
+  <div class="top-actions-bar">
+    <div class="ctrl-pill active" id="btn-roll-80" onclick="selectPaperWidth(80)">
+      <span>📄 80mm Mode</span>
+    </div>
+    <div class="ctrl-pill" id="btn-roll-58" onclick="selectPaperWidth(58)">
+      <span>📄 58mm Mode</span>
+    </div>
+    <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.1); margin: 0 4px;"></div>
+    <div class="ctrl-pill" id="btn-lang-toggle" onclick="toggleLanguage()">
+      <span id="top-lang-text">🌐 Language: English (EN)</span>
+    </div>
+    <div class="ctrl-pill" onclick="adjustZoom(+0.2)">
+      <span>🔍 Zoom In</span>
+    </div>
+    <div class="ctrl-pill" onclick="resetZoom()">
+      <span id="zoom-badge-pill">Reset 1x</span>
+    </div>
+  </div>
+
+  <!-- Studio Grid -->
+  <div class="studio-grid">
+
+    <!-- Column 1: Native Android Mobile Device Simulator -->
+    <div class="phone-container">
+      <div class="phone-bezel">
+        <div class="phone-screen">
+          
+          <!-- Android Status Bar -->
+          <div class="android-status-bar">
+            <span>04:30</span>
+            <div class="status-icons">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.25C3.52 16.5 3 14.33 3 12c0-4.97 4.03-9 9-9s9 4.03 9 9c0 2.33-.52 4.5-1.35 6.25l-.62-.64C20.26 16.07 21 14.12 21 12c0-4.97-4.03-9-9-9z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98C20.93 5.9 16.69 4 12 4z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+            </div>
+          </div>
+
+          <!-- App Dimmed Scrim -->
+          <div class="app-scrim">
+
+            <!-- THE MONEY RECEIPT DIALOG MODAL -->
+            <div class="money-receipt-dialog">
+
+              <!-- 1. Header -->
+              <div class="dialog-header">
+                <div class="header-info-group">
+                  <div class="badge-icon-circle">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                  <div class="dialog-titles">
+                    <h3 id="dlgTitle">Money Receipt</h3>
+                    <span id="dlgSub">DUE REPAYMENT VOUCHER</span>
+                  </div>
+                </div>
+
+                <div class="header-actions-right">
+                  <div class="lang-toggle-pill" onclick="toggleLanguage()">
+                    <span class="lang-opt active" id="pill-en">EN</span>
+                    <span class="lang-opt" id="pill-bn">বাং</span>
+                  </div>
+                  <button class="btn-dialog-close" onclick="triggerToast('ℹ️ Close dialog tapped')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 2. Repaid Sub-banner -->
+              <div class="repaid-sub-banner">
+                <div class="repaid-amount-label">
+                  <span id="lblRepaidText">Repaid:</span>
+                  <strong id="lblRepaidAmount">৳927 (Cash)</strong>
+                </div>
+                <div class="repaid-status-chip" id="lblRepaidBadge">
+                  <span>⏳ PARTIAL</span>
+                </div>
+              </div>
+
+              <!-- 3. Thermal Chamber -->
+              <div class="thermal-chamber">
+                <div class="chamber-header">
+                  <div class="chamber-row-1">
+                    <div class="dispenser-active-badge">
+                      <div class="led-dot"></div>
+                      <span>THERMAL DISPENSER ACTIVE</span>
+                    </div>
+                    <div class="paper-roll-switcher">
+                      <button class="roll-btn active" id="chip-80mm" onclick="selectPaperWidth(80)">80mm</button>
+                      <button class="roll-btn" id="chip-58mm" onclick="selectPaperWidth(58)">58mm</button>
+                    </div>
+                  </div>
+                  <div class="chamber-row-2">
+                    <div class="zoom-status-label">SCALE: <span id="lblZoomPct">100%</span></div>
+                    <div class="zoom-controls-group">
+                      <button class="zoom-tool-btn" onclick="adjustZoom(-0.2)">−</button>
+                      <button class="zoom-reset-btn" onclick="resetZoom()">Reset 1x</button>
+                      <button class="zoom-tool-btn" onclick="adjustZoom(+0.2)">+</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Viewport -->
+                <div class="chamber-viewport">
+                  <div class="receipt-paper-canvas w-80mm" id="receiptCanvas">
+                    <div class="sawtooth-edge-top"></div>
+                    <div class="rcpt-logo-box">
+                      <svg class="diamond-logo" viewBox="0 0 240 160">
+                        <polygon points="120,6 230,80 120,154 10,80" fill="#000" stroke="#000" stroke-width="2"/>
+                        <polygon points="120,14 218,80 120,146 22,80" fill="#FFF"/>
+                        <text x="120" y="72" font-family="'JetBrains Mono', Impact, sans-serif" font-weight="900" font-size="44" fill="#000" text-anchor="middle">MAKS</text>
+                        <rect x="36" y="86" width="168" height="2" fill="#000"/>
+                        <text x="120" y="106" font-family="'JetBrains Mono', Arial Black, sans-serif" font-weight="900" font-size="20" fill="#000" text-anchor="middle">KAWSAR STORE</text>
+                      </svg>
+                    </div>
+                    <div class="rcpt-store-name" id="rcptStoreName">M/S AL KAWSAR STORE</div>
+                    <div class="rcpt-store-address" id="rcptStoreAddress">121 WEST KAFRUL, TALTOLA, DHAKA</div>
+                    <div class="rcpt-store-hotline" id="rcptStorePhone">Hotline: 01711352148 | 01712-650307</div>
+                    <div class="rcpt-voucher-banner" id="rcptBanner">★ MONEY RECEIPT • DUE REPAYMENT ★</div>
+                    <div class="dashed-divider"></div>
+                    <div class="rcpt-meta-row"><span class="label" id="lblRcptDate">Date:</span><span class="value" id="valRcptDate">05 Sep 2026, 04:13 AM</span></div>
+                    <div class="rcpt-meta-row"><span class="label" id="lblRcptVoucher">Voucher #:</span><span class="value">REC-20785</span></div>
+                    <div class="rcpt-meta-row"><span class="label" id="lblRcptCustomer">Customer:</span><span class="value">ARIF KHAN</span></div>
+                    <div class="rcpt-meta-row"><span class="label" id="lblRcptPhone">Phone:</span><span class="value">01919207715</span></div>
+                    <div class="dashed-divider"></div>
+                    <div class="rcpt-meta-row"><span class="label" id="lblRcptPrevDue">Previous Due:</span><span class="value">৳1,500.00</span></div>
+                    <div class="rcpt-hero-box">
+                      <div class="hero-amount-label" id="lblHeroAmount">Repaid Amount (জমা)</div>
+                      <div class="hero-amount-val" id="valHeroAmount">৳927.00</div>
+                      <div class="hero-method-badge" id="valHeroMethod">CASH (নগদ)</div>
+                    </div>
+                    <div class="rcpt-meta-row"><span class="label" id="lblRcptRemainDue">Remaining Due:</span><span class="value" style="color: #DC2626;">৳573.00</span></div>
+                    <div class="dashed-divider"></div>
+                    <div class="rcpt-status-stamp" id="rcptStatusStamp">★ PARTIAL REPAYMENT / আংশিক পরিশোধ ★</div>
+                    <div class="sawtooth-edge-bottom"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ======================================================= -->
+              <!-- 4 & 5. REDESIGNED BOTTOM ACTION DECK STAGE -->
+              <!-- ======================================================= -->
+              <div class="bottom-deck-stage" id="bottomDeckStage">
+                
+                <!-- DYNAMICALLY RENDERED BY JAVASCRIPT BASED ON SELECTED VARIANT -->
+
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 2: Photorealistic 3D Animated Icons & Spec Studio -->
+    <div class="spec-column">
+
+      <!-- 3D Icons Showcase Card -->
+      <div class="lab-card">
+        <h2>
+          <span>🎨 Photorealistic 3D Animated Icon Suite</span>
+          <span style="font-size: 11px; color: #10B981; font-weight: 700;">GPU-Accelerated</span>
+        </h2>
+        <p class="sub">
+          Handcrafted vector-based 3D icons with realistic specular lighting, depth bevels, and micro-animations matching Jetpack Compose <code>Realistic3DIconSuite.kt</code>.
+        </p>
+
+        <div class="icons-showcase-grid">
+          
+          <!-- Printer -->
+          <div class="icon-showcase-card">
+            <div class="icon-showcase-preview">
+              <div class="icon-3d-printer" style="transform: scale(1.4);">
+                <div class="printer-body-3d">
+                  <div class="printer-slot-3d"></div>
+                  <div class="printer-paper-3d"></div>
+                  <div class="printer-led-3d"></div>
+                </div>
+              </div>
+            </div>
+            <div class="icon-showcase-details">
+              <h4>3D Thermal Printer</h4>
+              <span>Continuous paper feed & blinking ready LED.</span>
+            </div>
+          </div>
+
+          <!-- Share -->
+          <div class="icon-showcase-card">
+            <div class="icon-showcase-preview">
+              <div class="icon-3d-share" style="transform: scale(1.4);">
+                <div class="share-bubble-3d">
+                  <svg class="share-plane-3d" viewBox="0 0 24 24" fill="#FFF">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="icon-showcase-details">
+              <h4>3D Supersonic Share</h4>
+              <span>Floating emerald bubble with paper plane tilt.</span>
+            </div>
+          </div>
+
+          <!-- Download / Save -->
+          <div class="icon-showcase-card">
+            <div class="icon-showcase-preview">
+              <div class="icon-3d-download" style="transform: scale(1.4);">
+                <div class="disk-cartridge-3d">
+                  <div class="disk-shutter-3d"></div>
+                  <svg class="download-arrow-3d" viewBox="0 0 24 24" fill="#FFF">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="icon-showcase-details">
+              <h4>3D Save / Storage Disk</h4>
+              <span>Sapphire metallic tray with bouncing arrow.</span>
+            </div>
+          </div>
+
+          <!-- Clipboard -->
+          <div class="icon-showcase-card">
+            <div class="icon-showcase-preview">
+              <div class="icon-3d-copy" style="transform: scale(1.4);">
+                <div class="clipboard-board-3d"></div>
+                <div class="clipboard-paper-3d"></div>
+                <div class="clipboard-clip-3d"></div>
+              </div>
+            </div>
+            <div class="icon-showcase-details">
+              <h4>3D Clipboard Copy</h4>
+              <span>Amber binder board with copy tick badge.</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Comparative Analysis Table -->
+      <div class="lab-card">
+        <h2>
+          <span>📊 Redesign Concept Comparison</span>
+        </h2>
+        <p class="sub">
+          Detailed ergonomic assessment of the 3 proposed bottom deck designs.
+        </p>
+
+        <table class="variant-comp-table">
+          <thead>
+            <tr>
+              <th>Concept</th>
+              <th>Height</th>
+              <th>Ergonomics</th>
+              <th>Key Strengths</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="highlight">
+              <td><strong>Variant 1: Compact 3D Floating Dock</strong></td>
+              <td><span style="color:#10B981; font-weight:800;">72dp</span></td>
+              <td>★★★★★</td>
+              <td>Balanced layout; separated text vs image share; high-visibility 3D icons.</td>
+            </tr>
+            <tr>
+              <td><strong>Variant 2: Hero Command Deck</strong></td>
+              <td><span style="color:#38BDF8; font-weight:800;">64dp</span></td>
+              <td>★★★★★</td>
+              <td>Ultra-compact (-40% height); hero 1-tap print button; maximum receipt chamber height.</td>
+            </tr>
+            <tr>
+              <td><strong>Variant 3: Smart WhatsApp Express</strong></td>
+              <td><span style="color:#FBBF24; font-weight:800;">70dp</span></td>
+              <td>★★★★☆</td>
+              <td>Direct 1-tap WhatsApp customer dispatch; tailored for Bangladeshi customer habits.</td>
+            </tr>
+          </tbody>
+        </table>
+
+      </div>
+
+    </div>
+
+    <!-- Column 3: Suggestions & UX Innovations -->
+    <div class="suggest-column">
+
+      <!-- Additional Improvements Card -->
+      <div class="lab-card">
+        <h2>
+          <span>💡 Additional Suggested Improvements</span>
+        </h2>
+        <p class="sub">
+          Professional UI/UX recommendations to elevate the merchant and customer experience:
+        </p>
+
+        <!-- Suggestion 1 -->
+        <div class="suggestion-box">
+          <div class="suggestion-header">
+            <span>⚡ 1. Direct Customer WhatsApp Dispatch</span>
+          </div>
+          <p class="suggestion-desc">
+            Since the customer's phone number (<code>01919207715</code>) is already captured in the voucher, a single tap can immediately open WhatsApp with the formatted voucher message preloaded—saving cashiers 15+ seconds per transaction!
+          </p>
+        </div>
+
+        <!-- Suggestion 2 -->
+        <div class="suggestion-box" style="margin-top: 10px;">
+          <div class="suggestion-header">
+            <span>📳 2. Tactile Haptic Confirmation Feedback</span>
+          </div>
+          <p class="suggestion-desc">
+            Trigger a subtle physical haptic vibration (<code>HapticFeedbackType.LongPress</code> or <code>TextHandleMove</code>) on Print and Copy actions, confirming operation success even in noisy retail environments.
+          </p>
+        </div>
+
+        <!-- Suggestion 3 -->
+        <div class="suggestion-box" style="margin-top: 10px;">
+          <div class="suggestion-header">
+            <span>⏱️ 3. Animated Reactive Print Button State</span>
+          </div>
+          <p class="suggestion-desc">
+            Upon tapping Print, the button shows a 1.2s "Printing..." spinner state with the 3D printer feeding paper, transitioning to "Printed ✓" before returning to default.
+          </p>
+        </div>
+
+        <!-- Suggestion 4 -->
+        <div class="suggestion-box" style="margin-top: 10px;">
+          <div class="suggestion-header">
+            <span>📏 4. Automatic Dialog Height Conservation</span>
+          </div>
+          <p class="suggestion-desc">
+            By trimming ~28dp to 36dp from the bottom deck, the thermal receipt chamber gains extra vertical space, ensuring the full repayment voucher (including barcode and signature) fits on screen without requiring scrolling!
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="live-toast" id="liveToast">
+    <span id="toastMsg">Notification</span>
+  </div>
+
+  <!-- Interactive Logic -->
+  <script>
+    let activeVariant = 1;
+    let currentWidth = 80;
+    let currentZoom = 1.0;
+    let currentLang = 'en';
+    let isCopied = false;
+
+    // Render the selected bottom deck variant
+    function renderBottomDeck() {
+      const stage = document.getElementById('bottomDeckStage');
+      const isBn = currentLang === 'bn';
+      const printWidthLabel = currentWidth === 80 ? (isBn ? '৮০ মিমি' : '80mm') : (isBn ? '৫৮ মিমি' : '58mm');
+
+      if (activeVariant === 1) {
+        // VARIANT 1: Compact 3D Floating Dock (Recommended)
+        stage.innerHTML = `
+          <div class="v1-deck">
+            <!-- Row 1: Compact Quick Text Bar with 3D Clipboard & Action Chips -->
+            <div class="v1-quick-text-bar">
+              <div class="v1-quick-left">
+                <div class="icon-3d-copy">
+                  <div class="clipboard-board-3d"></div>
+                  <div class="clipboard-paper-3d"></div>
+                  <div class="clipboard-clip-3d"></div>
+                </div>
+                <span>${isBn ? 'রসিদের SMS / WhatsApp টেক্সট' : 'Receipt SMS / WhatsApp Text'}</span>
+              </div>
+              <div class="v1-actions-cluster">
+                <button class="v1-micro-chip" onclick="simulateShareText()">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                  <span>${isBn ? 'শেয়ার' : 'Share'}</span>
+                </button>
+                <button class="v1-micro-chip copy" onclick="simulateCopyText()">
+                  <span>${isCopied ? (isBn ? 'কপি হয়েছে! ✓' : 'Copied! ✓') : (isBn ? 'কপি' : 'Copy')}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Row 2: 3 Ergonomic Buttons with Photorealistic 3D Icons -->
+            <div class="v1-buttons-deck">
+              <!-- Print Button -->
+              <button class="v1-btn-card print" onclick="simulatePrint()">
+                <div class="icon-3d-printer">
+                  <div class="printer-body-3d">
+                    <div class="printer-slot-3d"></div>
+                    <div class="printer-paper-3d"></div>
+                    <div class="printer-led-3d"></div>
+                  </div>
+                </div>
+                <span>${isBn ? `প্রিন্ট (${printWidthLabel})` : `Print (${printWidthLabel})`}</span>
+              </button>
+
+              <!-- Share Slip Button -->
+              <button class="v1-btn-card share" onclick="simulateShareSlip()">
+                <div class="icon-3d-share">
+                  <div class="share-bubble-3d">
+                    <svg class="share-plane-3d" viewBox="0 0 24 24" fill="#FFF">
+                      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                  </div>
+                </div>
+                <span>${isBn ? 'শেয়ার স্লিপ' : 'Share Slip'}</span>
+              </button>
+
+              <!-- Save Slip Button -->
+              <button class="v1-btn-card save" onclick="simulateSaveSlip()">
+                <div class="icon-3d-download">
+                  <div class="disk-cartridge-3d">
+                    <div class="disk-shutter-3d"></div>
+                    <svg class="download-arrow-3d" viewBox="0 0 24 24" fill="#FFF">
+                      <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    </svg>
+                  </div>
+                </div>
+                <span>${isBn ? 'সংরক্ষণ' : 'Save Slip'}</span>
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (activeVariant === 2) {
+        // VARIANT 2: Hero Command Deck (-40% Height)
+        stage.innerHTML = `
+          <div class="v2-deck">
+            <!-- Hero Wide Print CTA -->
+            <button class="v2-hero-print" onclick="simulatePrint()">
+              <div class="v2-hero-left">
+                <div class="icon-3d-printer">
+                  <div class="printer-body-3d">
+                    <div class="printer-slot-3d"></div>
+                    <div class="printer-paper-3d"></div>
+                    <div class="printer-led-3d"></div>
+                  </div>
+                </div>
+                <span>${isBn ? 'রসিদ প্রিন্ট করুন' : 'PRINT MONEY RECEIPT'}</span>
+              </div>
+              <div class="v2-hero-badge">${printWidthLabel} ESC/POS</div>
+            </button>
+
+            <!-- Sub Actions Row: 3 Clean Cards -->
+            <div class="v2-sub-actions-row">
+              <div class="v2-sub-card" onclick="simulateShareSlip()">
+                <div class="icon-3d-share" style="transform: scale(0.9);">
+                  <div class="share-bubble-3d">
+                    <svg class="share-plane-3d" viewBox="0 0 24 24" fill="#FFF"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                  </div>
+                </div>
+                <span>${isBn ? 'শেয়ার' : 'Share Slip'}</span>
+              </div>
+
+              <div class="v2-sub-card" onclick="simulateSaveSlip()">
+                <div class="icon-3d-download" style="transform: scale(0.9);">
+                  <div class="disk-cartridge-3d">
+                    <div class="disk-shutter-3d"></div>
+                    <svg class="download-arrow-3d" viewBox="0 0 24 24" fill="#FFF"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                  </div>
+                </div>
+                <span>${isBn ? 'সেভ' : 'Save Slip'}</span>
+              </div>
+
+              <div class="v2-sub-card" onclick="simulateCopyText()">
+                <div class="icon-3d-copy" style="transform: scale(0.9);">
+                  <div class="clipboard-board-3d"></div>
+                  <div class="clipboard-paper-3d"></div>
+                  <div class="clipboard-clip-3d"></div>
+                </div>
+                <span>${isCopied ? (isBn ? 'কপি ✓' : 'Copied ✓') : (isBn ? 'কপি টেক্সট' : 'Copy Text')}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (activeVariant === 3) {
+        // VARIANT 3: Smart WhatsApp Express Deck
+        stage.innerHTML = `
+          <div class="v3-deck">
+            <!-- Split Hero CTAs: Print + Direct WhatsApp Customer -->
+            <div class="v3-split-hero">
+              <button class="v3-print-btn" onclick="simulatePrint()">
+                <div class="icon-3d-printer">
+                  <div class="printer-body-3d">
+                    <div class="printer-slot-3d"></div>
+                    <div class="printer-paper-3d"></div>
+                    <div class="printer-led-3d"></div>
+                  </div>
+                </div>
+                <span>${isBn ? `প্রিন্ট (${printWidthLabel})` : `Print (${printWidthLabel})`}</span>
+              </button>
+
+              <button class="v3-whatsapp-btn" onclick="simulateDirectWhatsApp()">
+                <div class="icon-3d-whatsapp">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#FFF">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
+                  </svg>
+                </div>
+                <span>${isBn ? 'গ্রাহককে পাঠান' : 'WhatsApp'}</span>
+              </button>
+            </div>
+
+            <!-- Utility row -->
+            <div class="v3-utility-row">
+              <span>${isBn ? 'অতিরিক্ত সুবিধা:' : 'Slip Options:'}</span>
+              <div class="v3-links-group">
+                <span class="v3-link-chip" onclick="simulateShareSlip()">🚀 ${isBn ? 'শেয়ার' : 'Share'}</span>
+                <span class="v3-link-chip" onclick="simulateSaveSlip()">💾 ${isBn ? 'সেভ' : 'Save'}</span>
+                <span class="v3-link-chip" onclick="simulateCopyText()">📋 ${isCopied ? '✓' : (isBn ? 'কপি' : 'Copy')}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Switch active variant
+    function switchVariant(v) {
+      activeVariant = v;
+      document.getElementById('btn-v1').classList.toggle('active', v === 1);
+      document.getElementById('btn-v2').classList.toggle('active', v === 2);
+      document.getElementById('btn-v3').classList.toggle('active', v === 3);
+      renderBottomDeck();
+
+      const names = [
+        "",
+        "🌟 Variant 1: Compact 3D Floating Dock",
+        "🚀 Variant 2: Hero Command Deck",
+        "💬 Variant 3: Smart WhatsApp Express"
+      ];
+      triggerToast(`Activated: ${names[v]}`);
+    }
+
+    // Paper width selector
+    function selectPaperWidth(width) {
+      currentWidth = width;
+      document.getElementById('chip-80mm').classList.toggle('active', width === 80);
+      document.getElementById('chip-58mm').classList.toggle('active', width === 58);
+      document.getElementById('btn-roll-80').classList.toggle('active', width === 80);
+      document.getElementById('btn-roll-58').classList.toggle('active', width === 58);
+
+      const canvas = document.getElementById('receiptCanvas');
+      canvas.classList.remove('w-80mm', 'w-58mm');
+      canvas.classList.add(`w-${width}mm`);
+
+      renderBottomDeck();
+      triggerToast(`📄 Roll Width set to ${width}mm ESC/POS`);
+    }
+
+    // Zoom adjustments
+    function adjustZoom(delta) {
+      currentZoom = Math.max(0.7, Math.min(2.2, currentZoom + delta));
+      applyZoom();
+    }
+
+    function resetZoom() {
+      currentZoom = 1.0;
+      applyZoom();
+    }
+
+    function applyZoom() {
+      const canvas = document.getElementById('receiptCanvas');
+      canvas.style.transform = `scale(${currentZoom})`;
+      const pctStr = `${Math.round(currentZoom * 100)}%`;
+      document.getElementById('lblZoomPct').textContent = pctStr;
+      document.getElementById('zoom-badge-pill').textContent = `Reset 1x (${pctStr})`;
+      triggerToast(`🔍 Zoom Level: ${pctStr}`);
+    }
+
+    // Language switcher
+    function toggleLanguage() {
+      currentLang = currentLang === 'en' ? 'bn' : 'en';
+      const isBn = currentLang === 'bn';
+
+      document.getElementById('pill-en').classList.toggle('active', !isBn);
+      document.getElementById('pill-bn').classList.toggle('active', isBn);
+      document.getElementById('top-lang-text').textContent = isBn ? '🌐 ভাষা: বাংলা (BN)' : '🌐 Language: English (EN)';
+
+      document.getElementById('dlgTitle').textContent = isBn ? 'মানি রসিদ' : 'Money Receipt';
+      document.getElementById('dlgSub').textContent = isBn ? 'বকেয়া আদায় ভাউচার' : 'DUE REPAYMENT VOUCHER';
+      document.getElementById('lblRepaidText').textContent = isBn ? 'পরিশোধ:' : 'Repaid:';
+
+      const canvas = document.getElementById('receiptCanvas');
+      canvas.classList.toggle('bangla-active', isBn);
+
+      document.getElementById('rcptBanner').textContent = isBn ? '★ মানি রসিদ • বকেয়া পরিশোধ ★' : '★ MONEY RECEIPT • DUE REPAYMENT ★';
+      document.getElementById('lblRcptDate').textContent = isBn ? 'তারিখ:' : 'Date:';
+      document.getElementById('lblRcptVoucher').textContent = isBn ? 'ভাউচার নং:' : 'Voucher #:';
+      document.getElementById('lblRcptCustomer').textContent = isBn ? 'গ্রাহক:' : 'Customer:';
+      document.getElementById('lblRcptPhone').textContent = isBn ? 'মোবাইল:' : 'Phone:';
+      document.getElementById('lblRcptPrevDue').textContent = isBn ? 'পূর্বের বকেয়া:' : 'Previous Due:';
+      document.getElementById('lblHeroAmount').textContent = isBn ? 'পরিশোধিত টাকা (জমা)' : 'Repaid Amount (জমা)';
+      document.getElementById('valHeroMethod').textContent = isBn ? 'নগদ (CASH)' : 'CASH (নগদ)';
+      document.getElementById('lblRcptRemainDue').textContent = isBn ? 'বর্তমান বকেয়া:' : 'Remaining Due:';
+      document.getElementById('rcptStatusStamp').textContent = isBn ? '★ আংশিক বকেয়া জমা / PARTIAL REPAYMENT ★' : '★ PARTIAL REPAYMENT / আংশিক পরিশোধ ★';
+
+      renderBottomDeck();
+      triggerToast(isBn ? '🌐 ভাউচার বাংলায় রূপান্তর করা হয়েছে' : '🌐 Switched to English Receipt');
+    }
+
+    // Simulated Actions
+    function simulatePrint() {
+      const canvas = document.getElementById('receiptCanvas');
+      canvas.style.transition = 'none';
+      canvas.style.transform = `scale(${currentZoom}) translateY(-25px)`;
+      canvas.style.opacity = '0.6';
+      
+      setTimeout(() => {
+        canvas.style.transition = 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
+        canvas.style.transform = `scale(${currentZoom}) translateY(0)`;
+        canvas.style.opacity = '1';
+      }, 50);
+
+      triggerToast(`🖨️ ESC/POS Thermal Print Job sent to ${currentWidth}mm Dispenser!`);
+    }
+
+    function simulateShareSlip() {
+      triggerToast('🚀 High-Res Thermal JPEG Slip shared via Android System Share Sheet!');
+    }
+
+    function simulateShareText() {
+      triggerToast('📤 Formatted SMS / WhatsApp Voucher Text ready to send!');
+    }
+
+    function simulateSaveSlip() {
+      triggerToast('💾 Money Receipt Voucher JPEG successfully saved to Downloads!');
+    }
+
+    function simulateDirectWhatsApp() {
+      triggerToast('💬 WhatsApp opened for ARIF KHAN (01919207715) with prefilled voucher text!');
+    }
+
+    function simulateCopyText() {
+      isCopied = true;
+      renderBottomDeck();
+      const text = `=== M/S AL KAWSAR STORE ===\nMONEY RECEIPT (REC-20785)\nCustomer: ARIF KHAN (01919207715)\nDate: 05 Sep 2026, 04:13 AM\nPrevious Due: ৳1,500.00\nAmount Paid: ৳927.00 (Cash)\nRemaining Due: ৳573.00\nStatus: PARTIAL REPAYMENT\nThank you!`;
+      navigator.clipboard.writeText(text).catch(() => {});
+      triggerToast('📋 Receipt SMS / WhatsApp text copied to clipboard!');
+      
+      setTimeout(() => {
+        isCopied = false;
+        renderBottomDeck();
+      }, 2500);
+    }
+
+    // Toast helper
+    let toastTimeout;
+    function triggerToast(msg) {
+      const toast = document.getElementById('liveToast');
+      document.getElementById('toastMsg').textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2600);
+    }
+
+    // Initial render
+    renderBottomDeck();
+  </script>
+</body>
+</html>

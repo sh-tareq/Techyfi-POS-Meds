@@ -1,0 +1,3285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Techyfi POS — Customer Database & Advanced CRM Experience Redesign</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0B0F19;
+      --surface: #111827;
+      --surface-card: rgba(19, 26, 42, 0.88);
+      --surface-elevated: #1F293D;
+      --surface-border: rgba(255, 255, 255, 0.08);
+      --surface-border-hover: rgba(16, 185, 129, 0.35);
+      
+      --primary: #10B981;
+      --primary-hover: #059669;
+      --primary-light: rgba(16, 185, 129, 0.14);
+      --primary-glow: rgba(16, 185, 129, 0.3);
+
+      --blue: #0284C7;
+      --blue-light: rgba(2, 132, 199, 0.14);
+      --purple: #8B5CF6;
+      --purple-light: rgba(139, 92, 246, 0.14);
+      --amber: #F59E0B;
+      --amber-light: rgba(245, 158, 11, 0.14);
+      --rose: #F43F5E;
+      --rose-light: rgba(244, 63, 94, 0.14);
+      
+      --text: #F8FAFC;
+      --text-secondary: #94A3B8;
+      --text-tertiary: #64748B;
+      
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-bn: 'Hind Siliguri', sans-serif;
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+      --shadow-md: 0 8px 24px -4px rgba(0, 0, 0, 0.35);
+      --shadow-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.5);
+      --shadow-glow: 0 0 25px rgba(16, 185, 129, 0.22);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 45%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.12) 0px, transparent 45%),
+        radial-gradient(at 50% 100%, rgba(2, 132, 199, 0.1) 0px, transparent 50%);
+      color: var(--text);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: 60px;
+    }
+
+    /* Top Control Bar & Lab Header */
+    .lab-top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(11, 15, 25, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 12px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .lab-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo-3d {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #10B981, #0284C7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 8px 18px rgba(16, 185, 129, 0.35), inset 0 2px 4px rgba(255,255,255,0.4);
+      transform: perspective(400px) rotateX(10deg);
+      animation: floatLogo 4s ease-in-out infinite;
+    }
+
+    @keyframes floatLogo {
+      0%, 100% { transform: perspective(400px) rotateX(10deg) translateY(0); }
+      50% { transform: perspective(400px) rotateX(15deg) translateY(-4px); }
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #FFF;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Viewport Simulator Switcher */
+    .viewport-controls {
+      display: flex;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 4px;
+    }
+
+    .vp-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .vp-btn.active {
+      background: var(--primary);
+      color: #042f1a;
+      font-weight: 700;
+      box-shadow: 0 2px 8px var(--primary-glow);
+    }
+
+    .vp-btn:hover:not(.active) {
+      color: #FFF;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .lab-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge-live-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-size: 11px;
+      font-weight: 700;
+      color: #34D399;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 10px #10B981;
+      animation: pulseAnim 1.8s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Main Container (Simulated Device Frame) */
+    .viewport-wrapper {
+      width: 100%;
+      max-width: 1440px;
+      margin: 20px auto;
+      padding: 0 16px;
+      transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .viewport-wrapper.tablet-view {
+      max-width: 860px;
+    }
+
+    .viewport-wrapper.mobile-view {
+      max-width: 440px;
+    }
+
+    /* CRM Executive Top Hero Bar */
+    .crm-hero-banner {
+      background: linear-gradient(135deg, rgba(22, 30, 49, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-xl);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+
+    .crm-hero-banner::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.15), transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-header-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .hero-title-group h2 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hero-title-group p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 3px;
+    }
+
+    .hero-quick-buttons {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary-3d {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #032d19;
+      border: none;
+      padding: 9px 18px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary-3d:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(16, 185, 129, 0.45);
+    }
+
+    .btn-secondary-deck {
+      background: var(--surface-elevated);
+      color: var(--text);
+      border: 1px solid var(--surface-border);
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary-deck:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* KPI Deck Cards */
+    .kpi-deck-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 14px;
+    }
+
+    .kpi-card {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      position: relative;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .kpi-card:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+      background: rgba(26, 36, 56, 0.8);
+    }
+
+    .kpi-3d-emblem {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+      position: relative;
+    }
+
+    .emblem-green {
+      background: linear-gradient(135deg, #10B981, #047857);
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+    }
+
+    .emblem-purple {
+      background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+      box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
+    }
+
+    .emblem-amber {
+      background: linear-gradient(135deg, #F59E0B, #B45309);
+      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35);
+    }
+
+    .emblem-blue {
+      background: linear-gradient(135deg, #0284C7, #0369A1);
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+    }
+
+    .emblem-rose {
+      background: linear-gradient(135deg, #F43F5E, #BE123C);
+      box-shadow: 0 6px 16px rgba(244, 63, 94, 0.35);
+    }
+
+    .kpi-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .kpi-value {
+      font-size: 17px;
+      font-weight: 800;
+      color: #FFF;
+      font-family: var(--font-mono);
+      letter-spacing: -0.3px;
+    }
+
+    .kpi-subtext {
+      font-size: 10.5px;
+      color: #34D399;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .kpi-subtext.warning {
+      color: #F87171;
+    }
+
+    /* Duplicate Detection Alert Banner */
+    .dedup-alert-banner {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.18));
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.1);
+      animation: alertPulse 4s infinite alternate;
+    }
+
+    @keyframes alertPulse {
+      0% { border-color: rgba(245, 158, 11, 0.3); }
+      100% { border-color: rgba(245, 158, 11, 0.6); }
+    }
+
+    .dedup-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .dedup-icon {
+      font-size: 20px;
+    }
+
+    .dedup-text h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #FDE68A;
+    }
+
+    .dedup-text p {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+    }
+
+    .btn-merge-action {
+      background: #F59E0B;
+      color: #451a03;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 7px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .btn-merge-action:hover {
+      background: #D97706;
+      transform: translateY(-1px);
+    }
+
+    /* Filter & Search Toolbar */
+    .crm-toolbar-panel {
+      background: var(--surface-card);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .search-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .search-box-wrap {
+      flex: 1;
+      min-width: 240px;
+      position: relative;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-tertiary);
+      font-size: 15px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      padding: 10px 14px 10px 38px;
+      color: #FFF;
+      font-family: var(--font-main);
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    .clear-search-btn {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: 14px;
+      display: none;
+    }
+
+    .filter-controls-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .select-dropdown {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 9px;
+      font-size: 12.5px;
+      font-family: var(--font-main);
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .select-dropdown:focus {
+      border-color: var(--primary);
+    }
+
+    .view-toggle-btns {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 9px;
+      padding: 2px;
+    }
+
+    .vt-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 7px 12px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .vt-btn.active {
+      background: var(--surface-elevated);
+      color: #FFF;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    /* Smart Filter Chips Bar */
+    .filter-chips-scroll {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: thin;
+    }
+
+    .filter-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--surface-border);
+      color: var(--text-secondary);
+      padding: 6px 13px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .filter-chip:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: #FFF;
+    }
+
+    .filter-chip.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+    }
+
+    .filter-chip .chip-count {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+    }
+
+    /* Floating Bulk Actions Bar */
+    .bulk-action-bar {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120px);
+      z-index: 40;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(16, 185, 129, 0.25);
+      border-radius: 16px;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .bulk-action-bar.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .bulk-count-badge {
+      background: var(--primary);
+      color: #022c19;
+      font-weight: 800;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .bulk-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--surface-border);
+      color: #FFF;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .bulk-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .bulk-btn.danger:hover {
+      background: rgba(244, 63, 94, 0.2);
+      border-color: #F43F5E;
+      color: #FCA5A5;
+    }
+
+    /* Customer Table / Grid Views */
+    .data-table-container {
+      background: var(--surface-card);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .pos-data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    .pos-data-table th {
+      background: rgba(15, 23, 42, 0.9);
+      padding: 12px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--surface-border);
+      white-space: nowrap;
+    }
+
+    .pos-data-table th.sortable {
+      cursor: pointer;
+    }
+
+    .pos-data-table th.sortable:hover {
+      color: #FFF;
+    }
+
+    .pos-data-table td {
+      padding: 12px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: middle;
+      transition: background 0.15s ease;
+    }
+
+    .pos-data-table tr.customer-row {
+      cursor: pointer;
+    }
+
+    .pos-data-table tr.customer-row:hover td {
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .pos-data-table tr.selected td {
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    /* Customer Cell with Avatar */
+    .customer-id-cell {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-weight: 600;
+    }
+
+    .customer-info-flex {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar-ring {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1E293B, #0F172A);
+      border: 1.5px solid var(--surface-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+      color: #FFF;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .avatar-ring.vip {
+      border-color: #8B5CF6;
+      background: linear-gradient(135deg, #4C1D95, #1E1B4B);
+      color: #DDD6FE;
+    }
+
+    .avatar-ring.wholesale {
+      border-color: #0284C7;
+      background: linear-gradient(135deg, #0C4A6E, #082F49);
+      color: #BAE6FD;
+    }
+
+    .avatar-ring.defaulter {
+      border-color: #F43F5E;
+      background: linear-gradient(135deg, #881337, #4C0519);
+      color: #FECDD3;
+    }
+
+    .cust-name-line {
+      font-weight: 700;
+      font-size: 13.5px;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cust-phone-sub {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    /* Badges & Pills */
+    .badge-tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 10.5px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge-vip {
+      background: rgba(139, 92, 246, 0.15);
+      color: #C4B5FD;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .badge-wholesale {
+      background: rgba(2, 132, 199, 0.15);
+      color: #7DD3FC;
+      border: 1px solid rgba(2, 132, 199, 0.3);
+    }
+
+    .badge-corporate {
+      background: rgba(20, 184, 166, 0.15);
+      color: #5EEAD4;
+      border: 1px solid rgba(20, 184, 166, 0.3);
+    }
+
+    .badge-retail {
+      background: rgba(148, 163, 184, 0.12);
+      color: #CBD5E1;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .badge-defaulter {
+      background: rgba(244, 63, 94, 0.15);
+      color: #FDA4AF;
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    .due-amount-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #F87171;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .due-clean-pill {
+      color: #34D399;
+      font-size: 11.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .table-actions-cell {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .action-icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .action-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #FFF;
+      transform: scale(1.05);
+    }
+
+    .action-icon-btn.pos-sale {
+      background: var(--primary-light);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #10B981;
+    }
+
+    .action-icon-btn.pos-sale:hover {
+      background: var(--primary);
+      color: #032b18;
+    }
+
+    /* Cards Grid View (Alternative to Table) */
+    .cards-grid-layout {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 14px;
+    }
+
+    .customer-compact-card {
+      background: var(--surface-card);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+    }
+
+    .customer-compact-card:hover {
+      border-color: rgba(16, 185, 129, 0.35);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      background: rgba(25, 34, 53, 0.9);
+    }
+
+    .card-top-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .card-metrics-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+      padding: 8px 10px;
+      text-align: center;
+      gap: 4px;
+    }
+
+    .card-metric-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .card-metric-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .card-metric-val {
+      font-size: 12px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: #FFF;
+    }
+
+    .card-bottom-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 8px;
+      margin-top: 2px;
+    }
+
+    /* CRM Customer Profile Drawer / Modal */
+    .crm-drawer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(5, 8, 15, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .crm-drawer-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .crm-drawer-sheet {
+      width: 100%;
+      max-width: 640px;
+      height: 100%;
+      background: #0E1422;
+      border-left: 1px solid var(--surface-border);
+      box-shadow: -10px 0 40px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+
+    .crm-drawer-overlay.open .crm-drawer-sheet {
+      transform: translateX(0);
+    }
+
+    /* Drawer Header */
+    .drawer-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--surface-border);
+      background: rgba(17, 24, 39, 0.8);
+      position: relative;
+    }
+
+    .drawer-close-btn {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      color: var(--text-secondary);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .drawer-close-btn:hover {
+      color: #FFF;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .drawer-cust-profile-top {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .drawer-avatar-3d {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #10B981, #0284C7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 900;
+      color: #032b18;
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+      position: relative;
+    }
+
+    .vip-floating-crown {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      font-size: 20px;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+      animation: crownBounce 3s ease-in-out infinite;
+    }
+
+    @keyframes crownBounce {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-4px) rotate(8deg); }
+    }
+
+    .drawer-cust-details h3 {
+      font-size: 19px;
+      font-weight: 800;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .drawer-cust-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    /* Credit Limit Meter Bar */
+    .credit-limit-wrap {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-top: 8px;
+    }
+
+    .credit-labels-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+
+    .credit-meter-bg {
+      width: 100%;
+      height: 7px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .credit-meter-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10B981, #F59E0B, #EF4444);
+      border-radius: 999px;
+      transition: width 0.4s ease;
+    }
+
+    /* Drawer Quick Action Deck */
+    .drawer-actions-deck {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 12px 22px;
+      background: rgba(15, 23, 42, 0.7);
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .deck-action-btn {
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      color: #FFF;
+      padding: 8px 6px;
+      border-radius: 9px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+
+    .deck-action-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .deck-action-btn.sale-btn {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.35));
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #6EE7B7;
+    }
+
+    .deck-action-btn.due-btn {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(185, 28, 28, 0.3));
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #FCA5A5;
+    }
+
+    .deck-action-btn.whatsapp-btn {
+      background: linear-gradient(135deg, rgba(37, 211, 102, 0.18), rgba(18, 140, 126, 0.25));
+      border-color: rgba(37, 211, 102, 0.35);
+      color: #86EFAC;
+    }
+
+    /* Drawer Tabs Switcher */
+    .drawer-tabs-bar {
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      background: rgba(15, 23, 42, 0.5);
+      border-bottom: 1px solid var(--surface-border);
+      overflow-x: auto;
+    }
+
+    .d-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 12px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .d-tab-btn:hover {
+      color: #FFF;
+    }
+
+    .d-tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      font-weight: 700;
+    }
+
+    .drawer-tab-pane {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 22px;
+      display: none;
+    }
+
+    .drawer-tab-pane.active {
+      display: block;
+    }
+
+    /* Tab: Overview & Analytics */
+    .analytics-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .a-stat-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    .a-stat-title {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .a-stat-val {
+      font-size: 18px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: #FFF;
+      margin-top: 4px;
+    }
+
+    .top-products-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .top-product-item {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .tp-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tp-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .tp-details h5 {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #FFF;
+    }
+
+    .tp-details p {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .tp-right {
+      text-align: right;
+    }
+
+    .tp-spend {
+      font-size: 12.5px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--primary);
+    }
+
+    .tp-qty {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Tab: Timeline */
+    .crm-timeline {
+      position: relative;
+      padding-left: 20px;
+    }
+
+    .crm-timeline::before {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    .timeline-node {
+      position: relative;
+      padding-bottom: 20px;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: -20px;
+      top: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--surface-elevated);
+      border: 2px solid var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+    }
+
+    .timeline-dot.sale { border-color: #10B981; }
+    .timeline-dot.due { border-color: #EF4444; }
+    .timeline-dot.payment { border-color: #3B82F6; }
+    .timeline-dot.note { border-color: #F59E0B; }
+    .timeline-dot.loyalty { border-color: #8B5CF6; }
+
+    .timeline-content-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+
+    .tl-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .tl-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #FFF;
+    }
+
+    .tl-time {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-family: var(--font-mono);
+    }
+
+    .tl-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Tab: Invoices */
+    .invoice-card-row {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .invoice-card-row:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(16, 185, 129, 0.3);
+      transform: translateX(3px);
+    }
+
+    /* Tab: CRM Notes & Reminders */
+    .note-input-deck {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 18px;
+    }
+
+    .note-textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      padding: 10px;
+      color: #FFF;
+      font-family: var(--font-main);
+      font-size: 12.5px;
+      resize: vertical;
+      min-height: 60px;
+      margin-bottom: 10px;
+    }
+
+    .note-textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .note-footer-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* General Modal Styling */
+    .pos-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(5, 8, 15, 0.85);
+      backdrop-filter: blur(12px);
+      z-index: 120;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .pos-modal-overlay.open {
+      display: flex;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .pos-modal-box {
+      background: #111827;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-xl);
+      width: 100%;
+      max-width: 580px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      transform: scale(0.97);
+      animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    @keyframes popIn {
+      to { transform: scale(1); }
+    }
+
+    .modal-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--surface-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .modal-head h3 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--surface-border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 9px;
+      padding: 9px 12px;
+      color: #FFF;
+      font-family: var(--font-main);
+      font-size: 13px;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    /* Merge Comparison Grid */
+    .merge-comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .merge-col-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      padding: 14px;
+      position: relative;
+    }
+
+    .merge-col-card.selected {
+      border-color: var(--primary);
+      background: rgba(16, 185, 129, 0.06);
+    }
+
+    .merge-radio-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* Thermal Receipt Modal Simulation */
+    .receipt-simulator-wrap {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .thermal-paper {
+      background: #FFFFFF;
+      color: #111;
+      width: 320px;
+      padding: 20px 16px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      border-radius: 4px;
+      line-height: 1.4;
+      transition: width 0.3s ease;
+    }
+
+    .thermal-paper.width-58 {
+      width: 240px;
+      font-size: 10px;
+      padding: 14px 10px;
+    }
+
+    .thermal-paper.bangla-mode {
+      font-family: var(--font-bn);
+      line-height: 1.55;
+    }
+
+    .r-header {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .r-logo-txt {
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+
+    .r-divider {
+      border-top: 1px dashed #666;
+      margin: 8px 0;
+    }
+
+    .r-flex {
+      display: flex;
+      justify-content: space-between;
+      margin: 3px 0;
+    }
+
+    .r-total-row {
+      font-weight: 800;
+      font-size: 12px;
+      border-top: 1px solid #111;
+      border-bottom: 1px solid #111;
+      padding: 4px 0;
+      margin: 6px 0;
+    }
+
+    /* Toast Notifications */
+    .pos-toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: rgba(16, 185, 129, 0.95);
+      color: #032d19;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 200;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .pos-toast.visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Responsive Rules */
+    @media (max-width: 900px) {
+      .pos-data-table th:nth-child(4),
+      .pos-data-table td:nth-child(4),
+      .pos-data-table th:nth-child(7),
+      .pos-data-table td:nth-child(7) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .pos-data-table th:nth-child(5),
+      .pos-data-table td:nth-child(5) {
+        display: none;
+      }
+      .crm-drawer-sheet {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation & Viewport Mode Switcher -->
+  <header class="lab-top-bar">
+    <div class="lab-brand">
+      <div class="brand-logo-3d">👑</div>
+      <div>
+        <div class="brand-title">Techyfi POS — Advanced CRM & Customer Database</div>
+        <div class="brand-subtitle">Modern Retail Architecture • Interactive Prototype Suite</div>
+      </div>
+    </div>
+
+    <!-- Viewport Switcher -->
+    <div class="viewport-controls">
+      <button class="vp-btn active" id="vpDesktopBtn" onclick="switchViewport('desktop')">
+        <span>🖥️</span> Desktop POS
+      </button>
+      <button class="vp-btn" id="vpTabletBtn" onclick="switchViewport('tablet')">
+        <span>📱</span> Tablet (10")
+      </button>
+      <button class="vp-btn" id="vpMobileBtn" onclick="switchViewport('mobile')">
+        <span>📲</span> Mobile POS
+      </button>
+    </div>
+
+    <div class="lab-actions">
+      <div class="badge-live-status">
+        <span class="pulse-dot"></span> Interactive High-Fidelity Demo
+      </div>
+    </div>
+  </header>
+
+  <!-- Simulated Device Viewport -->
+  <div class="viewport-wrapper" id="viewportWrapper">
+
+    <!-- Executive CRM Dashboard Deck -->
+    <section class="crm-hero-banner">
+      <div class="hero-header-row">
+        <div class="hero-title-group">
+          <h2>
+            <span>👥</span> Customer Intelligence & CRM Hub
+          </h2>
+          <p>Real-time customer segmentation, lifetime value tracking & due management</p>
+        </div>
+
+        <div class="hero-quick-buttons">
+          <button class="btn-secondary-deck" onclick="openDuplicateModal()">
+            <span>🔗</span> Deduplicate (3)
+          </button>
+          <button class="btn-secondary-deck" onclick="exportDataExcel()">
+            <span>📊</span> Export Excel
+          </button>
+          <button class="btn-primary-3d" onclick="openAddCustomerModal()">
+            <span>➕</span> New Customer
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Deck Cards with 3D Animated Accents -->
+      <div class="kpi-deck-grid">
+        <div class="kpi-card" onclick="filterByChip('all')">
+          <div class="kpi-3d-emblem emblem-green">👥</div>
+          <div class="kpi-info">
+            <div class="kpi-label">Total Customers</div>
+            <div class="kpi-value" id="kpiTotalCust">1,482</div>
+            <div class="kpi-subtext">↑ 14% this month</div>
+          </div>
+        </div>
+
+        <div class="kpi-card" onclick="filterByChip('due')">
+          <div class="kpi-3d-emblem emblem-rose">⚠️</div>
+          <div class="kpi-info">
+            <div class="kpi-label">Outstanding Dues</div>
+            <div class="kpi-value" id="kpiTotalDues">৳2,48,650</div>
+            <div class="kpi-subtext warning">68 debtors active</div>
+          </div>
+        </div>
+
+        <div class="kpi-card" onclick="filterByChip('vip')">
+          <div class="kpi-3d-emblem emblem-purple">👑</div>
+          <div class="kpi-info">
+            <div class="kpi-label">VIP Spenders</div>
+            <div class="kpi-value" id="kpiVipCount">142</div>
+            <div class="kpi-subtext">42% of gross revenue</div>
+          </div>
+        </div>
+
+        <div class="kpi-card" onclick="filterByChip('frequent')">
+          <div class="kpi-3d-emblem emblem-blue">🔁</div>
+          <div class="kpi-info">
+            <div class="kpi-label">Repeat Rate</div>
+            <div class="kpi-value">64.8%</div>
+            <div class="kpi-subtext">864 active (30d)</div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-3d-emblem emblem-amber">💰</div>
+          <div class="kpi-info">
+            <div class="kpi-label">Avg Order Value (AOV)</div>
+            <div class="kpi-value">৳1,840</div>
+            <div class="kpi-subtext">↑ ৳220 vs last month</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Duplicate Detection Smart Banner -->
+    <div class="dedup-alert-banner" id="dedupAlertBanner">
+      <div class="dedup-left">
+        <div class="dedup-icon">⚡</div>
+        <div class="dedup-text">
+          <h4>3 Potential Duplicate Customer Accounts Detected</h4>
+          <p>Similar phone numbers or identical names found. Merge accounts to consolidate purchase history and ledger.</p>
+        </div>
+      </div>
+      <button class="btn-merge-action" onclick="openDuplicateModal()">
+        <span>🔗</span> Review & Merge Records
+      </button>
+    </div>
+
+    <!-- Search & Smart Filtering Toolbar -->
+    <section class="crm-toolbar-panel">
+      <div class="search-row">
+        <!-- Live Instant Search -->
+        <div class="search-box-wrap">
+          <span class="search-icon">🔍</span>
+          <input 
+            type="text" 
+            id="searchInput" 
+            class="search-input" 
+            placeholder="Instant search by Name, Phone (017xx...), ID, Address, or Tag..." 
+            oninput="handleSearch(this.value)"
+          />
+          <button class="clear-search-btn" id="clearSearchBtn" onclick="clearSearch()">✖</button>
+        </div>
+
+        <!-- Sorting Selector -->
+        <div class="filter-controls-group">
+          <select class="select-dropdown" id="sortSelect" onchange="handleSortChange(this.value)">
+            <option value="recent">Sort: Most Recent Visit</option>
+            <option value="spend_high">Sort: Lifetime Spend (High-Low)</option>
+            <option value="due_high">Sort: Highest Due First</option>
+            <option value="orders_count">Sort: Total Orders</option>
+            <option value="name_asc">Sort: Customer Name (A-Z)</option>
+            <option value="loyalty">Sort: Loyalty Points</option>
+          </select>
+
+          <!-- Table vs Card Mode Toggle -->
+          <div class="view-toggle-btns">
+            <button class="vt-btn active" id="vtTableBtn" onclick="toggleLayoutView('table')">
+              <span>📋</span> Table
+            </button>
+            <button class="vt-btn" id="vtCardsBtn" onclick="toggleLayoutView('cards')">
+              <span>🗂️</span> Cards
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Segment Filter Chips Carousel -->
+      <div class="filter-chips-scroll">
+        <button class="filter-chip active" data-segment="all" onclick="filterByChip('all')">
+          All Customers <span class="chip-count" id="chipCountAll">8</span>
+        </button>
+        <button class="filter-chip" data-segment="due" onclick="filterByChip('due')">
+          ⚠️ Has Due (বকেয়া) <span class="chip-count" id="chipCountDue">4</span>
+        </button>
+        <button class="filter-chip" data-segment="vip" onclick="filterByChip('vip')">
+          👑 VIP & Platinum <span class="chip-count" id="chipCountVip">2</span>
+        </button>
+        <button class="filter-chip" data-segment="wholesale" onclick="filterByChip('wholesale')">
+          🏢 Wholesale Accounts <span class="chip-count" id="chipCountWholesale">2</span>
+        </button>
+        <button class="filter-chip" data-segment="frequent" onclick="filterByChip('frequent')">
+          🔁 Frequent Shoppers (5+ orders) <span class="chip-count" id="chipCountFrequent">5</span>
+        </button>
+        <button class="filter-chip" data-segment="new" onclick="filterByChip('new')">
+          🌟 New (Last 30d) <span class="chip-count" id="chipCountNew">1</span>
+        </button>
+        <button class="filter-chip" data-segment="defaulter" onclick="filterByChip('defaulter')">
+          🚫 Defaulters & Risk <span class="chip-count" id="chipCountDefaulter">1</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Table View Container -->
+    <div class="data-table-container" id="tableViewContainer">
+      <table class="pos-data-table">
+        <thead>
+          <tr>
+            <th style="width: 38px;">
+              <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)" />
+            </th>
+            <th style="width: 80px;">ID</th>
+            <th>Customer Information</th>
+            <th>Segment / Tag</th>
+            <th class="sortable" onclick="setSort('spend_high')">Lifetime Spend ↕</th>
+            <th class="sortable" onclick="setSort('due_high')">Outstanding Due ↕</th>
+            <th>Orders / Last Visit</th>
+            <th>Loyalty Tier</th>
+            <th style="text-align: right;">Quick Actions</th>
+          </tr>
+        </thead>
+        <tbody id="customerTableBody">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Cards Grid View (Alternative layout) -->
+    <div class="cards-grid-layout" id="cardsViewContainer">
+      <!-- Populated by JavaScript -->
+    </div>
+
+  </div> <!-- End Viewport Wrapper -->
+
+  <!-- Floating Bulk Action Bar -->
+  <div class="bulk-action-bar" id="bulkActionBar">
+    <div class="bulk-count-badge" id="bulkCountBadge">0 Selected</div>
+    <button class="bulk-btn" onclick="bulkSendDueWhatsApp()">
+      <span>💬</span> Send WhatsApp Reminder
+    </button>
+    <button class="bulk-btn" onclick="bulkAddTag()">
+      <span>🏷️</span> Assign Tag
+    </button>
+    <button class="bulk-btn" onclick="bulkExportExcel()">
+      <span>📊</span> Export Selected
+    </button>
+    <button class="bulk-btn danger" onclick="bulkDeselect()">
+      <span>✖</span> Deselect
+    </button>
+  </div>
+
+  <!-- Advanced Interactive Customer CRM Profile Drawer / Sheet -->
+  <div class="crm-drawer-overlay" id="crmDrawerOverlay" onclick="closeDrawerOnBackdrop(event)">
+    <div class="crm-drawer-sheet" id="crmDrawerSheet">
+      
+      <!-- Drawer Header -->
+      <div class="drawer-header">
+        <button class="drawer-close-btn" onclick="closeCustomerDrawer()">✖</button>
+        
+        <div class="drawer-cust-profile-top">
+          <div class="drawer-avatar-3d" id="drawerAvatar">
+            <span>RH</span>
+            <span class="vip-floating-crown" id="drawerCrownIcon">👑</span>
+          </div>
+
+          <div class="drawer-cust-details">
+            <h3 id="drawerName">
+              Haji Mohammad Rafiqul Islam
+              <span class="badge-tag-pill badge-vip" id="drawerTierBadge">VIP Platinum</span>
+            </h3>
+            <div class="drawer-cust-meta">
+              <span id="drawerPhone">📞 01712-345678</span>
+              <span id="drawerId">🆔 CUST-104</span>
+              <span id="drawerAddress">📍 Bashundhara R/A, Block C</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Credit Limit & Due Bar -->
+        <div class="credit-limit-wrap">
+          <div class="credit-labels-row">
+            <span>Outstanding Due: <strong id="drawerDueTxt" style="color: #F87171;">৳4,200.00</strong></span>
+            <span>Credit Limit: <strong id="drawerLimitTxt">৳50,000.00</strong></span>
+          </div>
+          <div class="credit-meter-bg">
+            <div class="credit-meter-fill" id="drawerCreditMeter" style="width: 8.4%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action Deck -->
+      <div class="drawer-actions-deck">
+        <button class="deck-action-btn sale-btn" onclick="triggerStartSaleFromDrawer()">
+          <span style="font-size: 16px;">🛒</span> New Sale
+        </button>
+        <button class="deck-action-btn due-btn" onclick="openSettleDueModal()">
+          <span style="font-size: 16px;">💵</span> Collect Due
+        </button>
+        <button class="deck-action-btn whatsapp-btn" onclick="openWhatsAppComposer()">
+          <span style="font-size: 16px;">💬</span> WhatsApp
+        </button>
+        <button class="deck-action-btn" onclick="openEditCurrentCustomer()">
+          <span style="font-size: 16px;">✏️</span> Edit Profile
+        </button>
+      </div>
+
+      <!-- Drawer Tabs Switcher -->
+      <div class="drawer-tabs-bar">
+        <button class="d-tab-btn active" onclick="switchDrawerTab('overview')">
+          <span>📊</span> Overview & Analytics
+        </button>
+        <button class="d-tab-btn" onclick="switchDrawerTab('timeline')">
+          <span>⏱️</span> Activity Timeline
+        </button>
+        <button class="d-tab-btn" onclick="switchDrawerTab('invoices')">
+          <span>📜</span> Invoices (14)
+        </button>
+        <button class="d-tab-btn" onclick="switchDrawerTab('notes')">
+          <span>📝</span> CRM Notes & Reminders
+        </button>
+        <button class="d-tab-btn" onclick="switchDrawerTab('ledger')">
+          <span>📒</span> Due Ledger
+        </button>
+      </div>
+
+      <!-- Tab Content 1: Overview & Analytics -->
+      <div class="drawer-tab-pane active" id="pane-overview">
+        <div class="analytics-stats-grid">
+          <div class="a-stat-box">
+            <div class="a-stat-title">Lifetime Spend</div>
+            <div class="a-stat-val" id="drawerLifetimeSpend" style="color: #10B981;">৳84,500.00</div>
+          </div>
+          <div class="a-stat-box">
+            <div class="a-stat-title">Total Orders</div>
+            <div class="a-stat-val" id="drawerOrdersCount">14 Orders</div>
+          </div>
+          <div class="a-stat-box">
+            <div class="a-stat-title">Average Order Value</div>
+            <div class="a-stat-val" id="drawerAov">৳6,035.71</div>
+          </div>
+          <div class="a-stat-box">
+            <div class="a-stat-title">Loyalty Points</div>
+            <div class="a-stat-val" id="drawerLoyaltyPts" style="color: #F59E0B;">⭐ 845 pts</div>
+          </div>
+        </div>
+
+        <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 10px; color: #FFF;">
+          🛍️ Top Frequently Purchased Products
+        </h4>
+        <div class="top-products-list" id="drawerTopProductsList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Tab Content 2: Activity Timeline -->
+      <div class="drawer-tab-pane" id="pane-timeline">
+        <div class="crm-timeline" id="drawerTimelineList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Tab Content 3: Invoices -->
+      <div class="drawer-tab-pane" id="pane-invoices">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h4 style="font-size: 13px; font-weight: 800; color: #FFF;">Past Invoices & Sales</h4>
+          <span style="font-size: 11px; color: var(--text-secondary);">Click invoice to preview receipt</span>
+        </div>
+        <div id="drawerInvoicesList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Tab Content 4: Notes & Reminders -->
+      <div class="drawer-tab-pane" id="pane-notes">
+        <!-- New Note Composer -->
+        <div class="note-input-deck">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+            Add Staff CRM Note / Interaction Log
+          </label>
+          <textarea class="note-textarea" id="newNoteInput" placeholder="Log phone conversation, wholesale discount agreements, special requests..."></textarea>
+          
+          <div class="note-footer-controls">
+            <div style="display: flex; gap: 6px;">
+              <select class="select-dropdown" id="noteCategorySelect" style="padding: 5px 8px; font-size: 11px;">
+                <option value="General">🏷️ General Interaction</option>
+                <option value="Payment Promise">💵 Payment Promise</option>
+                <option value="Wholesale Quote">📦 Wholesale Quote</option>
+                <option value="Complaint">⚠️ Customer Complaint</option>
+              </select>
+            </div>
+            <button class="btn-primary-3d" style="padding: 6px 14px; font-size: 12px;" onclick="addStaffNote()">
+              Save Note
+            </button>
+          </div>
+        </div>
+
+        <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 12px; color: #FFF;">
+          Recent CRM Notes & Follow-up Reminders
+        </h4>
+        <div id="drawerNotesList" style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Tab Content 5: Due Ledger -->
+      <div class="drawer-tab-pane" id="pane-ledger">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div>
+            <div style="font-size: 11px; color: var(--text-secondary);">Net Outstanding Balance</div>
+            <div style="font-size: 20px; font-weight: 800; font-family: var(--font-mono); color: #F87171;" id="drawerLedgerDue">৳4,200.00</div>
+          </div>
+          <button class="btn-primary-3d" onclick="openSettleDueModal()">
+            <span>💵</span> Record Repayment
+          </button>
+        </div>
+
+        <div id="drawerLedgerList" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: Duplicate Detection & Merge Tool -->
+  <div class="pos-modal-overlay" id="mergeModalOverlay">
+    <div class="pos-modal-box" style="max-width: 680px;">
+      <div class="modal-head">
+        <h3><span>🔗</span> Intelligent Duplicate Customer Merge</h3>
+        <button class="drawer-close-btn" onclick="closeMergeModal()">✖</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 14px;">
+          We matched 2 accounts that likely belong to the same person. Select the <strong>Primary Master Record</strong>. All sales history, loyalty points, and due ledgers will be seamlessly unified.
+        </p>
+
+        <div class="merge-comparison-grid">
+          <!-- Record A -->
+          <div class="merge-col-card selected" id="mergeCardA" onclick="selectMergeMaster('A')">
+            <div class="merge-radio-head">
+              <label style="font-size: 12px; font-weight: 700; color: #10B981; cursor: pointer;">
+                <input type="radio" name="masterChoice" value="A" checked /> Master Record (Keep)
+              </label>
+              <span class="badge-tag-pill badge-vip">VIP Platinum</span>
+            </div>
+            <h4 style="font-size: 14px; font-weight: 800; color: #FFF;">Haji Mohammad Rafiqul Islam</h4>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+              <div>📞 01712-345678</div>
+              <div>📍 Bashundhara R/A, Dhaka</div>
+              <div style="margin-top: 6px; font-weight: 700; color: #FFF;">Orders: 14 • Spend: ৳84,500</div>
+              <div style="color: #F87171;">Due: ৳4,200 • Points: 845</div>
+            </div>
+          </div>
+
+          <!-- Record B -->
+          <div class="merge-col-card" id="mergeCardB" onclick="selectMergeMaster('B')">
+            <div class="merge-radio-head">
+              <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); cursor: pointer;">
+                <input type="radio" name="masterChoice" value="B" /> Merge into Master
+              </label>
+              <span class="badge-tag-pill badge-retail">Retail</span>
+            </div>
+            <h4 style="font-size: 14px; font-weight: 800; color: #FFF;">Md. Rafiqul (Bashundhara)</h4>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+              <div>📞 +8801712345678</div>
+              <div>📍 Road 4, Block C, Bashundhara</div>
+              <div style="margin-top: 6px; font-weight: 700; color: #FFF;">Orders: 2 • Spend: ৳3,400</div>
+              <div style="color: #34D399;">Due: ৳0 • Points: 34</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Merged Preview Summary -->
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 12px;">
+          <div style="font-size: 11.5px; font-weight: 700; color: #34D399; margin-bottom: 4px;">
+            ✨ Resulting Consolidated Account Preview:
+          </div>
+          <div style="font-size: 12px; color: #FFF; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <span>Total Orders: <strong>16</strong> (14 + 2)</span>
+            <span>Consolidated Spend: <strong>৳87,900.00</strong></span>
+            <span>Total Dues: <strong>৳4,200.00</strong></span>
+            <span>Unified Points: <strong>879 pts</strong></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary-deck" onclick="closeMergeModal()">Cancel</button>
+        <button class="btn-primary-3d" onclick="executeMerge()">
+          <span>🔗</span> Confirm & Merge Records
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add / Edit Customer -->
+  <div class="pos-modal-overlay" id="addEditModalOverlay">
+    <div class="pos-modal-box">
+      <div class="modal-head">
+        <h3 id="addEditModalTitle"><span>👤</span> Add New Customer</h3>
+        <button class="drawer-close-btn" onclick="closeAddEditModal()">✖</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Phone Number *</label>
+          <input type="text" class="form-input" id="formPhone" placeholder="017xxxxxxxx or 018xxxxxxxx" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Customer Full Name *</label>
+          <input type="text" class="form-input" id="formName" placeholder="e.g. Tanvir Hossain" />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label">Customer Segment</label>
+            <select class="form-input" id="formSegment">
+              <option value="Retail">Retail Customer</option>
+              <option value="VIP">VIP Customer</option>
+              <option value="Wholesale">Wholesale Account</option>
+              <option value="Corporate">Corporate Client</option>
+              <option value="Staff">Staff Member</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Credit Limit (৳)</label>
+            <input type="number" class="form-input" id="formCreditLimit" placeholder="0.00" value="10000" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Address / Location</label>
+          <input type="text" class="form-input" id="formAddress" placeholder="e.g. House 12, Road 5, Dhanmondi" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">CRM Notes / Special Instructions</label>
+          <textarea class="form-input" id="formNotes" rows="2" placeholder="Preferred delivery time, special wholesale pricing..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary-deck" onclick="closeAddEditModal()">Cancel</button>
+        <button class="btn-primary-3d" onclick="saveCustomerForm()">
+          <span>💾</span> Save Customer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Live Thermal Receipt Preview -->
+  <div class="pos-modal-overlay" id="receiptModalOverlay">
+    <div class="pos-modal-box" style="max-width: 520px;">
+      <div class="modal-head">
+        <h3><span>🧾</span> Real-time Thermal Receipt</h3>
+        <button class="drawer-close-btn" onclick="closeReceiptModal()">✖</button>
+      </div>
+      <div class="modal-body" style="background: #0B0F19;">
+        <!-- Receipt Controls Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div style="display: flex; gap: 6px;">
+            <button class="btn-secondary-deck" style="padding: 4px 10px; font-size: 11px;" onclick="toggleReceiptWidth('80')">80mm</button>
+            <button class="btn-secondary-deck" style="padding: 4px 10px; font-size: 11px;" onclick="toggleReceiptWidth('58')">58mm</button>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn-secondary-deck" style="padding: 4px 10px; font-size: 11px;" onclick="toggleReceiptLang('EN')">English</button>
+            <button class="btn-secondary-deck" style="padding: 4px 10px; font-size: 11px;" onclick="toggleReceiptLang('BN')">বাংলা</button>
+          </div>
+        </div>
+
+        <div class="receipt-simulator-wrap">
+          <div class="thermal-paper" id="thermalPaper">
+            <div class="r-header">
+              <div class="r-logo-txt">TECHYFI RETAIL POS</div>
+              <div style="font-size: 9.5px; color: #555;">Dhanmondi, Dhaka • 01700-000000</div>
+              <div class="r-divider"></div>
+              <div style="font-weight: 700;" id="rSlipTitle">CASH MEMO / MONEY RECEIPT</div>
+              <div style="font-size: 10px;" id="rInvoiceNum">INV-849 • 04-Sep-2026 04:15 PM</div>
+            </div>
+
+            <div style="font-size: 10px; margin-bottom: 6px;">
+              <div>Customer: <strong id="rCustName">Haji Mohammad Rafiqul Islam</strong></div>
+              <div>Phone: <span id="rCustPhone">01712-345678</span></div>
+            </div>
+
+            <div class="r-divider"></div>
+
+            <div id="rItemsTable">
+              <div class="r-flex" style="font-weight: 700;">
+                <span>ITEM</span>
+                <span>QTY x PRICE</span>
+                <span>TOTAL</span>
+              </div>
+              <div class="r-divider" style="margin: 4px 0;"></div>
+              <div class="r-flex">
+                <span>Basmati Rice 5kg</span>
+                <span>1 x 620.00</span>
+                <span>620.00</span>
+              </div>
+              <div class="r-flex">
+                <span>Radhuni Pure Mustard 1L</span>
+                <span>2 x 340.00</span>
+                <span>680.00</span>
+              </div>
+              <div class="r-flex">
+                <span>Aarong Premium Ghee 500g</span>
+                <span>1 x 1150.00</span>
+                <span>1150.00</span>
+              </div>
+            </div>
+
+            <div class="r-divider"></div>
+
+            <div class="r-flex">
+              <span>Subtotal:</span>
+              <span id="rSubtotal">৳2,450.00</span>
+            </div>
+            <div class="r-flex">
+              <span>Discount:</span>
+              <span>৳0.00</span>
+            </div>
+            <div class="r-flex r-total-row">
+              <span>GRAND TOTAL:</span>
+              <span id="rGrandTotal">৳2,450.00</span>
+            </div>
+            <div class="r-flex">
+              <span>Paid via bKash:</span>
+              <span>৳2,450.00</span>
+            </div>
+            <div class="r-flex" style="font-weight: 700; color: #059669;">
+              <span>Net Due Balance:</span>
+              <span>৳0.00</span>
+            </div>
+
+            <div class="r-divider"></div>
+            <div style="text-align: center; font-size: 9.5px; color: #555; margin-top: 6px;">
+              Thank you for shopping with us!<br>
+              Software by Techyfi Solutions
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary-deck" onclick="closeReceiptModal()">Close</button>
+        <button class="btn-primary-3d" onclick="printReceiptSimulation()">
+          <span>🖨️</span> Send to Thermal Printer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Bar -->
+  <div class="pos-toast" id="posToast">
+    <span id="toastIcon">✅</span>
+    <span id="toastMsg">Operation completed successfully!</span>
+  </div>
+
+  <!-- Interactive JavaScript Application Engine -->
+  <script>
+    // Sample Realistic Retail Customer Database
+    let customersData = [
+      {
+        id: "CUST-101",
+        phone: "01712-345678",
+        name: "Haji Mohammad Rafiqul Islam",
+        tag: "VIP",
+        loyaltyTier: "Platinum",
+        loyaltyPoints: 845,
+        lifetimeSpent: 84500.0,
+        totalDue: 4200.0,
+        creditLimit: 50000.0,
+        totalOrders: 14,
+        address: "Bashundhara R/A, Block C",
+        lastVisit: "2 hours ago",
+        notes: "Prefers whole cartons of Aarong Ghee. High volume family purchaser.",
+        topItems: [
+          { name: "Aarong Premium Ghee 500g", qty: 12, spend: 13800, icon: "🧈" },
+          { name: "Basmati Rice Special 5kg", qty: 24, spend: 14880, icon: "🌾" },
+          { name: "Teer Fortified Soybean Oil 5L", qty: 18, spend: 15300, icon: "🫒" }
+        ],
+        timeline: [
+          { type: "sale", title: "Sale Invoice #INV-849", time: "Today, 04:15 PM", desc: "Purchased 3 items totaling ৳2,450.00 paid via bKash." },
+          { type: "payment", title: "Due Repayment Received", time: "Yesterday, 11:30 AM", desc: "Collected ৳1,000.00 in Cash (Receipt #REC-412)." },
+          { type: "due", title: "Credit Due Created", time: "28 Aug 2026", desc: "Due of ৳5,200.00 added from Invoice #INV-812." },
+          { type: "note", title: "Staff Interaction Log", time: "20 Aug 2026", desc: "Manager Karim: Customer requested carton discount for upcoming wedding banquet." }
+        ],
+        invoices: [
+          { id: "INV-849", date: "04 Sep 2026, 04:15 PM", total: 2450.0, method: "bKash", status: "Paid" },
+          { id: "INV-832", date: "31 Aug 2026, 07:20 PM", total: 6800.0, method: "Cash", status: "Paid" },
+          { id: "INV-812", date: "28 Aug 2026, 03:45 PM", total: 9200.0, method: "Partial", status: "Due: ৳4,200" }
+        ],
+        ledger: [
+          { date: "04 Sep 2026", ref: "Invoice #INV-849", debit: 2450, credit: 2450, balance: 4200 },
+          { date: "03 Sep 2026", ref: "Payment #REC-412", debit: 0, credit: 1000, balance: 4200 },
+          { date: "28 Aug 2026", ref: "Invoice #INV-812", debit: 9200, credit: 4000, balance: 5200 }
+        ]
+      },
+      {
+        id: "CUST-102",
+        phone: "01819-223344",
+        name: "Begum Rokeya Sultana",
+        tag: "Retail",
+        loyaltyTier: "Gold",
+        loyaltyPoints: 320,
+        lifetimeSpent: 32100.0,
+        totalDue: 0.0,
+        creditLimit: 15000.0,
+        totalOrders: 9,
+        address: "Road 27, Dhanmondi, Dhaka",
+        lastVisit: "1 day ago",
+        notes: "Strictly requests chemical-free organic spices.",
+        topItems: [
+          { name: "Radhuni Pure Mustard Oil 1L", qty: 10, spend: 3400, icon: "🧴" },
+          { name: "Dano Daily Pushti Milk 1kg", qty: 8, spend: 6400, icon: "🥛" }
+        ],
+        timeline: [
+          { type: "sale", title: "Sale Invoice #INV-842", time: "Yesterday, 06:10 PM", desc: "Purchased items worth ৳1,850.00 via Cash." },
+          { type: "loyalty", title: "Loyalty Tier Upgraded", time: "15 Aug 2026", desc: "Customer reached Gold Tier status (300+ points)." }
+        ],
+        invoices: [
+          { id: "INV-842", date: "03 Sep 2026, 06:10 PM", total: 1850.0, method: "Cash", status: "Paid" },
+          { id: "INV-795", date: "20 Aug 2026, 12:40 PM", total: 4200.0, method: "Card", status: "Paid" }
+        ],
+        ledger: [
+          { date: "03 Sep 2026", ref: "Invoice #INV-842", debit: 1850, credit: 1850, balance: 0 }
+        ]
+      },
+      {
+        id: "CUST-103",
+        phone: "01911-887766",
+        name: "Kabir Hossain General Store",
+        tag: "Wholesale",
+        loyaltyTier: "Platinum",
+        loyaltyPoints: 1450,
+        lifetimeSpent: 145000.0,
+        totalDue: 18500.0,
+        creditLimit: 100000.0,
+        totalOrders: 28,
+        address: "Chawkbazar Main Road, Old Dhaka",
+        lastVisit: "3 days ago",
+        notes: "Wholesale bulk reseller. Clears dues every Thursday.",
+        topItems: [
+          { name: "Teer Fortified Soybean Oil 5L (Cartons)", qty: 60, spend: 51000, icon: "🫒" },
+          { name: "Miniket Super Rice 25kg Bags", qty: 40, spend: 68000, icon: "🌾" }
+        ],
+        timeline: [
+          { type: "due", title: "Wholesale Due Extended", time: "01 Sep 2026", desc: "Balance of ৳18,500.00 carried over for Thursday cycle." },
+          { type: "sale", title: "Sale Invoice #INV-830", time: "01 Sep 2026, 02:00 PM", desc: "Carton bulk order worth ৳34,000.00." }
+        ],
+        invoices: [
+          { id: "INV-830", date: "01 Sep 2026, 02:00 PM", total: 34000.0, method: "Partial", status: "Due: ৳18,500" }
+        ],
+        ledger: [
+          { date: "01 Sep 2026", ref: "Bulk Sale #INV-830", debit: 34000, credit: 15500, balance: 18500 }
+        ]
+      },
+      {
+        id: "CUST-104",
+        phone: "01715-998877",
+        name: "Dr. Tanvir Ahmed",
+        tag: "VIP",
+        loyaltyTier: "Gold",
+        loyaltyPoints: 624,
+        lifetimeSpent: 62400.0,
+        totalDue: 0.0,
+        creditLimit: 30000.0,
+        totalOrders: 11,
+        address: "Gulshan-2, Avenue 4, Dhaka",
+        lastVisit: "4 days ago",
+        notes: "Always pays via contactless credit card.",
+        topItems: [
+          { name: "Ispahani Mirzapore Tea 400g", qty: 15, spend: 3750, icon: "☕" },
+          { name: "Nestle Nido Milk Powder 1kg", qty: 12, spend: 11400, icon: "🥛" }
+        ],
+        timeline: [
+          { type: "sale", title: "Sale Invoice #INV-815", time: "30 Aug 2026", desc: "Card purchase of ৳4,120.00 completed smoothly." }
+        ],
+        invoices: [
+          { id: "INV-815", date: "30 Aug 2026", total: 4120.0, method: "Card", status: "Paid" }
+        ],
+        ledger: []
+      },
+      {
+        id: "CUST-105",
+        phone: "01622-445566",
+        name: "Fatema Akter",
+        tag: "Retail",
+        loyaltyTier: "Silver",
+        loyaltyPoints: 38,
+        lifetimeSpent: 3850.0,
+        totalDue: 450.0,
+        creditLimit: 5000.0,
+        totalOrders: 1,
+        address: "Section 10, Mirpur, Dhaka",
+        lastVisit: "5 days ago",
+        notes: "New neighborhood resident. Promised to pay ৳450 balance on next visit.",
+        topItems: [
+          { name: "Daily Essentials Kitchen Combo", qty: 1, spend: 3850, icon: "🛍️" }
+        ],
+        timeline: [
+          { type: "sale", title: "First Purchase #INV-802", time: "29 Aug 2026", desc: "Initial registration and purchase of ৳3,850.00." }
+        ],
+        invoices: [
+          { id: "INV-802", date: "29 Aug 2026", total: 3850.0, method: "Partial", status: "Due: ৳450" }
+        ],
+        ledger: []
+      },
+      {
+        id: "CUST-106",
+        phone: "01733-112233",
+        name: "Ariful Islam",
+        tag: "Retail",
+        loyaltyTier: "Silver",
+        loyaltyPoints: 192,
+        lifetimeSpent: 19200.0,
+        totalDue: 2800.0,
+        creditLimit: 12000.0,
+        totalOrders: 6,
+        address: "Sector 7, Uttara, Dhaka",
+        lastVisit: "1 week ago",
+        notes: "Due pending from Eid grocery shopping.",
+        topItems: [
+          { name: "Basmati Rice 5kg", qty: 6, spend: 3720, icon: "🌾" }
+        ],
+        timeline: [
+          { type: "due", title: "Due Notice Sent", time: "25 Aug 2026", desc: "Automated WhatsApp due notification dispatched." }
+        ],
+        invoices: [
+          { id: "INV-780", date: "25 Aug 2026", total: 4200.0, method: "Partial", status: "Due: ৳2,800" }
+        ],
+        ledger: []
+      },
+      {
+        id: "CUST-107",
+        phone: "01844-556677",
+        name: "Sumon Enterprise & Traders",
+        tag: "Wholesale",
+        loyaltyTier: "Platinum",
+        loyaltyPoints: 980,
+        lifetimeSpent: 98000.0,
+        totalDue: 12000.0,
+        creditLimit: 80000.0,
+        totalOrders: 19,
+        address: "Motijheel C/A, Dhaka",
+        lastVisit: "1 week ago",
+        notes: "Corporate canteen supplies contractor.",
+        topItems: [
+          { name: "Miniket Rice 25kg", qty: 25, spend: 42500, icon: "🌾" }
+        ],
+        timeline: [
+          { type: "sale", title: "Corporate Supply Invoice", time: "22 Aug 2026", desc: "Delivered office canteen groceries." }
+        ],
+        invoices: [
+          { id: "INV-765", date: "22 Aug 2026", total: 18000.0, method: "Partial", status: "Due: ৳12,000" }
+        ],
+        ledger: []
+      },
+      {
+        id: "CUST-108",
+        phone: "01552-334455",
+        name: "Shamim Rezwan (Suspended)",
+        tag: "Defaulter",
+        loyaltyTier: "Bronze",
+        loyaltyPoints: 0,
+        lifetimeSpent: 14000.0,
+        totalDue: 14000.0,
+        creditLimit: 0.0,
+        totalOrders: 3,
+        address: "Khilgaon Taltola, Dhaka",
+        lastVisit: "2 months ago",
+        notes: "Credit suspended! Unreachable on phone for 45 days. Do not issue credit sales.",
+        topItems: [
+          { name: "General Groceries", qty: 5, spend: 14000, icon: "⚠️" }
+        ],
+        timeline: [
+          { type: "due", title: "Credit Account Suspended", time: "10 Jul 2026", desc: "Flagged as Defaulter due to 60+ days overdue debt." }
+        ],
+        invoices: [
+          { id: "INV-620", date: "08 Jul 2026", total: 14000.0, method: "Due", status: "Overdue" }
+        ],
+        ledger: []
+      }
+    ];
+
+    // Current State
+    let activeFilter = 'all';
+    let currentSearch = '';
+    let currentSort = 'recent';
+    let selectedCustomerIds = new Set();
+    let currentActiveCustomer = customersData[0];
+    let activeLayoutView = 'table'; // 'table' or 'cards'
+
+    // Format BDT Currency Helper
+    function formatTaka(amount) {
+      return "৳" + Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Initialize UI
+    document.addEventListener('DOMContentLoaded', () => {
+      renderTable();
+      renderCards();
+      updateCounts();
+    });
+
+    // Filtering & Sorting Core Logic
+    function getFilteredCustomers() {
+      return customersData.filter(c => {
+        // Search Filter
+        if (currentSearch) {
+          const q = currentSearch.toLowerCase();
+          const match = c.name.toLowerCase().includes(q) ||
+                        c.phone.includes(q) ||
+                        c.id.toLowerCase().includes(q) ||
+                        (c.address && c.address.toLowerCase().includes(q)) ||
+                        c.tag.toLowerCase().includes(q);
+          if (!match) return false;
+        }
+
+        // Segment Filter
+        if (activeFilter === 'all') return true;
+        if (activeFilter === 'due') return c.totalDue > 0;
+        if (activeFilter === 'vip') return c.tag === 'VIP' || c.loyaltyTier === 'Platinum';
+        if (activeFilter === 'wholesale') return c.tag === 'Wholesale';
+        if (activeFilter === 'frequent') return c.totalOrders >= 5;
+        if (activeFilter === 'new') return c.totalOrders <= 2;
+        if (activeFilter === 'defaulter') return c.tag === 'Defaulter' || c.totalDue > 10000;
+        return true;
+      }).sort((a, b) => {
+        if (currentSort === 'recent') return 0; // Natural index order
+        if (currentSort === 'spend_high') return b.lifetimeSpent - a.lifetimeSpent;
+        if (currentSort === 'due_high') return b.totalDue - a.totalDue;
+        if (currentSort === 'orders_count') return b.totalOrders - a.totalOrders;
+        if (currentSort === 'name_asc') return a.name.localeCompare(b.name);
+        if (currentSort === 'loyalty') return b.loyaltyPoints - a.loyaltyPoints;
+        return 0;
+      });
+    }
+
+    // Render Table View
+    function renderTable() {
+      const list = getFilteredCustomers();
+      const tbody = document.getElementById('customerTableBody');
+      tbody.innerHTML = '';
+
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+              <div style="font-size: 32px; margin-bottom: 8px;">🔍</div>
+              <div style="font-weight: 700; font-size: 15px; color: #FFF;">No customers found matching criteria</div>
+              <div style="font-size: 12px; margin-top: 4px;">Try clearing filters or search terms</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      list.forEach(c => {
+        const isSelected = selectedCustomerIds.has(c.id);
+        const tr = document.createElement('tr');
+        tr.className = `customer-row ${isSelected ? 'selected' : ''}`;
+        tr.id = `row-${c.id}`;
+
+        // Avatar style
+        let avatarClass = 'avatar-ring';
+        if (c.tag === 'VIP') avatarClass += ' vip';
+        else if (c.tag === 'Wholesale') avatarClass += ' wholesale';
+        else if (c.tag === 'Defaulter') avatarClass += ' defaulter';
+
+        // Tag pill class
+        let tagBadgeClass = 'badge-retail';
+        if (c.tag === 'VIP') tagBadgeClass = 'badge-vip';
+        else if (c.tag === 'Wholesale') tagBadgeClass = 'badge-wholesale';
+        else if (c.tag === 'Corporate') tagBadgeClass = 'badge-corporate';
+        else if (c.tag === 'Defaulter') tagBadgeClass = 'badge-defaulter';
+
+        const initials = c.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+        tr.innerHTML = `
+          <td onclick="event.stopPropagation();">
+            <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleCustomerSelect('${c.id}', this.checked)" />
+          </td>
+          <td class="customer-id-cell">${c.id}</td>
+          <td>
+            <div class="customer-info-flex">
+              <div class="${avatarClass}">${initials}</div>
+              <div>
+                <div class="cust-name-line">
+                  ${c.name}
+                  ${c.tag === 'VIP' ? '<span title="VIP Customer">👑</span>' : ''}
+                </div>
+                <div class="cust-phone-sub">📞 ${c.phone} ${c.address ? '• ' + c.address : ''}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge-tag-pill ${tagBadgeClass}">${c.tag}</span>
+          </td>
+          <td>
+            <div style="font-weight: 800; font-family: var(--font-mono); color: #FFF;">${formatTaka(c.lifetimeSpent)}</div>
+            <div style="font-size: 11px; color: var(--text-tertiary);">AOV: ${formatTaka(c.totalOrders > 0 ? c.lifetimeSpent / c.totalOrders : 0)}</div>
+          </td>
+          <td>
+            ${c.totalDue > 0 
+              ? `<span class="due-amount-pill">⚠️ ${formatTaka(c.totalDue)}</span>` 
+              : `<span class="due-clean-pill">✓ Clean (৳0)</span>`}
+          </td>
+          <td>
+            <div style="font-weight: 700; color: #FFF;">${c.totalOrders} orders</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">${c.lastVisit}</div>
+          </td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: 12px; color: ${c.loyaltyPoints > 500 ? '#F59E0B' : '#94A3B8'};">
+              ⭐ ${c.loyaltyPoints} pts
+            </div>
+            <div style="font-size: 10.5px; color: var(--text-tertiary);">${c.loyaltyTier} Tier</div>
+          </td>
+          <td style="text-align: right;" onclick="event.stopPropagation();">
+            <div class="table-actions-cell" style="justify-content: flex-end;">
+              <button class="action-icon-btn pos-sale" title="New POS Sale for Customer" onclick="quickStartSale('${c.id}')">🛒</button>
+              <button class="action-icon-btn" title="WhatsApp Message" onclick="quickWhatsApp('${c.phone}')">💬</button>
+              <button class="action-icon-btn" title="Phone Call" onclick="quickCall('${c.phone}')">📞</button>
+              <button class="action-icon-btn" title="Open Full CRM Dossier" onclick="openCustomerProfile('${c.id}')">👤</button>
+            </div>
+          </td>
+        `;
+
+        tr.onclick = () => openCustomerProfile(c.id);
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Render Cards View
+    function renderCards() {
+      const list = getFilteredCustomers();
+      const container = document.getElementById('cardsViewContainer');
+      container.innerHTML = '';
+
+      list.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'customer-compact-card';
+        card.onclick = () => openCustomerProfile(c.id);
+
+        const initials = c.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+        card.innerHTML = `
+          <div class="card-top-row">
+            <div class="customer-info-flex">
+              <div class="avatar-ring ${c.tag === 'VIP' ? 'vip' : ''}">${initials}</div>
+              <div>
+                <div class="cust-name-line" style="font-size: 13px;">${c.name}</div>
+                <div class="cust-phone-sub">📞 ${c.phone}</div>
+              </div>
+            </div>
+            <span class="badge-tag-pill ${c.tag === 'VIP' ? 'badge-vip' : 'badge-retail'}">${c.tag}</span>
+          </div>
+
+          <div class="card-metrics-strip">
+            <div class="card-metric-col">
+              <div class="card-metric-label">Spent</div>
+              <div class="card-metric-val" style="color: #10B981;">${formatTaka(c.lifetimeSpent)}</div>
+            </div>
+            <div class="card-metric-col">
+              <div class="card-metric-label">Due</div>
+              <div class="card-metric-val" style="color: ${c.totalDue > 0 ? '#F87171' : '#34D399'};">
+                ${c.totalDue > 0 ? formatTaka(c.totalDue) : '৳0'}
+              </div>
+            </div>
+            <div class="card-metric-col">
+              <div class="card-metric-label">Orders</div>
+              <div class="card-metric-val">${c.totalOrders}</div>
+            </div>
+          </div>
+
+          <div class="card-bottom-actions" onclick="event.stopPropagation();">
+            <span style="font-size: 11px; color: var(--text-tertiary);">⭐ ${c.loyaltyPoints} pts</span>
+            <div style="display: flex; gap: 6px;">
+              <button class="action-icon-btn pos-sale" style="width: 28px; height: 28px;" onclick="quickStartSale('${c.id}')">🛒</button>
+              <button class="action-icon-btn" style="width: 28px; height: 28px;" onclick="quickWhatsApp('${c.phone}')">💬</button>
+              <button class="action-icon-btn" style="width: 28px; height: 28px;" onclick="openCustomerProfile('${c.id}')">👤</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Toggle Table vs Card View
+    function toggleLayoutView(mode) {
+      activeLayoutView = mode;
+      document.getElementById('vtTableBtn').classList.toggle('active', mode === 'table');
+      document.getElementById('vtCardsBtn').classList.toggle('active', mode === 'cards');
+
+      document.getElementById('tableViewContainer').style.display = mode === 'table' ? 'block' : 'none';
+      document.getElementById('cardsViewContainer').style.display = mode === 'cards' ? 'grid' : 'none';
+    }
+
+    // Switch Viewport Simulator (Desktop, Tablet, Mobile)
+    function switchViewport(mode) {
+      const wrapper = document.getElementById('viewportWrapper');
+      document.getElementById('vpDesktopBtn').classList.toggle('active', mode === 'desktop');
+      document.getElementById('vpTabletBtn').classList.toggle('active', mode === 'tablet');
+      document.getElementById('vpMobileBtn').classList.toggle('active', mode === 'mobile');
+
+      wrapper.classList.remove('tablet-view', 'mobile-view');
+      if (mode === 'tablet') wrapper.classList.add('tablet-view');
+      if (mode === 'mobile') wrapper.classList.add('mobile-view');
+
+      showToast(`Switched view to ${mode.toUpperCase()} layout`, '🖥️');
+    }
+
+    // Search & Filter Handlers
+    function handleSearch(val) {
+      currentSearch = val.trim();
+      document.getElementById('clearSearchBtn').style.display = currentSearch ? 'block' : 'none';
+      renderTable();
+      renderCards();
+    }
+
+    function clearSearch() {
+      document.getElementById('searchInput').value = '';
+      handleSearch('');
+    }
+
+    function handleSortChange(val) {
+      currentSort = val;
+      renderTable();
+      renderCards();
+    }
+
+    function setSort(val) {
+      currentSort = val;
+      document.getElementById('sortSelect').value = val;
+      renderTable();
+      renderCards();
+    }
+
+    function filterByChip(segment) {
+      activeFilter = segment;
+      document.querySelectorAll('.filter-chip').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.segment === segment);
+      });
+      renderTable();
+      renderCards();
+    }
+
+    function updateCounts() {
+      const total = customersData.length;
+      const dueCount = customersData.filter(c => c.totalDue > 0).length;
+      const vipCount = customersData.filter(c => c.tag === 'VIP').length;
+      const wholesaleCount = customersData.filter(c => c.tag === 'Wholesale').length;
+      const frequentCount = customersData.filter(c => c.totalOrders >= 5).length;
+      const newCount = customersData.filter(c => c.totalOrders <= 2).length;
+      const defaulterCount = customersData.filter(c => c.tag === 'Defaulter').length;
+
+      document.getElementById('chipCountAll').innerText = total;
+      document.getElementById('chipCountDue').innerText = dueCount;
+      document.getElementById('chipCountVip').innerText = vipCount;
+      document.getElementById('chipCountWholesale').innerText = wholesaleCount;
+      document.getElementById('chipCountFrequent').innerText = frequentCount;
+      document.getElementById('chipCountNew').innerText = newCount;
+      document.getElementById('chipCountDefaulter').innerText = defaulterCount;
+    }
+
+    // Customer Selection & Bulk Actions
+    function toggleCustomerSelect(id, checked) {
+      if (checked) selectedCustomerIds.add(id);
+      else selectedCustomerIds.delete(id);
+
+      updateBulkBar();
+      renderTable();
+    }
+
+    function toggleSelectAll(checked) {
+      const list = getFilteredCustomers();
+      if (checked) {
+        list.forEach(c => selectedCustomerIds.add(c.id));
+      } else {
+        selectedCustomerIds.clear();
+      }
+      updateBulkBar();
+      renderTable();
+    }
+
+    function updateBulkBar() {
+      const bar = document.getElementById('bulkActionBar');
+      const count = selectedCustomerIds.size;
+      document.getElementById('bulkCountBadge').innerText = `${count} Selected`;
+
+      if (count > 0) bar.classList.add('visible');
+      else bar.classList.remove('visible');
+    }
+
+    function bulkDeselect() {
+      selectedCustomerIds.clear();
+      document.getElementById('selectAllCheckbox').checked = false;
+      updateBulkBar();
+      renderTable();
+    }
+
+    function bulkSendDueWhatsApp() {
+      showToast(`Dispatched WhatsApp Due Reminders to ${selectedCustomerIds.size} customers`, '💬');
+      bulkDeselect();
+    }
+
+    function bulkAddTag() {
+      const tag = prompt("Enter tag to apply to selected customers (e.g. 'Ramadan Offer', 'VIP 2026'):");
+      if (tag) {
+        customersData.forEach(c => {
+          if (selectedCustomerIds.has(c.id)) c.tag = tag;
+        });
+        showToast(`Tag '${tag}' applied to ${selectedCustomerIds.size} customers`, '🏷️');
+        bulkDeselect();
+        renderTable();
+        renderCards();
+      }
+    }
+
+    function bulkExportExcel() {
+      showToast(`Exported ${selectedCustomerIds.size} selected customer records to Excel`, '📊');
+      bulkDeselect();
+    }
+
+    // Open Full Customer CRM Profile Drawer
+    function openCustomerProfile(id) {
+      const cust = customersData.find(c => c.id === id);
+      if (!cust) return;
+      currentActiveCustomer = cust;
+
+      // Populate Header
+      document.getElementById('drawerName').innerHTML = `
+        ${cust.name}
+        <span class="badge-tag-pill ${cust.tag === 'VIP' ? 'badge-vip' : 'badge-retail'}">${cust.tag} ${cust.loyaltyTier}</span>
+      `;
+      document.getElementById('drawerPhone').innerText = `📞 ${cust.phone}`;
+      document.getElementById('drawerId').innerText = `🆔 ${cust.id}`;
+      document.getElementById('drawerAddress').innerText = cust.address ? `📍 ${cust.address}` : '📍 No address recorded';
+
+      const initials = cust.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+      document.getElementById('drawerAvatar').querySelector('span').innerText = initials;
+      document.getElementById('drawerCrownIcon').style.display = cust.tag === 'VIP' ? 'block' : 'none';
+
+      // Credit limit & Due
+      document.getElementById('drawerDueTxt').innerText = formatTaka(cust.totalDue);
+      document.getElementById('drawerLimitTxt').innerText = formatTaka(cust.creditLimit);
+      const pct = cust.creditLimit > 0 ? (cust.totalDue / cust.creditLimit) * 100 : 0;
+      document.getElementById('drawerCreditMeter').style.width = Math.min(100, pct) + '%';
+
+      // Analytics Stats
+      document.getElementById('drawerLifetimeSpend').innerText = formatTaka(cust.lifetimeSpent);
+      document.getElementById('drawerOrdersCount').innerText = `${cust.totalOrders} Orders`;
+      document.getElementById('drawerAov').innerText = formatTaka(cust.totalOrders > 0 ? cust.lifetimeSpent / cust.totalOrders : 0);
+      document.getElementById('drawerLoyaltyPts').innerText = `⭐ ${cust.loyaltyPoints} pts`;
+
+      // Top Products
+      const tpList = document.getElementById('drawerTopProductsList');
+      tpList.innerHTML = '';
+      if (cust.topItems && cust.topItems.length > 0) {
+        cust.topItems.forEach(item => {
+          tpList.innerHTML += `
+            <div class="top-product-item">
+              <div class="tp-left">
+                <div class="tp-icon">${item.icon || '🛍️'}</div>
+                <div class="tp-details">
+                  <h5>${item.name}</h5>
+                  <p>Bought ${item.qty} units overall</p>
+                </div>
+              </div>
+              <div class="tp-right">
+                <div class="tp-spend">${formatTaka(item.spend)}</div>
+                <div class="tp-qty">${item.qty} units</div>
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        tpList.innerHTML = `<div style="color: var(--text-secondary); font-size: 12px; padding: 10px;">No top products recorded.</div>`;
+      }
+
+      // Timeline List
+      const tlList = document.getElementById('drawerTimelineList');
+      tlList.innerHTML = '';
+      if (cust.timeline && cust.timeline.length > 0) {
+        cust.timeline.forEach(t => {
+          tlList.innerHTML += `
+            <div class="timeline-node">
+              <div class="timeline-dot ${t.type}"></div>
+              <div class="timeline-content-card">
+                <div class="tl-header">
+                  <div class="tl-title">${t.title}</div>
+                  <div class="tl-time">${t.time}</div>
+                </div>
+                <div class="tl-desc">${t.desc}</div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // Invoices List
+      const invList = document.getElementById('drawerInvoicesList');
+      invList.innerHTML = '';
+      if (cust.invoices && cust.invoices.length > 0) {
+        cust.invoices.forEach(inv => {
+          invList.innerHTML += `
+            <div class="invoice-card-row" onclick="openReceiptModal('${inv.id}', '${cust.name}', '${cust.phone}', ${inv.total})">
+              <div>
+                <div style="font-weight: 700; color: #FFF; font-size: 13px;">Invoice #${inv.id}</div>
+                <div style="font-size: 11px; color: var(--text-secondary);">${inv.date} • ${inv.method}</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-weight: 800; font-family: var(--font-mono); color: #10B981; font-size: 13.5px;">${formatTaka(inv.total)}</div>
+                <div style="font-size: 10.5px; color: ${inv.status.includes('Due') ? '#F87171' : '#34D399'}; font-weight: 700;">${inv.status}</div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // Notes List
+      const notesList = document.getElementById('drawerNotesList');
+      notesList.innerHTML = '';
+      if (cust.notes) {
+        notesList.innerHTML += `
+          <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--surface-border); border-radius: 10px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">
+              <span style="font-weight: 700; color: #F59E0B;">📝 Customer Profile Remarks</span>
+              <span>Updated recently</span>
+            </div>
+            <div style="font-size: 12.5px; color: #FFF; line-height: 1.5;">${cust.notes}</div>
+          </div>
+        `;
+      }
+
+      // Ledger List
+      const ledgerList = document.getElementById('drawerLedgerList');
+      document.getElementById('drawerLedgerDue').innerText = formatTaka(cust.totalDue);
+      ledgerList.innerHTML = '';
+      if (cust.ledger && cust.ledger.length > 0) {
+        cust.ledger.forEach(row => {
+          ledgerList.innerHTML += `
+            <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.02); border: 1px solid var(--surface-border); border-radius: 8px; padding: 10px 12px; font-size: 12px;">
+              <div>
+                <div style="font-weight: 700; color: #FFF;">${row.ref}</div>
+                <div style="font-size: 10.5px; color: var(--text-secondary);">${row.date}</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="color: #F87171;">Due Debit: +${formatTaka(row.debit)}</div>
+                <div style="color: #34D399;">Paid Credit: -${formatTaka(row.credit)}</div>
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        ledgerList.innerHTML = `<div style="font-size: 12px; color: var(--text-secondary); text-align: center; padding: 20px;">No credit due transactions recorded.</div>`;
+      }
+
+      // Open Drawer
+      document.getElementById('crmDrawerOverlay').classList.add('open');
+    }
+
+    function closeCustomerDrawer() {
+      document.getElementById('crmDrawerOverlay').classList.remove('open');
+    }
+
+    function closeDrawerOnBackdrop(e) {
+      if (e.target.id === 'crmDrawerOverlay') {
+        closeCustomerDrawer();
+      }
+    }
+
+    // Switch Drawer Tab
+    function switchDrawerTab(tabId) {
+      document.querySelectorAll('.d-tab-btn').forEach((b, i) => {
+        const tabs = ['overview', 'timeline', 'invoices', 'notes', 'ledger'];
+        b.classList.toggle('active', tabs[i] === tabId);
+      });
+
+      document.querySelectorAll('.drawer-tab-pane').forEach(pane => {
+        pane.classList.toggle('active', pane.id === `pane-${tabId}`);
+      });
+    }
+
+    // Add Staff Note
+    function addStaffNote() {
+      const text = document.getElementById('newNoteInput').value.trim();
+      const cat = document.getElementById('noteCategorySelect').value;
+      if (!text) {
+        alert("Please write note text first.");
+        return;
+      }
+
+      currentActiveCustomer.timeline.unshift({
+        type: "note",
+        title: `Staff CRM Note (${cat})`,
+        time: "Just now",
+        desc: text
+      });
+
+      document.getElementById('newNoteInput').value = '';
+      showToast("CRM Note logged to timeline!", "📝");
+      openCustomerProfile(currentActiveCustomer.id);
+      switchDrawerTab('timeline');
+    }
+
+    // Quick Actions
+    function quickStartSale(id) {
+      const c = customersData.find(x => x.id === id);
+      showToast(`Attaching ${c.name} to POS Cart & launching Sale...`, "🛒");
+    }
+
+    function quickWhatsApp(phone) {
+      window.open(`https://wa.me/88${phone.replace(/[^0-9]/g, '')}`, '_blank');
+    }
+
+    function quickCall(phone) {
+      showToast(`Dialing ${phone} via POS Telephony...`, "📞");
+    }
+
+    function triggerStartSaleFromDrawer() {
+      closeCustomerDrawer();
+      quickStartSale(currentActiveCustomer.id);
+    }
+
+    function openSettleDueModal() {
+      const amount = prompt(`Enter repayment amount for ${currentActiveCustomer.name} (Total Due: ${formatTaka(currentActiveCustomer.totalDue)}):`, currentActiveCustomer.totalDue);
+      if (amount && Number(amount) > 0) {
+        const paid = Number(amount);
+        currentActiveCustomer.totalDue = Math.max(0, currentActiveCustomer.totalDue - paid);
+        currentActiveCustomer.timeline.unshift({
+          type: "payment",
+          title: "Due Repayment Received",
+          time: "Just now",
+          desc: `Received ${formatTaka(paid)} in Cash. Remaining due: ${formatTaka(currentActiveCustomer.totalDue)}.`
+        });
+        showToast(`Collected payment of ${formatTaka(paid)}!`, "💵");
+        openCustomerProfile(currentActiveCustomer.id);
+        renderTable();
+        renderCards();
+      }
+    }
+
+    function openWhatsAppComposer() {
+      const msg = `Dear ${currentActiveCustomer.name}, thank you for being a valued customer at Techyfi Retail. Your current loyalty points balance is ${currentActiveCustomer.loyaltyPoints} pts.`;
+      const url = `https://wa.me/88${currentActiveCustomer.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`;
+      window.open(url, '_blank');
+    }
+
+    // Modal: Duplicate Merge Logic
+    function openDuplicateModal() {
+      document.getElementById('mergeModalOverlay').classList.add('open');
+    }
+
+    function closeMergeModal() {
+      document.getElementById('mergeModalOverlay').classList.remove('open');
+    }
+
+    function selectMergeMaster(choice) {
+      document.getElementById('mergeCardA').classList.toggle('selected', choice === 'A');
+      document.getElementById('mergeCardB').classList.toggle('selected', choice === 'B');
+      document.querySelector(`input[name="masterChoice"][value="${choice}"]`).checked = true;
+    }
+
+    function executeMerge() {
+      closeMergeModal();
+      document.getElementById('dedupAlertBanner').style.display = 'none';
+      showToast("Customers successfully merged into single consolidated account!", "🔗");
+    }
+
+    // Modal: Add / Edit Customer
+    function openAddCustomerModal() {
+      document.getElementById('addEditModalTitle').innerHTML = `<span>👤</span> Add New Customer`;
+      document.getElementById('formPhone').value = '';
+      document.getElementById('formName').value = '';
+      document.getElementById('formAddress').value = '';
+      document.getElementById('formCreditLimit').value = '10000';
+      document.getElementById('formNotes').value = '';
+      document.getElementById('addEditModalOverlay').classList.add('open');
+    }
+
+    function openEditCurrentCustomer() {
+      closeCustomerDrawer();
+      document.getElementById('addEditModalTitle').innerHTML = `<span>✏️</span> Edit Customer — ${currentActiveCustomer.id}`;
+      document.getElementById('formPhone').value = currentActiveCustomer.phone;
+      document.getElementById('formName').value = currentActiveCustomer.name;
+      document.getElementById('formAddress').value = currentActiveCustomer.address || '';
+      document.getElementById('formSegment').value = currentActiveCustomer.tag;
+      document.getElementById('formCreditLimit').value = currentActiveCustomer.creditLimit;
+      document.getElementById('formNotes').value = currentActiveCustomer.notes || '';
+      document.getElementById('addEditModalOverlay').classList.add('open');
+    }
+
+    function closeAddEditModal() {
+      document.getElementById('addEditModalOverlay').classList.remove('open');
+    }
+
+    function saveCustomerForm() {
+      const phone = document.getElementById('formPhone').value.trim();
+      const name = document.getElementById('formName').value.trim();
+      if (!phone || !name) {
+        alert("Phone and Customer Name are required fields.");
+        return;
+      }
+
+      // Check if updating or adding
+      const existing = customersData.find(c => c.phone === phone);
+      if (existing) {
+        existing.name = name;
+        existing.address = document.getElementById('formAddress').value.trim();
+        existing.tag = document.getElementById('formSegment').value;
+        existing.creditLimit = Number(document.getElementById('formCreditLimit').value) || 0;
+        existing.notes = document.getElementById('formNotes').value.trim();
+        showToast("Customer record updated!", "✅");
+      } else {
+        const newCust = {
+          id: `CUST-${100 + customersData.length + 1}`,
+          phone: phone,
+          name: name,
+          tag: document.getElementById('formSegment').value,
+          loyaltyTier: "Silver",
+          loyaltyPoints: 0,
+          lifetimeSpent: 0.0,
+          totalDue: 0.0,
+          creditLimit: Number(document.getElementById('formCreditLimit').value) || 0,
+          totalOrders: 0,
+          address: document.getElementById('formAddress').value.trim(),
+          lastVisit: "Just now",
+          notes: document.getElementById('formNotes').value.trim(),
+          topItems: [],
+          timeline: [
+            { type: "note", title: "Customer Account Created", time: "Just now", desc: "Profile registered in Techyfi POS." }
+          ],
+          invoices: [],
+          ledger: []
+        };
+        customersData.unshift(newCust);
+        showToast("New customer created successfully!", "🎉");
+      }
+
+      closeAddEditModal();
+      renderTable();
+      renderCards();
+      updateCounts();
+    }
+
+    // Modal: Thermal Receipt Viewer
+    function openReceiptModal(invId, name, phone, total) {
+      document.getElementById('rInvoiceNum').innerText = `${invId} • 04-Sep-2026 04:15 PM`;
+      document.getElementById('rCustName').innerText = name;
+      document.getElementById('rCustPhone').innerText = phone;
+      document.getElementById('rGrandTotal').innerText = formatTaka(total);
+      document.getElementById('rSubtotal').innerText = formatTaka(total);
+      document.getElementById('receiptModalOverlay').classList.add('open');
+    }
+
+    function closeReceiptModal() {
+      document.getElementById('receiptModalOverlay').classList.remove('open');
+    }
+
+    function toggleReceiptWidth(width) {
+      const paper = document.getElementById('thermalPaper');
+      paper.classList.toggle('width-58', width === '58');
+      showToast(`Receipt width changed to ${width}mm`, '🧾');
+    }
+
+    function toggleReceiptLang(lang) {
+      const paper = document.getElementById('thermalPaper');
+      paper.classList.toggle('bangla-mode', lang === 'BN');
+      if (lang === 'BN') {
+        document.getElementById('rSlipTitle').innerText = 'ক্যাশ মেমো / বিক্রয় রশিদ';
+      } else {
+        document.getElementById('rSlipTitle').innerText = 'CASH MEMO / MONEY RECEIPT';
+      }
+      showToast(`Receipt language set to ${lang === 'BN' ? 'বাংলা' : 'English'}`, '🌐');
+    }
+
+    function printReceiptSimulation() {
+      showToast("Receipt streamed to 80mm ESC/POS Thermal Printer!", "🖨️");
+      closeReceiptModal();
+    }
+
+    function exportDataExcel() {
+      showToast("Generating customers-full-database.xlsx...", "📊");
+    }
+
+    // Toast Notification System
+    function showToast(msg, icon = '✅') {
+      const toast = document.getElementById('posToast');
+      document.getElementById('toastMsg').innerText = msg;
+      document.getElementById('toastIcon').innerText = icon;
+      toast.classList.add('visible');
+      setTimeout(() => {
+        toast.classList.remove('visible');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

@@ -48,6 +48,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -73,6 +74,14 @@ import com.example.techyfipos.R
 import com.example.techyfipos.data.db.Product
 import com.example.techyfipos.ui.viewmodel.CartViewModel
 import com.example.techyfipos.ui.viewmodel.ScannerViewModel
+import com.example.techyfipos.ui.viewmodel.ProductsViewModel
+import com.example.techyfipos.ui.viewmodel.CartItem
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import com.example.techyfipos.utils.beepAndVibrate
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.HardwareBarcodeScanner
@@ -89,7 +98,10 @@ import java.util.concurrent.Executors
 fun ScannerScreen(
     scannerViewModel: ScannerViewModel,
     cartViewModel: CartViewModel,
+    productsViewModel: ProductsViewModel? = null,
+    isTablet: Boolean = false,
     isOwner: Boolean = true,
+    canCheckStock: Boolean = isOwner,
     onNavigateToCart: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToProducts: (String?) -> Unit,
@@ -100,11 +112,9 @@ fun ScannerScreen(
 
     val isSellMode by scannerViewModel.isSellMode.collectAsStateWithLifecycle()
 
-    // Stock Check mode mutates inventory, which is an owner-only operation server-side
-    // (DataRepository.requireOwnerSession) — hide it from cashiers rather than let them enter a
-    // mode whose mutations would throw uncaught and crash the app.
-    LaunchedEffect(isOwner) {
-        if (!isOwner) scannerViewModel.setMode(true)
+    // Stock Check mode mutates inventory; allow owners, supervisors, or staff with INVENTORY_ADD_EDIT permission
+    LaunchedEffect(canCheckStock) {
+        if (!canCheckStock) scannerViewModel.setMode(true)
     }
     val scannedProduct by scannerViewModel.scannedProduct.collectAsStateWithLifecycle()
     val scannedBarcode by scannerViewModel.scannedBarcode.collectAsStateWithLifecycle()
@@ -187,154 +197,189 @@ fun ScannerScreen(
     val heldCartCount by cartViewModel.heldCartCount.collectAsStateWithLifecycle()
     var showHeldCartsSheet by remember { mutableStateOf(false) }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.surface,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            SellHeader(
+    Box(modifier = modifier.fillMaxSize()) {
+        if (isTablet) {
+            TabletSplitTerminal(
+                scannerViewModel = scannerViewModel,
+                cartViewModel = cartViewModel,
+                productsViewModel = productsViewModel,
+                cameraControl = cameraControl,
+                onCameraControlReady = { cameraControl = it },
+                hasCameraPermission = hasCameraPermission,
+                onRequestCameraPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                torchEnabled = torchEnabled,
+                onTorchToggle = { scannerViewModel.torchEnabled.value = !torchEnabled },
+                scanningPaused = scanningPaused,
+                onScanningPausedToggle = { scanningPaused = !scanningPaused },
                 isSellMode = isSellMode,
-                itemCount = cartUnitCount,
-                total = grandTotal,
-                onCartClick = { showCartPreview = true }
+                canCheckStock = canCheckStock,
+                onModeChanged = scannerViewModel::setMode,
+                heldCartCount = heldCartCount,
+                onShowHeldCarts = { showHeldCartsSheet = true },
+                onManualEntry = { scannerViewModel.showManualDialog.value = true },
+                cartItems = cartItems,
+                grandTotal = grandTotal,
+                onNavigateToCart = onNavigateToCart,
+                modifier = Modifier.fillMaxSize()
             )
-        },
-        bottomBar = {
-            SellCheckoutBar(
-                itemCount = cartUnitCount,
-                total = grandTotal,
-                onReviewCart = { showCartPreview = true }
-            )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            Column(
+            SnackbarHost(
+                hostState = snackbarHostState,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Stock Check mode mutates inventory and requires an owner session server-side;
-                // a cashier is forced into Sell mode above, so there is no mode to switch here.
-                if (isOwner) {
-                    SellControlBar(
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+            )
+        } else {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                containerColor = MaterialTheme.colorScheme.surface,
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                topBar = {
+                    SellHeader(
                         isSellMode = isSellMode,
-                        onModeChanged = scannerViewModel::setMode
+                        itemCount = cartUnitCount,
+                        total = grandTotal,
+                        onCartClick = { showCartPreview = true }
+                    )
+                },
+                bottomBar = {
+                    SellCheckoutBar(
+                        itemCount = cartUnitCount,
+                        total = grandTotal,
+                        onReviewCart = { showCartPreview = true }
                     )
                 }
-
-                AnimatedVisibility(
-                    visible = isSellMode && heldCartCount > 0,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    com.example.techyfipos.ui.components.HeldCartsTopBanner(
-                        count = heldCartCount,
-                        onClick = { showHeldCartsSheet = true }
-                    )
-                }
-
+            ) { paddingValues ->
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xFF07130F))
+                        .fillMaxSize()
+                        .padding(paddingValues)
                 ) {
-                    if (hasCameraPermission) {
-                        CameraPreviewView(
-                            scannerViewModel = scannerViewModel,
-                            cartViewModel = cartViewModel,
-                            scanningEnabled = !scanningPaused,
-                            torchEnabled = torchEnabled,
-                            onCameraControlReady = { cameraControl = it },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        ScanFrameOverlay()
-                    } else {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Stock Check mode mutates inventory and requires an owner session server-side;
+                        // a cashier is forced into Sell mode above, so there is no mode to switch here.
+                        if (canCheckStock) {
+                            SellControlBar(
+                                isSellMode = isSellMode,
+                                onModeChanged = scannerViewModel::setMode
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = isSellMode && heldCartCount > 0,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.NoPhotography,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = stringResource(R.string.camera_permission_required),
-                                color = Color.White,
-                                textAlign = TextAlign.Center,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
-                                Text(stringResource(R.string.grant_permission))
-                            }
-                        }
-                    }
-
-                    ScannerStatusMessage(
-                        scanningPaused = scanningPaused,
-                        isSellMode = isSellMode,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 18.dp)
-                    )
-
-                    addedProductConfirmation
-                        ?.takeIf { !it.isSuccess }
-                        ?.let { confirmation ->
-                            CompactScanAlert(
-                                confirmation = confirmation,
-                                modifier = Modifier
-                                    .align(Alignment.Center)
-                                    .padding(horizontal = 24.dp)
+                            com.example.techyfipos.ui.components.HeldCartsTopBanner(
+                                count = heldCartCount,
+                                onClick = { showHeldCartsSheet = true }
                             )
                         }
 
-                    ScannerToolDock(
-                        torchEnabled = torchEnabled,
-                        torchAvailable = true,
-                        scanningPaused = scanningPaused,
-                        onTorchClick = { scannerViewModel.torchEnabled.value = !torchEnabled },
-                        onManualEntry = { scannerViewModel.showManualDialog.value = true },
-                        onPauseChanged = { scanningPaused = !scanningPaused },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(12.dp)
-                    )
-                }
-
-                AnimatedVisibility(
-                    visible = isSellMode && lastScannedProduct != null,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    lastScannedProduct?.let { product ->
-                        LastScannedItemCard(
-                            product = product,
-                            quantity = cartItems.firstOrNull { it.product.barcode == product.barcode }?.quantity ?: 0.0,
-                            onUndo = {
-                                cartItems.firstOrNull { it.product.barcode == product.barcode }?.let { item ->
-                                    cartViewModel.updateQuantity(product, (item.quantity - 1.0).coerceAtLeast(0.0))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.Black)
+                        ) {
+                            if (hasCameraPermission) {
+                                CameraPreviewView(
+                                    scannerViewModel = scannerViewModel,
+                                    cartViewModel = cartViewModel,
+                                    scanningEnabled = !scanningPaused,
+                                    torchEnabled = torchEnabled,
+                                    onCameraControlReady = { cameraControl = it },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                ScanFrameOverlay()
+                            } else {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(32.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.NoPhotography,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = stringResource(R.string.camera_permission_required),
+                                        color = Color.White,
+                                        textAlign = TextAlign.Center,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
+                                        Text(stringResource(R.string.grant_permission))
+                                    }
                                 }
-                                lastScannedProduct = null
-                                scannerViewModel.dismissAddedConfirmation()
                             }
-                        )
+
+                            ScannerStatusMessage(
+                                scanningPaused = scanningPaused,
+                                isSellMode = isSellMode,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = 18.dp)
+                            )
+
+                            addedProductConfirmation
+                                ?.takeIf { !it.isSuccess }
+                                ?.let { confirmation ->
+                                    CompactScanAlert(
+                                        confirmation = confirmation,
+                                        modifier = Modifier
+                                            .align(Alignment.Center)
+                                            .padding(horizontal = 24.dp)
+                                    )
+                                }
+
+                            ScannerToolDock(
+                                torchEnabled = torchEnabled,
+                                torchAvailable = true,
+                                scanningPaused = scanningPaused,
+                                onTorchClick = { scannerViewModel.torchEnabled.value = !torchEnabled },
+                                onManualEntry = { scannerViewModel.showManualDialog.value = true },
+                                onPauseChanged = { scanningPaused = !scanningPaused },
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(12.dp)
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = isSellMode && lastScannedProduct != null,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            lastScannedProduct?.let { product ->
+                                LastScannedItemCard(
+                                    product = product,
+                                    quantity = cartItems.firstOrNull { it.product.barcode == product.barcode }?.quantity ?: 0.0,
+                                    onUndo = {
+                                        cartItems.firstOrNull { it.product.barcode == product.barcode }?.let { item ->
+                                            cartViewModel.updateQuantity(product, (item.quantity - 1.0).coerceAtLeast(0.0))
+                                        }
+                                        lastScannedProduct = null
+                                        scannerViewModel.dismissAddedConfirmation()
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
+        }
 
             // Dynamic bottom sheets
             if (scannedProduct != null) {
@@ -449,6 +494,641 @@ fun ScannerScreen(
                     },
                     onDismiss = { showHeldCartsSheet = false }
                 )
+            }
+        }
+    }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TabletSplitTerminal(
+    scannerViewModel: ScannerViewModel,
+    cartViewModel: CartViewModel,
+    productsViewModel: ProductsViewModel?,
+    cameraControl: androidx.camera.core.CameraControl?,
+    onCameraControlReady: (androidx.camera.core.CameraControl) -> Unit,
+    hasCameraPermission: Boolean,
+    onRequestCameraPermission: () -> Unit,
+    torchEnabled: Boolean,
+    onTorchToggle: () -> Unit,
+    scanningPaused: Boolean,
+    onScanningPausedToggle: () -> Unit,
+    isSellMode: Boolean,
+    canCheckStock: Boolean,
+    onModeChanged: (Boolean) -> Unit,
+    heldCartCount: Int,
+    onShowHeldCarts: () -> Unit,
+    onManualEntry: () -> Unit,
+    cartItems: List<CartItem>,
+    grandTotal: Double,
+    onNavigateToCart: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val allProducts by (productsViewModel?.allProducts?.collectAsStateWithLifecycle()) ?: remember { mutableStateOf(emptyList()) }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    var showCameraPIP by remember { mutableStateOf(false) }
+
+    val categories = remember(allProducts) {
+        listOf("All") + allProducts.map { it.category }.filter { it.isNotBlank() }.distinct()
+    }
+
+    val filteredProducts = remember(allProducts, searchQuery, selectedCategory) {
+        allProducts.filter { product ->
+            val matchesQuery = if (searchQuery.isBlank()) true else {
+                product.name.contains(searchQuery, ignoreCase = true) ||
+                product.barcode.contains(searchQuery, ignoreCase = true)
+            }
+            val matchesCat = if (selectedCategory == null || selectedCategory == "All") true else {
+                product.category.equals(selectedCategory, ignoreCase = true)
+            }
+            matchesQuery && matchesCat
+        }
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // LEFT PANE: Catalog, Search, Categories, Grid & Camera PIP (58% width)
+        Column(
+            modifier = Modifier
+                .weight(0.58f)
+                .fillMaxHeight()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Top Bar: Search + Manual Barcode + PIP Toggle + Held Carts
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text(stringResource(R.string.tablet_search_placeholder), fontSize = 13.sp) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary)
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Manual Barcode Entry button
+                FilledTonalIconButton(onClick = onManualEntry) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Manual Barcode")
+                }
+
+                // Camera PIP Toggle button
+                FilledTonalIconButton(
+                    onClick = { showCameraPIP = !showCameraPIP },
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = if (showCameraPIP) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Icon(
+                        imageVector = if (showCameraPIP) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = "Camera PIP",
+                        tint = if (showCameraPIP) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Held Carts badge button if any
+                if (heldCartCount > 0) {
+                    BadgedBox(
+                        badge = {
+                            Badge { Text("$heldCartCount") }
+                        }
+                    ) {
+                        FilledTonalIconButton(onClick = onShowHeldCarts) {
+                            Icon(Icons.Default.Restore, contentDescription = "Held Carts", tint = Color(0xFFE65100))
+                        }
+                    }
+                }
+            }
+
+            // Collapsible Camera PIP
+            AnimatedVisibility(
+                visible = showCameraPIP,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Black),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(170.dp)
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (hasCameraPermission) {
+                            CameraPreviewView(
+                                scannerViewModel = scannerViewModel,
+                                cartViewModel = cartViewModel,
+                                scanningEnabled = !scanningPaused,
+                                torchEnabled = torchEnabled,
+                                onCameraControlReady = onCameraControlReady,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            ScanFrameOverlay()
+                        } else {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text("Camera permission required", color = Color.White, fontSize = 12.sp)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Button(onClick = onRequestCameraPermission) {
+                                    Text("Grant Permission", fontSize = 12.sp)
+                                }
+                            }
+                        }
+
+                        // Mini PIP controls
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            FilledIconButton(
+                                onClick = onTorchToggle,
+                                modifier = Modifier.size(36.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = if (torchEnabled) Color(0xFFFFD54F) else Color.DarkGray
+                                )
+                            ) {
+                                Realistic3DTacticalFlashlightIcon(torchEnabled = torchEnabled, size = 18.dp)
+                            }
+
+                            FilledIconButton(
+                                onClick = onScanningPausedToggle,
+                                modifier = Modifier.size(36.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = if (scanningPaused) Color(0xFFEF5350) else Color.DarkGray
+                                )
+                            ) {
+                                Realistic3DPauseDiscIcon(isPaused = scanningPaused, size = 18.dp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Mode indicator if supervisor / stock check enabled
+            if (canCheckStock) {
+                SellControlBar(
+                    isSellMode = isSellMode,
+                    onModeChanged = onModeChanged
+                )
+            }
+
+            // Category Chips Row
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(categories) { cat ->
+                    val isSelected = (selectedCategory == null && cat == "All") || (selectedCategory == cat)
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            selectedCategory = if (cat == "All") null else cat
+                        },
+                        label = {
+                            Text(
+                                text = if (cat == "All") stringResource(R.string.tablet_category_all) else cat,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 12.sp
+                            )
+                        }
+                    )
+                }
+            }
+
+            // Product Grid
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (filteredProducts.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.tablet_no_products_found),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 14.sp
+                        )
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 135.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(filteredProducts, key = { it.barcode }) { product ->
+                            TabletProductGridCard(
+                                product = product,
+                                inCartQuantity = cartItems.firstOrNull { it.product.barcode == product.barcode }?.quantity ?: 0.0,
+                                onClick = {
+                                    val added = cartViewModel.addToCart(product)
+                                    if (added) {
+                                        beepAndVibrate(context)
+                                    } else {
+                                        Toast.makeText(context, context.getString(R.string.tablet_out_of_stock_toast), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Vertical Divider
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        )
+
+        // RIGHT PANE: Pinned Live Cart & Checkout (42% width)
+        Column(
+            modifier = Modifier
+                .weight(0.42f)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Cart Header
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.ShoppingCart,
+                            contentDescription = "Cart",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.tablet_live_cart),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 17.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    // Item count pill
+                    val itemCount = cartItems.sumOf { it.quantity }.toInt()
+                    val itemCountText = if (itemCount == 1) {
+                        stringResource(R.string.tablet_cart_item_single, itemCount)
+                    } else {
+                        stringResource(R.string.tablet_cart_items, itemCount)
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = itemCountText,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                // Quick actions: Hold & Clear
+                if (cartItems.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                cartViewModel.holdCurrentCart()
+                                Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.Restore, contentDescription = "Hold", modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.tablet_cart_hold), fontSize = 11.sp)
+                        }
+
+                        OutlinedButton(
+                            onClick = { cartViewModel.clearCart() },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.tablet_cart_clear), fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Cart Items Scrollable List
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (cartItems.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.ShoppingCart,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.size(56.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = stringResource(R.string.tablet_cart_empty_title),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.tablet_cart_empty_subtitle),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(cartItems, key = { it.product.barcode }) { item ->
+                            TabletCartItemRow(
+                                item = item,
+                                onQuantityChange = { newQty ->
+                                    cartViewModel.updateQuantity(item.product, newQty)
+                                },
+                                onRemove = {
+                                    cartViewModel.removeFromCart(item.product)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Cart Summary & Big Checkout Button
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(stringResource(R.string.tablet_grand_total), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(
+                            text = formatTaka(grandTotal),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 22.sp,
+                            color = Color(0xFF2E7D32)
+                        )
+                    }
+
+                    Button(
+                        onClick = onNavigateToCart,
+                        enabled = cartItems.isNotEmpty(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF1B5E20),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.tablet_checkout),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabletProductGridCard(
+    product: Product,
+    inCartQuantity: Double,
+    onClick: () -> Unit
+) {
+    val isOutOfStock = product.stockQty <= 0.0
+    Card(
+        onClick = onClick,
+        enabled = !isOutOfStock,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (inCartQuantity > 0.0) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+            else MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(115.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize().padding(10.dp)) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = product.name,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        lineHeight = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (product.category.isNotBlank()) {
+                        Text(
+                            text = product.category,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(
+                        text = formatTaka(product.sellingPrice),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    val stockText = if (isOutOfStock) {
+                        stringResource(R.string.tablet_stock_out)
+                    } else {
+                        stringResource(R.string.tablet_stock_available, product.stockQty.toInt())
+                    }
+                    Text(
+                        text = stockText,
+                        fontSize = 10.sp,
+                        color = if (isOutOfStock) MaterialTheme.colorScheme.error else Color(0xFF388E3C),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            if (inCartQuantity > 0.0) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(20.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "${inCartQuantity.toInt()}",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabletCartItemRow(
+    item: CartItem,
+    onQuantityChange: (Double) -> Unit,
+    onRemove: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.product.name,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "${formatTaka(item.product.sellingPrice)} × ${item.quantity.toInt()} = ${formatTaka(item.product.sellingPrice * item.quantity)}",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                IconButton(
+                    onClick = { onQuantityChange(item.quantity - 1.0) },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(Icons.Default.Remove, contentDescription = "Decrease", modifier = Modifier.size(16.dp))
+                }
+
+                Text(
+                    text = "${item.quantity.toInt()}",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+
+                IconButton(
+                    onClick = { onQuantityChange(item.quantity + 1.0) },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Increase", modifier = Modifier.size(16.dp))
+                }
+
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Remove",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
     }
@@ -578,7 +1258,10 @@ private fun SellControlBar(
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
                 .padding(4.dp)
         ) {
-            listOf(true to "Sell", false to "Stock").forEach { (sell, label) ->
+            listOf(
+                true to stringResource(R.string.tablet_mode_sell),
+                false to stringResource(R.string.tablet_mode_stock)
+            ).forEach { (sell, label) ->
                 val selected = isSellMode == sell
                 Surface(
                     onClick = { onModeChanged(sell) },
@@ -1272,8 +1955,6 @@ fun CameraPreviewView(
     )
 }
 
-const val SCAN_BOX_WIDTH_FRACTION = 0.75f
-const val SCAN_BOX_HEIGHT_TO_WIDTH_RATIO = 0.6f
 
 @Composable
 fun ScanFrameOverlay() {
@@ -1302,32 +1983,36 @@ fun ScanFrameOverlay() {
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width
         val height = size.height
-        val boxWidth = width * SCAN_BOX_WIDTH_FRACTION
-        val boxHeight = boxWidth * SCAN_BOX_HEIGHT_TO_WIDTH_RATIO
-        val left = (width - boxWidth) / 2
-        val top = (height - boxHeight) / 2
+
+        // Responsive scan box sizing that works elegantly in both portrait phone and landscape tablet banner
+        val boxHeight = minOf(height * 0.78f, width * 0.75f, 260.dp.toPx())
+        val boxWidth = minOf(width * 0.85f, boxHeight * 2.2f, 480.dp.toPx())
+        val left = (width - boxWidth) / 2f
+        val top = (height - boxHeight) / 2f
         val right = left + boxWidth
         val bottom = top + boxHeight
-        val centerX = (left + right) / 2
-        val centerY = (top + bottom) / 2
+        val centerX = width / 2f
+        val centerY = height / 2f
 
-        // 1. Draw a dark transparent background over the camera view
-        drawPath(
-            path = Path().apply {
-                addRoundRect(
-                    RoundRect(
-                        rect = Rect(left, top, right, bottom),
-                        cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx())
-                    )
+        // 1. Soft scrim outside the scan box, with CRYSTAL CLEAR view inside the scan box using EvenOdd fill rule
+        val scrimPath = Path().apply {
+            fillType = PathFillType.EvenOdd
+            addRect(Rect(0f, 0f, width, height))
+            addRoundRect(
+                RoundRect(
+                    rect = Rect(left, top, right, bottom),
+                    cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx())
                 )
-            },
-            color = Color.Black.copy(alpha = 0.5f),
-            blendMode = BlendMode.SrcOut
+            )
+        }
+        drawPath(
+            path = scrimPath,
+            color = Color.Black.copy(alpha = 0.32f)
         )
 
-        // 2. Draw border frame corners
-        val cornerSize = 24.dp.toPx()
-        val strokeWidth = 4.dp.toPx()
+        // 2. Draw border frame corners in vibrant Emerald Green
+        val cornerSize = minOf(24.dp.toPx(), boxWidth * 0.15f, boxHeight * 0.25f)
+        val strokeWidth = 3.5.dp.toPx()
         val cornerColor = Color(0xFF10B981) // Emerald Green
 
         // Top Left
@@ -1348,29 +2033,29 @@ fun ScanFrameOverlay() {
 
         // 3. Draw animated glowing reticle in exact center
         drawCircle(
-            color = Color(0x5510B981),
-            radius = 18.dp.toPx() * reticleScale,
+            color = Color(0x3310B981),
+            radius = 16.dp.toPx() * reticleScale,
             center = Offset(centerX, centerY)
         )
         drawCircle(
             color = Color(0xFF10B981),
-            radius = 10.dp.toPx(),
+            radius = 8.dp.toPx(),
             center = Offset(centerX, centerY),
-            style = Stroke(width = 2.dp.toPx())
+            style = Stroke(width = 1.5.dp.toPx())
         )
         drawCircle(
             color = Color(0xFF10B981),
-            radius = 4.5.dp.toPx(),
+            radius = 3.dp.toPx(),
             center = Offset(centerX, centerY)
         )
 
-        // 4. Draw animated scan line
+        // 4. Draw animated laser scan line
         val lineY = top + (boxHeight * animatedY)
         drawLine(
-            color = Color(0xFFF59E0B), // Glowing Amber scan line
+            color = Color(0xFF10B981), // Emerald green laser scan line
             start = Offset(left + 8.dp.toPx(), lineY),
             end = Offset(right - 8.dp.toPx(), lineY),
-            strokeWidth = 3.5.dp.toPx()
+            strokeWidth = 2.5.dp.toPx()
         )
     }
 }
@@ -1416,7 +2101,7 @@ fun StockCheckBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Realistic3DIsometricPackageIcon(size = 46.dp)
+                Realistic3DProductsBoxIcon(size = 46.dp)
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -1501,7 +2186,9 @@ fun StockCheckBottomSheet(
             FinancialMarginCard(
                 purchasePrice = product.purchasePrice,
                 sellingPrice = product.sellingPrice,
-                quantity = quantity
+                quantity = quantity,
+                mrpPrice = product.mrpPrice,
+                wholesalePrice = product.wholesalePrice
             )
 
             // Date Tracking Info Row with 3D Calendar Icon
@@ -1874,18 +2561,16 @@ class BarcodeAnalyzer(
     private val scanner = BarcodeScanning.getClient(options)
 
     /**
-     * The PreviewView renders with ScaleType.FILL_CENTER, which center-crops the camera
-     * image to fill the view. A barcode's on-screen position only matches its position in
-     * the *analyzed* image once that same center-crop is accounted for — otherwise a code
-     * near the edge of the (wider) analyzed frame can be inside the visible preview while
-     * outside the drawn scan box, or vice versa. This computes the scan box, in the
-     * analyzed image's own coordinate space, so detections outside it can be dropped.
+     * Verifies that the detected barcode is within the visible camera preview area
+     * (accounting for ScaleType.FILL_CENTER cropping), preventing phantom scans of items
+     * outside the user's screen while ensuring responsive scanning across the entire viewfinder.
      */
-    private fun scanBoxInImageSpace(imageWidth: Int, imageHeight: Int): android.graphics.RectF? {
+    private fun isBarcodeInVisiblePreview(box: android.graphics.Rect?, imageWidth: Int, imageHeight: Int): Boolean {
+        if (box == null) return true
         val previewSize = getPreviewSize()
         val previewW = previewSize.width
         val previewH = previewSize.height
-        if (previewW <= 0 || previewH <= 0) return null
+        if (previewW <= 0 || previewH <= 0) return true
 
         val scale = maxOf(previewW.toFloat() / imageWidth, previewH.toFloat() / imageHeight)
         val visibleImgW = previewW / scale
@@ -1893,17 +2578,13 @@ class BarcodeAnalyzer(
         val visibleLeft = (imageWidth - visibleImgW) / 2f
         val visibleTop = (imageHeight - visibleImgH) / 2f
 
-        val boxWidth = previewW * SCAN_BOX_WIDTH_FRACTION
-        val boxHeight = boxWidth * SCAN_BOX_HEIGHT_TO_WIDTH_RATIO
-        val boxLeft = (previewW - boxWidth) / 2f
-        val boxTop = (previewH - boxHeight) / 2f
-
-        return android.graphics.RectF(
-            visibleLeft + boxLeft / scale,
-            visibleTop + boxTop / scale,
-            visibleLeft + (boxLeft + boxWidth) / scale,
-            visibleTop + (boxTop + boxHeight) / scale
+        val visibleBounds = android.graphics.RectF(
+            visibleLeft,
+            visibleTop,
+            visibleLeft + visibleImgW,
+            visibleTop + visibleImgH
         )
+        return visibleBounds.contains(box.exactCenterX(), box.exactCenterY())
     }
 
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
@@ -1915,7 +2596,6 @@ class BarcodeAnalyzer(
             // ML Kit reports bounding boxes in the upright (rotated) orientation.
             val imageWidth = if (rotation == 90 || rotation == 270) imageProxy.height else imageProxy.width
             val imageHeight = if (rotation == 90 || rotation == 270) imageProxy.width else imageProxy.height
-            val scanBox = scanBoxInImageSpace(imageWidth, imageHeight)
 
             scanner.process(image)
                 .addOnSuccessListener { barcodes ->
@@ -1933,14 +2613,10 @@ class BarcodeAnalyzer(
                         if (format == Barcode.FORMAT_QR_CODE && !isPlausibleProductCode(value)) {
                             continue
                         }
-                        // Only accept codes that actually fall within the on-screen scan box.
+                        // Ensure the barcode is within the visible camera preview
                         val box = barcode.boundingBox
-                        if (scanBox != null && box != null) {
-                            val centerX = box.exactCenterX()
-                            val centerY = box.exactCenterY()
-                            if (!scanBox.contains(centerX, centerY)) {
-                                continue
-                            }
+                        if (!isBarcodeInVisiblePreview(box, imageWidth, imageHeight)) {
+                            continue
                         }
                         detectedAny = true
                         onBarcodeDetected(value)

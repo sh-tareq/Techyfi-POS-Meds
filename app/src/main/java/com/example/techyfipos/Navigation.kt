@@ -3,28 +3,38 @@
 package com.example.techyfipos
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.DpOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -34,9 +44,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation3.ui.NavDisplay
 import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.screens.*
@@ -200,8 +215,16 @@ fun MainNavigation() {
 
     val settingsViewModel: SettingsViewModel = viewModel(factory = factory)
     val currentLang by settingsViewModel.language.collectAsStateWithLifecycle("en")
+    val uiLayoutMode by settingsViewModel.uiLayoutMode.collectAsStateWithLifecycle("AUTO")
 
     LocaleWrapper(language = currentLang) {
+        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+        val screenWidthDp = configuration.screenWidthDp
+        val isTablet = when (uiLayoutMode) {
+            "TABLET" -> true
+            "PHONE" -> false
+            else -> screenWidthDp >= 600
+        }
         val ownerOnlyReportsText = stringResource(R.string.owner_only_reports)
         val ownerOnlyExpensesText = stringResource(R.string.owner_only_expenses)
         val ownerOnlySuppliersText = stringResource(R.string.owner_only_suppliers)
@@ -225,6 +248,7 @@ fun MainNavigation() {
         val isOwner by authViewModel.isOwner.collectAsStateWithLifecycle()
         val isSupervisor by authViewModel.isSupervisor.collectAsStateWithLifecycle()
         val activePermissions by authViewModel.activePermissions.collectAsStateWithLifecycle()
+        val currentUser by authViewModel.currentUser.collectAsStateWithLifecycle()
 
         var prefilledBarcodeForProductScreen by remember { mutableStateOf<String?>(null) }
 
@@ -269,11 +293,13 @@ fun MainNavigation() {
         }
 
         var showMoreHubSheet by remember { mutableStateOf(false) }
+        var showUserDropdown by remember { mutableStateOf(false) }
+        var showLogoutConfirmDialog by remember { mutableStateOf(false) }
 
         Scaffold(
             bottomBar = {
-                // Show bottom bar for core main sections (Scanner, Products, SalesHistory, SalesReport, Dues, Settings, Expenses, Suppliers, RegisterClose, Loyalty, Customers)
-                if (currentKey == Scanner || currentKey == Products || currentKey == SalesHistory || currentKey == SalesReport || currentKey == Dues || currentKey == Settings || currentKey == Expenses || currentKey == Suppliers || currentKey == RegisterClose || currentKey == Loyalty || currentKey == Customers) {
+                // Show bottom bar for core main sections on phone ONLY
+                if (!isTablet && (currentKey == Scanner || currentKey == Products || currentKey == SalesHistory || currentKey == SalesReport || currentKey == Dues || currentKey == Settings || currentKey == Expenses || currentKey == Suppliers || currentKey == RegisterClose || currentKey == Loyalty || currentKey == Customers)) {
                     val isMoreActive = currentKey in listOf(SalesReport, Expenses, Suppliers, Settings, RegisterClose, Loyalty, Customers)
 
                     NavigationBar {
@@ -409,223 +435,692 @@ fun MainNavigation() {
                     },
                     isOwner = isOwner,
                     currentKey = currentKey,
+                    isTablet = isTablet,
                     language = currentLang
                 )
             }
-            NavDisplay(
-                backStack = backStack,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
-                onBack = { backStack.removeLastOrNull() },
-                entryProvider = entryProvider {
-                    entry<Splash> {
-                        SplashScreen(
-                            onSplashFinished = {
-                                while (backStack.size > 0) {
-                                    backStack.removeLastOrNull()
-                                }
-                                backStack.add(Lock)
-                            }
+
+            if (showLogoutConfirmDialog) {
+                val user = currentUser
+                val displayName = user?.name?.ifBlank { user.role } ?: if (currentLang == "bn") "ব্যবহারকারী" else "User"
+                AlertDialog(
+                    onDismissRequest = { showLogoutConfirmDialog = false },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.ExitToApp,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(28.dp)
                         )
-                    }
-                    entry<Lock> {
-                        LockScreen(
-                            authViewModel = authViewModel,
-                            onUnlocked = {
-                                while (backStack.size > 0) {
-                                    backStack.removeLastOrNull()
-                                }
-                                backStack.add(Scanner)
-                            },
-                            modifier = Modifier.padding(innerPadding)
+                    },
+                    title = {
+                        Text(
+                            text = if (currentLang == "bn") "লগ আউট নিশ্চিতকরণ" else "Log Out Confirmation",
+                            fontWeight = FontWeight.Bold
                         )
-                    }
-                    entry<ManageUsers> {
-                        ManageUsersScreen(
-                            authViewModel = authViewModel,
-                            onBack = { backStack.removeLastOrNull() },
-                            modifier = Modifier.padding(innerPadding)
+                    },
+                    text = {
+                        Text(
+                            text = if (currentLang == "bn")
+                                "আপনি কি নিশ্চিত যে আপনি '$displayName' অ্যাকাউন্ট থেকে লগ আউট করতে চান?"
+                            else
+                                "Are you sure you want to log out of '$displayName'?"
                         )
-                    }
-                    entry<Scanner> {
-                        ScannerScreen(
-                            scannerViewModel = scannerViewModel,
-                            cartViewModel = cartViewModel,
-                            isOwner = isOwner,
-                            onNavigateToCart = { backStack.add(Cart) },
-                            onNavigateToSettings = { backStack.add(Settings) },
-                            onNavigateToProducts = { barcode ->
-                                prefilledBarcodeForProductScreen = barcode
-                                backStack.add(Products)
-                            },
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
-                    entry<Cart> {
-                        CartScreen(
-                            cartViewModel = cartViewModel,
-                            settingsViewModel = settingsViewModel,
-                            salesViewModel = salesViewModel,
-                            authViewModel = authViewModel,
-                            isOwner = isOwner,
-                            isSupervisor = isSupervisor,
-                            activePermissions = activePermissions,
-                            onBack = { backStack.removeLastOrNull() },
-                            onNavigateToProducts = { barcode ->
-                                prefilledBarcodeForProductScreen = barcode
-                                backStack.add(Products)
-                            },
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
-                    entry<Products> {
-                        val code = prefilledBarcodeForProductScreen
-                        // Clear prefill so it doesn't open dialog next time we open products screen
-                        DisposableEffect(Unit) {
-                            onDispose { prefilledBarcodeForProductScreen = null }
-                        }
-                        ProductsScreen(
-                            productsViewModel = productsViewModel,
-                            cartViewModel = cartViewModel,
-                            prefilledBarcode = code,
-                            isOwner = isOwner,
-                            canViewCosts = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW_COSTS),
-                            canEdit = isOwner || activePermissions.contains(AppPermissions.INVENTORY_ADD_EDIT),
-                            canDelete = isOwner || activePermissions.contains(AppPermissions.INVENTORY_DELETE),
-                            canAdjustStock = isOwner || activePermissions.contains(AppPermissions.INVENTORY_ADJUST_STOCK),
-                            canPrintLabels = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_PRINT_LABELS),
-                            onBack = { backStack.removeLastOrNull() },
-                            onNavigateToCart = { backStack.add(Cart) },
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
-                    entry<SalesHistory> {
-                        SalesHistoryScreen(
-                            salesViewModel = salesViewModel,
-                            settingsViewModel = settingsViewModel,
-                            cartViewModel = cartViewModel,
-                            authViewModel = authViewModel,
-                            isOwner = isOwner,
-                            isSupervisor = isSupervisor,
-                            activePermissions = activePermissions,
-                            onBack = { backStack.removeLastOrNull() },
-                            onNavigateToReport = {
-                                val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
-                                if (canReport) {
-                                    backStack.add(SalesReport)
-                                } else {
-                                    android.widget.Toast.makeText(context, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            onNavigateToCart = { backStack.add(Cart) },
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
-                    entry<SalesReport> {
-                        SalesReportScreen(
-                            salesViewModel = salesViewModel,
-                            onBack = { backStack.removeLastOrNull() },
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
-                    entry<Expenses> {
-                        ExpensesScreen(
-                            expenseViewModel = expenseViewModel,
-                            onBack = { backStack.removeLastOrNull() },
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
-                    entry<Suppliers> {
-                        SuppliersScreen(
-                            supplierViewModel = supplierViewModel,
-                            onBack = { backStack.removeLastOrNull() },
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
-                    entry<Dues> {
-                        DuesScreen(
-                            duesViewModel = duesViewModel,
-                            customerViewModel = customerViewModel,
-                            isOwner = isOwner,
-                            isSupervisor = isSupervisor,
-                            activePermissions = activePermissions,
-                            onBack = { backStack.removeLastOrNull() },
-                            onStartSaleForCustomer = { customer ->
-                                cartViewModel.onCustomerPhoneChanged(customer.phone)
-                                cartViewModel.customerName.value = customer.name
-                                while (backStack.size > 1) { backStack.removeLastOrNull() }
-                                backStack.add(Scanner)
-                                android.widget.Toast.makeText(context, "Started sale for ${customer.name}", android.widget.Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
-                    entry<Settings> {
-                        SettingsScreen(
-                            settingsViewModel = settingsViewModel,
-                            isOwner = isOwner,
-                            onBack = { backStack.removeLastOrNull() },
-                            onExpensesClick = { backStack.add(Expenses) },
-                            onSuppliersClick = { backStack.add(Suppliers) },
-                            onManageUsersClick = {
-                                val canManageStaff = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_MANAGE_STAFF)
-                                if (canManageStaff) {
-                                    backStack.add(ManageUsers)
-                                } else {
-                                    android.widget.Toast.makeText(context, "Only Shop Owner or authorized staff can manage user accounts", android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            onLogout = {
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showLogoutConfirmDialog = false
                                 authViewModel.logout()
                                 while (backStack.size > 0) { backStack.removeLastOrNull() }
                                 backStack.add(Lock)
                             },
-                            modifier = Modifier.padding(innerPadding)
-                        )
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text(
+                                text = if (currentLang == "bn") "লগ আউট" else "Log Out",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(onClick = { showLogoutConfirmDialog = false }) {
+                            Text(text = if (currentLang == "bn") "বাতিল" else "Cancel")
+                        }
                     }
-                    entry<RegisterClose> {
-                        RegisterCloseScreen(
-                            registerClosingViewModel = registerClosingViewModel,
-                            expenseViewModel = expenseViewModel,
-                            salesViewModel = salesViewModel,
-                            onBack = { backStack.removeLastOrNull() },
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
-                    entry<Loyalty> {
-                        LoyaltyScreen(
-                            loyaltyViewModel = loyaltyViewModel,
-                            customerViewModel = customerViewModel,
-                            onBack = { backStack.removeLastOrNull() },
-                            onStartSaleForCustomer = { customer ->
-                                cartViewModel.onCustomerPhoneChanged(customer.phone)
-                                cartViewModel.customerName.value = customer.name
-                                while (backStack.size > 1) { backStack.removeLastOrNull() }
-                                backStack.add(Scanner)
-                                android.widget.Toast.makeText(context, "Started sale for ${customer.name}", android.widget.Toast.LENGTH_SHORT).show()
+                )
+            }
+
+            val isCoreScreen = currentKey in listOf(Scanner, Products, SalesHistory, SalesReport, Dues, Settings, Expenses, Suppliers, RegisterClose, Loyalty, Customers)
+            val layoutDirection = LocalLayoutDirection.current
+            val topInset = innerPadding.calculateTopPadding()
+            val bottomInset = innerPadding.calculateBottomPadding()
+            val startInset = innerPadding.calculateStartPadding(layoutDirection)
+            val endInset = innerPadding.calculateEndPadding(layoutDirection)
+
+            val contentPadding = if (isTablet) {
+                PaddingValues(
+                    start = if (isCoreScreen) 0.dp else startInset,
+                    top = topInset,
+                    end = endInset,
+                    bottom = bottomInset
+                )
+            } else {
+                innerPadding
+            }
+
+            Row(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (isTablet && isCoreScreen) {
+                    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                    val brandBlue = Color(0xFF0082FF)
+
+                    NavigationRail(
+                        modifier = Modifier
+                            .width(72.dp)
+                            .fillMaxHeight()
+                            .drawBehind {
+                                val strokeWidth = 1.dp.toPx()
+                                drawLine(
+                                    color = dividerColor,
+                                    start = Offset(size.width - strokeWidth / 2, 0f),
+                                    end = Offset(size.width - strokeWidth / 2, size.height),
+                                    strokeWidth = strokeWidth
+                                )
                             },
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
-                    entry<Customers> {
-                        CustomersScreen(
-                            customerViewModel = customerViewModel,
-                            onBack = { backStack.removeLastOrNull() },
-                            onStartSaleForCustomer = { customer ->
-                                cartViewModel.onCustomerPhoneChanged(customer.phone)
-                                cartViewModel.customerName.value = customer.name
-                                while (backStack.size > 1) { backStack.removeLastOrNull() }
-                                backStack.add(Scanner)
-                                android.widget.Toast.makeText(context, "Started sale for ${customer.name}", android.widget.Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.padding(innerPadding)
-                        )
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        header = {
+                            Box(
+                                modifier = Modifier
+                                    .padding(
+                                        top = if (topInset > 0.dp) topInset + 4.dp else 8.dp,
+                                        bottom = 4.dp
+                                    )
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(11.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                                        )
+                                    )
+                                    .border(
+                                        width = 1.5.dp,
+                                        brush = Brush.linearGradient(
+                                            listOf(brandBlue, Color(0xFF38BDF8), Color(0xFF1E293B))
+                                        ),
+                                        shape = RoundedCornerShape(11.dp)
+                                    )
+                                    .clickable {
+                                        while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                                    contentDescription = stringResource(R.string.app_name),
+                                    modifier = Modifier
+                                        .fillMaxSize(0.92f)
+                                        .graphicsLayer {
+                                            scaleX = 1.15f
+                                            scaleY = 1.15f
+                                        }
+                                )
+                            }
+                        }
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .padding(bottom = if (bottomInset > 0.dp) bottomInset + 4.dp else 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            val railScrollState = rememberScrollState()
+                            LaunchedEffect(Unit) {
+                                railScrollState.scrollTo(0)
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .verticalScroll(railScrollState),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                val navItems = listOf(
+                                    Triple(Nav3DType.SELL, currentKey == Scanner, stringResource(R.string.sell_mode)) to {
+                                        while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                    },
+                                    Triple(Nav3DType.PRODUCTS, currentKey == Products, stringResource(R.string.products)) to {
+                                        val canViewInventory = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
+                                        if (canViewInventory) {
+                                            while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                            if (backStack.lastOrNull() != Products) { backStack.add(Products) }
+                                        } else {
+                                            android.widget.Toast.makeText(context, "Permission required to view inventory", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    Triple(Nav3DType.HISTORY, currentKey == SalesHistory, stringResource(R.string.sales_history)) to {
+                                        while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                        if (backStack.lastOrNull() != SalesHistory) { backStack.add(SalesHistory) }
+                                    },
+                                    Triple(Nav3DType.DUES, currentKey == Dues, stringResource(R.string.dues_list)) to {
+                                        val canViewDues = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_VIEW)
+                                        if (canViewDues) {
+                                            while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                            if (backStack.lastOrNull() != Dues) { backStack.add(Dues) }
+                                        } else {
+                                            android.widget.Toast.makeText(context, "Permission required to view dues", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    Triple(Nav3DType.REPORT, currentKey == SalesReport, stringResource(R.string.sales_report_section)) to {
+                                        val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
+                                        if (canReport) {
+                                            while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                            if (backStack.lastOrNull() != SalesReport) { backStack.add(SalesReport) }
+                                        } else {
+                                            android.widget.Toast.makeText(context, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    Triple(Nav3DType.SETTINGS, currentKey == Settings, stringResource(R.string.settings)) to {
+                                        val canSettings = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+                                        if (canSettings) {
+                                            while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                            if (backStack.lastOrNull() != Settings) { backStack.add(Settings) }
+                                        } else {
+                                            android.widget.Toast.makeText(context, ownerOnlySettingsText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    Triple(Nav3DType.MORE, currentKey in listOf(RegisterClose, Suppliers, Loyalty, Customers, Expenses), stringResource(R.string.more_hub)) to {
+                                        showMoreHubSheet = true
+                                    }
+                                )
+
+                                navItems.forEachIndexed { index, (info, onClickAction) ->
+                                    val (type, isSelected, labelText) = info
+                                    val isPressed = pressedTab == type
+                                    val scale by animateFloatAsState(
+                                        targetValue = if (isPressed) 0.88f else 1.0f,
+                                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                                        label = "railScale_${type.name}"
+                                    )
+
+                                    if (index == 4) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 3.dp),
+                                            thickness = 0.8.dp,
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                                        )
+                                    }
+
+                                    NavigationRailItem(
+                                        selected = isSelected,
+                                        onClick = { triggerTap(type, onClickAction) },
+                                        icon = {
+                                            Animated3DNavItemIcon(
+                                                type = type,
+                                                selected = isSelected,
+                                                sellIconSize = if (isSelected) 26.dp else 24.dp,
+                                                modifier = Modifier.graphicsLayer {
+                                                    scaleX = scale
+                                                    scaleY = scale
+                                                }
+                                            )
+                                        },
+                                        label = {
+                                            Text(
+                                                text = labelText,
+                                                fontSize = 11.5.sp,
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                overflow = TextOverflow.Ellipsis,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                                letterSpacing = 0.15.sp
+                                            )
+                                        },
+                                        colors = NavigationRailItemDefaults.colors(
+                                            selectedIconColor = brandBlue,
+                                            selectedTextColor = brandBlue,
+                                            indicatorColor = brandBlue.copy(alpha = 0.16f),
+                                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                        ),
+                                        modifier = Modifier.padding(vertical = 0.dp)
+                                    )
+                                }
+                            }
+
+                            // Bottom Utility Section: Cashier Shift Avatar & 1-tap Lock
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier
+                                    .padding(top = 2.dp)
+                                    .fillMaxWidth()
+                            ) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 3.dp),
+                                    thickness = 0.8.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                                )
+
+                                val user = currentUser
+                                val displayName = user?.name?.ifBlank { user.role } ?: if (currentLang == "bn") "ক্যাশিয়ার" else "Cashier"
+                                val initials = (user?.name?.ifBlank { user.role } ?: "POS").take(2).uppercase()
+                                val roleBadge = if (user != null) {
+                                    when (user.role.uppercase()) {
+                                        "OWNER" -> if (currentLang == "bn") "মালিক" else "Owner"
+                                        "MANAGER" -> if (currentLang == "bn") "ম্যানেজার" else "Manager"
+                                        "CASHIER" -> if (currentLang == "bn") "ক্যাশিয়ার" else "Cashier"
+                                        else -> user.role
+                                    }
+                                } else {
+                                    if (currentLang == "bn") "স্টাফ" else "Staff"
+                                }
+
+                                Box(
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF10B981).copy(alpha = 0.18f))
+                                            .border(1.2.dp, Color(0xFF10B981).copy(alpha = 0.5f), CircleShape)
+                                            .clickable { showUserDropdown = true },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = initials,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF10B981)
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = showUserDropdown,
+                                        onDismissRequest = { showUserDropdown = false },
+                                        offset = DpOffset(x = 64.dp, y = (-20).dp),
+                                        modifier = Modifier
+                                            .widthIn(min = 230.dp)
+                                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(38.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color(0xFF10B981).copy(alpha = 0.18f))
+                                                        .border(1.dp, Color(0xFF10B981), CircleShape),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = initials,
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFF10B981)
+                                                    )
+                                                }
+                                                Column {
+                                                    Text(
+                                                        text = displayName,
+                                                        fontSize = 14.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    Surface(
+                                                        shape = RoundedCornerShape(4.dp),
+                                                        color = Color(0xFF10B981).copy(alpha = 0.14f),
+                                                        modifier = Modifier.padding(top = 2.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = roleBadge,
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            color = Color(0xFF10B981),
+                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                                            thickness = 0.8.dp,
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                                        )
+
+                                        DropdownMenuItem(
+                                            text = {
+                                                Column {
+                                                    Text(
+                                                        text = if (currentLang == "bn") "টার্মিনাল লক করুন" else "Lock Terminal",
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Text(
+                                                        text = if (currentLang == "bn") "সেশন চালু রেখে সাময়িক লক" else "Keep active session locked",
+                                                        fontSize = 10.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.Lock,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            },
+                                            onClick = {
+                                                showUserDropdown = false
+                                                backStack.add(Lock)
+                                            }
+                                        )
+
+                                        DropdownMenuItem(
+                                            text = {
+                                                Column {
+                                                    Text(
+                                                        text = if (currentLang == "bn") "লগ আউট করুন" else "Log Out",
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.error
+                                                    )
+                                                    Text(
+                                                        text = if (currentLang == "bn") "অ্যাকাউন্ট থেকে সাইন আউট করুন" else "Sign out of account",
+                                                        fontSize = 10.sp,
+                                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.75f)
+                                                    )
+                                                }
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.ExitToApp,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            },
+                                            onClick = {
+                                                showUserDropdown = false
+                                                showLogoutConfirmDialog = true
+                                            }
+                                        )
+                                    }
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        backStack.add(Lock)
+                                    },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Lock Terminal",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            )
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    NavDisplay(
+                        backStack = backStack,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background),
+                        onBack = { backStack.removeLastOrNull() },
+                        entryProvider = entryProvider {
+                            entry<Splash> {
+                                SplashScreen(
+                                    onSplashFinished = {
+                                        while (backStack.size > 0) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                        backStack.add(Lock)
+                                    }
+                                )
+                            }
+                            entry<Lock> {
+                                LockScreen(
+                                    authViewModel = authViewModel,
+                                    onUnlocked = {
+                                        while (backStack.size > 0) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                        backStack.add(Scanner)
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            entry<ManageUsers> {
+                                ManageUsersScreen(
+                                    authViewModel = authViewModel,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<Scanner> {
+                                ScannerScreen(
+                                    scannerViewModel = scannerViewModel,
+                                    cartViewModel = cartViewModel,
+                                    productsViewModel = productsViewModel,
+                                    isTablet = isTablet,
+                                    isOwner = isOwner,
+                                    canCheckStock = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_ADD_EDIT),
+                                    onNavigateToCart = { backStack.add(Cart) },
+                                    onNavigateToSettings = { backStack.add(Settings) },
+                                    onNavigateToProducts = { barcode ->
+                                        prefilledBarcodeForProductScreen = barcode
+                                        backStack.add(Products)
+                                    },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<Cart> {
+                                CartScreen(
+                                    cartViewModel = cartViewModel,
+                                    settingsViewModel = settingsViewModel,
+                                    salesViewModel = salesViewModel,
+                                    authViewModel = authViewModel,
+                                    isOwner = isOwner,
+                                    isSupervisor = isSupervisor,
+                                    activePermissions = activePermissions,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onNavigateToProducts = { barcode ->
+                                        prefilledBarcodeForProductScreen = barcode
+                                        backStack.add(Products)
+                                    },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<Products> {
+                                val code = prefilledBarcodeForProductScreen
+                                DisposableEffect(Unit) {
+                                    onDispose { prefilledBarcodeForProductScreen = null }
+                                }
+                                ProductsScreen(
+                                    productsViewModel = productsViewModel,
+                                    cartViewModel = cartViewModel,
+                                    prefilledBarcode = code,
+                                    isOwner = isOwner,
+                                    canViewCosts = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW_COSTS),
+                                    canEdit = isOwner || activePermissions.contains(AppPermissions.INVENTORY_ADD_EDIT),
+                                    canDelete = isOwner || activePermissions.contains(AppPermissions.INVENTORY_DELETE),
+                                    canAdjustStock = isOwner || activePermissions.contains(AppPermissions.INVENTORY_ADJUST_STOCK),
+                                    canPrintLabels = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_PRINT_LABELS),
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onNavigateToCart = { backStack.add(Cart) },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<SalesHistory> {
+                                SalesHistoryScreen(
+                                    salesViewModel = salesViewModel,
+                                    settingsViewModel = settingsViewModel,
+                                    cartViewModel = cartViewModel,
+                                    authViewModel = authViewModel,
+                                    isOwner = isOwner,
+                                    isSupervisor = isSupervisor,
+                                    activePermissions = activePermissions,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onNavigateToReport = {
+                                        val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
+                                        if (canReport) {
+                                            backStack.add(SalesReport)
+                                        } else {
+                                            android.widget.Toast.makeText(context, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    onNavigateToCart = { backStack.add(Cart) },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<SalesReport> {
+                                SalesReportScreen(
+                                    salesViewModel = salesViewModel,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<Expenses> {
+                                ExpensesScreen(
+                                    expenseViewModel = expenseViewModel,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onNavigateToDayStartClose = {
+                                        if (isOwner) {
+                                            if (backStack.lastOrNull() != RegisterClose) { backStack.add(RegisterClose) }
+                                        } else {
+                                            android.widget.Toast.makeText(context, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<Suppliers> {
+                                SuppliersScreen(
+                                    supplierViewModel = supplierViewModel,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<Dues> {
+                                DuesScreen(
+                                    duesViewModel = duesViewModel,
+                                    customerViewModel = customerViewModel,
+                                    isOwner = isOwner,
+                                    isSupervisor = isSupervisor,
+                                    activePermissions = activePermissions,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onStartSaleForCustomer = { customer ->
+                                        cartViewModel.onCustomerPhoneChanged(customer.phone)
+                                        cartViewModel.customerName.value = customer.name
+                                        while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                        backStack.add(Scanner)
+                                        android.widget.Toast.makeText(context, "Started sale for ${customer.name}", android.widget.Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<Settings> {
+                                SettingsScreen(
+                                    settingsViewModel = settingsViewModel,
+                                    isOwner = isOwner,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onExpensesClick = { backStack.add(Expenses) },
+                                    onSuppliersClick = { backStack.add(Suppliers) },
+                                    onManageUsersClick = {
+                                        val canManageStaff = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_MANAGE_STAFF)
+                                        if (canManageStaff) {
+                                            backStack.add(ManageUsers)
+                                        } else {
+                                            android.widget.Toast.makeText(context, "Only Shop Owner or authorized staff can manage user accounts", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    onLogout = {
+                                        authViewModel.logout()
+                                        while (backStack.size > 0) { backStack.removeLastOrNull() }
+                                        backStack.add(Lock)
+                                    },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<RegisterClose> {
+                                RegisterCloseScreen(
+                                    registerClosingViewModel = registerClosingViewModel,
+                                    expenseViewModel = expenseViewModel,
+                                    salesViewModel = salesViewModel,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onNavigateToExpenses = {
+                                        if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
+                                    },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<Loyalty> {
+                                LoyaltyScreen(
+                                    loyaltyViewModel = loyaltyViewModel,
+                                    customerViewModel = customerViewModel,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onStartSaleForCustomer = { customer ->
+                                        cartViewModel.onCustomerPhoneChanged(customer.phone)
+                                        cartViewModel.customerName.value = customer.name
+                                        while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                        backStack.add(Scanner)
+                                        android.widget.Toast.makeText(context, "Started sale for ${customer.name}", android.widget.Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                            entry<Customers> {
+                                CustomersScreen(
+                                    customerViewModel = customerViewModel,
+                                    onBack = { backStack.removeLastOrNull() },
+                                    onStartSaleForCustomer = { customer ->
+                                        cartViewModel.onCustomerPhoneChanged(customer.phone)
+                                        cartViewModel.customerName.value = customer.name
+                                        while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                        backStack.add(Scanner)
+                                        android.widget.Toast.makeText(context, "Started sale for ${customer.name}", android.widget.Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.padding(contentPadding)
+                                )
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
+}
+
+enum class OperationCategory {
+    ALL, SHIFT, CRM, MANAGEMENT
 }
 
 data class OperationHubItem(
@@ -635,6 +1130,8 @@ data class OperationHubItem(
     val badge: String,
     val badgeColor: Color,
     val isSelected: Boolean,
+    val category: OperationCategory = OperationCategory.ALL,
+    val isLocked: Boolean = false,
     val onClick: () -> Unit
 )
 
@@ -651,209 +1148,608 @@ fun MoreOperationsHubSheet(
     onNavigateToCustomers: () -> Unit,
     isOwner: Boolean,
     currentKey: Any?,
+    isTablet: Boolean = false,
     language: String = "en"
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        dragHandle = {
+    if (isTablet) {
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
             Box(
                 modifier = Modifier
-                    .padding(top = 12.dp, bottom = 8.dp)
-                    .width(44.dp)
-                    .height(4.5.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
-            )
-        }
-    ) {
-        LocaleWrapper(language = language) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onDismiss() },
+                contentAlignment = Alignment.Center
             ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.store_operations),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = stringResource(R.string.store_operations_sub),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    modifier = Modifier
+                        .widthIn(max = 760.dp)
+                        .fillMaxWidth(0.94f)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {}
+                        .padding(vertical = 20.dp)
+                ) {
+                    LocaleWrapper(language = language) {
+                        MoreOperationsHubContent(
+                            onDismiss = onDismiss,
+                            onNavigateToReport = onNavigateToReport,
+                            onNavigateToExpenses = onNavigateToExpenses,
+                            onNavigateToSuppliers = onNavigateToSuppliers,
+                            onNavigateToSettings = onNavigateToSettings,
+                            onNavigateToRegisterClose = onNavigateToRegisterClose,
+                            onNavigateToLoyalty = onNavigateToLoyalty,
+                            onNavigateToCustomers = onNavigateToCustomers,
+                            isOwner = isOwner,
+                            currentKey = currentKey,
+                            isTablet = true,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+                        )
+                    }
                 }
-                IconButton(onClick = onDismiss) {
+            }
+        }
+    } else {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 10.dp, bottom = 6.dp)
+                        .width(42.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                )
+            }
+        ) {
+            LocaleWrapper(language = language) {
+                MoreOperationsHubContent(
+                    onDismiss = onDismiss,
+                    onNavigateToReport = onNavigateToReport,
+                    onNavigateToExpenses = onNavigateToExpenses,
+                    onNavigateToSuppliers = onNavigateToSuppliers,
+                    onNavigateToSettings = onNavigateToSettings,
+                    onNavigateToRegisterClose = onNavigateToRegisterClose,
+                    onNavigateToLoyalty = onNavigateToLoyalty,
+                    onNavigateToCustomers = onNavigateToCustomers,
+                    isOwner = isOwner,
+                    currentKey = currentKey,
+                    isTablet = false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MoreOperationsHubContent(
+    onDismiss: () -> Unit,
+    onNavigateToReport: () -> Unit,
+    onNavigateToExpenses: () -> Unit,
+    onNavigateToSuppliers: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToRegisterClose: () -> Unit,
+    onNavigateToLoyalty: () -> Unit,
+    onNavigateToCustomers: () -> Unit,
+    isOwner: Boolean,
+    currentKey: Any?,
+    isTablet: Boolean,
+    modifier: Modifier = Modifier
+) {
+    var selectedCategory by remember { mutableStateOf(OperationCategory.ALL) }
+    var isGridView by rememberSaveable { mutableStateOf(isTablet) }
+
+    val operationsList = listOf(
+        OperationHubItem(
+            title = stringResource(R.string.register_close_section),
+            subtitle = stringResource(R.string.register_close_hub_subtitle),
+            navType = Nav3DType.REGISTER,
+            badge = if (isOwner) stringResource(R.string.more_audit_badge) else stringResource(R.string.more_locked_badge),
+            badgeColor = if (isOwner) Color(0xFFF59E0B) else Color(0xFF64748B),
+            isSelected = currentKey == RegisterClose,
+            category = OperationCategory.SHIFT,
+            isLocked = !isOwner,
+            onClick = onNavigateToRegisterClose
+        ),
+        OperationHubItem(
+            title = stringResource(R.string.expenses),
+            subtitle = stringResource(R.string.more_expenses_subtitle),
+            navType = Nav3DType.EXPENSES,
+            badge = stringResource(R.string.more_expenses_badge),
+            badgeColor = Color(0xFFEF4444),
+            isSelected = currentKey == Expenses,
+            category = OperationCategory.SHIFT,
+            onClick = onNavigateToExpenses
+        ),
+        OperationHubItem(
+            title = stringResource(R.string.sales_report_section),
+            subtitle = stringResource(R.string.more_report_subtitle),
+            navType = Nav3DType.REPORT,
+            badge = stringResource(R.string.more_report_badge),
+            badgeColor = Color(0xFF3B82F6),
+            isSelected = currentKey == SalesReport,
+            category = OperationCategory.MANAGEMENT,
+            onClick = onNavigateToReport
+        ),
+        OperationHubItem(
+            title = stringResource(R.string.suppliers),
+            subtitle = stringResource(R.string.more_suppliers_subtitle),
+            navType = Nav3DType.SUPPLIERS,
+            badge = stringResource(R.string.more_suppliers_badge),
+            badgeColor = Color(0xFF10B981),
+            isSelected = currentKey == Suppliers,
+            category = OperationCategory.MANAGEMENT,
+            onClick = onNavigateToSuppliers
+        ),
+        OperationHubItem(
+            title = stringResource(R.string.loyalty_screen_title),
+            subtitle = stringResource(R.string.loyalty_hub_subtitle),
+            navType = Nav3DType.LOYALTY,
+            badge = stringResource(R.string.loyalty_badge),
+            badgeColor = Color(0xFFEC4899),
+            isSelected = currentKey == Loyalty,
+            category = OperationCategory.CRM,
+            onClick = onNavigateToLoyalty
+        ),
+        OperationHubItem(
+            title = stringResource(R.string.customers_hub_title),
+            subtitle = stringResource(R.string.customers_hub_subtitle),
+            navType = Nav3DType.CUSTOMERS,
+            badge = stringResource(R.string.customers_badge),
+            badgeColor = Color(0xFF0D9488),
+            isSelected = currentKey == Customers,
+            category = OperationCategory.CRM,
+            onClick = onNavigateToCustomers
+        ),
+        OperationHubItem(
+            title = stringResource(R.string.settings),
+            subtitle = stringResource(R.string.more_settings_subtitle),
+            navType = Nav3DType.SETTINGS,
+            badge = if (isOwner) stringResource(R.string.more_admin_badge) else stringResource(R.string.more_locked_badge),
+            badgeColor = if (isOwner) Color(0xFF8B5CF6) else Color(0xFF64748B),
+            isSelected = currentKey == Settings,
+            category = OperationCategory.MANAGEMENT,
+            isLocked = !isOwner,
+            onClick = onNavigateToSettings
+        )
+    )
+
+    val filteredList = if (selectedCategory == OperationCategory.ALL) {
+        operationsList
+    } else {
+        operationsList.filter { it.category == selectedCategory }
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        // Header Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.store_operations),
+                    fontSize = 17.5.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(1.dp))
+                Text(
+                    text = stringResource(R.string.store_operations_sub),
+                    fontSize = 11.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // List / Grid View Mode Toggle
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                    ),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // List View
+                        Surface(
+                            onClick = { isGridView = false },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (!isGridView) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                            modifier = Modifier.size(30.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ViewList,
+                                    contentDescription = stringResource(R.string.more_view_list_cd),
+                                    modifier = Modifier.size(17.dp),
+                                    tint = if (!isGridView) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Grid View
+                        Surface(
+                            onClick = { isGridView = true },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isGridView) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                            modifier = Modifier.size(30.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.GridView,
+                                    contentDescription = stringResource(R.string.more_view_grid_cd),
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (isGridView) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(34.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = stringResource(R.string.common_close_content_description),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
+        }
 
-            Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(10.dp))
 
-            val operationsList = listOf(
-                OperationHubItem(
-                    title = stringResource(R.string.sales_report_section),
-                    subtitle = stringResource(R.string.more_report_subtitle),
-                    navType = Nav3DType.REPORT,
-                    badge = stringResource(R.string.more_report_badge),
-                    badgeColor = Color(0xFF3B82F6),
-                    isSelected = currentKey == SalesReport,
-                    onClick = onNavigateToReport
-                ),
-                OperationHubItem(
-                    title = stringResource(R.string.expenses),
-                    subtitle = stringResource(R.string.more_expenses_subtitle),
-                    navType = Nav3DType.EXPENSES,
-                    badge = stringResource(R.string.more_expenses_badge),
-                    badgeColor = Color(0xFFEF4444),
-                    isSelected = currentKey == Expenses,
-                    onClick = onNavigateToExpenses
-                ),
-                OperationHubItem(
-                    title = stringResource(R.string.suppliers),
-                    subtitle = stringResource(R.string.more_suppliers_subtitle),
-                    navType = Nav3DType.SUPPLIERS,
-                    badge = stringResource(R.string.more_suppliers_badge),
-                    badgeColor = Color(0xFF10B981),
-                    isSelected = currentKey == Suppliers,
-                    onClick = onNavigateToSuppliers
-                ),
-                OperationHubItem(
-                    title = stringResource(R.string.settings),
-                    subtitle = stringResource(R.string.more_settings_subtitle),
-                    navType = Nav3DType.SETTINGS,
-                    badge = if (isOwner) stringResource(R.string.more_admin_badge) else stringResource(R.string.more_locked_badge),
-                    badgeColor = if (isOwner) Color(0xFF8B5CF6) else Color(0xFF64748B),
-                    isSelected = currentKey == Settings,
-                    onClick = onNavigateToSettings
-                ),
-                OperationHubItem(
-                    title = stringResource(R.string.register_close_section),
-                    subtitle = stringResource(R.string.register_close_hub_subtitle),
-                    navType = Nav3DType.REGISTER,
-                    badge = if (isOwner) stringResource(R.string.more_audit_badge) else stringResource(R.string.more_locked_badge),
-                    badgeColor = if (isOwner) Color(0xFFF59E0B) else Color(0xFF64748B),
-                    isSelected = currentKey == RegisterClose,
-                    onClick = onNavigateToRegisterClose
-                ),
-                OperationHubItem(
-                    title = stringResource(R.string.loyalty_screen_title),
-                    subtitle = stringResource(R.string.loyalty_hub_subtitle),
-                    navType = Nav3DType.LOYALTY,
-                    badge = stringResource(R.string.loyalty_badge),
-                    badgeColor = Color(0xFFEC4899),
-                    isSelected = currentKey == Loyalty,
-                    onClick = onNavigateToLoyalty
-                ),
-                OperationHubItem(
-                    title = stringResource(R.string.customers_hub_title),
-                    subtitle = stringResource(R.string.customers_hub_subtitle),
-                    navType = Nav3DType.CUSTOMERS,
-                    badge = stringResource(R.string.customers_badge),
-                    badgeColor = Color(0xFF0D9488),
-                    isSelected = currentKey == Customers,
-                    onClick = onNavigateToCustomers
+        // Category Quick-Filter Chips
+        val categories = listOf(
+            Triple(OperationCategory.ALL, stringResource(R.string.more_filter_all), operationsList.size),
+            Triple(OperationCategory.SHIFT, stringResource(R.string.more_filter_shift), operationsList.count { it.category == OperationCategory.SHIFT }),
+            Triple(OperationCategory.CRM, stringResource(R.string.more_filter_crm), operationsList.count { it.category == OperationCategory.CRM }),
+            Triple(OperationCategory.MANAGEMENT, stringResource(R.string.more_filter_management), operationsList.count { it.category == OperationCategory.MANAGEMENT })
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            categories.forEach { (cat, label, count) ->
+                val isCatSelected = selectedCategory == cat
+                FilterChip(
+                    selected = isCatSelected,
+                    onClick = { selectedCategory = cat },
+                    label = {
+                        Text(
+                            text = "$label ($count)",
+                            fontSize = 11.sp,
+                            fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Medium
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isCatSelected,
+                        borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        borderWidth = 1.dp,
+                        selectedBorderWidth = 1.dp
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(30.dp)
                 )
-            )
+            }
+        }
 
+        Spacer(Modifier.height(12.dp))
+
+        // Operations List / Grid
+        if (isGridView) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = if (isTablet) 460.dp else 490.dp)
             ) {
-                items(operationsList) { item ->
-                    OperationHubCard(item = item)
+                items(
+                    items = filteredList,
+                    key = { it.title },
+                    span = { item ->
+                        val index = filteredList.indexOf(item)
+                        val isLastOdd = index == filteredList.lastIndex && filteredList.size % 2 != 0
+                        GridItemSpan(if (isLastOdd) 2 else 1)
+                    }
+                ) { item ->
+                    val isLastOdd = filteredList.indexOf(item) == filteredList.lastIndex && filteredList.size % 2 != 0
+                    OperationHubCard(
+                        item = item,
+                        isGrid = if (!isTablet && isLastOdd) false else true,
+                        isTablet = isTablet
+                    )
                 }
             }
-
-            Spacer(Modifier.height(24.dp))
-        }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = if (isTablet) 460.dp else 520.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                filteredList.forEach { item ->
+                    OperationHubCard(
+                        item = item,
+                        isGrid = false,
+                        isTablet = isTablet
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
         }
     }
 }
 
 @Composable
-fun OperationHubCard(item: OperationHubItem) {
+fun OperationHubCard(
+    item: OperationHubItem,
+    isGrid: Boolean = false,
+    isTablet: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "tile_scale"
+    )
+
     Card(
         onClick = item.onClick,
-        shape = RoundedCornerShape(18.dp),
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (item.isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = if (item.isSelected) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            }
         ),
-        border = if (item.isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
-        else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-        modifier = Modifier
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (item.isSelected) 1.5.dp else 1.dp,
+            color = if (item.isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+        ),
+        modifier = modifier
             .fillMaxWidth()
-            .height(130.dp)
+            .graphicsLayer {
+                scaleX = animatedScale
+                scaleY = animatedScale
+            }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        if (isGrid && !isTablet) {
+            // Compact 2-column Grid Card for Phone
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 10.dp)
             ) {
-                Animated3DNavItemIcon(
-                    type = item.navType,
-                    selected = true,
-                    fontSize = 28.sp,
-                    sellIconSize = 28.dp,
-                    modifier = Modifier.size(36.dp)
-                )
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = item.badgeColor.copy(alpha = 0.15f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, item.badgeColor.copy(alpha = 0.35f))
+                // Top Row: 3D Icon & Badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(item.badgeColor.copy(alpha = 0.12f))
+                            .border(
+                                1.dp,
+                                item.badgeColor.copy(alpha = 0.25f),
+                                RoundedCornerShape(11.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Animated3DNavItemIcon(
+                            type = item.navType,
+                            selected = true,
+                            fontSize = 18.sp,
+                            sellIconSize = 18.dp,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = item.badgeColor.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, item.badgeColor.copy(alpha = 0.32f))
+                    ) {
+                        Text(
+                            text = item.badge,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = item.badgeColor,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                // Title Row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
-                        text = item.badge,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = item.badgeColor,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        text = item.title,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    if (item.isLocked) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(11.dp)
+                        )
+                    }
                 }
-            }
 
-            Column {
-                Text(
-                    text = item.title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(2.5.dp))
+
+                // Subtitle (2 Lines, No Cutoff)
                 Text(
                     text = item.subtitle,
                     fontSize = 10.5.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 13.sp,
+                    lineHeight = 13.5.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+        } else {
+            // Horizontal Card for Tablet (Grid & List) and Phone (List)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Squircle Icon Container
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(item.badgeColor.copy(alpha = 0.12f))
+                        .border(
+                            1.dp,
+                            item.badgeColor.copy(alpha = 0.25f),
+                            RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Animated3DNavItemIcon(
+                        type = item.navType,
+                        selected = true,
+                        fontSize = 20.sp,
+                        sellIconSize = 20.dp,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                // Title & Subtitle Column
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = item.title,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (item.isLocked) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = item.subtitle,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 14.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                // Trailing Section: Badge & Chevron
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(7.dp),
+                        color = item.badgeColor.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, item.badgeColor.copy(alpha = 0.32f))
+                    ) {
+                        Text(
+                            text = item.badge,
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = item.badgeColor,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp)
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
     }

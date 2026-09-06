@@ -43,6 +43,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -1162,6 +1164,11 @@ fun DuesScreen(
                         updatedAt = System.currentTimeMillis()
                     )
                 customerToEditDue = due
+            },
+            onAddNote = { text, cat ->
+                dossierData?.customer?.phone?.let { phone ->
+                    customerViewModel.addCustomerNote(phone, text, cat)
+                }
             }
         )
     }
@@ -5816,15 +5823,18 @@ fun DueRepaymentReceiptDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val settingsDataStore = remember { SettingsDataStore(context) }
     val appLanguage by settingsDataStore.languageFlow.collectAsStateWithLifecycle(initialValue = "en")
     val isAppBangla = appLanguage == "bn"
 
+    var selectedRollWidth by rememberSaveable { mutableIntStateOf(settings.paperRollWidthMm.takeIf { it == 58 || it == 80 } ?: 80) }
+    var zoomScale by rememberSaveable { mutableFloatStateOf(1f) }
     var isReceiptBangla by remember { mutableStateOf(false) }
     var receiptFile by remember { mutableStateOf<java.io.File?>(null) }
     var bitmapPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
 
-    LaunchedEffect(data, isReceiptBangla, settings) {
+    LaunchedEffect(data, isReceiptBangla, settings, selectedRollWidth) {
         try {
             val file = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 generateDueRepaymentJpeg(
@@ -5839,7 +5849,7 @@ fun DueRepaymentReceiptDialog(
                     storeAddress = storeAddress,
                     storePhone = storePhone,
                     isBangla = isReceiptBangla,
-                    settings = settings,
+                    settings = settings.copy(paperRollWidthMm = selectedRollWidth),
                     timestamp = data.timestamp
                 )
             }
@@ -6067,7 +6077,7 @@ fun DueRepaymentReceiptDialog(
                         }
                     }
 
-                    // 3. Compact High-Resolution Thermal Printer Preview Chamber (Taller Upward Height!)
+                    // 3. Compact High-Resolution Thermal Printer Preview Chamber with 80mm/58mm & Zoom Controls
                     Surface(
                         shape = RoundedCornerShape(14.dp),
                         color = Color(0xFF0F172A),
@@ -6082,7 +6092,7 @@ fun DueRepaymentReceiptDialog(
                                 .fillMaxSize()
                                 .padding(top = 7.dp, bottom = 6.dp, start = 8.dp, end = 8.dp)
                         ) {
-                            // Chamber status indicator bar
+                            // Chamber status indicator & Paper roll switcher (80mm vs 58mm)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -6108,34 +6118,155 @@ fun DueRepaymentReceiptDialog(
                                         letterSpacing = 0.4.sp
                                     )
                                 }
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = Color.White.copy(alpha = 0.08f)
+
+                                // 80mm / 58mm Filter Chips
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Text(
-                                        text = "${settings.paperRollWidthMm}mm ESC/POS",
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF94A3B8),
-                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp)
+                                    FilterChip(
+                                        selected = selectedRollWidth == 80,
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            selectedRollWidth = 80
+                                        },
+                                        label = { Text("80mm", fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = Color(0xFF059669),
+                                            selectedLabelColor = Color.White,
+                                            containerColor = Color.White.copy(alpha = 0.08f),
+                                            labelColor = Color(0xFF94A3B8)
+                                        ),
+                                        border = null,
+                                        modifier = Modifier.height(24.dp)
+                                    )
+                                    FilterChip(
+                                        selected = selectedRollWidth == 58,
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            selectedRollWidth = 58
+                                        },
+                                        label = { Text("58mm", fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = Color(0xFF059669),
+                                            selectedLabelColor = Color.White,
+                                            containerColor = Color.White.copy(alpha = 0.08f),
+                                            labelColor = Color(0xFF94A3B8)
+                                        ),
+                                        border = null,
+                                        modifier = Modifier.height(24.dp)
                                     )
                                 }
                             }
+
+                            Spacer(Modifier.height(4.dp))
+
+                            // Zoom Suite Toolbar [ SCALE: 100% | − | Reset 1x | + ]
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(7.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "SCALE: ",
+                                        fontSize = 8.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF64748B)
+                                    )
+                                    Text(
+                                        text = "${(zoomScale * 100).toInt()}%",
+                                        fontSize = 8.5.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF10B981)
+                                    )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    // Zoom out
+                                    Surface(
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            zoomScale = (zoomScale - 0.2f).coerceIn(0.7f, 2.2f)
+                                        },
+                                        shape = RoundedCornerShape(5.dp),
+                                        color = Color.White.copy(alpha = 0.08f),
+                                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                                        modifier = Modifier.size(width = 24.dp, height = 20.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text("−", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFCBD5E1))
+                                        }
+                                    }
+
+                                    // Reset 1x
+                                    Surface(
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            zoomScale = if (zoomScale != 1f) 1f else 1.35f
+                                        },
+                                        shape = RoundedCornerShape(5.dp),
+                                        color = Color(0xFF1E293B),
+                                        border = BorderStroke(1.dp, Color(0xFF334155)),
+                                        modifier = Modifier.height(20.dp)
+                                    ) {
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier = Modifier.padding(horizontal = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = if (zoomScale != 1f) "🔎 Reset 1x" else "🔍 Zoom 1.35x",
+                                                fontSize = 8.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFCBD5E1)
+                                            )
+                                        }
+                                    }
+
+                                    // Zoom in
+                                    Surface(
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            zoomScale = (zoomScale + 0.2f).coerceIn(0.7f, 2.2f)
+                                        },
+                                        shape = RoundedCornerShape(5.dp),
+                                        color = Color.White.copy(alpha = 0.08f),
+                                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                                        modifier = Modifier.size(width = 24.dp, height = 20.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text("+", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFCBD5E1))
+                                        }
+                                    }
+                                }
+                            }
+
                             Spacer(Modifier.height(5.dp))
+
+                            // Scrollable thermal image viewport with 2D scroll support
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f)
-                                    .verticalScroll(rememberScrollState()),
+                                    .verticalScroll(rememberScrollState())
+                                    .horizontalScroll(rememberScrollState()),
                                 contentAlignment = Alignment.TopCenter
                             ) {
                                 if (bitmapPreview != null) {
+                                    val baseFraction = if (selectedRollWidth == 58) 0.78f else 0.94f
+                                    val targetFraction = (baseFraction * zoomScale).coerceIn(0.6f, 2.5f)
                                     Image(
                                         bitmap = bitmapPreview!!.asImageBitmap(),
-                                        contentDescription = "Thermal Due Repayment Receipt Preview",
+                                        contentDescription = "$selectedRollWidth mm Thermal Due Repayment Receipt Preview",
                                         contentScale = ContentScale.FillWidth,
                                         modifier = Modifier
-                                            .fillMaxWidth()
+                                            .fillMaxWidth(targetFraction)
                                             .clip(RoundedCornerShape(6.dp))
                                     )
                                 } else {
@@ -6155,11 +6286,11 @@ fun DueRepaymentReceiptDialog(
                         }
                     }
 
-                    // 4. Quick Text Actions Bar (Share Text icon + Copy button!)
+                    // 4. Quick Text Actions Bar with 3D Clipboard & Action Chips
                     Surface(
-                        shape = RoundedCornerShape(11.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -6175,6 +6306,7 @@ fun DueRepaymentReceiptDialog(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         clipboardManager.setText(AnnotatedString(receiptText))
                                         isCopied = true
                                         Toast.makeText(
@@ -6186,7 +6318,7 @@ fun DueRepaymentReceiptDialog(
                             ) {
                                 Realistic3DClipboardCopyIcon(size = 18.dp, copied = isCopied)
                                 Text(
-                                    text = if (isAppBangla) "রসিদের SMS বা WhatsApp টেক্সট" else "Receipt SMS / WhatsApp Text",
+                                    text = if (isAppBangla) "রসিদের SMS / WhatsApp টেক্সট" else "Receipt SMS / WhatsApp Text",
                                     fontSize = 9.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -6199,9 +6331,10 @@ fun DueRepaymentReceiptDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                // Share Text Button with Share Icon
+                                // Share Text Button
                                 Surface(
                                     onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         shareReceiptAsText(context, receiptText)
                                     },
                                     shape = RoundedCornerShape(7.dp),
@@ -6209,7 +6342,7 @@ fun DueRepaymentReceiptDialog(
                                     border = BorderStroke(1.dp, Color(0xFF0284C7).copy(alpha = 0.25f))
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(3.dp)
                                     ) {
@@ -6217,7 +6350,7 @@ fun DueRepaymentReceiptDialog(
                                             imageVector = Icons.Default.Share,
                                             contentDescription = "Share text",
                                             tint = Color(0xFF0284C7),
-                                            modifier = Modifier.size(11.dp)
+                                            modifier = Modifier.size(10.dp)
                                         )
                                         Text(
                                             text = if (isAppBangla) "শেয়ার" else "Share",
@@ -6231,6 +6364,7 @@ fun DueRepaymentReceiptDialog(
                                 // Copy Text Button
                                 Surface(
                                     onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         clipboardManager.setText(AnnotatedString(receiptText))
                                         isCopied = true
                                         Toast.makeText(
@@ -6244,7 +6378,7 @@ fun DueRepaymentReceiptDialog(
                                     border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.25f))
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(3.dp)
                                     ) {
@@ -6264,50 +6398,53 @@ fun DueRepaymentReceiptDialog(
                         }
                     }
 
-                    // 5. Action Buttons Bar (Print Slip, Share Slip, Save Image)
+                    // 5. Redesigned Action Buttons Deck with Photorealistic 3D Animated Icons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Print Button (Blue)
+                        // Print Button (Blue Gradient with 3D Printer Icon)
                         Button(
                             onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val fileToPrint = receiptFile
                                 if (fileToPrint != null) {
                                     printBillJpeg(
                                         context = context,
                                         imageFile = fileToPrint,
                                         jobName = "Due_Voucher_${data.customerName}",
-                                        paperRollWidthMm = settings.paperRollWidthMm
+                                        paperRollWidthMm = selectedRollWidth
                                     )
                                 }
                             },
-                            shape = RoundedCornerShape(11.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                             modifier = Modifier
-                                .weight(1f)
-                                .height(38.dp)
+                                .weight(1.25f)
+                                .height(40.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Realistic3DPrinterIcon(size = 14.dp)
-                                Spacer(Modifier.width(3.dp))
+                                Realistic3DPrinterIcon(size = 18.dp, animate = true)
+                                Spacer(Modifier.width(4.dp))
                                 Text(
-                                    text = if (isAppBangla) "রসিদ প্রিন্ট" else "Print Slip",
-                                    fontSize = 10.5.sp,
+                                    text = if (isAppBangla) "প্রিন্ট (${if (selectedRollWidth == 80) "৮০মিমি" else "৫৮মিমি"})" else "Print (${selectedRollWidth}mm)",
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     maxLines = 1
                                 )
                             }
                         }
 
-                        // Share Slip Button (Emerald - Shares JPEG image)
+                        // Share Slip Button (Emerald with 3D Share Icon)
                         Button(
                             onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 try {
                                     val file = receiptFile ?: generateDueRepaymentJpeg(
                                         context = context,
@@ -6321,7 +6458,7 @@ fun DueRepaymentReceiptDialog(
                                         storeAddress = storeAddress,
                                         storePhone = storePhone,
                                         isBangla = isReceiptBangla,
-                                        settings = settings,
+                                        settings = settings.copy(paperRollWidthMm = selectedRollWidth),
                                         timestamp = data.timestamp
                                     )
                                     val uri = FileProvider.getUriForFile(
@@ -6338,31 +6475,33 @@ fun DueRepaymentReceiptDialog(
                                     shareReceiptAsText(context, receiptText)
                                 }
                             },
-                            shape = RoundedCornerShape(11.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                             modifier = Modifier
-                                .weight(1f)
-                                .height(38.dp)
+                                .weight(1.05f)
+                                .height(40.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Realistic3DShareIcon(size = 14.dp)
-                                Spacer(Modifier.width(3.dp))
+                                Realistic3DShareIcon(size = 18.dp, animate = true)
+                                Spacer(Modifier.width(4.dp))
                                 Text(
-                                    text = if (isAppBangla) "রসিদ শেয়ার" else "Share Slip",
-                                    fontSize = 10.5.sp,
+                                    text = if (isAppBangla) "শেয়ার স্লিপ" else "Share Slip",
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     maxLines = 1
                                 )
                             }
                         }
 
-                        // Save Image Button (Glassmorphic Outlined - Saves JPEG to Downloads)
-                        OutlinedButton(
+                        // Save Image Button (Glassmorphic Outlined with 3D Download Icon)
+                        Surface(
                             onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 try {
                                     val file = receiptFile ?: generateDueRepaymentJpeg(
                                         context = context,
@@ -6376,7 +6515,7 @@ fun DueRepaymentReceiptDialog(
                                         storeAddress = storeAddress,
                                         storePhone = storePhone,
                                         isBangla = isReceiptBangla,
-                                        settings = settings,
+                                        settings = settings.copy(paperRollWidthMm = selectedRollWidth),
                                         timestamp = data.timestamp
                                     )
                                     val success = saveBillJpegToDownloads(context, file)
@@ -6402,25 +6541,27 @@ fun DueRepaymentReceiptDialog(
                                     ).show()
                                 }
                             },
-                            shape = RoundedCornerShape(11.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.2.dp, Color(0xFFCBD5E1)),
+                            shadowElevation = 1.dp,
                             modifier = Modifier
-                                .weight(1f)
-                                .height(38.dp)
+                                .weight(0.95f)
+                                .height(40.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxSize()
                             ) {
-                                Realistic3DDownloadIcon(size = 14.dp)
-                                Spacer(Modifier.width(3.dp))
+                                Realistic3DDownloadIcon(size = 18.dp, animate = true)
+                                Spacer(Modifier.width(4.dp))
                                 Text(
-                                    text = if (isAppBangla) "ছবি সেভ" else "Save Slip",
-                                    fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    text = if (isAppBangla) "সংরক্ষণ" else "Save Slip",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1
                                 )
                             }
                         }

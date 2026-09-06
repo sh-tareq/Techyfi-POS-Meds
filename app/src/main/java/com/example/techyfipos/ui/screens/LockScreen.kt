@@ -19,9 +19,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.*
@@ -253,167 +255,190 @@ fun LockScreen(
             )
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize()
         ) {
-            // Header / Branding
+            val isCompactHeight = maxHeight < 650.dp
+            val scrollState = rememberScrollState()
+
             Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 20.dp, vertical = if (isCompactHeight) 8.dp else 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 16.dp)
+                verticalArrangement = Arrangement.Center
             ) {
-                TechyfiLockBrandingHeader()
+                // Header / Branding
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(top = if (isCompactHeight) 4.dp else 8.dp)
+                ) {
+                    TechyfiLockBrandingHeader(isCompact = isCompactHeight)
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(if (isCompactHeight) 8.dp else 12.dp))
 
-                when (mode) {
-                    LockMode.LOADING -> {
-                        CircularProgressIndicator(
-                            color = Color(0xFF0082FF),
-                            strokeWidth = 3.dp,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                    LockMode.SETUP -> {
-                        Surface(
-                            color = Color(0xFF1E293B).copy(alpha = 0.8f),
-                            shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
-                        ) {
-                            Text(
-                                text = if (!awaitingConfirm) "🔐 Owner Account Setup" else "🔄 Confirm Security PIN",
-                                color = Color(0xFF93C5FD),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                    when (mode) {
+                        LockMode.LOADING -> {
+                            CircularProgressIndicator(
+                                color = Color(0xFF0082FF),
+                                strokeWidth = 3.dp,
+                                modifier = Modifier.size(32.dp)
                             )
                         }
-
-                        if (!awaitingConfirm) {
-                            Spacer(Modifier.height(14.dp))
-                            OutlinedTextField(
-                                value = ownerName,
-                                onValueChange = { ownerName = it },
-                                label = { Text("Owner / Admin Name", color = Color(0xFF94A3B8)) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White,
-                                    focusedBorderColor = Color(0xFF0082FF),
-                                    unfocusedBorderColor = Color(0xFF334155),
-                                    focusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.6f),
-                                    unfocusedContainerColor = Color(0xFF0F172A).copy(alpha = 0.6f)
-                                ),
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier.fillMaxWidth(0.85f)
-                            )
-                        }
-
-                        Spacer(Modifier.height(18.dp))
-
-                        Box(modifier = Modifier.graphicsLayer { translationX = shakeOffset.value }) {
-                            Realistic3DPinDots(length = if (awaitingConfirm) confirmPin.length else pin.length)
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = if (!awaitingConfirm) "Choose a 4-digit master PIN" else "Re-enter the 4-digit PIN to confirm",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    LockMode.LOGIN -> {
-                        Surface(
-                            color = Color(0xFF1E293B).copy(alpha = 0.8f),
-                            shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                        LockMode.SETUP -> {
+                            Surface(
+                                color = Color(0xFF1E293B).copy(alpha = 0.8f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(7.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF10B981))
-                                )
                                 Text(
-                                    text = "Terminal Locked · Cash Register",
-                                    color = Color(0xFFE2E8F0),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    text = if (!awaitingConfirm) "🔐 Owner Account Setup" else "🔄 Confirm Security PIN",
+                                    color = Color(0xFF93C5FD),
+                                    fontSize = if (isCompactHeight) 11.sp else 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
+                                )
+                            }
+
+                            if (!awaitingConfirm) {
+                                Spacer(Modifier.height(if (isCompactHeight) 8.dp else 12.dp))
+                                OutlinedTextField(
+                                    value = ownerName,
+                                    onValueChange = { ownerName = it },
+                                    label = { Text("Owner / Admin Name", color = Color(0xFF94A3B8)) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White,
+                                        focusedBorderColor = Color(0xFF0082FF),
+                                        unfocusedBorderColor = Color(0xFF334155),
+                                        focusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.6f),
+                                        unfocusedContainerColor = Color(0xFF0F172A).copy(alpha = 0.6f)
+                                    ),
+                                    shape = RoundedCornerShape(14.dp),
+                                    modifier = Modifier
+                                        .widthIn(max = 380.dp)
+                                        .fillMaxWidth(0.85f)
+                                )
+                            }
+
+                            Spacer(Modifier.height(if (isCompactHeight) 10.dp else 14.dp))
+
+                            Box(modifier = Modifier.graphicsLayer { translationX = shakeOffset.value }) {
+                                Realistic3DPinDots(
+                                    length = if (awaitingConfirm) confirmPin.length else pin.length,
+                                    isCompact = isCompactHeight
+                                )
+                            }
+
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = if (!awaitingConfirm) "Choose a 4-digit master PIN" else "Re-enter the 4-digit PIN to confirm",
+                                color = Color(0xFF94A3B8),
+                                fontSize = if (isCompactHeight) 11.sp else 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        LockMode.LOGIN -> {
+                            Surface(
+                                color = Color(0xFF1E293B).copy(alpha = 0.8f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF10B981))
+                                    )
+                                    Text(
+                                        text = "Terminal Locked · Cash Register",
+                                        color = Color(0xFFE2E8F0),
+                                        fontSize = if (isCompactHeight) 11.sp else 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(if (isCompactHeight) 10.dp else 14.dp))
+
+                            Box(modifier = Modifier.graphicsLayer { translationX = shakeOffset.value }) {
+                                Realistic3DPinDots(length = pin.length, isCompact = isCompactHeight)
+                            }
+
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = "Enter your 4-digit cashier/owner PIN",
+                                color = Color(0xFF94A3B8),
+                                fontSize = if (isCompactHeight) 11.5.sp else 12.5.sp
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = errorMessage != null,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        if (errorMessage != null) {
+                            Spacer(Modifier.height(8.dp))
+                            Surface(
+                                color = Color(0xFFEF4444).copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(10.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.4f))
+                            ) {
+                                Text(
+                                    text = "⚠️ $errorMessage",
+                                    color = Color(0xFFFCA5A5),
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
                                 )
                             }
                         }
-
-                        Spacer(Modifier.height(20.dp))
-
-                        Box(modifier = Modifier.graphicsLayer { translationX = shakeOffset.value }) {
-                            Realistic3DPinDots(length = pin.length)
-                        }
-
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            text = "Enter your 4-digit cashier/owner PIN",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 12.5.sp
-                        )
                     }
-                }
-
-                AnimatedVisibility(
-                    visible = errorMessage != null,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    if (errorMessage != null) {
-                        Spacer(Modifier.height(10.dp))
-                        Surface(
-                            color = Color(0xFFEF4444).copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(10.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.4f))
+                    if (mode == LockMode.LOGIN) {
+                        TextButton(
+                            onClick = ::beginSecurePinRecovery,
+                            modifier = Modifier
+                                .heightIn(min = 40.dp)
+                                .padding(top = 2.dp)
                         ) {
+                            Icon(Icons.Default.LockReset, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "⚠️ $errorMessage",
-                                color = Color(0xFFFCA5A5),
-                                fontSize = 12.sp,
+                                text = stringResource(R.string.lock_forgot_owner_pin),
+                                color = Color(0xFF7DD3FC),
                                 fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                fontSize = 12.sp
                             )
                         }
                     }
                 }
-                if (mode == LockMode.LOGIN) {
-                    TextButton(
-                        onClick = ::beginSecurePinRecovery,
-                        modifier = Modifier.heightIn(min = 48.dp)
-                    ) {
-                        Icon(Icons.Default.LockReset, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.lock_forgot_owner_pin), color = Color(0xFF7DD3FC), fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
 
-            // 3D Tactile Numpad
-            if (mode != LockMode.LOADING) {
-                Realistic3DNumpad(
-                    onDigit = ::onDigit,
-                    onBackspace = ::onBackspace,
-                    onClear = ::onClear,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-            } else {
-                Spacer(Modifier.height(1.dp))
+                Spacer(Modifier.height(if (isCompactHeight) 10.dp else 16.dp))
+
+                // 3D Tactile Numpad
+                if (mode != LockMode.LOADING) {
+                    Realistic3DNumpad(
+                        onDigit = ::onDigit,
+                        onBackspace = ::onBackspace,
+                        onClear = ::onClear,
+                        isCompact = isCompactHeight,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                } else {
+                    Spacer(Modifier.height(1.dp))
+                }
             }
         }
     }
@@ -469,16 +494,18 @@ fun LockScreen(
  * High-definition Techyfi branding logo with 3D glowing badge and stylized wordmark
  */
 @Composable
-private fun TechyfiLockBrandingHeader() {
+private fun TechyfiLockBrandingHeader(isCompact: Boolean = false) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        val boxSize = if (isCompact) 52.dp else 64.dp
+        val cornerRadius = if (isCompact) 16.dp else 20.dp
         Box(
             modifier = Modifier
-                .size(76.dp)
-                .shadow(16.dp, shape = RoundedCornerShape(22.dp), spotColor = Color(0xFF0082FF), ambientColor = Color(0xFF0082FF))
-                .clip(RoundedCornerShape(22.dp))
+                .size(boxSize)
+                .shadow(12.dp, shape = RoundedCornerShape(cornerRadius), spotColor = Color(0xFF0082FF), ambientColor = Color(0xFF0082FF))
+                .clip(RoundedCornerShape(cornerRadius))
                 .background(
                     Brush.linearGradient(
                         colors = listOf(Color(0xFF1E293B), Color(0xFF0F172A))
@@ -489,7 +516,7 @@ private fun TechyfiLockBrandingHeader() {
                     brush = Brush.linearGradient(
                         colors = listOf(Color(0xFF0082FF), Color(0xFF38BDF8), Color(0xFF1E293B))
                     ),
-                    shape = RoundedCornerShape(22.dp)
+                    shape = RoundedCornerShape(cornerRadius)
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -505,7 +532,7 @@ private fun TechyfiLockBrandingHeader() {
             )
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(if (isCompact) 6.dp else 8.dp))
 
         Text(
             text = buildAnnotatedString {
@@ -516,18 +543,18 @@ private fun TechyfiLockBrandingHeader() {
                 append(" POS")
             },
             color = Color.White,
-            fontSize = 22.sp,
+            fontSize = if (isCompact) 18.sp else 21.sp,
             fontWeight = FontWeight.ExtraBold,
-            letterSpacing = 1.8.sp,
+            letterSpacing = if (isCompact) 1.2.sp else 1.6.sp,
             textAlign = TextAlign.Center
         )
 
         Text(
             text = "POWERING YOUR DIGITAL LIFESTYLE",
             color = Color(0xFF64748B),
-            fontSize = 8.5.sp,
+            fontSize = if (isCompact) 7.5.sp else 8.5.sp,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.2.sp,
+            letterSpacing = 1.1.sp,
             textAlign = TextAlign.Center
         )
     }
@@ -537,9 +564,13 @@ private fun TechyfiLockBrandingHeader() {
  * 3D Glowing PIN Dots with bouncy animations
  */
 @Composable
-private fun Realistic3DPinDots(length: Int) {
+private fun Realistic3DPinDots(length: Int, isCompact: Boolean = false) {
+    val outerSize = if (isCompact) 14.dp else 16.dp
+    val innerSize = if (isCompact) 9.dp else 11.dp
+    val spacing = if (isCompact) 12.dp else 14.dp
+
     Row(
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(spacing),
         verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(4) { index ->
@@ -552,7 +583,7 @@ private fun Realistic3DPinDots(length: Int) {
 
             Box(
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(outerSize)
                     .graphicsLayer {
                         scaleX = scale
                         scaleY = scale
@@ -563,14 +594,14 @@ private fun Realistic3DPinDots(length: Int) {
                     // Glow ring
                     Box(
                         modifier = Modifier
-                            .size(18.dp)
+                            .size(outerSize)
                             .clip(CircleShape)
                             .background(Color(0xFF0082FF).copy(alpha = 0.35f))
                     )
                     // Inner dot
                     Box(
                         modifier = Modifier
-                            .size(12.dp)
+                            .size(innerSize)
                             .clip(CircleShape)
                             .background(
                                 Brush.radialGradient(
@@ -582,7 +613,7 @@ private fun Realistic3DPinDots(length: Int) {
                 } else {
                     Box(
                         modifier = Modifier
-                            .size(12.dp)
+                            .size(innerSize)
                             .clip(CircleShape)
                             .background(Color(0xFF1E293B))
                             .border(1.5.dp, Color(0xFF475569), CircleShape)
@@ -601,6 +632,7 @@ private fun Realistic3DNumpad(
     onDigit: (String) -> Unit,
     onBackspace: () -> Unit,
     onClear: () -> Unit,
+    isCompact: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val keypadData = listOf(
@@ -610,21 +642,27 @@ private fun Realistic3DNumpad(
         listOf(Triple("C", "CLEAR", KeypadKeyType.CLEAR), Triple("0", "+", KeypadKeyType.DIGIT), Triple("⌫", "DELETE", KeypadKeyType.BACKSPACE))
     )
 
+    val rowSpacing = if (isCompact) 8.dp else 10.dp
+    val colSpacing = if (isCompact) 10.dp else 12.dp
+
     Column(
-        modifier = modifier.fillMaxWidth(0.92f),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = modifier
+            .widthIn(max = 380.dp)
+            .fillMaxWidth(0.92f),
+        verticalArrangement = Arrangement.spacedBy(rowSpacing),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         keypadData.forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(colSpacing, Alignment.CenterHorizontally)
             ) {
                 row.forEach { (mainText, subText, keyType) ->
                     Realistic3DNumpadButton(
                         mainText = mainText,
                         subText = subText,
                         keyType = keyType,
+                        isCompact = isCompact,
                         onClick = {
                             when (keyType) {
                                 KeypadKeyType.DIGIT -> onDigit(mainText)
@@ -647,6 +685,7 @@ private fun Realistic3DNumpadButton(
     mainText: String,
     subText: String,
     keyType: KeypadKeyType,
+    isCompact: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -659,21 +698,23 @@ private fun Realistic3DNumpadButton(
         label = "btnPress_$mainText"
     )
 
-    val elevation = (6f * (1f - pressProgress)).dp
-    val translateY = (4f * pressProgress).dp
+    val elevation = (5f * (1f - pressProgress)).dp
+    val translateY = (3f * pressProgress).dp
+    val btnHeight = if (isCompact) 48.dp else 54.dp
+    val shapeRadius = if (isCompact) 16.dp else 18.dp
 
     Box(
         modifier = modifier
-            .height(68.dp)
+            .height(btnHeight)
             .graphicsLayer {
                 this.translationY = translateY.toPx()
-                val scale = 1f - (0.05f * pressProgress)
+                val scale = 1f - (0.04f * pressProgress)
                 this.scaleX = scale
                 this.scaleY = scale
             }
             .shadow(
                 elevation = elevation,
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(shapeRadius),
                 spotColor = when (keyType) {
                     KeypadKeyType.DIGIT -> Color(0xFF0082FF).copy(alpha = 0.3f)
                     KeypadKeyType.CLEAR -> Color(0xFFF59E0B).copy(alpha = 0.3f)
@@ -681,7 +722,7 @@ private fun Realistic3DNumpadButton(
                 },
                 ambientColor = Color.Black
             )
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(shapeRadius))
             .background(
                 Brush.verticalGradient(
                     colors = when (keyType) {
@@ -716,7 +757,7 @@ private fun Realistic3DNumpadButton(
                         }
                     }
                 ),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(shapeRadius)
             )
             .clickable(
                 interactionSource = interactionSource,
@@ -732,8 +773,8 @@ private fun Realistic3DNumpadButton(
             // Top rim highlight
             drawLine(
                 color = Color.White.copy(alpha = if (isPressed) 0.08f else 0.22f),
-                start = Offset(16.dp.toPx(), 2.dp.toPx()),
-                end = Offset(w - 16.dp.toPx(), 2.dp.toPx()),
+                start = Offset(14.dp.toPx(), 2.dp.toPx()),
+                end = Offset(w - 14.dp.toPx(), 2.dp.toPx()),
                 strokeWidth = 2.dp.toPx()
             )
         }
@@ -747,7 +788,7 @@ private fun Realistic3DNumpadButton(
                     Text(
                         text = mainText,
                         color = Color.White,
-                        fontSize = 24.sp,
+                        fontSize = if (isCompact) 20.sp else 22.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
@@ -755,9 +796,9 @@ private fun Realistic3DNumpadButton(
                         Text(
                             text = subText,
                             color = Color(0xFF94A3B8),
-                            fontSize = 8.5.sp,
+                            fontSize = if (isCompact) 7.5.sp else 8.5.sp,
                             fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 1.1.sp,
+                            letterSpacing = 1.sp,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -767,12 +808,12 @@ private fun Realistic3DNumpadButton(
                         imageVector = Icons.AutoMirrored.Filled.Backspace,
                         contentDescription = "Backspace",
                         tint = Color(0xFFFCA5A5),
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(if (isCompact) 18.dp else 20.dp)
                     )
                     Text(
                         text = "DELETE",
                         color = Color(0xFFFCA5A5).copy(alpha = 0.8f),
-                        fontSize = 8.sp,
+                        fontSize = if (isCompact) 7.5.sp else 8.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp
                     )
@@ -781,14 +822,14 @@ private fun Realistic3DNumpadButton(
                     Text(
                         text = "C",
                         color = Color(0xFFFDE68A),
-                        fontSize = 22.sp,
+                        fontSize = if (isCompact) 19.sp else 21.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
                     Text(
                         text = "CLEAR",
                         color = Color(0xFFFDE68A).copy(alpha = 0.8f),
-                        fontSize = 8.sp,
+                        fontSize = if (isCompact) 7.5.sp else 8.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp
                     )

@@ -137,7 +137,7 @@ internal fun calculateEffectiveAmountPaid(
     splitPayments: List<SplitPaymentEntry>
 ): Double = when {
     isSplitPayment -> splitPayments.filterNot { it.method == "Due" }.sumOf { it.amount }
-    paymentMethod == "Due" -> 0.0
+    paymentMethod == "Due" -> enteredAmountPaid.coerceAtLeast(0.0)
     paymentMethod == "Cash" -> if (enteredAmountPaid > 0.0) enteredAmountPaid else grandTotal
     else -> grandTotal
 }
@@ -326,6 +326,8 @@ fun CartScreen(
     val splitPayments by cartViewModel.splitPayments.collectAsStateWithLifecycle()
     val priceMode by cartViewModel.priceMode.collectAsStateWithLifecycle()
     val priceModesSavings by cartViewModel.priceModesSavings.collectAsStateWithLifecycle()
+    val saleModeMrpSavings by cartViewModel.saleModeMrpSavings.collectAsStateWithLifecycle()
+    val mrpSubtotal by cartViewModel.mrpSubtotal.collectAsStateWithLifecycle()
     val loyaltyCustomer by cartViewModel.loyaltyCustomer.collectAsStateWithLifecycle()
     val loyaltyDiscount by cartViewModel.loyaltyDiscount.collectAsStateWithLifecycle()
 
@@ -597,6 +599,7 @@ fun CartScreen(
                         CartItemRow(
                             item = item,
                             unitPrice = cartViewModel.effectivePriceFor(item),
+                            allowNegativeInventory = invoiceSettingsData.allowNegativeInventory || isOwner || isSupervisor,
                             onQuantityChanged = { qty -> cartViewModel.updateQuantity(item.product, qty) },
                             onRemove = {
                                 if (canRemoveItem) {
@@ -750,6 +753,34 @@ fun CartScreen(
                                     }
                                 }
                             )
+                        }
+
+                        if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) {
+                            val isBn = Locale.getDefault().language == "bn"
+                            val totalSavings = saleModeMrpSavings + discountVal
+                            val pct = if (mrpSubtotal > 0.0) Math.round((totalSavings / mrpSubtotal) * 100).toInt() else 0
+                            val pctStr = if (isBn) com.example.techyfipos.utils.toBanglaDigits(pct.toString()) else "$pct"
+                            Surface(
+                                color = Color(0xFFDCFCE7),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, Color(0xFF86EFAC)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        stringResource(R.string.cart_mrp_savings_badge, formatTaka(totalSavings), pctStr),
+                                        color = Color(0xFF15803D),
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -937,13 +968,21 @@ fun CartScreen(
                                 Text(stringResource(R.string.cart_payment_method_label), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             }
                             Spacer(modifier = Modifier.height(6.dp))
+                            val availablePaymentMethods = remember(resolvedCustomer?.storeCredit) {
+                                if ((resolvedCustomer?.storeCredit ?: 0.0) > 0.0) {
+                                    listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due", "Store Credit")
+                                } else {
+                                    listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due")
+                                }
+                            }
+
                             FlowRow(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                                 maxItemsInEachRow = 3
                             ) {
-                                listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due").forEach { method ->
+                                availablePaymentMethods.forEach { method ->
                                     val chipScaleAnim = remember { Animatable(1f) }
                                     FilterChip(
                                         selected = paymentMethod == method,
@@ -963,6 +1002,7 @@ fun CartScreen(
                                                 when (method) {
                                                     "Cash" -> Text("💵", fontSize = 16.sp)
                                                     "Card" -> Text("💳", fontSize = 16.sp)
+                                                    "Store Credit" -> Text("🏷️", fontSize = 16.sp)
                                                     "bKash", "Nagad", "Rocket" -> Image(
                                                         painter = painterResource(
                                                             when (method) {
@@ -977,10 +1017,48 @@ fun CartScreen(
                                                     else -> Text("⏳", fontSize = 16.sp)
                                                 }
                                                 Spacer(modifier = Modifier.width(5.dp))
-                                                Text(if (method == "Due") stringResource(R.string.due) else method, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                                Text(
+                                                    text = when (method) {
+                                                        "Due" -> stringResource(R.string.due)
+                                                        "Store Credit" -> "Store Credit"
+                                                        else -> method
+                                                    },
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
                                             }
                                         }
                                     )
+                                }
+                            }
+
+                            AnimatedVisibility(visible = paymentMethod == "Store Credit") {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFFE8F5E9),
+                                    border = BorderStroke(1.dp, Color(0xFFA5D6A7)),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("🏷️", fontSize = 22.sp)
+                                        Spacer(Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                "Available Store Credit: ${formatTaka(resolvedCustomer?.storeCredit ?: 0.0)}",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = Color(0xFF1B5E20)
+                                            )
+                                            Text(
+                                                "Amount ${formatTaka(grandTotal)} will be deducted directly from store credit upon sale completion.",
+                                                fontSize = 11.5.sp,
+                                                color = Color(0xFF2E7D32)
+                                            )
+                                        }
+                                    }
                                 }
                             }
 
@@ -1209,6 +1287,20 @@ fun CartScreen(
                                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
+                                            if (resolvedCustomer!!.storeCredit > 0) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = Color(0xFFE8F5E9)
+                                                ) {
+                                                    Text(
+                                                        text = "🏷️ Credit: ${formatTaka(resolvedCustomer!!.storeCredit)}",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFF2E7D32),
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
                                             if (resolvedCustomer!!.dueAmount > 0) {
                                                 Surface(
                                                     shape = RoundedCornerShape(6.dp),
@@ -1476,37 +1568,57 @@ fun CartScreen(
                                     color = Color.Gray
                                 )
                             }
-                            Text(formatTaka(subtotal), fontWeight = FontWeight.Bold)
+                            val displaySubtotal = if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) mrpSubtotal else subtotal
+                            Text(formatTaka(displaySubtotal), fontWeight = FontWeight.Bold)
                         }
-                        if (priceModesSavings > 0.0) {
+                        if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        when (priceMode) {
-                                            PriceMode.WHOLESALE  -> "📦"
-                                            PriceMode.MRP        -> "💹"
-                                            PriceMode.DISCOUNTED -> "🏷️"
-                                        },
-                                        fontSize = 14.sp
-                                    )
+                                    Text("🏷️", fontSize = 14.sp)
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        when (priceMode) {
-                                            PriceMode.WHOLESALE  -> stringResource(R.string.cart_wholesale_bulk_savings)
-                                            PriceMode.MRP        -> stringResource(R.string.cart_mrp_premium)
-                                            PriceMode.DISCOUNTED -> stringResource(R.string.cart_sale_savings)
-                                        },
-                                        color = when (priceMode) {
-                                            PriceMode.MRP -> Color(0xFF1D4ED8)
-                                            else          -> Color(0xFFB45309)
-                                        },
+                                        stringResource(R.string.cart_sale_savings),
+                                        color = Color(0xFF15803D),
                                         fontSize = 12.sp, fontWeight = FontWeight.Bold
                                     )
                                 }
                                 Text(
-                                    if (priceMode == PriceMode.MRP) "+${formatTaka(priceModesSavings)}"
-                                    else "-${formatTaka(priceModesSavings)}",
-                                    color = if (priceMode == PriceMode.MRP) Color(0xFF2563EB) else Color(0xFFD97706),
+                                    "-${formatTaka(saleModeMrpSavings)}",
+                                    color = Color(0xFF16A34A),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        } else if (priceMode == PriceMode.WHOLESALE && priceModesSavings > 0.0) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("📦", fontSize = 14.sp)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        stringResource(R.string.cart_wholesale_bulk_savings),
+                                        color = Color(0xFFB45309),
+                                        fontSize = 12.sp, fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Text(
+                                    "-${formatTaka(priceModesSavings)}",
+                                    color = Color(0xFFD97706),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        } else if (priceMode == PriceMode.MRP && priceModesSavings > 0.0) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("💹", fontSize = 14.sp)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        stringResource(R.string.cart_mrp_premium),
+                                        color = Color(0xFF1D4ED8),
+                                        fontSize = 12.sp, fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Text(
+                                    "+${formatTaka(priceModesSavings)}",
+                                    color = Color(0xFF2563EB),
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -1560,6 +1672,119 @@ fun CartScreen(
                             )
                         }
 
+                        if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) {
+                            val totalSavings = saleModeMrpSavings + discountVal
+                            val pct = if (mrpSubtotal > 0.0) Math.round((totalSavings / mrpSubtotal) * 100).toInt() else 0
+                            val isBn = Locale.getDefault().language == "bn"
+                            val pctStr = if (isBn) com.example.techyfipos.utils.toBanglaDigits(pct.toString()) else "$pct"
+                            val isItemWise = invoiceSettingsData.showItemWiseMrpDiscount
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 10.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
+                                border = BorderStroke(1.dp, Color(0xFFBBF7D0)),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("✨", fontSize = 14.sp)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                stringResource(R.string.cart_customer_savings_breakdown),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.5.sp,
+                                                color = Color(0xFF166534)
+                                            )
+                                        }
+                                        Surface(
+                                            color = Color(0xFF16A34A),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Text(
+                                                "$pctStr% OFF",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(stringResource(R.string.cart_original_mrp_subtotal), fontSize = 12.sp, color = Color(0xFF4B5563))
+                                        Text(formatTaka(mrpSubtotal), fontSize = 12.sp, color = Color(0xFF4B5563))
+                                    }
+
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(stringResource(R.string.cart_store_sale_discount), fontSize = 12.sp, color = Color(0xFF15803D), fontWeight = FontWeight.SemiBold)
+                                        Text("-${formatTaka(saleModeMrpSavings)}", fontSize = 12.sp, color = Color(0xFF15803D), fontWeight = FontWeight.Bold)
+                                    }
+
+                                    if (discountVal > 0.0) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(stringResource(R.string.discount), fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                                            Text("-${formatTaka(discountVal)}", fontSize = 12.sp, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+
+                                    HorizontalDivider(color = Color(0xFFDCFCE7), thickness = 1.dp)
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(stringResource(R.string.cart_total_customer_savings), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF14532D))
+                                        Text("${formatTaka(totalSavings)} ($pctStr%)", fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = Color(0xFF15803D))
+                                    }
+
+                                    // Switch between item-by-item discount and summary only
+                                    Spacer(Modifier.height(4.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        FilterChip(
+                                            selected = isItemWise,
+                                            onClick = {
+                                                settingsViewModel.saveInvoiceSettingsData(invoiceSettingsData.copy(showItemWiseMrpDiscount = true))
+                                            },
+                                            label = { Text(stringResource(R.string.cart_item_by_item_switch), fontSize = 11.sp, fontWeight = if (isItemWise) FontWeight.Bold else FontWeight.Normal) },
+                                            leadingIcon = if (isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = Color(0xFF16A34A),
+                                                selectedLabelColor = Color.White,
+                                                selectedLeadingIconColor = Color.White
+                                            ),
+                                            modifier = Modifier.weight(1f)
+                                        )
+
+                                        FilterChip(
+                                            selected = !isItemWise,
+                                            onClick = {
+                                                settingsViewModel.saveInvoiceSettingsData(invoiceSettingsData.copy(showItemWiseMrpDiscount = false))
+                                            },
+                                            label = { Text(stringResource(R.string.cart_summary_only_switch), fontSize = 11.sp, fontWeight = if (!isItemWise) FontWeight.Bold else FontWeight.Normal) },
+                                            leadingIcon = if (!isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = Color(0xFF16A34A),
+                                                selectedLabelColor = Color.White,
+                                                selectedLeadingIconColor = Color.White
+                                            ),
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Checkout trigger validation
@@ -1567,6 +1792,7 @@ fun CartScreen(
                         val isWalletValid = isSplitPayment || paymentMethod !in listOf("bKash", "Nagad", "Rocket") || walletPhone.length == 11
                         val isCardValid = isSplitPayment || paymentMethod != "Card" || cardLastFour.length == 4
                         val isCashValid = isSplitPayment || paymentMethod != "Cash" || effectiveAmountPaid >= grandTotal
+                        val isStoreCreditValid = isSplitPayment || paymentMethod != "Store Credit" || (customerPhone.isNotBlank() && (resolvedCustomer?.storeCredit ?: 0.0) >= grandTotal)
                         val isSplitValid = !isSplitPayment || (splitPayments.isNotEmpty() && kotlin.math.abs(splitPayments.sumOf { it.amount } - grandTotal) < 0.01)
                         val isSplitDetailsValid = !isSplitPayment || splitPayments.all { sp ->
                             when (sp.method) {
@@ -1575,7 +1801,7 @@ fun CartScreen(
                                 else -> true
                             }
                         }
-                        val isCheckoutEnabled = cartItems.isNotEmpty() && isDueValid && isWalletValid && isCardValid && isCashValid && isSplitValid && isSplitDetailsValid && canSell
+                        val isCheckoutEnabled = cartItems.isNotEmpty() && isDueValid && isWalletValid && isCardValid && isCashValid && isStoreCreditValid && isSplitValid && isSplitDetailsValid && canSell
 
                         if (!canSell) {
                             Text(stringResource(R.string.perm_sales_sell_title) + " required to checkout", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
@@ -1587,6 +1813,10 @@ fun CartScreen(
                                 !isWalletValid -> stringResource(R.string.cart_reason_wallet_number_required, paymentMethod)
                                 !isCardValid -> stringResource(R.string.cart_reason_card_digits_required)
                                 !isCashValid -> stringResource(R.string.cart_reason_cash_insufficient)
+                                !isStoreCreditValid -> {
+                                    if (customerPhone.isBlank()) "Customer phone required for Store Credit"
+                                    else "Insufficient store credit (Available: ${formatTaka(resolvedCustomer?.storeCredit ?: 0.0)})"
+                                }
                                 else -> stringResource(R.string.cart_reason_generic_incomplete)
                             }
                             Text(reason, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
@@ -1603,10 +1833,14 @@ fun CartScreen(
                                         unitPrice = chargedUnitPrice,
                                         lineTotal = chargedUnitPrice * item.quantity,
                                         unit = item.product.unit,
-                                        note = item.note
+                                        note = item.note,
+                                        mrpPrice = if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice
                                     )
                                 }
                                 val snapshotSubtotal = subtotal
+                                val snapshotMrpSubtotal = mrpSubtotal
+                                val snapshotMrpSavings = saleModeMrpSavings
+                                val snapshotIsSaleMode = (priceMode == PriceMode.DISCOUNTED)
                                 val snapshotDiscount = discountVal
                                 val snapshotTax = taxVal
                                 val snapshotGrandTotal = grandTotal
@@ -1656,7 +1890,11 @@ fun CartScreen(
                                             settingsData = invoiceSettingsData,
                                             taxLabel = invoiceSettingsData.taxLabel,
                                             taxValue = snapshotTax,
-                                            totalOutstandingDue = updatedTotalDue
+                                            totalOutstandingDue = updatedTotalDue,
+                                            mrpSubtotal = snapshotMrpSubtotal,
+                                            mrpSavings = snapshotMrpSavings,
+                                            isSaleMode = snapshotIsSaleMode,
+                                            showItemWiseMrpDiscount = invoiceSettingsData.showItemWiseMrpDiscount
                                         )
                                         showReceiptDialog = true
                                     } catch (e: Exception) {
@@ -1678,22 +1916,37 @@ fun CartScreen(
                                         (grandTotal - effectiveAmountPaid).coerceAtLeast(0.0)
                                     } else 0.0
 
-                                    if (hasDueInPayment && customerPhone.isNotBlank()) {
-                                        scope.launch {
-                                            val custDue = cartViewModel.getCustomerCreditAccount(customerPhone)
-                                            if (custDue != null && custDue.creditLimit > 0.0 && (custDue.outstandingAmount + newDue) > custDue.creditLimit) {
-                                                exceededCustomerDue = custDue
-                                                pendingDueAmount = newDue
-                                                showCreditLimitWarningDialog = true
-                                            } else {
-                                                pendingDueCustomerName = custDue?.customerName?.takeIf { it.isNotBlank() } ?: customerName
-                                                pendingDuePreviousAmount = custDue?.outstandingAmount ?: 0.0
-                                                pendingDueAmount = newDue
-                                                showDueConfirmDialog = true
+                                    val proceedWithSale = {
+                                        if (hasDueInPayment && customerPhone.isNotBlank()) {
+                                            scope.launch {
+                                                val custDue = cartViewModel.getCustomerCreditAccount(customerPhone)
+                                                if (custDue != null && custDue.creditLimit > 0.0 && (custDue.outstandingAmount + newDue) > custDue.creditLimit) {
+                                                    exceededCustomerDue = custDue
+                                                    pendingDueAmount = newDue
+                                                    showCreditLimitWarningDialog = true
+                                                } else {
+                                                    pendingDueCustomerName = custDue?.customerName?.takeIf { it.isNotBlank() } ?: customerName
+                                                    pendingDuePreviousAmount = custDue?.outstandingAmount ?: 0.0
+                                                    pendingDueAmount = newDue
+                                                    showDueConfirmDialog = true
+                                                }
                                             }
+                                        } else {
+                                            executeSaleAction()
+                                        }
+                                    }
+
+                                    val hasNegativeStock = cartItems.any { it.quantity > it.product.stockQty && !it.product.barcode.startsWith("CUSTOM-") }
+                                    if (hasNegativeStock && !invoiceSettingsData.allowNegativeInventory && !isOwner && !isSupervisor) {
+                                        if (authViewModel != null) {
+                                            pendingSupervisorDesc = "Authorize sale with negative inventory / insufficient stock"
+                                            pendingSupervisorAction = { proceedWithSale() }
+                                            showSupervisorAuthDialog = true
+                                        } else {
+                                            Toast.makeText(context, "Negative inventory is disabled. Supervisor authorization required.", Toast.LENGTH_LONG).show()
                                         }
                                     } else {
-                                        executeSaleAction()
+                                        proceedWithSale()
                                     }
                                 }
                             },
@@ -1802,7 +2055,7 @@ fun CartScreen(
             customer = custDueToWarn,
             newDue = pendingDueAmount,
             onVerifyOwnerPin = { pin ->
-                cartViewModel.authorizeCreditLimitOverride(pin, custDueToWarn.customerPhone)
+                cartViewModel.authorizeCreditLimitOverride(pin, custDueToWarn.customerPhone, maxAmount = pendingDueAmount)
             },
             onDismiss = {
                 showCreditLimitWarningDialog = false
@@ -1820,10 +2073,14 @@ fun CartScreen(
                         unitPrice = chargedUnitPrice,
                         lineTotal = chargedUnitPrice * item.quantity,
                         unit = item.product.unit,
-                        note = item.note
+                        note = item.note,
+                        mrpPrice = if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice
                     )
                 }
                 val snapshotSubtotal = subtotal
+                val snapshotMrpSubtotal = mrpSubtotal
+                val snapshotMrpSavings = saleModeMrpSavings
+                val snapshotIsSaleMode = (priceMode == PriceMode.DISCOUNTED)
                 val snapshotDiscount = discountVal
                 val snapshotTax = taxVal
                 val snapshotGrandTotal = grandTotal
@@ -1876,7 +2133,11 @@ fun CartScreen(
                             settingsData = invoiceSettingsData,
                             taxLabel = invoiceSettingsData.taxLabel,
                             taxValue = snapshotTax,
-                            totalOutstandingDue = updatedTotalDue
+                            totalOutstandingDue = updatedTotalDue,
+                            mrpSubtotal = snapshotMrpSubtotal,
+                            mrpSavings = snapshotMrpSavings,
+                            isSaleMode = snapshotIsSaleMode,
+                            showItemWiseMrpDiscount = invoiceSettingsData.showItemWiseMrpDiscount
                         )
                         showReceiptDialog = true
                     } catch (e: Exception) {
@@ -2087,7 +2348,8 @@ fun CartItemRow(
     onQuantityChanged: (Double) -> Unit,
     onRemove: () -> Unit,
     onEditNote: () -> Unit = {},
-    unitPrice: Double = item.product.sellingPrice
+    unitPrice: Double = item.product.sellingPrice,
+    allowNegativeInventory: Boolean = false
 ) {
     var showQuantityDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -2105,7 +2367,7 @@ fun CartItemRow(
     if (showQuantityDialog) {
         ManualQuantityDialog(
             currentQuantity = item.quantity,
-            maxQuantity = item.product.stockQty,
+            maxQuantity = if (allowNegativeInventory) Double.MAX_VALUE else item.product.stockQty,
             unit = item.product.unit,
             onConfirm = { qty ->
                 onQuantityChanged(qty)
@@ -2280,14 +2542,14 @@ fun CartItemRow(
                             val next = (Math.round((item.quantity - stepVal) * 100.0) / 100.0).coerceAtLeast(0.0)
                             onQuantityChanged(next)
                         },
-                        shape = RoundedCornerShape(9.dp),
+                        shape = RoundedCornerShape(10.dp),
                         color = Color(0xFFFEE2E2),
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(38.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = "➖",
-                                fontSize = 12.sp,
+                                fontSize = 13.sp,
                                 modifier = Modifier.graphicsLayer {
                                     scaleX = minusAnim.value
                                     scaleY = minusAnim.value
@@ -2299,15 +2561,15 @@ fun CartItemRow(
                     // Quantity counter badge
                     Surface(
                         onClick = { showQuantityDialog = true },
-                        shape = RoundedCornerShape(9.dp),
+                        shape = RoundedCornerShape(10.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier
-                            .height(32.dp)
-                            .padding(horizontal = 1.dp)
+                            .height(38.dp)
+                            .padding(horizontal = 2.dp)
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
-                            modifier = Modifier.padding(horizontal = 7.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp)
                         ) {
                             val displayQty = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
                             Text(
@@ -2330,19 +2592,19 @@ fun CartItemRow(
                                 plusAnim.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
                             }
                             val next = Math.round((item.quantity + stepVal) * 100.0) / 100.0
-                            if (item.product.stockQty <= 0.0 || next <= item.product.stockQty) {
+                            if (allowNegativeInventory || item.product.stockQty <= 0.0 || next <= item.product.stockQty) {
                                 onQuantityChanged(next)
                             }
                         },
-                        shape = RoundedCornerShape(9.dp),
+                        shape = RoundedCornerShape(10.dp),
                         color = Color(0xFF10B981),
                         contentColor = Color.White,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(38.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = "➕",
-                                fontSize = 12.sp,
+                                fontSize = 13.sp,
                                 modifier = Modifier.graphicsLayer {
                                     scaleX = plusAnim.value
                                     scaleY = plusAnim.value
@@ -2351,7 +2613,7 @@ fun CartItemRow(
                         }
                     }
 
-                    Spacer(Modifier.width(1.dp))
+                    Spacer(Modifier.width(2.dp))
 
                     // Remove Single Item Button
                     Surface(
@@ -2363,14 +2625,14 @@ fun CartItemRow(
                             }
                             onRemove()
                         },
-                        shape = RoundedCornerShape(9.dp),
+                        shape = RoundedCornerShape(10.dp),
                         color = Color(0xFFFEE2E2),
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(38.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = "🗑️",
-                                fontSize = 13.sp,
+                                fontSize = 14.sp,
                                 modifier = Modifier.graphicsLayer { rotationZ = removeAnim.value }
                             )
                         }
@@ -2406,6 +2668,7 @@ fun ManualQuantityDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.imePadding(),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("⚖️", fontSize = 20.sp)
@@ -2708,43 +2971,53 @@ fun ReceiptSummaryDialog(
     }
 
     fun withPdf(action: (java.io.File) -> Unit) {
-        val file = try {
-            generateBillPdf(context, activeBill, receiptLanguage = receiptLanguage)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(context, context.getString(R.string.cart_failed_generate_pdf_toast), Toast.LENGTH_SHORT).show()
-            return
-        }
-        try {
-            action(file)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(context, context.getString(R.string.cart_action_failed_toast, e.message ?: ""), Toast.LENGTH_SHORT).show()
+        scope.launch {
+            val file = try {
+                withContext(Dispatchers.IO) {
+                    generateBillPdf(context, activeBill, receiptLanguage = receiptLanguage)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, context.getString(R.string.cart_failed_generate_pdf_toast), Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            try {
+                action(file)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, context.getString(R.string.cart_action_failed_toast, e.message ?: ""), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
     fun withJpeg(action: (java.io.File) -> Unit) {
-        val file = try {
-            generateBillJpeg(context, activeBill, receiptLanguage = receiptLanguage)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(context, context.getString(R.string.cart_failed_generate_jpeg_toast), Toast.LENGTH_SHORT).show()
-            return
-        }
-        try {
-            action(file)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(context, context.getString(R.string.cart_action_failed_toast, e.message ?: ""), Toast.LENGTH_SHORT).show()
+        scope.launch {
+            val file = try {
+                withContext(Dispatchers.IO) {
+                    generateBillJpeg(context, activeBill, receiptLanguage = receiptLanguage)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, context.getString(R.string.cart_failed_generate_jpeg_toast), Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            try {
+                action(file)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, context.getString(R.string.cart_action_failed_toast, e.message ?: ""), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
-    val receiptBitmap = remember(activeBill, receiptLanguage) {
-        try {
-            val file = generateBillJpeg(context, activeBill, receiptLanguage = receiptLanguage)
-            BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
-        } catch (e: Exception) {
-            null
+    val receiptBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, activeBill, receiptLanguage) {
+        value = withContext(Dispatchers.IO) {
+            try {
+                val file = generateBillJpeg(context, activeBill, receiptLanguage = receiptLanguage)
+                BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
+            } catch (e: Exception) {
+                null
+            }
         }
     }
 
@@ -3195,9 +3468,10 @@ fun ReceiptSummaryDialog(
                                 .padding(horizontal = 10.dp, vertical = 6.dp),
                             contentAlignment = Alignment.TopCenter
                         ) {
-                            if (receiptBitmap != null) {
+                            val currentBmp = receiptBitmap
+                            if (currentBmp != null) {
                                 Image(
-                                    bitmap = receiptBitmap,
+                                    bitmap = currentBmp,
                                     contentDescription = "$selectedRollWidth mm Thermal Receipt",
                                     modifier = Modifier
                                         .then(

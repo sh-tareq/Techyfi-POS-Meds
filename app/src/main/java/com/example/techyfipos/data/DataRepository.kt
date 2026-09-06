@@ -19,8 +19,11 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import kotlin.math.abs
 import kotlin.math.floor
+import javax.crypto.Cipher
 import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
+import javax.crypto.spec.SecretKeySpec
 
 private fun JSONObject.optionalDouble(key: String): Double? =
     if (has(key) && !isNull(key)) optDouble(key).takeUnless { it.isNaN() } else null
@@ -49,6 +52,10 @@ class DataRepository(
     private val database: AppDatabase,
     private val settingsDataStore: SettingsDataStore
 ) {
+    val appContext: Context get() = context
+    fun getLoyaltySettings(): com.example.techyfipos.utils.LoyaltyProgramSettings =
+        com.example.techyfipos.utils.LoyaltySettingsHelper.getSettings(context)
+
     companion object {
         // 1 loyalty point (redeemable 1:1 as taka off a future sale) per 100 taka of grand total.
         private const val LOYALTY_TAKA_PER_POINT = 100.0
@@ -72,6 +79,9 @@ class DataRepository(
     private val registerShiftStateDao = database.registerShiftStateDao()
     private val dueReminderLogDao = database.dueReminderLogDao()
     private val customerDao = database.customerDao()
+    private val saleAuditLogDao = database.saleAuditLogDao()
+
+    val allSaleAuditLogs: Flow<List<com.example.techyfipos.data.db.SaleAuditLog>> = saleAuditLogDao.getAllAuditLogs()
 
     val allScheduledDueReminders: Flow<List<ScheduledDueReminder>> = scheduledDueReminderDao.getAll()
 
@@ -107,11 +117,21 @@ class DataRepository(
     // ViewModel is constructed with, so gating owner-only mutations here (rather than only in the
     // UI's `isOwner` checks) enforces the role regardless of which screen/ViewModel calls in.
     @Volatile private var sessionUser: User? = null
-    @Volatile private var pendingCreditOverride: Pair<String, Long>? = null
+    data class CreditOverrideToken(
+        val phone: String,
+        val maxAmount: Double = Double.MAX_VALUE,
+        val cartHash: String? = null,
+        val expiresAt: Long
+    )
+
+    @Volatile private var pendingCreditOverride: CreditOverrideToken? = null
 
     fun setSessionUser(user: User?) {
         sessionUser = user
     }
+
+    val currentSessionUser: User? get() = sessionUser
+    val sessionUserName: String get() = sessionUser?.name ?: "Admin"
 
     fun isSessionOwner(): Boolean = sessionUser?.role == AppRoles.OWNER
     fun isSessionManager(): Boolean = sessionUser?.role == AppRoles.MANAGER
@@ -134,15 +154,24 @@ class DataRepository(
 
     /**
      * Verifies an owner or manager PIN without changing the signed-in cashier session, then grants one short-lived
-     * override for the specified customer. The grant is consumed by the sale transaction only when the
-     * customer's configured credit limit would actually be exceeded.
+     * scoped override for the specified customer, amount, and cart signature.
      */
-    suspend fun authorizeCreditLimitOverride(pin: String, phoneRaw: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun authorizeCreditLimitOverride(
+        pin: String,
+        phoneRaw: String,
+        maxAmount: Double = Double.MAX_VALUE,
+        cartHash: String? = null
+    ): Boolean = withContext(Dispatchers.IO) {
         val supervisor = verifySupervisorPin(pin) ?: return@withContext false
         val phone = normalizePhone(phoneRaw)
         if (phone.isBlank()) return@withContext false
         synchronized(this@DataRepository) {
-            pendingCreditOverride = phone to (System.currentTimeMillis() + CREDIT_OVERRIDE_VALIDITY_MS)
+            pendingCreditOverride = CreditOverrideToken(
+                phone = phone,
+                maxAmount = maxAmount,
+                cartHash = cartHash,
+                expiresAt = System.currentTimeMillis() + CREDIT_OVERRIDE_VALIDITY_MS
+            )
         }
         true
     }
@@ -156,10 +185,19 @@ class DataRepository(
         }
     }
 
-    private fun consumeCreditLimitOverride(phone: String): Boolean = synchronized(this) {
+    private fun consumeCreditLimitOverride(
+        phone: String,
+        requestedAmount: Double = 0.0,
+        cartHash: String? = null
+    ): Boolean = synchronized(this) {
         val grant = pendingCreditOverride
-        val valid = grant?.first == phone && grant.second >= System.currentTimeMillis()
-        if (grant?.first == phone || grant?.second?.let { it < System.currentTimeMillis() } == true) {
+        val valid = grant != null &&
+            grant.phone == phone &&
+            grant.expiresAt >= System.currentTimeMillis() &&
+            (grant.maxAmount >= requestedAmount - 0.01) &&
+            (grant.cartHash == null || cartHash == null || grant.cartHash == cartHash)
+
+        if (grant?.phone == phone || grant?.expiresAt?.let { it < System.currentTimeMillis() } == true) {
             pendingCreditOverride = null
         }
         valid
@@ -336,11 +374,27 @@ class DataRepository(
         )
     }
 
-    suspend fun deleteSale(saleId: Long) = withContext(Dispatchers.IO) {
+    suspend fun deleteSale(saleId: Long, reason: String = "Sale Cancelled/Deleted") = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.RETURNS_DELETE_SALE)
         database.withDriverTransaction {
+            val returnsForSale = returnDao.getReturnsForSaleOnce(saleId)
+            if (returnsForSale.isNotEmpty()) {
+                throw IllegalStateException("Cannot delete sale #$saleId because it has ${returnsForSale.size} active return(s). Please review return history first.")
+            }
             val saleWithItems = saleDao.getSaleWithItemsById(saleId)
             if (saleWithItems != null) {
+                val sale = saleWithItems.sale
+                saleAuditLogDao.insertAuditLog(
+                    com.example.techyfipos.data.db.SaleAuditLog(
+                        saleId = saleId,
+                        action = "DELETED",
+                        reason = reason,
+                        grandTotal = sale.grandTotal,
+                        paymentMethod = sale.paymentMethod,
+                        cashierName = sessionUser?.name ?: "Admin",
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
                 val returnedItems = returnDao.getReturnItemsForSale(saleId)
                 val returnedByBarcode = returnedItems
                     .groupBy { it.productBarcode }
@@ -382,7 +436,8 @@ class DataRepository(
 
                     val alreadyRefunded = returnDao.getRefundTotalForSale(saleId)
                     val remainingSpend = (saleWithItems.sale.grandTotal - alreadyRefunded).coerceAtLeast(0.0)
-                    val reversedPoints = floor(remainingSpend / LOYALTY_TAKA_PER_POINT).toInt()
+                    val takaPerPt = getLoyaltySettings().takaPerPoint.takeIf { it > 0.0 } ?: LOYALTY_TAKA_PER_POINT
+                    val reversedPoints = floor(remainingSpend / takaPerPt).toInt()
                     customerLoyaltyDao.reverseEarnedPoints(
                         normalizePhone(phone),
                         reversedPoints,
@@ -554,6 +609,9 @@ class DataRepository(
                 "Due" -> require(customerName?.isNotBlank() == true && !normalizedCustomerPhone.isNullOrBlank()) {
                     "Customer name and phone are required for a Due sale"
                 }
+                "Store Credit" -> require(customerName?.isNotBlank() == true && !normalizedCustomerPhone.isNullOrBlank()) {
+                    "Customer name and phone are required for a Store Credit sale"
+                }
                 "bKash", "Nagad", "Rocket" -> require(!walletPhone.isNullOrBlank()) {
                     "A wallet number is required for $paymentMethod payments"
                 }
@@ -573,6 +631,11 @@ class DataRepository(
                                     "Customer name and phone are required for a Due split row"
                                 }
                             }
+                            "Store Credit" -> if (amount > 0.0) {
+                                require(customerName?.isNotBlank() == true && !normalizedCustomerPhone.isNullOrBlank()) {
+                                    "Customer name and phone are required for a Store Credit split row"
+                                }
+                            }
                             "bKash", "Nagad", "Rocket" -> require(!entry.optString("walletPhone").isNullOrBlank()) {
                                 "A wallet number is required for the $method split row"
                             }
@@ -584,20 +647,49 @@ class DataRepository(
                 }
             }
             if (loyaltyPointsToRedeem > 0) {
+                val loyaltySettings = getLoyaltySettings()
+                require(loyaltyPointsToRedeem >= loyaltySettings.minRedeemPoints) {
+                    "Minimum redemption is ${loyaltySettings.minRedeemPoints} points"
+                }
                 val regularDiscount = if (isPercentage) {
                     subtotal * discountAmount.coerceIn(0.0, 100.0) / 100.0
                 } else {
                     discountAmount.coerceAtMost(subtotal)
                 }
                 val payableBeforeLoyalty = (subtotal - regularDiscount + taxAmount).coerceAtLeast(0.0)
-                require(loyaltyPointsToRedeem <= floor(payableBeforeLoyalty).toInt()) {
-                    "Loyalty redemption exceeds the payable amount"
+                val ptCashVal = loyaltySettings.pointCashValue.takeIf { it > 0.0 } ?: 1.0
+                val loyaltyDiscountAmount = loyaltyPointsToRedeem * ptCashVal
+                val maxAllowedPercent = loyaltySettings.maxBillPercentPayable.coerceIn(1, 100) / 100.0
+                val maxAllowedDiscount = payableBeforeLoyalty * maxAllowedPercent
+                require(loyaltyDiscountAmount <= maxAllowedDiscount + 0.05) {
+                    "Loyalty redemption exceeds maximum allowed bill percentage (${loyaltySettings.maxBillPercentPayable}%)"
                 }
-                val expectedGrandTotal = (payableBeforeLoyalty - loyaltyPointsToRedeem).coerceAtLeast(0.0)
-                require(abs(grandTotal - expectedGrandTotal) < 0.01) {
+                val expectedGrandTotal = (payableBeforeLoyalty - loyaltyDiscountAmount).coerceAtLeast(0.0)
+                require(abs(grandTotal - expectedGrandTotal) < 0.05) {
                     "Loyalty redemption does not match the sale total"
                 }
             }
+
+            // Deduct Store Credit if tender used
+            var storeCreditToUse = 0.0
+            if (paymentMethod.equals("Store Credit", ignoreCase = true)) {
+                storeCreditToUse = grandTotal
+            } else if (paymentMethod == "Split" && splitEntries != null) {
+                storeCreditToUse = splitEntries.filter { it.optString("method").equals("Store Credit", ignoreCase = true) }
+                    .sumOf { it.optDouble("amount", 0.0) }
+            }
+            if (storeCreditToUse > 0.0) {
+                require(!normalizedCustomerPhone.isNullOrBlank()) { "Customer phone number is required for Store Credit payment" }
+                val currentCust = customerDao.getCustomerByPhone(normalizedCustomerPhone)
+                val availableCredit = currentCust?.storeCredit ?: 0.0
+                require(availableCredit >= storeCreditToUse - 0.01) {
+                    "Insufficient store credit balance (Available: ৳${availableCredit})"
+                }
+                customerDao.adjustCustomerStoreCredit(normalizedCustomerPhone, -storeCreditToUse, System.currentTimeMillis())
+            }
+
+            val cartHash = cartItemsWithNotes.sortedBy { it.first.barcode }
+                .joinToString("|") { "${it.first.barcode}:${it.second}:${it.first.sellingPrice}" }
 
             val dueAddition = calculateDueAddition(paymentMethod, grandTotal, amountPaid, splitPaymentJson)
             if (dueAddition > 0.0) {
@@ -615,21 +707,25 @@ class DataRepository(
                     else -> 0.0
                 }
                 if (creditLimit > 0.0 && outstanding + dueAddition > creditLimit + 0.001) {
-                    require(consumeCreditLimitOverride(normalizedCustomerPhone)) {
-                        "Owner authorization is required to exceed the customer's credit limit"
+                    require(consumeCreditLimitOverride(normalizedCustomerPhone, dueAddition, cartHash)) {
+                        "Supervisor authorization is required to exceed the customer's credit limit"
                     }
                 }
             }
 
-            // Reserve all real inventory inside this same transaction. A conditional SQL update
-            // prevents two checkouts from both selling the same final unit.
+            // Reserve inventory. Support Negative Inventory Policy setting or Manager elevation:
+            val currentSettings = settingsDataStore.invoiceSettingsDataFlow.first()
+            val allowNegative = currentSettings.allowNegativeInventory || isSessionManagerOrOwner()
             cartItemsWithNotes
                 .filterNot { (product, _, _) -> product.barcode.startsWith("CUSTOM-") || product.barcode.startsWith("ADHOC-") }
                 .groupBy { it.first.barcode }
                 .forEach { (barcode, lines) ->
                     val requested = lines.sumOf { it.second }
-                    require(productDao.decrementStockIfAvailable(barcode, requested) == 1) {
-                        "Insufficient stock for ${lines.first().first.name}"
+                    if (productDao.decrementStockIfAvailable(barcode, requested) != 1) {
+                        require(allowNegative) {
+                            "Insufficient stock for ${lines.first().first.name}. Enable 'Allow Negative Stock' or elevate with Manager PIN."
+                        }
+                        productDao.adjustStockQty(barcode, -requested)
                     }
                 }
 
@@ -718,7 +814,9 @@ class DataRepository(
             // at checkout accrues points, rather than only being able to redeem an existing
             // balance that nothing else in the app ever populates.
             if (!normalizedCustomerPhone.isNullOrBlank() && grandTotal > 0.0) {
-                val earnedPoints = floor(grandTotal / LOYALTY_TAKA_PER_POINT).toInt()
+                val loyaltySettings = getLoyaltySettings()
+                val takaPerPt = loyaltySettings.takaPerPoint.takeIf { it > 0.0 } ?: LOYALTY_TAKA_PER_POINT
+                val earnedPoints = floor(grandTotal / takaPerPt).toInt()
                 if (customerLoyaltyDao.getLoyaltyByPhone(normalizedCustomerPhone) == null) {
                     customerLoyaltyDao.upsertLoyalty(
                         CustomerLoyalty(
@@ -809,6 +907,7 @@ class DataRepository(
                 tier = loyaltyTier,
                 tag = customer.tag,
                 creditLimit = creditLimit,
+                storeCredit = customer.storeCredit,
                 lifetimeSpent = customer.lifetimeSpent,
                 totalOrders = customer.totalOrders,
                 address = customer.address,
@@ -827,6 +926,7 @@ class DataRepository(
                 tier = loyaltyTier,
                 tag = customer?.tag ?: "Due Customer",
                 creditLimit = creditLimit,
+                storeCredit = customer?.storeCredit ?: 0.0,
                 lifetimeSpent = customer?.lifetimeSpent ?: 0.0,
                 totalOrders = customer?.totalOrders ?: 0,
                 address = customer?.address,
@@ -845,6 +945,7 @@ class DataRepository(
                 tier = loyaltyTier,
                 tag = customer?.tag ?: "Loyalty Member",
                 creditLimit = creditLimit,
+                storeCredit = customer?.storeCredit ?: 0.0,
                 lifetimeSpent = loyalty.lifetimeSpent,
                 totalOrders = customer?.totalOrders ?: 0,
                 address = customer?.address,
@@ -864,6 +965,7 @@ class DataRepository(
                 tier = loyaltyTier,
                 tag = customer?.tag ?: "Repeat Customer",
                 creditLimit = creditLimit,
+                storeCredit = customer?.storeCredit ?: 0.0,
                 lifetimeSpent = customer?.lifetimeSpent ?: 0.0,
                 totalOrders = customer?.totalOrders ?: 1,
                 address = customer?.address,
@@ -882,6 +984,7 @@ class DataRepository(
                 tier = loyaltyTier,
                 tag = customer?.tag,
                 creditLimit = creditLimit,
+                storeCredit = customer?.storeCredit ?: 0.0,
                 lifetimeSpent = loyalty?.lifetimeSpent ?: customer?.lifetimeSpent ?: 0.0,
                 totalOrders = customer?.totalOrders ?: 0,
                 address = customer?.address,
@@ -909,6 +1012,7 @@ class DataRepository(
                     tier = loyalty?.tier ?: c.loyaltyTier,
                     tag = c.tag,
                     creditLimit = due?.creditLimit ?: c.creditLimit,
+                    storeCredit = c.storeCredit,
                     lifetimeSpent = c.lifetimeSpent,
                     totalOrders = c.totalOrders,
                     address = c.address,
@@ -966,6 +1070,86 @@ class DataRepository(
             customerLoyaltyDao.delete(normalized)
             scheduledDueReminderDao.deleteByPhone(normalized)
         }
+    }
+
+    suspend fun mergeCustomers(masterPhone: String, secondaryPhone: String): Boolean = withContext(Dispatchers.IO) {
+        val masterNorm = normalizePhone(masterPhone)
+        val secNorm = normalizePhone(secondaryPhone)
+        if (masterNorm == secNorm) return@withContext false
+
+        database.withDriverTransaction {
+            val master = customerDao.getCustomerByPhone(masterNorm) ?: return@withDriverTransaction
+            val secondary = customerDao.getCustomerByPhone(secNorm) ?: return@withDriverTransaction
+
+            // 1. Reassign sales
+            saleDao.reassignCustomerForSales(secNorm, masterNorm, master.name)
+
+            // 2. Reassign dues, charges and payments
+            customerDueDao.reassignDueChargesPhone(secNorm, masterNorm)
+            customerDueDao.reassignDuePaymentsPhone(secNorm, masterNorm)
+            val secDue = customerDueDao.getCustomerDueByPhone(secNorm)
+            if (secDue != null) {
+                val masterDue = customerDueDao.getCustomerDueByPhone(masterNorm)
+                val newDueAmount = (masterDue?.outstandingAmount ?: 0.0) + secDue.outstandingAmount
+                val newCreditLimit = maxOf(masterDue?.creditLimit ?: 0.0, secDue.creditLimit)
+                customerDueDao.upsertCustomerDue(
+                    (masterDue ?: CustomerDue(customerPhone = masterNorm, customerName = master.name, outstandingAmount = 0.0))
+                        .copy(outstandingAmount = newDueAmount, creditLimit = newCreditLimit, updatedAt = System.currentTimeMillis())
+                )
+                customerDueDao.archiveCustomerDue(secNorm, System.currentTimeMillis())
+            }
+
+            // 3. Reassign loyalty
+            loyaltyTransactionDao.reassignCustomerPhone(secNorm, masterNorm)
+            val secLoyalty = customerLoyaltyDao.getLoyaltyByPhone(secNorm)
+            if (secLoyalty != null) {
+                val masterLoyalty = customerLoyaltyDao.getLoyaltyByPhone(masterNorm)
+                val newPoints = (masterLoyalty?.pointsBalance ?: 0) + secLoyalty.pointsBalance
+                val newLifetime = (masterLoyalty?.lifetimeSpent ?: 0.0) + secLoyalty.lifetimeSpent
+                customerLoyaltyDao.upsertLoyalty(
+                    (masterLoyalty ?: CustomerLoyalty(phone = masterNorm, name = master.name))
+                        .copy(pointsBalance = newPoints, lifetimeSpent = newLifetime, updatedAt = System.currentTimeMillis())
+                )
+                customerLoyaltyDao.setActive(secNorm, false, System.currentTimeMillis())
+            }
+
+            // 4. Combine customer notes and metrics
+            val combinedNotes = listOfNotNull(
+                master.notes?.takeIf { it.isNotBlank() },
+                secondary.notes?.takeIf { it.isNotBlank() }?.let { "[Merged from ${secondary.phone} (${secondary.name})]: $it" }
+            ).joinToString("\n\n")
+
+            val combinedSpent = master.lifetimeSpent + secondary.lifetimeSpent
+            val combinedOrders = master.totalOrders + secondary.totalOrders
+            val combinedDue = master.totalDue + secondary.totalDue
+            val combinedPoints = master.loyaltyPoints + secondary.loyaltyPoints
+            val combinedLimit = maxOf(master.creditLimit, secondary.creditLimit)
+
+            val updatedMaster = master.copy(
+                notes = combinedNotes.ifBlank { null },
+                lifetimeSpent = combinedSpent,
+                totalOrders = combinedOrders,
+                totalDue = combinedDue,
+                creditLimit = combinedLimit,
+                loyaltyPoints = combinedPoints,
+                updatedAt = System.currentTimeMillis()
+            )
+            customerDao.upsertCustomer(updatedMaster)
+
+            // 5. Archive secondary customer
+            customerDao.archiveCustomer(secNorm, System.currentTimeMillis())
+        }
+        true
+    }
+
+    suspend fun addCustomerNote(phone: String, noteText: String, category: String = "General"): Boolean = withContext(Dispatchers.IO) {
+        val cleanPhone = normalizePhone(phone)
+        val customer = customerDao.getCustomerByPhone(cleanPhone) ?: return@withContext false
+        val timeStr = java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
+        val newEntry = "• [$timeStr | $category] ${noteText.trim()}"
+        val updatedNotes = if (customer.notes.isNullOrBlank()) newEntry else "$newEntry\n\n${customer.notes}"
+        customerDao.upsertCustomer(customer.copy(notes = updatedNotes, updatedAt = System.currentTimeMillis()))
+        true
     }
 
     suspend fun getTopProductsForCustomer(phone: String, limit: Int = 10): List<CustomerProductPurchaseSummary> = withContext(Dispatchers.IO) {
@@ -1297,6 +1481,7 @@ class DataRepository(
     // Settings
     val languageFlow: Flow<String> = settingsDataStore.languageFlow
     val themeModeFlow: Flow<String> = settingsDataStore.themeModeFlow
+    val uiLayoutModeFlow: Flow<String> = settingsDataStore.uiLayoutModeFlow
     val invoiceSettingsDataFlow: Flow<InvoiceSettingsData> = settingsDataStore.invoiceSettingsDataFlow
     val shopNameFlow: Flow<String> = settingsDataStore.shopNameFlow
     val shopAddressFlow: Flow<String> = settingsDataStore.shopAddressFlow
@@ -1345,6 +1530,10 @@ class DataRepository(
 
     suspend fun saveThemeMode(mode: String) {
         settingsDataStore.saveThemeMode(mode)
+    }
+
+    suspend fun saveUiLayoutMode(mode: String) {
+        settingsDataStore.saveUiLayoutMode(mode)
     }
 
     suspend fun saveShopInfo(name: String, address: String, phone: String) {
@@ -1610,6 +1799,8 @@ class DataRepository(
                     put("cashRefunds", closing.cashRefunds); put("shiftStartedAt", closing.shiftStartedAt)
                     put("actualCountedCash", closing.actualCountedCash); put("variance", closing.variance)
                     put("notes", closing.notes ?: ""); put("timestamp", closing.timestamp); put("cashierName", closing.cashierName)
+                    put("bkashSales", closing.bkashSales); put("nagadSales", closing.nagadSales)
+                    put("rocketSales", closing.rocketSales); put("cardSales", closing.cardSales); put("dueSales", closing.dueSales)
                 }) }
             })
             backupJson.put("customerLoyalty", JSONArray().apply {
@@ -1663,7 +1854,7 @@ class DataRepository(
                     put("firstPurchaseDate", c.firstPurchaseDate ?: JSONObject.NULL)
                     put("lastPurchaseDate", c.lastPurchaseDate ?: JSONObject.NULL)
                     put("createdAt", c.createdAt); put("updatedAt", c.updatedAt)
-                    put("isArchived", c.isArchived)
+                    put("isArchived", c.isArchived); put("storeCredit", c.storeCredit)
                 }) }
             })
             // Preferences-backed business configuration (not part of the Room database): quick-sale
@@ -2035,7 +2226,13 @@ class DataRepository(
                     registerClosingDao.insertClosing(RegisterClosing(
                         id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), date = value.optString("date"),
                         startingFloat = value.optDouble("startingFloat", 0.0), cashSales = value.optDouble("cashSales", 0.0),
-                        digitalSales = value.optDouble("digitalSales", 0.0), cashIn = value.optDouble("cashIn", 0.0),
+                        digitalSales = value.optDouble("digitalSales", 0.0),
+                        bkashSales = value.optDouble("bkashSales", 0.0),
+                        nagadSales = value.optDouble("nagadSales", 0.0),
+                        rocketSales = value.optDouble("rocketSales", 0.0),
+                        cardSales = value.optDouble("cardSales", 0.0),
+                        dueSales = value.optDouble("dueSales", 0.0),
+                        cashIn = value.optDouble("cashIn", 0.0),
                         cashOut = value.optDouble("cashOut", 0.0), expectedCash = value.optDouble("expectedCash", 0.0),
                         cashRefunds = value.optDouble("cashRefunds", 0.0),
                         shiftStartedAt = value.optLong("shiftStartedAt", 0L),
@@ -2144,6 +2341,7 @@ class DataRepository(
                         notes = value.optString("notes").takeIf { it.isNotBlank() },
                         tag = value.optString("tag", "Retail"),
                         creditLimit = value.optDouble("creditLimit", 0.0),
+                        storeCredit = value.optDouble("storeCredit", 0.0),
                         totalOrders = value.optInt("totalOrders", 0),
                         lifetimeSpent = value.optDouble("lifetimeSpent", 0.0),
                         totalDue = value.optDouble("totalDue", 0.0),
@@ -2251,6 +2449,122 @@ class DataRepository(
                     productDao.insertProduct(p)
                 }
             }
+        }
+    }
+
+    suspend fun bulkUpdateProductPrices(
+        barcodes: List<String>,
+        percentDelta: Double? = null,
+        fixedDelta: Double? = null
+    ) = withContext(Dispatchers.IO) {
+        requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
+        database.withDriverTransaction {
+            for (barcode in barcodes) {
+                val p = productDao.getProductByBarcode(barcode) ?: continue
+                var newPrice = p.sellingPrice
+                if (percentDelta != null) {
+                    newPrice = (newPrice * (1.0 + percentDelta / 100.0)).coerceAtLeast(0.0)
+                } else if (fixedDelta != null) {
+                    newPrice = (newPrice + fixedDelta).coerceAtLeast(0.0)
+                }
+                productDao.updateProduct(p.copy(sellingPrice = kotlin.math.round(newPrice * 100.0) / 100.0))
+            }
+        }
+    }
+
+    suspend fun bulkUpdateProductCategory(
+        barcodes: List<String>,
+        newCategory: String
+    ) = withContext(Dispatchers.IO) {
+        requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
+        database.withDriverTransaction {
+            for (barcode in barcodes) {
+                val p = productDao.getProductByBarcode(barcode) ?: continue
+                productDao.updateProduct(p.copy(category = newCategory))
+            }
+        }
+    }
+
+    suspend fun bulkDeleteProducts(
+        barcodes: List<String>
+    ) = withContext(Dispatchers.IO) {
+        requirePermission(AppPermissions.INVENTORY_DELETE)
+        database.withDriverTransaction {
+            for (barcode in barcodes) {
+                val p = productDao.getProductByBarcode(barcode) ?: continue
+                requireProductNotInSavedCarts(barcode)
+                productDao.deleteProduct(p)
+            }
+        }
+    }
+
+    suspend fun exportEncryptedLocalBackup(outputFile: File, passphrase: String): Boolean = withContext(Dispatchers.IO) {
+        requireOwnerSession()
+        require(passphrase.length >= 4) { "Password must be at least 4 characters" }
+        try {
+            val tempJsonFile = File(context.cacheDir, "backup_plain_${System.currentTimeMillis()}.json")
+            val success = exportBackup(tempJsonFile)
+            if (!success || !tempJsonFile.exists()) return@withContext false
+            val plainBytes = tempJsonFile.readBytes()
+            tempJsonFile.delete()
+
+            val salt = ByteArray(16).also(SecureRandom()::nextBytes)
+            val iv = ByteArray(12).also(SecureRandom()::nextBytes)
+            val spec = PBEKeySpec(passphrase.toCharArray(), salt, 65536, 256)
+            val keyBytes = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
+            val key = SecretKeySpec(keyBytes, "AES")
+            spec.clearPassword()
+
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, iv))
+            val ciphertext = cipher.doFinal(plainBytes)
+
+            outputFile.outputStream().use { out ->
+                out.write("POSENC1".toByteArray(Charsets.UTF_8))
+                out.write(salt)
+                out.write(iv)
+                out.write(ciphertext)
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun importEncryptedLocalBackup(
+        inputFile: File,
+        passphrase: String,
+        mode: BackupImportMode = BackupImportMode.REPLACE
+    ): Boolean = withContext(Dispatchers.IO) {
+        requireOwnerSession()
+        try {
+            val fileBytes = inputFile.readBytes()
+            require(fileBytes.size > 35) { "Invalid backup file size" }
+            val magic = String(fileBytes.copyOfRange(0, 7), Charsets.UTF_8)
+            require(magic == "POSENC1") { "Not a valid encrypted Techyfi POS backup file" }
+
+            val salt = fileBytes.copyOfRange(7, 23)
+            val iv = fileBytes.copyOfRange(23, 35)
+            val ciphertext = fileBytes.copyOfRange(35, fileBytes.size)
+
+            val spec = PBEKeySpec(passphrase.toCharArray(), salt, 65536, 256)
+            val keyBytes = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
+            val key = SecretKeySpec(keyBytes, "AES")
+            spec.clearPassword()
+
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
+            val plainBytes = cipher.doFinal(ciphertext)
+
+            val tempJsonFile = File(context.cacheDir, "backup_dec_${System.currentTimeMillis()}.json")
+            tempJsonFile.writeBytes(plainBytes)
+            val res = importBackup(tempJsonFile, mode)
+            tempJsonFile.delete()
+            res
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 
@@ -2571,23 +2885,16 @@ class DataRepository(
                 if (refundMethod.equals("Store Credit", ignoreCase = true)) {
                     val excessCredit = (refundTotal - dueReduction).coerceAtLeast(0.0)
                     if (excessCredit > 0.0) {
-                        reduceCustomerDue(phone, excessCredit)
-                        customerDueDao.insertDuePayment(
-                            DuePayment(
-                                customerPhone = normalizePhone(phone),
-                                amountPaid = excessCredit,
-                                timestamp = System.currentTimeMillis(),
-                                paymentMethod = "Store Credit",
-                                referenceNote = "Store Credit refund for return on invoice #$saleId"
-                            )
-                        )
+                        customerDao.adjustCustomerStoreCredit(normalizePhone(phone), excessCredit, System.currentTimeMillis())
                     }
                 }
+                val loyaltySettings = getLoyaltySettings()
+                val takaPerPt = loyaltySettings.takaPerPoint.takeIf { it > 0.0 } ?: LOYALTY_TAKA_PER_POINT
                 val pointsBefore = floor(
-                    (sale.grandTotal - alreadyRefunded).coerceAtLeast(0.0) / LOYALTY_TAKA_PER_POINT
+                    (sale.grandTotal - alreadyRefunded).coerceAtLeast(0.0) / takaPerPt
                 ).toInt()
                 val pointsAfter = floor(
-                    (sale.grandTotal - alreadyRefunded - refundTotal).coerceAtLeast(0.0) / LOYALTY_TAKA_PER_POINT
+                    (sale.grandTotal - alreadyRefunded - refundTotal).coerceAtLeast(0.0) / takaPerPt
                 ).toInt()
                 val pointsReversed = (pointsBefore - pointsAfter).coerceAtLeast(0)
                 customerLoyaltyDao.reverseEarnedPoints(
@@ -2743,6 +3050,20 @@ class DataRepository(
                         performedByName = sessionUser?.name
                     )
                 )
+                if (paymentMethod.equals("Cash", ignoreCase = true)) {
+                    expenseDao.insertExpense(
+                        Expense(
+                            title = "Supplier Invoice #$invoiceNumber",
+                            category = "Supplier Payment",
+                            type = "EXPENSE",
+                            amount = paidAmount,
+                            paymentSource = "Cash",
+                            note = "Paid to supplier on Invoice #$invoiceNumber${if (!note.isNullOrBlank()) " - $note" else ""}",
+                            timestamp = System.currentTimeMillis(),
+                            cashierName = sessionUser?.name ?: "Admin"
+                        )
+                    )
+                }
             }
             if (stockLines.isNotEmpty()) {
                 val invoiceItems = stockLines.map { line ->
@@ -2806,7 +3127,7 @@ class DataRepository(
             require(supplierDao.recordSupplierPayment(supplierId, amountPaid, timestamp) == 1) {
                 "Payment exceeds the outstanding supplier balance"
             }
-            supplierDao.insertSupplierPayment(
+            val paymentId = supplierDao.insertSupplierPayment(
                 SupplierPayment(
                     supplierId = supplierId,
                     amountPaid = amountPaid,
@@ -2816,6 +3137,23 @@ class DataRepository(
                     performedByName = sessionUser?.name
                 )
             )
+            if (paymentMethod.equals("Cash", ignoreCase = true)) {
+                val supplier = supplierDao.getSupplierById(supplierId)
+                val supplierName = supplier?.name ?: "Supplier #$supplierId"
+                expenseDao.insertExpense(
+                    Expense(
+                        title = "Supplier Payment: $supplierName",
+                        category = "Supplier Payment",
+                        type = "EXPENSE",
+                        amount = amountPaid,
+                        paymentSource = "Cash",
+                        note = referenceNote?.trim()?.takeIf { it.isNotEmpty() } ?: "Payment to $supplierName",
+                        timestamp = timestamp,
+                        cashierName = sessionUser?.name ?: "Admin"
+                    )
+                )
+            }
+            paymentId
         }
     }
 

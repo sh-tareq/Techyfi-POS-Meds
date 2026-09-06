@@ -1,0 +1,2965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Techyfi POS — Day Start & Close and Expenses Redesign Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0B1120;
+      --surface-dark: #1E293B;
+      --surface-card: #0F172A;
+      --surface-border: rgba(255, 255, 255, 0.08);
+      --surface-border-light: rgba(255, 255, 255, 0.14);
+      
+      --pos-bg: #F8FAFC;
+      --pos-surface: #FFFFFF;
+      --pos-card-border: #E2E8F0;
+      --pos-border-light: #F1F5F9;
+      --pos-text: #0F172A;
+      --pos-text-secondary: #64748B;
+      --pos-text-muted: #94A3B8;
+      
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --primary-light: #EEF2FF;
+      --primary-border: #C7D2FE;
+      
+      --emerald: #059669;
+      --emerald-hover: #047857;
+      --emerald-bg: #ECFDF5;
+      --emerald-border: #A7F3D0;
+      --emerald-text: #065F46;
+      
+      --amber: #D97706;
+      --amber-bg: #FEF3C7;
+      --amber-border: #FDE68A;
+      --amber-text: #92400E;
+      
+      --rose: #E11D48;
+      --rose-bg: #FFE4E6;
+      --rose-border: #FECDD3;
+      --rose-text: #9F1239;
+      
+      --teal: #0D9488;
+      --teal-bg: #CCFBF1;
+      
+      --purple: #7C3AED;
+      --purple-bg: #F5F3FF;
+      
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-bn: 'Hind Siliguri', sans-serif;
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --radius-full: 9999px;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+      --shadow-3d: 0 12px 28px -6px rgba(15, 23, 42, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: #F8FAFC;
+      font-family: var(--font-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* 3D Animations */
+    @keyframes float3D {
+      0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+      }
+      50% {
+        transform: translateY(-6px) rotate(1deg);
+      }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% {
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+      }
+      50% {
+        box-shadow: 0 0 28px rgba(16, 185, 129, 0.5);
+      }
+    }
+
+    /* Top Lab Bar */
+    .lab-bar {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 12px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .lab-logo-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .lab-icon-3d-box {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #059669, #4F46E5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(5, 150, 105, 0.4);
+      animation: float3D 6s ease-in-out infinite;
+    }
+
+    .lab-icon-3d-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .lab-title-text h1 {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lab-title-text p {
+      font-size: 12px;
+      color: #94A3B8;
+    }
+
+    .lab-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .control-pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-full);
+      padding: 4px 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .control-btn {
+      background: transparent;
+      border: none;
+      color: #94A3B8;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-btn:hover {
+      color: #FFFFFF;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .control-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+    }
+
+    /* Screen Tab Switcher in Lab Bar */
+    .screen-tab-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--surface-border);
+      color: #CBD5E1;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 7px 16px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .screen-tab-btn.active {
+      background: linear-gradient(135deg, #059669, #10B981);
+      border-color: #34D399;
+      color: #FFFFFF;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+
+    .screen-tab-btn.active.expenses {
+      background: linear-gradient(135deg, #E11D48, #F43F5E);
+      border-color: #FB7185;
+      box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35);
+    }
+
+    .screen-tab-btn.active.compare {
+      background: linear-gradient(135deg, #4F46E5, #6366F1);
+      border-color: #818CF8;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+    }
+
+    /* Workspace */
+    .lab-workspace {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px 16px 60px;
+      background: radial-gradient(circle at 50% 0%, rgba(5, 150, 105, 0.1) 0%, rgba(15, 23, 42, 0) 70%);
+    }
+
+    /* Android Mockup Device */
+    .device-shell {
+      width: 412px;
+      height: 890px;
+      max-width: 100%;
+      background: var(--pos-bg);
+      border-radius: 40px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 10px #1E293B, 0 0 0 12px #334155;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .device-shell.tablet {
+      width: 820px;
+      height: 960px;
+      border-radius: 28px;
+    }
+
+    .device-shell.comparison {
+      width: 1040px;
+      height: auto;
+      min-height: 800px;
+      border-radius: 28px;
+    }
+
+    /* Android Status Bar */
+    .android-status-bar {
+      height: 38px;
+      background: var(--pos-bg);
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--pos-text);
+      user-select: none;
+      z-index: 20;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* POS Top App Bar */
+    .pos-top-bar {
+      background: var(--pos-surface);
+      border-bottom: 1px solid var(--pos-border-light);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-back-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--pos-text);
+      transition: background 0.15s;
+    }
+
+    .btn-back-icon:hover {
+      background: var(--pos-border-light);
+    }
+
+    .pos-header-titles h2 {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--pos-text);
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .pos-header-titles p {
+      font-size: 11.5px;
+      color: var(--pos-text-secondary);
+      font-weight: 500;
+    }
+
+    .top-bar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-action-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: var(--radius-full);
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+    }
+
+    .badge-xreport {
+      background: #0F766E;
+      color: #FFFFFF;
+      box-shadow: 0 2px 6px rgba(15, 118, 110, 0.3);
+    }
+
+    .badge-zreport {
+      background: #1E1B4B;
+      color: #C7D2FE;
+      box-shadow: 0 2px 6px rgba(30, 27, 75, 0.3);
+    }
+
+    /* Screen Content Container */
+    .screen-container {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .screen-content {
+      padding: 12px 14px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    .screen-content > * {
+      flex-shrink: 0;
+    }
+
+    .screen-content::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .screen-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .screen-content::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.45);
+      border-radius: 4px;
+    }
+
+    .screen-content::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.7);
+    }
+
+    /* Photorealistic 3D Hero Card: Today's Drawer Cash Vault */
+    .hero-vault-card {
+      background: linear-gradient(145deg, #0F172A 0%, #172554 100%);
+      border-radius: 18px;
+      padding: 12px 14px;
+      color: #FFFFFF;
+      box-shadow: 0 8px 22px -4px rgba(15, 23, 42, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-vault-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .vault-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .vault-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .vault-3d-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      background: #0B1120;
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+      flex-shrink: 0;
+      animation: float3D 5s ease-in-out infinite;
+    }
+
+    .vault-3d-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .vault-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #94A3B8;
+      text-transform: uppercase;
+    }
+
+    .vault-amount {
+      font-size: 25px;
+      font-weight: 900;
+      color: #FFFFFF;
+      letter-spacing: -0.02em;
+      font-family: var(--font-mono);
+      line-height: 1.1;
+    }
+
+    .vault-live-pill {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(52, 211, 153, 0.4);
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      font-size: 9.5px;
+      font-weight: 800;
+      color: #34D399;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #34D399;
+      animation: pulseGlow 2s infinite;
+    }
+
+    /* Shift Info Mini Strip */
+    .shift-info-strip {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10.5px;
+      color: #CBD5E1;
+      margin-bottom: 8px;
+    }
+
+    .shift-info-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .shift-info-item strong {
+      color: #FFFFFF;
+      font-weight: 700;
+    }
+
+    /* 2-Column Cash Movement Velocity Flow */
+    .cash-flow-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .flow-stat-box {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 6px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .flow-stat-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #94A3B8;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .flow-stat-val {
+      font-size: 14px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .flow-stat-val.positive {
+      color: #34D399;
+    }
+
+    .flow-stat-val.negative {
+      color: #F87171;
+    }
+
+    /* Vault Action Buttons Grid (48dp Touch Target) */
+    .vault-actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-vault-action {
+      height: 44px;
+      border-radius: 11px;
+      font-size: 11.5px;
+      font-weight: 800;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-vault-action.cash-in {
+      background: #059669;
+      color: #FFFFFF;
+      box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3);
+    }
+
+    .btn-vault-action.cash-in:hover {
+      background: #047857;
+      transform: translateY(-1px);
+    }
+
+    .btn-vault-action.safe-drop {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #F8FAFC;
+    }
+
+    .btn-vault-action.safe-drop:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    /* Quick Shortcuts Bar (Denominations, Float, Close) */
+    .quick-tools-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+
+    .btn-quick-tool {
+      background: var(--pos-surface);
+      border: 1px solid var(--pos-card-border);
+      border-radius: 10px;
+      padding: 7px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+
+    .btn-quick-tool:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-1px);
+    }
+
+    .btn-quick-tool.highlight {
+      background: linear-gradient(135deg, #FEF3C7, #FFFBEB);
+      border-color: #FCD34D;
+    }
+
+    .tool-icon-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--pos-border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .tool-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--pos-text);
+    }
+
+    .tool-sub {
+      font-size: 9px;
+      color: var(--pos-text-secondary);
+    }
+
+    /* Section Card */
+    .section-card {
+      background: var(--pos-surface);
+      border: 1px solid var(--pos-card-border);
+      border-radius: 14px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .section-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title-group h3 {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: var(--pos-text);
+    }
+
+    .section-badge-pill {
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: var(--radius-full);
+      background: var(--pos-border-light);
+      color: var(--pos-text-secondary);
+    }
+
+    /* Compact Formula Summary Rows */
+    .math-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      padding: 2.5px 0;
+      color: var(--pos-text-secondary);
+    }
+
+    .math-row.highlight {
+      border-top: 1px dashed var(--pos-card-border);
+      margin-top: 3px;
+      padding-top: 6px;
+      color: var(--pos-text);
+      font-weight: 800;
+      font-size: 12.5px;
+    }
+
+    .math-row-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .math-row-val.add {
+      color: #059669;
+    }
+
+    .math-row-val.sub {
+      color: #E11D48;
+    }
+
+    /* Primary Close Register Button (46dp) */
+    .btn-primary-close-day {
+      width: 100%;
+      height: 46px;
+      background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary-close-day:hover {
+      background: linear-gradient(135deg, #6D28D9 0%, #5B21B6 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(124, 58, 237, 0.45);
+    }
+
+    /* Denomination Calculator Modal / Drawer */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      padding: 16px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #FFFFFF;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: var(--shadow-3d);
+      overflow: hidden;
+      animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      max-height: 90vh;
+    }
+
+    @keyframes modalSlideUp {
+      from { transform: translateY(30px) scale(0.96); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--pos-card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #F8FAFC;
+    }
+
+    .modal-header h3 {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--pos-text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--pos-card-border);
+      background: #FFFFFF;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: var(--pos-text-secondary);
+    }
+
+    .modal-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Denomination Row */
+    .denom-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .denom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: var(--pos-bg);
+      border: 1px solid var(--pos-card-border);
+      border-radius: 10px;
+    }
+
+    .denom-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 68px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      background: #EEF2FF;
+      color: #4F46E5;
+      border: 1px solid #C7D2FE;
+    }
+
+    .denom-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-counter {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--pos-card-border);
+      background: #FFFFFF;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--pos-text);
+      user-select: none;
+    }
+
+    .btn-counter:active {
+      background: #E2E8F0;
+    }
+
+    .denom-input {
+      width: 48px;
+      height: 32px;
+      text-align: center;
+      border: 1px solid var(--pos-card-border);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .denom-subtotal {
+      width: 80px;
+      text-align: right;
+      font-size: 12.5px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--pos-text);
+    }
+
+    /* Denomination Mode Switcher (Count by Note vs Quick Total) */
+    .denom-mode-switcher {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: #F1F5F9;
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .denom-mode-btn {
+      border: none;
+      background: transparent;
+      padding: 8px 12px;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748B;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .denom-mode-btn.active {
+      background: #FFFFFF;
+      color: var(--primary);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+    }
+
+    .quick-switch-hint {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #F8FAFC;
+      border: 1px dashed #CBD5E1;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 11.5px;
+      color: #64748B;
+      margin-top: 8px;
+    }
+
+    .btn-text-link {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 11.5px;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+    }
+
+    /* Quick Total Amount Card */
+    .quick-total-card {
+      background: #F8FAFC;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .quick-total-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .quick-total-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: #EEF2FF;
+      color: #4F46E5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .quick-total-header h4 {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+
+    .quick-total-header p {
+      font-size: 11px;
+      color: #64748B;
+    }
+
+    .quick-total-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .quick-total-input-wrapper .currency-symbol {
+      position: absolute;
+      left: 16px;
+      font-size: 24px;
+      font-weight: 800;
+      color: #059669;
+      font-family: var(--font-mono);
+      pointer-events: none;
+    }
+
+    .quick-total-input {
+      width: 100%;
+      height: 56px;
+      padding: 0 16px 0 46px;
+      font-size: 28px;
+      font-weight: 900;
+      font-family: var(--font-mono);
+      color: #0F172A;
+      background: #FFFFFF;
+      border: 2px solid #CBD5E1;
+      border-radius: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .quick-total-input:focus {
+      border-color: #059669;
+      box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.15);
+    }
+
+    .quick-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .quick-chip-btn {
+      padding: 6px 10px;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .quick-chip-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #EEF2FF;
+    }
+
+    .quick-chip-btn.match {
+      background: #ECFDF5;
+      border-color: #A7F3D0;
+      color: #065F46;
+      font-weight: 800;
+    }
+
+    .quick-chip-btn.clear {
+      background: #FFF1F2;
+      border-color: #FECDD3;
+      color: #9F1239;
+    }
+
+    .reconcile-comparison-box {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .reconcile-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: #64748B;
+    }
+
+    .reconcile-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: #1E293B;
+    }
+
+    .reconcile-val.bold {
+      font-weight: 900;
+      color: #0F172A;
+      font-size: 13px;
+    }
+
+    .reconcile-divider {
+      height: 1px;
+      background: #F1F5F9;
+      margin: 2px 0;
+    }
+
+    .variance-badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .variance-badge.exact {
+      background: #DCFCE7;
+      color: #166534;
+    }
+
+    .variance-badge.shortage {
+      background: #FFE4E6;
+      color: #9F1239;
+    }
+
+    .variance-badge.overage {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+
+    .optional-note-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .optional-note-group label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748B;
+    }
+
+    .optional-note-group input {
+      padding: 8px 12px;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      font-size: 12px;
+      background: #FFFFFF;
+    }
+
+    /* Hide/Show Note Breakdown Styles */
+    .btn-toggle-part {
+      background: #F1F5F9;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-toggle-part:hover {
+      background: #E2E8F0;
+      color: #0F172A;
+    }
+
+    .hidden-notes-placeholder {
+      background: #F8FAFC;
+      border: 1.5px dashed #CBD5E1;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .collapsible-breakdown-card {
+      background: #FFFFFF;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 14px;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .collapsible-breakdown-header {
+      padding: 10px 14px;
+      background: #F8FAFC;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    .collapsible-breakdown-header:hover {
+      background: #F1F5F9;
+    }
+
+    .collapse-icon {
+      font-size: 14px;
+      color: #4F46E5;
+      font-weight: 800;
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+
+    .breakdown-status-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 8px;
+      background: #E2E8F0;
+      color: #475569;
+    }
+
+    .breakdown-status-badge.active {
+      background: #EEF2FF;
+      color: #4F46E5;
+    }
+
+    .collapsible-breakdown-body {
+      padding: 12px;
+      border-top: 1px solid #E2E8F0;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    /* Denomination Footer Bar */
+    .denom-footer-total {
+      background: #0F172A;
+      color: #FFFFFF;
+      padding: 12px 16px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    .denom-total-val {
+      font-size: 18px;
+      font-weight: 900;
+      font-family: var(--font-mono);
+      color: #34D399;
+    }
+
+    /* Thermal Receipt Simulation (Z-Report) */
+    .thermal-paper {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      padding: 20px 16px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: #1E293B;
+      line-height: 1.4;
+      position: relative;
+    }
+
+    .thermal-paper::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      right: 0;
+      height: 8px;
+      background: repeating-linear-gradient(45deg, transparent, transparent 4px, #FFFFFF 4px, #FFFFFF 8px);
+    }
+
+    .receipt-header {
+      text-align: center;
+      border-bottom: 1px dashed #94A3B8;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+
+    .receipt-store-title {
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .receipt-report-badge {
+      display: inline-block;
+      border: 1.5px solid #0F172A;
+      padding: 2px 8px;
+      font-weight: 900;
+      font-size: 12px;
+      margin: 4px 0;
+      letter-spacing: 0.05em;
+    }
+
+    .receipt-line-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 3px;
+    }
+
+    .receipt-divider {
+      border-bottom: 1px dashed #94A3B8;
+      margin: 8px 0;
+    }
+
+    /* Redesigned Expenses Screen Styles */
+    .expense-hero-card {
+      background: linear-gradient(145deg, #1E1B4B 0%, #311042 100%);
+      border-radius: 20px;
+      padding: 16px 18px;
+      color: #FFFFFF;
+      box-shadow: 0 10px 25px -5px rgba(30, 27, 75, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .expense-hero-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .expense-3d-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+      background: #0B1120;
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+      animation: float3D 6s ease-in-out infinite;
+    }
+
+    .expense-3d-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Category Distribution Bar */
+    .category-bar-wrapper {
+      margin-top: 10px;
+    }
+
+    .category-segmented-bar {
+      height: 10px;
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      display: flex;
+      margin-bottom: 8px;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .bar-segment {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+
+    .category-legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 10.5px;
+      color: #CBD5E1;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    /* Filter Chips Horizontal Row */
+    .filter-chips-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .filter-chips-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-chip-btn {
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      font-size: 11.5px;
+      font-weight: 700;
+      border: 1px solid var(--pos-card-border);
+      background: var(--pos-surface);
+      color: var(--pos-text);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .filter-chip-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    }
+
+    /* Expense Item Card */
+    .expense-record-card {
+      background: var(--pos-surface);
+      border: 1px solid var(--pos-card-border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+    }
+
+    .expense-record-card:hover {
+      border-color: #CBD5E1;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .expense-meta-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .cat-icon-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--pos-bg);
+      border: 1px solid var(--pos-card-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .expense-details h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--pos-text);
+      line-height: 1.2;
+    }
+
+    .expense-sub-info {
+      font-size: 11px;
+      color: var(--pos-text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .expense-amount-tag {
+      font-size: 14px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--rose-text);
+    }
+
+    /* Bottom Nav Bar */
+    .pos-bottom-nav {
+      height: 62px;
+      background: var(--pos-surface);
+      border-top: 1px solid var(--pos-border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 8px;
+      z-index: 10;
+    }
+
+    .nav-item-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      background: transparent;
+      border: none;
+      color: var(--pos-text-secondary);
+      font-size: 10.5px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 4px 12px;
+      border-radius: 12px;
+      transition: all 0.15s;
+    }
+
+    .nav-item-btn.active {
+      color: var(--primary);
+      background: rgba(79, 70, 229, 0.08);
+    }
+
+    .nav-item-icon {
+      font-size: 18px;
+    }
+
+    /* Comparison View Grid */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 20px;
+      background: #0B1120;
+    }
+
+    .comparison-col {
+      background: #1E293B;
+      border-radius: 20px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .comparison-col.new-arch {
+      border-color: #34D399;
+      box-shadow: 0 0 20px rgba(52, 211, 153, 0.15);
+    }
+
+    .comparison-col h3 {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .diff-point-card {
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-left: 4px solid #64748B;
+    }
+
+    .diff-point-card.success {
+      border-left-color: #10B981;
+    }
+
+    .diff-point-card.danger {
+      border-left-color: #F43F5E;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Lab Navigation -->
+  <header class="lab-bar">
+    <div class="lab-logo-group">
+      <div class="lab-icon-3d-box">
+        <img src="assets/3d_day_shift_audit.jpg" alt="Day Start & Close 3D Icon" />
+      </div>
+      <div class="lab-title-text">
+        <h1>Techyfi POS — Day Start & Close Architecture</h1>
+        <p>Photorealistic 3D Redesign & Pure Expenses Ledger Experience</p>
+      </div>
+    </div>
+
+    <!-- Active View Selector -->
+    <div class="lab-controls">
+      <button class="screen-tab-btn active" id="tabBtnDayClose" onclick="switchActiveScreen('dayclose')">
+        ☀️ Day Start & Close (New)
+      </button>
+      <button class="screen-tab-btn" id="tabBtnExpenses" onclick="switchActiveScreen('expenses')">
+        🧾 Expenses (Redesigned)
+      </button>
+      <button class="screen-tab-btn" id="tabBtnComparison" onclick="switchActiveScreen('comparison')">
+        ⚖️ Architecture Diff
+      </button>
+
+      <!-- Language & Viewport controls -->
+      <div class="control-pill" style="margin-left: 12px;">
+        <button class="control-btn active" id="langEnBtn" onclick="setLanguage('en')">EN</button>
+        <button class="control-btn" id="langBnBtn" onclick="setLanguage('bn')">বাংলা</button>
+      </div>
+
+      <div class="control-pill">
+        <button class="control-btn active" id="btnPhoneView" onclick="setDeviceView('phone')">📱 Phone</button>
+        <button class="control-btn" id="btnTabletView" onclick="setDeviceView('tablet')">📟 Tablet</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Canvas Workspace -->
+  <main class="lab-workspace">
+    <div class="device-shell" id="deviceShell">
+
+      <!-- Android System Status Bar -->
+      <div class="android-status-bar">
+        <span>7:10 AM</span>
+        <div class="status-icons">
+          <span style="font-size: 11px;">5G</span>
+          <span>📶</span>
+          <span>🔋 98%</span>
+        </div>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- SCREEN 1: DAY START & CLOSE (REMOVED FROM EXPENSES)       -->
+      <!-- ======================================================== -->
+      <div id="screenDayClose" class="screen-container">
+        
+        <!-- POS Top Bar -->
+        <div class="pos-top-bar">
+          <div class="top-bar-left">
+            <button class="btn-back-icon" title="Back">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="pos-header-titles">
+              <h2 id="dayCloseTitle">Day Start & Close</h2>
+              <p id="dayCloseSubtitle">Shift open, drawer cash float & day close audit</p>
+            </div>
+          </div>
+          <div class="top-bar-actions">
+            <button class="btn-action-badge badge-xreport" onclick="openXReportModal()" title="Mid-day X-Report">
+              📋 <span>X-Report</span>
+            </button>
+            <button class="btn-action-badge badge-zreport" onclick="openZReportModal()" title="Shift Closing Z-Report">
+              📜 <span>Z-Report</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Content -->
+        <div class="screen-content">
+
+          <!-- 1. Photorealistic 3D Hero Card: Today's Drawer Cash Vault -->
+          <div class="hero-vault-card">
+            <div class="vault-top-row">
+              <div class="vault-title-group">
+                <div class="vault-3d-avatar">
+                  <img src="assets/3d_cash_vault.jpg" alt="3D Cash Drawer Vault" />
+                </div>
+                <div>
+                  <div class="vault-label" id="txtVaultLabel">TODAY'S DRAWER CASH</div>
+                  <div class="vault-amount" id="valDrawerCash">৳14,850</div>
+                </div>
+              </div>
+              <div class="vault-live-pill">
+                <div class="live-dot"></div>
+                <span id="txtLiveSync">Live Synced</span>
+              </div>
+            </div>
+
+            <!-- Shift Status Mini Strip -->
+            <div class="shift-info-strip">
+              <div class="shift-info-item">
+                <span>🕒</span>
+                <span id="txtShiftTime">Shift #42 • <strong>Active (5h 20m)</strong></span>
+              </div>
+              <div class="shift-info-item">
+                <span>👤</span>
+                <span>Cashier: <strong>Liton</strong></span>
+              </div>
+            </div>
+
+            <!-- 2-Column Cash Velocity Flow Strip -->
+            <div class="cash-flow-grid">
+              <div class="flow-stat-box">
+                <span class="flow-stat-label">
+                  <span style="color:#34D399;">▲</span> <span id="txtFloatInLabel">Cash In (+ Float)</span>
+                </span>
+                <span class="flow-stat-val positive" id="valCashIn">+৳2,500</span>
+              </div>
+              <div class="flow-stat-box">
+                <span class="flow-stat-label">
+                  <span style="color:#F87171;">▼</span> <span id="txtCashOutLabel">Cash Out (Expense/Drop)</span>
+                </span>
+                <span class="flow-stat-val negative" id="valCashOut">-৳1,100</span>
+              </div>
+            </div>
+
+            <!-- Primary Vault Quick Action Buttons (48dp Touch Targets) -->
+            <div class="vault-actions-grid">
+              <button class="btn-vault-action cash-in" onclick="openCashInModal()">
+                <span>➕</span> <span id="btnTxtAddFloat">Add Cash Float</span>
+              </button>
+              <button class="btn-vault-action safe-drop" onclick="openSafeDropModal()">
+                <span>🔒</span> <span id="btnTxtSafeDrop">Safe Drop / Transfer</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Fast Navigation Tool Cards -->
+          <div class="quick-tools-bar">
+            <div class="btn-quick-tool highlight" onclick="openDenomModal()">
+              <div class="tool-icon-circle" style="background:#FEF3C7; color:#B45309;">🧮</div>
+              <span class="tool-label" id="txtCountNotes">Count Notes</span>
+              <span class="tool-sub" id="txtDenomSub">৳1000 - ৳1</span>
+            </div>
+
+            <div class="btn-quick-tool" onclick="editOpeningFloat()">
+              <div class="tool-icon-circle" style="background:#EEF2FF; color:#4F46E5;">💵</div>
+              <span class="tool-label" id="txtOpenFloat">Opening Float</span>
+              <span class="tool-sub" id="valOpeningFloatSub">৳2,000</span>
+            </div>
+
+            <div class="btn-quick-tool" onclick="switchActiveScreen('expenses')">
+              <div class="tool-icon-circle" style="background:#FFE4E6; color:#E11D48;">🧾</div>
+              <span class="tool-label" id="txtViewExpenses">Expenses</span>
+              <span class="tool-sub">৳1,100 today</span>
+            </div>
+          </div>
+
+          <!-- 3. Shift Financial Reconciliation Math Breakdown Card -->
+          <div class="section-card">
+            <div class="section-card-header">
+              <div class="section-title-group">
+                <span style="font-size:18px;">📊</span>
+                <h3 id="txtShiftMathTitle">Shift Cash Math Breakdown</h3>
+              </div>
+              <span class="section-badge-pill" id="txtExpectedBadge">Reconciled</span>
+            </div>
+
+            <div class="math-row">
+              <span id="lblOpeningFloat">Starting Float (+ Cash in drawer at start)</span>
+              <span class="math-row-val" id="valMathStartingFloat">৳2,000</span>
+            </div>
+            <div class="math-row">
+              <span id="lblCashSales">Cash Sales Collected (+)</span>
+              <span class="math-row-val add" id="valMathCashSales">+৳11,450</span>
+            </div>
+            <div class="math-row">
+              <span id="lblCashInFloat">Mid-Shift Cash In / Top-up (+)</span>
+              <span class="math-row-val add" id="valMathCashIn">+৳500</span>
+            </div>
+            <div class="math-row">
+              <span id="lblDueCollected">Customer Due Cash Paid (+)</span>
+              <span class="math-row-val add" id="valMathDueCollected">+৳2,500</span>
+            </div>
+            <div class="math-row">
+              <span id="lblCashExpenses">Petty Cash Expenses Paid (−)</span>
+              <span class="math-row-val sub" id="valMathExpenses">−৳1,100</span>
+            </div>
+            <div class="math-row">
+              <span id="lblSupplierPaid">Supplier Cash Disbursements (−)</span>
+              <span class="math-row-val sub" id="valMathSupplier">−৳500</span>
+            </div>
+            <div class="math-row">
+              <span id="lblRefunds">Customer Cash Returns / Refunds (−)</span>
+              <span class="math-row-val sub" id="valMathRefunds">−৳0</span>
+            </div>
+
+            <div class="math-row highlight">
+              <span id="lblExpectedCash">Expected Cash in Drawer</span>
+              <span class="math-row-val" style="color:#059669; font-size:16px;" id="valMathExpected">৳14,850</span>
+            </div>
+          </div>
+
+          <!-- 4. Primary Day Close CTA (Starts Reconciliation Workflow) -->
+          <button class="btn-primary-close-day" onclick="openZReportModal()">
+            <span style="font-size:20px;">🔒</span>
+            <span id="btnTxtCloseDay">End Shift & Close Register (Z-Report)</span>
+          </button>
+
+          <!-- 5. Previous Closings History Accordion -->
+          <div class="section-card">
+            <div class="section-card-header">
+              <div class="section-title-group">
+                <span style="font-size:16px;">📜</span>
+                <h3 id="txtPastClosingsTitle">Recent Shift Closings</h3>
+              </div>
+              <span class="section-badge-pill">Last 7 Days</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-size:12px; font-weight:800; color:#0F172A;">Shift #41 • 04 Sep 2026, 10:45 PM</div>
+                  <div style="font-size:11px; color:#64748B;">Cashier: Shahidul • Closed with ৳18,240</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="background:#DCFCE7; color:#166534; font-size:10px; font-weight:800; padding:2px 8px; border-radius:10px;">Exact Match</span>
+                  <button style="border:none; background:transparent; cursor:pointer;" onclick="openZReportModal()" title="View Receipt">🖨️</button>
+                </div>
+              </div>
+
+              <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-size:12px; font-weight:800; color:#0F172A;">Shift #40 • 03 Sep 2026, 11:10 PM</div>
+                  <div style="font-size:11px; color:#64748B;">Cashier: Liton • Closed with ৳15,400</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="background:#DCFCE7; color:#166534; font-size:10px; font-weight:800; padding:2px 8px; border-radius:10px;">Exact Match</span>
+                  <button style="border:none; background:transparent; cursor:pointer;" onclick="openZReportModal()" title="View Receipt">🖨️</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- POS Bottom Nav Bar -->
+        <nav class="pos-bottom-nav">
+          <button class="nav-item-btn"><span class="nav-item-icon">📱</span><span>Sell</span></button>
+          <button class="nav-item-btn"><span class="nav-item-icon">📦</span><span>Products</span></button>
+          <button class="nav-item-btn"><span class="nav-item-icon">⏱️</span><span>History</span></button>
+          <button class="nav-item-btn"><span class="nav-item-icon">📋</span><span>Dues</span></button>
+          <button class="nav-item-btn active"><span class="nav-item-icon">⚡</span><span>More</span></button>
+        </nav>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- SCREEN 2: REDESIGNED PURE EXPENSES (NO DRAWER CASH)       -->
+      <!-- ======================================================== -->
+      <div id="screenExpenses" class="screen-container" style="display: none;">
+        
+        <!-- POS Top Bar -->
+        <div class="pos-top-bar">
+          <div class="top-bar-left">
+            <button class="btn-back-icon" onclick="switchActiveScreen('dayclose')">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="pos-header-titles">
+              <h2 id="expTitle">Expenses Ledger</h2>
+              <p id="expSubtitle">Daily shop expenses & petty cash ledger</p>
+            </div>
+          </div>
+          <div class="top-bar-actions">
+            <button class="btn-action-badge" style="background:#F1F5F9; color:#0F172A;" onclick="exportExpensesExcel()">
+              📥 <span>Export</span>
+            </button>
+            <button class="btn-action-badge" style="background:#E11D48; color:#FFFFFF;" onclick="openAddExpenseModal()">
+              ➕ <span>Record</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Content -->
+        <div class="screen-content">
+
+          <!-- 1. Photorealistic 3D Expense Analytics Hero Card -->
+          <div class="expense-hero-card">
+            <div class="expense-hero-top">
+              <div>
+                <div style="font-size:10.5px; font-weight:800; color:#CBD5E1; letter-spacing:0.08em; text-transform:uppercase;">
+                  TOTAL TODAY'S EXPENSES
+                </div>
+                <div style="font-size:30px; font-weight:900; font-family:var(--font-mono); color:#FFFFFF; margin-top:2px;" id="valTotalExpenses">
+                  ৳1,100
+                </div>
+                <div style="font-size:11px; color:#FCA5A5; margin-top:3px; font-weight:600;">
+                  ⚠️ 4 petty cash disbursements today
+                </div>
+              </div>
+              <div class="expense-3d-avatar">
+                <img src="assets/3d_expense_analytics.jpg" alt="Expense Analytics 3D Icon" />
+              </div>
+            </div>
+
+            <!-- Visual Category Distribution Bar -->
+            <div class="category-bar-wrapper">
+              <div class="category-segmented-bar">
+                <div class="bar-segment" style="width: 35%; background: #F59E0B;" title="Tea & Snacks (35%)"></div>
+                <div class="bar-segment" style="width: 30%; background: #EF4444;" title="Staff Meal (30%)"></div>
+                <div class="bar-segment" style="width: 20%; background: #8B5CF6;" title="Electricity (20%)"></div>
+                <div class="bar-segment" style="width: 15%; background: #10B981;" title="Transport (15%)"></div>
+              </div>
+              <div class="category-legend-row">
+                <div class="legend-item"><div class="legend-dot" style="background:#F59E0B;"></div><span>Tea 35%</span></div>
+                <div class="legend-item"><div class="legend-dot" style="background:#EF4444;"></div><span>Meal 30%</span></div>
+                <div class="legend-item"><div class="legend-dot" style="background:#8B5CF6;"></div><span>Electricity 20%</span></div>
+                <div class="legend-item"><div class="legend-dot" style="background:#10B981;"></div><span>Transport 15%</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notice: Cash Drawer has moved info banner -->
+          <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:12px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:16px;">💡</span>
+              <span style="font-size:11.5px; color:#065F46; font-weight:600;" id="txtCashMovedBanner">
+                Cash Drawer & Float balance is now securely tracked in <strong>Day Start & Close</strong>
+              </span>
+            </div>
+            <button onclick="switchActiveScreen('dayclose')" style="background:#059669; color:#fff; border:none; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;">
+              View Drawer ➔
+            </button>
+          </div>
+
+          <!-- Filter Chips -->
+          <div class="filter-chips-scroll">
+            <button class="filter-chip-btn active" onclick="filterExpenses('All')">All (4)</button>
+            <button class="filter-chip-btn" onclick="filterExpenses('Tea & Refreshments')">☕ Tea & Refreshments</button>
+            <button class="filter-chip-btn" onclick="filterExpenses('Staff Meal')">🍲 Staff Meal</button>
+            <button class="filter-chip-btn" onclick="filterExpenses('Electricity')">⚡ Electricity</button>
+            <button class="filter-chip-btn" onclick="filterExpenses('Transport')">🛵 Transport</button>
+            <button class="filter-chip-btn" onclick="filterExpenses('Shop Rent')">🏢 Rent</button>
+          </div>
+
+          <!-- Expense Item Records List -->
+          <div style="display: flex; flex-direction: column; gap: 8px;" id="expenseRecordList">
+            
+            <div class="expense-record-card">
+              <div class="expense-meta-left">
+                <div class="cat-icon-badge">☕</div>
+                <div class="expense-details">
+                  <h4>Tea & Snacks for Customers</h4>
+                  <div class="expense-sub-info">
+                    <span>11:30 AM</span> • <span>Cash Drawer</span> • <span style="color:#059669; font-weight:700;">Verified</span>
+                  </div>
+                </div>
+              </div>
+              <span class="expense-amount-tag">-৳350</span>
+            </div>
+
+            <div class="expense-record-card">
+              <div class="expense-meta-left">
+                <div class="cat-icon-badge">🍲</div>
+                <div class="expense-details">
+                  <h4>Staff Lunch (2 Persons)</h4>
+                  <div class="expense-sub-info">
+                    <span>02:15 PM</span> • <span>Cash Drawer</span> • <span style="color:#059669; font-weight:700;">Verified</span>
+                  </div>
+                </div>
+              </div>
+              <span class="expense-amount-tag">-৳350</span>
+            </div>
+
+            <div class="expense-record-card">
+              <div class="expense-meta-left">
+                <div class="cat-icon-badge">⚡</div>
+                <div class="expense-details">
+                  <h4>Meter Electric Token Recharge</h4>
+                  <div class="expense-sub-info">
+                    <span>04:00 PM</span> • <span>bKash Petty</span> • <span style="color:#64748B;">Voucher #E-94</span>
+                  </div>
+                </div>
+              </div>
+              <span class="expense-amount-tag">-৳250</span>
+            </div>
+
+            <div class="expense-record-card">
+              <div class="expense-meta-left">
+                <div class="cat-icon-badge">🛵</div>
+                <div class="expense-details">
+                  <h4>Delivery Van Fare (Carton Transit)</h4>
+                  <div class="expense-sub-info">
+                    <span>05:30 PM</span> • <span>Cash Drawer</span>
+                  </div>
+                </div>
+              </div>
+              <span class="expense-amount-tag">-৳150</span>
+            </div>
+
+          </div>
+
+          <!-- Primary Record Button -->
+          <button class="btn-vault-action cash-in" style="background:#E11D48; width:100%; height:48px;" onclick="openAddExpenseModal()">
+            <span>➕</span> <span>Record New Expense</span>
+          </button>
+
+        </div>
+
+        <!-- POS Bottom Nav Bar -->
+        <nav class="pos-bottom-nav">
+          <button class="nav-item-btn"><span class="nav-item-icon">📱</span><span>Sell</span></button>
+          <button class="nav-item-btn"><span class="nav-item-icon">📦</span><span>Products</span></button>
+          <button class="nav-item-btn"><span class="nav-item-icon">⏱️</span><span>History</span></button>
+          <button class="nav-item-btn"><span class="nav-item-icon">📋</span><span>Dues</span></button>
+          <button class="nav-item-btn active"><span class="nav-item-icon">⚡</span><span>More</span></button>
+        </nav>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- SCREEN 3: ARCHITECTURE BEFORE VS AFTER COMPARISON         -->
+      <!-- ======================================================== -->
+      <div id="screenComparison" style="display: none; flex-direction: column; flex: 1; background: #0F172A; color: #FFFFFF;">
+        <div class="pos-top-bar" style="background:#1E293B; border-bottom:1px solid rgba(255,255,255,0.1);">
+          <div class="top-bar-left">
+            <button class="btn-back-icon" style="color:#fff;" onclick="switchActiveScreen('dayclose')">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="pos-header-titles">
+              <h2 style="color:#fff;">System Architecture Comparison</h2>
+              <p style="color:#94A3B8;">Clean Separation of Concerns: Drawer Cash vs Shop Expenses</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 20px; overflow-y: auto; max-height: 720px; display: flex; flex-direction: column; gap: 16px;">
+          
+          <div class="diff-point-card danger">
+            <h4 style="font-size:14px; font-weight:800; color:#F43F5E; margin-bottom:4px;">❌ Previous Layout (Confused Responsibilities)</h4>
+            <p style="font-size:12px; color:#CBD5E1; line-height:1.5;">
+              • The <strong>"Today's Drawer Cash"</strong> vault card was situated inside <strong>Expenses & Cash</strong> screen.<br>
+              • Float In (`+ Cash In Float`) was mixed in with ordinary shop expenses.<br>
+              • Staff going to close the day in <strong>Day Close</strong> had no visual connection with the cash float card they saw in Expenses.<br>
+              • No Bangladeshi denomination note counter was present.
+            </p>
+          </div>
+
+          <div class="diff-point-card success">
+            <h4 style="font-size:14px; font-weight:800; color:#34D399; margin-bottom:4px;">✅ New Redesigned Layout (Clear, Intuitive, Powerful)</h4>
+            <p style="font-size:12px; color:#CBD5E1; line-height:1.5;">
+              • <strong>Day Start & Close</strong> now acts as the unified command center for all cash register operations (Opening Float, Mid-shift Float In, Safe Drop, Shift Timer, Live Drawer Cash, Discrepancy Detection, and Z-Report closing).<br>
+              • <strong>Expenses</strong> is now a pure, dedicated expense ledger focusing 100% on expense analytics, category distribution, budget health, and receipts.<br>
+              • Added <strong>Interactive Bangladeshi Note Denomination Counter (৳1000 - ৳1)</strong> with live tallying.<br>
+              • Photorealistic 3D animated iconography (`3d_cash_vault`, `3d_day_shift_audit`, `3d_expense_analytics`, `3d_taka_stack`) delivers an ultra-premium look.
+            </p>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div style="background:rgba(255,255,255,0.05); border-radius:14px; padding:14px; border:1px solid rgba(255,255,255,0.08);">
+              <h5 style="color:#FBBF24; font-size:13px; font-weight:800; margin-bottom:8px;">☀️ Day Start & Close Holds:</h5>
+              <ul style="font-size:11.5px; color:#94A3B8; line-height:1.6; padding-left:16px;">
+                <li>Opening Cash Float</li>
+                <li>Live Drawer Cash (Synced)</li>
+                <li>Cash In / Top-up Float</li>
+                <li>Safe Drops (Cash to safe)</li>
+                <li>Note Denomination Counter</li>
+                <li>Mid-Shift X-Report</li>
+                <li>Day Close Reconciliation</li>
+                <li>Thermal Z-Report Generator</li>
+              </ul>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.05); border-radius:14px; padding:14px; border:1px solid rgba(255,255,255,0.08);">
+              <h5 style="color:#F43F5E; font-size:13px; font-weight:800; margin-bottom:8px;">🧾 Expenses Screen Holds:</h5>
+              <ul style="font-size:11.5px; color:#94A3B8; line-height:1.6; padding-left:16px;">
+                <li>Total Daily & Monthly Expenses</li>
+                <li>Category Distribution Breakdown</li>
+                <li>Record Expense Dialog</li>
+                <li>Payment Source (Cash, bKash, Bank)</li>
+                <li>Receipt / Voucher attachment</li>
+                <li>Excel / CSV Report Export</li>
+                <li>Filter by Category & Date</li>
+                <li>Average & Top Expense Insights</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- MODALS & DIALOGS                                         -->
+  <!-- ======================================================== -->
+
+  <!-- 1. DENOMINATION CALCULATOR MODAL -->
+  <div class="modal-overlay" id="modalDenom">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🧮 <span id="lblDenomModalTitle">Bangladeshi Taka Denomination Counter</span></h3>
+        <button class="btn-modal-close" onclick="closeModal('modalDenom')">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Mode Switcher: Count by Note vs Quick Total Amount -->
+        <div class="denom-mode-switcher">
+          <button type="button" class="denom-mode-btn active" id="btnModeCountNotes" onclick="setDenomMode('detailed')">
+            <span>🧮</span> <span id="lblModeCountNotes">Count by Note</span>
+          </button>
+          <button type="button" class="denom-mode-btn" id="btnModeQuickTotal" onclick="setDenomMode('quick')">
+            <span>⚡</span> <span id="lblModeQuickTotal">Quick Total Amount</span>
+          </button>
+        </div>
+
+        <!-- Mode 1: Detailed Banknotes & Coins (৳1000 - ৳1) -->
+        <div id="denomSectionDetailed">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <div style="font-size:11.5px; color:#64748B;" id="lblDetailedSub">
+              Count physical banknotes and coins in drawer.
+            </div>
+            <button type="button" class="btn-toggle-part" id="btnToggleDetailedPart" onclick="toggleDetailedNoteList()">
+              <span id="iconToggleDetailed">👁️</span> <span id="lblToggleDetailed">Hide Notes</span>
+            </button>
+          </div>
+
+          <div class="denom-list" id="denomRowsContainer">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Collapsed Placeholder for Detailed Mode -->
+          <div class="hidden-notes-placeholder" id="placeholderDetailedHidden" style="display:none;">
+            <div style="font-size:24px;">🗂️</div>
+            <div style="font-size:12px; font-weight:700; color:#0F172A;" id="lblHiddenNotesNotice">Note-by-note breakdown is collapsed</div>
+            <div style="font-size:11px; color:#64748B;" id="lblHiddenNotesSub">10 denominations tallied. Total is preserved.</div>
+            <button type="button" class="btn-toggle-part" style="margin-top:4px;" onclick="toggleDetailedNoteList()">
+              <span>👁️</span> <span id="lblExpandNotesBtn">Show 10 Denominations</span>
+            </button>
+          </div>
+
+          <div class="quick-switch-hint">
+            <span id="lblDontWannaCount">Don't want to count note by note?</span>
+            <button type="button" class="btn-text-link" onclick="setDenomMode('quick')" id="lnkEnterTotalDirectly">⚡ Enter total directly</button>
+          </div>
+        </div>
+
+        <!-- Mode 2: Quick Total Amount Input -->
+        <div id="denomSectionQuick" style="display: none;">
+          <div class="quick-total-card">
+            <div class="quick-total-header">
+              <div class="quick-total-icon">💵</div>
+              <div>
+                <h4 id="lblQuickTotalTitle">Direct Cash Drawer Total</h4>
+                <p id="lblQuickTotalSubtitle">Enter lump-sum cash without counting individual notes</p>
+              </div>
+            </div>
+
+            <!-- Large Currency Input -->
+            <div class="quick-total-input-wrapper">
+              <span class="currency-symbol">৳</span>
+              <input type="number" id="inputDirectTotal" class="quick-total-input" placeholder="0" value="14850" oninput="onDirectTotalChange(this.value)" />
+            </div>
+
+            <!-- Quick Shortcut Chips -->
+            <div class="quick-chips-row">
+              <button type="button" class="quick-chip-btn" onclick="addDirectTotalPreset(500)">+৳500</button>
+              <button type="button" class="quick-chip-btn" onclick="addDirectTotalPreset(1000)">+৳1,000</button>
+              <button type="button" class="quick-chip-btn" onclick="addDirectTotalPreset(2000)">+৳2,000</button>
+              <button type="button" class="quick-chip-btn" onclick="addDirectTotalPreset(5000)">+৳5,000</button>
+              <button type="button" class="quick-chip-btn match" onclick="setDirectTotalToExpected()" id="btnMatchExpected">Match Expected (৳14,850)</button>
+              <button type="button" class="quick-chip-btn clear" onclick="clearDirectTotal()" id="btnClearTotal">Clear</button>
+            </div>
+
+            <!-- Live Expected vs Entered Comparison -->
+            <div class="reconcile-comparison-box">
+              <div class="reconcile-row">
+                <span class="reconcile-label" id="lblExpectedSystem">System Expected Cash:</span>
+                <span class="reconcile-val" id="quickExpectedVal">৳14,850</span>
+              </div>
+              <div class="reconcile-row">
+                <span class="reconcile-label" id="lblEnteredPhysical">Entered Physical Cash:</span>
+                <span class="reconcile-val bold" id="quickEnteredVal">৳14,850</span>
+              </div>
+              <div class="reconcile-divider"></div>
+              <div class="reconcile-row diff-row">
+                <span class="reconcile-label" id="lblShiftVariance">Shift Variance:</span>
+                <span class="variance-badge exact" id="quickVarianceBadge">✓ Balanced (Exact Match)</span>
+              </div>
+            </div>
+
+            <!-- Ability to Hide/Show Note Breakdown in Quick Mode -->
+            <div class="collapsible-breakdown-card">
+              <div class="collapsible-breakdown-header" onclick="toggleQuickBreakdown()">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="collapse-icon" id="iconQuickBreakdown">▸</span>
+                  <div>
+                    <strong id="lblQuickBreakdownTitle" style="font-size:12.5px; color:#0F172A;">Banknote Denomination Breakdown (Optional)</strong>
+                    <div id="lblQuickBreakdownSub" style="font-size:11px; color:#64748B;">Tap to show or hide note-by-note counts</div>
+                  </div>
+                </div>
+                <span class="breakdown-status-badge" id="badgeQuickBreakdownStatus">Hidden</span>
+              </div>
+
+              <div class="collapsible-breakdown-body" id="bodyQuickBreakdown" style="display:none;">
+                <div class="denom-list" id="denomRowsContainerQuick">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Optional Counting Method / Audit Note -->
+            <div class="optional-note-group">
+              <label for="inputQuickNote" id="lblAuditNote">Counting Method / Audit Note (Optional)</label>
+              <input type="text" id="inputQuickNote" placeholder="e.g. Bill counter machine #1 / Manual bundle count" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Sticky Footer Total Bar -->
+        <div class="denom-footer-total">
+          <div>
+            <div style="font-size:11px; color:#94A3B8; font-weight:700;" id="lblTotalPhysicalCash">TOTAL PHYSICAL CASH</div>
+            <div class="denom-total-val" id="denomGrandTotal">৳14,850</div>
+          </div>
+          <button style="background:#059669; color:#fff; border:none; padding:10px 18px; border-radius:12px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px;" onclick="applyDenominationToClose()">
+            <span id="btnLblApplyToShift">Apply to Shift</span> ➔
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. CASH IN / FLOAT TOP-UP MODAL -->
+  <div class="modal-overlay" id="modalCashIn">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>➕ <span>Add Cash Float / Cash In</span></h3>
+        <button class="btn-modal-close" onclick="closeModal('modalCashIn')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <label style="font-size:12px; font-weight:700; color:#1E293B;">Amount (৳ Taka)</label>
+          <input type="number" id="inputCashInAmount" value="500" style="padding:12px; font-size:18px; font-weight:800; font-family:var(--font-mono); border:1.5px solid #CBD5E1; border-radius:12px;" />
+
+          <div style="display:flex; gap:6px; margin-top:4px;">
+            <button style="flex:1; padding:6px; border:1px solid #CBD5E1; border-radius:8px; background:#F8FAFC; font-weight:700; font-size:11px; cursor:pointer;" onclick="setCashInPreset(500)">+৳500</button>
+            <button style="flex:1; padding:6px; border:1px solid #CBD5E1; border-radius:8px; background:#F8FAFC; font-weight:700; font-size:11px; cursor:pointer;" onclick="setCashInPreset(1000)">+৳1,000</button>
+            <button style="flex:1; padding:6px; border:1px solid #CBD5E1; border-radius:8px; background:#F8FAFC; font-weight:700; font-size:11px; cursor:pointer;" onclick="setCashInPreset(2000)">+৳2,000</button>
+          </div>
+
+          <label style="font-size:12px; font-weight:700; color:#1E293B; margin-top:8px;">Reason / Source</label>
+          <input type="text" id="inputCashInReason" value="Drawer Change Top-up (50 & 100 notes)" style="padding:10px; font-size:13px; border:1.5px solid #CBD5E1; border-radius:12px;" />
+
+          <button style="height:48px; background:#059669; color:#fff; border:none; border-radius:12px; font-weight:800; font-size:14px; cursor:pointer; margin-top:12px;" onclick="confirmCashIn()">
+            Confirm Cash In (+৳500)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. SAFE DROP MODAL -->
+  <div class="modal-overlay" id="modalSafeDrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🔒 <span>Safe Drop / Cash Transfer</span></h3>
+        <button class="btn-modal-close" onclick="closeModal('modalSafeDrop')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="background:#FFFBEB; border:1px solid #FCD34D; border-radius:10px; padding:10px; font-size:11.5px; color:#92400E;">
+            Transfer cash from current register to the store safe vault to reduce cash liability during peak rush.
+          </div>
+
+          <label style="font-size:12px; font-weight:700; color:#1E293B;">Drop Amount (৳)</label>
+          <input type="number" id="inputSafeDropAmount" value="5000" style="padding:12px; font-size:18px; font-weight:800; font-family:var(--font-mono); border:1.5px solid #CBD5E1; border-radius:12px;" />
+
+          <label style="font-size:12px; font-weight:700; color:#1E293B;">Authorized By / Witness</label>
+          <input type="text" id="inputSafeDropWitness" value="Store Owner (Shahidul Haque)" style="padding:10px; font-size:13px; border:1.5px solid #CBD5E1; border-radius:12px;" />
+
+          <button style="height:48px; background:#0F172A; color:#fff; border:none; border-radius:12px; font-weight:800; font-size:14px; cursor:pointer; margin-top:12px;" onclick="confirmSafeDrop()">
+            Authorize Safe Drop (-৳5,000)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Z-REPORT & DAY CLOSE RECONCILIATION MODAL -->
+  <div class="modal-overlay" id="modalZReport">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>📜 <span>Day Close & Z-Report Audit</span></h3>
+        <button class="btn-modal-close" onclick="closeModal('modalZReport')">✕</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Thermal Receipt Preview Box -->
+        <div class="thermal-paper" id="thermalZReportReceipt">
+          <div class="receipt-header">
+            <div class="receipt-store-title">TECHYFI DIGITAL POS</div>
+            <div style="font-size:10px; color:#475569;">House 12, Road 4, Banani, Dhaka</div>
+            <div class="receipt-report-badge">SHIFT Z-REPORT #0042</div>
+            <div style="font-size:10px; color:#64748B;">Date: 05 Sep 2026 • 07:10 AM</div>
+            <div style="font-size:10px; color:#64748B;">Cashier: Liton (ID: #OP-04)</div>
+          </div>
+
+          <div class="receipt-line-item"><span>OPENING FLOAT:</span><span>৳2,000.00</span></div>
+          <div class="receipt-line-item"><span>CASH SALES:</span><span>৳11,450.00</span></div>
+          <div class="receipt-line-item"><span>CASH IN (FLOAT):</span><span>+৳500.00</span></div>
+          <div class="receipt-line-item"><span>DUE CASH COLLECTED:</span><span>+৳2,500.00</span></div>
+          <div class="receipt-line-item"><span>EXPENSES PAID:</span><span>-৳1,100.00</span></div>
+          <div class="receipt-line-item"><span>SUPPLIER DISBURSED:</span><span>-৳500.00</span></div>
+          <div class="receipt-line-item"><span>REFUNDS / RETURNS:</span><span>-৳0.00</span></div>
+
+          <div class="receipt-divider"></div>
+          <div class="receipt-line-item" style="font-weight:900; font-size:12.5px;">
+            <span>EXPECTED CASH:</span><span>৳14,850.00</span>
+          </div>
+          <div class="receipt-line-item" style="font-weight:900; font-size:12.5px; color:#059669;">
+            <span>COUNTED CASH:</span><span id="receiptCountedCash">৳14,850.00</span>
+          </div>
+          <div class="receipt-line-item" style="font-weight:900; color:#059669;">
+            <span>DISCREPANCY:</span><span id="receiptDiscrepancy">৳0.00 (Balanced)</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+          <div class="receipt-line-item"><span>TOTAL SALES VOLUME:</span><span>৳18,720.00</span></div>
+          <div class="receipt-line-item"><span>DIGITAL (bKash/Card):</span><span>৳7,270.00</span></div>
+          <div class="receipt-line-item"><span>INVOICE COUNT:</span><span>34 Orders</span></div>
+
+          <div style="text-align:center; margin-top:10px; font-size:9.5px; color:#64748B;">
+            *** END OF SHIFT REGISTER CLOSE ***<br>
+            Verified by Store Manager
+          </div>
+        </div>
+
+        <!-- Action Row -->
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button style="flex:1; height:44px; background:#0F172A; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:12.5px; cursor:pointer;" onclick="simulateThermalPrint()">
+            🖨️ Print 58/80mm Thermal
+          </button>
+          <button style="flex:1; height:44px; background:#059669; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:12.5px; cursor:pointer;" onclick="confirmCloseShift()">
+            ✅ Finalize & Close Shift
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. RECORD EXPENSE MODAL -->
+  <div class="modal-overlay" id="modalAddExpense">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🧾 <span>Record Shop Expense</span></h3>
+        <button class="btn-modal-close" onclick="closeModal('modalAddExpense')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <label style="font-size:12px; font-weight:700; color:#1E293B;">Expense Title</label>
+          <input type="text" id="inputExpTitle" value="Electricity Meter Recharge" style="padding:10px; font-size:13px; border:1.5px solid #CBD5E1; border-radius:12px;" />
+
+          <label style="font-size:12px; font-weight:700; color:#1E293B;">Amount (৳)</label>
+          <input type="number" id="inputExpAmount" value="450" style="padding:12px; font-size:18px; font-weight:800; font-family:var(--font-mono); border:1.5px solid #CBD5E1; border-radius:12px;" />
+
+          <label style="font-size:12px; font-weight:700; color:#1E293B;">Category</label>
+          <select id="selectExpCategory" style="padding:10px; font-size:13px; border:1.5px solid #CBD5E1; border-radius:12px; background:#fff;">
+            <option>☕ Tea & Refreshments</option>
+            <option>🍲 Staff Meal</option>
+            <option selected>⚡ Electricity (Token)</option>
+            <option>🛵 Transport & Delivery</option>
+            <option>🏢 Shop Rent</option>
+            <option>🧹 Cleaning & Maintenance</option>
+            <option>📦 Packaging Supplies</option>
+          </select>
+
+          <label style="font-size:12px; font-weight:700; color:#1E293B;">Payment Source</label>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="control-btn active" style="flex:1; border:1px solid #CBD5E1;" id="btnPayDrawer" onclick="setPaymentSource('Cash Drawer')">Cash Drawer</button>
+            <button type="button" class="control-btn" style="flex:1; border:1px solid #CBD5E1;" id="btnPayOwner" onclick="setPaymentSource('Owner Pocket')">Owner Pocket</button>
+            <button type="button" class="control-btn" style="flex:1; border:1px solid #CBD5E1;" id="btnPayBkash" onclick="setPaymentSource('bKash/Nagad')">bKash/Nagad</button>
+          </div>
+
+          <button style="height:48px; background:#E11D48; color:#fff; border:none; border-radius:12px; font-weight:800; font-size:14px; cursor:pointer; margin-top:12px;" onclick="confirmAddExpense()">
+            Save Expense Record (-৳450)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Logic & State Engine -->
+  <script>
+    // State Engine
+    const state = {
+      language: 'en',
+      activeScreen: 'dayclose',
+      drawerCash: 14850,
+      openingFloat: 2000,
+      cashSales: 11450,
+      cashIn: 500,
+      dueCashCollected: 2500,
+      expenses: 1100,
+      supplierCash: 500,
+      refunds: 0,
+      safeDrops: 0,
+      totalExpensesToday: 1100,
+      denominations: [
+        { note: 1000, count: 8 },
+        { note: 500, count: 8 },
+        { note: 200, count: 10 },
+        { note: 100, count: 5 },
+        { note: 50, count: 4 },
+        { note: 20, count: 5 },
+        { note: 10, count: 5 },
+        { note: 5, count: 0 },
+        { note: 2, count: 0 },
+        { note: 1, count: 0 }
+      ]
+    };
+
+    // Calculate drawer expected cash
+    function calculateExpected() {
+      return state.openingFloat + state.cashSales + state.cashIn + state.dueCashCollected - state.expenses - state.supplierCash - state.refunds - state.safeDrops;
+    }
+
+    function resetScroll() {
+      const dayCloseEl = document.querySelector('#screenDayClose .screen-content');
+      if (dayCloseEl) dayCloseEl.scrollTop = 0;
+      const expEl = document.querySelector('#screenExpenses .screen-content');
+      if (expEl) expEl.scrollTop = 0;
+      document.querySelectorAll('.screen-content').forEach(el => { el.scrollTop = 0; });
+      window.scrollTo(0, 0);
+    }
+
+    // Switch Screens (Day Close vs Expenses vs Comparison)
+    function switchActiveScreen(screenName) {
+      state.activeScreen = screenName;
+      document.getElementById('screenDayClose').style.display = screenName === 'dayclose' ? 'flex' : 'none';
+      document.getElementById('screenExpenses').style.display = screenName === 'expenses' ? 'flex' : 'none';
+      document.getElementById('screenComparison').style.display = screenName === 'comparison' ? 'flex' : 'none';
+
+      // Update lab buttons
+      document.getElementById('tabBtnDayClose').className = 'screen-tab-btn' + (screenName === 'dayclose' ? ' active' : '');
+      document.getElementById('tabBtnExpenses').className = 'screen-tab-btn' + (screenName === 'expenses' ? ' active expenses' : '');
+      document.getElementById('tabBtnComparison').className = 'screen-tab-btn' + (screenName === 'comparison' ? ' active compare' : '');
+
+      const shell = document.getElementById('deviceShell');
+      if (screenName === 'comparison') {
+        shell.className = 'device-shell comparison';
+      } else {
+        const isTablet = document.getElementById('btnTabletView').classList.contains('active');
+        shell.className = isTablet ? 'device-shell tablet' : 'device-shell';
+      }
+      resetScroll();
+    }
+
+    // Set Device Viewport
+    function setDeviceView(mode) {
+      document.getElementById('btnPhoneView').classList.toggle('active', mode === 'phone');
+      document.getElementById('btnTabletView').classList.toggle('active', mode === 'tablet');
+      if (state.activeScreen !== 'comparison') {
+        document.getElementById('deviceShell').className = mode === 'tablet' ? 'device-shell tablet' : 'device-shell';
+      }
+      resetScroll();
+    }
+
+    // Bilingual Dictionary
+    const i18n = {
+      en: {
+        dayCloseTitle: "Day Start & Close",
+        dayCloseSubtitle: "Shift open, drawer cash float & day close audit",
+        txtVaultLabel: "TODAY'S DRAWER CASH",
+        txtLiveSync: "Live Synced",
+        txtShiftTime: "Shift #42 • <strong>Active (5h 20m)</strong>",
+        txtFloatInLabel: "Cash In (+ Float)",
+        txtCashOutLabel: "Cash Out (Expense/Drop)",
+        btnTxtAddFloat: "Add Cash Float",
+        btnTxtSafeDrop: "Safe Drop / Transfer",
+        txtCountNotes: "Count Notes",
+        txtDenomSub: "৳1000 - ৳1",
+        txtOpenFloat: "Opening Float",
+        txtViewExpenses: "Expenses",
+        txtShiftMathTitle: "Shift Cash Math Breakdown",
+        lblOpeningFloat: "Starting Float (+ Cash in drawer at start)",
+        lblCashSales: "Cash Sales Collected (+)",
+        lblCashInFloat: "Mid-Shift Cash In / Top-up (+)",
+        lblDueCollected: "Customer Due Cash Paid (+)",
+        lblCashExpenses: "Petty Cash Expenses Paid (−)",
+        lblSupplierPaid: "Supplier Cash Disbursements (−)",
+        lblRefunds: "Customer Cash Returns / Refunds (−)",
+        lblExpectedCash: "Expected Cash in Drawer",
+        btnTxtCloseDay: "End Shift & Close Register (Z-Report)",
+        txtPastClosingsTitle: "Recent Shift Closings",
+        expTitle: "Expenses Ledger",
+        expSubtitle: "Daily shop expenses & petty cash ledger",
+        txtCashMovedBanner: "Cash Drawer & Float balance is now securely tracked in <strong>Day Start & Close</strong>",
+        lblModeCountNotes: "Count by Note",
+        lblModeQuickTotal: "Quick Total Amount",
+        lblDetailedSub: "Count physical banknotes and coins in drawer. Total is automatically tallied.",
+        lblDontWannaCount: "Don't want to count note by note?",
+        lnkEnterTotalDirectly: "⚡ Enter total directly",
+        lblQuickTotalTitle: "Direct Cash Drawer Total",
+        lblQuickTotalSubtitle: "Enter lump-sum cash without counting individual notes",
+        lblDenomModalTitle: "Bangladeshi Taka Denomination Counter",
+        lblQuickBreakdownTitle: "Banknote Denomination Breakdown (Optional)",
+        lblQuickBreakdownSub: "Tap to show or hide note-by-note counts",
+        btnMatchExpected: "Match Expected (৳14,850)",
+        btnClearTotal: "Clear",
+        lblExpectedSystem: "System Expected Cash:",
+        lblEnteredPhysical: "Entered Physical Cash:",
+        lblShiftVariance: "Shift Variance:",
+        lblAuditNote: "Counting Method / Audit Note (Optional)",
+        lblTotalPhysicalCash: "TOTAL PHYSICAL CASH",
+        btnLblApplyToShift: "Apply to Shift"
+      },
+      bn: {
+        lblDenomModalTitle: "বাংলাদেশী টাকা নোট গণনা কাউন্টার",
+        lblQuickBreakdownTitle: "নোটের বিস্তারিত বিভাজন (ঐচ্ছিক)",
+        lblQuickBreakdownSub: "নোটের হিসাব দেখতে বা লুকাতে ট্যাপ করুন",
+        dayCloseTitle: "দিন শুরু ও সমাপ্তি",
+        dayCloseSubtitle: "শিফট শুরু, ক্যাশ ড্রয়ার ফ্লোট ও হিসাব ক্লোজিং",
+        txtVaultLabel: "আজকের ড্রয়ার ক্যাশ ব্যালেন্স",
+        txtLiveSync: "লাইভ সিঙ্কড",
+        txtShiftTime: "শিফট #৪২ • <strong>চলমান (৫ঘণ্টা ২০মি)</strong>",
+        txtFloatInLabel: "ক্যাশ ইন (+ ফ্লোট)",
+        txtCashOutLabel: "ক্যাশ আউট (ব্যয়/ড্রপ)",
+        btnTxtAddFloat: "ক্যাশ ফ্লোট যোগ",
+        btnTxtSafeDrop: "সেফ ড্রপ / ট্রান্সফার",
+        txtCountNotes: "নোট গণনা",
+        txtDenomSub: "৳১০০০ - ৳১",
+        txtOpenFloat: "ওপেনিং ফ্লোট",
+        txtViewExpenses: "ব্যয় হিসাব",
+        txtShiftMathTitle: "শিফটের ক্যাশ হিসাব বিশ্লেষণ",
+        lblOpeningFloat: "ওপেনিং ফ্লোট (শুরুতে ড্রয়ারের ক্যাশ)",
+        lblCashSales: "নগদ বিক্রি প্রাপ্তি (+)",
+        lblCashInFloat: "শিফটে অতিরিক্ত ক্যাশ ইন (+)",
+        lblDueCollected: "গ্রাহকের বকেয়া নগদ আদায় (+)",
+        lblCashExpenses: "দোকানের খরচ প্রদান (−)",
+        lblSupplierPaid: "সাপ্লায়ার ক্যাশ প্রদান (−)",
+        lblRefunds: "গ্রাহকের রিটার্ন ফেরত (−)",
+        lblExpectedCash: "ড্রয়ারে প্রত্যাশিত মোট ক্যাশ",
+        btnTxtCloseDay: "শিফট সমাপ্ত ও হিসাব ক্লোজ (Z-রিপোর্ট)",
+        txtPastClosingsTitle: "পূর্ববর্তী শিফট সমাপ্তি রেকর্ড",
+        expTitle: "ব্যয় ও খরচের হিসাব",
+        expSubtitle: "দৈনিক দোকানের খরচ ও ভাউচার লেজার",
+        txtCashMovedBanner: "ক্যাশ ড্রয়ার ও ফ্লোট ব্যালেন্স এখন <strong>দিন শুরু ও সমাপ্তি</strong> সেকশনে সংরক্ষিত",
+        lblModeCountNotes: "নোট ধরে গণনা",
+        lblModeQuickTotal: "সরাসরি মোট ক্যাশ",
+        lblDetailedSub: "ড্রয়ারের নোট ও কয়েন গণনা করুন। মোট টাকা স্বয়ংক্রিয়ভাবে যোগ হবে।",
+        lblDontWannaCount: "নোট ধরে গণনা করতে চান না?",
+        lnkEnterTotalDirectly: "⚡ সরাসরি মোট টাকা লিখুন",
+        lblQuickTotalTitle: "সরাসরি ড্রয়ার ক্যাশের মোট পরিমাণ",
+        lblQuickTotalSubtitle: "নোট গণনা না করে সরাসরি মোট টাকার অংক লিখুন",
+        btnMatchExpected: "হিসাব মতো বসান (৳১৪,৮৫০)",
+        btnClearTotal: "মুছুন",
+        lblExpectedSystem: "সিস্টেমের প্রত্যাশিত ক্যাশ:",
+        lblEnteredPhysical: "গণনাকৃত আসল ক্যাশ:",
+        lblShiftVariance: "শিফট হিসাব পার্থক্য:",
+        lblAuditNote: "গণনার মাধ্যম / অডিট নোট (ঐচ্ছিক)",
+        lblTotalPhysicalCash: "ড্রয়ারের মোট আসল ক্যাশ",
+        btnLblApplyToShift: "শিফটে প্রয়োগ করুন"
+      }
+    };
+
+    function setLanguage(lang) {
+      state.language = lang;
+      document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
+      document.getElementById('langBnBtn').classList.toggle('active', lang === 'bn');
+
+      const dict = i18n[lang];
+      for (const [key, val] of Object.entries(dict)) {
+        const el = document.getElementById(key);
+        if (el) el.innerHTML = val;
+      }
+      updateQuickReconcile();
+      updateHideShowLabels();
+    }
+
+    // Modal helpers
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    let denomMode = 'detailed'; // 'detailed' | 'quick'
+    let quickDirectTotal = 14850;
+    let detailedNotesVisible = true;
+    let quickBreakdownVisible = false;
+
+    function openDenomModal() {
+      quickDirectTotal = state.drawerCash;
+      const inputEl = document.getElementById('inputDirectTotal');
+      if (inputEl) inputEl.value = quickDirectTotal;
+      setDenomMode('detailed');
+      detailedNotesVisible = true;
+      quickBreakdownVisible = false;
+      const rowsEl = document.getElementById('denomRowsContainer');
+      const placeholderEl = document.getElementById('placeholderDetailedHidden');
+      if (rowsEl) rowsEl.style.display = 'flex';
+      if (placeholderEl) placeholderEl.style.display = 'none';
+      const bodyQuick = document.getElementById('bodyQuickBreakdown');
+      if (bodyQuick) bodyQuick.style.display = 'none';
+      const iconQuick = document.getElementById('iconQuickBreakdown');
+      if (iconQuick) iconQuick.innerText = '▸';
+      renderDenominations();
+      updateQuickReconcile();
+      updateHideShowLabels();
+      openModal('modalDenom');
+    }
+
+    function toggleDetailedNoteList() {
+      detailedNotesVisible = !detailedNotesVisible;
+      const rowsEl = document.getElementById('denomRowsContainer');
+      const placeholderEl = document.getElementById('placeholderDetailedHidden');
+      if (rowsEl && placeholderEl) {
+        rowsEl.style.display = detailedNotesVisible ? 'flex' : 'none';
+        placeholderEl.style.display = detailedNotesVisible ? 'none' : 'flex';
+      }
+      updateHideShowLabels();
+    }
+
+    function toggleQuickBreakdown() {
+      quickBreakdownVisible = !quickBreakdownVisible;
+      const bodyEl = document.getElementById('bodyQuickBreakdown');
+      const iconEl = document.getElementById('iconQuickBreakdown');
+      if (bodyEl) {
+        bodyEl.style.display = quickBreakdownVisible ? 'block' : 'none';
+      }
+      if (iconEl) {
+        iconEl.innerText = quickBreakdownVisible ? '▾' : '▸';
+      }
+      updateHideShowLabels();
+      if (quickBreakdownVisible) {
+        renderQuickBreakdown();
+      }
+    }
+
+    function updateHideShowLabels() {
+      const isBn = state.language === 'bn';
+      const lblToggle = document.getElementById('lblToggleDetailed');
+      const iconToggle = document.getElementById('iconToggleDetailed');
+      if (lblToggle) {
+        lblToggle.innerText = detailedNotesVisible 
+          ? (isBn ? "নোট লুকান" : "Hide Notes")
+          : (isBn ? "নোট দেখুন" : "Show Notes");
+      }
+      if (iconToggle) {
+        iconToggle.innerText = detailedNotesVisible ? "👁️" : "👁️‍🗨️";
+      }
+
+      const badgeQuick = document.getElementById('badgeQuickBreakdownStatus');
+      if (badgeQuick) {
+        badgeQuick.innerText = quickBreakdownVisible
+          ? (isBn ? "দৃশ্যমান" : "Visible")
+          : (isBn ? "লুকানো" : "Hidden");
+        badgeQuick.className = quickBreakdownVisible ? "breakdown-status-badge active" : "breakdown-status-badge";
+      }
+    }
+
+    function renderQuickBreakdown() {
+      const container = document.getElementById('denomRowsContainerQuick');
+      if (!container) return;
+      container.innerHTML = '';
+      
+      state.denominations.forEach((d, idx) => {
+        const sub = d.note * d.count;
+        const row = document.createElement('div');
+        row.className = 'denom-row';
+        row.innerHTML = `
+          <div class="denom-badge">৳${d.note}</div>
+          <div class="denom-controls">
+            <button class="btn-counter" onclick="changeDenomQuick(${idx}, -1)">−</button>
+            <input type="text" class="denom-input" value="${d.count}" onchange="setDenomValueQuick(${idx}, this.value)" />
+            <button class="btn-counter" onclick="changeDenomQuick(${idx}, 1)">+</button>
+          </div>
+          <div class="denom-subtotal">৳${sub.toLocaleString()}</div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function changeDenomQuick(idx, delta) {
+      state.denominations[idx].count = Math.max(0, state.denominations[idx].count + delta);
+      syncNotesToQuickTotal();
+      renderQuickBreakdown();
+      renderDenominations();
+    }
+
+    function setDenomValueQuick(idx, val) {
+      const parsed = parseInt(val) || 0;
+      state.denominations[idx].count = Math.max(0, parsed);
+      syncNotesToQuickTotal();
+      renderQuickBreakdown();
+      renderDenominations();
+    }
+
+    function syncNotesToQuickTotal() {
+      const noteTotal = state.denominations.reduce((acc, curr) => acc + (curr.note * curr.count), 0);
+      quickDirectTotal = noteTotal;
+      const inputEl = document.getElementById('inputDirectTotal');
+      if (inputEl) inputEl.value = quickDirectTotal;
+      updateDenomTotalDisplay();
+    }
+
+    function setDenomMode(mode) {
+      denomMode = mode;
+      const btnDetailed = document.getElementById('btnModeCountNotes');
+      const btnQuick = document.getElementById('btnModeQuickTotal');
+      const secDetailed = document.getElementById('denomSectionDetailed');
+      const secQuick = document.getElementById('denomSectionQuick');
+
+      if (btnDetailed) btnDetailed.classList.toggle('active', mode === 'detailed');
+      if (btnQuick) btnQuick.classList.toggle('active', mode === 'quick');
+      if (secDetailed) secDetailed.style.display = mode === 'detailed' ? 'block' : 'none';
+      if (secQuick) secQuick.style.display = mode === 'quick' ? 'block' : 'none';
+
+      updateDenomTotalDisplay();
+    }
+
+    function updateDenomTotalDisplay() {
+      let total = 0;
+      if (denomMode === 'detailed') {
+        total = state.denominations.reduce((acc, curr) => acc + (curr.note * curr.count), 0);
+      } else {
+        total = quickDirectTotal;
+      }
+      const el = document.getElementById('denomGrandTotal');
+      if (el) el.innerText = `৳${total.toLocaleString()}`;
+      updateQuickReconcile();
+    }
+
+    function onDirectTotalChange(val) {
+      quickDirectTotal = Math.max(0, parseFloat(val) || 0);
+      updateDenomTotalDisplay();
+    }
+
+    function addDirectTotalPreset(amt) {
+      quickDirectTotal = (quickDirectTotal || 0) + amt;
+      const inputEl = document.getElementById('inputDirectTotal');
+      if (inputEl) inputEl.value = quickDirectTotal;
+      updateDenomTotalDisplay();
+    }
+
+    function setDirectTotalToExpected() {
+      const expected = calculateExpected();
+      quickDirectTotal = expected;
+      const inputEl = document.getElementById('inputDirectTotal');
+      if (inputEl) inputEl.value = quickDirectTotal;
+      updateDenomTotalDisplay();
+    }
+
+    function clearDirectTotal() {
+      quickDirectTotal = 0;
+      const inputEl = document.getElementById('inputDirectTotal');
+      if (inputEl) inputEl.value = '';
+      updateDenomTotalDisplay();
+    }
+
+    function updateQuickReconcile() {
+      const expected = calculateExpected();
+      const entered = quickDirectTotal;
+      const diff = entered - expected;
+      
+      const elExpected = document.getElementById('quickExpectedVal');
+      const elEntered = document.getElementById('quickEnteredVal');
+      const badge = document.getElementById('quickVarianceBadge');
+      
+      if (elExpected) elExpected.innerText = `৳${expected.toLocaleString()}`;
+      if (elEntered) elEntered.innerText = `৳${entered.toLocaleString()}`;
+      
+      if (badge) {
+        if (diff === 0) {
+          badge.className = "variance-badge exact";
+          badge.innerText = state.language === 'bn' ? "✓ মিলে গেছে (Exact Match)" : "✓ Balanced (Exact Match)";
+        } else if (diff > 0) {
+          badge.className = "variance-badge overage";
+          badge.innerText = state.language === 'bn' ? `+৳${diff.toLocaleString()} উদ্বৃত্ত (Overage)` : `+৳${diff.toLocaleString()} Overage`;
+        } else {
+          badge.className = "variance-badge shortage";
+          badge.innerText = state.language === 'bn' ? `-৳${Math.abs(diff).toLocaleString()} কমতি (Shortage)` : `-৳${Math.abs(diff).toLocaleString()} Shortage`;
+        }
+      }
+    }
+
+    function openCashInModal() { openModal('modalCashIn'); }
+    function openSafeDropModal() { openModal('modalSafeDrop'); }
+    function openZReportModal() { openModal('modalZReport'); }
+    function openAddExpenseModal() { openModal('modalAddExpense'); }
+
+    function openXReportModal() {
+      alert("📋 Instant Mid-Shift X-Report generated! Does not close register. Ideal for cashier shift handover or mid-day manager inspection.");
+    }
+
+    // Render Denominations
+    function renderDenominations() {
+      const container = document.getElementById('denomRowsContainer');
+      container.innerHTML = '';
+      let grandTotal = 0;
+
+      state.denominations.forEach((d, idx) => {
+        const sub = d.note * d.count;
+        grandTotal += sub;
+
+        const row = document.createElement('div');
+        row.className = 'denom-row';
+        row.innerHTML = `
+          <div class="denom-badge">৳${d.note}</div>
+          <div class="denom-controls">
+            <button class="btn-counter" onclick="changeDenom(${idx}, -1)">−</button>
+            <input type="text" class="denom-input" value="${d.count}" onchange="setDenomValue(${idx}, this.value)" />
+            <button class="btn-counter" onclick="changeDenom(${idx}, 1)">+</button>
+          </div>
+          <div class="denom-subtotal">৳${sub.toLocaleString()}</div>
+        `;
+        container.appendChild(row);
+      });
+
+      if (denomMode === 'detailed') {
+        document.getElementById('denomGrandTotal').innerText = `৳${grandTotal.toLocaleString()}`;
+      }
+    }
+
+    function changeDenom(idx, delta) {
+      state.denominations[idx].count = Math.max(0, state.denominations[idx].count + delta);
+      renderDenominations();
+    }
+
+    function setDenomValue(idx, val) {
+      const parsed = parseInt(val) || 0;
+      state.denominations[idx].count = Math.max(0, parsed);
+      renderDenominations();
+    }
+
+    function applyDenominationToClose() {
+      let total = 0;
+      let methodText = "";
+      if (denomMode === 'detailed') {
+        total = state.denominations.reduce((acc, curr) => acc + (curr.note * curr.count), 0);
+        methodText = state.language === 'bn' ? "নোট গণনা অনুযায়ী" : "Note denomination count";
+      } else {
+        total = quickDirectTotal;
+        methodText = state.language === 'bn' ? "সরাসরি মোট টাকার ইনপুট" : "Direct lump-sum total";
+      }
+      closeModal('modalDenom');
+      state.drawerCash = total;
+      updateUI();
+      const alertMsg = state.language === 'bn'
+        ? `✅ ${methodText} ৳${total.toLocaleString()} ড্রয়ার ক্যাশে প্রয়োগ করা হয়েছে!`
+        : `✅ ${methodText} ৳${total.toLocaleString()} applied to Drawer Cash!`;
+      alert(alertMsg);
+    }
+
+    function setCashInPreset(amt) {
+      document.getElementById('inputCashInAmount').value = amt;
+    }
+
+    function confirmCashIn() {
+      const amt = parseFloat(document.getElementById('inputCashInAmount').value) || 0;
+      if (amt <= 0) return;
+      state.cashIn += amt;
+      state.drawerCash += amt;
+      closeModal('modalCashIn');
+      updateUI();
+      alert(`➕ Added ৳${amt.toLocaleString()} to cash drawer!`);
+    }
+
+    function confirmSafeDrop() {
+      const amt = parseFloat(document.getElementById('inputSafeDropAmount').value) || 0;
+      if (amt <= 0) return;
+      state.safeDrops += amt;
+      state.drawerCash -= amt;
+      closeModal('modalSafeDrop');
+      updateUI();
+      alert(`🔒 ৳${amt.toLocaleString()} dropped to store safe!`);
+    }
+
+    function editOpeningFloat() {
+      const promptVal = prompt("Enter Opening Float (৳ Taka):", state.openingFloat);
+      if (promptVal !== null) {
+        const parsed = parseFloat(promptVal) || 0;
+        state.openingFloat = parsed;
+        updateUI();
+      }
+    }
+
+    function confirmCloseShift() {
+      alert("✅ Shift #42 successfully finalized and closed! Z-Report archived to database and printed.");
+      closeModal('modalZReport');
+    }
+
+    function simulateThermalPrint() {
+      alert("🖨️ ESC/POS Thermal Receipt sent to POS printer (58mm / 80mm)! High-speed print complete.");
+    }
+
+    function confirmAddExpense() {
+      const amt = parseFloat(document.getElementById('inputExpAmount').value) || 0;
+      const title = document.getElementById('inputExpTitle').value;
+      const cat = document.getElementById('selectExpCategory').value;
+      if (amt <= 0) return;
+
+      state.expenses += amt;
+      state.totalExpensesToday += amt;
+      state.drawerCash -= amt; // if paid from cash drawer
+      closeModal('modalAddExpense');
+      updateUI();
+
+      // Add to UI list
+      const list = document.getElementById('expenseRecordList');
+      const newCard = document.createElement('div');
+      newCard.className = 'expense-record-card';
+      newCard.innerHTML = `
+        <div class="expense-meta-left">
+          <div class="cat-icon-badge">${cat.split(' ')[0]}</div>
+          <div class="expense-details">
+            <h4>${title}</h4>
+            <div class="expense-sub-info">
+              <span>Just now</span> • <span>Cash Drawer</span> • <span style="color:#059669; font-weight:700;">New</span>
+            </div>
+          </div>
+        </div>
+        <span class="expense-amount-tag">-৳${amt.toLocaleString()}</span>
+      `;
+      list.prepend(newCard);
+      alert(`🧾 Recorded expense: ${title} (-৳${amt})`);
+    }
+
+    function filterExpenses(category) {
+      alert(`Filtering expenses by: ${category}`);
+    }
+
+    function exportExpensesExcel() {
+      alert("📥 Exporting expenses to Excel (.xlsx)... Ready for download!");
+    }
+
+    function updateUI() {
+      const expected = calculateExpected();
+      document.getElementById('valDrawerCash').innerText = `৳${state.drawerCash.toLocaleString()}`;
+      document.getElementById('valCashIn').innerText = `+৳${(state.openingFloat + state.cashIn).toLocaleString()}`;
+      document.getElementById('valCashOut').innerText = `-৳${(state.expenses + state.supplierCash + state.safeDrops).toLocaleString()}`;
+      document.getElementById('valOpeningFloatSub').innerText = `৳${state.openingFloat.toLocaleString()}`;
+      document.getElementById('valMathStartingFloat').innerText = `৳${state.openingFloat.toLocaleString()}`;
+      document.getElementById('valMathCashIn').innerText = `+৳${state.cashIn.toLocaleString()}`;
+      document.getElementById('valMathExpenses').innerText = `−৳${state.expenses.toLocaleString()}`;
+      document.getElementById('valMathExpected').innerText = `৳${expected.toLocaleString()}`;
+      document.getElementById('valTotalExpenses').innerText = `৳${state.totalExpensesToday.toLocaleString()}`;
+      document.getElementById('receiptCountedCash').innerText = `৳${state.drawerCash.toLocaleString()}.00`;
+
+      const diff = state.drawerCash - expected;
+      const diffEl = document.getElementById('receiptDiscrepancy');
+      if (diff === 0) {
+        diffEl.innerText = "৳0.00 (Balanced)";
+        diffEl.style.color = "#059669";
+      } else if (diff > 0) {
+        diffEl.innerText = `+৳${diff.toLocaleString()}.00 (Overage)`;
+        diffEl.style.color = "#D97706";
+      } else {
+        diffEl.innerText = `-৳${Math.abs(diff).toLocaleString()}.00 (Shortage)`;
+        diffEl.style.color = "#E11D48";
+      }
+    }
+
+    // Initial load & scroll reset
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    updateUI();
+    resetScroll();
+    document.addEventListener('DOMContentLoaded', resetScroll);
+    window.addEventListener('load', resetScroll);
+    setTimeout(resetScroll, 50);
+    setTimeout(resetScroll, 200);
+  </script>
+</body>
+</html>

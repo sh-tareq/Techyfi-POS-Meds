@@ -103,5 +103,77 @@ object HardwareBarcodeScanner {
         buffer.clear()
         lastKeyTime = 0L
         mainHandler.removeCallbacks(idleEmitRunnable)
+        burstBuffer.clear()
+        burstCharCount = 0
+        lastBurstTime = 0L
+    }
+
+    private const val SCANNER_BURST_THRESHOLD_MS = 38L
+    private var burstCharCount = 0
+    private val burstBuffer = StringBuilder()
+    private var lastBurstTime = 0L
+
+    /**
+     * Intercepts rapid hardware barcode scanner keystrokes (< 38ms delta) even when an editable
+     * text field currently has focus. This prevents long barcodes from being typed into customer
+     * search, discount, or phone input fields, while preserving normal human typing speed (> 60ms).
+     */
+    fun dispatchKeyEventWithEditorCheck(event: KeyEvent, isEditorFocused: Boolean): Boolean {
+        if (event.action != KeyEvent.ACTION_DOWN) return false
+
+        val now = System.currentTimeMillis()
+        val delta = now - lastBurstTime
+        lastBurstTime = now
+
+        val keyCode = event.keyCode
+        val unicodeChar = event.unicodeChar
+        val isEnter = keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                unicodeChar == '\n'.code || unicodeChar == '\r'.code
+
+        if (!isEditorFocused) {
+            burstBuffer.clear()
+            burstCharCount = 0
+            return dispatchKeyEvent(event)
+        }
+
+        // Editor is focused:
+        if (delta > 120L) {
+            burstBuffer.clear()
+            burstCharCount = 0
+        }
+
+        if (isEnter) {
+            if (burstCharCount >= 3 && burstBuffer.isNotEmpty()) {
+                val scanned = burstBuffer.toString().trim()
+                burstBuffer.clear()
+                burstCharCount = 0
+                if (scanned.isNotBlank()) {
+                    emit(scanned)
+                    return true // Intercept Enter key so editor doesn't submit
+                }
+            }
+            burstBuffer.clear()
+            burstCharCount = 0
+            return false
+        }
+
+        if (unicodeChar > 31 && unicodeChar < 127) {
+            val char = unicodeChar.toChar()
+            if (delta <= SCANNER_BURST_THRESHOLD_MS || burstCharCount == 0) {
+                burstBuffer.append(char)
+                burstCharCount++
+                if (burstCharCount >= 2 && delta <= SCANNER_BURST_THRESHOLD_MS) {
+                    // Confirmed hardware scanner burst: intercept keystroke from being typed into editor
+                    return true
+                }
+            } else {
+                // Human typing pace (> 38ms)
+                burstBuffer.clear()
+                burstCharCount = 0
+                return false
+            }
+        }
+
+        return false
     }
 }

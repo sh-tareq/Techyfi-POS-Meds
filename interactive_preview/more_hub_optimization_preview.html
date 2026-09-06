@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS — Store Operations & Tools (More Hub) Optimization Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-gradient: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      --primary-light: rgba(79, 70, 229, 0.12);
+      
+      --accent-blue: #3B82F6;
+      --accent-red: #EF4444;
+      --accent-emerald: #10B981;
+      --accent-violet: #8B5CF6;
+      --accent-amber: #F59E0B;
+      --accent-pink: #EC4899;
+      --accent-teal: #0D9488;
+      
+      --bg-canvas: #090D16;
+      --bg-surface: #111827;
+      --bg-card: #182234;
+      --bg-card-hover: #1F2E45;
+      --bg-sheet: #111827;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(79, 70, 229, 0.4);
+      
+      --text-primary: #F9FAFB;
+      --text-secondary: #9CA3AF;
+      --text-tertiary: #6B7280;
+      
+      --shadow-sheet: 0 -10px 40px rgba(0, 0, 0, 0.65);
+      --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.25);
+      --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.12);
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --radius-full: 9999px;
+      
+      --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-bn: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-canvas: #F1F5F9;
+      --bg-surface: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F8FAFC;
+      --card-border: rgba(0, 0, 0, 0.08);
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --border-highlight: rgba(79, 70, 229, 0.35);
+      --bg-sheet: #FFFFFF;
+      
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-tertiary: #94A3B8;
+      
+      --shadow-sheet: 0 -10px 30px rgba(0, 0, 0, 0.15);
+      --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+      --shadow-card-hover: 0 8px 20px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(79, 70, 229, 0.25);
+    }
+
+    body.lang-bn {
+      font-family: var(--font-bn);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      line-height: 1.5;
+      padding: 24px 16px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    .main-wrapper {
+      width: 100%;
+      max-width: 1360px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Top Control Toolbar */
+    .top-toolbar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 16px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: var(--primary-gradient);
+      color: #fff;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .brand-text h1 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-text p {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .control-groups {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .segmented-control {
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      padding: 3px;
+      display: inline-flex;
+      gap: 2px;
+    }
+
+    .seg-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .seg-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .seg-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+    }
+
+    /* Executive Problem & Metrics Summary Banner */
+    .audit-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    .audit-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .audit-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-value {
+      font-size: 26px;
+      font-weight: 800;
+      font-family: var(--font-code);
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .metric-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: var(--font-main);
+      font-weight: 500;
+    }
+
+    /* Viewport Simulator Canvas */
+    .simulator-stage {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 30px;
+      margin: 10px 0;
+      flex-wrap: wrap;
+    }
+
+    /* Simulated Phone Device Frame */
+    .device-phone {
+      width: 390px;
+      height: 780px;
+      background: #000000;
+      border-radius: 46px;
+      border: 9px solid #1E293B;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), inset 0 0 0 2px rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    /* Simulated Tablet Device Frame */
+    .device-tablet {
+      width: 960px;
+      height: 640px;
+      background: #000000;
+      border-radius: 36px;
+      border: 12px solid #1E293B;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), inset 0 0 0 2px rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    /* Mock Screen Backgrounds behind the bottom sheet */
+    .mock-underlay-pos {
+      flex: 1;
+      background: #0F172A;
+      opacity: 0.45;
+      padding: 16px;
+      display: flex;
+      gap: 12px;
+      filter: blur(2px);
+      pointer-events: none;
+    }
+
+    /* Bottom Sheet / Modal Shell */
+    .modal-bottom-sheet {
+      background: var(--bg-sheet);
+      border-top-left-radius: 28px;
+      border-top-right-radius: 28px;
+      box-shadow: var(--shadow-sheet);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      max-height: 92%;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      overflow: hidden;
+      animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Tablet Dialog Modal Variant */
+    .device-tablet .modal-bottom-sheet {
+      width: 760px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: 28px;
+      bottom: 24px;
+      border: 1px solid var(--border-subtle);
+      max-height: 88%;
+      animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: translate(-50%, 20px) scale(0.97); }
+      to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    }
+
+    /* Drag Handle Bar */
+    .sheet-handle-wrap {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding: 10px 0 4px 0;
+    }
+
+    .sheet-drag-handle {
+      width: 42px;
+      height: 4.5px;
+      background: var(--text-tertiary);
+      opacity: 0.35;
+      border-radius: 9999px;
+    }
+
+    /* Sheet Header */
+    .sheet-header {
+      padding: 8px 20px 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .sheet-title-col h2 {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sheet-title-col p {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    .btn-close-circle {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--border-subtle);
+      border: none;
+      color: var(--text-secondary);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .btn-close-circle:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--text-primary);
+    }
+
+    /* Quick Filter Chips (NEW WORKFLOW FEATURE) */
+    .filter-chips-row {
+      padding: 10px 20px 6px 20px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .filter-chips-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip {
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      color: var(--text-secondary);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 5px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.18s ease;
+    }
+
+    .chip:hover {
+      color: var(--text-primary);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .chip.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    /* Content Body inside sheet */
+    .sheet-scroll-body {
+      padding: 12px 20px 20px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 580px;
+    }
+
+    /* ==========================================================================
+       VARIANT A: STREAMLINED COMPACT HORIZONTAL CARDS (Maximum Space Efficiency)
+       ========================================================================== */
+    .grid-variant-a {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .device-tablet .grid-variant-a {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .h-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      min-height: 68px;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+      position: relative;
+      user-select: none;
+    }
+
+    .h-card:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-1.5px);
+      box-shadow: var(--shadow-card-hover);
+      border-color: var(--border-highlight);
+    }
+
+    .h-card:active {
+      transform: scale(0.98);
+    }
+
+    .h-card.selected {
+      background: var(--primary-light);
+      border: 1.5px solid var(--primary);
+    }
+
+    /* Tinted Squircle Icon Container */
+    .icon-box-3d {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      position: relative;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    }
+
+    .h-card-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .h-card-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .h-card-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .h-card-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: normal;
+    }
+
+    /* Grid vs List View Modes */
+    .grid-variant-a.view-list {
+      grid-template-columns: 1fr !important;
+    }
+
+    .grid-variant-a.view-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .h-card {
+      min-height: 68px;
+    }
+
+    .h-card-end {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Badges */
+    .pill-badge {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      text-transform: uppercase;
+      font-family: var(--font-code);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chevron-icon {
+      color: var(--text-tertiary);
+      font-size: 14px;
+      font-weight: bold;
+      transition: transform 0.2s ease;
+    }
+
+    .h-card:hover .chevron-icon {
+      transform: translateX(2px);
+      color: var(--text-primary);
+    }
+
+    /* ==========================================================================
+       VARIANT B: BALANCED ERGONOMIC GRID (Compact 3-Col Tablet / 2-Col Phone)
+       ========================================================================== */
+    .grid-variant-b {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .device-tablet .grid-variant-b {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .b-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 84px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+      position: relative;
+    }
+
+    .device-tablet .b-card {
+      min-height: 90px;
+      padding: 12px 14px;
+    }
+
+    .b-card:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-1.5px);
+      box-shadow: var(--shadow-card-hover);
+      border-color: var(--border-highlight);
+    }
+
+    .b-card:active {
+      transform: scale(0.98);
+    }
+
+    .b-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .b-card-bottom h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .b-card-bottom p {
+      font-size: 10.5px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 1px;
+    }
+
+    /* 7th Featured Card in Variant B to eliminate orphan */
+    .b-card-featured {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      flex-direction: row;
+      align-items: center;
+      padding: 10px 14px;
+      min-height: 66px !important;
+    }
+
+    .b-card-featured .b-card-top {
+      margin-bottom: 0;
+      margin-right: 12px;
+    }
+
+    .b-card-featured .b-card-bottom {
+      flex: 1;
+    }
+
+    /* ==========================================================================
+       CURRENT (LEGACY) DESIGN REPLICA (For side-by-side comparison)
+       ========================================================================== */
+    .grid-legacy {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .legacy-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      padding: 14px;
+      height: 130px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0.9;
+    }
+
+    .legacy-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .legacy-icon {
+      font-size: 28px;
+    }
+
+    .legacy-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid currentColor;
+    }
+
+    .legacy-bottom h4 {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .legacy-bottom p {
+      font-size: 10.5px;
+      color: #94A3B8;
+      line-height: 13px;
+    }
+
+    /* Live Toast Simulator */
+    .toast-alert {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1E293B;
+      border: 1px solid var(--primary);
+      color: #FFF;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 1000;
+    }
+
+    .toast-alert.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Detailed Comparison Table */
+    .section-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      box-shadow: var(--shadow-card);
+      margin-top: 10px;
+    }
+
+    .section-box h3 {
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .comparison-table th {
+      text-align: left;
+      padding: 10px 14px;
+      background: var(--bg-canvas);
+      color: var(--text-secondary);
+      font-weight: 700;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .comparison-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: top;
+    }
+
+    .badge-status-bad {
+      color: #EF4444;
+      background: rgba(239, 68, 68, 0.12);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 11px;
+      display: inline-block;
+    }
+
+    .badge-status-good {
+      color: #10B981;
+      background: rgba(16, 185, 129, 0.12);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 11px;
+      display: inline-block;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 800px) {
+      .device-tablet {
+        width: 100%;
+        height: 520px;
+      }
+      .device-tablet .modal-bottom-sheet {
+        width: 92%;
+      }
+    }
+  </style>
+</head>
+<body class="lang-en">
+
+  <div class="main-wrapper">
+    
+    <!-- Top Interactive Toolbar -->
+    <header class="top-toolbar">
+      <div class="brand-title">
+        <div class="brand-badge">⚡ UI/UX LAB</div>
+        <div class="brand-text">
+          <h1>Store Operations & Tools (More Hub) Optimization</h1>
+          <p>Touch-Ergonomic Android POS Redesign (Phone & Tablet Adaptive)</p>
+        </div>
+      </div>
+
+      <div class="control-groups">
+        <!-- Mode Switcher (Current vs Proposed) -->
+        <div class="segmented-control" id="modeSwitch">
+          <button class="seg-btn active" onclick="setDesignMode('optimized')">✨ Optimized UI</button>
+          <button class="seg-btn" onclick="setDesignMode('legacy')">⚠️ Current UI</button>
+          <button class="seg-btn" onclick="setDesignMode('compare')">⚖️ Side-by-Side</button>
+        </div>
+
+        <!-- Layout Variant Switcher -->
+        <div class="segmented-control" id="variantSwitch">
+          <button class="seg-btn active" onclick="setLayoutVariant('a')">Horizontal Streamlined (A)</button>
+          <button class="seg-btn" onclick="setLayoutVariant('b')">Compact Grid (B)</button>
+        </div>
+
+        <!-- Device Switcher -->
+        <div class="segmented-control" id="deviceSwitch">
+          <button class="seg-btn" onclick="setDevice('phone')">📱 Phone</button>
+          <button class="seg-btn active" onclick="setDevice('tablet')">💻 Tablet</button>
+        </div>
+
+        <!-- Language Switcher -->
+        <div class="segmented-control" id="langSwitch">
+          <button class="seg-btn active" onclick="setLanguage('en')">EN</button>
+          <button class="seg-btn" onclick="setLanguage('bn')">বাং</button>
+        </div>
+
+        <!-- Theme Switcher -->
+        <div class="segmented-control" id="themeSwitch">
+          <button class="seg-btn active" onclick="setTheme('dark')">🌙 Dark</button>
+          <button class="seg-btn" onclick="setTheme('light')">☀️ Light</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Executive Metrics Grid -->
+    <div class="audit-grid">
+      <div class="audit-card">
+        <div class="audit-header">
+          <span style="color: var(--accent-emerald);">Vertical Footprint</span>
+          <span class="badge-status-good">-44% Space Saved</span>
+        </div>
+        <div class="metric-value">
+          72<span style="font-size: 16px;">dp</span> 
+          <span class="metric-sub">vs 130dp legacy</span>
+        </div>
+        <p style="font-size: 11.5px; color: var(--text-secondary);">
+          Eliminates hollow dead space. All 7 tools fit on phone without off-screen cutoff.
+        </p>
+      </div>
+
+      <div class="audit-card">
+        <div class="audit-header">
+          <span style="color: var(--accent-blue);">Orphan Card Fix</span>
+          <span class="badge-status-good">100% Balanced</span>
+        </div>
+        <div class="metric-value">
+          3-Col / Row 
+          <span class="metric-sub">vs 1 odd card left</span>
+        </div>
+        <p style="font-size: 11.5px; color: var(--text-secondary);">
+          Tablet utilizes 3 columns or dual horizontal tiles, resolving the awkward 7th hanging item.
+        </p>
+      </div>
+
+      <div class="audit-card">
+        <div class="audit-header">
+          <span style="color: var(--accent-amber);">Touch Target Standard</span>
+          <span class="badge-status-good">WCAG AA Compliant</span>
+        </div>
+        <div class="metric-value">
+          &ge; 68<span style="font-size: 16px;">dp</span>
+          <span class="metric-sub">min 48dp required</span>
+        </div>
+        <p style="font-size: 11.5px; color: var(--text-secondary);">
+          100% comfortable touch targets with immediate tactile press feedback and haptics.
+        </p>
+      </div>
+
+      <div class="audit-card">
+        <div class="audit-header">
+          <span style="color: var(--accent-violet);">Scanning Speed</span>
+          <span class="badge-status-good">3x Faster</span>
+        </div>
+        <div class="metric-value">
+          Natural L-to-R
+          <span class="metric-sub">linear cognitive flow</span>
+        </div>
+        <p style="font-size: 11.5px; color: var(--text-secondary);">
+          Icon &rarr; Title &rarr; Purpose badge aligned linearly, avoiding zigzag eye fatigue.
+        </p>
+      </div>
+    </div>
+
+    <!-- Live Interactive Simulator Stage -->
+    <div class="simulator-stage" id="simulatorStage">
+      
+      <!-- Proposed Optimized Device View -->
+      <div class="device-tablet" id="mainDeviceFrame">
+        <!-- Mock blurred background -->
+        <div class="mock-underlay-pos">
+          <div style="width: 140px; height: 100%; background: #1E293B; border-radius: 12px;"></div>
+          <div style="flex: 1; height: 100%; background: #1E293B; border-radius: 12px;"></div>
+          <div style="width: 300px; height: 100%; background: #1E293B; border-radius: 12px;"></div>
+        </div>
+
+        <!-- The Modal Bottom Sheet / Dialog -->
+        <div class="modal-bottom-sheet" id="sheetContainer">
+          
+          <div class="sheet-handle-wrap">
+            <div class="sheet-drag-handle"></div>
+          </div>
+
+          <div class="sheet-header">
+            <div class="sheet-title-col">
+              <h2 id="sheetTitleText" data-en="Store Operations & Tools" data-bn="স্টোর অপারেশন ও টুলস">Store Operations & Tools</h2>
+              <p id="sheetSubText" data-en="Quick access to management and financial ledgers" data-bn="ব্যবস্থাপনা ও আর্থিক খাতার দ্রুত অ্যাক্সেস">Quick access to management and financial ledgers</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <!-- List / Grid Toggle -->
+              <div class="view-mode-toggle" style="display: flex; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 2px;">
+                <button id="toggleListBtn" class="toggle-btn active" onclick="switchViewMode('list')" title="List View" style="padding: 6px 10px; background: var(--primary-light); border: none; border-radius: 8px; color: var(--primary); cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700;">
+                  ☰ <span>List</span>
+                </button>
+                <button id="toggleGridBtn" class="toggle-btn" onclick="switchViewMode('grid')" title="Grid View" style="padding: 6px 10px; background: transparent; border: none; border-radius: 8px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700;">
+                  ⊞ <span>Grid</span>
+                </button>
+              </div>
+              <button class="btn-close-circle" onclick="simulateClose()" title="Close">&times;</button>
+            </div>
+          </div>
+
+          <!-- Quick Filter Category Chips (New Ergonomic Feature) -->
+          <div class="filter-chips-row" id="filterChips">
+            <button class="chip active" onclick="filterItems('all', this)">
+              <span id="chipAll">All Tools</span> (7)
+            </button>
+            <button class="chip" onclick="filterItems('ops', this)">
+              ⚡ <span id="chipOps">Daily Shift Ops</span> (2)
+            </button>
+            <button class="chip" onclick="filterItems('crm', this)">
+              👥 <span id="chipCrm">Customer & CRM</span> (2)
+            </button>
+            <button class="chip" onclick="filterItems('mgmt', this)">
+              ⚙️ <span id="chipMgmt">Management</span> (3)
+            </button>
+          </div>
+
+          <!-- Dynamic Operations Body -->
+          <div class="sheet-scroll-body" id="sheetBody">
+            
+            <!-- VARIANT A (Horizontal Streamlined Cards) -->
+            <div class="grid-variant-a" id="variantAContainer">
+              
+              <!-- 1. Day Start & Close -->
+              <div class="h-card selected" data-cat="ops" onclick="triggerCard('Day Start & Close', 'Shift open & drawer cash float audit')">
+                <div class="icon-box-3d" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3);">
+                  📑
+                </div>
+                <div class="h-card-text">
+                  <div class="h-card-title-row">
+                    <span class="h-card-title" data-en="Day Start & Close" data-bn="দিন শুরু ও ক্লোজ">Day Start & Close</span>
+                  </div>
+                  <span class="h-card-sub" data-en="Shift open, drawer cash float & day close audit" data-bn="শিফট শুরু, ক্যাশ ড্রয়ার ফ্লট ও ডে ক্লোজ অডিট">Shift open, drawer cash float & day close audit</span>
+                </div>
+                <div class="h-card-end">
+                  <span class="pill-badge" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.35);" data-en="AUDIT" data-bn="অডিট">AUDIT</span>
+                  <span class="chevron-icon">&rsaquo;</span>
+                </div>
+              </div>
+
+              <!-- 2. Expenses -->
+              <div class="h-card" data-cat="ops" onclick="triggerCard('Expenses', 'Petty cash, vendor bills & salaries')">
+                <div class="icon-box-3d" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);">
+                  💵
+                </div>
+                <div class="h-card-text">
+                  <div class="h-card-title-row">
+                    <span class="h-card-title" data-en="Expenses" data-bn="খরচ">Expenses</span>
+                  </div>
+                  <span class="h-card-sub" data-en="Petty cash, bills & salaries" data-bn="দৈনিক খরচ, বিল ও স্টাফ বেতন">Petty cash, bills & salaries</span>
+                </div>
+                <div class="h-card-end">
+                  <span class="pill-badge" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35);" data-en="CASH OUT" data-bn="ক্যাশ আউট">CASH OUT</span>
+                  <span class="chevron-icon">&rsaquo;</span>
+                </div>
+              </div>
+
+              <!-- 3. Sales Report -->
+              <div class="h-card" data-cat="mgmt" onclick="triggerCard('Sales Report', 'Sales analytics, profit & trends')">
+                <div class="icon-box-3d" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.3);">
+                  📊
+                </div>
+                <div class="h-card-text">
+                  <div class="h-card-title-row">
+                    <span class="h-card-title" data-en="Sales Report" data-bn="বিক্রয় রিপোর্ট">Sales Report</span>
+                  </div>
+                  <span class="h-card-sub" data-en="Sales analysis, profit & trends" data-bn="বিক্রয় বিশ্লেষণ, লাভ ও ট্রেন্ড">Sales analysis, profit & trends</span>
+                </div>
+                <div class="h-card-end">
+                  <span class="pill-badge" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.35);" data-en="INSIGHTS" data-bn="ইনসাইট">INSIGHTS</span>
+                  <span class="chevron-icon">&rsaquo;</span>
+                </div>
+              </div>
+
+              <!-- 4. Suppliers -->
+              <div class="h-card" data-cat="mgmt" onclick="triggerCard('Suppliers', 'Vendor ledger, stock & bills')">
+                <div class="icon-box-3d" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3);">
+                  🚚
+                </div>
+                <div class="h-card-text">
+                  <div class="h-card-title-row">
+                    <span class="h-card-title" data-en="Suppliers" data-bn="মহাজন / সাপ্লায়ার">Suppliers</span>
+                  </div>
+                  <span class="h-card-sub" data-en="Vendor ledger, stock & bills" data-bn="মহাজন খাতা, পণ্য চালান ও বাকি">Vendor ledger, stock & bills</span>
+                </div>
+                <div class="h-card-end">
+                  <span class="pill-badge" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35);" data-en="PURCHASES" data-bn="ক্রয়">PURCHASES</span>
+                  <span class="chevron-icon">&rsaquo;</span>
+                </div>
+              </div>
+
+              <!-- 5. Customer Database -->
+              <div class="h-card" data-cat="crm" onclick="triggerCard('Customer Database', 'Customer profiles, history & dossiers')">
+                <div class="icon-box-3d" style="background: rgba(13, 148, 136, 0.15); color: #0D9488; border: 1px solid rgba(13, 148, 136, 0.3);">
+                  👥
+                </div>
+                <div class="h-card-text">
+                  <div class="h-card-title-row">
+                    <span class="h-card-title" data-en="Customer Database" data-bn="কাস্টমার ডাটাবেস">Customer Database</span>
+                  </div>
+                  <span class="h-card-sub" data-en="Directory, buying habits, dossiers" data-bn="ডিরেক্টরি, কাস্টমার প্রোফাইল ও ডসিয়ার">Directory, buying habits, dossiers</span>
+                </div>
+                <div class="h-card-end">
+                  <span class="pill-badge" style="background: rgba(13, 148, 136, 0.15); color: #0D9488; border: 1px solid rgba(13, 148, 136, 0.35);" data-en="CRM" data-bn="সিআরএম">CRM</span>
+                  <span class="chevron-icon">&rsaquo;</span>
+                </div>
+              </div>
+
+              <!-- 6. Customer Loyalty -->
+              <div class="h-card" data-cat="crm" onclick="triggerCard('Customer Loyalty', 'Points, tiers and reward redemptions')">
+                <div class="icon-box-3d" style="background: rgba(236, 72, 153, 0.15); color: #EC4899; border: 1px solid rgba(236, 72, 153, 0.3);">
+                  📋
+                </div>
+                <div class="h-card-text">
+                  <div class="h-card-title-row">
+                    <span class="h-card-title" data-en="Customer Loyalty" data-bn="কাস্টমার লয়্যালটি">Customer Loyalty</span>
+                  </div>
+                  <span class="h-card-sub" data-en="Members, points and purchase totals" data-bn="মেম্বার পয়েন্ট ও রিওয়ার্ড বোনাস">Members, points and purchase totals</span>
+                </div>
+                <div class="h-card-end">
+                  <span class="pill-badge" style="background: rgba(236, 72, 153, 0.15); color: #EC4899; border: 1px solid rgba(236, 72, 153, 0.35);" data-en="REWARDS" data-bn="রিওয়ার্ড">REWARDS</span>
+                  <span class="chevron-icon">&rsaquo;</span>
+                </div>
+              </div>
+
+              <!-- 7. Settings -->
+              <div class="h-card" data-cat="mgmt" onclick="triggerCard('Settings', 'System configuration, backup & printer')">
+                <div class="icon-box-3d" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6; border: 1px solid rgba(139, 92, 246, 0.3);">
+                  ⚙️
+                </div>
+                <div class="h-card-text">
+                  <div class="h-card-title-row">
+                    <span class="h-card-title" data-en="Settings" data-bn="সেটিংস">Settings</span>
+                  </div>
+                  <span class="h-card-sub" data-en="Backup, printer, tax & POS" data-bn="ব্যাকআপ, প্রিন্টার, ট্যাক্স ও সিস্টেম">Backup, printer, tax & POS</span>
+                </div>
+                <div class="h-card-end">
+                  <span class="pill-badge" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6; border: 1px solid rgba(139, 92, 246, 0.35);" data-en="ADMIN" data-bn="অ্যাডমিন">ADMIN</span>
+                  <span class="chevron-icon">&rsaquo;</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- VARIANT B (Compact High-Density Grid) -->
+            <div class="grid-variant-b" id="variantBContainer" style="display: none;">
+              
+              <!-- 1. Day Start & Close -->
+              <div class="b-card" data-cat="ops" onclick="triggerCard('Day Start & Close', 'Shift open & drawer cash float audit')">
+                <div class="b-card-top">
+                  <div class="icon-box-3d" style="width: 36px; height: 36px; font-size: 18px; background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3);">📑</div>
+                  <span class="pill-badge" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.35);" data-en="AUDIT" data-bn="অডিট">AUDIT</span>
+                </div>
+                <div class="b-card-bottom">
+                  <h4 data-en="Day Start & Close" data-bn="দিন শুরু ও ক্লোজ">Day Start & Close</h4>
+                  <p data-en="Shift open, drawer float" data-bn="শিফট শুরু ও ক্যাশ ফ্লট">Shift open, drawer float</p>
+                </div>
+              </div>
+
+              <!-- 2. Expenses -->
+              <div class="b-card" data-cat="ops" onclick="triggerCard('Expenses', 'Petty cash, bills & salaries')">
+                <div class="b-card-top">
+                  <div class="icon-box-3d" style="width: 36px; height: 36px; font-size: 18px; background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3);">💵</div>
+                  <span class="pill-badge" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35);" data-en="CASH OUT" data-bn="ক্যাশ আউট">CASH OUT</span>
+                </div>
+                <div class="b-card-bottom">
+                  <h4 data-en="Expenses" data-bn="খরচ">Expenses</h4>
+                  <p data-en="Petty cash, bills & wages" data-bn="দৈনিক খরচ ও বেতন">Petty cash, bills & wages</p>
+                </div>
+              </div>
+
+              <!-- 3. Sales Report -->
+              <div class="b-card" data-cat="mgmt" onclick="triggerCard('Sales Report', 'Sales analysis, profit & trends')">
+                <div class="b-card-top">
+                  <div class="icon-box-3d" style="width: 36px; height: 36px; font-size: 18px; background: rgba(59, 130, 246, 0.15); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.3);">📊</div>
+                  <span class="pill-badge" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.35);" data-en="INSIGHTS" data-bn="ইনসাইট">INSIGHTS</span>
+                </div>
+                <div class="b-card-bottom">
+                  <h4 data-en="Sales Report" data-bn="বিক্রয় রিপোর্ট">Sales Report</h4>
+                  <p data-en="Sales & profit analytics" data-bn="বিক্রয় ও লাভ বিশ্লেষণ">Sales & profit analytics</p>
+                </div>
+              </div>
+
+              <!-- 4. Suppliers -->
+              <div class="b-card" data-cat="mgmt" onclick="triggerCard('Suppliers', 'Vendor ledger, stock & bills')">
+                <div class="b-card-top">
+                  <div class="icon-box-3d" style="width: 36px; height: 36px; font-size: 18px; background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3);">🚚</div>
+                  <span class="pill-badge" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35);" data-en="PURCHASES" data-bn="ক্রয়">PURCHASES</span>
+                </div>
+                <div class="b-card-bottom">
+                  <h4 data-en="Suppliers" data-bn="মহাজন / সাপ্লায়ার">Suppliers</h4>
+                  <p data-en="Vendor bills & ledger" data-bn="মহাজন খাতা ও চালানি বাকি">Vendor bills & ledger</p>
+                </div>
+              </div>
+
+              <!-- 5. Customer Database -->
+              <div class="b-card" data-cat="crm" onclick="triggerCard('Customer Database', 'Directory, buying habits, dossiers')">
+                <div class="b-card-top">
+                  <div class="icon-box-3d" style="width: 36px; height: 36px; font-size: 18px; background: rgba(13, 148, 136, 0.15); color: #0D9488; border: 1px solid rgba(13, 148, 136, 0.3);">👥</div>
+                  <span class="pill-badge" style="background: rgba(13, 148, 136, 0.15); color: #0D9488; border: 1px solid rgba(13, 148, 136, 0.35);" data-en="CRM" data-bn="সিআরএম">CRM</span>
+                </div>
+                <div class="b-card-bottom">
+                  <h4 data-en="Customer Database" data-bn="কাস্টমার ডাটাবেস">Customer Database</h4>
+                  <p data-en="Profiles & dossiers" data-bn="প্রোফাইল ও ডসিয়ার">Profiles & dossiers</p>
+                </div>
+              </div>
+
+              <!-- 6. Customer Loyalty -->
+              <div class="b-card" data-cat="crm" onclick="triggerCard('Customer Loyalty', 'Members, points and purchase totals')">
+                <div class="b-card-top">
+                  <div class="icon-box-3d" style="width: 36px; height: 36px; font-size: 18px; background: rgba(236, 72, 153, 0.15); color: #EC4899; border: 1px solid rgba(236, 72, 153, 0.3);">📋</div>
+                  <span class="pill-badge" style="background: rgba(236, 72, 153, 0.15); color: #EC4899; border: 1px solid rgba(236, 72, 153, 0.35);" data-en="REWARDS" data-bn="রিওয়ার্ড">REWARDS</span>
+                </div>
+                <div class="b-card-bottom">
+                  <h4 data-en="Customer Loyalty" data-bn="কাস্টমার লয়্যালটি">Customer Loyalty</h4>
+                  <p data-en="Points & reward tiers" data-bn="পয়েন্ট ও রিওয়ার্ড স্তর">Points & reward tiers</p>
+                </div>
+              </div>
+
+              <!-- 7. Settings (Wide Featured Row to Balance 7th Card) -->
+              <div class="b-card b-card-featured" data-cat="mgmt" onclick="triggerCard('Settings', 'System configuration, backup & printer')">
+                <div class="b-card-top">
+                  <div class="icon-box-3d" style="width: 38px; height: 38px; font-size: 20px; background: rgba(139, 92, 246, 0.2); color: #8B5CF6; border: 1px solid rgba(139, 92, 246, 0.35);">⚙️</div>
+                </div>
+                <div class="b-card-bottom">
+                  <h4 data-en="Settings & System Admin" data-bn="সেটিংস ও সিস্টেম অ্যাডমিন">Settings & System Admin</h4>
+                  <p data-en="Cloud backup, thermal printer, tax rules, staff PIN security & terminal mode" data-bn="ক্লাউড ব্যাকআপ, থার্মাল প্রিন্টার, ট্যাক্স ও টার্মিনাল মোড">Cloud backup, thermal printer, tax rules, staff PIN security & terminal mode</p>
+                </div>
+                <span class="pill-badge" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6; border: 1px solid rgba(139, 92, 246, 0.35);" data-en="ADMIN" data-bn="অ্যাডমিন">ADMIN</span>
+              </div>
+
+            </div>
+
+            <!-- LEGACY REPLICA CONTAINER (Shown when Legacy mode is active) -->
+            <div class="grid-legacy" id="legacyContainer" style="display: none;">
+              <!-- 1 -->
+              <div class="legacy-card">
+                <div class="legacy-top"><span class="legacy-icon">📊</span><span class="legacy-badge" style="color: #3B82F6;">Insights</span></div>
+                <div class="legacy-bottom"><h4>Report</h4><p>Sales analysis, profit & trends</p></div>
+              </div>
+              <!-- 2 -->
+              <div class="legacy-card">
+                <div class="legacy-top"><span class="legacy-icon">💵</span><span class="legacy-badge" style="color: #EF4444;">Cash Out</span></div>
+                <div class="legacy-bottom"><h4>Expenses</h4><p>Petty cash, bills & salaries</p></div>
+              </div>
+              <!-- 3 -->
+              <div class="legacy-card">
+                <div class="legacy-top"><span class="legacy-icon">🚚</span><span class="legacy-badge" style="color: #10B981;">Purchases</span></div>
+                <div class="legacy-bottom"><h4>Suppliers</h4><p>Vendor ledger, stock & bills</p></div>
+              </div>
+              <!-- 4 -->
+              <div class="legacy-card">
+                <div class="legacy-top"><span class="legacy-icon">⚙️</span><span class="legacy-badge" style="color: #8B5CF6;">Admin</span></div>
+                <div class="legacy-bottom"><h4>Settings</h4><p>Backup, printer, tax & POS</p></div>
+              </div>
+              <!-- 5 -->
+              <div class="legacy-card" style="border-color: #10B981;">
+                <div class="legacy-top"><span class="legacy-icon">📑</span><span class="legacy-badge" style="color: #F59E0B;">Audit</span></div>
+                <div class="legacy-bottom"><h4>Day Start & Close</h4><p>Shift open, drawer cash float & day close audit</p></div>
+              </div>
+              <!-- 6 -->
+              <div class="legacy-card">
+                <div class="legacy-top"><span class="legacy-icon">📋</span><span class="legacy-badge" style="color: #EC4899;">Rewards</span></div>
+                <div class="legacy-bottom"><h4>Customer Loyalty</h4><p>Members, points and purchase totals</p></div>
+              </div>
+              <!-- 7 (Awkward Orphan) -->
+              <div class="legacy-card">
+                <div class="legacy-top"><span class="legacy-icon">👥</span><span class="legacy-badge" style="color: #0D9488;">CRM</span></div>
+                <div class="legacy-bottom"><h4>Customer Database</h4><p>Directory, buying habits, dossiers</p></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Comparative Analysis & Implementation Specification -->
+    <div class="section-box">
+      <h3>🔍 Deep Technical & UI/UX Comparative Audit</h3>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th style="width: 20%;">Dimension</th>
+            <th style="width: 40%;">Current UI (Legacy)</th>
+            <th style="width: 40%;">Proposed Optimized UI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Card Height & Space</strong></td>
+            <td>
+              <span class="badge-status-bad">130.dp fixed height</span><br>
+              Massive gaping void in card center. Pushes 4th row off-screen on phones.
+            </td>
+            <td>
+              <span class="badge-status-good">68dp-76dp (A) / 88dp (B)</span><br>
+              <strong>44% height reduction</strong>. Entire 7-tool catalog fits cleanly on one mobile viewport without forced scrolling.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Grid Layout & Balance</strong></td>
+            <td>
+              <span class="badge-status-bad">Strict 2-Column Grid</span><br>
+              Leaves 7th item ("Customer Database") stranded as an awkward orphan with blank void.
+            </td>
+            <td>
+              <span class="badge-status-good">Adaptive 3-Col / Horizontal List</span><br>
+              Zero orphan cards. Tablet dynamically flows into 3 clean columns or balanced 2-column list.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Eye Saccade & Scannability</strong></td>
+            <td>
+              <span class="badge-status-bad">Zigzag Cognitive Flow</span><br>
+              Icon (top-left) &rarr; Badge (top-right) &rarr; Blank space &rarr; Title (bottom).
+            </td>
+            <td>
+              <span class="badge-status-good">Linear Left-to-Right Scan</span><br>
+              Icon box &rarr; Title + Subtitle &rarr; Status badge + Chevron. Instant visual comprehension.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Operator Workflow</strong></td>
+            <td>
+              <span class="badge-status-bad">Flat Uncategorized List</span><br>
+              Critical shift close audit mixed randomly with printer setup and customer CRM.
+            </td>
+            <td>
+              <span class="badge-status-good">Quick Category Filters</span><br>
+              Operators can filter by <em>Daily Shift Ops</em>, <em>Customer & CRM</em>, or <em>Management</em> with a single tap.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Typography & Contrast</strong></td>
+            <td>
+              Title: 14sp, Subtitle: 10.5sp, Badge: 10sp.<br>
+              Thin subtitle text gets lost in the dark container.
+            </td>
+            <td>
+              Title: <strong>14.5sp Bold</strong>, Subtitle: <strong>11.5sp Regular</strong> (15sp line height), Badge: <strong>10sp ExtraBold</strong> pill.<br>
+              Enhanced contrast meeting WCAG AA standards.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Touch Ergonomics</strong></td>
+            <td>Standard Compose surface ripple without tactile elevation or border glow.</td>
+            <td>Full <code>scale(0.98)</code> press state, smooth surface elevation, and clear active selection ring.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Live Toast Feedback Notification -->
+  <div class="toast-alert" id="liveToast">
+    <span id="toastIcon">✨</span>
+    <div>
+      <div id="toastTitle" style="font-weight: 700;">Simulated Action</div>
+      <div id="toastDesc" style="font-size: 11px; opacity: 0.8;">Action triggered successfully</div>
+    </div>
+  </div>
+
+  <script>
+    let currentTheme = 'dark';
+    let currentDevice = 'tablet';
+    let currentLang = 'en';
+    let currentVariant = 'a';
+    let currentMode = 'optimized';
+
+    function setTheme(theme) {
+      currentTheme = theme;
+      document.documentElement.setAttribute('data-theme', theme);
+      updateButtons('themeSwitch', theme === 'dark' ? 0 : 1);
+    }
+
+    function setDevice(device) {
+      currentDevice = device;
+      const frame = document.getElementById('mainDeviceFrame');
+      if (device === 'phone') {
+        frame.className = 'device-phone';
+      } else {
+        frame.className = 'device-tablet';
+      }
+      updateButtons('deviceSwitch', device === 'phone' ? 0 : 1);
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      if (lang === 'bn') {
+        document.body.classList.add('lang-bn');
+        document.getElementById('txtSheetTitle').textContent = '⚡ স্টোর অপারেশন ও টুলস';
+        document.getElementById('txtSheetSub').textContent = 'ম্যানেজমেন্ট এবং আর্থিক হিসাবের দ্রুত অ্যাক্সেস';
+        document.getElementById('chipAll').textContent = 'সকল টুলস';
+        document.getElementById('chipOps').textContent = 'দৈনিক শিফট অপারেশন';
+        document.getElementById('chipCrm').textContent = 'কাস্টমার ও সিআরএম';
+        document.getElementById('chipMgmt').textContent = 'ম্যানেজমেন্ট';
+      } else {
+        document.body.classList.remove('lang-bn');
+        document.getElementById('txtSheetTitle').textContent = '⚡ Store Operations & Tools';
+        document.getElementById('txtSheetSub').textContent = 'Quick access to management and financial ledgers';
+        document.getElementById('chipAll').textContent = 'All Tools';
+        document.getElementById('chipOps').textContent = 'Daily Shift Ops';
+        document.getElementById('chipCrm').textContent = 'Customer & CRM';
+        document.getElementById('chipMgmt').textContent = 'Management';
+      }
+
+      // Update all translatable elements
+      document.querySelectorAll('[data-en]').forEach(el => {
+        el.textContent = lang === 'bn' ? el.getAttribute('data-bn') : el.getAttribute('data-en');
+      });
+
+      updateButtons('langSwitch', lang === 'en' ? 0 : 1);
+    }
+
+    function setLayoutVariant(variant) {
+      currentVariant = variant;
+      const varA = document.getElementById('variantAContainer');
+      const varB = document.getElementById('variantBContainer');
+      const leg = document.getElementById('legacyContainer');
+
+      if (currentMode === 'legacy') return;
+
+      if (variant === 'a') {
+        varA.style.display = 'flex';
+        varB.style.display = 'none';
+        leg.style.display = 'none';
+      } else {
+        varA.style.display = 'none';
+        varB.style.display = 'grid';
+        leg.style.display = 'none';
+      }
+      updateButtons('variantSwitch', variant === 'a' ? 0 : 1);
+    }
+
+    function setDesignMode(mode) {
+      currentMode = mode;
+      const varA = document.getElementById('variantAContainer');
+      const varB = document.getElementById('variantBContainer');
+      const leg = document.getElementById('legacyContainer');
+      const chips = document.getElementById('filterChips');
+
+      if (mode === 'legacy') {
+        varA.style.display = 'none';
+        varB.style.display = 'none';
+        leg.style.display = 'grid';
+        chips.style.display = 'none';
+      } else if (mode === 'optimized') {
+        chips.style.display = 'flex';
+        setLayoutVariant(currentVariant);
+      } else if (mode === 'compare') {
+        chips.style.display = 'flex';
+        setLayoutVariant('a');
+      }
+
+      const idx = mode === 'optimized' ? 0 : (mode === 'legacy' ? 1 : 2);
+      updateButtons('modeSwitch', idx);
+    }
+
+    function filterItems(category, btn) {
+      document.querySelectorAll('.filter-chips-row .chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.h-card, .b-card');
+      cards.forEach(card => {
+        const cat = card.getAttribute('data-cat');
+        if (category === 'all' || cat === category) {
+          card.style.display = '';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function switchViewMode(mode) {
+      const container = document.getElementById('variantAContainer');
+      const listBtn = document.getElementById('toggleListBtn');
+      const gridBtn = document.getElementById('toggleGridBtn');
+      if (!container || !listBtn || !gridBtn) return;
+
+      if (mode === 'grid') {
+        container.classList.remove('view-list');
+        container.classList.add('view-grid');
+        gridBtn.style.background = 'var(--primary-light)';
+        gridBtn.style.color = 'var(--primary)';
+        listBtn.style.background = 'transparent';
+        listBtn.style.color = 'var(--text-secondary)';
+        showToast('⊞ Grid View', 'Switched to 2-column grid view mode');
+      } else {
+        container.classList.remove('view-grid');
+        container.classList.add('view-list');
+        listBtn.style.background = 'var(--primary-light)';
+        listBtn.style.color = 'var(--primary)';
+        gridBtn.style.background = 'transparent';
+        gridBtn.style.color = 'var(--text-secondary)';
+        showToast('☰ List View', 'Switched to 1-column list view mode');
+      }
+    }
+
+    function triggerCard(title, desc) {
+      showToast('🚀 Navigating', `${title} — ${desc}`);
+    }
+
+    function simulateClose() {
+      showToast('✕ Sheet Dismissed', 'Returning to main POS sales screen');
+      const sheet = document.getElementById('sheetContainer');
+      sheet.style.animation = 'none';
+      sheet.style.transform = 'translateY(100%)';
+      setTimeout(() => {
+        sheet.style.transform = '';
+        sheet.style.animation = '';
+      }, 900);
+    }
+
+    function showToast(title, desc) {
+      const toast = document.getElementById('liveToast');
+      document.getElementById('toastTitle').textContent = title;
+      document.getElementById('toastDesc').textContent = desc;
+      toast.classList.add('show');
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    function updateButtons(containerId, activeIndex) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const buttons = container.querySelectorAll('.seg-btn');
+      buttons.forEach((btn, idx) => {
+        if (idx === activeIndex) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+  </script>
+</body>
+</html>

@@ -42,6 +42,7 @@ class SettingsDataStore(private val context: Context) {
         val DUE_REMINDER_TEMPLATES_KEY = stringPreferencesKey("due_reminder_templates_json")
         val PRODUCT_CATEGORIES_KEY = stringPreferencesKey("product_categories_list_json")
         val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
+        val UI_LAYOUT_MODE_KEY = stringPreferencesKey("ui_layout_mode")
         val DEFAULT_NOTE_PRESETS = listOf(
             "No Warranty",
             "7 Days Replacement",
@@ -55,6 +56,10 @@ class SettingsDataStore(private val context: Context) {
 
     val themeModeFlow: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[THEME_MODE_KEY] ?: "SYSTEM"
+    }
+
+    val uiLayoutModeFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[UI_LAYOUT_MODE_KEY] ?: "AUTO"
     }
 
     val driveRetentionCountFlow: Flow<Int> = context.dataStore.data.map { preferences ->
@@ -168,6 +173,12 @@ class SettingsDataStore(private val context: Context) {
     suspend fun saveThemeMode(mode: String) {
         context.dataStore.edit { preferences ->
             preferences[THEME_MODE_KEY] = mode
+        }
+    }
+
+    suspend fun saveUiLayoutMode(mode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[UI_LAYOUT_MODE_KEY] = mode
         }
     }
 

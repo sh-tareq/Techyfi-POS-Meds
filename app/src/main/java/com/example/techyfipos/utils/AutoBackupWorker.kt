@@ -134,8 +134,22 @@ class AutoBackupWorker(
                     completedAt?.let { settings.saveLastBackupTimestamp(it) }
                 }
                 when {
-                    driveNeedsUserAuthorization -> Result.retry()
-                    driveFailed -> Result.retry()
+                    driveNeedsUserAuthorization -> {
+                        notifyBackupFailure(
+                            context = context,
+                            title = "Google Drive Reconnect Required",
+                            message = "Google Drive authorization has expired or needs reconnecting. Please open Settings to re-authorize."
+                        )
+                        Result.retry()
+                    }
+                    driveFailed -> {
+                        notifyBackupFailure(
+                            context = context,
+                            title = "Google Drive Auto-Backup Failed",
+                            message = "Automatic backup upload to Google Drive could not complete. Check your connection or Google account."
+                        )
+                        Result.retry()
+                    }
                     else -> Result.success()
                 }
             } finally {
@@ -161,18 +175,18 @@ class AutoBackupWorker(
             }
         )
 
-        // App-specific external storage remains available to the app without
-        // storage permission, even when the UI process is not running.
+        // Ensure external storage does not leak plaintext customer and financial JSON records.
+        // Clean up any legacy unencrypted backup files from external storage.
         context.getExternalFilesDir(null)?.let { root ->
             val externalDir = File(root, BACKUP_FOLDER)
-            if (externalDir.exists() || externalDir.mkdirs()) {
-                source.copyTo(File(externalDir, fileName), overwrite = true)
-                pruneFiles(externalDir.listFiles { _, name -> name.endsWith(".json") })
+            if (externalDir.exists()) {
+                externalDir.listFiles { _, name -> name.endsWith(".json") }?.forEach { it.delete() }
             }
         }
 
-        // Automatic JSON backups contain sales and customer data, so they intentionally remain
-        // in app-private storage. Users can explicitly export a shareable copy from Settings.
+        // Automatic JSON backups contain sensitive customer dues, sales, and profit data.
+        // They remain securely protected in app-private internal storage (context.filesDir).
+        // Users can explicitly export a shareable backup copy from Settings when needed.
     }
 
     private fun pruneFiles(files: Array<File>?) {
@@ -190,6 +204,45 @@ class AutoBackupWorker(
             else -> 1L
         }
         return now - lastBackup >= TimeUnit.DAYS.toMillis(intervalDays)
+    }
+
+    private fun notifyBackupFailure(context: Context, title: String, message: String) {
+        try {
+            val channelId = "techyfi_backup_alerts"
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+                ?: return
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val channel = android.app.NotificationChannel(
+                    channelId,
+                    "Backup Alerts",
+                    android.app.NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Alerts about failed or disconnected backups"
+                }
+                notificationManager.createNotificationChannel(channel)
+            }
+            val intent = android.content.Intent(context, com.example.techyfipos.MainActivity::class.java).apply {
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pendingIntent = android.app.PendingIntent.getActivity(
+                context,
+                0,
+                intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = androidx.core.app.NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(android.R.drawable.stat_notify_error)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(message))
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build()
+            notificationManager.notify(1099, notification)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to post backup alert notification", e)
+        }
     }
 
     private companion object {

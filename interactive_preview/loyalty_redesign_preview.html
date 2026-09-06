@@ -1,0 +1,2975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Techyfi POS — Customer Loyalty Experience Redesign Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0F172A;
+      --surface: #1E293B;
+      --surface-card: #1E293B;
+      --surface-elevated: #334155;
+      --surface-border: rgba(255, 255, 255, 0.08);
+      --surface-border-light: rgba(255, 255, 255, 0.14);
+      
+      --pos-bg: #F8FAFC;
+      --pos-surface: #FFFFFF;
+      --pos-card-border: #E2E8F0;
+      --pos-border-light: #F1F5F9;
+      --pos-text: #0F172A;
+      --pos-text-secondary: #64748B;
+      --pos-text-muted: #94A3B8;
+      
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --primary-light: #EEF2FF;
+      --primary-border: #C7D2FE;
+      
+      --amber: #D97706;
+      --amber-bg: #FEF3C7;
+      --amber-border: #FDE68A;
+      --amber-text: #92400E;
+      
+      --gold: #F59E0B;
+      --gold-bg: #FFFBEB;
+      --gold-border: #FCD34D;
+      --gold-text: #B45309;
+      
+      --emerald: #059669;
+      --emerald-bg: #ECFDF5;
+      --emerald-border: #A7F3D0;
+      --emerald-text: #065F46;
+      
+      --rose: #E11D48;
+      --rose-bg: #FFE4E6;
+      --rose-border: #FECDD3;
+      --rose-text: #9F1239;
+      
+      --purple: #7C3AED;
+      --purple-bg: #F5F3FF;
+      --purple-border: #DDD6FE;
+      --purple-text: #5B21B6;
+      
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-bn: 'Hind Siliguri', sans-serif;
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --radius-full: 9999px;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+      --shadow-3d: 0 8px 20px -4px rgba(79, 70, 229, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: #F8FAFC;
+      font-family: var(--font-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Navigation & Lab Bar */
+    .lab-bar {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 12px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .lab-logo-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .lab-badge-3d {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #4F46E5, #F59E0B);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lab-badge-3d::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.35), transparent);
+    }
+
+    .lab-title-text h1 {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lab-title-text p {
+      font-size: 12px;
+      color: #94A3B8;
+    }
+
+    .lab-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .control-pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-full);
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .control-btn {
+      background: transparent;
+      border: none;
+      color: #94A3B8;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-btn:hover {
+      color: #FFFFFF;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .control-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+    }
+
+    /* Main Container */
+    .lab-workspace {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px 16px 60px;
+      background: radial-gradient(circle at 50% 0%, rgba(79, 70, 229, 0.12) 0%, transparent 60%);
+    }
+
+    /* Android Mockup Frame */
+    .device-shell {
+      width: 412px;
+      max-width: 100%;
+      background: var(--pos-bg);
+      border-radius: 40px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 10px #1E293B, 0 0 0 12px #334155;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .device-shell.tablet {
+      width: 780px;
+      border-radius: 28px;
+    }
+
+    .device-shell.comparison {
+      width: 980px;
+      border-radius: 28px;
+    }
+
+    /* Android Status Bar */
+    .android-status-bar {
+      height: 38px;
+      background: var(--pos-bg);
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--pos-text);
+      user-select: none;
+      z-index: 20;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* App Screen Body */
+    .app-screen {
+      background: var(--pos-bg);
+      min-height: 760px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      color: var(--pos-text);
+      overflow-y: auto;
+      max-height: 840px;
+    }
+
+    /* Top App Bar */
+    .pos-top-bar {
+      background: var(--pos-bg);
+      padding: 10px 16px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      border-bottom: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .pos-top-bar.scrolled {
+      background: rgba(248, 250, 252, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom-color: var(--pos-card-border);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .icon-btn-touch {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-full);
+      background: transparent;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--pos-text);
+      transition: background 0.15s ease;
+    }
+
+    .icon-btn-touch:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .icon-btn-touch:active {
+      background: rgba(0, 0, 0, 0.1);
+      transform: scale(0.96);
+    }
+
+    .screen-header-text h2 {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--pos-text);
+      line-height: 1.2;
+    }
+
+    .screen-header-text .subtitle {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--pos-text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sync-chip {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: var(--radius-full);
+      background: #E0E7FF;
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .top-bar-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Compact KPI Overview Bar */
+    .kpi-section {
+      padding: 6px 16px 12px;
+    }
+
+    .kpi-scroll-container {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(88px, 1fr));
+      gap: 8px;
+    }
+
+    .kpi-item {
+      background: var(--pos-surface);
+      border: 1px solid var(--pos-card-border);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .kpi-item:hover {
+      border-color: var(--primary-border);
+      transform: translateY(-1px);
+    }
+
+    .kpi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--pos-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .kpi-icon-mini {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    .kpi-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--pos-text);
+      font-family: var(--font-mono);
+      letter-spacing: -0.02em;
+    }
+
+    .kpi-sub {
+      font-size: 9.5px;
+      color: var(--pos-text-muted);
+      font-weight: 500;
+    }
+
+    /* Search & Filter Toolbar */
+    .search-filter-dock {
+      padding: 0 16px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .search-input-box {
+      flex: 1;
+      height: 46px;
+      background: var(--pos-surface);
+      border: 1.5px solid var(--pos-card-border);
+      border-radius: var(--radius-lg);
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+    }
+
+    .search-input-box:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    .search-icon {
+      color: var(--pos-text-muted);
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input {
+      flex: 1;
+      height: 100%;
+      border: none;
+      outline: none;
+      font-family: var(--font-main);
+      font-size: 14px;
+      color: var(--pos-text);
+      background: transparent;
+      font-weight: 500;
+    }
+
+    .search-input::placeholder {
+      color: var(--pos-text-muted);
+    }
+
+    .search-clear-btn {
+      background: #E2E8F0;
+      border: none;
+      width: 20px;
+      height: 20px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #64748B;
+      font-size: 11px;
+      visibility: hidden;
+    }
+
+    .search-clear-btn.visible {
+      visibility: visible;
+    }
+
+    .btn-filter-sort {
+      height: 46px;
+      padding: 0 14px;
+      background: var(--pos-surface);
+      border: 1.5px solid var(--pos-card-border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-family: var(--font-main);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--pos-text);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-filter-sort:hover {
+      background: #F1F5F9;
+      border-color: #CBD5E1;
+    }
+
+    .btn-filter-sort.has-filter {
+      background: var(--primary-light);
+      border-color: var(--primary-border);
+      color: var(--primary);
+    }
+
+    /* Active Filter Chips Scroll */
+    .filter-chips-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+
+    .filter-chips-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip-filter {
+      background: var(--pos-surface);
+      border: 1px solid var(--pos-card-border);
+      border-radius: var(--radius-full);
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--pos-text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .chip-filter:hover {
+      background: #F1F5F9;
+      color: var(--pos-text);
+    }
+
+    .chip-filter.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+    }
+
+    /* Compact Customer List */
+    .customer-list-container {
+      padding: 0 16px 90px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .list-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--pos-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Compact Customer Row Item */
+    .customer-row-card {
+      background: var(--pos-surface);
+      border: 1px solid var(--pos-card-border);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+    }
+
+    .customer-row-card:hover {
+      border-color: var(--primary-border);
+      background: #FAFAFC;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      transform: translateY(-1px);
+    }
+
+    .customer-row-card:active {
+      transform: scale(0.99);
+      background: #F1F5F9;
+    }
+
+    .row-main-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* 3D Stylized Avatar */
+    .avatar-badge {
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      position: relative;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+    }
+
+    .avatar-badge.tier-gold {
+      background: linear-gradient(135deg, #FDE68A, #F59E0B);
+      color: #78350F;
+      border: 2px solid #FCD34D;
+    }
+
+    .avatar-badge.tier-silver {
+      background: linear-gradient(135deg, #E2E8F0, #94A3B8);
+      color: #1E293B;
+      border: 2px solid #CBD5E1;
+    }
+
+    .avatar-badge.tier-platinum {
+      background: linear-gradient(135deg, #DDD6FE, #7C3AED);
+      color: #FFFFFF;
+      border: 2px solid #C4B5FD;
+    }
+
+    .avatar-badge.tier-regular {
+      background: linear-gradient(135deg, #E0E7FF, #6366F1);
+      color: #FFFFFF;
+      border: 2px solid #C7D2FE;
+    }
+
+    .avatar-crown-indicator {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 14px;
+      height: 14px;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+    }
+
+    .customer-meta-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .name-tier-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .cust-name {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--pos-text);
+      line-height: 1.25;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+      letter-spacing: -0.01em;
+    }
+
+    .tier-pill-mini {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: var(--radius-full);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .tier-pill-mini.gold {
+      background: var(--gold-bg);
+      color: var(--gold-text);
+      border: 1px solid var(--gold-border);
+    }
+
+    .tier-pill-mini.silver {
+      background: #F1F5F9;
+      color: #475569;
+      border: 1px solid #CBD5E1;
+    }
+
+    .tier-pill-mini.platinum {
+      background: var(--purple-bg);
+      color: var(--purple-text);
+      border: 1px solid var(--purple-border);
+    }
+
+    .tier-pill-mini.regular {
+      background: #F1F5F9;
+      color: #64748B;
+      border: 1px solid #E2E8F0;
+    }
+
+    .phone-spend-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--pos-text-secondary);
+      font-family: var(--font-main);
+    }
+
+    .phone-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--pos-text-secondary);
+    }
+
+    .dot-separator {
+      color: #CBD5E1;
+    }
+
+    .spend-text {
+      color: var(--pos-text-muted);
+      font-weight: 500;
+    }
+
+    .spend-amount {
+      color: var(--pos-text);
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    .row-right-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+    }
+
+    /* 3D Stylized Points Badge */
+    .points-badge-pill {
+      background: linear-gradient(180deg, #FEF3C7 0%, #FDE68A 100%);
+      border: 1px solid #FCD34D;
+      border-radius: var(--radius-md);
+      padding: 4px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      min-width: 68px;
+      box-shadow: 0 1px 3px rgba(245, 158, 11, 0.15);
+      transition: transform 0.15s ease;
+    }
+
+    .customer-row-card:hover .points-badge-pill {
+      transform: scale(1.03);
+    }
+
+    .points-number {
+      font-size: 13px;
+      font-weight: 800;
+      color: #92400E;
+      font-family: var(--font-mono);
+      line-height: 1.1;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .points-number .star-3d {
+      font-size: 11px;
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+    }
+
+    .points-value-taka {
+      font-size: 9px;
+      font-weight: 700;
+      color: #B45309;
+    }
+
+    .btn-overflow-trigger {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-full);
+      background: transparent;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #94A3B8;
+      transition: all 0.15s ease;
+    }
+
+    .btn-overflow-trigger:hover {
+      background: #E2E8F0;
+      color: var(--pos-text);
+    }
+
+    /* Floating Add Member Button */
+    .fab-add-member {
+      position: absolute;
+      bottom: 24px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #4F46E5, #7C3AED);
+      border: none;
+      color: #FFFFFF;
+      box-shadow: 0 10px 25px -3px rgba(79, 70, 229, 0.4), 0 4px 6px -4px rgba(79, 70, 229, 0.3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      z-index: 40;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .fab-add-member:hover {
+      transform: translateY(-3px) scale(1.04);
+      box-shadow: 0 14px 30px -4px rgba(79, 70, 229, 0.5);
+    }
+
+    .fab-add-member:active {
+      transform: scale(0.96);
+    }
+
+    /* Modals & Slide-over Sheets */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 150;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      animation: fadeIn 0.2s ease forwards;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .bottom-sheet {
+      background: #FFFFFF;
+      width: 100%;
+      max-width: 440px;
+      border-radius: 28px 28px 0 0;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.2);
+      max-height: 88vh;
+      overflow-y: auto;
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: #CBD5E1;
+      border-radius: var(--radius-full);
+      margin: 10px auto 4px;
+    }
+
+    .sheet-header {
+      padding: 12px 20px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #F1F5F9;
+    }
+
+    .sheet-title-text h3 {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--pos-text);
+    }
+
+    .sheet-title-text p {
+      font-size: 12px;
+      color: var(--pos-text-secondary);
+    }
+
+    .btn-sheet-close {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-full);
+      background: #F1F5F9;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--pos-text-secondary);
+      font-size: 14px;
+    }
+
+    .sheet-body {
+      padding: 16px 20px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Customer Dossier Tabs */
+    .dossier-nav-tabs {
+      display: flex;
+      background: #F1F5F9;
+      border-radius: var(--radius-md);
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .dossier-tab-btn {
+      flex: 1;
+      padding: 7px 4px;
+      border: none;
+      background: transparent;
+      border-radius: 9px;
+      font-family: var(--font-main);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--pos-text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .dossier-tab-btn.active {
+      background: #FFFFFF;
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .profile-hero-card {
+      background: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%);
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .hero-avatar-large {
+      width: 54px;
+      height: 54px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .hero-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .hero-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--pos-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hero-phone {
+      font-size: 12px;
+      color: var(--pos-text-secondary);
+      font-family: var(--font-mono);
+      margin-top: 1px;
+    }
+
+    .hero-id-tag {
+      font-size: 10px;
+      color: var(--pos-text-muted);
+    }
+
+    /* Primary Profile Actions */
+    .profile-action-deck {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-action-primary {
+      height: 44px;
+      border-radius: var(--radius-md);
+      border: none;
+      font-family: var(--font-main);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-action-primary.redeem {
+      background: linear-gradient(135deg, #059669, #10B981);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-action-primary.redeem:hover {
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-action-primary.adjust {
+      background: linear-gradient(135deg, #4F46E5, #6366F1);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-action-primary.adjust:hover {
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+      transform: translateY(-1px);
+    }
+
+    /* Stat Grid Cards */
+    .stat-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .stat-card-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-box-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--pos-text-secondary);
+      text-transform: uppercase;
+    }
+
+    .stat-box-val {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--pos-text);
+      font-family: var(--font-mono);
+    }
+
+    /* Staff Insights Chips */
+    .insights-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .insight-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      background: #EFF6FF;
+      color: #1D4ED8;
+      border: 1px solid #BFDBFE;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Audit Ledger Items */
+    .ledger-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .ledger-item-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ledger-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .ledger-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--pos-text);
+    }
+
+    .ledger-meta {
+      font-size: 10.5px;
+      color: var(--pos-text-secondary);
+    }
+
+    .ledger-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+
+    .points-change-tag {
+      font-size: 13px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .points-change-tag.positive {
+      color: #059669;
+    }
+
+    .points-change-tag.negative {
+      color: #E11D48;
+    }
+
+    .ledger-balance-audit {
+      font-size: 9.5px;
+      color: var(--pos-text-muted);
+      font-family: var(--font-mono);
+    }
+
+    /* Form Fields in Sheet */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--pos-text);
+    }
+
+    .form-input {
+      height: 44px;
+      background: #F8FAFC;
+      border: 1.5px solid #CBD5E1;
+      border-radius: var(--radius-md);
+      padding: 0 12px;
+      font-family: var(--font-main);
+      font-size: 13.5px;
+      color: var(--pos-text);
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      background: #FFFFFF;
+    }
+
+    /* Duplicate Warning Banner */
+    .duplicate-alert-banner {
+      background: #FEF3C7;
+      border: 1.5px solid #FCD34D;
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .duplicate-alert-banner.active {
+      display: flex;
+    }
+
+    .dup-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dup-icon {
+      font-size: 16px;
+    }
+
+    .dup-text {
+      font-size: 11.5px;
+      color: #92400E;
+      font-weight: 600;
+    }
+
+    .btn-dup-view {
+      padding: 4px 8px;
+      background: #D97706;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* Overflow Menu Dropdown */
+    .overflow-menu-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 12px;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      width: 190px;
+      z-index: 60;
+      display: none;
+      flex-direction: column;
+      padding: 4px 0;
+      animation: fadeIn 0.15s ease;
+    }
+
+    .overflow-menu-dropdown.active {
+      display: flex;
+    }
+
+    .menu-item-btn {
+      background: transparent;
+      border: none;
+      padding: 9px 14px;
+      font-family: var(--font-main);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--pos-text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.1s ease;
+    }
+
+    .menu-item-btn:hover {
+      background: #F1F5F9;
+    }
+
+    .menu-item-btn.danger {
+      color: #E11D48;
+      border-top: 1px solid #F1F5F9;
+    }
+
+    .menu-item-btn.danger:hover {
+      background: #FFE4E6;
+    }
+
+    /* Comparison View Layout */
+    .comparison-wrapper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 16px;
+    }
+
+    .compare-column {
+      background: #FFFFFF;
+      border-radius: var(--radius-lg);
+      border: 1.5px solid #E2E8F0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .compare-header-bar {
+      padding: 12px 16px;
+      border-bottom: 1px solid #E2E8F0;
+      font-size: 13px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .compare-header-bar.current {
+      background: #FFF1F2;
+      color: #BE123C;
+    }
+
+    .compare-header-bar.redesign {
+      background: #ECFDF5;
+      color: #047857;
+    }
+
+    /* Toast Notification */
+    .pos-toast {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(50px);
+      background: #1E293B;
+      color: #FFFFFF;
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .pos-toast.active {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Lab Header & Mode Switcher -->
+  <header class="lab-bar">
+    <div class="lab-logo-group">
+      <div class="lab-badge-3d">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#F59E0B" stroke="#FFFFFF" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="lab-title-text">
+        <h1>Techyfi POS — Customer Loyalty Redesign</h1>
+        <p>Ultra-Compact List View • 360° Profile & Audit Ledger • Instant Points Redemption & Tiers</p>
+      </div>
+    </div>
+
+    <div class="lab-controls">
+      <!-- Device View Modes -->
+      <div class="control-pill">
+        <button class="control-btn active" id="btnModeMobile" onclick="setDeviceMode('mobile')">
+          📱 Phone (412px)
+        </button>
+        <button class="control-btn" id="btnModeTablet" onclick="setDeviceMode('tablet')">
+          📟 Tablet POS (780px)
+        </button>
+        <button class="control-btn" id="btnModeCompare" onclick="setDeviceMode('comparison')">
+          ⚖️ Current vs Redesign
+        </button>
+      </div>
+
+      <!-- Specialized Modules -->
+      <div class="control-pill">
+        <button class="control-btn" onclick="openLoyaltySettingsModal()">
+          ⚙️ Rules & Tiers
+        </button>
+        <button class="control-btn" onclick="openCheckoutSimulationModal()">
+          🛒 Checkout Preview
+        </button>
+      </div>
+
+      <!-- Language Toggle -->
+      <div class="control-pill">
+        <button class="control-btn active" id="btnLangEn" onclick="setLanguage('en')">EN</button>
+        <button class="control-btn" id="btnLangBn" onclick="setLanguage('bn')">বাংলা</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Interactive Workspace -->
+  <main class="lab-workspace">
+
+    <!-- Device Frame Shell -->
+    <div class="device-shell" id="deviceShell">
+      
+      <!-- Android Status Bar -->
+      <div class="android-status-bar">
+        <span id="statusBarClock">06:05</span>
+        <div class="status-icons">
+          <span style="font-size: 11px;">5G</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.25l1.41 1.41 1.63-1.63C9.07 19.26 10.49 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
+          </svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- POS Customer Loyalty Screen -->
+      <div class="app-screen" id="appScreenBody">
+
+        <!-- Screen Top App Bar -->
+        <div class="pos-top-bar" id="posTopBar">
+          <div class="top-bar-left">
+            <button class="icon-btn-touch" title="Back to More Hub">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+            </button>
+            <div class="screen-header-text">
+              <h2 id="txtScreenTitle">Customer Loyalty</h2>
+              <div class="subtitle">
+                <span id="txtMemberCount">8 Members</span>
+                <span class="sync-chip" id="chipSyncStatus" title="Offline-First Room DB: Synced with local POS">
+                  ✓ Synced
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="top-bar-actions">
+            <button class="icon-btn-touch" onclick="openLoyaltySettingsModal()" title="Loyalty Program Settings">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Compact Top KPI Dashboard Bar -->
+        <section class="kpi-section" id="kpiSection">
+          <div class="kpi-scroll-container">
+            <div class="kpi-item">
+              <div class="kpi-header">
+                <span class="kpi-label" id="lblKpiMembers">Members</span>
+                <span class="kpi-icon-mini" style="background:#EEF2FF; color:#4F46E5;">👥</span>
+              </div>
+              <div class="kpi-value" id="valKpiMembers">8</div>
+              <div class="kpi-sub">Total Registered</div>
+            </div>
+
+            <div class="kpi-item">
+              <div class="kpi-header">
+                <span class="kpi-label" id="lblKpiPoints">Outstanding</span>
+                <span class="kpi-icon-mini" style="background:#FEF3C7; color:#D97706;">⭐</span>
+              </div>
+              <div class="kpi-value" id="valKpiPoints">367</div>
+              <div class="kpi-sub">Worth ৳367</div>
+            </div>
+
+            <div class="kpi-item">
+              <div class="kpi-header">
+                <span class="kpi-label" id="lblKpiRedeemed">Redeemed</span>
+                <span class="kpi-icon-mini" style="background:#ECFDF5; color:#059669;">🎁</span>
+              </div>
+              <div class="kpi-value" id="valKpiRedeemed">185</div>
+              <div class="kpi-sub">This Month</div>
+            </div>
+
+            <div class="kpi-item">
+              <div class="kpi-header">
+                <span class="kpi-label" id="lblKpiVip">VIP Tier</span>
+                <span class="kpi-icon-mini" style="background:#FFFBEB; color:#F59E0B;">👑</span>
+              </div>
+              <div class="kpi-value" id="valKpiVip">2</div>
+              <div class="kpi-sub">Gold / Platinum</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Search & Filter Toolbar -->
+        <section class="search-filter-dock">
+          <div class="search-row">
+            <div class="search-input-box">
+              <span class="search-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
+              <input type="text" id="inputSearch" class="search-input" placeholder="Search customer name or phone..." oninput="handleSearchInput(this.value)">
+              <button class="search-clear-btn" id="btnSearchClear" onclick="clearSearch()" title="Clear">✕</button>
+            </div>
+
+            <button class="btn-filter-sort" id="btnFilterSort" onclick="openFilterSortModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="4" y1="21" x2="4" y2="14"></line>
+                <line x1="4" y1="10" x2="4" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12" y2="3"></line>
+                <line x1="20" y1="21" x2="20" y2="16"></line>
+                <line x1="20" y1="12" x2="20" y2="3"></line>
+                <line x1="1" y1="14" x2="7" y2="14"></line>
+                <line x1="9" y1="8" x2="15" y2="8"></line>
+                <line x1="17" y1="16" x2="23" y2="16"></line>
+              </svg>
+              <span id="txtFilterBtn">Sort & Filter</span>
+            </button>
+          </div>
+
+          <!-- Quick Filter Chips Row -->
+          <div class="filter-chips-row" id="filterChipsRow">
+            <div class="chip-filter active" onclick="applyQuickFilter('ALL', this)">All (সব)</div>
+            <div class="chip-filter" onclick="applyQuickFilter('VIP', this)">👑 VIP & Gold</div>
+            <div class="chip-filter" onclick="applyQuickFilter('HAS_POINTS', this)">⭐ With Points (>0)</div>
+            <div class="chip-filter" onclick="applyQuickFilter('ACTIVE', this)">Active (সক্রিয়)</div>
+            <div class="chip-filter" onclick="applyQuickFilter('EXPIRING', this)">⚠️ Expiring Soon</div>
+            <div class="chip-filter" onclick="applyQuickFilter('ZERO_POINTS', this)">0 Points</div>
+          </div>
+        </section>
+
+        <!-- Customer List Container -->
+        <section class="customer-list-container">
+          <div class="list-header-row">
+            <span>Customer Name & Phone</span>
+            <span>Loyalty Points</span>
+          </div>
+
+          <div id="customerListWrapper" style="display: flex; flex-direction: column; gap: 6px;">
+            <!-- Customer rows will be injected dynamically via JS -->
+          </div>
+        </section>
+
+        <!-- Floating Action Button: Add Member -->
+        <button class="fab-add-member" onclick="openAddMemberModal()" title="Register New Loyalty Member">
+          +
+        </button>
+
+        <!-- Toast Component -->
+        <div class="pos-toast" id="posToast">
+          <span id="toastIcon">✓</span>
+          <span id="toastMsg">Points updated successfully</span>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= MODALS & BOTTOM SHEETS ================= -->
+
+  <!-- 1. CUSTOMER 360° LOYALTY PROFILE DOSSIER SHEET -->
+  <div class="modal-overlay" id="modalCustomerProfile" onclick="handleBackdropClick(event, 'modalCustomerProfile')">
+    <div class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="sheet-title-text">
+          <h3 id="dossierName">Customer Profile</h3>
+          <p id="dossierSubtitle">Member since May 2026 • Regular</p>
+        </div>
+        <button class="btn-sheet-close" onclick="closeModal('modalCustomerProfile')">✕</button>
+      </div>
+
+      <div class="sheet-body">
+        <!-- Hero Card -->
+        <div class="profile-hero-card">
+          <div class="hero-avatar-large tier-gold" id="dossierAvatar">SB</div>
+          <div class="hero-details">
+            <div class="hero-name-row">
+              <span class="hero-name" id="dossierHeroName">Shohid Bhai (Liton)</span>
+              <span class="tier-pill-mini gold" id="dossierTierBadge">GOLD</span>
+            </div>
+            <div class="hero-phone" id="dossierHeroPhone">01703820730</div>
+            <div class="hero-id-tag" id="dossierIdTag">ID: #LOY-101 • 14 Invoices</div>
+          </div>
+        </div>
+
+        <!-- Primary Action Deck: Redeem & Adjust -->
+        <div class="profile-action-deck">
+          <button class="btn-action-primary redeem" onclick="openRedeemPointsForActive()">
+            🎁 Redeem Points
+          </button>
+          <button class="btn-action-primary adjust" onclick="openAdjustPointsForActive()">
+            ➕ Add / Adjust
+          </button>
+        </div>
+
+        <!-- Dossier Navigation Tabs -->
+        <div class="dossier-nav-tabs">
+          <button class="dossier-tab-btn active" id="tabBtnSummary" onclick="switchDossierTab('summary')">
+            📊 Summary
+          </button>
+          <button class="dossier-tab-btn" id="tabBtnLedger" onclick="switchDossierTab('ledger')">
+            📜 Points Ledger
+          </button>
+          <button class="dossier-tab-btn" id="tabBtnPurchases" onclick="switchDossierTab('purchases')">
+            🛒 Purchases
+          </button>
+        </div>
+
+        <!-- Tab 1: Summary -->
+        <div id="dossierTabSummary" style="display: flex; flex-direction: column; gap: 12px;">
+          <!-- Points Stat Grid -->
+          <div class="stat-cards-grid">
+            <div class="stat-card-box">
+              <span class="stat-box-label">Available Points</span>
+              <span class="stat-box-val" id="dossierAvailablePts" style="color:#D97706;">83 pts</span>
+              <span style="font-size:10px; color:#059669; font-weight:700;">= ৳83.00 Cash Value</span>
+            </div>
+            <div class="stat-card-box">
+              <span class="stat-box-label">Lifetime Spend</span>
+              <span class="stat-box-val" id="dossierLifetimeSpend">৳8,430</span>
+              <span style="font-size:10px; color:#64748B;">Avg: ৳602 / order</span>
+            </div>
+            <div class="stat-card-box">
+              <span class="stat-box-label">Total Points Earned</span>
+              <span class="stat-box-val" id="dossierEarnedPts" style="color:#4F46E5;">133 pts</span>
+              <span style="font-size:10px; color:#64748B;">Multiplier: 1.5×</span>
+            </div>
+            <div class="stat-card-box">
+              <span class="stat-box-label">Points Redeemed</span>
+              <span class="stat-box-val" id="dossierRedeemedPts" style="color:#059669;">50 pts</span>
+              <span style="font-size:10px; color:#64748B;">৳50 Saved</span>
+            </div>
+          </div>
+
+          <!-- Staff Retail Insights -->
+          <div class="form-group">
+            <span class="form-label">Smart POS Insights</span>
+            <div class="insights-row" id="dossierInsightsRow">
+              <span class="insight-pill">⭐ Frequent Shopper</span>
+              <span class="insight-pill">👑 Top 5% Customer</span>
+              <span class="insight-pill">🛍️ Visits Weekly</span>
+              <span class="insight-pill" style="background:#FEF3C7; color:#B45309; border-color:#FDE68A;">⚠️ 15 pts expire in 20d</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Points Audit Ledger -->
+        <div id="dossierTabLedger" style="display: none; flex-direction: column; gap: 8px;">
+          <div class="ledger-container" id="dossierLedgerList">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Tab 3: Purchase Invoices History -->
+        <div id="dossierTabPurchases" style="display: none; flex-direction: column; gap: 8px;">
+          <div class="ledger-container" id="dossierPurchasesList">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. REDEEM POINTS MODAL -->
+  <div class="modal-overlay" id="modalRedeemPoints" onclick="handleBackdropClick(event, 'modalRedeemPoints')">
+    <div class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="sheet-title-text">
+          <h3>Redeem Loyalty Points</h3>
+          <p id="redeemCustomerName">Shohid Bhai (83 points available)</p>
+        </div>
+        <button class="btn-sheet-close" onclick="closeModal('modalRedeemPoints')">✕</button>
+      </div>
+
+      <div class="sheet-body">
+        <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:12px; padding:12px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:11px; font-weight:700; color:#92400E;">EXCHANGE RATE</div>
+            <div style="font-size:13px; font-weight:800; color:#B45309;">1 Point = ৳1.00 Discount</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px; font-weight:700; color:#92400E;">MAX REDEEMABLE</div>
+            <div style="font-size:16px; font-weight:800; color:#92400E; font-family:var(--font-mono);" id="txtMaxRedeemable">83 Pts</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Points to Redeem</label>
+          <input type="number" class="form-input" id="inputRedeemPoints" value="50" min="1" max="83" oninput="calculateRedemptionValues(this.value)">
+          <div style="display:flex; gap:6px; margin-top:4px;">
+            <button type="button" class="chip-filter" onclick="setRedeemPreset(20)">20 pts (৳20)</button>
+            <button type="button" class="chip-filter" onclick="setRedeemPreset(50)">50 pts (৳50)</button>
+            <button type="button" class="chip-filter" onclick="setRedeemPresetMax()">Max All</button>
+          </div>
+        </div>
+
+        <div style="background:#F1F5F9; border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; justify-content:space-between; font-size:12px;">
+            <span style="color:#64748B;">Discount Applied:</span>
+            <span style="font-weight:800; color:#059669; font-size:14px;" id="txtRedeemDiscountVal">৳50.00</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:12px;">
+            <span style="color:#64748B;">Remaining Balance:</span>
+            <span style="font-weight:700; color:#1E293B;" id="txtRedeemRemainingBal">33 Points</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Invoice Number / Notes (Optional)</label>
+          <input type="text" class="form-input" id="inputRedeemInvoice" placeholder="e.g. #INV-1090">
+        </div>
+
+        <button class="btn-action-primary redeem" style="height:48px; width:100%;" onclick="confirmRedeemPoints()">
+          Confirm Redemption (ডিসকাউন্ট নিশ্চিত করুন)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ADD / ADJUST POINTS MODAL -->
+  <div class="modal-overlay" id="modalAdjustPoints" onclick="handleBackdropClick(event, 'modalAdjustPoints')">
+    <div class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="sheet-title-text">
+          <h3>Add or Adjust Points</h3>
+          <p id="adjustCustomerSubtitle">Manual Ledger Correction</p>
+        </div>
+        <button class="btn-sheet-close" onclick="closeModal('modalAdjustPoints')">✕</button>
+      </div>
+
+      <div class="sheet-body">
+        <div class="form-group">
+          <label class="form-label">Adjustment Type</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <button type="button" id="btnAdjustTypeAdd" class="btn-filter-sort active has-filter" style="justify-content:center;" onclick="setAdjustType('ADD')">
+              ➕ Add Points (+pts)
+            </button>
+            <button type="button" id="btnAdjustTypeDeduct" class="btn-filter-sort" style="justify-content:center;" onclick="setAdjustType('DEDUCT')">
+              ➖ Deduct (-pts)
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Points Amount</label>
+          <input type="number" class="form-input" id="inputAdjustAmount" placeholder="e.g. 15" value="15">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Associated Purchase Spend ৳ (Optional)</label>
+          <input type="number" class="form-input" id="inputAdjustSpend" placeholder="e.g. 1500" value="0">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Audit Reason (বাধ্যতামূলক কারণ)</label>
+          <input type="text" class="form-input" id="inputAdjustReason" placeholder="e.g. Festival promotional bonus, customer courtesy" value="Manager courtesy reward">
+        </div>
+
+        <button class="btn-action-primary adjust" style="height:48px; width:100%;" onclick="confirmAdjustPoints()">
+          Save Adjustment to Ledger
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. ADD NEW MEMBER MODAL (WITH DUPLICATE DETECTION) -->
+  <div class="modal-overlay" id="modalAddMember" onclick="handleBackdropClick(event, 'modalAddMember')">
+    <div class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="sheet-title-text">
+          <h3>New Loyalty Member</h3>
+          <p>Registration takes only 5 seconds</p>
+        </div>
+        <button class="btn-sheet-close" onclick="closeModal('modalAddMember')">✕</button>
+      </div>
+
+      <div class="sheet-body">
+        <!-- Duplicate Warning Banner -->
+        <div class="duplicate-alert-banner" id="duplicateWarning">
+          <div class="dup-left">
+            <span class="dup-icon">⚠️</span>
+            <div class="dup-text" id="dupWarningText">
+              Customer Already Exists: Shohid Bhai (83 pts)
+            </div>
+          </div>
+          <button class="btn-dup-view" onclick="viewDuplicateCustomer()">View Customer</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Phone Number * (মোবাইল নম্বর)</label>
+          <input type="tel" class="form-input" id="inputNewPhone" placeholder="017xxxxxxxx" oninput="handlePhoneInput(this.value)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Customer Name * (গ্রাহকের নাম)</label>
+          <input type="text" class="form-input" id="inputNewName" placeholder="Full name in English or বাংলা">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Membership Tier</label>
+          <select class="form-input" id="selectNewTier">
+            <option value="Regular">Regular (1.0× points)</option>
+            <option value="Silver">Silver (1.25× points)</option>
+            <option value="Gold">Gold VIP (1.5× points)</option>
+            <option value="Platinum">Platinum VIP (2.0× points)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Birthday (Optional — for auto birthday bonus)</label>
+          <input type="date" class="form-input" id="inputNewBirthday">
+        </div>
+
+        <button class="btn-action-primary adjust" style="height:48px; width:100%; margin-top:8px;" onclick="confirmAddMember()">
+          Register Member (সদস্য যুক্ত করুন)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. FILTER & SORT BOTTOM SHEET -->
+  <div class="modal-overlay" id="modalFilterSort" onclick="handleBackdropClick(event, 'modalFilterSort')">
+    <div class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="sheet-title-text">
+          <h3>Sort & Filter Members</h3>
+          <p>Customize customer view</p>
+        </div>
+        <button class="btn-sheet-close" onclick="closeModal('modalFilterSort')">✕</button>
+      </div>
+
+      <div class="sheet-body">
+        <div class="form-group">
+          <label class="form-label">Sort By (সাজানোর ক্রম)</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            <button type="button" class="chip-filter active" id="sortHighestPts" onclick="setSortOption('POINTS_DESC', this)">Highest Points</button>
+            <button type="button" class="chip-filter" id="sortLowestPts" onclick="setSortOption('POINTS_ASC', this)">Lowest Points</button>
+            <button type="button" class="chip-filter" id="sortSpendDesc" onclick="setSortOption('SPEND_DESC', this)">Highest Spend</button>
+            <button type="button" class="chip-filter" id="sortRecentActive" onclick="setSortOption('RECENT_ACTIVE', this)">Recently Active</button>
+            <button type="button" class="chip-filter" id="sortNameAsc" onclick="setSortOption('NAME_ASC', this)">Name A–Z</button>
+            <button type="button" class="chip-filter" id="sortRecentAdded" onclick="setSortOption('RECENT_ADDED', this)">Recently Added</button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:8px;">
+          <label class="form-label">Filter Category (ফিল্টার)</label>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <button type="button" class="chip-filter active" onclick="setFilterOption('ALL', this)">All Customers</button>
+            <button type="button" class="chip-filter" onclick="setFilterOption('VIP', this)">VIP & Gold</button>
+            <button type="button" class="chip-filter" onclick="setFilterOption('HAS_POINTS', this)">With Points (>0)</button>
+            <button type="button" class="chip-filter" onclick="setFilterOption('ZERO_POINTS', this)">Zero Points (=0)</button>
+            <button type="button" class="chip-filter" onclick="setFilterOption('EXPIRING', this)">Expiring Soon (&lt;30d)</button>
+            <button type="button" class="chip-filter" onclick="setFilterOption('INACTIVE', this)">Inactive (&gt;60d)</button>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button type="button" class="btn-filter-sort" style="flex:1; justify-content:center;" onclick="resetFilters()">
+            Reset All
+          </button>
+          <button type="button" class="btn-action-primary adjust" style="flex:2;" onclick="closeModal('modalFilterSort')">
+            Apply Filters (প্রয়োগ করুন)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. LOYALTY RULES & REWARDS SETTINGS MODAL -->
+  <div class="modal-overlay" id="modalLoyaltySettings" onclick="handleBackdropClick(event, 'modalLoyaltySettings')">
+    <div class="bottom-sheet" style="max-width:520px;">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="sheet-title-text">
+          <h3>Loyalty Program Rules & Tiers</h3>
+          <p>Configurable POS Reward Engine</p>
+        </div>
+        <button class="btn-sheet-close" onclick="closeModal('modalLoyaltySettings')">✕</button>
+      </div>
+
+      <div class="sheet-body">
+        <!-- Earning Rules -->
+        <div class="stat-card-box" style="background:#FFFFFF;">
+          <div style="font-size:12px; font-weight:800; color:var(--primary); margin-bottom:4px;">1. POINTS EARNING RULE</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div>
+              <span class="form-label" style="font-size:11px;">Spend Amount</span>
+              <input type="number" class="form-input" value="100" style="height:36px; font-size:13px;">
+            </div>
+            <div>
+              <span class="form-label" style="font-size:11px;">Points Awarded</span>
+              <input type="number" class="form-input" value="1" style="height:36px; font-size:13px;">
+            </div>
+          </div>
+          <div style="font-size:11px; color:#64748B; margin-top:4px;">Formula: ৳100 Spend = 1 Point (Default)</div>
+        </div>
+
+        <!-- Redemption Rules -->
+        <div class="stat-card-box" style="background:#FFFFFF;">
+          <div style="font-size:12px; font-weight:800; color:#059669; margin-bottom:4px;">2. REDEMPTION VALUATION</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div>
+              <span class="form-label" style="font-size:11px;">1 Point Value (৳)</span>
+              <input type="number" class="form-input" value="1.00" step="0.10" style="height:36px; font-size:13px;">
+            </div>
+            <div>
+              <span class="form-label" style="font-size:11px;">Min. Pts to Redeem</span>
+              <input type="number" class="form-input" value="20" style="height:36px; font-size:13px;">
+            </div>
+          </div>
+          <div style="font-size:11px; color:#64748B; margin-top:4px;">Max bill percentage payable with points: 50%</div>
+        </div>
+
+        <!-- Tiers Matrix -->
+        <div class="stat-card-box" style="background:#FFFFFF;">
+          <div style="font-size:12px; font-weight:800; color:#D97706; margin-bottom:4px;">3. MEMBERSHIP TIER MULTIPLIERS</div>
+          <div style="display:flex; flex-direction:column; gap:4px; font-size:12px;">
+            <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #F1F5F9;">
+              <span>Regular Member</span>
+              <span style="font-weight:700; color:#475569;">1.0× Points</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #F1F5F9;">
+              <span>Silver Tier (&gt; ৳3,000 spend)</span>
+              <span style="font-weight:700; color:#0284C7;">1.25× Points</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #F1F5F9;">
+              <span>Gold Tier (&gt; ৳7,500 spend)</span>
+              <span style="font-weight:700; color:#D97706;">1.5× Points</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0;">
+              <span>Platinum VIP (&gt; ৳15,000 spend)</span>
+              <span style="font-weight:700; color:#7C3AED;">2.0× Points</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Catalog Rewards -->
+        <div class="stat-card-box" style="background:#FFFFFF;">
+          <div style="font-size:12px; font-weight:800; color:#7C3AED; margin-bottom:4px;">4. PRE-CONFIGURED REWARDS CATALOG</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11.5px;">
+            <div style="background:#F8FAFC; padding:6px 8px; border-radius:8px; border:1px solid #E2E8F0;">
+              <strong>৳50 Off</strong> — 50 pts
+            </div>
+            <div style="background:#F8FAFC; padding:6px 8px; border-radius:8px; border:1px solid #E2E8F0;">
+              <strong>৳100 Off</strong> — 100 pts
+            </div>
+            <div style="background:#F8FAFC; padding:6px 8px; border-radius:8px; border:1px solid #E2E8F0;">
+              <strong>Free Cold Drink</strong> — 150 pts
+            </div>
+            <div style="background:#F8FAFC; padding:6px 8px; border-radius:8px; border:1px solid #E2E8F0;">
+              <strong>5% Bill Discount</strong> — 200 pts
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-action-primary adjust" style="width:100%;" onclick="saveLoyaltySettings()">
+          Save Program Configuration
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. POS CHECKOUT LOYALTY INTEGRATION PREVIEW -->
+  <div class="modal-overlay" id="modalCheckoutSimulation" onclick="handleBackdropClick(event, 'modalCheckoutSimulation')">
+    <div class="bottom-sheet" style="max-width:480px;">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="sheet-title-text">
+          <h3>POS Sales Checkout Integration</h3>
+          <p>Seamless One-Touch Points at Register</p>
+        </div>
+        <button class="btn-sheet-close" onclick="closeModal('modalCheckoutSimulation')">✕</button>
+      </div>
+
+      <div class="sheet-body">
+        <!-- Cart Summary Card -->
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px;">
+          <div style="font-size:11px; font-weight:700; color:#64748B;">CURRENT SALE #INV-1095</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+            <span style="font-size:14px; font-weight:700;">Cart Subtotal (3 Items):</span>
+            <span style="font-size:16px; font-weight:800; font-family:var(--font-mono);">৳1,500.00</span>
+          </div>
+        </div>
+
+        <!-- Checkout Loyalty Box -->
+        <div style="background:linear-gradient(135deg, #EEF2FF 0%, #FFFBEB 100%); border:1.5px solid #C7D2FE; border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">👑</span>
+              <div>
+                <div style="font-weight:800; font-size:14px; color:#1E293B;">Shohid Bhai (Liton)</div>
+                <div style="font-size:11px; color:#4F46E5; font-weight:600;">83 Points Available (৳83)</div>
+              </div>
+            </div>
+            <span class="tier-pill-mini gold">GOLD 1.5×</span>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; font-size:12px; border-top:1px dashed #CBD5E1; padding-top:8px;">
+            <span style="color:#64748B;">Points to Earn on this sale:</span>
+            <span style="font-weight:800; color:#059669;">+22 Points</span>
+          </div>
+
+          <!-- Quick Redemption Switch in Cart -->
+          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px; padding:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:12.5px; font-weight:700; color:#1E293B;">Redeem 50 Points?</div>
+              <div style="font-size:11px; color:#059669; font-weight:600;">Instant ৳50.00 discount</div>
+            </div>
+            <input type="checkbox" id="chkCheckoutRedeem" checked onchange="toggleCheckoutRedemption(this.checked)" style="width:20px; height:20px; cursor:pointer;">
+          </div>
+        </div>
+
+        <!-- Net Payable Calculation -->
+        <div style="background:#F1F5F9; border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:4px;">
+          <div style="display:flex; justify-content:space-between; font-size:12px;">
+            <span style="color:#64748B;">Subtotal:</span>
+            <span>৳1,500.00</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:#059669;" id="rowCheckoutDiscount">
+            <span>Loyalty Discount (50 pts):</span>
+            <span>-৳50.00</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:800; border-top:1px solid #CBD5E1; padding-top:6px; margin-top:2px;">
+            <span>Net Payable:</span>
+            <span id="txtCheckoutNetPayable" style="color:#0F172A; font-family:var(--font-mono);">৳1,450.00</span>
+          </div>
+          <div style="font-size:10.5px; color:#4F46E5; margin-top:4px; text-align:right;" id="txtBalanceProjection">
+            Balance After Sale: 83 - 50 + 22 = <strong>55 Points</strong>
+          </div>
+        </div>
+
+        <button class="btn-action-primary adjust" style="width:100%; height:48px;" onclick="completeCheckoutSim()">
+          Complete POS Sale (৳1,450)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT ENGINE & INTERACTIVE STATE -->
+  <script>
+    // State Data: Exact sample data from user's attached screenshot + test cases
+    let customers = [
+      {
+        id: "LOY-101",
+        name: "Shohid Bhai ( Liton )",
+        phone: "01703820730",
+        points: 83,
+        lifetimeSpend: 8430,
+        tier: "Gold",
+        totalOrders: 14,
+        lastVisit: "Yesterday",
+        joinedDate: "12 May 2026",
+        isActive: true,
+        expiresInDays: 18,
+        ledger: [
+          { type: "EARNED", points: 12, reason: "Purchase #INV-1082 (৳1,250)", date: "5 Sep 2026 • 2:15 PM", balance: 83 },
+          { type: "REDEEMED", points: -50, reason: "Reward Redeemed (৳50 discount)", date: "28 Aug 2026 • 5:30 PM", balance: 71 },
+          { type: "EARNED", points: 20, reason: "Manual Adjustment (Eid Bonus)", date: "15 Aug 2026 • 11:00 AM", balance: 121 },
+          { type: "EARNED", points: 15, reason: "Purchase #INV-1012 (৳1,500)", date: "2 Aug 2026 • 4:20 PM", balance: 101 }
+        ],
+        purchases: [
+          { invoice: "#INV-1082", date: "5 Sep 2026", items: 4, total: 1250, pts: 12 },
+          { invoice: "#INV-1054", date: "28 Aug 2026", items: 6, total: 2100, pts: 21 },
+          { invoice: "#INV-1012", date: "2 Aug 2026", items: 3, total: 1500, pts: 15 }
+        ]
+      },
+      {
+        id: "LOY-102",
+        name: "Monowar Abhawa Office",
+        phone: "01716947415",
+        points: 63,
+        lifetimeSpend: 6445,
+        tier: "Silver",
+        totalOrders: 9,
+        lastVisit: "3 days ago",
+        joinedDate: "18 Jun 2026",
+        isActive: true,
+        expiresInDays: 90,
+        ledger: [
+          { type: "EARNED", points: 18, reason: "Purchase #INV-1070 (৳1,440)", date: "2 Sep 2026 • 1:10 PM", balance: 63 },
+          { type: "EARNED", points: 25, reason: "Purchase #INV-1031 (৳2,000)", date: "14 Aug 2026 • 3:45 PM", balance: 45 }
+        ],
+        purchases: [
+          { invoice: "#INV-1070", date: "2 Sep 2026", items: 5, total: 1440, pts: 18 },
+          { invoice: "#INV-1031", date: "14 Aug 2026", items: 7, total: 2000, pts: 25 }
+        ]
+      },
+      {
+        id: "LOY-103",
+        name: "ARIF KHAN",
+        phone: "01919207715",
+        points: 37,
+        lifetimeSpend: 3710,
+        tier: "Silver",
+        totalOrders: 6,
+        lastVisit: "1 week ago",
+        joinedDate: "2 Jul 2026",
+        isActive: true,
+        expiresInDays: 120,
+        ledger: [
+          { type: "EARNED", points: 10, reason: "Purchase #INV-1061 (৳800)", date: "28 Aug 2026", balance: 37 }
+        ],
+        purchases: [
+          { invoice: "#INV-1061", date: "28 Aug 2026", items: 2, total: 800, pts: 10 }
+        ]
+      },
+      {
+        id: "LOY-104",
+        name: "Arafat",
+        phone: "01670492978",
+        points: 26,
+        lifetimeSpend: 2875,
+        tier: "Regular",
+        totalOrders: 5,
+        lastVisit: "2 weeks ago",
+        joinedDate: "10 Jul 2026",
+        isActive: true,
+        expiresInDays: 140,
+        ledger: [
+          { type: "EARNED", points: 8, reason: "Purchase #INV-1042 (৳800)", date: "20 Aug 2026", balance: 26 }
+        ],
+        purchases: [
+          { invoice: "#INV-1042", date: "20 Aug 2026", items: 3, total: 800, pts: 8 }
+        ]
+      },
+      {
+        id: "LOY-105",
+        name: "মাদ্রাসা",
+        phone: "01916183356",
+        points: 11,
+        lifetimeSpend: 1150,
+        tier: "Regular",
+        totalOrders: 2,
+        lastVisit: "1 month ago",
+        joinedDate: "1 Aug 2026",
+        isActive: false,
+        expiresInDays: 180,
+        ledger: [
+          { type: "EARNED", points: 11, reason: "Purchase #INV-1010 (৳1,150)", date: "1 Aug 2026", balance: 11 }
+        ],
+        purchases: [
+          { invoice: "#INV-1010", date: "1 Aug 2026", items: 4, total: 1150, pts: 11 }
+        ]
+      },
+      {
+        id: "LOY-106",
+        name: "সাজু ভাই ফুড সেন্টার তালতলা",
+        phone: "01673636980",
+        points: 2,
+        lifetimeSpend: 450,
+        tier: "Regular",
+        totalOrders: 1,
+        lastVisit: "45 days ago",
+        joinedDate: "20 Jul 2026",
+        isActive: false,
+        expiresInDays: 200,
+        ledger: [
+          { type: "EARNED", points: 2, reason: "Purchase #INV-1015 (৳450)", date: "20 Jul 2026", balance: 2 }
+        ],
+        purchases: [
+          { invoice: "#INV-1015", date: "20 Jul 2026", items: 2, total: 450, pts: 2 }
+        ]
+      },
+      {
+        id: "LOY-107",
+        name: "Tariqul Islam (Corporate)",
+        phone: "01711223344",
+        points: 145,
+        lifetimeSpend: 18900,
+        tier: "Platinum",
+        totalOrders: 22,
+        lastVisit: "Today",
+        joinedDate: "15 Jan 2026",
+        isActive: true,
+        expiresInDays: 12,
+        ledger: [
+          { type: "EARNED", points: 40, reason: "Purchase #INV-1091 (৳2,000) Platinum 2×", date: "Today 10:30 AM", balance: 145 }
+        ],
+        purchases: [
+          { invoice: "#INV-1091", date: "Today", items: 10, total: 2000, pts: 40 }
+        ]
+      },
+      {
+        id: "LOY-108",
+        name: "Kamrul Hasan",
+        phone: "01819283746",
+        points: 0,
+        lifetimeSpend: 850,
+        tier: "Regular",
+        totalOrders: 1,
+        lastVisit: "3 months ago",
+        joinedDate: "2 Feb 2026",
+        isActive: false,
+        expiresInDays: 0,
+        ledger: [
+          { type: "REDEEMED", points: -8, reason: "Points Expired (Inactivity)", date: "1 Aug 2026", balance: 0 }
+        ],
+        purchases: [
+          { invoice: "#INV-990", date: "2 Feb 2026", items: 1, total: 850, pts: 8 }
+        ]
+      }
+    ];
+
+    let currentLanguage = 'en';
+    let currentFilter = 'ALL';
+    let currentSort = 'POINTS_DESC';
+    let searchQuery = '';
+    let selectedCustomer = customers[0];
+    let activeAdjustType = 'ADD';
+
+    // Init
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCustomerList();
+      updateKpis();
+
+      // URL Parameter Inspector for Direct State Inspection
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('lang') === 'bn') setLanguage('bn');
+      if (params.get('mode')) setDeviceMode(params.get('mode'));
+      if (params.get('filter')) applyQuickFilter(params.get('filter'));
+      if (params.get('q')) {
+        document.getElementById('inputSearch').value = params.get('q');
+        handleSearchInput(params.get('q'));
+      }
+
+      const view = params.get('view');
+      const phone = params.get('phone') || '01703820730';
+
+      if (view === 'profile') {
+        openCustomerProfile(phone);
+        if (params.get('tab')) switchDossierTab(params.get('tab'));
+      } else if (view === 'redeem') {
+        openRedeemPointsDirect(phone);
+      } else if (view === 'adjust') {
+        openAdjustPointsDirect(phone, params.get('type') || 'ADD');
+      } else if (view === 'add') {
+        openAddMemberModal();
+        if (params.get('phone')) {
+          document.getElementById('inputNewPhone').value = params.get('phone');
+          handlePhoneInput(params.get('phone'));
+        }
+      } else if (view === 'settings') {
+        openLoyaltySettingsModal();
+      } else if (view === 'checkout') {
+        openCheckoutSimulationModal();
+      } else if (view === 'compare') {
+        setDeviceMode('comparison');
+      }
+    });
+
+    // Update KPI bar numbers
+    function updateKpis() {
+      const totalMembers = customers.length;
+      const totalPts = customers.reduce((acc, c) => acc + c.points, 0);
+      const vipCount = customers.filter(c => c.tier === 'Gold' || c.tier === 'Platinum').length;
+      
+      document.getElementById('txtMemberCount').innerText = `${totalMembers} Members`;
+      document.getElementById('valKpiMembers').innerText = totalMembers;
+      document.getElementById('valKpiPoints').innerText = totalPts;
+      document.getElementById('valKpiVip').innerText = vipCount;
+    }
+
+    // Render Compact Customer List
+    function renderCustomerList() {
+      const container = document.getElementById('customerListWrapper');
+      container.innerHTML = '';
+
+      let list = customers.filter(c => {
+        // Search
+        if (searchQuery.trim() !== '') {
+          const q = searchQuery.toLowerCase();
+          const matchName = c.name.toLowerCase().includes(q);
+          const matchPhone = c.phone.includes(q);
+          if (!matchName && !matchPhone) return false;
+        }
+
+        // Filter
+        if (currentFilter === 'VIP') return c.tier === 'Gold' || c.tier === 'Platinum';
+        if (currentFilter === 'HAS_POINTS') return c.points > 0;
+        if (currentFilter === 'ZERO_POINTS') return c.points === 0;
+        if (currentFilter === 'ACTIVE') return c.isActive;
+        if (currentFilter === 'EXPIRING') return c.expiresInDays > 0 && c.expiresInDays <= 30;
+        if (currentFilter === 'INACTIVE') return !c.isActive;
+
+        return true;
+      });
+
+      // Sort
+      list.sort((a, b) => {
+        if (currentSort === 'POINTS_DESC') return b.points - a.points;
+        if (currentSort === 'POINTS_ASC') return a.points - b.points;
+        if (currentSort === 'SPEND_DESC') return b.lifetimeSpend - a.lifetimeSpend;
+        if (currentSort === 'NAME_ASC') return a.name.localeCompare(b.name);
+        return 0;
+      });
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:30px 20px; text-align:center;">
+            <div style="font-size:32px; margin-bottom:6px;">🔍</div>
+            <div style="font-weight:700; color:#1E293B;">No loyalty members found</div>
+            <div style="font-size:12px; color:#64748B; margin-top:2px;">Try adjusting your search query or filter chips</div>
+          </div>
+        `;
+        return;
+      }
+
+      list.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'customer-row-card';
+        row.onclick = (e) => {
+          if (!e.target.closest('.btn-overflow-trigger') && !e.target.closest('.overflow-menu-dropdown')) {
+            openCustomerProfile(c.phone);
+          }
+        };
+
+        const tierClass = c.tier.toLowerCase();
+        const initials = c.name.trim().split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+        row.innerHTML = `
+          <div class="row-main-group">
+            <div class="avatar-badge tier-${tierClass}">
+              ${initials}
+              ${c.tier === 'Gold' || c.tier === 'Platinum' ? '<span class="avatar-crown-indicator">👑</span>' : ''}
+            </div>
+            <div class="customer-meta-col">
+              <div class="name-tier-line">
+                <span class="cust-name">${c.name}</span>
+              </div>
+              <div class="phone-spend-line">
+                <span class="tier-pill-mini ${tierClass}">${c.tier}</span>
+                <span class="phone-text">${c.phone}</span>
+                <span class="dot-separator">•</span>
+                <span class="spend-text">৳${c.lifetimeSpend.toLocaleString()} spent</span>
+                ${c.expiresInDays > 0 && c.expiresInDays <= 20 ? `<span style="font-size:9.5px; color:#D97706; font-weight:700;" title="Points expiring in ${c.expiresInDays} days">⏳ ${c.expiresInDays}d</span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="row-right-group">
+            <div class="points-badge-pill">
+              <div class="points-number">
+                <span class="star-3d">⭐</span>
+                <span>${c.points}</span>
+              </div>
+              <span class="points-value-taka">৳${c.points} val</span>
+            </div>
+
+            <button class="btn-overflow-trigger" onclick="toggleRowOverflow(event, '${c.phone}')" title="Actions">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="6" r="1.8"/>
+                <circle cx="12" cy="12" r="1.8"/>
+                <circle cx="12" cy="18" r="1.8"/>
+              </svg>
+            </button>
+
+            <!-- Overflow dropdown for this row -->
+            <div class="overflow-menu-dropdown" id="menu-${c.phone}">
+              <button class="menu-item-btn" onclick="openCustomerProfile('${c.phone}')">👤 View Customer</button>
+              <button class="menu-item-btn" onclick="openAdjustPointsDirect('${c.phone}', 'ADD')">➕ Add Points</button>
+              <button class="menu-item-btn" onclick="openRedeemPointsDirect('${c.phone}')">🎁 Redeem Points</button>
+              <button class="menu-item-btn" onclick="openAdjustPointsDirect('${c.phone}', 'DEDUCT')">⚙️ Adjust Points</button>
+              <button class="menu-item-btn" onclick="openCustomerProfileWithTab('${c.phone}', 'purchases')">📜 Purchase History</button>
+              <button class="menu-item-btn" onclick="callCustomer('${c.phone}')">📞 Call Customer</button>
+              <button class="menu-item-btn danger" onclick="confirmDeleteMember('${c.phone}')">🗑️ Delete Member</button>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(row);
+      });
+    }
+
+    // Toggle 3-dot overflow menu
+    function toggleRowOverflow(e, phone) {
+      e.stopPropagation();
+      const allMenus = document.querySelectorAll('.overflow-menu-dropdown');
+      allMenus.forEach(m => {
+        if (m.id !== `menu-${phone}`) m.classList.remove('active');
+      });
+      const target = document.getElementById(`menu-${phone}`);
+      if (target) target.classList.toggle('active');
+    }
+
+    // Close any open menus when clicking anywhere
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.btn-overflow-trigger')) {
+        document.querySelectorAll('.overflow-menu-dropdown').forEach(m => m.classList.remove('active'));
+      }
+    });
+
+    // Search Input handling
+    function handleSearchInput(val) {
+      searchQuery = val;
+      const clearBtn = document.getElementById('btnSearchClear');
+      if (val.trim().length > 0) {
+        clearBtn.classList.add('visible');
+      } else {
+        clearBtn.classList.remove('visible');
+      }
+      renderCustomerList();
+    }
+
+    function clearSearch() {
+      document.getElementById('inputSearch').value = '';
+      handleSearchInput('');
+    }
+
+    // Filter Chips handling
+    function applyQuickFilter(filterType, elem) {
+      currentFilter = filterType;
+      document.querySelectorAll('.chip-filter').forEach(c => c.classList.remove('active'));
+      if (elem) elem.classList.add('active');
+      renderCustomerList();
+    }
+
+    // Customer Profile Modal Opening
+    function openCustomerProfile(phone) {
+      const c = customers.find(x => x.phone === phone);
+      if (!c) return;
+      selectedCustomer = c;
+
+      document.getElementById('dossierName').innerText = c.name;
+      document.getElementById('dossierSubtitle').innerText = `Member since ${c.joinedDate} • ${c.tier}`;
+      document.getElementById('dossierHeroName').innerText = c.name;
+      document.getElementById('dossierHeroPhone').innerText = c.phone;
+      document.getElementById('dossierIdTag').innerText = `ID: #${c.id} • ${c.totalOrders} Invoices`;
+      document.getElementById('dossierTierBadge').innerText = c.tier.toUpperCase();
+      document.getElementById('dossierTierBadge').className = `tier-pill-mini ${c.tier.toLowerCase()}`;
+      
+      const initials = c.name.trim().split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+      const avatarEl = document.getElementById('dossierAvatar');
+      avatarEl.innerText = initials;
+      avatarEl.className = `hero-avatar-large tier-${c.tier.toLowerCase()}`;
+
+      // Stats
+      document.getElementById('dossierAvailablePts').innerText = `${c.points} pts`;
+      document.getElementById('dossierLifetimeSpend').innerText = `৳${c.lifetimeSpend.toLocaleString()}`;
+      document.getElementById('dossierEarnedPts').innerText = `${c.points + 50} pts`;
+      document.getElementById('dossierRedeemedPts').innerText = `50 pts`;
+
+      // Render Ledger
+      renderLedger(c);
+
+      // Render Purchases
+      renderPurchases(c);
+
+      // Reset to Summary Tab
+      switchDossierTab('summary');
+
+      openModal('modalCustomerProfile');
+    }
+
+    function openCustomerProfileWithTab(phone, tab) {
+      openCustomerProfile(phone);
+      switchDossierTab(tab);
+    }
+
+    function switchDossierTab(tab) {
+      document.getElementById('dossierTabSummary').style.display = tab === 'summary' ? 'flex' : 'none';
+      document.getElementById('dossierTabLedger').style.display = tab === 'ledger' ? 'flex' : 'none';
+      document.getElementById('dossierTabPurchases').style.display = tab === 'purchases' ? 'flex' : 'none';
+
+      document.getElementById('tabBtnSummary').classList.toggle('active', tab === 'summary');
+      document.getElementById('tabBtnLedger').classList.toggle('active', tab === 'ledger');
+      document.getElementById('tabBtnPurchases').classList.toggle('active', tab === 'purchases');
+    }
+
+    function renderLedger(c) {
+      const container = document.getElementById('dossierLedgerList');
+      container.innerHTML = '';
+      if (!c.ledger || c.ledger.length === 0) {
+        container.innerHTML = '<div style="font-size:12px; color:#64748B; text-align:center; padding:16px;">No loyalty transactions recorded yet.</div>';
+        return;
+      }
+      c.ledger.forEach(item => {
+        const isPos = item.type === 'EARNED';
+        const card = document.createElement('div');
+        card.className = 'ledger-item-card';
+        card.innerHTML = `
+          <div class="ledger-left">
+            <span class="ledger-title">${item.reason}</span>
+            <span class="ledger-meta">${item.date}</span>
+          </div>
+          <div class="ledger-right">
+            <span class="points-change-tag ${isPos ? 'positive' : 'negative'}">
+              ${isPos ? '+' : ''}${item.points} Pts
+            </span>
+            <span class="ledger-balance-audit">Bal: ${item.balance}</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderPurchases(c) {
+      const container = document.getElementById('dossierPurchasesList');
+      container.innerHTML = '';
+      if (!c.purchases || c.purchases.length === 0) {
+        container.innerHTML = '<div style="font-size:12px; color:#64748B; text-align:center; padding:16px;">No past purchase invoices found.</div>';
+        return;
+      }
+      c.purchases.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'ledger-item-card';
+        card.innerHTML = `
+          <div class="ledger-left">
+            <span class="ledger-title">${p.invoice} (${p.items} items)</span>
+            <span class="ledger-meta">${p.date} • Paid via Cash</span>
+          </div>
+          <div class="ledger-right">
+            <span style="font-size:13px; font-weight:800; font-family:var(--font-mono); color:#0F172A;">৳${p.total.toLocaleString()}</span>
+            <span style="font-size:10px; color:#059669; font-weight:700;">+${p.pts} Pts Earned</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Modal Control Helpers
+    function openModal(id) {
+      document.getElementById(id).classList.add('active');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function handleBackdropClick(e, id) {
+      if (e.target.id === id) closeModal(id);
+    }
+
+    // Open Redeem Direct
+    function openRedeemPointsDirect(phone) {
+      const c = customers.find(x => x.phone === phone);
+      if (!c) return;
+      selectedCustomer = c;
+      openRedeemPointsForActive();
+    }
+
+    function openRedeemPointsForActive() {
+      closeModal('modalCustomerProfile');
+      document.getElementById('redeemCustomerName').innerText = `${selectedCustomer.name} (${selectedCustomer.points} pts available)`;
+      document.getElementById('txtMaxRedeemable').innerText = `${selectedCustomer.points} Pts`;
+      const input = document.getElementById('inputRedeemPoints');
+      input.max = selectedCustomer.points;
+      input.value = Math.min(50, selectedCustomer.points);
+      calculateRedemptionValues(input.value);
+      openModal('modalRedeemPoints');
+    }
+
+    function calculateRedemptionValues(val) {
+      const pts = parseInt(val) || 0;
+      const discount = pts * 1.0;
+      const remaining = Math.max(0, selectedCustomer.points - pts);
+      document.getElementById('txtRedeemDiscountVal').innerText = `৳${discount.toFixed(2)}`;
+      document.getElementById('txtRedeemRemainingBal').innerText = `${remaining} Points`;
+    }
+
+    function setRedeemPreset(pts) {
+      const target = Math.min(pts, selectedCustomer.points);
+      document.getElementById('inputRedeemPoints').value = target;
+      calculateRedemptionValues(target);
+    }
+
+    function setRedeemPresetMax() {
+      setRedeemPreset(selectedCustomer.points);
+    }
+
+    function confirmRedeemPoints() {
+      const pts = parseInt(document.getElementById('inputRedeemPoints').value) || 0;
+      if (pts <= 0 || pts > selectedCustomer.points) {
+        showToast('⚠️ Invalid redemption amount', 'error');
+        return;
+      }
+      selectedCustomer.points -= pts;
+      selectedCustomer.ledger.unshift({
+        type: "REDEEMED",
+        points: -pts,
+        reason: `Reward Redeemed (৳${pts} discount)`,
+        date: "Just Now • Cashier Liton",
+        balance: selectedCustomer.points
+      });
+      closeModal('modalRedeemPoints');
+      renderCustomerList();
+      updateKpis();
+      showToast(`🎉 ৳${pts}.00 discount applied! Remaining: ${selectedCustomer.points} pts`);
+    }
+
+    // Open Adjust Direct
+    function openAdjustPointsDirect(phone, type) {
+      const c = customers.find(x => x.phone === phone);
+      if (!c) return;
+      selectedCustomer = c;
+      setAdjustType(type);
+      openAdjustPointsForActive();
+    }
+
+    function openAdjustPointsForActive() {
+      closeModal('modalCustomerProfile');
+      document.getElementById('adjustCustomerSubtitle').innerText = `${selectedCustomer.name} • Current: ${selectedCustomer.points} pts`;
+      openModal('modalAdjustPoints');
+    }
+
+    function setAdjustType(type) {
+      activeAdjustType = type;
+      document.getElementById('btnAdjustTypeAdd').className = `btn-filter-sort ${type === 'ADD' ? 'active has-filter' : ''}`;
+      document.getElementById('btnAdjustTypeDeduct').className = `btn-filter-sort ${type === 'DEDUCT' ? 'active has-filter' : ''}`;
+    }
+
+    function confirmAdjustPoints() {
+      const amount = parseInt(document.getElementById('inputAdjustAmount').value) || 0;
+      const reason = document.getElementById('inputAdjustReason').value.trim() || 'Manual adjustment';
+      if (amount <= 0) {
+        showToast('⚠️ Please enter a valid point amount', 'error');
+        return;
+      }
+
+      const delta = activeAdjustType === 'ADD' ? amount : -amount;
+      if (selectedCustomer.points + delta < 0) {
+        showToast('⚠️ Cannot deduct more points than customer balance', 'error');
+        return;
+      }
+
+      selectedCustomer.points += delta;
+      selectedCustomer.ledger.unshift({
+        type: delta >= 0 ? "EARNED" : "REDEEMED",
+        points: delta,
+        reason: `Manual Correction: ${reason}`,
+        date: "Just Now • Admin",
+        balance: selectedCustomer.points
+      });
+
+      closeModal('modalAdjustPoints');
+      renderCustomerList();
+      updateKpis();
+      showToast(`✓ Ledger updated: ${delta >= 0 ? '+' : ''}${delta} Points (${selectedCustomer.name})`);
+    }
+
+    // New Member Registration with Duplicate Phone Protection
+    function openAddMemberModal() {
+      document.getElementById('inputNewPhone').value = '';
+      document.getElementById('inputNewName').value = '';
+      document.getElementById('duplicateWarning').classList.remove('active');
+      openModal('modalAddMember');
+    }
+
+    let duplicateFound = null;
+
+    function handlePhoneInput(phone) {
+      const clean = phone.trim().replace(/\D/g, '');
+      duplicateFound = customers.find(c => c.phone.replace(/\D/g, '') === clean && clean.length >= 10);
+      const banner = document.getElementById('duplicateWarning');
+      if (duplicateFound) {
+        document.getElementById('dupWarningText').innerText = `⚠️ Customer Already Exists: ${duplicateFound.name} (${duplicateFound.points} pts)`;
+        banner.classList.add('active');
+      } else {
+        banner.classList.remove('active');
+      }
+    }
+
+    function viewDuplicateCustomer() {
+      if (duplicateFound) {
+        closeModal('modalAddMember');
+        openCustomerProfile(duplicateFound.phone);
+      }
+    }
+
+    function confirmAddMember() {
+      const phone = document.getElementById('inputNewPhone').value.trim();
+      const name = document.getElementById('inputNewName').value.trim();
+      const tier = document.getElementById('selectNewTier').value;
+
+      if (!phone || !name) {
+        showToast('⚠️ Please fill both Name and Phone number', 'error');
+        return;
+      }
+
+      if (duplicateFound) {
+        showToast(`⚠️ Customer with phone ${phone} already exists!`, 'error');
+        return;
+      }
+
+      const newId = `LOY-${customers.length + 101}`;
+      customers.unshift({
+        id: newId,
+        name: name,
+        phone: phone,
+        points: 10, // Welcome bonus
+        lifetimeSpend: 0,
+        tier: tier,
+        totalOrders: 0,
+        lastVisit: "Just Joined",
+        joinedDate: "Today",
+        isActive: true,
+        expiresInDays: 365,
+        ledger: [
+          { type: "EARNED", points: 10, reason: "Welcome Registration Bonus", date: "Just Now", balance: 10 }
+        ],
+        purchases: []
+      });
+
+      closeModal('modalAddMember');
+      renderCustomerList();
+      updateKpis();
+      showToast(`🎉 Registered ${name} with 10 Welcome Points!`);
+    }
+
+    // Delete confirmation
+    function confirmDeleteMember(phone) {
+      const c = customers.find(x => x.phone === phone);
+      if (!c) return;
+      if (confirm(`Are you sure you want to remove ${c.name} from the loyalty program? This will delete ${c.points} points.`)) {
+        customers = customers.filter(x => x.phone !== phone);
+        renderCustomerList();
+        updateKpis();
+        showToast(`🗑️ Member removed successfully`);
+      }
+    }
+
+    function callCustomer(phone) {
+      showToast(`📞 Dialing ${phone}...`);
+    }
+
+    // Filter & Sort Bottom Sheet
+    function openFilterSortModal() {
+      openModal('modalFilterSort');
+    }
+
+    function setSortOption(sort, elem) {
+      currentSort = sort;
+      document.querySelectorAll('#modalFilterSort .chip-filter').forEach(c => {
+        if (c.id.startsWith('sort')) c.classList.remove('active');
+      });
+      if (elem) elem.classList.add('active');
+      renderCustomerList();
+    }
+
+    function setFilterOption(filter, elem) {
+      currentFilter = filter;
+      document.querySelectorAll('#modalFilterSort .chip-filter').forEach(c => {
+        if (!c.id.startsWith('sort')) c.classList.remove('active');
+      });
+      if (elem) elem.classList.add('active');
+      renderCustomerList();
+    }
+
+    function resetFilters() {
+      currentFilter = 'ALL';
+      currentSort = 'POINTS_DESC';
+      document.querySelectorAll('.chip-filter').forEach(c => c.classList.remove('active'));
+      document.querySelector('.filter-chips-row .chip-filter').classList.add('active');
+      renderCustomerList();
+      closeModal('modalFilterSort');
+      showToast('Filters reset to default');
+    }
+
+    // Settings Modal
+    function openLoyaltySettingsModal() {
+      openModal('modalLoyaltySettings');
+    }
+
+    function saveLoyaltySettings() {
+      closeModal('modalLoyaltySettings');
+      showToast('✓ Loyalty rules and tier settings saved');
+    }
+
+    // Checkout Simulation Modal
+    function openCheckoutSimulationModal() {
+      openModal('modalCheckoutSimulation');
+    }
+
+    function toggleCheckoutRedemption(checked) {
+      const row = document.getElementById('rowCheckoutDiscount');
+      const net = document.getElementById('txtCheckoutNetPayable');
+      const proj = document.getElementById('txtBalanceProjection');
+      if (checked) {
+        row.style.display = 'flex';
+        net.innerText = '৳1,450.00';
+        proj.innerHTML = 'Balance After Sale: 83 - 50 + 22 = <strong>55 Points</strong>';
+      } else {
+        row.style.display = 'none';
+        net.innerText = '৳1,500.00';
+        proj.innerHTML = 'Balance After Sale: 83 + 22 = <strong>105 Points</strong>';
+      }
+    }
+
+    function completeCheckoutSim() {
+      closeModal('modalCheckoutSimulation');
+      showToast('🛒 Sale #INV-1095 completed! Loyalty balance updated.');
+    }
+
+    // Toast Notification helper
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('posToast');
+      document.getElementById('toastMsg').innerText = msg;
+      document.getElementById('toastIcon').innerText = type === 'error' ? '⚠️' : '✓';
+      toast.classList.add('active');
+      setTimeout(() => {
+        toast.classList.remove('active');
+      }, 3000);
+    }
+
+    // Device View Mode Switching
+    function setDeviceMode(mode) {
+      const shell = document.getElementById('deviceShell');
+      document.getElementById('btnModeMobile').classList.toggle('active', mode === 'mobile');
+      document.getElementById('btnModeTablet').classList.toggle('active', mode === 'tablet');
+      document.getElementById('btnModeCompare').classList.toggle('active', mode === 'comparison');
+
+      shell.className = `device-shell ${mode}`;
+
+      if (mode === 'comparison') {
+        renderComparisonLayout();
+      } else {
+        restoreNormalLayout();
+      }
+    }
+
+    function renderComparisonLayout() {
+      const screen = document.getElementById('appScreenBody');
+      screen.innerHTML = `
+        <div class="pos-top-bar">
+          <div class="top-bar-left">
+            <h2 style="font-size:18px; font-weight:800;">Customer Loyalty: Current vs. Redesign Comparison</h2>
+          </div>
+        </div>
+        <div class="comparison-wrapper">
+          <!-- Current Design Column -->
+          <div class="compare-column">
+            <div class="compare-header-bar current">
+              <span>CURRENT IMPLEMENTATION (Attached Screen)</span>
+              <span style="font-size:11px; background:#FECDD3; padding:2px 6px; border-radius:4px;">Low Density</span>
+            </div>
+            <div style="padding:14px; display:flex; flex-direction:column; gap:10px; background:#F8FAFC;">
+              <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:14px; padding:10px 14px; color:#94A3B8; font-size:13px; display:flex; gap:8px;">
+                🔍 Search name or phone
+              </div>
+              
+              <!-- Bulky Cards Replica -->
+              <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:12px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <div style="width:40px; height:40px; border-radius:50%; background:#E0F2FE; display:flex; align-items:center; justify-content:center; color:#0284C7;">👤</div>
+                  <div>
+                    <div style="font-weight:700; font-size:14px;">Shohid Bhai ( Liton )</div>
+                    <div style="font-size:12px; color:#64748B;">01703820730</div>
+                    <div style="font-size:11px; color:#94A3B8;">Lifetime spend: ৳8,430</div>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="background:#FEF3C7; color:#92400E; font-weight:800; font-size:11px; padding:4px 8px; border-radius:8px;">83 points</span>
+                  <span style="color:#0284C7;">👤</span>
+                  <span style="color:#E11D48;">🗑️</span>
+                </div>
+              </div>
+
+              <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:12px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <div style="width:40px; height:40px; border-radius:50%; background:#E0F2FE; display:flex; align-items:center; justify-content:center; color:#0284C7;">👤</div>
+                  <div>
+                    <div style="font-weight:700; font-size:14px;">Monowar Abhawa Office</div>
+                    <div style="font-size:12px; color:#64748B;">01716947415</div>
+                    <div style="font-size:11px; color:#94A3B8;">Lifetime spend: ৳6,445</div>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="background:#FEF3C7; color:#92400E; font-weight:800; font-size:11px; padding:4px 8px; border-radius:8px;">63 points</span>
+                  <span style="color:#0284C7;">👤</span>
+                  <span style="color:#E11D48;">🗑️</span>
+                </div>
+              </div>
+
+              <!-- UX Issues Box -->
+              <div style="background:#FFF1F2; border:1px solid #FECDD3; border-radius:10px; padding:12px; font-size:11.5px; color:#9F1239;">
+                <strong>Identified Critical UX Issues:</strong>
+                <ul style="margin-left:16px; margin-top:4px; line-height:1.5;">
+                  <li><strong>Excessive Space:</strong> ~110dp per card fits only 3.5 customers per viewport.</li>
+                  <li><strong>Accidental Deletions:</strong> Red trash delete icon exposed permanently without 3-dot overflow shield.</li>
+                  <li><strong>No Loyalty KPIs:</strong> No liability value, no monthly redeemed metrics, no tier indicators.</li>
+                  <li><strong>No Audit Trail:</strong> Cashiers cannot see past point additions or redemptions.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Redesigned Column -->
+          <div class="compare-column">
+            <div class="compare-header-bar redesign">
+              <span>RECOMMENDED REDESIGN (Live Prototype)</span>
+              <span style="font-size:11px; background:#A7F3D0; padding:2px 6px; border-radius:4px;">High Density CRM</span>
+            </div>
+            <div style="padding:14px; display:flex; flex-direction:column; gap:10px; background:#F8FAFC;">
+              <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:10px 12px; font-size:12px; color:#065F46;">
+                <strong>✨ Key Architectural Improvements:</strong>
+                <ul style="margin-left:16px; margin-top:4px; line-height:1.5;">
+                  <li><strong>+120% Information Density:</strong> Compact 52dp rows fit 8-10+ customers on screen.</li>
+                  <li><strong>360° Loyalty Profile:</strong> Tap entire row to inspect detailed audit ledger, purchase history, and ৳ cash equivalents.</li>
+                  <li><strong>Safer Touch Ergonomics:</strong> Delete and admin actions protected inside 3-dot overflow menu.</li>
+                  <li><strong>Top KPI Overview:</strong> Total points liability, monthly redemption, and VIP members at a glance.</li>
+                  <li><strong>Instant 1-Click Redemption:</strong> Seamlessly integrate into POS cart checkout.</li>
+                </ul>
+              </div>
+              <button class="btn-action-primary adjust" onclick="setDeviceMode('mobile')" style="height:44px; justify-content:center;">
+                ← Return to Live Interactive Prototype
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function restoreNormalLayout() {
+      location.reload();
+    }
+
+    // Language Toggle
+    function setLanguage(lang) {
+      currentLanguage = lang;
+      document.getElementById('btnLangEn').classList.toggle('active', lang === 'en');
+      document.getElementById('btnLangBn').classList.toggle('active', lang === 'bn');
+
+      if (lang === 'bn') {
+        document.getElementById('txtScreenTitle').innerText = 'গ্রাহক লয়্যালটি ও রিওয়ার্ড';
+        document.getElementById('inputSearch').placeholder = 'গ্রাহকের নাম বা ফোন নম্বর দিয়ে খুঁজুন...';
+        document.getElementById('lblKpiMembers').innerText = 'মোট সদস্য';
+        document.getElementById('lblKpiPoints').innerText = 'মোট পয়েন্ট';
+        document.getElementById('lblKpiRedeemed').innerText = 'রিডিম হয়েছে';
+        document.getElementById('lblKpiVip').innerText = 'ভিআইপি গ্রাহক';
+        document.getElementById('txtFilterBtn').innerText = 'ফিল্টার ও সাজানো';
+      } else {
+        document.getElementById('txtScreenTitle').innerText = 'Customer Loyalty';
+        document.getElementById('inputSearch').placeholder = 'Search customer name or phone...';
+        document.getElementById('lblKpiMembers').innerText = 'Members';
+        document.getElementById('lblKpiPoints').innerText = 'Outstanding';
+        document.getElementById('lblKpiRedeemed').innerText = 'Redeemed';
+        document.getElementById('lblKpiVip').innerText = 'VIP Tier';
+        document.getElementById('txtFilterBtn').innerText = 'Sort & Filter';
+      }
+      renderCustomerList();
+    }
+  </script>
+</body>
+</html>

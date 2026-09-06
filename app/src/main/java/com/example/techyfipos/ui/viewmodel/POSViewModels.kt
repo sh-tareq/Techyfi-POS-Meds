@@ -18,6 +18,7 @@ import org.json.JSONObject
 import java.io.File
 import android.content.Context
 import com.example.techyfipos.utils.parseExpiryDateToMillis
+import com.example.techyfipos.utils.roundMoney
 
 // Cart Item Wrapper
 data class CartItem(
@@ -62,7 +63,7 @@ internal fun calculateDiscountValue(
     } else {
         safeAmount
     }
-    return calculated.coerceIn(0.0, safeSubtotal)
+    return calculated.coerceIn(0.0, safeSubtotal).roundMoney()
 }
 
 /** Quick Sale / ad-hoc cart items use a synthetic, never-persisted product with this barcode prefix. */
@@ -366,11 +367,16 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun applyLoyaltyDiscount(discount: Double) {
-        val availablePoints = loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0
+        val settings = repository.getLoyaltySettings()
+        val ptCashVal = settings.pointCashValue.takeIf { it > 0.0 } ?: 1.0
+        val availablePoints = loyaltyCustomer.value?.pointsBalance ?: 0
+        val maxDiscountFromPoints = availablePoints * ptCashVal
         val payableBeforeLoyalty = (subtotal.value - discountValue.value + taxValue.value).coerceAtLeast(0.0)
+        val maxAllowedBillDiscount = payableBeforeLoyalty * (settings.maxBillPercentPayable.coerceIn(1, 100) / 100.0)
+        val maxPossibleDiscount = minOf(maxDiscountFromPoints, maxAllowedBillDiscount)
         loyaltyDiscount.value = discount
             .takeIf(Double::isFinite)
-            ?.coerceIn(0.0, minOf(availablePoints, payableBeforeLoyalty))
+            ?.coerceIn(0.0, maxPossibleDiscount)
             ?: 0.0
     }
 
@@ -379,8 +385,13 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     suspend fun getCustomerCreditAccount(phone: String): CustomerDue? =
         repository.getCustomerCreditAccount(phone)
 
-    suspend fun authorizeCreditLimitOverride(pin: String, phone: String): Boolean =
-        repository.authorizeCreditLimitOverride(pin, phone)
+    suspend fun authorizeCreditLimitOverride(
+        pin: String,
+        phone: String,
+        maxAmount: Double = Double.MAX_VALUE,
+        cartHash: String? = null
+    ): Boolean =
+        repository.authorizeCreditLimitOverride(pin, phone, maxAmount, cartHash)
 
     /**
      * Loads a past sale's items (looked up fresh by barcode, so current stock/price applies) plus
@@ -596,6 +607,30 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         items.sumOf { item -> effectivePrice(item.product, mode) * item.quantity }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
 
+    /** Total MRP price of all items currently in cart (using product.mrpPrice if > 0 else sellingPrice). */
+    val mrpSubtotal: StateFlow<Double> = _cartItems.map { items ->
+        items.sumOf { item ->
+            val baseMrp = if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice
+            baseMrp * item.quantity
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    /**
+     * Customer savings vs MRP strictly in Sale mode (DISCOUNTED).
+     * Strictly evaluates to 0.0 in MRP mode and Wholesale/Bulk mode.
+     */
+    val saleModeMrpSavings: StateFlow<Double> = combine(_cartItems, priceMode) { items, mode ->
+        if (mode == PriceMode.DISCOUNTED) {
+            items.sumOf { item ->
+                val mrp = if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice
+                val sale = item.product.sellingPrice
+                (mrp - sale).coerceAtLeast(0.0) * item.quantity
+            }
+        } else {
+            0.0 // Strictly 0 in MRP or Wholesale/Bulk mode!
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
     /** Savings compared to the default sellingPrice (only positive when mode gives a lower price). */
     val priceModesSavings: StateFlow<Double> = combine(_cartItems, priceMode) { items, mode ->
         val retailTotal = items.sumOf { it.product.sellingPrice * it.quantity }
@@ -616,13 +651,14 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     val taxValue: StateFlow<Double> = combine(subtotal, discountValue, taxSettings) { sub, discVal, settings ->
         if (settings.taxEnabled && settings.taxRate > 0.0) {
             val taxableBase = (sub - discVal).coerceAtLeast(0.0)
-            if (settings.taxInclusive) {
+            val rawTax = if (settings.taxInclusive) {
                 // MRP Inclusive: Extract VAT component
                 taxableBase * (settings.taxRate / (100.0 + settings.taxRate))
             } else {
                 // Add-on Exclusive VAT
                 taxableBase * settings.taxRate / 100.0
             }
+            rawTax.roundMoney()
         } else {
             0.0
         }
@@ -635,11 +671,11 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         } else {
             base
         }
-        (withTax - loyaltyDisc).coerceAtLeast(0.0)
+        (withTax - loyaltyDisc).coerceAtLeast(0.0).roundMoney()
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
 
     val changeAmount: StateFlow<Double> = combine(grandTotal, amountPaid) { total, paid ->
-        (paid - total).coerceAtLeast(0.0)
+        (paid - total).coerceAtLeast(0.0).roundMoney()
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
 
     init {
@@ -915,10 +951,11 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         } else {
             (subtotal.value - discountValue.value).coerceAtLeast(0.0)
         }
-        val appliedLoyaltyPoints = if (redeemedCustomer != null) {
-            loyaltyDiscount.value
-                .coerceIn(0.0, minOf(redeemedCustomer.pointsBalance.toDouble(), payableBeforeLoyalty))
-                .toInt()
+        val appliedLoyaltyPoints = if (redeemedCustomer != null && loyaltyDiscount.value > 0.0) {
+            val loyaltySettings = repository.getLoyaltySettings()
+            val ptCashVal = loyaltySettings.pointCashValue.takeIf { it > 0.0 } ?: 1.0
+            val neededPoints = kotlin.math.round(loyaltyDiscount.value / ptCashVal).toInt()
+            neededPoints.coerceIn(0, redeemedCustomer.pointsBalance)
         } else {
             0
         }
@@ -1302,6 +1339,27 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         }
         result
     }
+
+    suspend fun bulkUpdateProductPrices(
+        barcodes: List<String>,
+        percentDelta: Double? = null,
+        fixedDelta: Double? = null
+    ) {
+        repository.bulkUpdateProductPrices(barcodes, percentDelta, fixedDelta)
+    }
+
+    suspend fun bulkUpdateProductCategory(
+        barcodes: List<String>,
+        newCategory: String
+    ) {
+        repository.bulkUpdateProductCategory(barcodes, newCategory)
+    }
+
+    suspend fun bulkDeleteProducts(
+        barcodes: List<String>
+    ) {
+        repository.bulkDeleteProducts(barcodes)
+    }
 }
 
 data class InventoryAlertsData(
@@ -1368,10 +1426,24 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         val todaySalesList = list.filter { it.sale.timestamp >= todayStart }
         
         var profitSum = 0.0
+        val missingProductBarcodes = mutableSetOf<String>()
         for (swi in todaySalesList) {
             for (item in swi.items) {
-                val prod = repository.getProductByBarcode(item.productBarcode)
-                val purchase = prod?.purchasePrice ?: fallbackPurchasePrice(item.productBarcode, item.price)
+                if (item.purchasePriceAtSale == null) {
+                    missingProductBarcodes.add(item.productBarcode)
+                }
+            }
+        }
+        val fallbackProducts = mutableMapOf<String, Double>()
+        for (barcode in missingProductBarcodes) {
+            val prod = repository.getProductByBarcode(barcode)
+            if (prod != null) fallbackProducts[barcode] = prod.purchasePrice
+        }
+        for (swi in todaySalesList) {
+            for (item in swi.items) {
+                val purchase = item.purchasePriceAtSale
+                    ?: fallbackProducts[item.productBarcode]
+                    ?: fallbackPurchasePrice(item.productBarcode, item.price)
                 profitSum += (item.price - purchase) * item.quantity
             }
         }
@@ -1626,10 +1698,10 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         )
     }
 
-    fun deleteSale(saleId: Long) {
+    fun deleteSale(saleId: Long, reason: String = "Sale Cancelled/Deleted") {
         viewModelScope.launch {
             try {
-                repository.deleteSale(saleId)
+                repository.deleteSale(saleId, reason)
             } catch (error: Exception) {
                 android.util.Log.e("SalesViewModel", "Unable to delete sale", error)
             }
@@ -1637,8 +1709,8 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     /** Suspend variant so a caller (e.g. "Edit sale") can wait for the void to finish before rebuilding the cart. Returns true on success. */
-    suspend fun deleteSaleAndAwait(saleId: Long): Boolean = try {
-        repository.deleteSale(saleId)
+    suspend fun deleteSaleAndAwait(saleId: Long, reason: String = "Sale Cancelled/Deleted"): Boolean = try {
+        repository.deleteSale(saleId, reason)
         true
     } catch (error: Exception) {
         android.util.Log.e("SalesViewModel", "Unable to delete sale", error)
@@ -2164,6 +2236,9 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     val themeMode: StateFlow<String> = repository.themeModeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "SYSTEM")
 
+    val uiLayoutMode: StateFlow<String> = repository.uiLayoutModeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "AUTO")
+
     val shopName: StateFlow<String> = repository.shopNameFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "My Shop")
 
@@ -2230,6 +2305,12 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     fun saveThemeMode(mode: String) {
         viewModelScope.launch {
             repository.saveThemeMode(mode)
+        }
+    }
+
+    fun saveUiLayoutMode(mode: String) {
+        viewModelScope.launch {
+            repository.saveUiLayoutMode(mode)
         }
     }
 
@@ -2565,6 +2646,49 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
         }
         return@withContext false
     }
+
+    suspend fun exportEncryptedLocalBackup(
+        outputStream: java.io.OutputStream,
+        passphrase: String
+    ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val tempFile = java.io.File.createTempFile("temp_export_", ".posenc")
+        try {
+            val ok = repository.exportEncryptedLocalBackup(tempFile, passphrase)
+            if (ok && tempFile.exists()) {
+                tempFile.inputStream().use { input ->
+                    input.copyTo(outputStream)
+                }
+                outputStream.flush()
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    suspend fun importEncryptedLocalBackup(
+        inputStream: java.io.InputStream,
+        passphrase: String,
+        mode: com.example.techyfipos.data.BackupImportMode = com.example.techyfipos.data.BackupImportMode.REPLACE
+    ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val tempFile = java.io.File.createTempFile("temp_import_", ".posenc")
+        try {
+            tempFile.outputStream().use { output ->
+                inputStream.copyTo(output)
+            }
+            repository.importEncryptedLocalBackup(tempFile, passphrase, mode)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        } finally {
+            tempFile.delete()
+        }
+    }
 }
 
 /** Role-based access: "OWNER" (master), "MANAGER" (store operations), "CASHIER" (frontline sales) */
@@ -2820,7 +2944,59 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
     }
 }
 
-private val REGISTER_CLOSE_DIGITAL_METHODS = setOf("bkash", "nagad", "rocket", "card", "bank", "mfs", "digital")
+data class ProviderSalesBreakdown(
+    val cash: Double = 0.0,
+    val bkash: Double = 0.0,
+    val nagad: Double = 0.0,
+    val rocket: Double = 0.0,
+    val card: Double = 0.0,
+    val due: Double = 0.0
+)
+
+internal fun calculateSaleProviderAmounts(sale: Sale): ProviderSalesBreakdown {
+    val nonSplitMethod = sale.paymentMethod.trim().lowercase()
+    if (sale.paymentMethod != "Split" || sale.splitPaymentJson.isNullOrBlank()) {
+        return when (nonSplitMethod) {
+            "cash" -> ProviderSalesBreakdown(cash = sale.grandTotal)
+            "bkash" -> ProviderSalesBreakdown(bkash = sale.grandTotal)
+            "nagad" -> ProviderSalesBreakdown(nagad = sale.grandTotal)
+            "rocket" -> ProviderSalesBreakdown(rocket = sale.grandTotal)
+            "card", "bank" -> ProviderSalesBreakdown(card = sale.grandTotal)
+            "due" -> ProviderSalesBreakdown(due = (sale.grandTotal - sale.amountPaid).coerceAtLeast(0.0), cash = sale.amountPaid.coerceAtLeast(0.0))
+            "store credit", "loyalty" -> ProviderSalesBreakdown()
+            else -> ProviderSalesBreakdown()
+        }
+    }
+    return try {
+        val arr = JSONArray(sale.splitPaymentJson)
+        var cash = 0.0
+        var bkash = 0.0
+        var nagad = 0.0
+        var rocket = 0.0
+        var card = 0.0
+        var due = 0.0
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            val amount = obj.optDouble("amount", 0.0)
+            val m = obj.optString("method", "").trim().lowercase()
+            when (m) {
+                "cash" -> cash += amount
+                "bkash" -> bkash += amount
+                "nagad" -> nagad += amount
+                "rocket" -> rocket += amount
+                "card", "bank" -> card += amount
+                "due" -> due += amount
+                "store credit", "loyalty" -> { /* store credit brings no cash or digital currency */ }
+                else -> { /* do not default unknown methods to cash */ }
+            }
+        }
+        ProviderSalesBreakdown(cash = cash, bkash = bkash, nagad = nagad, rocket = rocket, card = card, due = due)
+    } catch (_: Exception) {
+        ProviderSalesBreakdown()
+    }
+}
+
+internal val REGISTER_CLOSE_DIGITAL_METHODS = setOf("bkash", "nagad", "rocket", "card", "bank", "mfs", "digital")
 
 /** Cash/digital portion of a sale's grandTotal, apportioning a Split sale's components from `splitPaymentJson` instead of dropping it entirely. Due portions count toward neither (not yet collected). */
 internal fun splitCashAndDigitalAmounts(sale: Sale): Pair<Double, Double> {
@@ -2828,6 +3004,7 @@ internal fun splitCashAndDigitalAmounts(sale: Sale): Pair<Double, Double> {
     if (sale.paymentMethod != "Split" || sale.splitPaymentJson.isNullOrBlank()) {
         return when {
             nonSplitMethod.equals("Cash", ignoreCase = true) -> sale.grandTotal to 0.0
+            nonSplitMethod.equals("Due", ignoreCase = true) -> sale.amountPaid.coerceAtLeast(0.0) to 0.0
             REGISTER_CLOSE_DIGITAL_METHODS.contains(nonSplitMethod.lowercase()) -> 0.0 to sale.grandTotal
             else -> 0.0 to 0.0
         }
@@ -2923,10 +3100,43 @@ class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
         sales.filter { it.timestamp >= start }.sumOf { splitCashAndDigitalAmounts(it).first }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
 
-    val totalDigitalSales: StateFlow<Double> = combine(allSales, registerShiftState) { sales, shift ->
+    val totalDigitalSales: StateFlow<Double> = combine(allSales, allDuePayments, registerShiftState) { sales, duePayments, shift ->
         val start = shift?.startedAt?.takeIf { it > 0L } ?: todayStartMillis()
-        sales.filter { it.timestamp >= start }.sumOf { splitCashAndDigitalAmounts(it).second }
+        val salesDigital = sales.filter { it.timestamp >= start }.sumOf { splitCashAndDigitalAmounts(it).second }
+        val dueDigital = duePayments.filter {
+            it.timestamp >= start && REGISTER_CLOSE_DIGITAL_METHODS.contains(it.paymentMethod.trim().lowercase())
+        }.sumOf { it.amountPaid }
+        salesDigital + dueDigital
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val providerSalesBreakdown: StateFlow<ProviderSalesBreakdown> = combine(allSales, allDuePayments, registerShiftState) { sales, duePayments, shift ->
+        val start = shift?.startedAt?.takeIf { it > 0L } ?: todayStartMillis()
+        var cash = 0.0
+        var bkash = 0.0
+        var nagad = 0.0
+        var rocket = 0.0
+        var card = 0.0
+        var due = 0.0
+        sales.filter { it.timestamp >= start }.forEach { sale ->
+            val b = calculateSaleProviderAmounts(sale)
+            cash += b.cash
+            bkash += b.bkash
+            nagad += b.nagad
+            rocket += b.rocket
+            card += b.card
+            due += b.due
+        }
+        duePayments.filter { it.timestamp >= start }.forEach { dp ->
+            val m = dp.paymentMethod.trim().lowercase()
+            when (m) {
+                "bkash" -> bkash += dp.amountPaid
+                "nagad" -> nagad += dp.amountPaid
+                "rocket" -> rocket += dp.amountPaid
+                "card", "bank" -> card += dp.amountPaid
+            }
+        }
+        ProviderSalesBreakdown(cash = cash, bkash = bkash, nagad = nagad, rocket = rocket, card = card, due = due)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, ProviderSalesBreakdown())
 
     val totalDueCashCollected: StateFlow<Double> = combine(allDuePayments, registerShiftState) { payments, shift ->
         val start = shift?.startedAt?.takeIf { it > 0L } ?: todayStartMillis()
@@ -2960,7 +3170,7 @@ class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
             (shift?.startingFloat ?: 0.0) + dueCash - supplierCash
         }
     ) { salesNet, shiftNet ->
-        (salesNet + shiftNet).coerceAtLeast(0.0)
+        salesNet + shiftNet
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
 
     val liveDrawerCash: StateFlow<Double> = netDrawerCash
@@ -3192,6 +3402,7 @@ class SupplierViewModel(private val repository: DataRepository) : ViewModel() {
 }
 
 class RegisterClosingViewModel(private val repository: DataRepository) : ViewModel() {
+    val activeCashierName: String get() = repository.sessionUserName
     val allClosings: StateFlow<List<RegisterClosing>> = repository.allRegisterClosings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val shiftState: StateFlow<RegisterShiftState?> = repository.registerShiftState
@@ -3212,6 +3423,11 @@ class RegisterClosingViewModel(private val repository: DataRepository) : ViewMod
         expectedCash: Double,
         actualCountedCash: Double,
         notes: String? = null,
+        bkashSales: Double = 0.0,
+        nagadSales: Double = 0.0,
+        rocketSales: Double = 0.0,
+        cardSales: Double = 0.0,
+        dueSales: Double = 0.0,
         onResult: (Result<Long>) -> Unit = {}
     ) {
         val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
@@ -3232,7 +3448,12 @@ class RegisterClosingViewModel(private val repository: DataRepository) : ViewMod
                     actualCountedCash = actualCountedCash,
                     variance = variance,
                     notes = notes,
-                    timestamp = System.currentTimeMillis()
+                    timestamp = System.currentTimeMillis(),
+                    bkashSales = bkashSales,
+                    nagadSales = nagadSales,
+                    rocketSales = rocketSales,
+                    cardSales = cardSales,
+                    dueSales = dueSales
                     ))
                 }
             }
@@ -3241,11 +3462,91 @@ class RegisterClosingViewModel(private val repository: DataRepository) : ViewMod
     }
 }
 
+enum class LoyaltyFilterOption {
+    ALL,
+    VIP,
+    WITH_POINTS,
+    ACTIVE,
+    EXPIRING_SOON,
+    ZERO_POINTS
+}
+
+enum class LoyaltySortOption {
+    POINTS_DESC,
+    POINTS_ASC,
+    SPEND_DESC,
+    RECENTLY_ACTIVE,
+    NAME_ASC,
+    RECENTLY_ADDED
+}
+
+data class LoyaltyKpiData(
+    val totalMembers: Int = 0,
+    val outstandingPoints: Int = 0,
+    val redeemedThisMonth: Int = 0,
+    val vipMembers: Int = 0
+)
+
 class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
     val allMembers: StateFlow<List<CustomerLoyalty>> = repository.allLoyaltyMembers
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val allTransactions: StateFlow<List<LoyaltyTransaction>> = repository.allLoyaltyTransactions
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val searchQuery = MutableStateFlow("")
+    val selectedFilter = MutableStateFlow(LoyaltyFilterOption.ALL)
+    val selectedSort = MutableStateFlow(LoyaltySortOption.POINTS_DESC)
+
+    val kpiStats: StateFlow<LoyaltyKpiData> = combine(allMembers, allTransactions) { members, transactions ->
+        val totalMembers = members.size
+        val outstanding = members.sumOf { it.pointsBalance }
+        val now = System.currentTimeMillis()
+        val oneMonthAgo = now - 30L * 24 * 60 * 60 * 1000
+        val redeemed = transactions
+            .filter { it.timestamp >= oneMonthAgo && it.pointsChange < 0 }
+            .sumOf { -it.pointsChange }
+        val vipCount = members.count { it.tier.equals("Gold", ignoreCase = true) || it.tier.equals("Platinum", ignoreCase = true) }
+        LoyaltyKpiData(totalMembers, outstanding, redeemed, vipCount)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LoyaltyKpiData())
+
+    val filteredMembers: StateFlow<List<CustomerLoyalty>> = combine(
+        allMembers,
+        searchQuery,
+        selectedFilter,
+        selectedSort
+    ) { members, query, filter, sort ->
+        val q = query.trim()
+        var list = if (q.isBlank()) members else members.filter {
+            it.name.contains(q, ignoreCase = true) || it.phone.contains(q)
+        }
+        val now = System.currentTimeMillis()
+        val ninetyDaysAgo = now - 90L * 24 * 60 * 60 * 1000
+        list = when (filter) {
+            LoyaltyFilterOption.ALL -> list
+            LoyaltyFilterOption.VIP -> list.filter { it.tier.equals("Gold", ignoreCase = true) || it.tier.equals("Platinum", ignoreCase = true) }
+            LoyaltyFilterOption.WITH_POINTS -> list.filter { it.pointsBalance > 0 }
+            LoyaltyFilterOption.ACTIVE -> list.filter { it.isActive && it.updatedAt >= ninetyDaysAgo }
+            LoyaltyFilterOption.EXPIRING_SOON -> list.filter { it.pointsBalance > 0 && it.updatedAt < ninetyDaysAgo }
+            LoyaltyFilterOption.ZERO_POINTS -> list.filter { it.pointsBalance == 0 }
+        }
+        when (sort) {
+            LoyaltySortOption.POINTS_DESC -> list.sortedByDescending { it.pointsBalance }
+            LoyaltySortOption.POINTS_ASC -> list.sortedBy { it.pointsBalance }
+            LoyaltySortOption.SPEND_DESC -> list.sortedByDescending { it.lifetimeSpent }
+            LoyaltySortOption.RECENTLY_ACTIVE -> list.sortedByDescending { it.updatedAt }
+            LoyaltySortOption.NAME_ASC -> list.sortedBy { it.name.lowercase() }
+            LoyaltySortOption.RECENTLY_ADDED -> list.sortedByDescending { it.updatedAt }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun findMemberByPhone(phone: String): CustomerLoyalty? {
+        val clean = phone.trim().filter(Char::isDigit)
+        if (clean.length < 5) return null
+        return allMembers.value.firstOrNull {
+            val memberClean = it.phone.filter(Char::isDigit)
+            memberClean == clean || memberClean.endsWith(clean) || clean.endsWith(memberClean)
+        }
+    }
 
     fun upsertMember(phone: String, name: String, tier: String = "Silver") {
         viewModelScope.launch(Dispatchers.IO) {
@@ -3290,7 +3591,9 @@ enum class CustomerFilterSegment {
     VIP,
     FREQUENT,
     WHOLESALE,
-    RECENT
+    RECENT,
+    NEW_CUSTOMERS,
+    DEFAULTER
 }
 
 enum class CustomerSortOption {
@@ -3298,15 +3601,42 @@ enum class CustomerSortOption {
     LIFETIME_SPEND,
     HIGHEST_DUE,
     ORDERS_COUNT,
-    NAME_ASC
+    NAME_ASC,
+    LOYALTY_POINTS
 }
+
+enum class CustomerTimelineEventType {
+    SALE,
+    DUE_CREATED,
+    PAYMENT_RECEIVED,
+    LOYALTY,
+    NOTE,
+    ACCOUNT_CREATED
+}
+
+data class CustomerTimelineEvent(
+    val id: String,
+    val type: CustomerTimelineEventType,
+    val title: String,
+    val description: String,
+    val amount: Double? = null,
+    val timestamp: Long,
+    val referenceId: String? = null
+)
+
+data class DuplicateCustomerPair(
+    val customerA: Customer,
+    val customerB: Customer,
+    val matchReason: String
+)
 
 data class CustomerDossierData(
     val customer: Customer,
     val topProducts: List<CustomerProductPurchaseSummary>,
     val sales: List<SaleWithItems>,
     val duePayments: List<DuePayment>,
-    val loyaltyTransactions: List<LoyaltyTransaction>
+    val loyaltyTransactions: List<LoyaltyTransaction>,
+    val timelineEvents: List<CustomerTimelineEvent> = emptyList()
 )
 
 class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
@@ -3316,9 +3646,15 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
     val searchQuery = MutableStateFlow("")
     val selectedFilter = MutableStateFlow(CustomerFilterSegment.ALL)
     val selectedSort = MutableStateFlow(CustomerSortOption.RECENT_VISIT)
+    val isTableView = MutableStateFlow(false)
+    val selectedCustomerPhones = MutableStateFlow<Set<String>>(emptySet())
 
     val selectedCustomerDossier = MutableStateFlow<CustomerDossierData?>(null)
     val isLoadingDossier = MutableStateFlow(false)
+
+    val duplicatePairs: StateFlow<List<DuplicateCustomerPair>> = allCustomers.map { list ->
+        findDuplicatePairs(list)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val filteredCustomers: StateFlow<List<Customer>> = combine(
         allCustomers,
@@ -3347,6 +3683,13 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                 val sevenDaysAgo = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000)
                 searched.filter { (it.lastPurchaseDate ?: it.updatedAt) >= sevenDaysAgo }
             }
+            CustomerFilterSegment.NEW_CUSTOMERS -> {
+                val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
+                searched.filter { it.totalOrders <= 2 || it.createdAt >= thirtyDaysAgo }
+            }
+            CustomerFilterSegment.DEFAULTER -> {
+                searched.filter { it.tag.equals("Defaulter", ignoreCase = true) || (it.creditLimit > 0 && it.totalDue > it.creditLimit) }
+            }
         }
 
         when (sort) {
@@ -3355,6 +3698,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
             CustomerSortOption.HIGHEST_DUE -> filtered.sortedByDescending { it.totalDue }
             CustomerSortOption.ORDERS_COUNT -> filtered.sortedByDescending { it.totalOrders }
             CustomerSortOption.NAME_ASC -> filtered.sortedBy { it.name.lowercase() }
+            CustomerSortOption.LOYALTY_POINTS -> filtered.sortedByDescending { it.loyaltyPoints }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -3376,6 +3720,123 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val averageCustomerSpend: StateFlow<Double> = allCustomers.map { list ->
+        if (list.isEmpty()) 0.0 else list.sumOf { it.lifetimeSpent } / list.size
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    fun toggleCustomerSelection(phone: String) {
+        val current = selectedCustomerPhones.value
+        selectedCustomerPhones.value = if (current.contains(phone)) current - phone else current + phone
+    }
+
+    fun selectAll(phones: Collection<String>) {
+        selectedCustomerPhones.value = phones.toSet()
+    }
+
+    fun clearCustomerSelection() {
+        selectedCustomerPhones.value = emptySet()
+    }
+
+    fun bulkAssignTag(tag: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val targets = selectedCustomerPhones.value
+                targets.forEach { phone ->
+                    val c = repository.getCustomerByPhone(phone)
+                    if (c != null) {
+                        repository.upsertCustomer(c.copy(tag = tag, updatedAt = System.currentTimeMillis()))
+                    }
+                }
+                clearCustomerSelection()
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Failed to assign bulk tag")
+            }
+        }
+    }
+
+    fun mergeCustomers(masterPhone: String, secondaryPhone: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val success = repository.mergeCustomers(masterPhone, secondaryPhone)
+                if (success) {
+                    loadCustomerDossier(masterPhone)
+                    onSuccess()
+                } else {
+                    onError("Could not merge selected customer accounts")
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "Merge failed")
+            }
+        }
+    }
+
+    fun addCustomerNote(phone: String, noteText: String, category: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val ok = repository.addCustomerNote(phone, noteText, category)
+                if (ok) {
+                    loadCustomerDossier(phone)
+                    onSuccess()
+                } else {
+                    onError("Failed to add note")
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "Error saving note")
+            }
+        }
+    }
+
+    private fun findDuplicatePairs(customers: List<Customer>): List<DuplicateCustomerPair> {
+        val active = customers.filter { !it.isArchived }
+        val pairs = mutableListOf<DuplicateCustomerPair>()
+        val seenPairKeys = mutableSetOf<String>()
+
+        val phoneGroups = mutableMapOf<String, MutableList<Customer>>()
+        val nameGroups = mutableMapOf<String, MutableList<Customer>>()
+
+        for (c in active) {
+            val cleanDigits = c.phone.filter { it.isDigit() }.takeLast(10)
+            if (cleanDigits.length >= 10) {
+                phoneGroups.getOrPut(cleanDigits) { mutableListOf() }.add(c)
+            }
+            val cleanName = c.name.trim().lowercase()
+            if (cleanName.length >= 3) {
+                nameGroups.getOrPut(cleanName) { mutableListOf() }.add(c)
+            }
+        }
+
+        fun addPair(a: Customer, b: Customer, reason: String) {
+            if (a.phone == b.phone) return
+            val pairKey = if (a.phone < b.phone) "${a.phone}___${b.phone}" else "${b.phone}___${a.phone}"
+            if (seenPairKeys.add(pairKey)) {
+                pairs.add(DuplicateCustomerPair(a, b, reason))
+            }
+        }
+
+        for ((phoneDigits, list) in phoneGroups) {
+            if (list.size > 1) {
+                for (i in 0 until list.size) {
+                    for (j in i + 1 until list.size) {
+                        addPair(list[i], list[j], "Matching phone digits ($phoneDigits)")
+                    }
+                }
+            }
+        }
+
+        for ((_, list) in nameGroups) {
+            if (list.size > 1) {
+                for (i in 0 until list.size) {
+                    for (j in i + 1 until list.size) {
+                        addPair(list[i], list[j], "Identical name ('${list[i].name.trim()}')")
+                    }
+                }
+            }
+        }
+
+        return pairs
+    }
+
     fun loadCustomerDossier(phone: String) {
         isLoadingDossier.value = true
         viewModelScope.launch(Dispatchers.IO) {
@@ -3387,12 +3848,97 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                     val duePayments = repository.getPaymentsForCustomer(phone).firstOrNull() ?: emptyList()
                     val loyaltyTransactions = repository.getLoyaltyTransactionsForCustomer(phone).firstOrNull() ?: emptyList()
 
+                    val events = mutableListOf<CustomerTimelineEvent>()
+
+                    // Account created
+                    events.add(
+                        CustomerTimelineEvent(
+                            id = "created_${customer.phone}",
+                            type = CustomerTimelineEventType.ACCOUNT_CREATED,
+                            title = "Customer Registered",
+                            description = "Registered as ${customer.tag} account",
+                            timestamp = customer.createdAt
+                        )
+                    )
+
+                    // Sales and Dues
+                    sales.forEach { saleWithItems ->
+                        val s = saleWithItems.sale
+                        events.add(
+                            CustomerTimelineEvent(
+                                id = "sale_${s.id}",
+                                type = CustomerTimelineEventType.SALE,
+                                title = "Invoice #${s.id}",
+                                description = "${s.paymentMethod} • ${saleWithItems.items.size} items",
+                                amount = s.grandTotal,
+                                timestamp = s.timestamp,
+                                referenceId = s.id.toString()
+                            )
+                        )
+                        if (s.grandTotal > s.amountPaid) {
+                            events.add(
+                                CustomerTimelineEvent(
+                                    id = "due_${s.id}",
+                                    type = CustomerTimelineEventType.DUE_CREATED,
+                                    title = "Due Created: #${s.id}",
+                                    description = "Unpaid credit balance",
+                                    amount = s.grandTotal - s.amountPaid,
+                                    timestamp = s.timestamp + 1,
+                                    referenceId = s.id.toString()
+                                )
+                            )
+                        }
+                    }
+
+                    // Payments
+                    duePayments.forEach { p ->
+                        events.add(
+                            CustomerTimelineEvent(
+                                id = "payment_${p.id}",
+                                type = CustomerTimelineEventType.PAYMENT_RECEIVED,
+                                title = "Repayment: ${p.paymentMethod}",
+                                description = p.referenceNote?.takeIf { it.isNotBlank() } ?: "Due payment received",
+                                amount = p.amountPaid,
+                                timestamp = p.timestamp,
+                                referenceId = p.id.toString()
+                            )
+                        )
+                    }
+
+                    // Loyalty
+                    loyaltyTransactions.forEach { l ->
+                        events.add(
+                            CustomerTimelineEvent(
+                                id = "loyalty_${l.id}",
+                                type = CustomerTimelineEventType.LOYALTY,
+                                title = l.reason.ifBlank { "Loyalty Points" },
+                                description = if (l.pointsChange >= 0) "+${l.pointsChange} pts" else "${l.pointsChange} pts",
+                                timestamp = l.timestamp,
+                                referenceId = l.id.toString()
+                            )
+                        )
+                    }
+
+                    // Notes
+                    customer.notes?.takeIf { it.isNotBlank() }?.split("\n\n")?.forEachIndexed { idx, noteBlock ->
+                        events.add(
+                            CustomerTimelineEvent(
+                                id = "note_${customer.phone}_$idx",
+                                type = CustomerTimelineEventType.NOTE,
+                                title = "CRM Note",
+                                description = noteBlock.trim(),
+                                timestamp = customer.updatedAt - (idx * 60000L)
+                            )
+                        )
+                    }
+
                     selectedCustomerDossier.value = CustomerDossierData(
                         customer = customer,
                         topProducts = topProducts,
                         sales = sales,
                         duePayments = duePayments,
-                        loyaltyTransactions = loyaltyTransactions
+                        loyaltyTransactions = loyaltyTransactions,
+                        timelineEvents = events.sortedByDescending { it.timestamp }
                     )
                 }
             } catch (e: Exception) {

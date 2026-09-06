@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,19 +38,28 @@ import com.example.techyfipos.R
 import com.example.techyfipos.data.db.Expense
 import com.example.techyfipos.ui.components.AddExpenseDialog
 import com.example.techyfipos.ui.components.ExpenseItemRow
-import com.example.techyfipos.ui.components.ExpenseSummaryCard
 import com.example.techyfipos.ui.components.Realistic3DExpenseReceiptIcon
 import com.example.techyfipos.ui.viewmodel.ExpenseViewModel
+import com.example.techyfipos.utils.formatTaka
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+
+private fun todayStartMillis(): Long = Calendar.getInstance().apply {
+    set(Calendar.HOUR_OF_DAY, 0)
+    set(Calendar.MINUTE, 0)
+    set(Calendar.SECOND, 0)
+    set(Calendar.MILLISECOND, 0)
+}.timeInMillis
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpensesScreen(
     expenseViewModel: ExpenseViewModel,
     onBack: () -> Unit,
+    onNavigateToDayStartClose: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -59,9 +69,6 @@ fun ExpensesScreen(
     val exportExpenseSuccessMessage = stringResource(R.string.expense_export_excel_success)
 
     val allExpenses by expenseViewModel.allExpenses.collectAsStateWithLifecycle()
-    val drawerCash by expenseViewModel.liveDrawerCash.collectAsStateWithLifecycle(0.0)
-    val totalCashIn by expenseViewModel.totalCashIn.collectAsStateWithLifecycle(0.0)
-    val totalCashOut by expenseViewModel.totalCashOut.collectAsStateWithLifecycle(0.0)
 
     var showAddExpenseDialog by remember { mutableStateOf(false) }
     var showAddCashInDialog by remember { mutableStateOf(false) }
@@ -69,6 +76,23 @@ fun ExpensesScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf("All") }
     var selectedTypeFilter by remember { mutableStateOf("All") }
+
+    val todayStart = remember { todayStartMillis() }
+    val todayExpenses = remember(allExpenses, todayStart) {
+        allExpenses.filter { it.type == "EXPENSE" && it.timestamp >= todayStart }
+    }
+    val todayExpenseTotal = remember(todayExpenses) {
+        todayExpenses.sumOf { it.amount }
+    }
+    val todayExpenseCount = todayExpenses.size
+
+    val categoryBreakdown = remember(todayExpenses) {
+        todayExpenses
+            .groupBy { it.category }
+            .mapValues { (_, list) -> list.sumOf { it.amount } }
+            .toList()
+            .sortedByDescending { it.second }
+    }
 
     val exportExpensesLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -89,7 +113,7 @@ fun ExpensesScreen(
         }
     }
 
-    val categories = listOf("All", "Tea & Refreshments", "Staff Meal", "Electricity (Token)", "Transport", "Shop Rent", "Cleaning", "Float In", "Other")
+    val categories = listOf("All", "Tea & Refreshments", "Staff Meal", "Electricity (Token)", "Transport", "Shop Rent", "Cleaning", "Supplier Payment", "Float In", "Other")
 
     val filteredExpenses = remember(allExpenses, searchQuery, selectedCategoryFilter, selectedTypeFilter) {
         allExpenses.filter { exp ->
@@ -187,18 +211,26 @@ fun ExpensesScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(top = 10.dp, bottom = 20.dp)
+            contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp)
         ) {
+            // 1. Pure Expense Analytics Hero Card
             item {
-                ExpenseSummaryCard(
-                    drawerCash = drawerCash,
-                    totalCashIn = totalCashIn,
-                    totalCashOut = totalCashOut,
-                    onAddExpense = { showAddExpenseDialog = true },
-                    onAddCashIn = { showAddCashInDialog = true }
+                ExpenseAnalyticsHeroCard(
+                    totalAmount = todayExpenseTotal,
+                    expenseCount = todayExpenseCount,
+                    categoryBreakdown = categoryBreakdown,
+                    onRecordExpense = { showAddExpenseDialog = true }
                 )
             }
 
+            // 2. Relocation Banner: Cash Drawer has moved to Day Start & Close
+            item {
+                ExpenseRelocationNoticeBanner(
+                    onViewDrawer = onNavigateToDayStartClose
+                )
+            }
+
+            // 3. Search Bar
             item {
                 OutlinedTextField(
                     value = searchQuery,
@@ -224,6 +256,7 @@ fun ExpensesScreen(
                 )
             }
 
+            // 4. Type Filter Segmented Control
             item {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
@@ -282,6 +315,7 @@ fun ExpensesScreen(
                 }
             }
 
+            // 5. Category Filter Chips
             item {
                 Row(
                     modifier = Modifier
@@ -310,19 +344,21 @@ fun ExpensesScreen(
                                     "Shop Rent" -> stringResource(R.string.expense_category_rent)
                                     "Cleaning" -> stringResource(R.string.expense_category_cleaning)
                                     "Transport" -> stringResource(R.string.expense_category_transport)
+                                    "Supplier Payment" -> stringResource(R.string.expense_category_supplier_payment)
                                     "Float In" -> stringResource(R.string.expense_category_float_in)
                                     else -> stringResource(R.string.expense_category_other_format, cat)
                                 },
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                 color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp)
+                                modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp)
                             )
                         }
                     }
                 }
             }
 
+            // 6. Header Row: Ledger records count
             item {
                 Row(
                     modifier = Modifier
@@ -438,5 +474,232 @@ fun ExpensesScreen(
                 expenseToEdit = null
             }
         )
+    }
+}
+
+// =============================================================================
+// EXPENSE ANALYTICS HERO CARD
+// =============================================================================
+
+@Composable
+fun ExpenseAnalyticsHeroCard(
+    totalAmount: Double,
+    expenseCount: Int,
+    categoryBreakdown: List<Pair<String, Double>>,
+    onRecordExpense: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = BorderStroke(1.dp, Color(0x33FB7185)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(Color(0xFF881337), Color(0xFF4C0519), Color(0xFF1E1B4B))
+                    )
+                )
+                .padding(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Top Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.expense_hero_total_label),
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFCBD5E1),
+                            letterSpacing = 0.8.sp
+                        )
+                        Text(
+                            text = formatTaka(totalAmount),
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            Text("⚠️", fontSize = 11.sp)
+                            Text(
+                                text = stringResource(R.string.expense_hero_disbursements, expenseCount),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFFFCA5A5)
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color.Black.copy(alpha = 0.35f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                        modifier = Modifier.size(52.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Realistic3DExpenseReceiptIcon(size = 38.dp)
+                        }
+                    }
+                }
+
+                // Visual Category Distribution Bar
+                if (totalAmount > 0.0 && categoryBreakdown.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val categoryColors = listOf(
+                            Color(0xFFF59E0B), // Amber
+                            Color(0xFFEF4444), // Rose/Red
+                            Color(0xFF8B5CF6), // Purple
+                            Color(0xFF10B981), // Emerald
+                            Color(0xFF0EA5E9), // Sky Blue
+                            Color(0xFFEC4899)  // Pink
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(Color.White.copy(alpha = 0.15f))
+                        ) {
+                            categoryBreakdown.forEachIndexed { index, (_, amt) ->
+                                val fraction = (amt / totalAmount).toFloat().coerceIn(0.01f, 1f)
+                                val color = categoryColors[index % categoryColors.size]
+                                Box(
+                                    modifier = Modifier
+                                        .weight(fraction)
+                                        .fillMaxHeight()
+                                        .background(color)
+                                )
+                            }
+                        }
+
+                        // Legend items row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            categoryBreakdown.take(4).forEachIndexed { index, (cat, amt) ->
+                                val pct = ((amt / totalAmount) * 100).toInt()
+                                val color = categoryColors[index % categoryColors.size]
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .clip(CircleShape)
+                                            .background(color)
+                                    )
+                                    val shortCat = when {
+                                        cat.contains("Tea", ignoreCase = true) -> "Tea"
+                                        cat.contains("Staff", ignoreCase = true) -> "Meal"
+                                        cat.contains("Electricity", ignoreCase = true) -> "Power"
+                                        cat.contains("Transport", ignoreCase = true) -> "Transport"
+                                        cat.contains("Rent", ignoreCase = true) -> "Rent"
+                                        else -> cat.take(8)
+                                    }
+                                    Text(
+                                        text = "$shortCat $pct%",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFCBD5E1)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Action Button: Record Expense
+                Button(
+                    onClick = onRecordExpense,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                ) {
+                    Text("➕", fontSize = 13.sp)
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.expense_add_expense_button),
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 12.5.sp,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+// =============================================================================
+// RELOCATION NOTICE BANNER
+// =============================================================================
+
+@Composable
+fun ExpenseRelocationNoticeBanner(
+    onViewDrawer: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFFECFDF5),
+        border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("💡", fontSize = 16.sp)
+                Text(
+                    text = stringResource(R.string.expense_cash_moved_banner),
+                    fontSize = 11.5.sp,
+                    color = Color(0xFF065F46),
+                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 15.sp
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = onViewDrawer,
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.height(34.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.expense_view_drawer_btn),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White
+                )
+            }
+        }
     }
 }

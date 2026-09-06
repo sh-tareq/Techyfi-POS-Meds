@@ -106,6 +106,9 @@ interface SaleDao {
     @Query("SELECT * FROM sales WHERE customerPhone = :phone ORDER BY timestamp DESC")
     suspend fun getSalesWithItemsForCustomerOnce(phone: String): List<SaleWithItems>
 
+    @Query("UPDATE sales SET customerPhone = :newPhone, customerName = :newName WHERE customerPhone = :oldPhone")
+    suspend fun reassignCustomerForSales(oldPhone: String, newPhone: String, newName: String): Int
+
     @Query("""
         SELECT si.productBarcode AS barcode, si.productName AS name, 
                SUM(si.quantity) AS totalQty, 
@@ -491,6 +494,9 @@ interface LoyaltyTransactionDao {
     @Query("SELECT * FROM loyalty_transactions WHERE customerPhone = :phone ORDER BY timestamp DESC")
     fun getForCustomer(phone: String): Flow<List<LoyaltyTransaction>>
 
+    @Query("UPDATE loyalty_transactions SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
+    suspend fun reassignCustomerPhone(oldPhone: String, newPhone: String): Int
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(transaction: LoyaltyTransaction): Long
 }
@@ -601,6 +607,24 @@ interface CustomerDao {
 
     @Query("UPDATE customers SET loyaltyPoints = :points, loyaltyTier = :tier, updatedAt = :timestamp WHERE phone = :phone")
     suspend fun updateCustomerLoyalty(phone: String, points: Int, tier: String, timestamp: Long): Int
+
+    @Query("UPDATE customers SET storeCredit = :credit, updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun updateCustomerStoreCredit(phone: String, credit: Double, timestamp: Long): Int
+
+    @Query("UPDATE customers SET storeCredit = MAX(0.0, storeCredit + :delta), updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun adjustCustomerStoreCredit(phone: String, delta: Double, timestamp: Long): Int
+}
+
+@Dao
+interface SaleAuditLogDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAuditLog(log: SaleAuditLog): Long
+
+    @Query("SELECT * FROM sale_audit_logs ORDER BY timestamp DESC")
+    fun getAllAuditLogs(): Flow<List<SaleAuditLog>>
+
+    @Query("SELECT * FROM sale_audit_logs WHERE saleId = :saleId ORDER BY timestamp DESC")
+    suspend fun getAuditLogsForSale(saleId: Long): List<SaleAuditLog>
 }
 
 

@@ -235,6 +235,7 @@
     <string name="expense_category_cleaning">🧹 Cleaning</string>
     <string name="expense_category_transport">🚗 Transport</string>
     <string name="expense_category_float_in">💵 Float In</string>
+    <string name="expense_category_supplier_payment">🚚 Supplier Payment</string>
     <string name="expense_category_other_format">📦 %1$s</string>
     <string name="expense_ledger_label">DAILY LEDGER RECORDS</string>
     <plurals name="expense_records_count"><item quantity="one">%1$d Record</item><item quantity="other">%1$d Records</item></plurals>
@@ -351,14 +352,84 @@
     <string name="zreport_surplus">Surplus: +%1$s</string>
     <string name="zreport_complete_button">Lock &amp; Complete Z-Report</string>
 
-    <!-- Register Close (Day-end cash reconciliation) -->
-    <string name="register_close_section">Day Close</string>
-    <string name="register_close_hub_subtitle">Count cash &amp; close register</string>
-    <string name="register_close_screen_title">Register Close</string>
-    <string name="register_close_screen_subtitle">Day-end cash reconciliation</string>
+    <!-- Day Start & Close (Cash Drawer, Float & Day-end Reconciliation) -->
+    <string name="register_close_section">Day Start &amp; Close</string>
+    <string name="register_close_hub_subtitle">Shift open, drawer cash float &amp; day close audit</string>
+    <string name="register_close_screen_title">Day Start &amp; Close</string>
+    <string name="register_close_screen_subtitle">Drawer cash float &amp; shift reconciliation</string>
     <string name="register_close_today_summary">CURRENT SHIFT SUMMARY</string>
     <string name="register_close_cash_sales">Cash Sales</string>
     <string name="register_close_digital_sales">Digital Sales</string>
+
+    <!-- Day Start & Close Features -->
+    <string name="day_close_vault_label">TODAY\'S DRAWER CASH</string>
+    <string name="day_close_live_sync">Live Synced</string>
+    <string name="day_close_shift_active">Shift #%1$s • Active (%2$s)</string>
+    <string name="day_close_cashier_label">Cashier: %1$s</string>
+    <string name="day_close_float_in_label">Cash In (+ Float)</string>
+    <string name="day_close_cash_out_label">Cash Out (Expense/Drop)</string>
+    <string name="day_close_add_float_btn">Add Cash Float</string>
+    <string name="day_close_safe_drop_btn">Safe Drop / Transfer</string>
+    <string name="day_close_tool_count_notes">Count Notes</string>
+    <string name="day_close_tool_count_notes_sub">৳1000 - ৳1</string>
+    <string name="day_close_tool_open_float">Opening Float</string>
+    <string name="day_close_tool_expenses">Expenses</string>
+    <string name="day_close_shift_math_title">Shift Cash Math Breakdown</string>
+    <string name="day_close_math_starting_float">Starting Float (+ Cash in drawer at start)</string>
+    <string name="day_close_math_cash_sales">Cash Sales Collected (+)</string>
+    <string name="day_close_math_cash_in">Mid-Shift Cash In / Top-up (+)</string>
+    <string name="day_close_math_due_collected">Customer Due Cash Paid (+)</string>
+    <string name="day_close_math_expenses">Petty Cash Expenses Paid (−)</string>
+    <string name="day_close_math_supplier">Supplier Cash Disbursements (−)</string>
+    <string name="day_close_math_refunds">Customer Cash Returns / Refunds (−)</string>
+    <string name="day_close_math_expected">Expected Cash in Drawer</string>
+    <string name="day_close_end_shift_btn">End Shift &amp; Close Register (Z-Report)</string>
+    <string name="day_close_recent_closings_title">Recent Shift Closings</string>
+    <string name="day_close_safe_drop_title">Safe Drop / Cash Transfer</string>
+    <string name="day_close_safe_drop_sub">Transfer excess drawer cash to shop safe or bank</string>
+    <string name="day_close_safe_drop_amount">Safe Drop Amount (৳)</string>
+    <string name="day_close_safe_drop_dest">Destination / Note</string>
+    <string name="day_close_safe_drop_confirm">Confirm Safe Drop</string>
+    <string name="day_close_add_float_title">Add Cash Float / Cash In</string>
+    <string name="day_close_add_float_reason">Reason / Note</string>
+    <string name="day_close_add_float_confirm">Confirm Cash Float</string>
+
+    <!-- Denomination Counter Dialog -->
+    <string name="denom_dialog_title">Bangladeshi Taka Denomination Counter</string>
+    <string name="denom_mode_count_notes">Count by Note</string>
+    <string name="denom_mode_quick_total">Quick Total Amount</string>
+    <string name="denom_detailed_sub">Count physical banknotes and coins in drawer.</string>
+    <string name="denom_hide_notes">Hide Notes</string>
+    <string name="denom_show_notes">Show Notes</string>
+    <string name="denom_show_10_denominations">Show 10 Denominations</string>
+    <string name="denom_hidden_notice">Note-by-note breakdown is collapsed</string>
+    <string name="denom_hidden_sub">10 denominations tallied. Total is preserved.</string>
+    <string name="denom_dont_wanna_count">Don\'t want to count note by note?</string>
+    <string name="denom_enter_total_directly">⚡ Enter total directly</string>
+    <string name="denom_quick_title">Direct Cash Drawer Total</string>
+    <string name="denom_quick_sub">Enter lump-sum cash without counting individual notes</string>
+    <string name="denom_match_expected">Match Expected (%1$s)</string>
+    <string name="denom_clear">Clear</string>
+    <string name="denom_expected_system">System Expected Cash:</string>
+    <string name="denom_entered_physical">Entered Physical Cash:</string>
+    <string name="denom_shift_variance">Shift Variance:</string>
+    <string name="denom_variance_balanced">✓ Balanced (Exact Match)</string>
+    <string name="denom_variance_shortage">⚠️ Shortage: -%1$s</string>
+    <string name="denom_variance_surplus">ℹ️ Surplus: +%1$s</string>
+    <string name="denom_breakdown_title">Banknote Denomination Breakdown (Optional)</string>
+    <string name="denom_breakdown_sub">Tap to show or hide note-by-note counts</string>
+    <string name="denom_breakdown_hidden">Hidden</string>
+    <string name="denom_breakdown_shown">Shown</string>
+    <string name="denom_audit_note_label">Counting Method / Audit Note (Optional)</string>
+    <string name="denom_audit_note_hint">e.g. Bill counter machine #1 / Manual bundle count</string>
+    <string name="denom_total_physical_cash">TOTAL PHYSICAL CASH</string>
+    <string name="denom_apply_to_shift">Apply to Shift</string>
+
+    <!-- Expenses Redesign -->
+    <string name="expense_hero_total_label">TOTAL TODAY\'S EXPENSES</string>
+    <string name="expense_hero_disbursements">%1$d petty cash disbursements today</string>
+    <string name="expense_cash_moved_banner">Cash Drawer &amp; Float balance is now securely tracked in Day Start &amp; Close</string>
+    <string name="expense_view_drawer_btn">View Drawer ➔</string>
     <string name="owner_only_loyalty">Loyalty management is owner-only</string>
     <string name="loyalty_screen_title">Customer Loyalty</string>
     <string name="loyalty_hub_subtitle">Members, points and purchase totals</string>
@@ -436,6 +507,12 @@
     <string name="more_admin_badge">Admin</string>
     <string name="more_locked_badge">Locked</string>
     <string name="more_audit_badge">Audit</string>
+    <string name="more_filter_all">All Tools</string>
+    <string name="more_filter_shift">Daily Shift</string>
+    <string name="more_filter_crm">Customers &amp; CRM</string>
+    <string name="more_filter_management">Management</string>
+    <string name="more_view_list_cd">Switch to list view</string>
+    <string name="more_view_grid_cd">Switch to grid view</string>
     <string name="register_close_starting_float_label">Starting Float (৳)</string>
     <string name="register_close_cash_refunds_label">Cash Refunds</string>
     <string name="register_close_starting_float_hint">Opening cash placed in the drawer today</string>
@@ -767,6 +844,11 @@
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
+    <string name="settings_ui_layout_title">UI Layout &amp; Terminal Mode</string>
+    <string name="settings_ui_layout_subtitle">Auto adapts to screen size or force mode</string>
+    <string name="settings_ui_layout_auto">Auto-Detect</string>
+    <string name="settings_ui_layout_tablet">Tablet Mode</string>
+    <string name="settings_ui_layout_phone">Phone Mode</string>
     <string name="settings_app_name_display">Techyfi POS</string>
     <string name="settings_app_tagline">Smart offline POS &amp; inventory solution</string>
     <string name="settings_auto_drive_backup_title">Automatic Google Drive Backup</string>
@@ -959,6 +1041,16 @@
     <string name="settings_show_cashier_name">Show Cashier Name</string>
     <string name="settings_show_customer_details">Show Customer Details</string>
     <string name="settings_show_discount_line">Show Discount Line</string>
+    <string name="settings_show_mrp_discount_sale_mode">Show MRP Discount in Sale Mode</string>
+    <string name="settings_show_item_wise_mrp_discount">Item-by-Item MRP Discount on Receipt</string>
+    <string name="settings_item_by_item_discount_desc">Show MRP &amp; item savings under each line item</string>
+    <string name="cart_mrp_savings_badge">🎉 Customer Saves %1$s (%2$s%%) vs MRP!</string>
+    <string name="cart_customer_savings_breakdown">CUSTOMER SAVINGS BREAKDOWN</string>
+    <string name="cart_original_mrp_subtotal">Original MRP Subtotal:</string>
+    <string name="cart_store_sale_discount">Store Sale Discount:</string>
+    <string name="cart_total_customer_savings">Total Customer Savings:</string>
+    <string name="cart_item_by_item_switch">Item-by-Item</string>
+    <string name="cart_summary_only_switch">Without Item-by-Item</string>
     <string name="settings_show_fb_below_qr">Show Facebook Link Below QR Code</string>
     <string name="settings_show_fb_header">Show Facebook Link in Header</string>
     <string name="settings_show_logo_label">Show Logo</string>
@@ -1298,6 +1390,48 @@
     <string name="loyalty_show_all_history">Show All</string>
     <string name="loyalty_customer_history_title">Activity History: %1$s</string>
     <string name="loyalty_deleted_success">Member removed</string>
+
+    <!-- Customer Loyalty Redesign V5 -->
+    <string name="loyalty_kpi_members">Members</string>
+    <string name="loyalty_kpi_outstanding">Outstanding</string>
+    <string name="loyalty_kpi_redeemed">Redeemed</string>
+    <string name="loyalty_kpi_vip">VIP Members</string>
+    <string name="loyalty_kpi_liability_val">%1$s liability</string>
+    <string name="loyalty_filter_all">All Members</string>
+    <string name="loyalty_filter_vip">VIP &amp; Gold</string>
+    <string name="loyalty_filter_with_points">With Points</string>
+    <string name="loyalty_filter_active">Active (90d)</string>
+    <string name="loyalty_filter_expiring">Expiring Soon</string>
+    <string name="loyalty_filter_zero">0 Points</string>
+    <string name="loyalty_sort_sheet_title">Sort &amp; Filter Members</string>
+    <string name="loyalty_sort_points_desc">Highest Points</string>
+    <string name="loyalty_sort_points_asc">Lowest Points</string>
+    <string name="loyalty_sort_spend_desc">Highest Lifetime Spend</string>
+    <string name="loyalty_sort_recent">Recently Active</string>
+    <string name="loyalty_sort_name">Name (A–Z)</string>
+    <string name="loyalty_action_view_profile">Customer 360° Profile</string>
+    <string name="loyalty_action_add_points">Add Points</string>
+    <string name="loyalty_action_redeem_points">Redeem Points</string>
+    <string name="loyalty_action_adjust_points">Adjust Points</string>
+    <string name="loyalty_action_history">Points Audit Ledger</string>
+    <string name="loyalty_action_call">Call Customer</string>
+    <string name="loyalty_action_delete">Delete Member</string>
+    <string name="loyalty_settings_title">Loyalty Program Rules</string>
+    <string name="loyalty_settings_earn_rate">Spend for 1 Point (৳)</string>
+    <string name="loyalty_settings_redeem_rate">Cash Value per Point (৳)</string>
+    <string name="loyalty_settings_min_redeem">Min Points to Redeem</string>
+    <string name="loyalty_settings_max_discount">Max Bill Payable by Points (%)</string>
+    <string name="loyalty_settings_silver_thresh">Silver Spend Threshold (৳)</string>
+    <string name="loyalty_settings_gold_thresh">Gold Spend Threshold (৳)</string>
+    <string name="loyalty_settings_platinum_thresh">Platinum Spend Threshold (৳)</string>
+    <string name="loyalty_settings_save">Save Rules</string>
+    <string name="loyalty_duplicate_warning">Phone already registered: %1$s (%2$d pts)</string>
+    <string name="loyalty_duplicate_view_existing">View Existing</string>
+    <string name="loyalty_tab_summary">Summary</string>
+    <string name="loyalty_tab_ledger">Points Ledger</string>
+    <string name="loyalty_tab_purchases">Purchase History</string>
+    <string name="loyalty_synced">Synced</string>
+    <string name="loyalty_pts_val_pill">%1$d pts • ৳%2$s val</string>
     <string name="sales_report_title">Report &amp; Analytics</string>
     <string name="sales_report_subtitle">Revenue, profits &amp; trends</string>
     <string name="sales_report_export_excel">Export Excel</string>
@@ -1443,6 +1577,38 @@
     <string name="customer_export_excel_success">Customers exported to Excel successfully!</string>
     <string name="customer_export_csv_chooser_title">Export Customers CSV</string>
     <string name="customer_export_failed">Export failed: %1$s</string>
+    <string name="customer_view_table">Table View</string>
+    <string name="customer_view_cards">Card View</string>
+    <string name="customer_tab_timeline">Timeline</string>
+    <string name="customer_tab_notes">Notes &amp; Reminders</string>
+    <string name="customer_filter_new">🌟 New (30d)</string>
+    <string name="customer_filter_defaulter">🚫 Defaulter</string>
+    <string name="customer_sort_loyalty">Loyalty Points</string>
+    <string name="customer_dedup_banner_title">%1$d Potential Duplicate Accounts</string>
+    <string name="customer_dedup_banner_desc">Consolidate customer profiles, purchase history and dues</string>
+    <string name="customer_btn_review_merge">Review &amp; Merge</string>
+    <string name="customer_merge_title">Merge Duplicate Customers</string>
+    <string name="customer_merge_master_prompt">Select the Primary Master Account to keep:</string>
+    <string name="customer_merge_secondary_label">Account to be absorbed:</string>
+    <string name="customer_merge_confirm_btn">Confirm &amp; Merge Accounts</string>
+    <string name="customer_merge_success">Customers merged successfully!</string>
+    <string name="customer_merge_failed">Merge failed: %1$s</string>
+    <string name="customer_bulk_selected">%1$d selected</string>
+    <string name="customer_bulk_whatsapp_due">Send WhatsApp Due Reminder</string>
+    <string name="customer_bulk_tag">Assign Tag</string>
+    <string name="customer_bulk_export">Export Selected</string>
+    <string name="customer_bulk_deselect">Deselect</string>
+    <string name="customer_bulk_tag_dialog_title">Assign Tag to Selected Customers</string>
+    <string name="customer_bulk_tag_success">Tag updated for %1$d customers!</string>
+    <string name="customer_add_note_prompt">Add Staff CRM Note</string>
+    <string name="customer_note_category_label">Category</string>
+    <string name="customer_note_save_btn">Save Note</string>
+    <string name="customer_note_saved">Note saved successfully!</string>
+    <string name="customer_no_timeline">No activity recorded yet</string>
+    <string name="customer_no_notes">No CRM notes recorded yet</string>
+    <string name="customer_receipt_dialog_title">Invoice Receipt</string>
+    <string name="customer_due_settle_quick">Collect Due</string>
+    <string name="close">Close</string>
     <string name="dues_export_excel_button">Export Dues to Excel</string>
     <string name="dues_export_excel_success">Dues &amp; Credit Ledger exported to Excel successfully!</string>
     <string name="dues_export_excel_failed">Failed to export Dues to Excel: %1$s</string>
@@ -1594,5 +1760,32 @@
     <string name="settings_due_receipt_live_preview_title">Live Voucher Thermal Preview</string>
     <string name="settings_due_receipt_live_preview_desc">Real-time receipt preview adapting to toggles and roll width</string>
     <string name="settings_toast_due_receipt_saved">Money receipt &amp; voucher settings saved!</string>
+
+    <!-- Tablet POS Split Terminal Strings -->
+    <string name="tablet_search_placeholder">Search item or barcode…</string>
+    <string name="tablet_category_all">All</string>
+    <string name="tablet_no_products_found">No products found</string>
+    <string name="tablet_out_of_stock_toast">Out of stock!</string>
+    <string name="tablet_live_cart">Live Cart</string>
+    <string name="tablet_cart_items">%1$d items</string>
+    <string name="tablet_cart_item_single">%1$d item</string>
+    <string name="tablet_cart_hold">Hold</string>
+    <string name="tablet_cart_clear">Clear</string>
+    <string name="tablet_cart_empty_title">Your cart is empty</string>
+    <string name="tablet_cart_empty_subtitle">Tap products on the left or scan barcode</string>
+    <string name="tablet_grand_total">Grand Total:</string>
+    <string name="tablet_checkout">Checkout ➔</string>
+    <string name="tablet_stock_out">Out of Stock</string>
+    <string name="tablet_stock_available">Stock: %1$d</string>
+    <string name="tablet_mode_sell">Sell</string>
+    <string name="tablet_mode_stock">Stock</string>
+
+    <!-- Stock Check Financial Intelligence Strings -->
+    <string name="stock_check_purchase">Purchase</string>
+    <string name="stock_check_selling">Selling</string>
+    <string name="stock_check_mrp">MRP</string>
+    <string name="stock_check_wholesale">Wholesale</string>
+    <string name="stock_check_unit_margin">Unit Margin</string>
+    <string name="stock_check_asset_worth">Asset Worth (%1$s units)</string>
 </resources>
 

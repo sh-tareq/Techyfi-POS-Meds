@@ -6,7 +6,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import kotlinx.coroutines.launch
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,18 +14,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -41,7 +42,11 @@ import com.example.techyfipos.data.db.Customer
 import com.example.techyfipos.ui.viewmodel.CustomerFilterSegment
 import com.example.techyfipos.ui.viewmodel.CustomerSortOption
 import com.example.techyfipos.ui.viewmodel.CustomerViewModel
+import com.example.techyfipos.ui.viewmodel.DuplicateCustomerPair
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.openPhoneDialer
+import com.example.techyfipos.utils.openWhatsAppChat
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileWriter
 
@@ -59,18 +64,24 @@ fun CustomersScreen(
     val totalDues by customerViewModel.totalDuesAmount.collectAsStateWithLifecycle()
     val vipCount by customerViewModel.vipCustomersCount.collectAsStateWithLifecycle()
     val repeatPercent by customerViewModel.repeatCustomersPercent.collectAsStateWithLifecycle()
+    val avgSpend by customerViewModel.averageCustomerSpend.collectAsStateWithLifecycle()
 
     val searchQuery by customerViewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedFilter by customerViewModel.selectedFilter.collectAsStateWithLifecycle()
     val selectedSort by customerViewModel.selectedSort.collectAsStateWithLifecycle()
+    val isTableView by customerViewModel.isTableView.collectAsStateWithLifecycle()
+    val selectedPhones by customerViewModel.selectedCustomerPhones.collectAsStateWithLifecycle()
+    val duplicatePairs by customerViewModel.duplicatePairs.collectAsStateWithLifecycle()
 
     val dossierData by customerViewModel.selectedCustomerDossier.collectAsStateWithLifecycle()
-    val isLoadingDossier by customerViewModel.isLoadingDossier.collectAsStateWithLifecycle()
 
     var showAddCustomerDialog by remember { mutableStateOf(false) }
     var customerToEdit by remember { mutableStateOf<Customer?>(null) }
     var showSortMenu by remember { mutableStateOf(false) }
     var showExportMenu by remember { mutableStateOf(false) }
+    var showMergeDialog by remember { mutableStateOf(false) }
+    var showBulkTagDialog by remember { mutableStateOf(false) }
+
     val scope = rememberCoroutineScope()
     val exportSuccessMessage = stringResource(R.string.customer_export_excel_success)
     val exportFailedPrefix = stringResource(R.string.customer_export_failed, "").trimEnd()
@@ -108,7 +119,7 @@ fun CustomersScreen(
                         Text(
                             text = stringResource(R.string.customers_screen_title),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
+                            fontSize = 16.sp,
                             maxLines = 1,
                             softWrap = false,
                             overflow = TextOverflow.Ellipsis
@@ -123,19 +134,31 @@ fun CustomersScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = onBack,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 actions = {
+                    // View Toggle Button (Table vs Cards)
+                    IconButton(
+                        onClick = { customerViewModel.isTableView.value = !isTableView },
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isTableView) Icons.Default.ViewAgenda else Icons.Default.TableChart,
+                            contentDescription = if (isTableView) stringResource(R.string.customer_view_cards) else stringResource(R.string.customer_view_table),
+                            tint = if (isTableView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
                     // Sort Menu
                     Box {
                         IconButton(
                             onClick = { showSortMenu = true },
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(38.dp)
                         ) {
-                            Icon(Icons.Default.Sort, contentDescription = "Sort")
+                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort")
                         }
                         DropdownMenu(
                             expanded = showSortMenu,
@@ -170,6 +193,13 @@ fun CustomersScreen(
                                 }
                             )
                             DropdownMenuItem(
+                                text = { Text(stringResource(R.string.customer_sort_loyalty)) },
+                                onClick = {
+                                    customerViewModel.selectedSort.value = CustomerSortOption.LOYALTY_POINTS
+                                    showSortMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.customer_sort_name)) },
                                 onClick = {
                                     customerViewModel.selectedSort.value = CustomerSortOption.NAME_ASC
@@ -183,7 +213,7 @@ fun CustomersScreen(
                     Box {
                         IconButton(
                             onClick = { showExportMenu = true },
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(38.dp)
                         ) {
                             Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.customer_export_title))
                         }
@@ -214,134 +244,286 @@ fun CustomersScreen(
                     // Add Customer Button
                     FilledIconButton(
                         onClick = { showAddCustomerDialog = true },
-                        modifier = Modifier.padding(end = 4.dp).size(34.dp),
+                        modifier = Modifier.padding(end = 6.dp).size(36.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = "Add Customer", modifier = Modifier.size(17.dp))
+                        Icon(Icons.Default.PersonAdd, contentDescription = "Add Customer", modifier = Modifier.size(18.dp))
                     }
                 }
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 14.dp)
         ) {
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { customerViewModel.searchQuery.value = it },
-                placeholder = { Text(stringResource(R.string.customer_search_placeholder), fontSize = 12.5.sp) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp)) },
-                trailingIcon = {
-                    if (searchQuery.isNotBlank()) {
-                        IconButton(onClick = { customerViewModel.searchQuery.value = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear", modifier = Modifier.size(16.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp)
+            ) {
+                // Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { customerViewModel.searchQuery.value = it },
+                    placeholder = { Text(stringResource(R.string.customer_search_placeholder), fontSize = 12.5.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp)) },
+                    trailingIcon = {
+                        if (searchQuery.isNotBlank()) {
+                            IconButton(onClick = { customerViewModel.searchQuery.value = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear", modifier = Modifier.size(16.dp))
+                            }
                         }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-            )
-
-            // KPI Overview Metrics Carousel
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp)
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                KpiMetricCard(
-                    title = stringResource(R.string.customers_kpi_total),
-                    value = "$totalCount",
-                    color = MaterialTheme.colorScheme.primary,
-                    icon = Icons.Default.People
-                )
-                KpiMetricCard(
-                    title = stringResource(R.string.customers_kpi_due),
-                    value = formatTaka(totalDues),
-                    color = if (totalDues > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
-                    icon = Icons.Default.Warning
-                )
-                KpiMetricCard(
-                    title = stringResource(R.string.customers_kpi_vip),
-                    value = "$vipCount",
-                    color = Color(0xFF8B5CF6),
-                    icon = Icons.Default.Stars
-                )
-                KpiMetricCard(
-                    title = stringResource(R.string.customers_kpi_repeat),
-                    value = "$repeatPercent%",
-                    color = Color(0xFF00875A),
-                    icon = Icons.Default.Repeat
-                )
-            }
-
-            // Segment Filter Chips
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp)
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                listOf(
-                    CustomerFilterSegment.ALL to stringResource(R.string.customer_filter_all),
-                    CustomerFilterSegment.WITH_DUES to stringResource(R.string.customer_filter_dues),
-                    CustomerFilterSegment.VIP to stringResource(R.string.customer_filter_vip),
-                    CustomerFilterSegment.FREQUENT to stringResource(R.string.customer_filter_frequent),
-                    CustomerFilterSegment.WHOLESALE to stringResource(R.string.customer_filter_wholesale),
-                    CustomerFilterSegment.RECENT to stringResource(R.string.customer_filter_recent)
-                ).forEach { (segment, title) ->
-                    val isSelected = selectedFilter == segment
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { customerViewModel.selectedFilter.value = segment },
-                        label = { Text(title, fontSize = 11.5.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                }
-            }
-
-            // Customer List
-            if (customers.isEmpty()) {
-                Box(
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
+                        .padding(vertical = 4.dp)
+                )
+
+                // KPI Overview Metrics Carousel
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Default.PeopleOutline, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(44.dp))
-                        Text(
-                            text = stringResource(R.string.customers_empty),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 13.sp
+                    KpiMetricCard(
+                        title = stringResource(R.string.customers_kpi_total),
+                        value = "$totalCount",
+                        color = MaterialTheme.colorScheme.primary,
+                        icon = Icons.Default.People
+                    )
+                    KpiMetricCard(
+                        title = stringResource(R.string.customers_kpi_due),
+                        value = formatTaka(totalDues),
+                        color = if (totalDues > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
+                        icon = Icons.Default.Warning
+                    )
+                    KpiMetricCard(
+                        title = stringResource(R.string.customers_kpi_vip),
+                        value = "$vipCount",
+                        color = Color(0xFF8B5CF6),
+                        icon = Icons.Default.Stars
+                    )
+                    KpiMetricCard(
+                        title = stringResource(R.string.customers_kpi_repeat),
+                        value = "$repeatPercent%",
+                        color = Color(0xFF00875A),
+                        icon = Icons.Default.Repeat
+                    )
+                    KpiMetricCard(
+                        title = stringResource(R.string.customer_kpi_aov),
+                        value = formatTaka(avgSpend),
+                        color = Color(0xFF0284C7),
+                        icon = Icons.Default.AttachMoney
+                    )
+                }
+
+                // Duplicate Customer Detection Smart Alert Banner
+                if (duplicatePairs.isNotEmpty()) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFFEF3C7).copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.4f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("⚡", fontSize = 16.sp)
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.customer_dedup_banner_title, duplicatePairs.size),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = Color(0xFFF59E0B)
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.customer_dedup_banner_desc),
+                                        fontSize = 10.5.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            Button(
+                                onClick = { showMergeDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.height(30.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.customer_btn_review_merge),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF451A03)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Segment Filter Chips
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(
+                        CustomerFilterSegment.ALL to stringResource(R.string.customer_filter_all),
+                        CustomerFilterSegment.WITH_DUES to stringResource(R.string.customer_filter_dues),
+                        CustomerFilterSegment.VIP to stringResource(R.string.customer_filter_vip),
+                        CustomerFilterSegment.FREQUENT to stringResource(R.string.customer_filter_frequent),
+                        CustomerFilterSegment.WHOLESALE to stringResource(R.string.customer_filter_wholesale),
+                        CustomerFilterSegment.RECENT to stringResource(R.string.customer_filter_recent),
+                        CustomerFilterSegment.NEW_CUSTOMERS to stringResource(R.string.customer_filter_new),
+                        CustomerFilterSegment.DEFAULTER to stringResource(R.string.customer_filter_defaulter)
+                    ).forEach { (segment, title) ->
+                        val isSelected = selectedFilter == segment
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { customerViewModel.selectedFilter.value = segment },
+                            label = { Text(title, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                            shape = RoundedCornerShape(20.dp)
                         )
                     }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    contentPadding = PaddingValues(vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+
+                // Main Customer Content (Table View vs Card View)
+                if (customers.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Default.PeopleOutline, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(44.dp))
+                            Text(
+                                text = stringResource(R.string.customers_empty),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                } else if (isTableView) {
+                    CustomerDataTable(
+                        customers = customers,
+                        selectedPhones = selectedPhones,
+                        onToggleSelect = { phone -> customerViewModel.toggleCustomerSelection(phone) },
+                        onSelectAll = { customerViewModel.selectAll(customers.map { it.phone }) },
+                        onCustomerClick = { customer -> customerViewModel.loadCustomerDossier(customer.phone) },
+                        onStartSale = onStartSaleForCustomer,
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        contentPadding = PaddingValues(vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(customers, key = { it.phone }) { customer ->
+                            val isSelected = selectedPhones.contains(customer.phone)
+                            CustomerCard(
+                                customer = customer,
+                                isSelected = isSelected,
+                                onToggleSelect = { customerViewModel.toggleCustomerSelection(customer.phone) },
+                                onClick = {
+                                    customerViewModel.loadCustomerDossier(customer.phone)
+                                },
+                                onStartSale = { onStartSaleForCustomer(customer) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Floating Bulk Action Deck at Bottom
+            AnimatedVisibility(
+                visible = selectedPhones.isNotEmpty(),
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shadowElevation = 8.dp,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(customers, key = { it.phone }) { customer ->
-                        CustomerCard(
-                            customer = customer,
-                            onClick = {
-                                customerViewModel.loadCustomerDossier(customer.phone)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary
+                        ) {
+                            Text(
+                                text = stringResource(R.string.customer_bulk_selected, selectedPhones.size),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            FilledTonalButton(
+                                onClick = {
+                                    val firstSelected = selectedPhones.firstOrNull()
+                                    if (firstSelected != null) {
+                                        openWhatsAppChat(context, firstSelected)
+                                    }
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.height(34.dp)
+                            ) {
+                                Text("💬 ${stringResource(R.string.customer_action_whatsapp)}", fontSize = 11.sp)
                             }
-                        )
+
+                            FilledTonalButton(
+                                onClick = { showBulkTagDialog = true },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.height(34.dp)
+                            ) {
+                                Text("🏷️ ${stringResource(R.string.customer_bulk_tag)}", fontSize = 11.sp)
+                            }
+
+                            IconButton(
+                                onClick = { customerViewModel.clearCustomerSelection() },
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.customer_bulk_deselect), modifier = Modifier.size(18.dp))
+                            }
+                        }
                     }
                 }
             }
@@ -357,6 +539,15 @@ fun CustomersScreen(
             onEditCustomer = { customer ->
                 customerViewModel.clearDossier()
                 customerToEdit = customer
+            },
+            onAddNote = { text, category ->
+                customerViewModel.addCustomerNote(
+                    phone = dossierData!!.customer.phone,
+                    noteText = text,
+                    category = category,
+                    onSuccess = { Toast.makeText(context, context.getString(R.string.customer_note_saved), Toast.LENGTH_SHORT).show() },
+                    onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
+                )
             }
         )
     }
@@ -395,6 +586,210 @@ fun CustomersScreen(
             }
         )
     }
+
+    // Duplicate Customers Merge Dialog
+    if (showMergeDialog && duplicatePairs.isNotEmpty()) {
+        val pair = duplicatePairs.first()
+        CustomerMergeDialog(
+            pair = pair,
+            onDismiss = { showMergeDialog = false },
+            onConfirmMerge = { masterPhone, secondaryPhone ->
+                customerViewModel.mergeCustomers(
+                    masterPhone = masterPhone,
+                    secondaryPhone = secondaryPhone,
+                    onSuccess = {
+                        Toast.makeText(context, context.getString(R.string.customer_merge_success), Toast.LENGTH_SHORT).show()
+                        showMergeDialog = false
+                    },
+                    onError = { err ->
+                        Toast.makeText(context, context.getString(R.string.customer_merge_failed, err), Toast.LENGTH_LONG).show()
+                    }
+                )
+            }
+        )
+    }
+
+    // Bulk Tag Assignment Dialog
+    if (showBulkTagDialog) {
+        BulkAssignTagDialog(
+            count = selectedPhones.size,
+            onDismiss = { showBulkTagDialog = false },
+            onApplyTag = { tag ->
+                customerViewModel.bulkAssignTag(
+                    tag = tag,
+                    onSuccess = {
+                        Toast.makeText(context, context.getString(R.string.customer_bulk_tag_success, selectedPhones.size), Toast.LENGTH_SHORT).show()
+                        showBulkTagDialog = false
+                    },
+                    onError = { err ->
+                        Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        )
+    }
+}
+
+@Composable
+fun CustomerDataTable(
+    customers: List<Customer>,
+    selectedPhones: Set<String>,
+    onToggleSelect: (String) -> Unit,
+    onSelectAll: () -> Unit,
+    onCustomerClick: (Customer) -> Unit,
+    onStartSale: (Customer) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        color = MaterialTheme.colorScheme.surface,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Table Header Row
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = selectedPhones.size == customers.size && customers.isNotEmpty(),
+                        onCheckedChange = { onSelectAll() },
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Text("Customer", fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(2.2f))
+                    Text("Tag", fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1.1f))
+                    Text("Spend / Due", fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1.6f))
+                    Text("Orders", fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                    Text("Actions", fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.width(90.dp))
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(customers, key = { it.phone }) { customer ->
+                    val isSelected = selectedPhones.contains(customer.phone)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onCustomerClick(customer) }
+                            .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else Color.Transparent)
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = { onToggleSelect(customer.phone) },
+                            modifier = Modifier.size(32.dp)
+                        )
+
+                        // Customer Info
+                        Column(modifier = Modifier.weight(2.2f)) {
+                            Text(
+                                text = customer.name,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "📞 ${customer.phone}",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Segment Tag
+                        Box(modifier = Modifier.weight(1.1f)) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = when (customer.tag) {
+                                    "VIP" -> Color(0xFF8B5CF6).copy(alpha = 0.15f)
+                                    "Wholesale" -> Color(0xFF0284C7).copy(alpha = 0.15f)
+                                    "Defaulter" -> MaterialTheme.colorScheme.errorContainer
+                                    else -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                                }
+                            ) {
+                                Text(
+                                    text = customer.tag,
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = when (customer.tag) {
+                                        "VIP" -> Color(0xFF8B5CF6)
+                                        "Wholesale" -> Color(0xFF0284C7)
+                                        "Defaulter" -> MaterialTheme.colorScheme.onErrorContainer
+                                        else -> MaterialTheme.colorScheme.onSecondaryContainer
+                                    },
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        // Spend / Due
+                        Column(modifier = Modifier.weight(1.6f)) {
+                            Text(
+                                text = formatTaka(customer.lifetimeSpent),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            if (customer.totalDue > 0) {
+                                Text(
+                                    text = "Due: ${formatTaka(customer.totalDue)}",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 9.5.sp,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            } else {
+                                Text("৳0 due", fontSize = 9.5.sp, color = Color(0xFF00875A))
+                            }
+                        }
+
+                        // Orders
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("${customer.totalOrders} ord", fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+                            Text("⭐ ${customer.loyaltyPoints}p", fontSize = 9.5.sp, color = Color(0xFFE5A100))
+                        }
+
+                        // Action Shortcuts
+                        Row(
+                            modifier = Modifier.width(90.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            IconButton(
+                                onClick = { onStartSale(customer) },
+                                modifier = Modifier.size(26.dp)
+                            ) {
+                                Icon(Icons.Default.ShoppingCart, contentDescription = "Start Sale", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+                            }
+                            IconButton(
+                                onClick = { openWhatsAppChat(context, customer.phone) },
+                                modifier = Modifier.size(26.dp)
+                            ) {
+                                Text("💬", fontSize = 13.sp)
+                            }
+                            IconButton(
+                                onClick = { onCustomerClick(customer) },
+                                modifier = Modifier.size(26.dp)
+                            ) {
+                                Icon(Icons.Default.ChevronRight, contentDescription = "Dossier", modifier = Modifier.size(15.dp))
+                            }
+                        }
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -408,17 +803,17 @@ fun KpiMetricCard(
         shape = RoundedCornerShape(12.dp),
         color = color.copy(alpha = 0.12f),
         border = BorderStroke(1.dp, color.copy(alpha = 0.35f)),
-        modifier = Modifier.widthIn(min = 100.dp)
+        modifier = Modifier.widthIn(min = 96.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
             Column {
-                Text(title, fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
-                Text(value, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = color)
+                Text(title, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
+                Text(value, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = color)
             }
         }
     }
@@ -427,8 +822,12 @@ fun KpiMetricCard(
 @Composable
 fun CustomerCard(
     customer: Customer,
-    onClick: () -> Unit
+    isSelected: Boolean = false,
+    onToggleSelect: () -> Unit = {},
+    onClick: () -> Unit,
+    onStartSale: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val initials = remember(customer.name) {
         customer.name.trim().split(" ").take(2).mapNotNull { it.firstOrNull()?.toString() }.joinToString("").uppercase().ifBlank { "C" }
     }
@@ -436,25 +835,35 @@ fun CustomerCard(
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        border = BorderStroke(
+            if (isSelected) 1.5.dp else 1.dp,
+            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        ),
         onClick = onClick,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onToggleSelect() },
+                        modifier = Modifier.size(28.dp)
+                    )
+
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(9.dp))
                             .background(
                                 when (customer.tag) {
                                     "VIP" -> Color(0xFF8B5CF6).copy(alpha = 0.2f)
                                     "Wholesale" -> Color(0xFF0284C7).copy(alpha = 0.2f)
+                                    "Defaulter" -> MaterialTheme.colorScheme.errorContainer
                                     else -> MaterialTheme.colorScheme.primaryContainer
                                 }
                             ),
@@ -463,31 +872,33 @@ fun CustomerCard(
                         Text(
                             text = initials,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             color = when (customer.tag) {
                                 "VIP" -> Color(0xFF8B5CF6)
                                 "Wholesale" -> Color(0xFF0284C7)
+                                "Defaulter" -> MaterialTheme.colorScheme.onErrorContainer
                                 else -> MaterialTheme.colorScheme.primary
                             }
                         )
                     }
+
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
                                 text = customer.name,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 13.5.sp,
+                                fontSize = 13.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             if (customer.totalDue > 0) {
                                 Surface(
                                     shape = RoundedCornerShape(4.dp),
-                                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)
-                                 ) {
+                                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f)
+                                ) {
                                     Text(
                                         text = stringResource(R.string.customer_badge_due, formatTaka(customer.totalDue)),
-                                        fontSize = 9.5.sp,
+                                        fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onErrorContainer,
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
@@ -497,23 +908,32 @@ fun CustomerCard(
                         }
                         Text(
                             text = "📞 ${customer.phone}${if (!customer.address.isNullOrBlank()) " • ${customer.address}" else ""}",
-                            fontSize = 11.sp,
+                            fontSize = 10.5.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
-                Icon(
-                    Icons.Default.ChevronRight,
-                    contentDescription = "Details",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.size(18.dp)
-                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(
+                        onClick = onStartSale,
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(Icons.Default.ShoppingCart, contentDescription = "Start Sale", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                    }
+                    IconButton(
+                        onClick = { openWhatsAppChat(context, customer.phone) },
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Text("💬", fontSize = 14.sp)
+                    }
+                }
             }
 
             HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
+                modifier = Modifier.padding(vertical = 6.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
             )
 
@@ -524,32 +944,178 @@ fun CustomerCard(
             ) {
                 Text(
                     text = "${stringResource(R.string.customer_kpi_lifetime_spend)}: ${formatTaka(customer.lifetimeSpent)}",
-                    fontSize = 11.sp,
+                    fontSize = 10.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "${stringResource(R.string.customer_kpi_orders)}: ${customer.totalOrders}",
-                    fontSize = 11.sp,
+                    fontSize = 10.5.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (customer.loyaltyPoints > 0) {
                     Text(
                         text = "⭐ ${customer.loyaltyPoints} pts",
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFE5A100)
                     )
                 } else {
                     Text(
                         text = "🏷️ ${customer.tag}",
-                        fontSize = 10.5.sp,
+                        fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+fun CustomerMergeDialog(
+    pair: DuplicateCustomerPair,
+    onDismiss: () -> Unit,
+    onConfirmMerge: (masterPhone: String, secondaryPhone: String) -> Unit
+) {
+    var selectedMasterPhone by remember { mutableStateOf(pair.customerA.phone) }
+    val isMasterA = selectedMasterPhone == pair.customerA.phone
+    val master = if (isMasterA) pair.customerA else pair.customerB
+    val secondary = if (isMasterA) pair.customerB else pair.customerA
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("🔗", fontSize = 20.sp)
+                Text(stringResource(R.string.customer_merge_title), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "Match Reason: ${pair.matchReason}",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFF59E0B)
+                )
+                Text(
+                    text = stringResource(R.string.customer_merge_master_prompt),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // Option Card A
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(if (isMasterA) 2.dp else 1.dp, if (isMasterA) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.3f)),
+                    color = if (isMasterA) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth().clickable { selectedMasterPhone = pair.customerA.phone }
+                ) {
+                    Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        RadioButton(selected = isMasterA, onClick = { selectedMasterPhone = pair.customerA.phone })
+                        Column {
+                            Text(pair.customerA.name, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                            Text("📞 ${pair.customerA.phone} • Tag: ${pair.customerA.tag}", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Orders: ${pair.customerA.totalOrders} • Spend: ${formatTaka(pair.customerA.lifetimeSpent)}", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+
+                // Option Card B
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(if (!isMasterA) 2.dp else 1.dp, if (!isMasterA) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.3f)),
+                    color = if (!isMasterA) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth().clickable { selectedMasterPhone = pair.customerB.phone }
+                ) {
+                    Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        RadioButton(selected = !isMasterA, onClick = { selectedMasterPhone = pair.customerB.phone })
+                        Column {
+                            Text(pair.customerB.name, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                            Text("📞 ${pair.customerB.phone} • Tag: ${pair.customerB.tag}", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Orders: ${pair.customerB.totalOrders} • Spend: ${formatTaka(pair.customerB.lifetimeSpent)}", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+
+                // Consolidated Preview
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("✨ Merged Account Preview:", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("Combined Orders: ${master.totalOrders + secondary.totalOrders}", fontSize = 10.sp)
+                        Text("Combined Spend: ${formatTaka(master.lifetimeSpent + secondary.lifetimeSpent)}", fontSize = 10.sp)
+                        Text("Combined Dues: ${formatTaka(master.totalDue + secondary.totalDue)}", fontSize = 10.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirmMerge(master.phone, secondary.phone) }
+            ) {
+                Text(stringResource(R.string.customer_merge_confirm_btn), fontSize = 12.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel), fontSize = 12.sp)
+            }
+        }
+    )
+}
+
+@Composable
+fun BulkAssignTagDialog(
+    count: Int,
+    onDismiss: () -> Unit,
+    onApplyTag: (String) -> Unit
+) {
+    val tags = listOf("Retail", "VIP", "Wholesale", "Corporate", "Staff", "Defaulter")
+    var selectedTag by remember { mutableStateOf("VIP") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(stringResource(R.string.customer_bulk_tag_dialog_title), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Select tag to assign to $count selected customer(s):", fontSize = 12.sp)
+                tags.forEach { t ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedTag = t }
+                            .padding(vertical = 4.dp)
+                    ) {
+                        RadioButton(selected = selectedTag == t, onClick = { selectedTag = t })
+                        Text(t, fontSize = 12.5.sp, modifier = Modifier.padding(start = 6.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onApplyTag(selectedTag) }) {
+                Text("Apply Tag", fontSize = 12.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel), fontSize = 12.sp)
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -590,7 +1156,7 @@ fun CustomerAddEditDialog(
                     onValueChange = { phone = it },
                     label = { Text("Phone Number *") },
                     singleLine = true,
-                    enabled = customer == null, // Phone is PrimaryKey
+                    enabled = customer == null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -616,7 +1182,6 @@ fun CustomerAddEditDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
-                // Tag Selector
                 Text("Customer Tag / Segment:", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
