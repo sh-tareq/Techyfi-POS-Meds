@@ -507,4 +507,17 @@ data class SaleAuditLog(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+@Entity(tableName = "expense_audit_logs", indices = [Index(value = ["expenseId"])])
+data class ExpenseAuditLog(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val expenseId: Long,
+    val action: String, // "DELETED", "EDITED"
+    val reason: String,
+    val amount: Double,
+    val category: String,
+    val paymentSource: String,
+    val userName: String,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
 

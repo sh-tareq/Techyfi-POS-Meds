@@ -67,6 +67,7 @@ fun SuppliersScreen(
     var showAddSupplierDialog by remember { mutableStateOf(false) }
     var supplierToEdit by remember { mutableStateOf<Supplier?>(null) }
     var selectedSupplierForInflow by remember { mutableStateOf<Supplier?>(null) }
+    var showSupplierPickerForInflow by remember { mutableStateOf(false) }
     var selectedSupplierForPayDue by remember { mutableStateOf<Supplier?>(null) }
 
     var searchQuery by remember { mutableStateOf("") }
@@ -308,10 +309,12 @@ fun SuppliersScreen(
 
                                 Button(
                                     onClick = {
-                                        if (suppliers.isNotEmpty()) {
+                                        if (suppliers.isEmpty()) {
+                                            showAddSupplierDialog = true
+                                        } else if (suppliers.size == 1) {
                                             selectedSupplierForInflow = suppliers.first()
                                         } else {
-                                            showAddSupplierDialog = true
+                                            showSupplierPickerForInflow = true
                                         }
                                     },
                                     shape = RoundedCornerShape(12.dp),
@@ -868,6 +871,102 @@ fun SuppliersScreen(
                         }
                     }
                 )
+            }
+        )
+    }
+
+    if (showSupplierPickerForInflow) {
+        var pickerSearchQuery by remember { mutableStateOf("") }
+        val filteredSuppliersForInflow = remember(suppliers, pickerSearchQuery) {
+            if (pickerSearchQuery.isBlank()) suppliers
+            else suppliers.filter {
+                it.name.contains(pickerSearchQuery, ignoreCase = true) ||
+                it.phone.contains(pickerSearchQuery) ||
+                it.companyName.contains(pickerSearchQuery, ignoreCase = true)
+            }
+        }
+        AlertDialog(
+            onDismissRequest = { showSupplierPickerForInflow = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.supplier_select_for_inflow_title),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp)) {
+                    OutlinedTextField(
+                        value = pickerSearchQuery,
+                        onValueChange = { pickerSearchQuery = it },
+                        placeholder = { Text(stringResource(R.string.supplier_search_hint), fontSize = 12.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    if (filteredSuppliersForInflow.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = stringResource(R.string.supplier_no_matching_found),
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    } else {
+                        androidx.compose.foundation.lazy.LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            items(filteredSuppliersForInflow, key = { it.id }) { sup ->
+                                Surface(
+                                    onClick = {
+                                        showSupplierPickerForInflow = false
+                                        selectedSupplierForInflow = sup
+                                    },
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(sup.name.ifBlank { sup.companyName }, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
+                                            if (sup.companyName.isNotBlank() && sup.name.isNotBlank()) {
+                                                Text(sup.companyName, fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                                            }
+                                            if (sup.phone.isNotBlank()) {
+                                                Text(sup.phone, fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                                            }
+                                        }
+                                        Text(
+                                            formatTaka(sup.totalDue),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = if (sup.totalDue > 0) MaterialTheme.colorScheme.error else Color(0xFF059669)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSupplierPickerForInflow = false
+                    showAddSupplierDialog = true
+                }) {
+                    Text(stringResource(R.string.supplier_add_vendor), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSupplierPickerForInflow = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         )
     }

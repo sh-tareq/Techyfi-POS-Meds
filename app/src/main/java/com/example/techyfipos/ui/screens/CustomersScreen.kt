@@ -134,7 +134,7 @@ fun CustomersScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = onBack,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
@@ -143,7 +143,7 @@ fun CustomersScreen(
                     // View Toggle Button (Table vs Cards)
                     IconButton(
                         onClick = { customerViewModel.isTableView.value = !isTableView },
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                     ) {
                         Icon(
                             imageVector = if (isTableView) Icons.Default.ViewAgenda else Icons.Default.TableChart,
@@ -156,7 +156,7 @@ fun CustomersScreen(
                     Box {
                         IconButton(
                             onClick = { showSortMenu = true },
-                            modifier = Modifier.size(38.dp)
+                            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         ) {
                             Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort")
                         }

@@ -359,6 +359,9 @@ interface ExpenseDao {
     @Delete
     suspend fun deleteExpense(expense: Expense)
 
+    @Query("SELECT * FROM expenses WHERE id = :id LIMIT 1")
+    suspend fun getExpenseById(id: Long): Expense?
+
     @Query("DELETE FROM expenses WHERE id = :id")
     suspend fun deleteExpenseById(id: Long)
 
@@ -625,6 +628,18 @@ interface SaleAuditLogDao {
 
     @Query("SELECT * FROM sale_audit_logs WHERE saleId = :saleId ORDER BY timestamp DESC")
     suspend fun getAuditLogsForSale(saleId: Long): List<SaleAuditLog>
+}
+
+@Dao
+interface ExpenseAuditLogDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAuditLog(log: ExpenseAuditLog): Long
+
+    @Query("SELECT * FROM expense_audit_logs ORDER BY timestamp DESC")
+    fun getAllAuditLogs(): Flow<List<ExpenseAuditLog>>
+
+    @Query("SELECT * FROM expense_audit_logs WHERE expenseId = :expenseId ORDER BY timestamp DESC")
+    suspend fun getAuditLogsForExpense(expenseId: Long): List<ExpenseAuditLog>
 }
 
 

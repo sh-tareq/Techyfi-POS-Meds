@@ -33,12 +33,13 @@ import com.example.techyfipos.utils.HardwareBarcodeScanner
 class MainActivity : ComponentActivity() {
   companion object {
     var currentActivity: java.lang.ref.WeakReference<android.app.Activity>? = null
+    val pendingNavigationDestination = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     currentActivity = java.lang.ref.WeakReference(this)
-    handleRestoreIntent(intent)
+    handleDeepLink(intent)
 
     try {
       System.setProperty("javax.xml.stream.XMLInputFactory", "com.ctc.wstx.stax.WstxInputFactory")
@@ -89,34 +90,12 @@ class MainActivity : ComponentActivity() {
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)
-    handleRestoreIntent(intent)
+    handleDeepLink(intent)
   }
 
-  private fun handleRestoreIntent(intent: Intent?) {
-    val backupPath = intent?.getStringExtra("RESTORE_BACKUP_PATH") ?: return
-    intent.removeExtra("RESTORE_BACKUP_PATH")
-    val file = File(backupPath)
-    if (!file.exists()) return
-
-    val app = application as? TechyfiPOSApplication ?: return
-    lifecycleScope.launch(Dispatchers.IO) {
-      try {
-        val owner = AppDatabase.getDatabase(this@MainActivity).userDao().getActiveUsersOnce().firstOrNull { it.role == AppRoles.OWNER }
-        if (owner != null) {
-          app.repository.setSessionUser(owner)
-        }
-        val ok = app.repository.importBackup(file, BackupImportMode.REPLACE)
-        withContext(Dispatchers.Main) {
-          if (ok) {
-            Toast.makeText(this@MainActivity, "Database Restored Successfully! Restarting app...", Toast.LENGTH_SHORT).show()
-            restartApp(this@MainActivity)
-          } else {
-            Toast.makeText(this@MainActivity, "Backup Restore Failed", Toast.LENGTH_LONG).show()
-          }
-        }
-      } catch (e: Exception) {
-        e.printStackTrace()
-      }
-    }
+  private fun handleDeepLink(intent: Intent?) {
+    val destination = intent?.getStringExtra("navigate_to") ?: return
+    intent.removeExtra("navigate_to")
+    pendingNavigationDestination.value = destination
   }
 }

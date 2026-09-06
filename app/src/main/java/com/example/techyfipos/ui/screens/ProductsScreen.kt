@@ -3307,32 +3307,96 @@ fun copyUriToInternalStorage(context: android.content.Context, uri: Uri): String
     }
 }
 
-@Composable
-fun rememberUriImagePainter(uriString: String?): ImageBitmap? {
-    val context = LocalContext.current
-    return remember(uriString) {
-        if (uriString.isNullOrBlank()) return@remember null
-        try {
-            val file = File(uriString)
-            if (file.exists()) {
-                val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
-                bitmap?.asImageBitmap()
-            } else {
-                val uri = Uri.parse(uriString)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    val source = ImageDecoder.createSource(context.contentResolver, uri)
-                    ImageDecoder.decodeBitmap(source).asImageBitmap()
-                } else {
-                    @Suppress("DEPRECATION")
-                    val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-                    bitmap.asImageBitmap()
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
+internal object ProductImageMemoryCache {
+    private val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
+    private val cacheSize = (maxMemory / 8).coerceAtLeast(1024)
+    private val cache = object : android.util.LruCache<String, android.graphics.Bitmap>(cacheSize) {
+        override fun sizeOf(key: String, value: android.graphics.Bitmap): Int {
+            return value.byteCount / 1024
         }
     }
+
+    fun get(key: String): android.graphics.Bitmap? = cache.get(key)
+    fun put(key: String, bitmap: android.graphics.Bitmap) {
+        cache.put(key, bitmap)
+    }
+}
+
+private fun calculateInSampleSize(options: android.graphics.BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    val height = options.outHeight
+    val width = options.outWidth
+    var inSampleSize = 1
+    if (height > reqHeight || width > reqWidth) {
+        val halfHeight = height / 2
+        val halfWidth = width / 2
+        while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+            inSampleSize *= 2
+        }
+    }
+    return inSampleSize.coerceAtLeast(1)
+}
+
+private fun decodeSampledBitmapFromUri(context: android.content.Context, uriString: String, reqWidth: Int = 256, reqHeight: Int = 256): android.graphics.Bitmap? {
+    try {
+        val file = File(uriString)
+        val options = android.graphics.BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        if (file.exists()) {
+            android.graphics.BitmapFactory.decodeFile(file.absolutePath, options)
+            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
+            options.inJustDecodeBounds = false
+            options.inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+            return android.graphics.BitmapFactory.decodeFile(file.absolutePath, options)
+        } else {
+            val uri = Uri.parse(uriString)
+            val cr = context.contentResolver
+            val is1 = cr.openInputStream(uri)
+            if (is1 != null) {
+                is1.use { s ->
+                    android.graphics.BitmapFactory.decodeStream(s, null, options)
+                }
+            }
+            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
+            options.inJustDecodeBounds = false
+            options.inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+            val is2 = cr.openInputStream(uri)
+            return if (is2 != null) {
+                is2.use { s ->
+                    android.graphics.BitmapFactory.decodeStream(s, null, options)
+                }
+            } else null
+        }
+    } catch (_: Exception) {
+        // Corrupted or missing file
+    }
+    return null
+}
+
+@Composable
+fun rememberUriImagePainter(uriString: String?): ImageBitmap? {
+    if (uriString.isNullOrBlank()) return null
+    val context = LocalContext.current.applicationContext
+    val cached = ProductImageMemoryCache.get(uriString)
+    if (cached != null) return remember(cached) { cached.asImageBitmap() }
+
+    val state = produceState<ImageBitmap?>(initialValue = null, uriString) {
+        val inCache = ProductImageMemoryCache.get(uriString)
+        if (inCache != null) {
+            value = inCache.asImageBitmap()
+            return@produceState
+        }
+        val decoded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            decodeSampledBitmapFromUri(context, uriString)
+        }
+        if (decoded != null) {
+            ProductImageMemoryCache.put(uriString, decoded)
+            value = decoded.asImageBitmap()
+        } else {
+            value = null
+        }
+    }
+    return state.value
 }
 
 @Composable
@@ -6451,15 +6515,19 @@ fun ProductBarcodeScanDialog(
                         .background(Color.Black),
                     contentAlignment = Alignment.Center
                 ) {
+                    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+                    DisposableEffect(Unit) {
+                        onDispose {
+                            cameraExecutor.shutdown()
+                        }
+                    }
+
                     AndroidView(
                         factory = { ctx ->
-                            PreviewView(ctx).apply {
+                            val previewView = PreviewView(ctx).apply {
                                 scaleType = PreviewView.ScaleType.FILL_CENTER
                             }
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                        update = { previewView ->
-                            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+                            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                             cameraProviderFuture.addListener({
                                 try {
                                     val cameraProvider = cameraProviderFuture.get()
@@ -6481,12 +6549,12 @@ fun ProductBarcodeScanDialog(
                                         .build()
 
                                     imageAnalysis.setAnalyzer(
-                                        Executors.newSingleThreadExecutor(),
+                                        cameraExecutor,
                                         BarcodeAnalyzer(
                                             getPreviewSize = { android.util.Size(previewView.width, previewView.height) },
                                             onBarcodeDetected = { barcode ->
                                                 if (barcode.isNotBlank()) {
-                                                    beepAndVibrate(context)
+                                                    beepAndVibrate(ctx)
                                                     onBarcodeScanned(barcode)
                                                 }
                                             }
@@ -6504,8 +6572,10 @@ fun ProductBarcodeScanDialog(
                                 } catch (e: Exception) {
                                     e.printStackTrace()
                                 }
-                            }, ContextCompat.getMainExecutor(context))
-                        }
+                            }, ContextCompat.getMainExecutor(ctx))
+                            previewView
+                        },
+                        modifier = Modifier.fillMaxSize()
                     )
 
                     Box(

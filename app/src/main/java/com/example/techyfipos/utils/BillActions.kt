@@ -1,6 +1,7 @@
 package com.example.techyfipos.utils
 
 import com.example.techyfipos.R
+import com.example.techyfipos.data.InvoiceSettingsData
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -745,5 +746,47 @@ suspend fun printReceiptDirectBluetooth(
         paperWidthDots = dots,
         autoKickDrawer = autoKickDrawer
     )
+}
+
+/**
+ * Smart print function that first attempts direct ESC/POS Bluetooth printing
+ * if a Bluetooth printer address is configured in InvoiceSettings.
+ * If not configured or direct printing fails, falls back gracefully to standard Android OS print spooler.
+ */
+suspend fun printReceiptWithBluetoothFallback(
+    context: Context,
+    activity: Activity?,
+    bill: BillData,
+    settings: InvoiceSettingsData,
+    receiptLanguage: String = "EN"
+): Boolean {
+    val printerAddress = settings.directBluetoothPrinterAddress.trim()
+    if (printerAddress.isNotBlank()) {
+        try {
+            val jpegFile = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                generateBillJpeg(context, bill, receiptLanguage)
+            }
+            val bitmap = BitmapFactory.decodeFile(jpegFile.absolutePath)
+            if (bitmap != null) {
+                val printed = printReceiptDirectBluetooth(
+                    context = context,
+                    bitmap = bitmap,
+                    printerAddress = printerAddress,
+                    paperRollWidthMm = settings.paperRollWidthMm,
+                    autoKickDrawer = settings.cashDrawerKickEnabled
+                )
+                if (printed) {
+                    return true
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("BillActions", "Direct Bluetooth print failed, falling back to OS print dialog", e)
+        }
+    }
+    // Fallback to standard PDF print dialog
+    val pdfFile = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        generateBillPdf(context, bill, receiptLanguage = receiptLanguage)
+    }
+    return printBillPdf(activity ?: context, pdfFile, "Invoice #${bill.saleId}")
 }
 

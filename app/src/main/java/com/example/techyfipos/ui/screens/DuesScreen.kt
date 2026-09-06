@@ -1019,10 +1019,11 @@ fun DuesScreen(
             onDismiss = { paymentCustomer = null },
             onRecordPayment = { amount, method, reference, onSaved ->
                 val customer = paymentCustomer ?: return@RecordPaymentDialog
-                val newDue = (customer.outstandingAmount - amount).coerceAtLeast(0.0)
+                val appliedAmount = amount.coerceAtMost(customer.outstandingAmount)
+                val newDue = (customer.outstandingAmount - appliedAmount).coerceAtLeast(0.0)
                 duesViewModel.recordPayment(
                     phone = customer.customerPhone,
-                    amount = amount,
+                    amount = appliedAmount,
                     paymentMethod = method,
                     referenceNote = reference
                 ) { success ->
@@ -1032,7 +1033,7 @@ fun DuesScreen(
                         repaymentReceiptData = DueRepaymentReceiptData(
                             customerName = customer.customerName,
                             customerPhone = customer.customerPhone,
-                            amountPaid = amount,
+                            amountPaid = appliedAmount,
                             paymentMethod = method,
                             referenceNote = reference,
                             remainingDue = newDue
@@ -2682,8 +2683,8 @@ fun DuesAuditHistorySheet(
                         )
                     }
                 }
-                IconButton(onClick = onDismiss, modifier = Modifier.size(30.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(18.dp))
+                IconButton(onClick = onDismiss, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
                 }
             }
 

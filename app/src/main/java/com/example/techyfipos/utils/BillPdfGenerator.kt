@@ -1054,13 +1054,13 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     val paint = Paint().apply {
         color = Color.BLACK
         isAntiAlias = true
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
     }
 
     val boldPaint = Paint().apply {
         color = Color.BLACK
         isAntiAlias = true
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
     }
 
     var y = 45f
@@ -1241,13 +1241,13 @@ fun generateXReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     val paint = Paint().apply {
         color = Color.BLACK
         isAntiAlias = true
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
     }
 
     val boldPaint = Paint().apply {
         color = Color.BLACK
         isAntiAlias = true
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
     }
 
     var y = 45f

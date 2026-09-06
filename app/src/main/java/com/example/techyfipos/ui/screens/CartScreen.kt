@@ -137,7 +137,7 @@ internal fun calculateEffectiveAmountPaid(
     splitPayments: List<SplitPaymentEntry>
 ): Double = when {
     isSplitPayment -> splitPayments.filterNot { it.method == "Due" }.sumOf { it.amount }
-    paymentMethod == "Due" -> enteredAmountPaid.coerceAtLeast(0.0)
+    paymentMethod == "Due" -> 0.0
     paymentMethod == "Cash" -> if (enteredAmountPaid > 0.0) enteredAmountPaid else grandTotal
     else -> grandTotal
 }
@@ -307,9 +307,9 @@ fun CartScreen(
         }
     }
 
-    // Receipt details for sharing
-    var showReceiptDialog by remember { mutableStateOf(false) }
-    var billSnapshot by remember { mutableStateOf<BillData?>(null) }
+    // Receipt details for sharing - persisted in CartViewModel across rotation
+    val showReceiptDialog by cartViewModel.showReceiptDialog.collectAsStateWithLifecycle()
+    val billSnapshot by cartViewModel.completedBillSnapshot.collectAsStateWithLifecycle()
     var showEditConfirmForCompletedSale by remember { mutableStateOf(false) }
     val salesWithItemsForCompletedSale by salesViewModel.salesWithItems.collectAsStateWithLifecycle()
     var showCheckout by rememberSaveable { mutableStateOf(false) }
@@ -992,6 +992,10 @@ fun CartScreen(
                                                 chipScaleAnim.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
                                             }
                                             cartViewModel.paymentMethod.value = method
+                                            if (method != "Cash") {
+                                                receivedAmountText = ""
+                                                cartViewModel.amountPaid.value = 0.0
+                                            }
                                         },
                                         modifier = Modifier.graphicsLayer {
                                             scaleX = chipScaleAnim.value
@@ -1551,6 +1555,39 @@ fun CartScreen(
                                 }
                             }
                         }
+
+                        // Customer Due Confirmation Notice
+                        AnimatedVisibility(visible = !isSplitPayment && paymentMethod == "Due") {
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("⏳", fontSize = 18.sp)
+                                    Column {
+                                        Text(
+                                            text = "বকেয়া বিক্রয় (Customer Due)",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                        Text(
+                                            text = "সর্বমোট ${formatTaka(grandTotal)} ক্রেতার বকেয়া হিসেবে যুক্ত হবে।",
+                                            fontSize = 11.5.sp,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         Spacer(modifier = Modifier.height(6.dp))
 
                         // Pricing summaries
@@ -1864,7 +1901,7 @@ fun CartScreen(
                                         val updatedTotalDue = if (snapshotHasDueInPayment && snapshotCustomerPhone.isNotBlank()) {
                                             cartViewModel.getCustomerDue(snapshotCustomerPhone)?.outstandingAmount ?: 0.0
                                         } else 0.0
-                                        billSnapshot = BillData(
+                                        cartViewModel.openReceiptDialog(BillData(
                                             saleId = saleId,
                                             timestampMillis = System.currentTimeMillis(),
                                             shopName = shopName,
@@ -1895,8 +1932,7 @@ fun CartScreen(
                                             mrpSavings = snapshotMrpSavings,
                                             isSaleMode = snapshotIsSaleMode,
                                             showItemWiseMrpDiscount = invoiceSettingsData.showItemWiseMrpDiscount
-                                        )
-                                        showReceiptDialog = true
+                                        ))
                                     } catch (e: Exception) {
                                         android.util.Log.e("CartScreen", "Error completing sale", e)
                                         Toast.makeText(context, "Error completing sale: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
@@ -1995,7 +2031,7 @@ fun CartScreen(
         ReceiptSummaryDialog(
             bill = snapshot,
             onDismiss = {
-                showReceiptDialog = false
+                cartViewModel.dismissReceiptDialog()
                 onBack()
             },
             onAddToCartAgain = if (completedSale != null) {
@@ -2005,7 +2041,7 @@ fun CartScreen(
                         if (skipped > 0) {
                             Toast.makeText(context, context.getString(R.string.cart_add_to_cart_again_skipped_toast, skipped), Toast.LENGTH_LONG).show()
                         }
-                        showReceiptDialog = false
+                        cartViewModel.dismissReceiptDialog()
                     }
                 }
             } else null,
@@ -2033,7 +2069,7 @@ fun CartScreen(
                                     if (skipped > 0) {
                                         Toast.makeText(context, context.getString(R.string.cart_add_to_cart_again_skipped_toast, skipped), Toast.LENGTH_LONG).show()
                                     }
-                                    showReceiptDialog = false
+                                    cartViewModel.dismissReceiptDialog()
                                 } else {
                                     Toast.makeText(context, context.getString(R.string.sales_history_void_for_edit_failed), Toast.LENGTH_SHORT).show()
                                 }
@@ -2090,7 +2126,7 @@ fun CartScreen(
                 val snapshotAmountPaid = calculateEffectiveAmountPaid(
                     isSplitPayment = isSplitPayment,
                     paymentMethod = paymentMethod,
-                    enteredAmountPaid = receivedAmountText.toDoubleOrNull() ?: 0.0,
+                    enteredAmountPaid = if (paymentMethod == "Cash") (receivedAmountText.toDoubleOrNull() ?: 0.0) else 0.0,
                     grandTotal = grandTotal,
                     splitPayments = splitPayments
                 )
@@ -2107,7 +2143,7 @@ fun CartScreen(
                         val updatedTotalDue = if (snapshotCustomerPhone.isNotBlank()) {
                             cartViewModel.getCustomerDue(snapshotCustomerPhone)?.outstandingAmount ?: 0.0
                         } else 0.0
-                        billSnapshot = BillData(
+                        cartViewModel.openReceiptDialog(BillData(
                             saleId = saleId,
                             timestampMillis = System.currentTimeMillis(),
                             shopName = shopName,
@@ -2138,8 +2174,7 @@ fun CartScreen(
                             mrpSavings = snapshotMrpSavings,
                             isSaleMode = snapshotIsSaleMode,
                             showItemWiseMrpDiscount = invoiceSettingsData.showItemWiseMrpDiscount
-                        )
-                        showReceiptDialog = true
+                        ))
                     } catch (e: Exception) {
                         android.util.Log.e("CartScreen", "Error completing sale", e)
                         Toast.makeText(context, "Error completing sale: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
@@ -3508,8 +3543,13 @@ fun ReceiptSummaryDialog(
                                 printPressed = true
                                 delay(100)
                                 printPressed = false
-                                val file = withContext(Dispatchers.IO) { generateBillPdf(context, activeBill, receiptLanguage = receiptLanguage) }
-                                printBillPdf(activity ?: context, file, "Invoice #${bill.saleId}")
+                                com.example.techyfipos.utils.printReceiptWithBluetoothFallback(
+                                    context = context,
+                                    activity = activity,
+                                    bill = activeBill,
+                                    settings = activeBill.settingsData,
+                                    receiptLanguage = receiptLanguage
+                                )
                             }
                         },
                         modifier = Modifier

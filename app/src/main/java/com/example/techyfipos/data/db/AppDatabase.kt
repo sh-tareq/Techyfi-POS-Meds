@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.execSQL
 import kotlinx.coroutines.Dispatchers
 
-const val APP_DATABASE_VERSION = 25
+const val APP_DATABASE_VERSION = 26
 
 /**
  * Keeps every migration compatible with both Room database backends. Room calls
@@ -231,6 +231,12 @@ val MIGRATION_24_25 = sqlMigration(
     "CREATE INDEX IF NOT EXISTS `index_sale_audit_logs_saleId` ON `sale_audit_logs` (`saleId`)"
 )
 
+val MIGRATION_25_26 = sqlMigration(
+    25, 26,
+    "CREATE TABLE IF NOT EXISTS `expense_audit_logs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `expenseId` INTEGER NOT NULL, `action` TEXT NOT NULL, `reason` TEXT NOT NULL, `amount` REAL NOT NULL, `category` TEXT NOT NULL, `paymentSource` TEXT NOT NULL, `userName` TEXT NOT NULL, `timestamp` INTEGER NOT NULL)",
+    "CREATE INDEX IF NOT EXISTS `index_expense_audit_logs_expenseId` ON `expense_audit_logs` (`expenseId`)"
+)
+
 @Database(
     entities = [
         Product::class,
@@ -256,7 +262,8 @@ val MIGRATION_24_25 = sqlMigration(
         ScheduledDueReminder::class,
         DueReminderLog::class,
         Customer::class,
-        SaleAuditLog::class
+        SaleAuditLog::class,
+        ExpenseAuditLog::class
     ],
     version = APP_DATABASE_VERSION,
     exportSchema = true
@@ -280,6 +287,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun dueReminderLogDao(): DueReminderLogDao
     abstract fun customerDao(): CustomerDao
     abstract fun saleAuditLogDao(): SaleAuditLogDao
+    abstract fun expenseAuditLogDao(): ExpenseAuditLogDao
 
     companion object {
         @Volatile
@@ -314,7 +322,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
                         MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
                         MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
-                        MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25
+                        MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25,
+                        MIGRATION_25_26
                     )
                     .fallbackToDestructiveMigrationOnDowngrade()
                     .setDriver(BundledSQLiteDriver())

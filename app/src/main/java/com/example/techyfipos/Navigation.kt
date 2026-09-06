@@ -283,6 +283,20 @@ fun MainNavigation() {
         // Pressed animation states for each tab
         var pressedTab by remember { mutableStateOf<Nav3DType?>(null) }
 
+        val pendingNavDestination by MainActivity.pendingNavigationDestination.collectAsStateWithLifecycle()
+        LaunchedEffect(pendingNavDestination, currentUser) {
+            val dest = pendingNavDestination
+            if (dest != null && currentUser != null && backStack.lastOrNull() != Splash && backStack.lastOrNull() != Lock) {
+                MainActivity.pendingNavigationDestination.value = null
+                if (dest == "products") {
+                    while (backStack.size > 1) { backStack.removeLastOrNull() }
+                    if (backStack.lastOrNull() != Products) {
+                        backStack.add(Products)
+                    }
+                }
+            }
+        }
+
         fun triggerTap(type: Nav3DType, action: () -> Unit) {
             scope.launch {
                 pressedTab = type
@@ -313,7 +327,7 @@ fun MainNavigation() {
                                     while (backStack.size > 1) { backStack.removeLastOrNull() }
                                     if (backStack.lastOrNull() != Products) { backStack.add(Products) }
                                 } else {
-                                    android.widget.Toast.makeText(context, "Permission required to view inventory", android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             },
                             Triple(Nav3DType.HISTORY, currentKey == SalesHistory, stringResource(R.string.sales_history)) to {
@@ -326,7 +340,7 @@ fun MainNavigation() {
                                     while (backStack.size > 1) { backStack.removeLastOrNull() }
                                     if (backStack.lastOrNull() != Dues) { backStack.add(Dues) }
                                 } else {
-                                    android.widget.Toast.makeText(context, "Permission required to view dues", android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(context, context.getString(R.string.dues_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             },
                             Triple(Nav3DType.MORE, isMoreActive, stringResource(R.string.more_hub)) to {
@@ -598,7 +612,7 @@ fun MainNavigation() {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != Products) { backStack.add(Products) }
                                         } else {
-                                            android.widget.Toast.makeText(context, "Permission required to view inventory", android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     Triple(Nav3DType.HISTORY, currentKey == SalesHistory, stringResource(R.string.sales_history)) to {
@@ -611,7 +625,7 @@ fun MainNavigation() {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != Dues) { backStack.add(Dues) }
                                         } else {
-                                            android.widget.Toast.makeText(context, "Permission required to view dues", android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(context, context.getString(R.string.dues_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     Triple(Nav3DType.REPORT, currentKey == SalesReport, stringResource(R.string.sales_report_section)) to {
@@ -913,7 +927,13 @@ fun MainNavigation() {
                                         while (backStack.size > 0) {
                                             backStack.removeLastOrNull()
                                         }
-                                        backStack.add(Scanner)
+                                        val dest = MainActivity.pendingNavigationDestination.value
+                                        MainActivity.pendingNavigationDestination.value = null
+                                        if (dest == "products") {
+                                            backStack.add(Products)
+                                        } else {
+                                            backStack.add(Scanner)
+                                        }
                                     },
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -1042,7 +1062,7 @@ fun MainNavigation() {
                                         cartViewModel.customerName.value = customer.name
                                         while (backStack.size > 1) { backStack.removeLastOrNull() }
                                         backStack.add(Scanner)
-                                        android.widget.Toast.makeText(context, "Started sale for ${customer.name}", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
                                     },
                                     modifier = Modifier.padding(contentPadding)
                                 )
@@ -1059,7 +1079,7 @@ fun MainNavigation() {
                                         if (canManageStaff) {
                                             backStack.add(ManageUsers)
                                         } else {
-                                            android.widget.Toast.makeText(context, "Only Shop Owner or authorized staff can manage user accounts", android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(context, context.getString(R.string.user_management_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     onLogout = {
@@ -1092,7 +1112,7 @@ fun MainNavigation() {
                                         cartViewModel.customerName.value = customer.name
                                         while (backStack.size > 1) { backStack.removeLastOrNull() }
                                         backStack.add(Scanner)
-                                        android.widget.Toast.makeText(context, "Started sale for ${customer.name}", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
                                     },
                                     modifier = Modifier.padding(contentPadding)
                                 )
@@ -1106,7 +1126,7 @@ fun MainNavigation() {
                                         cartViewModel.customerName.value = customer.name
                                         while (backStack.size > 1) { backStack.removeLastOrNull() }
                                         backStack.add(Scanner)
-                                        android.widget.Toast.makeText(context, "Started sale for ${customer.name}", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
                                     },
                                     modifier = Modifier.padding(contentPadding)
                                 )

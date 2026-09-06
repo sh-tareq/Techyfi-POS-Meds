@@ -190,6 +190,12 @@
     <string name="supplier_outstanding_due">বকেয়া বাকি</string>
     <string name="supplier_add_vendor">+ ভেন্ডর যোগ করুন</string>
     <string name="supplier_quick_inward">+ দ্রুত ইনওয়ার্ড</string>
+    <string name="supplier_select_for_inflow_title">স্টক ইনওয়ার্ডের জন্য সাপ্লায়ার নির্বাচন করুন</string>
+    <string name="supplier_no_matching_found">কোনো সাপ্লায়ার পাওয়া যায়নি</string>
+    <string name="inventory_permission_required">ইনভেন্টরি দেখতে অনুমতির প্রয়োজন</string>
+    <string name="dues_permission_required">বাকি খাতা দেখতে অনুমতির প্রয়োজন</string>
+    <string name="user_management_permission_required">কেবল দোকান মালিক বা অনুমোদিত কর্মী ইউজার পরিচালনা করতে পারবেন</string>
+    <string name="sale_started_for_customer">%s এর জন্য নতুন বিক্রি শুরু হয়েছে</string>
     <string name="supplier_search_hint">কোম্পানি, যোগাযোগ, ফোন, গুদাম দিয়ে খুঁজুন...</string>
     <string name="supplier_filter_all">সব</string>
     <string name="supplier_filter_has_due">⚠️ বাকি আছে</string>

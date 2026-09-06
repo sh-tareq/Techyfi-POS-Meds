@@ -80,8 +80,10 @@ class DataRepository(
     private val dueReminderLogDao = database.dueReminderLogDao()
     private val customerDao = database.customerDao()
     private val saleAuditLogDao = database.saleAuditLogDao()
+    private val expenseAuditLogDao = database.expenseAuditLogDao()
 
     val allSaleAuditLogs: Flow<List<com.example.techyfipos.data.db.SaleAuditLog>> = saleAuditLogDao.getAllAuditLogs()
+    val allExpenseAuditLogs: Flow<List<com.example.techyfipos.data.db.ExpenseAuditLog>> = expenseAuditLogDao.getAllAuditLogs()
 
     val allScheduledDueReminders: Flow<List<ScheduledDueReminder>> = scheduledDueReminderDao.getAll()
 
@@ -2961,8 +2963,23 @@ class DataRepository(
         expenseDao.updateExpense(expense)
     }
 
-    suspend fun deleteExpense(id: Long) = withContext(Dispatchers.IO) {
+    suspend fun deleteExpense(id: Long, reason: String = "Expense Deleted") = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.EXPENSES_MANAGE)
+        val expense = expenseDao.getExpenseById(id)
+        if (expense != null) {
+            expenseAuditLogDao.insertAuditLog(
+                com.example.techyfipos.data.db.ExpenseAuditLog(
+                    expenseId = id,
+                    action = "DELETED",
+                    reason = reason,
+                    amount = expense.amount,
+                    category = expense.category,
+                    paymentSource = expense.paymentSource,
+                    userName = sessionUser?.name ?: "Admin",
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
         expenseDao.deleteExpenseById(id)
     }
 

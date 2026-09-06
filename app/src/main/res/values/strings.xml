@@ -190,6 +190,12 @@
     <string name="supplier_outstanding_due">Outstanding Due</string>
     <string name="supplier_add_vendor">+ Add Vendor</string>
     <string name="supplier_quick_inward">+ Quick Inward</string>
+    <string name="supplier_select_for_inflow_title">Select Supplier for Stock Inflow</string>
+    <string name="supplier_no_matching_found">No matching suppliers found</string>
+    <string name="inventory_permission_required">Permission required to view inventory</string>
+    <string name="dues_permission_required">Permission required to view dues</string>
+    <string name="user_management_permission_required">Only Shop Owner or authorized staff can manage user accounts</string>
+    <string name="sale_started_for_customer">Started sale for %s</string>
     <string name="supplier_search_hint">Search company, contact, phone, warehouse...</string>
     <string name="supplier_filter_all">All</string>
     <string name="supplier_filter_has_due">⚠️ Due</string>

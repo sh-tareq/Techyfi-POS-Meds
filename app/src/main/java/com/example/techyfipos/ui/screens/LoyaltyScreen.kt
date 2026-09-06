@@ -156,7 +156,7 @@ fun LoyaltyScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        IconButton(onClick = { showSortFilterSheet = true }, modifier = Modifier.size(40.dp)) {
+                        IconButton(onClick = { showSortFilterSheet = true }, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
                             Icon(
                                 Icons.Default.FilterList,
                                 contentDescription = stringResource(R.string.loyalty_sort_sheet_title),
@@ -164,7 +164,7 @@ fun LoyaltyScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
-                        IconButton(onClick = { showSettingsDialog = true }, modifier = Modifier.size(40.dp)) {
+                        IconButton(onClick = { showSettingsDialog = true }, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
                             Realistic3DSettingsGearIcon(modifier = Modifier.size(24.dp))
                         }
                     }

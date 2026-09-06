@@ -29,6 +29,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.mapSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.example.techyfipos.utils.isZeroMoney
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -61,6 +64,7 @@ import com.example.techyfipos.ui.viewmodel.RegisterClosingViewModel
 import com.example.techyfipos.ui.viewmodel.SalesReportData
 import com.example.techyfipos.ui.viewmodel.SalesViewModel
 import com.example.techyfipos.ui.viewmodel.REGISTER_CLOSE_DIGITAL_METHODS
+import com.example.techyfipos.ui.viewmodel.calculateSaleDueAmount
 import com.example.techyfipos.ui.viewmodel.cashRefundAmount
 import com.example.techyfipos.ui.viewmodel.splitCashAndDigitalAmounts
 import com.example.techyfipos.utils.findActivity
@@ -182,7 +186,7 @@ fun DayStartCloseScreen(
         expenses.filter { it.timestamp >= shiftStart && it.type == "CASH_IN" && it.paymentSource == "Cash" }.sumOf { it.amount }
     }
     val cashOut = remember(expenses, shiftStart) {
-        expenses.filter { it.timestamp >= shiftStart && it.type == "EXPENSE" && it.paymentSource == "Cash" }.sumOf { it.amount }
+        expenses.filter { it.timestamp >= shiftStart && it.type == "EXPENSE" && it.paymentSource == "Cash" && it.category != "Supplier Payment" }.sumOf { it.amount }
     }
     val dueCashCollected = remember(duePayments, shiftStart) {
         duePayments.filter { it.timestamp >= shiftStart && it.paymentMethod.equals("Cash", ignoreCase = true) }.sumOf { it.amountPaid }
@@ -194,6 +198,31 @@ fun DayStartCloseScreen(
         val salesById = sales.associateBy { it.id }
         returns.filter { it.timestamp >= shiftStart }
             .sumOf { refund -> cashRefundAmount(refund, salesById[refund.saleId]) }
+    }
+    val digitalRefunds = remember(returns, sales, shiftStart) {
+        val salesById = sales.associateBy { it.id }
+        returns.filter { it.timestamp >= shiftStart }
+            .sumOf { refund ->
+                val method = refund.refundMethod
+                val sale = salesById[refund.saleId]
+                when {
+                    method.startsWith("MFS") || method.startsWith("Card") || method.startsWith("bKash") || method.startsWith("Nagad") || method.startsWith("Rocket") -> refund.externalRefundAmount
+                    method.startsWith("Original method") && sale != null -> {
+                        val (_, digitalPortion) = splitCashAndDigitalAmounts(sale)
+                        val originalCollected = (sale.grandTotal - calculateSaleDueAmount(sale)).coerceAtLeast(0.0)
+                        if (originalCollected > 0.0) {
+                            refund.externalRefundAmount * (digitalPortion / originalCollected).coerceIn(0.0, 1.0)
+                        } else 0.0
+                    }
+                    else -> 0.0
+                }
+            }
+    }
+    val netDigitalSales = remember(digitalSales, digitalRefunds) {
+        (digitalSales - digitalRefunds).coerceAtLeast(0.0)
+    }
+    val hasShiftTransactions = remember(shiftSales, cashIn, cashOut, dueCashCollected, supplierCashPaid, cashRefunds) {
+        shiftSales.isNotEmpty() || cashIn > 0.0 || cashOut > 0.0 || dueCashCollected > 0.0 || supplierCashPaid > 0.0 || cashRefunds > 0.0
     }
 
     var startingFloatText by remember { mutableStateOf("0") }
@@ -610,7 +639,15 @@ fun DayStartCloseScreen(
 
                     // Card 2: Opening Float
                     Surface(
-                        onClick = { showEditFloatDialog = true },
+                        onClick = {
+                            if (hasShiftTransactions) {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Opening float is locked once transactions exist in the shift.")
+                                }
+                            } else {
+                                showEditFloatDialog = true
+                            }
+                        },
                         shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surface,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
@@ -622,19 +659,19 @@ fun DayStartCloseScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text("💵", fontSize = 20.sp)
+                            Text(if (hasShiftTransactions) "🔒" else "💵", fontSize = 20.sp)
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                text = stringResource(R.string.day_close_tool_open_float),
+                                text = if (hasShiftTransactions) "Float (Locked)" else stringResource(R.string.day_close_tool_open_float),
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = if (hasShiftTransactions) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = formatTaka(startingFloat),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF4F46E5)
+                                color = if (hasShiftTransactions) MaterialTheme.colorScheme.outline else Color(0xFF4F46E5)
                             )
                         }
                     }
@@ -842,23 +879,42 @@ fun DayStartCloseScreen(
 
             // 4. Primary Day Close CTA
             item {
-                Button(
-                    onClick = { showCloseReconcileDialog = true },
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C3AED)),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                ) {
-                    Text("🔒", fontSize = 16.sp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.day_close_end_shift_btn),
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 13.5.sp,
-                        color = Color.White
-                    )
+                val canCloseRegister = hasShiftTransactions || startingFloat > 0.0
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        enabled = canCloseRegister,
+                        onClick = { showCloseReconcileDialog = true },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF7C3AED),
+                            disabledContainerColor = Color(0xFF334155).copy(alpha = 0.6f)
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                    ) {
+                        Text("🔒", fontSize = 16.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (canCloseRegister) stringResource(R.string.day_close_end_shift_btn) else "Shift Clean / No Transactions",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 13.5.sp,
+                            color = if (canCloseRegister) Color.White else Color.LightGray
+                        )
+                    }
+                    if (!canCloseRegister) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "✨ Active shift has no new transactions. Set float or make a sale to open a new shift.",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
 
@@ -1166,20 +1222,25 @@ fun DenominationCounterDialog(
     onDismiss: () -> Unit,
     onApply: (countedTotal: Double, auditNote: String) -> Unit
 ) {
-    var mode by remember { mutableStateOf(if (initialCountedCash != null && initialCountedCash > 0) DenomCounterMode.QUICK else DenomCounterMode.DETAILED) }
+    var mode by rememberSaveable { mutableStateOf(if (initialCountedCash != null && initialCountedCash > 0) DenomCounterMode.QUICK else DenomCounterMode.DETAILED) }
 
     // Mode 1 State: Note-by-note counts map
-    var noteCounts by remember {
+    var noteCounts by rememberSaveable(stateSaver = run {
+        mapSaver(
+            save = { map -> map.entries.associate { it.key.toString() to it.value } },
+            restore = { savedMap -> savedMap.entries.associate { it.key.toInt() to (savedMap[it.key] as? Int ?: 0) } }
+        )
+    }) {
         mutableStateOf(BANGLADESHI_DENOMINATIONS.associate { it.value to 0 })
     }
-    var isDetailedNotesHidden by remember { mutableStateOf(false) }
+    var isDetailedNotesHidden by rememberSaveable { mutableStateOf(false) }
 
     // Mode 2 State: Direct Total Amount Input
-    var directTotalInput by remember {
+    var directTotalInput by rememberSaveable {
         mutableStateOf(if (initialCountedCash != null && initialCountedCash > 0) initialCountedCash.toInt().toString() else "")
     }
-    var isQuickBreakdownExpanded by remember { mutableStateOf(false) }
-    var auditNote by remember { mutableStateOf("") }
+    var isQuickBreakdownExpanded by rememberSaveable { mutableStateOf(false) }
+    var auditNote by rememberSaveable { mutableStateOf("") }
 
     // Compute sums
     val detailedSum = noteCounts.entries.sumOf { (denom, count) -> denom * count }
@@ -1585,7 +1646,7 @@ fun DenominationCounterDialog(
                                         ) {
                                             Text(stringResource(R.string.denom_shift_variance), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                                             val (badgeText, badgeBg, badgeTextColor) = when {
-                                                variance == 0.0 -> Triple(
+                                                variance.isZeroMoney() -> Triple(
                                                     stringResource(R.string.denom_variance_balanced),
                                                     Color(0xFFDCFCE7),
                                                     Color(0xFF166534)
@@ -2223,7 +2284,7 @@ fun CloseRegisterReconciliationDialog(
 
                 // Variance Badge
                 val (varianceText, varianceBg, varianceTextColor) = when {
-                    variance == 0.0 -> Triple("✓ Matched (Exact Match)", Color(0xFFDCFCE7), Color(0xFF166534))
+                    variance.isZeroMoney() -> Triple("✓ Matched (Exact Match)", Color(0xFFDCFCE7), Color(0xFF166534))
                     variance < 0.0 -> Triple("⚠️ Shortage: -${formatTaka(kotlin.math.abs(variance))}", Color(0xFFFEE2E2), Color(0xFF991B1B))
                     else -> Triple("ℹ️ Surplus: +${formatTaka(variance)}", Color(0xFFE0F2FE), Color(0xFF075985))
                 }
@@ -2327,12 +2388,12 @@ private fun RegisterClosingRow(closing: RegisterClosing, onClick: () -> Unit = {
             ) {
                 Text(dateLabel, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 val varianceColor = when {
-                    closing.variance == 0.0 -> Color(0xFF16A34A)
+                    closing.variance.isZeroMoney() -> Color(0xFF16A34A)
                     closing.variance < 0.0 -> Color(0xFFDC2626)
                     else -> Color(0xFF0284C7)
                 }
                 val varianceText = when {
-                    closing.variance == 0.0 -> stringResource(R.string.register_close_variance_matched)
+                    closing.variance.isZeroMoney() -> stringResource(R.string.register_close_variance_matched)
                     closing.variance < 0.0 -> stringResource(R.string.register_close_variance_shortage, formatTaka(kotlin.math.abs(closing.variance)))
                     else -> stringResource(R.string.register_close_variance_surplus, formatTaka(closing.variance))
                 }
@@ -2408,7 +2469,7 @@ private fun HistoricalClosingDetailDialog(
                     Text(formatTaka(closing.actualCountedCash), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
                 val varianceColor = when {
-                    closing.variance == 0.0 -> Color(0xFF16A34A)
+                    closing.variance.isZeroMoney() -> Color(0xFF16A34A)
                     closing.variance < 0.0 -> Color(0xFFDC2626)
                     else -> Color(0xFF0284C7)
                 }

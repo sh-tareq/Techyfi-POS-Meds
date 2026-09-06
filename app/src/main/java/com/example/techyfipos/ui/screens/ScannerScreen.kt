@@ -1871,16 +1871,20 @@ fun CameraPreviewView(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraExecutor.shutdown()
+        }
+    }
+
     AndroidView(
         factory = { ctx ->
-            PreviewView(ctx).apply {
+            val previewView = PreviewView(ctx).apply {
                 implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                 scaleType = PreviewView.ScaleType.FILL_CENTER
             }
-        },
-        modifier = modifier,
-        update = { previewView ->
-            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
             cameraProviderFuture.addListener({
                 val cameraProvider = cameraProviderFuture.get()
                 val preview = androidx.camera.core.Preview.Builder().build().apply {
@@ -1902,7 +1906,7 @@ fun CameraPreviewView(
                     .build()
 
                 imageAnalysis.setAnalyzer(
-                    Executors.newSingleThreadExecutor(),
+                    cameraExecutor,
                     BarcodeAnalyzer(
                         getPreviewSize = { android.util.Size(previewView.width, previewView.height) },
                         onBarcodeDetected = { barcode ->
@@ -1911,7 +1915,7 @@ fun CameraPreviewView(
                                 scannerViewModel.onBarcodeScanned(
                                     barcode = barcode,
                                     cartViewModel = cartViewModel,
-                                    onSoundVibrate = { beepAndVibrate(context) },
+                                    onSoundVibrate = { beepAndVibrate(ctx) },
                                     onShowSnackbar = { name, price, stock, total, isSuccess ->
                                         scope.launch {
                                             val msg = if (isSuccess) {
@@ -1950,8 +1954,10 @@ fun CameraPreviewView(
                 } catch (exc: Exception) {
                     exc.printStackTrace()
                 }
-            }, ContextCompat.getMainExecutor(context))
-        }
+            }, ContextCompat.getMainExecutor(ctx))
+            previewView
+        },
+        modifier = modifier
     )
 }
 

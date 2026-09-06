@@ -7,7 +7,9 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import com.example.techyfipos.utils.findActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -65,6 +67,11 @@ fun LockScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
+
+    BackHandler(enabled = true) {
+        val activity = context.findActivity()
+        activity?.moveTaskToBack(true)
+    }
 
     var mode by remember { mutableStateOf(LockMode.LOADING) }
     var ownerName by remember { mutableStateOf("") }

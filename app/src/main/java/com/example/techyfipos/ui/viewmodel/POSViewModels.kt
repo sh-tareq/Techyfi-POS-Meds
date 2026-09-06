@@ -19,6 +19,7 @@ import java.io.File
 import android.content.Context
 import com.example.techyfipos.utils.parseExpiryDateToMillis
 import com.example.techyfipos.utils.roundMoney
+import com.example.techyfipos.utils.BillData
 
 // Cart Item Wrapper
 data class CartItem(
@@ -251,6 +252,19 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun setCashierName(name: String) {
         _manualCashierName.value = name.takeIf { it.isNotBlank() }
+    }
+
+    val showReceiptDialog = MutableStateFlow(false)
+    val completedBillSnapshot = MutableStateFlow<BillData?>(null)
+
+    fun openReceiptDialog(data: BillData) {
+        completedBillSnapshot.value = data
+        showReceiptDialog.value = true
+    }
+
+    fun dismissReceiptDialog() {
+        showReceiptDialog.value = false
+        completedBillSnapshot.value = null
     }
 
     val amountPaid = MutableStateFlow(0.0) // Cash received
@@ -968,7 +982,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             paymentMethod = methodToSave,
             customerName = customerName.value.takeIf { it.isNotBlank() },
             customerPhone = customerPhone.value.takeIf { it.isNotBlank() },
-            amountPaid = if (methodToSave == "Split") splitPayments.value.firstOrNull { it.method == "Cash" }?.amount ?: 0.0 else amountPaid.value,
+            amountPaid = if (methodToSave == "Split") splitPayments.value.filterNot { it.method.equals("Due", ignoreCase = true) }.sumOf { it.amount } else amountPaid.value,
             walletPhone = walletPhone.value.takeIf { it.isNotBlank() },
             cardType = cardType.value.takeIf { paymentMethod.value == "Card" },
             cardLastFour = cardLastFour.value.takeIf { it.isNotBlank() },
@@ -1382,47 +1396,33 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
     /** Current outstanding due for a customer — used to show the live "Total Due" on a reopened historical receipt, since that figure isn't stored on the Sale row itself. */
     suspend fun getCustomerDue(phone: String) = repository.getCustomerDueByPhone(phone)
 
-    val salesSummary: StateFlow<Triple<Double, Double, Int>> = salesWithItems.map { list ->
-        // Today start timestamp
+    val registerShiftState: StateFlow<RegisterShiftState?> = repository.registerShiftState
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    val salesSummary: StateFlow<Triple<Double, Double, Int>> = combine(salesWithItems, registerShiftState) { list, shift ->
+        // Use active shift start or fallback to today midnight
         val calendar = java.util.Calendar.getInstance().apply {
             set(java.util.Calendar.HOUR_OF_DAY, 0)
             set(java.util.Calendar.MINUTE, 0)
             set(java.util.Calendar.SECOND, 0)
             set(java.util.Calendar.MILLISECOND, 0)
         }
-        val todayStart = calendar.timeInMillis
+        val todayStart = shift?.startedAt?.takeIf { it > 0L } ?: calendar.timeInMillis
         val todaySalesList = list.filter { it.sale.timestamp >= todayStart }
 
         val totalSales = todaySalesList.sumOf { it.sale.grandTotal }
-        var totalProfit = 0.0
-        for (swi in todaySalesList) {
-            val itemsProfit = swi.items.sumOf { item ->
-                // Look up purchase price in products if possible, or fall back to 80% of selling price
-                // Since Room contains products we can fetch, but in offline we just query.
-                // We'll calculate profit as: sum of item quantity * (sellingPrice - purchasePrice)
-                // We can query products in background, or we could also save purchasePrice in SaleItem.
-                // Let's assume we fetch products by barcode. To keep it simple and offline-first without blocking flow,
-                // we'll fetch the products for this sale from database. Let's do it reactively.
-                0.0
-            }
-            // For simple profit calculation, let's load all products first or load it inside repository.
-            // Let's query profit from a repo method if it's cleaner, or we can just fetch products map.
-        }
-
-        // To make profit calculation correct: we need purchasePrice * qty.
-        // Let's write a database query or calculate it. We'll refine profit calculation.
         Triple(totalSales, 0.0, todaySalesList.size)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Triple(0.0, 0.0, 0))
 
     // Real profit flow
-    val todayProfit: StateFlow<Double> = salesWithItems.map { list ->
+    val todayProfit: StateFlow<Double> = combine(salesWithItems, registerShiftState) { list, shift ->
         val calendar = java.util.Calendar.getInstance().apply {
             set(java.util.Calendar.HOUR_OF_DAY, 0)
             set(java.util.Calendar.MINUTE, 0)
             set(java.util.Calendar.SECOND, 0)
             set(java.util.Calendar.MILLISECOND, 0)
         }
-        val todayStart = calendar.timeInMillis
+        val todayStart = shift?.startedAt?.takeIf { it > 0L } ?: calendar.timeInMillis
         val todaySalesList = list.filter { it.sale.timestamp >= todayStart }
         
         var profitSum = 0.0
@@ -1455,7 +1455,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         val rawList = sourceList ?: salesWithItems.value
         val list = rawList.filter { it.sale.timestamp in startMillis until endMillis }
         val totalExpenses = repository.getExpensesBetween(startMillis, endMillis).first()
-            .filter { it.type == "EXPENSE" }
+            .filter { it.type == "EXPENSE" && it.category != "Supplier Payment" }
             .sumOf { it.amount }
         val totalRevenue = list.sumOf { it.sale.grandTotal }
         val totalDiscount = list.sumOf {
@@ -3080,7 +3080,7 @@ class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
 
     val totalCashOut: StateFlow<Double> = todayExpenses.map { list ->
-        list.filter { it.type == "EXPENSE" && it.paymentSource == "Cash" }.sumOf { it.amount }
+        list.filter { it.type == "EXPENSE" && it.paymentSource == "Cash" && it.category != "Supplier Payment" }.sumOf { it.amount }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
 
     val allSales: StateFlow<List<Sale>> = repository.allSales

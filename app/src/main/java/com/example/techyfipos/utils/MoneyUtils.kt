@@ -74,7 +74,29 @@ object MoneyUtils {
 
         return if (isNegative) "-$result" else result
     }
+
+    /**
+     * Checks if an amount is zero within financial rounding tolerance (0.005 Taka / half poisha).
+     */
+    fun isZeroMoney(amount: Double): Boolean {
+        if (amount.isNaN() || amount.isInfinite()) return true
+        return Math.abs(roundMoney(amount)) < 0.005
+    }
+
+    /**
+     * Checks if two amounts are equal within financial rounding tolerance.
+     */
+    fun isEqualMoney(a: Double, b: Double): Boolean {
+        if (a.isNaN() || b.isNaN() || a.isInfinite() || b.isInfinite()) return false
+        return Math.abs(roundMoney(a) - roundMoney(b)) < 0.005
+    }
 }
 
 /** Extension for convenient rounding */
 fun Double.roundMoney(): Double = MoneyUtils.roundMoney(this)
+
+/** Extension for safe zero money check */
+fun Double.isZeroMoney(): Boolean = MoneyUtils.isZeroMoney(this)
+
+/** Extension for safe equal money check */
+fun Double.isEqualMoney(other: Double): Boolean = MoneyUtils.isEqualMoney(this, other)
