@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-06 (app version 2.6.28-V06-09-2026, build `Techyfi-POS-Final-V06-09-2026.apk` / `Techyfi-POS-Final-V18.apk`; versionCode 220907; DB schema version 25)
+Last updated: 2026-09-07 (app version 2.6.29-V07-09-2026, build `Techyfi-POS-Final-V07-09-2026.apk` / `Techyfi-POS-Final-V21.apk`; versionCode 220908; DB schema version 26)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -35,6 +35,11 @@ mindmap
           Repository-enforced mutation security
             Mutations check authenticated user permissions and active status
             PINs must be unique across all accounts
+        Terminal Security & LockScreen Integrity
+          System back gesture intercepted via moveTaskToBack preventing terminal bypass
+          Unauthenticated remote backup restore backdoor removed from MainActivity
+          Strict PIN authentication enforced for database restore routines
+          Low-stock notification deep-link route preserved across terminal lock and unlock
       Adaptive Layout Resolution Engine
         Breakpoints & Form Factor Detection
           Compact Phone (< 600dp)
@@ -74,8 +79,13 @@ mindmap
       Bilingual Localization Engine & Strict Language Separation
         Zero Hardcoded Bilingual Slash Strings (Clean 100% English vs 100% Natural Retail Bangla)
         Android Resource-Backed Strings (res/values/strings.xml & res/values-bn/strings.xml)
+        Navigation and permission denial toasts localized to natural retail Bangla
         Dynamic Runtime Switching via LocaleWrapper & LocalConfiguration
         Bengali Sans-Serif font rendering eliminates complex conjunct glyph clipping (যুক্তাক্ষর)
+        PDF Invoice and X/Z report canvas headers use Typeface.SANS_SERIF preventing tofu glyphs
+      Accessibility & Ergonomic Touch Architecture
+        Minimum 48dp touch target sizing enforced across icon buttons, chips, and steppers
+        High-contrast Material 3 surfaces adhering to WCAG AA guidelines
     Selling workflow
       Selling Form Factors
         Phone POS Terminal
@@ -282,6 +292,9 @@ mindmap
           Add to Cart Again reloads the just-completed sale's line items into the cart without navigating away
           Edit (owner only) voids the just-completed sale — restoring stock, due balance, and loyalty points — then reloads its items into the cart for changes and re-checkout
           Both resolve the completed sale via SalesViewModel.salesWithItems by the sale ID captured on BillData at checkout time
+        Receipt State Retention & Direct ESC/POS Driver
+          Receipt dialog state and completedBillSnapshot hoisted into CartViewModel surviving screen rotation
+          Direct Bluetooth ESC/POS SPP printing with automatic cash drawer kick and system spooler fallback
     Products & Inventory Architecture
       Executive Inventory Valuation & Stock Health Strip
         Real-time Total Selling Valuation & Purchase Cost
@@ -344,6 +357,10 @@ mindmap
         Realistic3DSparkleGiftIcon (Emerald & gold gift package with radiating sparkles)
         Realistic3DWarrantyShieldIcon (Holographic blue-indigo security shield with checkmark)
         Realistic3DCategoryIcon (Reactive category dispatcher rendering appropriate 3D canvas icon)
+      High-Performance Image & Camera Engine
+        ProductImageMemoryCache with LruCache memory pool (1/8 max heap) eliminating OOM
+        Async produceState thumbnail loading with 256x256 RGB_565 downsampling
+        CameraX analyzer executor lifecycle cleanup via DisposableEffect in Products & Scanner
     Sales history
       Compact transaction summary
         Est. Margin uses the same real gross-margin calculation as Sales reports
@@ -401,8 +418,9 @@ mindmap
         Gross margin
           Selling price minus purchase price per item, net of returns
         Net profit
-          Gross margin minus discounts given minus expenses in the period
-          Visible line-item breakdown: Gross Margin, Discounts, Expenses, Net Profit
+          Gross margin minus discounts given minus operational expenses in the period
+          Supplier payments excluded from expense deduction to prevent COGS double-counting
+          Visible line-item breakdown: Gross Margin, Discounts, Operating Expenses, Net Profit
         Transactions
         Average sale
         Items sold
@@ -504,6 +522,9 @@ mindmap
       Payment history date range & settled customer history
     Suppliers and inward stock
       Supplier directory and outstanding balance
+      Multi-Supplier Quick Inward Vendor Picker
+        Interactive vendor selector dialog with live search, phone, and outstanding dues
+        Replaces arbitrary first-supplier selection with explicit cashier vendor choice
       Inward-stock invoice
         Select one or more existing products
         Capture decimal quantity and unit cost per product
@@ -1335,6 +1356,53 @@ mindmap
     - Bilingual string resources in `res/values/strings.xml` and `res/values-bn/strings.xml` (`more_view_list_cd`, `more_view_grid_cd`, `লিস্ট ভিউতে পরিবর্তন করুন`, `গ্রিড ভিউতে পরিবর্তন করুন`).
     - Verified on live Android emulator across all 4 modes (Tablet Grid, Tablet List, Phone Grid, Phone List) with zero ellipsis and zero truncation.
     - Delivered and verified as an update APK: `Techyfi-POS-Final-V06-09-2026.apk` with incremented `versionCode = 220907`.
+
+## V07-09-2026 Comprehensive Audit Fixes & Platform Hardening (Pass 1 & Pass 2, V19 - V21, V07-09-2026)
+
+- Final artifact: `Techyfi-POS-Final-V07-09-2026.apk` (also archived as `Techyfi-POS-Final-V21.apk`), versionCode `220908`, versionName `2.6.29-V07-09-2026`.
+- Verified file locations:
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V07-09-2026.apk`
+  - `/Users/shahidulhaque/App Dev/Techyfi POS Gemini/Techyfi-POS-Final-V07-09-2026.apk`
+  - `/Users/shahidulhaque/App Dev/Techyfi POS Gemini/Techyfi-POS-Final-V21.apk`
+- Database Schema Version: `26` (added `cashierId`, `shiftId`, enhanced audit logging & indexes via `MIGRATION_25_26`).
+- **Pass 1 Audit Fixes (M1 - M12: Financial, Cash Drawer & Shift Integrity)**:
+  - **[M1] Due Down Payments in Cash Drawer & Cash Sales**: Captured partial down payments on Due sales into `Sale.amountPaid` and included in `liveDrawerCash` and cash sales reconciliation.
+  - **[M2] Store Credit Treated as Non-Cash**: Excluded non-cash store credit and voucher tenders from liquid physical cash drawer calculations.
+  - **[M3] Sale Deletion Audit Logging & Return History Protection**: Created `SaleAuditLog` entity, `SaleAuditLogDao`, and required void/cancellation reason dialog; blocked deletion of sales that have active returns.
+  - **[M4 & M9] Standardized Money Utilities & Bangladeshi Lakh-Crore Digit Grouping**: Created `MoneyUtils.kt` with Banker's Rounding `HALF_EVEN` and Bangladeshi comma grouping (`৳1,00,000.00`) applied across thermal receipts, PDF, and UI.
+  - **[M5] Shift Time Scope for Z-Report & X-Report**: Scoped financial figures strictly between active `shiftStartedAt` and closing timestamp.
+  - **[M6] Digital Due Repayments in Shift Reconciliation**: Aggregated non-cash due collections (bKash, Nagad, Card) into digital shift sales and provider totals on register close.
+  - **[M7] Shift Register Closing Workflow: Blind Close, Double-Tap Debounce & Historical Inspection**: Added `HistoricalClosingDetailDialog` to inspect past shift breakdowns, over/short variances, and shift notes; debounced register close submission.
+  - **[M8] Non-Negative Price & Stock Validation**: Sanitized and clamped Excel product import and manual forms to `>= 0.0`.
+  - **[M10] Unclamping Live Drawer Cash**: Removed artificial `.coerceAtLeast(0.0)` clamp on `liveDrawerCash` so cash drawer deficits accurately match physical reality and expected cash.
+  - **[M11] Supplier Payment Due Deductions**: Prevented double deduction on supplier payments against purchase invoices and supplier ledger balances.
+  - **[M12] Due Khata Collection Lifecycle**: Ensured atomic update across `CustomerDue`, `DuePayment`, and digital payment split registers.
+
+- **Pass 2 Audit Fixes (G1 - G12: Security, Performance, UI/UX & Localization)**:
+  - **[G1] P&L Analytics - Supplier Payment Double-Counting Fix (CRITICAL)**:
+    - In `POSViewModels.kt`, excluded expenses categorized as `"Supplier Payment"` from `totalExpenses` in `SalesViewModel.buildReport()`, ensuring COGS inventory costs are not deducted a second time and Net Profit matches accounting standards.
+  - **[G2] Security - Unauthenticated Remote Restore Backdoor Removed (HIGH)**:
+    - Completely removed unauthenticated intent action `"com.techyfi.pos.RESTORE_BACKUP"` from `MainActivity.kt`. All database restoration now strictly requires owner PIN authentication inside Settings.
+  - **[G3] Security - LockScreen Back Gesture Interception (HIGH)**:
+    - Enforced `BackHandler(enabled = true)` inside `LockScreen.kt` utilizing `moveTaskToBack(true)`. Pressing Android system back button or gesture safely backgrounds the app without bypassing the terminal lock.
+  - **[G4] Performance - Async Bitmap Downsampling & LruCache (HIGH)**:
+    - Implemented `ProductImageMemoryCache` (1/8th heap max size) with background async downsampling to 256x256 `RGB_565` via `produceState` in `ProductsScreen.kt`, eliminating main-thread jank and OOM in 600+ SKU catalogs.
+  - **[G5] Concurrency - CameraX Analyzer Executor Cleanup (HIGH)**:
+    - Resolved CameraX background thread leak in `ProductsScreen.kt` and `ScannerScreen.kt` by migrating initialization to Compose `factory` and disposing single-thread executors cleanly in `DisposableEffect`.
+  - **[G6] Navigation - Notification Deep Link Preservation (MEDIUM)**:
+    - Preserved `pendingNavigationDestination` StateFlow in `MainActivity.kt` so tapping low-stock notifications navigates directly to Products screen upon cashier unlock instead of being discarded.
+  - **[G7] Lifecycle - Thermal Receipt Preview State Survival (MEDIUM)**:
+    - Hoisted `showReceiptDialog` and `completedBillSnapshot` into `CartViewModel` in `POSViewModels.kt`, preventing the receipt preview from vanishing on device screen rotation.
+  - **[G8] Hardware/Peripherals - Direct Bluetooth ESC/POS Printing Driver (MEDIUM)**:
+    - Implemented `printReceiptWithBluetoothFallback()` in `BillActions.kt`, attempting direct SPP socket printing to connected 58mm/80mm thermal printers with automatic cash drawer kick before falling back to Android PrintManager.
+  - **[G9] UI/Workflow - Multi-Supplier Quick Inward Vendor Picker (MEDIUM)**:
+    - Built interactive `showSupplierPickerForInflow` modal in `SuppliersScreen.kt` with live search, supplier name, representative, phone number, and outstanding due balance badges.
+  - **[G10] Localization - Bangla Navigation & Permission Toasts (LOW)**:
+    - Added dedicated string resources to `values/strings.xml` and `values-bn/strings.xml` adhering to Bangladeshi retail conventions for all role permission denials and navigation alerts.
+  - **[G11] Accessibility - 48dp Minimum Touch Targets (LOW)**:
+    - Enforced `Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)` across all action and navigation icon buttons in `DuesScreen.kt`, `LoyaltyScreen.kt`, and `CustomersScreen.kt`.
+  - **[G12] Typography - Bengali Unicode Sans-Serif Rendering (LOW)**:
+    - Standardized PDF invoice and X/Z report canvas headers to `Typeface.SANS_SERIF` in `BillPdfGenerator.kt`, preventing Bengali store names from rendering as tofu square blocks.
 
 ## Maintenance note
 
