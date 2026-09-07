@@ -70,7 +70,7 @@ mindmap
             5. Expenses & Petty Cash Disbursements
             6. Analytics & P&L Reports
             7. System Settings & Hardware Peripherals (3D Animated Category Icons & Isolated Subpage Scroll)
-            8. More Operations Hub Dialog (House for Day Start & Close, Suppliers, Customer Loyalty, CRM)
+            8. More Operations Hub Dialog (House for Cash Register, Suppliers, Customer Loyalty, Customers & CRM)
               Interactive Material 3 Segmented Toggle: List View [ ☰ ] vs Grid View [ ⊞ ]
               Expanded 760dp Max-Width Dialog Constraint eliminating all title truncation
               2-Column Horizontal Cards in Grid Mode (354dp per card) with Zero-Cutoff 2-Line Subheadings
@@ -86,10 +86,30 @@ mindmap
       Accessibility & Ergonomic Touch Architecture
         Minimum 48dp touch target sizing enforced across icon buttons, chips, and steppers
         High-contrast Material 3 surfaces adhering to WCAG AA guidelines
-        Responsive Zero-Cutoff Top AppBars on Compact Phone Screens
-          Customers Screen: Consolidates Table/Cards view switcher, Excel export, and CSV export into an overflow [ ⋮ ] menu, providing ample width for "Customers & CRM" title
-          Register Close Screen: Adapts [ 📋 X-Report ] and [ 🖨️ Z-Report ] into compact badge chips [ 📋 X ] and [ 🖨️ Z ] on narrow phone screens (< 440dp) to prevent "Day Start & Close" title truncation
-          Products Screen: 2-Tier Master POS Header architecture — Tier 1 features Back button, 3D Products Box Icon, zero-cutoff "Products" title with live SKU badge ("621 SKUs"), 3D Ringing Alert Bell (99+), and 3D Cart Capsule. Tier 2 features an integrated horizontal Quick-Tool Ribbon with dedicated 48dp chips for Excel Tools [ 📄 ], Batch Selection [ ✓≡ ], Stock Audit Ledger [ 📋 ], and Print Labels [ 🏷️ ], guaranteeing instantaneous 1-tap access and zero text clipping across all phone screen sizes
+        Universal 3D Navigation Icon Harmonization across All Screen Headers
+          Every top header across both Phone and Tablet modes embeds its matched photorealistic 3D navigation vector icon:
+            - Products: Realistic3DProductsBoxIcon (22dp phone / 24dp tablet)
+            - Customers & CRM: Realistic3DCustomerHubIcon (22dp phone / 24dp tablet)
+            - Cash Register: Realistic3DRegisterReceiptIcon (22dp phone / 24dp tablet)
+            - Sales History: Realistic3DHistoryClockIcon (22dp)
+            - Dues & Khata: Realistic3DClipboardDuesIcon (22dp)
+            - Expense Tracking: Realistic3DExpensesCashIcon (22dp)
+            - Suppliers: Realistic3DSupplierTruckIcon (22dp)
+            - Sales Reports & Analytics: Realistic3DReportChartIcon (22dp)
+            - System Settings: Realistic3DSettingsGearIcon (22dp)
+            - Shopping Cart & Quick Sale: Realistic3DSupermarketCartIcon (22dp) and Realistic3DSellTerminalIcon (22dp), eliminating flat unicode emojis (🛒/💳)
+            - Customer Loyalty: Realistic3DLoyaltyStarIcon (22dp)
+            - Staff Management: Realistic3DCustomerHubIcon (22dp)
+        Responsive Zero-Cutoff Top AppBars on Compact Phone Screens (< 600dp, e.g. 360dp Galaxy A)
+          Customers Screen: Renamed to "Customers & CRM" (Bengali: "কাস্টমার ও CRM"); consolidates Table/Cards view switcher, Excel export, and CSV export into an overflow menu, guaranteeing 230dp+ for the title and subtitle
+          Cash Register Screen: Renamed to "Cash Register" (Bengali: "ক্যাশ রেজিস্টার") with subtitle "Day Start & Close • Shift reconciliation"; compact 3D X-Report (Realistic3DClipboardDuesIcon) and 3D Z-Report (Realistic3DRegisterAuditZReportIcon) buttons prevent title cutoff
+          Products Screen: 2-Tier Master POS Header architecture — Tier 1 features Back button, 3D Products Box Icon, zero-cutoff "Products" title with live SKU badge ("621 SKUs"), 3D Ringing Alert Bell (99+), and 3D Cart Capsule. Tier 2 features an integrated horizontal Quick-Tool Ribbon with dedicated 48dp chips for Excel Tools [ 📄 ], Batch Selection [ ✓≡ ], Stock Audit Ledger [ 📋 ], and Print Labels [ 🏷️ ], guaranteeing instantaneous 1-tap access and zero text clipping
+        Adaptive Tablet Mode (>= 600dp) POS Architecture
+          Products Screen: Shows 24dp 3D Box icon, live SKU badge, and direct 1-tap [ 🖨️ Print Labels ] button beside Excel Tools, Batch Selection, and Stock Audit
+          Customers & CRM: Displays 24dp 3D Customer Hub icon, unclipped title, and responsive [ + Add New Customer ] button with 48dp touch target
+          Cash Register: Pinned 24dp 3D Register Receipt icon with full-label 3D X-Report and Z-Report buttons
+          Tablet Split Terminal (TabletSplitTerminal): Pinned Live Cart header with 24dp Realistic3DSupermarketCartIcon and Emerald Green Checkout CTA with 22dp Realistic3DSellTerminalIcon
+          Staff Management: Pinned 22dp Realistic3DCustomerHubIcon in title row
     Selling workflow
       Selling Form Factors
         Phone POS Terminal
@@ -105,11 +125,11 @@ mindmap
             Live stock badges & tap-to-add haptic feedback
             Collapsible PIP Camera Preview (Torch & Pause controls)
           Right Live Cart Pane (42% Width)
-            Pinned live cart with items count badge
+            Pinned live cart with Realistic3DSupermarketCartIcon (24dp) header & items count badge
             Interactive line steppers ([-] qty [+]) & delete
             Hold Cart & Clear Cart actions
             Grand Total BDT (৳) summary banner
-            Emerald Green Checkout CTA Button
+            Emerald Green Checkout CTA Button with Realistic3DSellTerminalIcon (22dp)
       Scanner Engine & Hardware Interception
         Camera barcode scan
         Simultaneous hardware scanner input without a source switch
