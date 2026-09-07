@@ -35,6 +35,7 @@ import com.example.techyfipos.data.AppRoles
 import com.example.techyfipos.data.PermissionCategory
 import com.example.techyfipos.data.PermissionItem
 import com.example.techyfipos.data.db.User
+import com.example.techyfipos.ui.components.Realistic3DCustomerHubIcon
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,11 +48,10 @@ fun ManageUsersScreen(
     val context = LocalContext.current
     val users by authViewModel.users.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
-    var userToDelete by remember { mutableStateOf<User?>(null) }
     var userToEdit by remember { mutableStateOf<User?>(null) }
     var userForPermissions by remember { mutableStateOf<User?>(null) }
-    val invalidUserMessage = stringResource(R.string.users_invalid_input)
-    val addFailedMessage = stringResource(R.string.users_add_failed)
+    var userToDelete by remember { mutableStateOf<User?>(null) }
+
     val onlyOwnerMessage = stringResource(R.string.users_only_owner_error)
     val cashierUpdatedMessage = stringResource(R.string.users_edit_cashier_success)
 
@@ -62,13 +62,20 @@ fun ManageUsersScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(stringResource(R.string.users_title), fontWeight = FontWeight.Bold)
-                        Text(
-                            stringResource(R.string.users_active_count, activeCount),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        Realistic3DCustomerHubIcon(size = 22.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(stringResource(R.string.users_title), fontWeight = FontWeight.Bold)
+                            Text(
+                                stringResource(R.string.users_active_count, activeCount),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 navigationIcon = {

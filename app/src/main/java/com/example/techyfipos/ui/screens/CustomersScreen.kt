@@ -236,7 +236,7 @@ fun CustomersScreen(
                             ) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_export_excel_option)) },
-                                    leadingIcon = { Text("📊", fontSize = 16.sp) },
+                                    leadingIcon = { Icon(Icons.Default.TableChart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
                                     onClick = {
                                         showExportMenu = false
                                         val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
@@ -245,7 +245,7 @@ fun CustomersScreen(
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_export_csv_option)) },
-                                    leadingIcon = { Text("📄", fontSize = 16.sp) },
+                                    leadingIcon = { Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
                                     onClick = {
                                         showExportMenu = false
                                         exportCustomerCsv(context, customers)
@@ -361,16 +361,29 @@ fun CustomersScreen(
                         }
                     }
 
-                    // Add Customer Button (Shared between Phone & Tablet)
-                    FilledIconButton(
-                        onClick = { showAddCustomerDialog = true },
-                        modifier = Modifier.padding(end = 4.dp).size(36.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = "Add Customer", modifier = Modifier.size(18.dp))
+                    // Add Customer Button (Responsive for Tablet & Phone)
+                    if (isTablet) {
+                        Button(
+                            onClick = { showAddCustomerDialog = true },
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(end = 6.dp)
+                        ) {
+                            Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.customer_add_title), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        FilledIconButton(
+                            onClick = { showAddCustomerDialog = true },
+                            modifier = Modifier.padding(end = 4.dp).size(36.dp),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            Icon(Icons.Default.PersonAdd, contentDescription = "Add Customer", modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
             )

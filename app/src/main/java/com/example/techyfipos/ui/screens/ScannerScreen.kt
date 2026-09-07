@@ -784,12 +784,7 @@ private fun TabletSplitTerminal(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            Icons.Default.ShoppingCart,
-                            contentDescription = "Cart",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Realistic3DSupermarketCartIcon(size = 24.dp)
                         Text(
                             text = stringResource(R.string.tablet_live_cart),
                             fontWeight = FontWeight.Bold,
@@ -953,6 +948,8 @@ private fun TabletSplitTerminal(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
+                            Realistic3DSellTerminalIcon(size = 22.dp)
+                            Spacer(Modifier.width(8.dp))
                             Text(
                                 text = stringResource(R.string.tablet_checkout),
                                 fontWeight = FontWeight.Bold,

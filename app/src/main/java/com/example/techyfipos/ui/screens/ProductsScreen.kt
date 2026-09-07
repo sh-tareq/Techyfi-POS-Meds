@@ -670,7 +670,7 @@ fun ProductsScreen(
                                 softWrap = false,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            if (!isTablet && allProductsList.isNotEmpty()) {
+                            if (allProductsList.isNotEmpty()) {
                                 Spacer(Modifier.width(6.dp))
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
@@ -777,6 +777,19 @@ fun ProductsScreen(
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Realistic3DClipboardDuesIcon(size = 22.dp)
+                            }
+
+                            // Direct Batch Barcode Print Labels button on tablet
+                            IconButton(
+                                onClick = { showBatchPrintDialog = true },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Print,
+                                    contentDescription = stringResource(R.string.products_batch_print_labels),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
                             }
                         }
 

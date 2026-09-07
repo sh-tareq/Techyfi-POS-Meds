@@ -57,6 +57,7 @@ import com.example.techyfipos.R
 import com.example.techyfipos.data.db.RegisterClosing
 import com.example.techyfipos.ui.components.Realistic3DCashInStashIcon
 import com.example.techyfipos.ui.components.Realistic3DCashVaultRegisterIcon
+import com.example.techyfipos.ui.components.Realistic3DClipboardDuesIcon
 import com.example.techyfipos.ui.components.Realistic3DExpenseReceiptIcon
 import com.example.techyfipos.ui.components.Realistic3DRegisterAuditZReportIcon
 import com.example.techyfipos.ui.components.Realistic3DVaultIcon
@@ -324,7 +325,7 @@ fun DayStartCloseScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(if (showFullReportLabel) 4.dp else 2.dp)
                             ) {
-                                Text("📋", fontSize = if (showFullReportLabel) 12.sp else 11.sp)
+                                Realistic3DClipboardDuesIcon(size = if (showFullReportLabel) 16.dp else 14.dp)
                                 Text(
                                     text = if (showFullReportLabel) "X-Report" else "X",
                                     fontSize = 11.5.sp,

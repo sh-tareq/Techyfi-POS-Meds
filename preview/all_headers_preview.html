@@ -669,8 +669,9 @@
       <span class="control-label">Width:</span>
       <button class="preset-btn active" onclick="setDeviceWidth(360, this)">360dp (Galaxy A)</button>
       <button class="preset-btn" onclick="setDeviceWidth(375, this)">375dp (Standard)</button>
-      <button class="preset-btn" onclick="setDeviceWidth(392, this)">392dp (Pixel 7)</button>
       <button class="preset-btn" onclick="setDeviceWidth(412, this)">412dp (Pro)</button>
+      <button class="preset-btn" onclick="setDeviceWidth(600, this)">600dp (Fold)</button>
+      <button class="preset-btn" onclick="setDeviceWidth(768, this)">768dp (Tablet Mode)</button>
     </div>
 
     <div class="control-group">
@@ -1600,10 +1601,14 @@
       renderCurrentScreen();
     }
 
+    let isTabletMode = false;
+
     function setDeviceWidth(width, btnEl) {
       document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
       btnEl.classList.add('active');
       document.documentElement.style.setProperty('--phone-width', width + 'px');
+      isTabletMode = width >= 600;
+      renderCurrentScreen();
     }
 
     function setLanguage(lang) {
@@ -1698,7 +1703,7 @@
           </div>
         </div>
         <div class="resolved-alert-banner">
-          <span>✅ Verified Zero Cutoff on 360dp • Matching 3D Nav Icon</span>
+          <span>${isTabletMode ? '✅ Verified Tablet Mode (Width &gt;= 600dp) • All 3D Icons &amp; Tool Decks Applied' : '✅ Verified Zero Cutoff on 360dp • Matching 3D Nav Icon'}</span>
         </div>
       `;
       document.getElementById('proposedHeaderArea').innerHTML = proposedHeaderHtml;
