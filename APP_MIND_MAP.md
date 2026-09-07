@@ -89,7 +89,7 @@ mindmap
         Responsive Zero-Cutoff Top AppBars on Compact Phone Screens
           Customers Screen: Consolidates Table/Cards view switcher, Excel export, and CSV export into an overflow [ ⋮ ] menu, providing ample width for "Customer Database & CRM" title
           Register Close Screen: Adapts [ 📋 X-Report ] and [ 🖨️ Z-Report ] into compact badge chips [ 📋 X ] and [ 🖨️ Z ] on narrow phone screens (< 440dp) to prevent "Day Start & Close" title truncation
-          Products Screen: Consolidates Excel import/export, batch selection mode, and stock audit history into an overflow [ ⋮ ] menu, while retaining the Alert Bell and compact Cart capsule, ensuring the "Products" title never truncates
+          Products Screen: 2-Tier Master POS Header architecture — Tier 1 features Back button, 3D Products Box Icon, zero-cutoff "Products" title with live SKU badge ("621 SKUs"), 3D Ringing Alert Bell (99+), and 3D Cart Capsule. Tier 2 features an integrated horizontal Quick-Tool Ribbon with dedicated 48dp chips for Excel Tools [ 📄 ], Batch Selection [ ✓≡ ], Stock Audit Ledger [ 📋 ], and Print Labels [ 🏷️ ], guaranteeing instantaneous 1-tap access and zero text clipping across all phone screen sizes
     Selling workflow
       Selling Form Factors
         Phone POS Terminal

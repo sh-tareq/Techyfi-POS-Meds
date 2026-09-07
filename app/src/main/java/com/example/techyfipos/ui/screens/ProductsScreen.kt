@@ -648,45 +648,298 @@ fun ProductsScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             var showExcelMenu by remember { mutableStateOf(false) }
-            var showMorePhoneMenu by remember { mutableStateOf(false) }
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(start = 2.dp)
-                    ) {
-                        Realistic3DProductsBoxIcon(size = if (isTablet) 24.dp else 20.dp)
-                        Spacer(Modifier.width(if (isTablet) 6.dp else 4.dp))
-                        Text(
-                            stringResource(R.string.products),
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = if (isTablet) 18.sp else 16.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            softWrap = false,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-                    }
-                },
-                actions = {
-                    if (isTablet) {
-                        // Quick Excel Tools Dropdown
-                        Box {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                TopAppBar(
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(start = 2.dp)
+                        ) {
+                            Realistic3DProductsBoxIcon(size = if (isTablet) 24.dp else 22.dp)
+                            Spacer(Modifier.width(if (isTablet) 6.dp else 6.dp))
+                            Text(
+                                stringResource(R.string.products),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = if (isTablet) 18.sp else 16.5.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                softWrap = false,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (!isTablet && allProductsList.isNotEmpty()) {
+                                Spacer(Modifier.width(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFFEEF2FF),
+                                    contentColor = Color(0xFF4F46E5)
+                                ) {
+                                    Text(
+                                        text = "${allProductsList.size} SKUs",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                        }
+                    },
+                    actions = {
+                        if (isTablet) {
+                            // Quick Excel Tools Dropdown (Tablet Mode)
+                            Box {
+                                IconButton(
+                                    onClick = { showExcelMenu = true },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Description,
+                                        contentDescription = "Excel Tools",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showExcelMenu,
+                                    onDismissRequest = { showExcelMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.products_import_excel), fontWeight = FontWeight.SemiBold) },
+                                        leadingIcon = { Icon(Icons.Default.FileUpload, null, tint = MaterialTheme.colorScheme.primary) },
+                                        onClick = {
+                                            showExcelMenu = false
+                                            importExcelLauncher.launch(
+                                                arrayOf(
+                                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                                    "application/vnd.ms-excel",
+                                                    "application/octet-stream"
+                                                )
+                                            )
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.products_export_excel), fontWeight = FontWeight.SemiBold) },
+                                        leadingIcon = { Icon(Icons.Default.FileDownload, null, tint = MaterialTheme.colorScheme.primary) },
+                                        onClick = {
+                                            showExcelMenu = false
+                                            val cleanDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+                                            exportExcelLauncher.launch("products-$cleanDate.xlsx")
+                                        }
+                                    )
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.products_batch_print_labels), fontWeight = FontWeight.SemiBold) },
+                                        leadingIcon = { Icon(Icons.Default.Print, null, tint = MaterialTheme.colorScheme.primary) },
+                                        onClick = {
+                                            showExcelMenu = false
+                                            showBatchPrintDialog = true
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(if (batchSelectMode) "Exit Batch Selection" else "Batch Operations (Select)", fontWeight = FontWeight.SemiBold) },
+                                        leadingIcon = { Icon(Icons.Default.Checklist, null, tint = MaterialTheme.colorScheme.primary) },
+                                        onClick = {
+                                            showExcelMenu = false
+                                            batchSelectMode = !batchSelectMode
+                                            if (!batchSelectMode) selectedBarcodes.clear()
+                                        }
+                                    )
+                                }
+                            }
+
+                            // Batch Selection Toggle Button
                             IconButton(
-                                onClick = { showExcelMenu = true },
+                                onClick = {
+                                    batchSelectMode = !batchSelectMode
+                                    if (!batchSelectMode) selectedBarcodes.clear()
+                                },
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Description,
-                                    contentDescription = "Excel Tools",
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    imageVector = if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
+                                    contentDescription = "Batch Operations",
+                                    tint = if (batchSelectMode) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(22.dp)
                                 )
+                            }
+
+                            // 3D Metal Clipboard Ledger for Stock Audit
+                            IconButton(
+                                onClick = { showStockAuditHistoryModal = true },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Realistic3DClipboardDuesIcon(size = 22.dp)
+                            }
+                        }
+
+                        // 3D Ringing Brass Bell for Inventory Alerts with Non-Clipping Badge (Present on both phone and tablet)
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 2.dp)
+                                .size(38.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IconButton(
+                                onClick = { showInventoryAlertsModal = true },
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Realistic3DBrassAlertBellIcon(size = 22.dp)
+                            }
+                            if (allAlerts.totalCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = 2.dp, y = (-2).dp)
+                                        .background(
+                                            if (allAlerts.expiredProducts.isNotEmpty()) Color(0xFFE11D48) else Color(0xFFF59E0B),
+                                            CircleShape
+                                        )
+                                        .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                                        .size(18.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val countText = if (allAlerts.totalCount > 99) "99+" else allAlerts.totalCount.toString()
+                                    Text(
+                                        text = countText,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White,
+                                        lineHeight = 9.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.width(4.dp))
+
+                        // 3D Indigo Cart Capsule with Tap & Add Animations
+                        Surface(
+                            onClick = {
+                                cartAnimKey = System.currentTimeMillis()
+                                onNavigateToCart()
+                            },
+                            interactionSource = cartInteractionSource,
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF4F46E5),
+                            contentColor = Color.White,
+                            shadowElevation = 2.dp,
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .height(36.dp)
+                                .graphicsLayer {
+                                    scaleX = cartPressScale * cartCapsuleBounceScale.value
+                                    scaleY = cartPressScale * cartCapsuleBounceScale.value
+                                }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.graphicsLayer {
+                                        scaleX = cartIconAnimScale.value
+                                        scaleY = cartIconAnimScale.value
+                                        rotationZ = cartIconAnimRotation.value
+                                        translationY = cartIconAnimOffsetY.value
+                                    }
+                                ) {
+                                    Realistic3DSupermarketCartIcon(size = 17.dp)
+                                }
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.cart), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                if (cartUnitCount > 0) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
+                                            .graphicsLayer {
+                                                scaleX = cartBadgeAnimScale.value
+                                                scaleY = cartBadgeAnimScale.value
+                                                rotationZ = cartBadgeAnimRotation.value
+                                            }
+                                            .background(Color(0xFFEF4444), RoundedCornerShape(9.dp))
+                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                    ) {
+                                        val cStr = if (cartUnitCount % 1.0 == 0.0) cartUnitCount.toLong().toString() else String.format(Locale.US, "%.1f", cartUnitCount)
+                                        AnimatedContent(
+                                            targetState = cStr,
+                                            transitionSpec = {
+                                                (slideInVertically { -it } + fadeIn() + scaleIn(initialScale = 1.35f))
+                                                    .togetherWith(slideOutVertically { it } + fadeOut() + scaleOut(targetScale = 0.65f))
+                                            },
+                                            label = "cartCountTextAnim"
+                                        ) { targetCount ->
+                                            Text(
+                                                text = targetCount,
+                                                color = Color.White,
+                                                fontSize = 9.5.sp,
+                                                fontWeight = FontWeight.Black,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1,
+                                                softWrap = false
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                )
+
+                // Option 2 Tier 2: Integrated Horizontal Quick-Tool Ribbon (Phone Mode only)
+                if (!isTablet) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .padding(bottom = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 1. Excel Tools Chip
+                        Box {
+                            Surface(
+                                onClick = { showExcelMenu = true },
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                                modifier = Modifier.height(34.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Description,
+                                        contentDescription = "Excel Tools",
+                                        tint = Color(0xFF059669),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "Excel Tools",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(Modifier.width(2.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                             DropdownMenu(
                                 expanded = showExcelMenu,
@@ -715,260 +968,93 @@ fun ProductsScreen(
                                         exportExcelLauncher.launch("products-$cleanDate.xlsx")
                                     }
                                 )
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.products_batch_print_labels), fontWeight = FontWeight.SemiBold) },
-                                    leadingIcon = { Icon(Icons.Default.Print, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = {
-                                        showExcelMenu = false
-                                        showBatchPrintDialog = true
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(if (batchSelectMode) "Exit Batch Selection" else "Batch Operations (Select)", fontWeight = FontWeight.SemiBold) },
-                                    leadingIcon = { Icon(Icons.Default.Checklist, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = {
-                                        showExcelMenu = false
-                                        batchSelectMode = !batchSelectMode
-                                        if (!batchSelectMode) selectedBarcodes.clear()
-                                    }
-                                )
                             }
                         }
 
-                        // Batch Selection Toggle Button
-                        IconButton(
+                        // 2. Batch Select Mode Chip
+                        Surface(
                             onClick = {
                                 batchSelectMode = !batchSelectMode
                                 if (!batchSelectMode) selectedBarcodes.clear()
                             },
-                            modifier = Modifier.size(36.dp)
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (batchSelectMode) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, if (batchSelectMode) Color(0xFF6EE7B7) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                            modifier = Modifier.height(34.dp)
                         ) {
-                            Icon(
-                                imageVector = if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
-                                contentDescription = "Batch Operations",
-                                tint = if (batchSelectMode) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        // 3D Metal Clipboard Ledger for Stock Audit
-                        IconButton(
-                            onClick = { showStockAuditHistoryModal = true },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Realistic3DClipboardDuesIcon(size = 22.dp)
-                        }
-                    } else {
-                        // Phone Mode Overflow Menu: consolidates Excel tools, batch mode, and stock audit history
-                        Box {
-                            IconButton(
-                                onClick = { showMorePhoneMenu = true },
-                                modifier = Modifier.size(36.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp)
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = "More Tools",
-                                        tint = if (batchSelectMode) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    if (batchSelectMode) {
-                                        Box(
-                                            modifier = Modifier
-                                                .align(Alignment.TopEnd)
-                                                .offset(x = 2.dp, y = (-2).dp)
-                                                .background(Color(0xFF10B981), CircleShape)
-                                                .size(8.dp)
-                                        )
-                                    }
-                                }
-                            }
-                            DropdownMenu(
-                                expanded = showMorePhoneMenu,
-                                onDismissRequest = { showMorePhoneMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            if (batchSelectMode) "Exit Batch Selection" else "Batch Operations (Select)",
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = if (batchSelectMode) Color(0xFF10B981) else Color.Unspecified
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
-                                            null,
-                                            tint = if (batchSelectMode) Color(0xFF10B981) else MaterialTheme.colorScheme.primary
-                                        )
-                                    },
-                                    onClick = {
-                                        showMorePhoneMenu = false
-                                        batchSelectMode = !batchSelectMode
-                                        if (!batchSelectMode) selectedBarcodes.clear()
-                                    }
+                                Icon(
+                                    imageVector = if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
+                                    contentDescription = "Batch Operations",
+                                    tint = if (batchSelectMode) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(16.dp)
                                 )
-                                DropdownMenuItem(
-                                    text = { Text("Stock Audit History", fontWeight = FontWeight.SemiBold) },
-                                    leadingIcon = { Realistic3DClipboardDuesIcon(size = 20.dp) },
-                                    onClick = {
-                                        showMorePhoneMenu = false
-                                        showStockAuditHistoryModal = true
-                                    }
-                                )
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.products_import_excel), fontWeight = FontWeight.SemiBold) },
-                                    leadingIcon = { Icon(Icons.Default.FileUpload, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = {
-                                        showMorePhoneMenu = false
-                                        importExcelLauncher.launch(
-                                            arrayOf(
-                                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                                "application/vnd.ms-excel",
-                                                "application/octet-stream"
-                                            )
-                                        )
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.products_export_excel), fontWeight = FontWeight.SemiBold) },
-                                    leadingIcon = { Icon(Icons.Default.FileDownload, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = {
-                                        showMorePhoneMenu = false
-                                        val cleanDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
-                                        exportExcelLauncher.launch("products-$cleanDate.xlsx")
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.products_batch_print_labels), fontWeight = FontWeight.SemiBold) },
-                                    leadingIcon = { Icon(Icons.Default.Print, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = {
-                                        showMorePhoneMenu = false
-                                        showBatchPrintDialog = true
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    // 3D Ringing Brass Bell for Inventory Alerts with Non-Clipping Badge (Present on both phone and tablet)
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 2.dp)
-                            .size(36.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconButton(
-                            onClick = { showInventoryAlertsModal = true },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Realistic3DBrassAlertBellIcon(size = 22.dp)
-                        }
-                        if (allAlerts.totalCount > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = 2.dp, y = (-2).dp)
-                                    .background(
-                                        if (allAlerts.expiredProducts.isNotEmpty()) Color(0xFFE11D48) else Color(0xFFF59E0B),
-                                        CircleShape
-                                    )
-                                    .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                                    .size(18.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                val countText = if (allAlerts.totalCount > 99) "99+" else allAlerts.totalCount.toString()
-                                Text(
-                                    text = countText,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White,
-                                    lineHeight = 9.sp
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.width(2.dp))
-
-                    // 3D Indigo Cart Capsule with Tap & Add Animations (Responsive width for phone/tablet)
-                    Surface(
-                        onClick = {
-                            cartAnimKey = System.currentTimeMillis()
-                            onNavigateToCart()
-                        },
-                        interactionSource = cartInteractionSource,
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFF4F46E5),
-                        contentColor = Color.White,
-                        shadowElevation = 2.dp,
-                        modifier = Modifier
-                            .padding(end = if (isTablet) 8.dp else 4.dp)
-                            .height(36.dp)
-                            .graphicsLayer {
-                                scaleX = cartPressScale * cartCapsuleBounceScale.value
-                                scaleY = cartPressScale * cartCapsuleBounceScale.value
-                            }
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = if (isTablet) 10.dp else 8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier.graphicsLayer {
-                                    scaleX = cartIconAnimScale.value
-                                    scaleY = cartIconAnimScale.value
-                                    rotationZ = cartIconAnimRotation.value
-                                    translationY = cartIconAnimOffsetY.value
-                                }
-                            ) {
-                                Realistic3DSupermarketCartIcon(size = 17.dp)
-                            }
-                            if (isTablet) {
                                 Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.cart), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = if (batchSelectMode) "Exit Batch" else "Batch Select",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (batchSelectMode) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface
+                                )
                             }
-                            if (cartUnitCount > 0) {
-                                Spacer(Modifier.width(if (isTablet) 6.dp else 4.dp))
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
-                                        .graphicsLayer {
-                                            scaleX = cartBadgeAnimScale.value
-                                            scaleY = cartBadgeAnimScale.value
-                                            rotationZ = cartBadgeAnimRotation.value
-                                        }
-                                        .background(Color(0xFFEF4444), RoundedCornerShape(9.dp))
-                                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                                ) {
-                                    val cStr = if (cartUnitCount % 1.0 == 0.0) cartUnitCount.toLong().toString() else String.format(Locale.US, "%.1f", cartUnitCount)
-                                    AnimatedContent(
-                                        targetState = cStr,
-                                        transitionSpec = {
-                                            (slideInVertically { -it } + fadeIn() + scaleIn(initialScale = 1.35f))
-                                                .togetherWith(slideOutVertically { it } + fadeOut() + scaleOut(targetScale = 0.65f))
-                                        },
-                                        label = "cartCountTextAnim"
-                                    ) { targetCount ->
-                                        Text(
-                                            text = targetCount,
-                                            color = Color.White,
-                                            fontSize = 9.5.sp,
-                                            fontWeight = FontWeight.Black,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 1,
-                                            softWrap = false
-                                        )
-                                    }
-                                }
+                        }
+
+                        // 3. Stock Audit History Chip
+                        Surface(
+                            onClick = { showStockAuditHistoryModal = true },
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            ) {
+                                Realistic3DClipboardDuesIcon(size = 16.dp)
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "Stock Audit",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+
+                        // 4. Batch Print Labels Chip
+                        Surface(
+                            onClick = { showBatchPrintDialog = true },
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Print,
+                                    contentDescription = "Print Labels",
+                                    tint = Color(0xFF4F46E5),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "Print Labels",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             }
                         }
                     }
                 }
-            )
+            }
         },
         floatingActionButton = {
             // 🟢 3D Emerald Jewel Floating Action Button (Add Product)

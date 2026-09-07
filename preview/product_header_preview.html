@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS — Product Header UI/UX Interactive Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-canvas: #0b0f19;
+      --card-bg: #1e293b;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --emerald: #10b981;
+      --emerald-dark: #059669;
+      --rose: #ef4444;
+      --amber: #f59e0b;
+      --surface: #ffffff;
+      --surface-subtle: #f8fafc;
+      --border-light: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --phone-width: 375px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: linear-gradient(135deg, #090d16 0%, #111827 50%, #0f172a 100%);
+      color: #f1f5f9;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 60px;
+    }
+
+    header.preview-nav {
+      max-width: 1080px;
+      width: 100%;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(79, 70, 229, 0.18);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: #a5b4fc;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(to right, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      color: #94a3b8;
+      font-size: 15px;
+      max-width: 720px;
+      margin: 0 auto 20px;
+      line-height: 1.5;
+    }
+
+    /* Controls Banner */
+    .control-panel {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 16px 20px;
+      max-width: 900px;
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .option-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .opt-btn {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #cbd5e1;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .opt-btn:hover {
+      background: rgba(79, 70, 229, 0.25);
+      border-color: #6366f1;
+      color: #fff;
+    }
+
+    .opt-btn.active {
+      background: #4f46e5;
+      border-color: #818cf8;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+    }
+
+    .screen-width-slider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    .screen-width-slider input[type="range"] {
+      width: 130px;
+      accent-color: #4f46e5;
+      cursor: pointer;
+    }
+
+    /* Main Showcase Arena */
+    .showcase-arena {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      align-items: flex-start;
+      max-width: 1100px;
+      width: 100%;
+    }
+
+    /* Phone Mockup Frame */
+    .phone-mockup {
+      width: var(--phone-width);
+      min-width: 320px;
+      max-width: 420px;
+      height: 780px;
+      background: #f8fafc;
+      border-radius: 40px;
+      border: 10px solid #1e293b;
+      box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: width 0.2s ease;
+      color: #0f172a;
+    }
+
+    /* Android Status Bar */
+    .status-bar {
+      height: 28px;
+      padding: 4px 18px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #1e293b;
+      background: #ffffff;
+      user-select: none;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .battery-pill {
+      border: 1.5px solid #1e293b;
+      border-radius: 3px;
+      padding: 0.5px 3px;
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    /* Screen Scrollable Body */
+    .phone-body {
+      flex: 1;
+      overflow-y: auto;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* TOP HEADER COMPONENT */
+    .product-header-container {
+      background: #ffffff;
+      border-bottom: 1px solid #f1f5f9;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    }
+
+    .top-bar-main {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px 0 4px;
+    }
+
+    .nav-and-title {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #0f172a;
+      transition: background 0.15s;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .icon-btn:hover {
+      background: #f1f5f9;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.94);
+    }
+
+    .header-title-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-title-text {
+      font-size: 16.5px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.3px;
+    }
+
+    .header-badge-count {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6366f1;
+      background: #eef2ff;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .header-actions-row {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    /* Custom Tool Icons */
+    .tool-icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .tool-icon-btn:hover {
+      background: #f8fafc;
+    }
+
+    .tool-icon-btn:active {
+      transform: scale(0.92);
+    }
+
+    .tool-icon-btn.active-batch {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .badge-dot-emerald {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 7px;
+      height: 7px;
+      background: #10b981;
+      border-radius: 50%;
+      border: 1.5px solid #fff;
+    }
+
+    /* Alert Bell Badge */
+    .bell-wrapper {
+      position: relative;
+    }
+
+    .alert-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: #f59e0b;
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 900;
+      height: 16px;
+      min-width: 16px;
+      padding: 0 3px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid #ffffff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Cart Capsule */
+    .cart-capsule {
+      height: 34px;
+      background: #4f46e5;
+      color: #ffffff;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(79, 70, 229, 0.3);
+      transition: transform 0.15s ease, background 0.15s ease;
+      border: none;
+      flex-shrink: 0;
+      margin-left: 2px;
+    }
+
+    .cart-capsule:hover {
+      background: #4338ca;
+    }
+
+    .cart-capsule:active {
+      transform: scale(0.95);
+    }
+
+    .cart-count-badge {
+      background: #ef4444;
+      color: #ffffff;
+      font-size: 9.5px;
+      font-weight: 900;
+      height: 16px;
+      min-width: 16px;
+      padding: 0 4px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulseBadge 1.2s infinite;
+    }
+
+    @keyframes pulseBadge {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    /* TIER 2: Secondary Quick-Tool Ribbon (Option 2) */
+    .action-ribbon {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      background: #ffffff;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .action-ribbon::-webkit-scrollbar {
+      display: none;
+    }
+
+    .ribbon-chip {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .ribbon-chip:hover {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+      color: #4f46e5;
+    }
+
+    .ribbon-chip.active {
+      background: #ecfdf5;
+      border-color: #6ee7b7;
+      color: #059669;
+    }
+
+    /* SEGMENTED CAPSULE (Option 3) */
+    .segmented-tool-capsule {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      gap: 1px;
+    }
+
+    .segmented-tool-capsule .tool-icon-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+    }
+
+    /* Valuation Navy Card */
+    .valuation-card {
+      margin: 12px 12px 10px;
+      background: linear-gradient(135deg, #111827 0%, #1e1b4b 100%);
+      color: #ffffff;
+      border-radius: 18px;
+      padding: 14px 16px;
+      box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .val-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .val-details-btn {
+      background: rgba(255, 255, 255, 0.12);
+      border: none;
+      color: #cbd5e1;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .val-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .val-label {
+      font-size: 11px;
+      color: #cbd5e1;
+      margin-bottom: 2px;
+    }
+
+    .val-amount {
+      font-size: 22px;
+      font-weight: 900;
+      color: #ffffff;
+    }
+
+    .val-margin-tag {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      padding: 4px 8px;
+      border-radius: 8px;
+      text-align: right;
+      font-size: 9.5px;
+      font-weight: 800;
+    }
+
+    .val-margin-val {
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .val-progress {
+      height: 4px;
+      width: 100%;
+      background: #334155;
+      border-radius: 999px;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .val-prog-green { width: 65%; background: #10b981; }
+    .val-prog-gold { width: 25%; background: #f59e0b; }
+    .val-prog-red { width: 10%; background: #ef4444; }
+
+    /* Search & Barcode Row */
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px 10px;
+    }
+
+    .search-input-box {
+      flex: 1;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 8px;
+      color: #64748b;
+      font-size: 12.5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .search-sq-btn {
+      width: 42px;
+      height: 42px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #334155;
+    }
+
+    /* Product Cards */
+    .product-list {
+      padding: 0 12px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .prod-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .prod-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .prod-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      font-family: 'Noto Sans Bengali', 'Plus Jakarta Sans', sans-serif;
+    }
+
+    .stock-chip-green {
+      background: #ecfdf5;
+      color: #059669;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .stock-chip-amber {
+      background: #fffbeb;
+      color: #d97706;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .prod-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .barcode-tag {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 10px;
+    }
+
+    .prod-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 4px;
+    }
+
+    .prod-price {
+      font-size: 16px;
+      font-weight: 900;
+      color: #059669;
+    }
+
+    .prod-price-unit {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .prod-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cart-add-btn {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #059669;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+
+    .cart-add-btn:hover {
+      background: #10b981;
+      color: #ffffff;
+    }
+
+    .stock-btn {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Floating Add Product Button */
+    .fab-add {
+      position: absolute;
+      bottom: 70px;
+      right: 16px;
+      background: #059669;
+      color: #ffffff;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 0 10px 20px -5px rgba(5, 150, 105, 0.5);
+      cursor: pointer;
+      z-index: 40;
+    }
+
+    /* Bottom Navigation Bar */
+    .bottom-nav {
+      height: 58px;
+      background: #ffffff;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 6px;
+      user-select: none;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+    }
+
+    .nav-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .nav-tab.active {
+      color: #4f46e5;
+    }
+
+    .nav-tab-pill {
+      position: absolute;
+      width: 48px;
+      height: 28px;
+      background: rgba(79, 70, 229, 0.12);
+      border-radius: 14px;
+      top: -2px;
+      z-index: -1;
+    }
+
+    /* Analysis Panel */
+    .analysis-panel {
+      flex: 1;
+      max-width: 520px;
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .analysis-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+
+    .analysis-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    .pros-cons-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+
+    .metric-card h4 {
+      font-size: 13px;
+      font-weight: 800;
+      color: #a5b4fc;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-card p {
+      font-size: 13.5px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    .badge-check {
+      color: #34d399;
+      font-weight: bold;
+    }
+
+    .badge-cross {
+      color: #f87171;
+      font-weight: bold;
+    }
+
+    /* Modal Sheet for Alerts Preview */
+    .mock-modal-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(2px);
+      z-index: 90;
+      display: none;
+      align-items: flex-end;
+    }
+
+    .mock-modal-content {
+      background: #ffffff;
+      width: 100%;
+      border-radius: 24px 24px 0 0;
+      padding: 20px;
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    /* Notification Toast */
+    .mock-toast {
+      position: absolute;
+      top: 65px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: #0f172a;
+      color: #ffffff;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
+      white-space: nowrap;
+    }
+
+    .mock-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="preview-nav">
+    <div class="brand-badge">✨ Interactive POS Architecture Lab</div>
+    <h1>Product Screen Header — UI/UX Proposals</h1>
+    <p class="subtitle">
+      Compare the design options in real-time on an interactive Android phone mockup. Test screen sizes, tap actions, verify touch ergonomics, and decide which solution delivers the best POS cashier experience.
+    </p>
+  </header>
+
+  <!-- Control Panel -->
+  <div class="control-panel">
+    <div class="option-pills">
+      <button class="opt-btn active" onclick="setOption(1)" id="btn-opt-1">
+        <span>Option 1</span>
+        <strong>Ultra-Compact Single Row</strong>
+      </button>
+      <button class="opt-btn" onclick="setOption(2)" id="btn-opt-2">
+        <span>Option 2</span>
+        <strong>2-Tier Master POS Ribbon</strong>
+      </button>
+      <button class="opt-btn" onclick="setOption(3)" id="btn-opt-3">
+        <span>Option 3</span>
+        <strong>Segmented Tool Capsule</strong>
+      </button>
+      <button class="opt-btn" onclick="setOption(0)" id="btn-opt-0" style="opacity: 0.8;">
+        <span>Before</span>
+        <strong>Original (Cutoff Bug)</strong>
+      </button>
+    </div>
+
+    <div class="screen-width-slider">
+      <span>Screen Width:</span>
+      <input type="range" id="widthSlider" min="320" max="420" value="375" oninput="updateWidth(this.value)">
+      <span id="widthValue" style="color: #818cf8; min-width: 45px;">375dp</span>
+    </div>
+  </div>
+
+  <!-- Showcase Arena -->
+  <div class="showcase-arena">
+
+    <!-- Phone Simulator -->
+    <div class="phone-mockup" id="phoneMockup">
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span>4:31</span>
+        <div class="status-icons">
+          <span>📶</span>
+          <span>Wi-Fi</span>
+          <span class="battery-pill">82%</span>
+        </div>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div class="phone-body">
+        
+        <!-- DYNAMIC TOP HEADER INJECTED HERE -->
+        <div class="product-header-container" id="dynamicHeader">
+          <!-- Dynamic Content based on option -->
+        </div>
+
+        <!-- Valuation Card -->
+        <div class="valuation-card">
+          <div class="val-header">
+            <span>📊 INVENTORY VALUATION & HEALTH</span>
+            <button class="val-details-btn" onclick="showToast('Valuation Details Breakdown')">Details ▾</button>
+          </div>
+          <div class="val-body">
+            <div>
+              <div class="val-label">Total Selling Value (621 SKUs)</div>
+              <div class="val-amount">৳11,51,640.60</div>
+            </div>
+            <div class="val-margin-tag">
+              <div>MARGIN</div>
+              <div class="val-margin-val">+17.1%</div>
+            </div>
+          </div>
+          <div class="val-progress">
+            <div class="val-prog-green"></div>
+            <div class="val-prog-gold"></div>
+            <div class="val-prog-red"></div>
+          </div>
+        </div>
+
+        <!-- Search Bar & Tools Row -->
+        <div class="search-row">
+          <div class="search-input-box">
+            <span>🔍</span>
+            <span>Search products...</span>
+          </div>
+          <button class="search-sq-btn" title="Hardware Scanner Gun" onclick="showToast('Barcode Scanner Activated 🔫')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3M9 12h6"/>
+            </svg>
+          </button>
+          <button class="search-sq-btn" title="Filter Categories" onclick="showToast('Category Filters')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M7 12h10M10 18h4"/>
+            </svg>
+          </button>
+          <button class="search-sq-btn" title="List View" style="color: #4f46e5;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Product Cards -->
+        <div class="product-list">
+          <!-- Card 1 -->
+          <div class="prod-card">
+            <div class="prod-top">
+              <div>
+                <div class="prod-name">প্রাণ হট টমেটো সস ৩ কেজি</div>
+                <div class="prod-meta">
+                  <span class="barcode-tag">#846656005286</span>
+                  <span>• সস</span>
+                </div>
+              </div>
+              <span class="stock-chip-green">● 6 Pcs</span>
+            </div>
+            <div class="prod-bottom">
+              <div>
+                <span class="prod-price">৳520</span>
+                <span class="prod-price-unit">/Pcs</span>
+              </div>
+              <div class="prod-actions">
+                <button class="cart-add-btn" onclick="addToCart(1, 'প্রাণ হট টমেটো সস')">
+                  🛒 Cart
+                </button>
+                <button class="stock-btn" onclick="showToast('± Stock Quick Adjust')">
+                  📦 ± Stock
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="prod-card">
+            <div class="prod-top">
+              <div>
+                <div class="prod-name">ভিটাকেয়ার সোপ ১০০ গ্রাম</div>
+                <div class="prod-meta">
+                  <span class="barcode-tag">#110857530369</span>
+                  <span>• বিউটি সোপ</span>
+                </div>
+              </div>
+              <span class="stock-chip-amber">⚡ Low: 2</span>
+            </div>
+            <div class="prod-bottom">
+              <div>
+                <span class="prod-price">৳65</span>
+                <span class="prod-price-unit">/Pcs</span>
+              </div>
+              <div class="prod-actions">
+                <button class="cart-add-btn" onclick="addToCart(1, 'ভিটাকেয়ার সোপ')">
+                  🛒 Cart
+                </button>
+                <button class="stock-btn" onclick="showToast('± Stock Quick Adjust')">
+                  📦 ± Stock
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="prod-card">
+            <div class="prod-top">
+              <div>
+                <div class="prod-name">Angelic Air Freshener 300 ml</div>
+                <div class="prod-meta">
+                  <span class="barcode-tag">#8139003000853</span>
+                  <span>• Air Freshener</span>
+                </div>
+              </div>
+              <span class="stock-chip-green">● 18 Pcs</span>
+            </div>
+            <div class="prod-bottom">
+              <div>
+                <span class="prod-price">৳280</span>
+                <span class="prod-price-unit">/Pcs</span>
+              </div>
+              <div class="prod-actions">
+                <button class="cart-add-btn" onclick="addToCart(1, 'Angelic Air Freshener')">
+                  🛒 Cart
+                </button>
+                <button class="stock-btn" onclick="showToast('± Stock Quick Adjust')">
+                  📦 ± Stock
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Add Button -->
+        <button class="fab-add" onclick="showToast('+ Add New Product Dialog')">
+          <span style="font-size: 16px;">＋</span> Add Product
+        </button>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+          <div class="nav-tab" onclick="showToast('Navigating to Sell')">
+            <span style="font-size: 18px;">📱</span>
+            <span>Sell</span>
+          </div>
+          <div class="nav-tab active">
+            <div class="nav-tab-pill"></div>
+            <span style="font-size: 18px;">📦</span>
+            <span>Products</span>
+          </div>
+          <div class="nav-tab" onclick="showToast('Navigating to History')">
+            <span style="font-size: 18px;">⏱️</span>
+            <span>History</span>
+          </div>
+          <div class="nav-tab" onclick="showToast('Navigating to Dues')">
+            <span style="font-size: 18px;">📋</span>
+            <span>Dues</span>
+          </div>
+          <div class="nav-tab" onclick="showToast('Opening More Operations Hub')">
+            <span style="font-size: 18px;">⚡</span>
+            <span>More ...</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Mock Modal -->
+      <div class="mock-modal-overlay" id="mockModal" onclick="closeModal()">
+        <div class="mock-modal-content" onclick="event.stopPropagation()">
+          <h3 style="font-size: 16px; margin-bottom: 8px;">🔔 Inventory Alerts (99+)</h3>
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
+            14 items expired • 85 low stock items needing reorder.
+          </p>
+          <button class="cart-capsule" style="width: 100%; justify-content: center; height: 40px;" onclick="closeModal()">
+            Done
+          </button>
+        </div>
+      </div>
+
+      <!-- Toast -->
+      <div class="mock-toast" id="mockToast">Action Triggered</div>
+    </div>
+
+    <!-- Analysis & UX Critique Panel -->
+    <div class="analysis-panel" id="analysisContent">
+      <!-- Injected by JavaScript -->
+    </div>
+
+  </div>
+
+  <script>
+    let currentOption = 1;
+    let cartCount = 3;
+    let isBatchMode = false;
+
+    const analysisData = {
+      1: {
+        title: "Option 1: Ultra-Compact Single Row (Preserves All 5 3D Tools)",
+        badge: "RECOMMENDED FOR POWER POS USERS",
+        description: "Mathematically optimizes horizontal padding and action widths to fit ALL 5 original tools (Excel, Batch toggle, Stock audit, Ringing Alert bell, and Cart) on a single row without cutting off 'Products'.",
+        pros: [
+          "<span class='badge-check'>✓ 100% Feature Parity:</span> Zero tools hidden behind a menu. Cashiers retain instantaneous 1-tap access to Excel, Batch mode, and Audit ledger.",
+          "<span class='badge-check'>✓ Zero Truncation:</span> Uses 30dp tool buttons with 48dp touch targets and compact 4dp gaps, leaving 90dp+ for 'Products' even on narrow 360dp phones.",
+          "<span class='badge-check'>✓ Vibrant 3D Visuals:</span> Retains all rich 3D icon textures (Green Excel, Teal Batch Sliders, Brass Bell, and Purple Cart capsule) that users love."
+        ],
+        cons: [
+          "<span class='badge-cross'>⚠ Touch Target Precision:</span> Requires tight 2dp horizontal spacing between icons on screens < 340dp (standard phones are 360-392dp, so perfectly safe)."
+        ],
+        layoutSummary: "TopAppBar Row: [Back (34dp)] + [📦 Products (78dp)] + Spacer + [📄 Excel (32dp)] + [✓≡ Batch (32dp)] + [📋 Audit (32dp)] + [🔔 Bell (34dp)] + [🛒 Cart (52dp)] = 294dp total width (fits cleanly within 360dp with 66dp safety margin)."
+      },
+      2: {
+        title: "Option 2: 2-Tier Master POS Header (Executive Header + Quick Ribbon)",
+        badge: "MODERN ENTERPRISE POS STANDARD (Shopify / Toast style)",
+        description: "Separates primary screen identity from contextual tools. Top bar houses the title with live SKU badge, Alert bell, and Cart. A dedicated horizontal tool ribbon directly beneath provides oversized, comfortable tap targets for all catalog utilities.",
+        pros: [
+          "<span class='badge-check'>✓ Maximum Ergonomic Comfort:</span> Massive 48dp touch targets for every button; impossible to miss-click during busy checkout rushes.",
+          "<span class='badge-check'>✓ Live Catalog Context:</span> Allows displaying the total active SKU count ('Products 621') right beside the title without crowding.",
+          "<span class='badge-check'>✓ Scalable for Future Features:</span> Additional tools (e.g. 'Print Labels', 'Barcode Generator') fit cleanly into the horizontal scrollable ribbon."
+        ],
+        cons: [
+          "<span class='badge-cross'>⚠ Vertical Space:</span> Consumes 36dp of vertical height for the tool ribbon, slightly pushing down the valuation card."
+        ],
+        layoutSummary: "Tier 1: [Back] [📦 Products (621)] ── [🔔 Bell (99+)] [🛒 Cart (3)]<br>Tier 2: [📄 Excel Tools] [✓≡ Batch Selection] [📋 Stock Audit] [🏷️ Barcode Labels]"
+      },
+      3: {
+        title: "Option 3: Segmented Tool Capsule (Modern Frosted Glass Grouping)",
+        badge: "CLEAN MINIMALIST FINTECH STYLE",
+        description: "Groups catalog management utilities (Excel, Batch, Audit) into a single cohesive segmented pill capsule, sitting alongside the Alert Bell and Cart.",
+        pros: [
+          "<span class='badge-check'>✓ Visual Cohesion:</span> Clearly distinguishes catalog editing tools from live transaction tools (Alerts and Cart).",
+          "<span class='badge-check'>✓ Space Efficient:</span> Saves 14dp of margin overhead by nesting tools inside a single bordered container.",
+          "<span class='badge-check'>✓ Zero Truncation:</span> 'Products' has plenty of breathing room."
+        ],
+        cons: [
+          "<span class='badge-cross'>⚠ Slightly Denser:</span> The three segmented icons share a single background, requiring slightly smaller icon glyphs (18dp)."
+        ],
+        layoutSummary: "TopAppBar Row: [Back] [📦 Products] ── [ (📄 | ✓≡ | 📋) Capsule ] [🔔 Bell] [🛒 Cart]"
+      },
+      0: {
+        title: "Before: Original Bug Reproduction (Why 'Products' Cut Off)",
+        badge: "PREVIOUS IMPLEMENTATION (BEFORE FIX)",
+        description: "Demonstrates why 'Products' was truncating to 'Product' in the user's screenshot. Material 3 TopAppBar default slot widths and unoptimized padding crowded the row.",
+        pros: [
+          "<span class='badge-cross'>All tools visible</span>, but at the cost of breaking the title layout."
+        ],
+        cons: [
+          "<span class='badge-cross'>❌ Broken Title Text:</span> 'Products' is compressed to 'Product...' or clipped.",
+          "<span class='badge-cross'>❌ Overcrowded:</span> 5 oversized action buttons + 85dp Cart button exceed 240dp, leaving only 45dp for the title.",
+          "<span class='badge-cross'>❌ Poor Cashier Aesthetics:</span> Looks cramped and unpolished."
+        ],
+        layoutSummary: "TopAppBar Row: [Back (48dp)] + [📦 Products (clipped to 50dp)] + [Excel (40dp)] + [Batch (40dp)] + [Audit (40dp)] + [Bell (42dp)] + [Cart Capsule (88dp)] = 348dp+ (forcing truncation on standard 360dp devices)."
+      }
+    };
+
+    function renderHeader() {
+      const container = document.getElementById('dynamicHeader');
+      
+      if (currentOption === 1) {
+        container.innerHTML = `
+          <div class="top-bar-main">
+            <div class="nav-and-title">
+              <button class="icon-btn" onclick="showToast('Back Pressed')">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </button>
+              <div class="header-title-box">
+                <span style="font-size: 20px;">📦</span>
+                <span class="header-title-text">Products</span>
+              </div>
+            </div>
+
+            <div class="header-actions-row">
+              <button class="tool-icon-btn" title="Excel Import/Export" onclick="showToast('Excel Tools: Import / Export')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 4v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6a2 2 0 00-2 2z" stroke="#059669" stroke-width="2"/>
+                  <path d="M14 2v6h6M8 13h8M8 17h5" stroke="#059669" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
+
+              <button class="tool-icon-btn ${isBatchMode ? 'active-batch' : ''}" title="Batch Operations" onclick="toggleBatchMode()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${isBatchMode ? '#10b981' : '#334155'}" stroke-width="2">
+                  <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                </svg>
+                ${isBatchMode ? '<div class="badge-dot-emerald"></div>' : ''}
+              </button>
+
+              <button class="tool-icon-btn" title="Stock Audit History" onclick="showToast('Stock Audit History Ledger')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2">
+                  <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/>
+                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                  <path d="M9 12h6M9 16h6"/>
+                </svg>
+              </button>
+
+              <div class="bell-wrapper">
+                <button class="tool-icon-btn" title="Inventory Alerts" onclick="openModal()">
+                  <span style="font-size: 19px;">🔔</span>
+                </button>
+                <div class="alert-badge">99+</div>
+              </div>
+
+              <button class="cart-capsule" onclick="showToast('Navigating to Checkout Cart')">
+                <span style="font-size: 14px;">🛒</span>
+                <span style="font-weight: 800;">Cart</span>
+                <div class="cart-count-badge">${cartCount}</div>
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (currentOption === 2) {
+        container.innerHTML = `
+          <div class="top-bar-main" style="border-bottom: 1px solid #f8fafc;">
+            <div class="nav-and-title">
+              <button class="icon-btn" onclick="showToast('Back Pressed')">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </button>
+              <div class="header-title-box">
+                <span style="font-size: 22px;">📦</span>
+                <span class="header-title-text" style="font-size: 18px;">Products</span>
+                <span class="header-badge-count">621 SKUs</span>
+              </div>
+            </div>
+
+            <div class="header-actions-row">
+              <div class="bell-wrapper">
+                <button class="tool-icon-btn" title="Inventory Alerts" onclick="openModal()">
+                  <span style="font-size: 20px;">🔔</span>
+                </button>
+                <div class="alert-badge">99+</div>
+              </div>
+
+              <button class="cart-capsule" onclick="showToast('Navigating to Checkout Cart')">
+                <span style="font-size: 15px;">🛒</span>
+                <span style="font-weight: 800;">Cart</span>
+                <div class="cart-count-badge">${cartCount}</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="action-ribbon">
+            <button class="ribbon-chip" onclick="showToast('Excel Import/Export Menu')">
+              <span style="color: #059669; font-size: 14px;">📄</span> Excel Tools
+            </button>
+            <button class="ribbon-chip ${isBatchMode ? 'active' : ''}" onclick="toggleBatchMode()">
+              <span style="color: #10b981; font-size: 14px;">✓≡</span> ${isBatchMode ? 'Exit Batch' : 'Batch Select'}
+            </button>
+            <button class="ribbon-chip" onclick="showToast('Stock Audit History Ledger')">
+              <span style="color: #2563eb; font-size: 14px;">📋</span> Stock Audit
+            </button>
+            <button class="ribbon-chip" onclick="showToast('Batch Print Labels')">
+              <span style="color: #4f46e5; font-size: 14px;">🏷️</span> Print Labels
+            </button>
+          </div>
+        `;
+      } else if (currentOption === 3) {
+        container.innerHTML = `
+          <div class="top-bar-main">
+            <div class="nav-and-title">
+              <button class="icon-btn" onclick="showToast('Back Pressed')">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </button>
+              <div class="header-title-box">
+                <span style="font-size: 20px;">📦</span>
+                <span class="header-title-text">Products</span>
+              </div>
+            </div>
+
+            <div class="header-actions-row">
+              <div class="segmented-tool-capsule">
+                <button class="tool-icon-btn" title="Excel Tools" onclick="showToast('Excel Import / Export')">
+                  <span style="font-size: 14px;">📄</span>
+                </button>
+                <button class="tool-icon-btn ${isBatchMode ? 'active-batch' : ''}" title="Batch Select Mode" onclick="toggleBatchMode()">
+                  <span style="font-size: 14px;">✓≡</span>
+                </button>
+                <button class="tool-icon-btn" title="Stock Audit Ledger" onclick="showToast('Stock Audit History')">
+                  <span style="font-size: 14px;">📋</span>
+                </button>
+              </div>
+
+              <div class="bell-wrapper">
+                <button class="tool-icon-btn" title="Inventory Alerts" onclick="openModal()">
+                  <span style="font-size: 19px;">🔔</span>
+                </button>
+                <div class="alert-badge">99+</div>
+              </div>
+
+              <button class="cart-capsule" onclick="showToast('Navigating to Checkout Cart')">
+                <span style="font-size: 14px;">🛒</span>
+                <div class="cart-count-badge">${cartCount}</div>
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (currentOption === 0) {
+        container.innerHTML = `
+          <div class="top-bar-main">
+            <div class="nav-and-title" style="max-width: 110px; overflow: hidden;">
+              <button class="icon-btn" onclick="showToast('Back Pressed')">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </button>
+              <div class="header-title-box" style="overflow: hidden;">
+                <span style="font-size: 20px;">📦</span>
+                <span class="header-title-text" style="color: #ef4444; border-bottom: 2px dashed #ef4444;" title="Truncated because right actions take 240dp!">Product</span>
+              </div>
+            </div>
+
+            <div class="header-actions-row" style="gap: 4px;">
+              <button class="tool-icon-btn" style="width: 36px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6a2 2 0 00-2 2z" stroke="#059669" stroke-width="2"/><path d="M14 2v6h6M8 13h8M8 17h5" stroke="#059669" stroke-width="2"/></svg>
+              </button>
+              <button class="tool-icon-btn" style="width: 36px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+              </button>
+              <button class="tool-icon-btn" style="width: 36px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+              </button>
+              <div class="bell-wrapper">
+                <button class="tool-icon-btn" style="width: 38px;"><span style="font-size: 20px;">🔔</span></button>
+                <div class="alert-badge">99+</div>
+              </div>
+              <button class="cart-capsule" style="padding: 0 12px; gap: 8px;">
+                <span style="font-size: 15px;">🛒</span>
+                <span style="font-weight: 800;">Cart</span>
+                <div class="cart-count-badge">${cartCount}</div>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function renderAnalysis() {
+      const data = analysisData[currentOption];
+      const panel = document.getElementById('analysisContent');
+      
+      let prosHtml = data.pros.map(p => `<p style="margin-bottom: 6px;">${p}</p>`).join('');
+      let consHtml = data.cons.map(c => `<p style="margin-bottom: 6px;">${c}</p>`).join('');
+
+      panel.innerHTML = `
+        <div class="analysis-header">
+          <div style="font-size: 11px; font-weight: 800; color: #818cf8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">
+            ${data.badge}
+          </div>
+          <h2 class="analysis-title">${data.title}</h2>
+          <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">${data.description}</p>
+        </div>
+
+        <div class="pros-cons-grid">
+          <div class="metric-card" style="border-left: 4px solid #10b981;">
+            <h4>Key Advantages</h4>
+            ${prosHtml}
+          </div>
+          <div class="metric-card" style="border-left: 4px solid #f59e0b;">
+            <h4>Design Considerations</h4>
+            ${consHtml}
+          </div>
+        </div>
+
+        <div class="metric-card" style="background: rgba(79, 70, 229, 0.1); border-color: rgba(99, 102, 241, 0.3);">
+          <h4>📐 Exact Pixel & Width Allocation</h4>
+          <p style="font-family: monospace; font-size: 12.5px; color: #e2e8f0;">
+            ${data.layoutSummary}
+          </p>
+        </div>
+      `;
+    }
+
+    function setOption(opt) {
+      currentOption = opt;
+      document.querySelectorAll('.opt-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('btn-opt-' + opt).classList.add('active');
+      renderHeader();
+      renderAnalysis();
+    }
+
+    function updateWidth(val) {
+      document.getElementById('phoneMockup').style.width = val + 'px';
+      document.getElementById('widthValue').innerText = val + 'dp';
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('mockToast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+
+    function addToCart(qty, name) {
+      cartCount += qty;
+      renderHeader();
+      showToast(`Added 1x ${name} to Cart 🛒`);
+    }
+
+    function toggleBatchMode() {
+      isBatchMode = !isBatchMode;
+      renderHeader();
+      showToast(isBatchMode ? "Batch Selection Mode ENABLED" : "Batch Selection Mode DISABLED");
+    }
+
+    function openModal() {
+      document.getElementById('mockModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('mockModal').style.display = 'none';
+    }
+
+    // Initial render
+    renderHeader();
+    renderAnalysis();
+  </script>
+</body>
+</html>
