@@ -396,7 +396,11 @@ fun CartScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(if (showCheckout) "💳" else "🛒", fontSize = 20.sp)
+                        if (showCheckout) {
+                            com.example.techyfipos.ui.components.Realistic3DSellTerminalIcon(size = 22.dp)
+                        } else {
+                            com.example.techyfipos.ui.components.Realistic3DSupermarketCartIcon(size = 22.dp)
+                        }
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = if (showCheckout) stringResource(R.string.complete_sale) else stringResource(R.string.cart),

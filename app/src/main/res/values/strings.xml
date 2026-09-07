@@ -361,8 +361,8 @@
     <!-- Day Start & Close (Cash Drawer, Float & Day-end Reconciliation) -->
     <string name="register_close_section">Day Start &amp; Close</string>
     <string name="register_close_hub_subtitle">Shift open, drawer cash float &amp; day close audit</string>
-    <string name="register_close_screen_title">Day Start &amp; Close</string>
-    <string name="register_close_screen_subtitle">Drawer cash float &amp; shift reconciliation</string>
+    <string name="register_close_screen_title">Cash Register</string>
+    <string name="register_close_screen_subtitle">Day Start &amp; Close • Shift reconciliation</string>
     <string name="register_close_today_summary">CURRENT SHIFT SUMMARY</string>
     <string name="register_close_cash_sales">Cash Sales</string>
     <string name="register_close_digital_sales">Digital Sales</string>
@@ -1536,7 +1536,7 @@
     <string name="customer_source_due">Due Record</string>
     <string name="customer_source_loyalty">Loyalty Member</string>
     <string name="customer_source_history">Past Sales Record</string>
-    <string name="customers_screen_title">Customer Database &amp; CRM</string>
+    <string name="customers_screen_title">Customers &amp; CRM</string>
     <string name="customers_count_subtitle">%1$d registered customers</string>
     <string name="customers_kpi_total">Total Customers</string>
     <string name="customers_kpi_due">Total Dues</string>
@@ -1553,7 +1553,7 @@
     <string name="customer_saved_success">Customer saved successfully!</string>
     <string name="customer_add_title">Add New Customer</string>
     <string name="customer_edit_title">Edit Customer Profile</string>
-    <string name="customers_hub_title">Customer Database</string>
+    <string name="customers_hub_title">Customers &amp; CRM</string>
     <string name="customers_hub_subtitle">Directory, buying habits, dossiers</string>
     <string name="customers_badge">CRM</string>
     <!-- Customer CRM Extra Strings -->

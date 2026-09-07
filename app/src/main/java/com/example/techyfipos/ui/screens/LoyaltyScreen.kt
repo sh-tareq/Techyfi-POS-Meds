@@ -111,13 +111,18 @@ fun LoyaltyScreen(
                         IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                         }
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(
-                                    text = stringResource(R.string.loyalty_screen_title),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 17.5.sp
-                                )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            com.example.techyfipos.ui.components.Realistic3DLoyaltyStarIcon(size = 22.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.loyalty_screen_title),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 17.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 // Synced pill
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
@@ -151,6 +156,7 @@ fun LoyaltyScreen(
                             )
                         }
                     }
+                }
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

@@ -142,19 +142,28 @@ fun ExpensesScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.expense_screen_title),
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 18.sp,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = stringResource(R.string.expense_screen_subtitle),
-                            fontSize = 11.5.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 2.dp)
+                    ) {
+                        com.example.techyfipos.ui.components.Realistic3DExpensesCashIcon(size = 22.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = stringResource(R.string.expense_screen_title),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 17.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = stringResource(R.string.expense_screen_subtitle),
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 },
                 navigationIcon = {

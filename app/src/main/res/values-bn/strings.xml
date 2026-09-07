@@ -361,8 +361,8 @@
     <!-- Day Start & Close (Cash Drawer, Float & Day-end Reconciliation) -->
     <string name="register_close_section">দিন শুরু ও সমাপ্তি</string>
     <string name="register_close_hub_subtitle">শিফট শুরু, ক্যাশ ড্রয়ার ফ্লোট ও হিসাব ক্লোজিং</string>
-    <string name="register_close_screen_title">দিন শুরু ও সমাপ্তি</string>
-    <string name="register_close_screen_subtitle">ক্যাশ ড্রয়ার ফ্লোট ও দিন শেষের হিসাব মিলান</string>
+    <string name="register_close_screen_title">ক্যাশ রেজিস্টার</string>
+    <string name="register_close_screen_subtitle">দিন শুরু ও সমাপ্তি • শিফট ক্লোজিং</string>
     <string name="register_close_today_summary">বর্তমান শিফটের সারাংশ</string>
     <string name="register_close_cash_sales">নগদ বিক্রয়</string>
     <string name="register_close_digital_sales">ডিজিটাল বিক্রয়</string>
@@ -1536,7 +1536,7 @@
     <string name="customer_source_due">বকেয়া খাতার রেকর্ড</string>
     <string name="customer_source_loyalty">লয়ালটি সদস্য</string>
     <string name="customer_source_history">পূর্ববর্তী বিক্রয় রেকর্ড</string>
-    <string name="customers_screen_title">কাস্টমার ডাটাবেস ও CRM</string>
+    <string name="customers_screen_title">কাস্টমার ও CRM</string>
     <string name="customers_count_subtitle">%1$d জন নিবন্ধিত গ্রাহক</string>
     <string name="customers_kpi_total">মোট গ্রাহক</string>
     <string name="customers_kpi_due">মোট বকেয়া</string>
@@ -1553,7 +1553,7 @@
     <string name="customer_saved_success">গ্রাহকের তথ্য সফলভাবে সংরক্ষণ হয়েছে!</string>
     <string name="customer_add_title">নতুন গ্রাহক যোগ করুন</string>
     <string name="customer_edit_title">গ্রাহকের প্রোফাইল সম্পাদনা</string>
-    <string name="customers_hub_title">কাস্টমার ডাটাবেস</string>
+    <string name="customers_hub_title">কাস্টমার ও CRM</string>
     <string name="customers_hub_subtitle">গ্রাহক তালিকা, ক্রয়ের হিসাব ও পূর্ণাঙ্গ ডসিয়ার</string>
     <string name="customers_badge">CRM</string>
     <!-- Customer CRM Extra Strings -->

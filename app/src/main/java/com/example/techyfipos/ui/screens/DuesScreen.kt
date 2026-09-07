@@ -331,32 +331,38 @@ fun DuesScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column(
-                        modifier = Modifier.padding(end = 2.dp),
-                        verticalArrangement = Arrangement.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 2.dp)
                     ) {
-                        Text(
-                            text = if (selectedCustomer != null) selectedCustomer!!.customerName else stringResource(R.string.dues_title),
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 17.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (selectedCustomer == null) {
+                        com.example.techyfipos.ui.components.Realistic3DClipboardDuesIcon(size = 22.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Column(
+                            verticalArrangement = Arrangement.Center
+                        ) {
                             Text(
-                                text = stringResource(R.string.dues_debtors_summary, outstandingDues.size, formatTaka(totalOutstanding)),
-                                fontSize = 11.5.sp,
-                                color = MaterialTheme.colorScheme.outline,
+                                text = if (selectedCustomer != null) selectedCustomer!!.customerName else stringResource(R.string.dues_title),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 17.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                        } else {
-                            Text(
-                                text = stringResource(R.string.dues_digital_khata_ledger),
-                                fontSize = 11.5.sp,
-                                color = MaterialTheme.colorScheme.outline,
-                                maxLines = 1
-                            )
+                            if (selectedCustomer == null) {
+                                Text(
+                                    text = stringResource(R.string.dues_debtors_summary, outstandingDues.size, formatTaka(totalOutstanding)),
+                                    fontSize = 11.5.sp,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            } else {
+                                Text(
+                                    text = stringResource(R.string.dues_digital_khata_ledger),
+                                    fontSize = 11.5.sp,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
                 },

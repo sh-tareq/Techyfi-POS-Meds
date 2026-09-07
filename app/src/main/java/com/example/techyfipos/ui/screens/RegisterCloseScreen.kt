@@ -271,23 +271,30 @@ fun DayStartCloseScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column(modifier = Modifier.padding(end = 4.dp)) {
-                        Text(
-                            text = stringResource(R.string.register_close_screen_title),
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = if (isTablet) 18.sp else 15.sp,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = stringResource(R.string.register_close_screen_subtitle),
-                            fontSize = if (isTablet) 11.5.sp else 10.5.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        com.example.techyfipos.ui.components.Realistic3DRegisterReceiptIcon(size = if (isTablet) 24.dp else 22.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = stringResource(R.string.register_close_screen_title),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = if (isTablet) 18.sp else 16.sp,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = stringResource(R.string.register_close_screen_subtitle),
+                                fontSize = if (isTablet) 11.5.sp else 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 },
                 navigationIcon = {

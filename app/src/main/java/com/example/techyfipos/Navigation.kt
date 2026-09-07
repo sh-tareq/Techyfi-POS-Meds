@@ -153,7 +153,7 @@ fun Animated3DNavItemIcon(
             Nav3DType.SUPPLIERS -> Realistic3DSupplierTruckIcon(size = targetSize)
             Nav3DType.SETTINGS -> Realistic3DSettingsGearIcon(size = targetSize)
             Nav3DType.REGISTER -> Realistic3DRegisterReceiptIcon(size = targetSize)
-            Nav3DType.LOYALTY -> Realistic3DClipboardDuesIcon(size = targetSize)
+            Nav3DType.LOYALTY -> Realistic3DLoyaltyStarIcon(size = targetSize)
             Nav3DType.CUSTOMERS -> Realistic3DCustomerHubIcon(size = targetSize)
         }
     }
