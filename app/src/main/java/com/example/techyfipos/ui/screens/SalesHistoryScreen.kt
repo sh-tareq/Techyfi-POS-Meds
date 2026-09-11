@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +44,8 @@ import com.example.techyfipos.R
 import com.example.techyfipos.data.db.SaleWithItems
 import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.viewmodel.CartViewModel
+import com.example.techyfipos.ui.viewmodel.SaleReturnSummary
+import com.example.techyfipos.ui.viewmodel.InvoiceProfitSummary
 import com.example.techyfipos.ui.viewmodel.SalesViewModel
 import com.example.techyfipos.ui.viewmodel.SettingsViewModel
 import com.example.techyfipos.utils.*
@@ -117,6 +120,9 @@ fun SalesHistoryScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val salesWithItems by salesViewModel.salesWithItems.collectAsStateWithLifecycle()
+    val returnsBySaleId by salesViewModel.returnsBySaleId.collectAsStateWithLifecycle()
+    var onlyReturnsFilter by rememberSaveable { mutableStateOf(false) }
+    var isStealthMode by rememberSaveable { mutableStateOf(false) }
     var returnTarget by remember { mutableStateOf<SaleWithItems?>(null) }
     var returnAlreadyReturned by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
     var issuedVoucherCode by remember { mutableStateOf<String?>(null) }
@@ -168,7 +174,7 @@ fun SalesHistoryScreen(
 
     val filteredSales = remember(
         dateFilteredSales, searchQuery, selectedPayments, customerFilter,
-        minimumTotal, maximumTotal, sortOrder
+        minimumTotal, maximumTotal, sortOrder, onlyReturnsFilter, returnsBySaleId
     ) {
         val query = searchQuery.trim().lowercase()
         val minimum = minimumTotal.toDoubleOrNull()
@@ -190,13 +196,20 @@ fun SalesHistoryScreen(
                 "Walk-in" -> isWalkIn
                 else -> true
             }
-            matchesSearch && matchesPayment && matchesCustomer &&
+            val matchesReturns = !onlyReturnsFilter || (returnsBySaleId[sale.id]?.hasReturns == true)
+            matchesSearch && matchesPayment && matchesCustomer && matchesReturns &&
                 (minimum == null || sale.grandTotal >= minimum) &&
                 (maximum == null || sale.grandTotal <= maximum)
         }.let { matches ->
             when (sortOrder) {
                 "Highest total" -> matches.sortedByDescending { it.sale.grandTotal }
                 "Lowest total" -> matches.sortedBy { it.sale.grandTotal }
+                "Highest profit" -> matches.sortedByDescending {
+                    salesViewModel.calculateInvoiceProfit(it, returnsBySaleId[it.sale.id]).netProfit
+                }
+                "Lowest profit" -> matches.sortedBy {
+                    salesViewModel.calculateInvoiceProfit(it, returnsBySaleId[it.sale.id]).netProfit
+                }
                 else -> matches.sortedByDescending { it.sale.timestamp }
             }
         }
@@ -230,9 +243,6 @@ fun SalesHistoryScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.sales_history),
-                        subtitle = if (filteredSales.isNotEmpty()) {
-                            stringResource(R.string.sales_history_header_subtitle, filteredSales.size)
-                        } else null,
                         metricBadge = if (filteredSales.isNotEmpty()) "${filteredSales.size} Sales" else null,
                         badgeColor = PosSectionColors.SalesHistory,
                         icon = { size -> Realistic3DHistoryClockIcon(size = size) }
@@ -244,6 +254,29 @@ fun SalesHistoryScreen(
                     }
                 },
                 actions = {
+                    if (isOwner) {
+                        Surface(
+                            onClick = { isStealthMode = !isStealthMode },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isStealthMode) Color(0xFF1E293B) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            border = BorderStroke(1.dp, if (isStealthMode) Color(0xFFF59E0B) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                            modifier = Modifier.padding(end = 6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Realistic3DStealthShieldIcon(isStealthActive = isStealthMode, size = 16.dp)
+                                Text(
+                                    text = if (isStealthMode) stringResource(R.string.invoice_stealth_mode_on) else stringResource(R.string.invoice_stealth_mode_off),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isStealthMode) Color(0xFFFDE68A) else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                     FilledTonalButton(
                         onClick = onNavigateToReport,
                         shape = RoundedCornerShape(12.dp),
@@ -437,6 +470,33 @@ fun SalesHistoryScreen(
                                 }
                             }
                         }
+
+                        val periodReturnsCount = remember(dateFilteredSales, returnsBySaleId) {
+                            dateFilteredSales.count { returnsBySaleId[it.sale.id]?.hasReturns == true }
+                        }
+                        if (periodReturnsCount > 0) {
+                            Surface(
+                                onClick = { onlyReturnsFilter = !onlyReturnsFilter },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (onlyReturnsFilter) Color(0xFFEF4444) else Color(0xFFFEF2F2),
+                                border = BorderStroke(0.8.dp, if (onlyReturnsFilter) Color(0xFFB91C1C) else Color(0xFFFECACA)),
+                                modifier = Modifier.height(26.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                    modifier = Modifier.padding(horizontal = 6.dp)
+                                ) {
+                                    Realistic3DReturnOrbIcon(size = 11.dp, animated = onlyReturnsFilter)
+                                    Text(
+                                        text = "${stringResource(R.string.invoice_has_returns_filter)} ($periodReturnsCount)",
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (onlyReturnsFilter) Color.White else Color(0xFFB91C1C)
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     Row(
@@ -463,9 +523,22 @@ fun SalesHistoryScreen(
                                 )
                             }
                             DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
-                                listOf("Newest first", "Highest total", "Lowest total").forEach { option ->
+                                val sortOptions = remember(isOwner) {
+                                    val list = mutableListOf("Newest first", "Highest total", "Lowest total")
+                                    if (isOwner) {
+                                        list.add("Highest profit")
+                                        list.add("Lowest profit")
+                                    }
+                                    list
+                                }
+                                sortOptions.forEach { option ->
+                                    val displayLabel = when (option) {
+                                        "Highest profit" -> stringResource(R.string.invoice_sort_profit_high)
+                                        "Lowest profit" -> stringResource(R.string.invoice_sort_profit_low)
+                                        else -> option
+                                    }
                                     DropdownMenuItem(
-                                        text = { Text(option) },
+                                        text = { Text(displayLabel) },
                                         onClick = { sortOrder = option; showSortMenu = false },
                                         leadingIcon = if (sortOrder == option) {
                                             { Icon(Icons.Default.Check, null) }
@@ -558,8 +631,16 @@ fun SalesHistoryScreen(
                             )
                         }
                         items(salesInGroup, key = { it.sale.id }) { saleWithItems ->
+                            val returnSum = returnsBySaleId[saleWithItems.sale.id]
+                            val profitSum = remember(saleWithItems, returnSum, isOwner) {
+                                if (isOwner) salesViewModel.calculateInvoiceProfit(saleWithItems, returnSum) else null
+                            }
                             SaleCard(
                                 saleWithItems = saleWithItems,
+                                isOwner = isOwner,
+                                isStealthMode = isStealthMode,
+                                returnSummary = returnSum,
+                                profitSummary = profitSum,
                                 onClick = { selectedSaleDetail = saleWithItems }
                             )
                         }
@@ -1220,12 +1301,20 @@ fun Payment3DBadge(
 @Composable
 fun SaleCard(
     saleWithItems: SaleWithItems,
+    isOwner: Boolean = false,
+    isStealthMode: Boolean = false,
+    returnSummary: SaleReturnSummary? = null,
+    profitSummary: InvoiceProfitSummary? = null,
     onClick: () -> Unit
 ) {
     val timeFormatter = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
     val saleTime = remember(saleWithItems.sale.timestamp) {
         timeFormatter.format(Date(saleWithItems.sale.timestamp))
     }
+
+    val hasReturns = returnSummary?.hasReturns == true
+    val refundAmount = returnSummary?.totalRefundAmount ?: 0.0
+    val netSaleTotal = (saleWithItems.sale.grandTotal - refundAmount).coerceAtLeast(0.0)
 
     Card(
         onClick = onClick,
@@ -1260,13 +1349,85 @@ fun SaleCard(
                     // 3D Payment Badge
                     Payment3DBadge(paymentMethod = saleWithItems.sale.paymentMethod)
                 }
-                Text(
-                    text = formatTaka(saleWithItems.sale.grandTotal),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 15.sp,
-                    color = if (saleWithItems.sale.paymentMethod == "Due") Color(0xFFDC2626) else MaterialTheme.colorScheme.primary
-                )
+
+                if (isStealthMode) {
+                    Text(
+                        text = "৳••••",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else if (hasReturns) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = formatTaka(saleWithItems.sale.grandTotal),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textDecoration = TextDecoration.LineThrough,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Text(
+                            text = formatTaka(netSaleTotal),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                } else {
+                    Text(
+                        text = formatTaka(saleWithItems.sale.grandTotal),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 15.sp,
+                        color = if (saleWithItems.sale.paymentMethod == "Due") Color(0xFFDC2626) else MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // Return Alert Badge (Prominent crimson capsule if invoice processed returns)
+            if (returnSummary != null && returnSummary.hasReturns) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFFEF2F2),
+                    border = BorderStroke(1.dp, Color(0xFFFECACA)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Realistic3DReturnOrbIcon(size = 13.dp, animated = true)
+                            Text(
+                                text = stringResource(R.string.invoice_return_processed_label),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFB91C1C)
+                            )
+                        }
+                        val refundStr = formatTaka(returnSummary.totalRefundAmount)
+                        val itemsCountStr = if (returnSummary.returnedItemsCount % 1.0 == 0.0)
+                            returnSummary.returnedItemsCount.toLong().toString()
+                        else String.format(Locale.US, "%.1f", returnSummary.returnedItemsCount)
+                        Text(
+                            text = stringResource(R.string.invoice_return_badge_desc, itemsCountStr, refundStr),
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF991B1B)
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -1398,6 +1559,65 @@ fun SaleCard(
                     }
                 }
             }
+
+            // Owner Profit Pill (Only visible when isOwner == true)
+            if (isOwner && profitSummary != null) {
+                Spacer(modifier = Modifier.height(5.dp))
+                val netProfit = profitSummary.netProfit
+                val margin = profitSummary.netMarginPercent
+                val isHigh = margin >= 20.0 && netProfit > 0
+                val isLow = margin in 0.0..20.0 && netProfit >= 0
+                val isLoss = netProfit < 0
+
+                val (profitBg, profitText, profitBorder) = when {
+                    isHigh -> Triple(Color(0xFFECFDF5), Color(0xFF047857), Color(0xFFA7F3D0))
+                    isLow -> Triple(Color(0xFFFFFBEB), Color(0xFFB45309), Color(0xFFFDE68A))
+                    else -> Triple(Color(0xFFFEF2F2), Color(0xFFB91C1C), Color(0xFFFECACA))
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = profitBg,
+                        border = BorderStroke(0.8.dp, profitBorder)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            when {
+                                isHigh -> Realistic3DHighMarginGemIcon(size = 12.dp)
+                                isLow -> Realistic3DLowMarginCoreIcon(size = 12.dp)
+                                else -> Realistic3DLossPrismIcon(size = 12.dp)
+                            }
+                            val profitVal = if (isStealthMode) "•••• (•••%)" else {
+                                val sign = if (netProfit >= 0) "+" else ""
+                                "$sign${formatTaka(netProfit)} (${String.format(Locale.US, "%.1f", margin)}%)"
+                            }
+                            Text(
+                                text = "${stringResource(R.string.invoice_profit_label)}: $profitVal",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = profitText
+                            )
+                        }
+                    }
+
+                    if (hasReturns) {
+                        Text(
+                            text = "Net after returns",
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF991B1B)
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -1461,6 +1681,9 @@ private fun SaleDetailDialog(
     var voucherForSale by remember { mutableStateOf<com.example.techyfipos.data.db.StoreCreditVoucher?>(null) }
     var showVoucherSlipDialog by remember { mutableStateOf(false) }
 
+    val returnsBySaleId by salesViewModel?.returnsBySaleId?.collectAsStateWithLifecycle(emptyMap()) ?: remember { mutableStateOf(emptyMap()) }
+    val currentReturnSummary = returnsBySaleId[saleWithItems.sale.id]
+
     LaunchedEffect(saleWithItems.sale.id) {
         if (salesViewModel != null) {
             val v = salesViewModel.getVoucherBySaleId(saleWithItems.sale.id)
@@ -1482,7 +1705,7 @@ private fun SaleDetailDialog(
         }
     }
 
-    val billData = remember(saleWithItems, shopName, shopAddress, shopPhone, shopLogoUri, facebookUrl, qrCodeInfo, cashierName, invoiceSettingsData, liveOutstandingDue, voucherForSale) {
+    val billData = remember(saleWithItems, shopName, shopAddress, shopPhone, shopLogoUri, facebookUrl, qrCodeInfo, cashierName, invoiceSettingsData, liveOutstandingDue, voucherForSale, currentReturnSummary) {
         var appliedSc: Double? = null
         var vCode: String? = voucherForSale?.code
         var vAmt: Double? = null
@@ -1518,7 +1741,8 @@ private fun SaleDetailDialog(
                     quantity = item.quantity,
                     unitPrice = item.price,
                     lineTotal = item.price * item.quantity,
-                    note = item.note
+                    note = item.note,
+                    purchasePrice = item.purchasePriceAtSale
                 )
             },
             subtotal = saleWithItems.sale.subtotal,
@@ -1548,7 +1772,10 @@ private fun SaleDetailDialog(
             storeCreditApplied = appliedSc,
             voucherCode = vCode,
             voucherAmount = vAmt,
-            voucherRemainingBalance = vRemaining
+            voucherRemainingBalance = vRemaining,
+            hasReturns = currentReturnSummary?.hasReturns == true,
+            returnRefundAmount = currentReturnSummary?.totalRefundAmount ?: 0.0,
+            returnCount = currentReturnSummary?.returnCount ?: 0
         )
     }
 
@@ -1603,7 +1830,9 @@ private fun SaleDetailDialog(
         } else null,
         onViewVoucherSlip = if (voucherForSale != null) {
             { showVoucherSlipDialog = true }
-        } else null
+        } else null,
+        isOwner = isOwner,
+        returnSummary = currentReturnSummary
     )
 
     if (showVoucherSlipDialog && voucherForSale != null) {

@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS — Generate Code Image: Price Switching & Enhancements Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&family=Hind+Siliguri:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #0F766E;
+      --primary-hover: #0D9488;
+      --primary-light: #CCFBF1;
+      --primary-gradient: linear-gradient(135deg, #0F766E 0%, #0D9488 100%);
+      
+      --purple-card: #F3E8F5;
+      --purple-chip-active: #E9D5FF;
+      --purple-chip-border: #C084FC;
+      --purple-text: #581C87;
+
+      --teal-bg: #E6F6F2;
+      --dialog-surface: #E8F7F3;
+      --card-bg: #F3E8F5;
+      --card-border: rgba(147, 51, 234, 0.15);
+
+      --selling-color: #0284C7;
+      --selling-light: #E0F2FE;
+      --mrp-color: #D97706;
+      --mrp-light: #FEF3C7;
+      --wholesale-color: #7C3AED;
+      --wholesale-light: #F3E8FF;
+      --dual-color: #059669;
+      --dual-light: #D1FAE5;
+
+      --text-main: #1E293B;
+      --text-muted: #64748B;
+      --text-subtle: #94A3B8;
+      --border-line: #CBD5E1;
+
+      --shadow-modal: 0 25px 60px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.08);
+      --shadow-label: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+
+      --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-bn: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: var(--font-ui);
+      background: #0B1120;
+      color: #F8FAFC;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Nav / Banner */
+    .top-bar {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: var(--primary-gradient);
+      color: white;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .page-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #F1F5F9;
+    }
+
+    .badge-preview-mode {
+      background: rgba(14, 165, 233, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.4);
+      color: #38BDF8;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge-preview-mode::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      background: #38BDF8;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #38BDF8;
+      animation: pulseDot 1.8s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+
+    /* Main Container */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 32px;
+      max-width: 1460px;
+      margin: 0 auto;
+      padding: 28px 24px 60px;
+      width: 100%;
+      flex: 1;
+    }
+
+    @media (max-width: 1080px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Device Phone Frame Mockup */
+    .phone-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: sticky;
+      top: 80px;
+      height: fit-content;
+    }
+
+    .phone-container {
+      width: 100%;
+      max-width: 440px;
+      background: #0F172A;
+      border-radius: 36px;
+      padding: 12px;
+      box-shadow: 0 30px 80px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.12);
+      position: relative;
+    }
+
+    .phone-screen {
+      background: var(--dialog-surface);
+      border-radius: 28px;
+      overflow: hidden;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      max-height: 840px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    /* Dialog Header inside Phone */
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 20px 12px;
+    }
+
+    .dialog-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: -0.3px;
+    }
+
+    .btn-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: #334155;
+      cursor: pointer;
+      font-size: 20px;
+      transition: background 0.15s;
+    }
+    .btn-close:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .dialog-body {
+      padding: 0 18px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Code Type Selector (Barcode / QR Code) */
+    .chip-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .type-chip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: transparent;
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .type-chip.active {
+      background: #E9D5FF;
+      border-color: #C084FC;
+      color: #581C87;
+      font-weight: 700;
+    }
+
+    .type-chip.qr-chip.active {
+      background: #CCFBF1;
+      border-color: #2DD4BF;
+      color: #0F766E;
+    }
+
+    /* Pink card container */
+    .pink-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 10px 14px;
+      border: 1px solid rgba(192, 132, 252, 0.2);
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1E293B;
+    }
+
+    .custom-checkbox {
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      background: #00897B;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 13px;
+      font-weight: 800;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .custom-checkbox.unchecked {
+      background: white;
+      border: 2px solid #94A3B8;
+      color: transparent;
+    }
+
+    /* Outlined Text field */
+    .field-group {
+      position: relative;
+      margin-top: 4px;
+    }
+
+    .field-input {
+      width: 100%;
+      background: transparent;
+      border: 1.5px solid #00897B;
+      border-radius: 10px;
+      padding: 14px 14px 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0F172A;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .field-label {
+      position: absolute;
+      top: -8px;
+      left: 12px;
+      background: var(--dialog-surface);
+      padding: 0 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #00897B;
+    }
+
+    .field-subtext {
+      font-size: 11px;
+      color: #64748B;
+      margin-top: 3px;
+      padding-left: 4px;
+    }
+
+    /* Label Preview Box */
+    .preview-canvas-card {
+      background: rgba(243, 232, 245, 0.7);
+      border-radius: 18px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 1px solid rgba(192, 132, 252, 0.25);
+    }
+
+    .sticker-wrapper {
+      width: 100%;
+      background: #FFFFFF;
+      border-radius: 14px;
+      border: 2px solid #000000;
+      padding: 14px 16px 16px;
+      box-shadow: var(--shadow-label);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      transition: all 0.25s ease;
+    }
+
+    .sticker-product-name {
+      font-family: var(--font-bn);
+      font-size: 17px;
+      font-weight: 800;
+      color: #000000;
+      text-align: center;
+      line-height: 1.3;
+      margin-bottom: 6px;
+      word-break: break-word;
+    }
+
+    .sticker-divider {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .sticker-divider::before, .sticker-divider::after {
+      content: '';
+      flex: 1;
+      height: 1.5px;
+      background: #000000;
+    }
+    .sticker-dot {
+      width: 6px;
+      height: 6px;
+      background: #000000;
+      border-radius: 50%;
+    }
+
+    /* The Hero Price on the sticker */
+    .sticker-price-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 6px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #000000;
+      text-align: center;
+      min-height: 22px;
+      transition: all 0.2s;
+    }
+
+    .sticker-price-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sticker-mrp-strike {
+      text-decoration: line-through;
+      color: #475569;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .sticker-special-highlight {
+      background: #000;
+      color: #fff;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 800;
+      margin-left: 4px;
+    }
+
+    /* Barcode Graphic */
+    .sticker-barcode-wrap {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 2px;
+    }
+
+    .barcode-svg {
+      width: 92%;
+      height: 68px;
+      object-fit: fill;
+      transition: height 0.2s;
+    }
+
+    .qr-svg {
+      width: 110px;
+      height: 110px;
+      margin: 4px 0;
+    }
+
+    .sticker-barcode-number {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 3.5px;
+      color: #000000;
+      margin-top: 4px;
+      text-align: center;
+    }
+
+    .sticker-store-name {
+      font-size: 11px;
+      font-weight: 800;
+      color: #000000;
+      margin-top: 2px;
+      text-align: center;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .sticker-date-row {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #000000;
+      margin-top: 4px;
+      text-align: center;
+      letter-spacing: 0.2px;
+    }
+
+    /* NEW PRICE SWITCHER SECTION (HERO IMPROVEMENT) */
+    .price-switcher-card {
+      background: #FFFFFF;
+      border-radius: 16px;
+      padding: 14px;
+      border: 2px solid #C084FC;
+      box-shadow: 0 4px 16px rgba(192, 132, 252, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .price-switcher-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .price-switcher-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #581C87;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-new-pill {
+      background: linear-gradient(135deg, #A855F7, #6366F1);
+      color: white;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* 3D Segmented Control for Price Switch */
+    .segmented-price-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .price-tier-btn {
+      background: #F8FAFC;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 8px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      text-align: center;
+    }
+
+    .price-tier-btn:hover {
+      border-color: #CBD5E1;
+      transform: translateY(-1px);
+    }
+
+    .price-tier-btn.active.selling {
+      background: var(--selling-light);
+      border-color: var(--selling-color);
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    }
+
+    .price-tier-btn.active.mrp {
+      background: var(--mrp-light);
+      border-color: var(--mrp-color);
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+    }
+
+    .price-tier-btn.active.wholesale {
+      background: var(--wholesale-light);
+      border-color: var(--wholesale-color);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+    }
+
+    .price-tier-btn.active.dual {
+      background: var(--dual-light);
+      border-color: var(--dual-color);
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+    }
+
+    .tier-tag {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #64748B;
+    }
+
+    .price-tier-btn.active.selling .tier-tag { color: #0369A1; }
+    .price-tier-btn.active.mrp .tier-tag { color: #B45309; }
+    .price-tier-btn.active.wholesale .tier-tag { color: #6D28D9; }
+    .price-tier-btn.active.dual .tier-tag { color: #047857; }
+
+    .tier-val {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+
+    .price-tier-btn.active.selling .tier-val { color: #0284C7; }
+    .price-tier-btn.active.mrp .tier-val { color: #D97706; }
+    .price-tier-btn.active.wholesale .tier-val { color: #7C3AED; }
+    .price-tier-btn.active.dual .tier-val { color: #059669; }
+
+    /* Suggested Improvement 1: Dual Price Pill */
+    .dual-price-btn {
+      grid-column: span 3;
+      background: #F0FDF4;
+      border: 1.5px dashed #86EFAC;
+      border-radius: 12px;
+      padding: 9px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .dual-price-btn:hover {
+      border-color: #22C55E;
+      background: #DCFCE7;
+    }
+    .dual-price-btn.active {
+      border-style: solid;
+      border-color: #10B981;
+      background: #D1FAE5;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+    }
+
+    .dual-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dual-icon {
+      font-size: 16px;
+    }
+    .dual-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #065F46;
+    }
+    .dual-hint {
+      font-size: 10px;
+      color: #059669;
+    }
+    .dual-preview-badge {
+      font-size: 12px;
+      font-weight: 800;
+      color: #047857;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(5, 150, 105, 0.2);
+    }
+
+    /* Sub-options for Price Customization */
+    .price-micro-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(0, 0, 0, 0.08);
+    }
+
+    .micro-option-chip {
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s;
+    }
+    .micro-option-chip.active {
+      background: #E0E7FF;
+      border-color: #818CF8;
+      color: #3730A3;
+      font-weight: 700;
+    }
+
+    /* Date Tracking Card */
+    .date-card {
+      background: rgba(243, 232, 245, 0.6);
+      border-radius: 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(192, 132, 252, 0.2);
+    }
+
+    .date-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .date-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0F766E;
+    }
+
+    .date-toggle-chips {
+      display: flex;
+      gap: 4px;
+    }
+    .date-chip {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 8px;
+      border: 1px solid #CBD5E1;
+      background: white;
+      color: #334155;
+      cursor: pointer;
+    }
+    .date-chip.active {
+      background: #F3E8FF;
+      border-color: #C084FC;
+      color: #6B21A8;
+    }
+
+    .date-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .date-field {
+      background: transparent;
+      border: 1.5px solid #00897B;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #0F172A;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Action Buttons */
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .btn-save-png {
+      flex: 1;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(15, 118, 110, 0.35);
+      transition: all 0.2s;
+    }
+    .btn-save-png:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-icon-action {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      border: 1.5px solid #00897B;
+      background: transparent;
+      color: #00897B;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-icon-action:hover {
+      background: rgba(0, 137, 123, 0.08);
+    }
+
+    /* RIGHT COLUMN: WORKBENCH & IMPROVEMENT PROPOSALS */
+    .workbench-column {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .panel-card {
+      background: #1E293B;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #F8FAFC;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    /* Comparison Table of Price Tiers */
+    .tier-compare-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .compare-card {
+      background: #0F172A;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      transition: all 0.2s;
+    }
+
+    .compare-card.highlight {
+      border-color: #38BDF8;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+    }
+
+    .compare-card-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      width: fit-content;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .compare-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #F1F5F9;
+    }
+
+    .compare-label-preview {
+      background: #FFFFFF;
+      color: #000000;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1.5px solid #000000;
+      font-family: var(--font-bn);
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .compare-desc {
+      font-size: 12px;
+      color: #94A3B8;
+      line-height: 1.4;
+    }
+
+    /* Interactive Live Sandbox for Price Values */
+    .sandbox-controls {
+      background: #0F172A;
+      border-radius: 14px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .sandbox-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sandbox-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #94A3B8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sandbox-input {
+      background: #1E293B;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #F8FAFC;
+      font-family: var(--font-mono);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .sandbox-input:focus {
+      border-color: #38BDF8;
+    }
+
+    /* Improvement Cards Grid */
+    .improvements-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .improvement-item {
+      background: #0F172A;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 16px 18px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      transition: border-color 0.2s;
+    }
+    .improvement-item:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .improvement-icon-wrap {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #38BDF8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .improvement-content {
+      flex: 1;
+    }
+
+    .improvement-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .improvement-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #F1F5F9;
+    }
+
+    .improvement-tag {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34D399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .improvement-desc {
+      font-size: 12px;
+      color: #94A3B8;
+      line-height: 1.5;
+    }
+
+    /* Real-Time Live Label Preview Zoom Modal/Box */
+    .zoom-preview-panel {
+      background: #0F172A;
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .zoom-preview-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .zoom-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #E2E8F0;
+    }
+
+    .size-chips-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .size-chip {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: #1E293B;
+      border: 1px solid #334155;
+      color: #CBD5E1;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .size-chip.active {
+      background: #0F766E;
+      border-color: #14B8A6;
+      color: white;
+    }
+
+    /* Bottom Confirmation Bar */
+    .confirmation-cta-bar {
+      background: linear-gradient(135deg, rgba(15, 118, 110, 0.25) 0%, rgba(99, 102, 241, 0.2) 100%);
+      border: 1.5px solid rgba(20, 184, 166, 0.4);
+      border-radius: 18px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .cta-text-wrap {
+      max-width: 680px;
+    }
+
+    .cta-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #5EEAD4;
+      margin-bottom: 4px;
+    }
+
+    .cta-desc {
+      font-size: 13px;
+      color: #CBD5E1;
+      line-height: 1.5;
+    }
+
+    .cta-button-group {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn-confirm-all {
+      background: linear-gradient(135deg, #0D9488 0%, #059669 100%);
+      color: white;
+      font-size: 14px;
+      font-weight: 800;
+      padding: 12px 24px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(13, 148, 136, 0.4);
+      transition: all 0.2s;
+    }
+    .btn-confirm-all:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(13, 148, 136, 0.5);
+    }
+
+    .interactive-badge {
+      display: inline-block;
+      font-size: 11px;
+      background: #F43F5E;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      margin-left: 6px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <div class="brand-badge">TECHYFI POS</div>
+      <div class="page-title">Generate Code Image — Price Switching & Retail Enhancements</div>
+    </div>
+    <div class="badge-preview-mode">
+      INTERACTIVE PROTOTYPE & PREVIEW
+    </div>
+  </header>
+
+  <main class="app-layout">
+    
+    <!-- LEFT: Realistic Mobile Phone Mockup -->
+    <div class="phone-column">
+      <div class="phone-container">
+        <div class="phone-screen">
+          
+          <!-- Dialog Header -->
+          <div class="dialog-header">
+            <h2 class="dialog-title">Generate Code Image</h2>
+            <button class="btn-close" title="Close">✕</button>
+          </div>
+
+          <div class="dialog-body">
+            
+            <!-- Barcode / QR Code Switcher -->
+            <div class="chip-selector">
+              <button class="type-chip active" id="chipBarcode" onclick="setCodeType('BARCODE')">
+                <span>|||</span> Barcode
+              </button>
+              <button class="type-chip qr-chip" id="chipQRCode" onclick="setCodeType('QR_CODE')">
+                <span>❖</span> QR Code
+              </button>
+            </div>
+
+            <!-- Show Store Name Checkbox -->
+            <div class="pink-card">
+              <div class="checkbox-row" onclick="toggleStoreName()">
+                <div class="custom-checkbox" id="checkStoreName">✓</div>
+                <span>Show Store Name</span>
+              </div>
+            </div>
+
+            <!-- Store Name Field -->
+            <div class="field-group" id="storeNameFieldGroup">
+              <span class="field-label">Store Name</span>
+              <input type="text" class="field-input" id="inputStoreName" value="M/S AL KAWSAR STORE" oninput="updateLabelPreview()">
+              <div class="field-subtext">Shown below the code number</div>
+            </div>
+
+            <!-- Sticker Preview Canvas inside Mobile -->
+            <div class="preview-canvas-card">
+              <div class="sticker-wrapper" id="phoneSticker">
+                <div class="sticker-product-name" id="stickerProdName">ভিটাকেয়ার সোপ ১০০ গ্রাম</div>
+                <div class="sticker-divider"><span class="sticker-dot"></span></div>
+                
+                <!-- Reactive Price Row -->
+                <div class="sticker-price-row" id="stickerPrice">
+                  <!-- Updated dynamically -->
+                  Price: ৳70
+                </div>
+
+                <!-- Barcode or QR -->
+                <div class="sticker-barcode-wrap" id="stickerCodeGraphic">
+                  <!-- Barcode SVG will be drawn here -->
+                  <svg class="barcode-svg" id="phoneBarcodeSvg" viewBox="0 0 280 60" preserveAspectRatio="none">
+                    <!-- SVG Barcode Bars -->
+                  </svg>
+                  <div class="sticker-barcode-number" id="stickerBarcodeNum">1 1 0 8 5 7 5 3 0 3 6 9</div>
+                  <div class="sticker-store-name" id="stickerStoreName">M/S AL KAWSAR STORE</div>
+                  <div class="sticker-date-row" id="stickerDateRow">MFG: 12-09-26 | EXP: 11-09-28</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- NEW PRICE SWITCHER (THE CORE REQUIREMENT) -->
+            <div class="price-switcher-card" id="priceSwitcherComponent">
+              <div class="price-switcher-header">
+                <div class="price-switcher-title">
+                  <span>🏷️ Price Tier on Label</span>
+                </div>
+                <div class="checkbox-row" onclick="toggleShowPrice()">
+                  <div class="custom-checkbox" id="checkShowPrice">✓</div>
+                  <span style="font-size: 12px;">Show Price</span>
+                </div>
+              </div>
+
+              <!-- 3-Way Price Switcher Pills -->
+              <div class="segmented-price-grid" id="tierSelectorRow">
+                
+                <!-- 1. Selling Price -->
+                <div class="price-tier-btn active selling" id="tierBtnSelling" onclick="selectPriceTier('SELLING')">
+                  <span class="tier-tag">Selling Price</span>
+                  <span class="tier-val" id="dispSellingVal">৳70</span>
+                </div>
+
+                <!-- 2. MRP Price -->
+                <div class="price-tier-btn mrp" id="tierBtnMRP" onclick="selectPriceTier('MRP')">
+                  <span class="tier-tag">MRP Price</span>
+                  <span class="tier-val" id="dispMrpVal">৳85</span>
+                </div>
+
+                <!-- 3. Wholesale Price -->
+                <div class="price-tier-btn wholesale" id="tierBtnWholesale" onclick="selectPriceTier('WHOLESALE')">
+                  <span class="tier-tag">Wholesale</span>
+                  <span class="tier-val" id="dispWholesaleVal">৳62</span>
+                </div>
+
+                <!-- Suggested Improvement: Dual Price Display Option (MRP + Offer) -->
+                <div class="dual-price-btn" id="tierBtnDual" onclick="selectPriceTier('DUAL')">
+                  <div class="dual-left">
+                    <span class="dual-icon">✨</span>
+                    <div>
+                      <div class="dual-label">Dual Display (MRP + Offer)</div>
+                      <div class="dual-hint">Supermarket style bargain label</div>
+                    </div>
+                  </div>
+                  <div class="dual-preview-badge" id="dispDualVal">
+                    <span style="text-decoration: line-through; color: #64748B; font-weight: 500; font-size: 11px;">MRP ৳85</span> ৳70
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Micro-customizations (Unit & Language options) -->
+              <div class="price-micro-options">
+                <div class="micro-option-chip" id="optUnitPcs" onclick="toggleUnitDisplay()">
+                  <span>Show Unit (/Pcs)</span>
+                  <span id="unitToggleIndicator">OFF</span>
+                </div>
+                <div class="micro-option-chip" id="optBanglaDigits" onclick="toggleBanglaNumerals()">
+                  <span>Bangla Digits (৳৭০)</span>
+                  <span id="digitToggleIndicator">OFF</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Show Code Number & Price side by side -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="pink-card">
+                <div class="checkbox-row" onclick="togglePriceCard()">
+                  <div class="custom-checkbox" id="checkShowPriceSub">✓</div>
+                  <span style="font-size: 13px;">Show Price</span>
+                </div>
+              </div>
+              <div class="pink-card">
+                <div class="checkbox-row" onclick="toggleCodeNumber()">
+                  <div class="custom-checkbox" id="checkShowCodeNum">✓</div>
+                  <span style="font-size: 13px;">Show Code Number</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Show Date Tracking -->
+            <div class="pink-card">
+              <div class="checkbox-row" onclick="toggleDateTracking()">
+                <div class="custom-checkbox" id="checkDateTracking">✓</div>
+                <span>Show Date Tracking</span>
+              </div>
+            </div>
+
+            <!-- Date Tracking Details -->
+            <div class="date-card" id="dateTrackingCard">
+              <div class="date-header">
+                <span class="date-title">Date Tracking Info</span>
+                <div class="date-toggle-chips">
+                  <button class="date-chip active" id="btnMfg" onclick="setDateType('Mfg')">🏭 Mfg</button>
+                  <button class="date-chip" id="btnPkg" onclick="setDateType('Pkg')">📦 Pkg</button>
+                </div>
+              </div>
+              <div class="date-grid">
+                <div>
+                  <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 2px;" id="lblMfgPkg">Mfg Date</div>
+                  <div class="date-field">
+                    <span>12-09-26</span>
+                    <span>📅</span>
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 2px;">Exp Date</div>
+                  <div class="date-field">
+                    <span>11-09-28</span>
+                    <span>📅</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Label Size Dropdown preview -->
+            <div style="margin-top: 4px;">
+              <div style="font-size: 12px; font-weight: 700; color: #0F172A; margin-bottom: 4px;">Label Size</div>
+              <div style="background: white; border: 1px solid #CBD5E1; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 600; color: #1E293B;">
+                <span id="activeLabelSizeName">50 × 30 mm</span>
+                <span>▾</span>
+              </div>
+            </div>
+
+            <!-- Action Buttons (Save PNG & Share PDF) -->
+            <div class="action-row">
+              <button class="btn-save-png">
+                <span>⬇</span> Save PNG
+              </button>
+              <button class="btn-icon-action" title="Share PDF">
+                <span>↗</span>
+              </button>
+              <button class="btn-icon-action" title="Print Thermal">
+                <span>🖨️</span>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: WORKBENCH, COMPARISON MATRIX & PROPOSED IMPROVEMENTS -->
+    <div class="workbench-column">
+      
+      <!-- Panel 1: Live Interactive Test Sandbox -->
+      <div class="panel-card">
+        <div class="panel-title">
+          <span>🧪 Real-Time Price Value Sandbox</span>
+          <span class="interactive-badge">LIVE TEST</span>
+        </div>
+        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 16px; line-height: 1.5;">
+          Modify the product's actual price fields below to see how each tier dynamically formats and renders on the label sticker in real-time.
+        </p>
+
+        <div class="sandbox-controls">
+          <div class="sandbox-field">
+            <div class="sandbox-label">
+              <span>Selling Price (বিক্রয়)</span>
+              <span style="color: #38BDF8;">Active Tier</span>
+            </div>
+            <input type="number" class="sandbox-input" id="sandSelling" value="70" oninput="onPriceValuesChanged()">
+          </div>
+
+          <div class="sandbox-field">
+            <div class="sandbox-label">
+              <span>MRP Price (সর্বোচ্চ খুচরা)</span>
+              <span style="color: #F59E0B;">Packaged</span>
+            </div>
+            <input type="number" class="sandbox-input" id="sandMRP" value="85" oninput="onPriceValuesChanged()">
+          </div>
+
+          <div class="sandbox-field">
+            <div class="sandbox-label">
+              <span>Wholesale Price (পাইকারি)</span>
+              <span style="color: #A855F7;">Trade B2B</span>
+            </div>
+            <input type="number" class="sandbox-input" id="sandWholesale" value="62" oninput="onPriceValuesChanged()">
+          </div>
+
+          <div class="sandbox-field">
+            <div class="sandbox-label">
+              <span>Custom Prefix</span>
+              <span style="color: #10B981;">Optional</span>
+            </div>
+            <select class="sandbox-input" id="sandPrefix" onchange="onPrefixChanged()">
+              <option value="AUTO">Auto (Price / MRP / Wholesale)</option>
+              <option value="SIMPLE">None (৳ Only)</option>
+              <option value="SPECIAL">Special Offer (অফার)</option>
+              <option value="TRADE">TP (Trade Price)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Quick Switcher Buttons in Workbench -->
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="type-chip active" id="wbBtnSelling" style="background: var(--selling-light); border-color: var(--selling-color); color: #0369A1;" onclick="selectPriceTier('SELLING')">
+            ● Selling Price (৳<span id="wbSpanSell">70</span>)
+          </button>
+          <button class="type-chip" id="wbBtnMRP" style="background: var(--mrp-light); border-color: var(--mrp-color); color: #B45309;" onclick="selectPriceTier('MRP')">
+            ● MRP Price (৳<span id="wbSpanMrp">85</span>)
+          </button>
+          <button class="type-chip" id="wbBtnWholesale" style="background: var(--wholesale-light); border-color: var(--wholesale-color); color: #6D28D9;" onclick="selectPriceTier('WHOLESALE')">
+            ● Wholesale Price (৳<span id="wbSpanWhole">62</span>)
+          </button>
+          <button class="type-chip" id="wbBtnDual" style="background: var(--dual-light); border-color: var(--dual-color); color: #047857;" onclick="selectPriceTier('DUAL')">
+            ✨ Dual Display (MRP + Offer)
+          </button>
+        </div>
+      </div>
+
+      <!-- Panel 2: Comparative Visual Matrix -->
+      <div class="panel-card">
+        <div class="panel-title">
+          <span>📊 Visual Matrix of Price Modes on Barcode Stickers</span>
+        </div>
+
+        <div class="tier-compare-grid">
+          
+          <!-- Mode 1: Selling Price -->
+          <div class="compare-card" id="cardCompSelling">
+            <div class="compare-card-badge" style="background: var(--selling-light); color: var(--selling-color);">Standard Retail</div>
+            <div class="compare-title">1. Selling Price</div>
+            <div class="compare-label-preview" id="cmpPrevSelling">Price: ৳70</div>
+            <div class="compare-desc">
+              Standard consumer price sticker for retail shelves. Cleary shows the store's regular selling price.
+            </div>
+          </div>
+
+          <!-- Mode 2: MRP Price -->
+          <div class="compare-card" id="cardCompMRP">
+            <div class="compare-card-badge" style="background: var(--mrp-light); color: var(--mrp-color);">BSTI / Legal</div>
+            <div class="compare-title">2. MRP Price</div>
+            <div class="compare-label-preview" id="cmpPrevMRP">MRP Price: ৳85</div>
+            <div class="compare-desc">
+              Maximum Retail Price. Crucial in Bangladesh for BSTI, Consumer Rights Directorate, and manufacturer-tagged packaging.
+            </div>
+          </div>
+
+          <!-- Mode 3: Wholesale Price -->
+          <div class="compare-card" id="cardCompWholesale">
+            <div class="compare-card-badge" style="background: var(--wholesale-light); color: var(--wholesale-color);">B2B / Trade</div>
+            <div class="compare-title">3. Wholesale Price</div>
+            <div class="compare-label-preview" id="cmpPrevWholesale">Wholesale Price: ৳62</div>
+            <div class="compare-desc">
+              For wholesale cartons, master boxes, trade distributors, and bulk sales stickers (Chawkbazar / Khatunganj market style).
+            </div>
+          </div>
+
+          <!-- Mode 4: Dual Display (Supermarket Style) -->
+          <div class="compare-card" id="cardCompDual">
+            <div class="compare-card-badge" style="background: var(--dual-light); color: var(--dual-color);">High Conversion</div>
+            <div class="compare-title">4. Dual Price (MRP + Offer)</div>
+            <div class="compare-label-preview" id="cmpPrevDual">MRP: ৳85 | Offer: ৳70</div>
+            <div class="compare-desc">
+              Shows the customer their instant savings right on the barcode sticker! Proven to boost sales in superstores.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Panel 3: Recommended Additional Improvements -->
+      <div class="panel-card">
+        <div class="panel-title">
+          <span>🚀 Suggested High-Value Improvements for Your Approval</span>
+        </div>
+        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 16px;">
+          These enhancements can be bundled together cleanly without adding clutter or complicating the workflow:
+        </p>
+
+        <div class="improvements-list">
+          
+          <div class="improvement-item">
+            <div class="improvement-icon-wrap">🏷️</div>
+            <div class="improvement-content">
+              <div class="improvement-header">
+                <div class="improvement-name">1. Dual Price Display Mode (MRP & Special Offer)</div>
+                <span class="improvement-tag">RECOMMENDED</span>
+              </div>
+              <div class="improvement-desc">
+                Allows printing both MRP and the Selling/Discounted price side-by-side (e.g. <code>MRP: ৳85 | Offer: ৳70</code>). In Bangladeshi retail, this builds consumer trust and highlights store discounts immediately.
+              </div>
+            </div>
+          </div>
+
+          <div class="improvement-item">
+            <div class="improvement-icon-wrap">⚡</div>
+            <div class="improvement-content">
+              <div class="improvement-header">
+                <div class="improvement-name">2. Quick In-Dialog Price Setting for Missing Tiers</div>
+                <span class="improvement-tag">ERGONOMICS</span>
+              </div>
+              <div class="improvement-desc">
+                If a product has <code>mrpPrice = 0.0</code> or <code>wholesalePrice = 0.0</code>, the chip displays <code>(৳0 - Not Set)</code> with a pencil icon. Clicking it opens a quick inline sheet to set the price without having to exit to the Edit Product screen.
+              </div>
+            </div>
+          </div>
+
+          <div class="improvement-item">
+            <div class="improvement-icon-wrap">🇧🇩</div>
+            <div class="improvement-content">
+              <div class="improvement-header">
+                <div class="improvement-name">3. Bangla Numerals & Prefix Toggle for Localized Receipts</div>
+                <span class="improvement-tag">LOCALIZATION</span>
+              </div>
+              <div class="improvement-desc">
+                Follows the <code>bangla-language</code> standard: allows toggling between English digits (<code>Price: ৳70</code>) and localized Bangla numerals (<code>মূল্য: ৳৭০</code>, <code>এমআরপি: ৳৮৫</code>, <code>পাইকারি: ৳৬২</code>) based on the merchant's customer base.
+              </div>
+            </div>
+          </div>
+
+          <div class="improvement-item">
+            <div class="improvement-icon-wrap">📦</div>
+            <div class="improvement-content">
+              <div class="improvement-header">
+                <div class="improvement-name">4. Batch Code Labels Price Tier Integration</div>
+                <span class="improvement-tag">BULK PRINT</span>
+              </div>
+              <div class="improvement-desc">
+                Extends the same Price Tier selection into the <strong>Batch Print Labels</strong> dialog. When printing a PDF sheet of 50 or 100 stickers for wholesale orders or shelf replenishment, merchants can choose Selling, MRP, or Wholesale for the entire run.
+              </div>
+            </div>
+          </div>
+
+          <div class="improvement-item">
+            <div class="improvement-icon-wrap">⚖️</div>
+            <div class="improvement-content">
+              <div class="improvement-header">
+                <div class="improvement-name">5. Persistent User Preference Remembering</div>
+                <span class="improvement-tag">SMART DEFAULTS</span>
+              </div>
+              <div class="improvement-desc">
+                Saves the selected price tier in <code>SharedPreferences("product_code_image_settings")</code> as <code>price_tier_mode</code> ("SELLING", "MRP", "WHOLESALE", "DUAL") so the user's preferred printing mode remains active across sessions.
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Bottom Confirmation Callout -->
+      <div class="confirmation-cta-bar">
+        <div class="cta-text-wrap">
+          <div class="cta-title">Ready for Your Review & Confirmation</div>
+          <div class="cta-desc">
+            Per your strict instructions, <strong>no Android source code has been modified yet</strong>. Please review this interactive prototype, test each price tier, and let me know if you approve this implementation or would like any refinements!
+          </div>
+        </div>
+        <div class="cta-button-group">
+          <button class="btn-confirm-all" onclick="alert('Thank you! Please submit your confirmation in the chat to proceed with the Android implementation.')">
+            <span>✓</span> Confirm Design
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    // State Variables
+    let currentCodeType = 'BARCODE';
+    let currentPriceTier = 'SELLING'; // 'SELLING', 'MRP', 'WHOLESALE', 'DUAL'
+    let showPrice = true;
+    let showStoreName = true;
+    let showCodeNumber = true;
+    let showDateTracking = true;
+    let showUnit = false;
+    let showBanglaDigits = false;
+    let prefixMode = 'AUTO';
+    let mfgOrPkg = 'Mfg';
+
+    let prices = {
+      selling: 70,
+      mrp: 85,
+      wholesale: 62
+    };
+
+    // Bangla digit mapping
+    const bnDigits = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
+    function toBn(numStr) {
+      return String(numStr).replace(/[0-9]/g, w => bnDigits[w] || w);
+    }
+
+    function formatTaka(val) {
+      let rounded = Number(val).toFixed(0);
+      return showBanglaDigits ? '৳' + toBn(rounded) : '৳' + rounded;
+    }
+
+    // Update Barcode Graphic SVG
+    function drawBarcodeSvg(targetSvgId) {
+      const svg = document.getElementById(targetSvgId);
+      if (!svg) return;
+      svg.innerHTML = '';
+
+      // Realistic Code 128 / EAN bar pattern
+      const bars = [
+        2, 1, 1, 2, 3, 1, 2, 1, 1, 3, 1, 2, 2, 1, 3, 1, 1, 2,
+        3, 2, 1, 1, 2, 3, 1, 2, 1, 1, 2, 1, 3, 2, 1, 2, 1, 3,
+        1, 1, 2, 2, 3, 1, 1, 2, 1, 3, 2, 1, 2, 3, 1, 1, 2, 1,
+        3, 1, 2, 2, 1, 1, 3, 2, 1, 1, 2, 1, 3, 1, 2, 2, 1, 3
+      ];
+
+      let x = 12;
+      const height = 54;
+      bars.forEach((w, i) => {
+        if (i % 2 === 0) {
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', x);
+          rect.setAttribute('y', 2);
+          rect.setAttribute('width', w * 1.55);
+          rect.setAttribute('height', height);
+          rect.setAttribute('fill', '#000000');
+          svg.appendChild(rect);
+        }
+        x += w * 1.55;
+      });
+      svg.setAttribute('viewBox', `0 0 ${Math.max(x + 12, 260)} 58`);
+    }
+
+    function drawQrSvg(targetContainerId) {
+      const wrap = document.getElementById(targetContainerId);
+      if (!wrap) return;
+      wrap.innerHTML = `
+        <svg class="qr-svg" viewBox="0 0 100 100">
+          <rect width="100" height="100" fill="#ffffff" />
+          <!-- Corner Finder 1 -->
+          <rect x="5" y="5" width="28" height="28" fill="#000" />
+          <rect x="9" y="9" width="20" height="20" fill="#fff" />
+          <rect x="13" y="13" width="12" height="12" fill="#000" />
+          <!-- Corner Finder 2 -->
+          <rect x="67" y="5" width="28" height="28" fill="#000" />
+          <rect x="71" y="9" width="20" height="20" fill="#fff" />
+          <rect x="75" y="13" width="12" height="12" fill="#000" />
+          <!-- Corner Finder 3 -->
+          <rect x="5" y="67" width="28" height="28" fill="#000" />
+          <rect x="9" y="71" width="20" height="20" fill="#fff" />
+          <rect x="13" y="75" width="12" height="12" fill="#000" />
+          <!-- Random data pattern -->
+          <rect x="40" y="8" width="6" height="6" fill="#000" />
+          <rect x="50" y="14" width="8" height="6" fill="#000" />
+          <rect x="42" y="26" width="6" height="10" fill="#000" />
+          <rect x="8" y="42" width="14" height="6" fill="#000" />
+          <rect x="26" y="42" width="6" height="8" fill="#000" />
+          <rect x="38" y="38" width="12" height="12" fill="#000" />
+          <rect x="56" y="40" width="8" height="16" fill="#000" />
+          <rect x="70" y="44" width="22" height="6" fill="#000" />
+          <rect x="80" y="56" width="12" height="8" fill="#000" />
+          <rect x="42" y="64" width="8" height="18" fill="#000" />
+          <rect x="58" y="72" width="14" height="6" fill="#000" />
+          <rect x="78" y="74" width="12" height="14" fill="#000" />
+        </svg>
+        <div class="sticker-barcode-number" id="stickerBarcodeNum">1 1 0 8 5 7 5 3 0 3 6 9</div>
+        <div class="sticker-store-name" id="stickerStoreName">${document.getElementById('inputStoreName').value}</div>
+        <div class="sticker-date-row" id="stickerDateRow">${mfgOrPkg.toUpperCase()}: 12-09-26 | EXP: 11-09-28</div>
+      `;
+    }
+
+    // Price tier selection
+    function selectPriceTier(tier) {
+      currentPriceTier = tier;
+
+      // Update button active classes in phone
+      document.querySelectorAll('.price-tier-btn, .dual-price-btn').forEach(btn => btn.classList.remove('active'));
+      if (tier === 'SELLING') document.getElementById('tierBtnSelling').classList.add('active');
+      if (tier === 'MRP') document.getElementById('tierBtnMRP').classList.add('active');
+      if (tier === 'WHOLESALE') document.getElementById('tierBtnWholesale').classList.add('active');
+      if (tier === 'DUAL') document.getElementById('tierBtnDual').classList.add('active');
+
+      // Update highlight in comparison cards
+      document.querySelectorAll('.compare-card').forEach(c => c.classList.remove('highlight'));
+      if (tier === 'SELLING') document.getElementById('cardCompSelling').classList.add('highlight');
+      if (tier === 'MRP') document.getElementById('cardCompMRP').classList.add('highlight');
+      if (tier === 'WHOLESALE') document.getElementById('cardCompWholesale').classList.add('highlight');
+      if (tier === 'DUAL') document.getElementById('cardCompDual').classList.add('highlight');
+
+      updateLabelPreview();
+    }
+
+    function setCodeType(type) {
+      currentCodeType = type;
+      document.getElementById('chipBarcode').classList.toggle('active', type === 'BARCODE');
+      document.getElementById('chipQRCode').classList.toggle('active', type === 'QR_CODE');
+      updateCodeGraphic();
+    }
+
+    function updateCodeGraphic() {
+      const container = document.getElementById('stickerCodeGraphic');
+      if (currentCodeType === 'BARCODE') {
+        container.innerHTML = `
+          <svg class="barcode-svg" id="phoneBarcodeSvg" viewBox="0 0 280 60" preserveAspectRatio="none"></svg>
+          <div class="sticker-barcode-number" id="stickerBarcodeNum">1 1 0 8 5 7 5 3 0 3 6 9</div>
+          <div class="sticker-store-name" id="stickerStoreName">${document.getElementById('inputStoreName').value}</div>
+          <div class="sticker-date-row" id="stickerDateRow">${mfgOrPkg.toUpperCase()}: 12-09-26 | EXP: 11-09-28</div>
+        `;
+        drawBarcodeSvg('phoneBarcodeSvg');
+      } else {
+        drawQrSvg('stickerCodeGraphic');
+      }
+      applyVisibilityToggles();
+    }
+
+    // Toggle Checkboxes
+    function toggleStoreName() {
+      showStoreName = !showStoreName;
+      document.getElementById('checkStoreName').classList.toggle('unchecked', !showStoreName);
+      document.getElementById('storeNameFieldGroup').style.display = showStoreName ? 'block' : 'none';
+      applyVisibilityToggles();
+    }
+
+    function toggleShowPrice() {
+      showPrice = !showPrice;
+      document.getElementById('checkShowPrice').classList.toggle('unchecked', !showPrice);
+      document.getElementById('checkShowPriceSub').classList.toggle('unchecked', !showPrice);
+      document.getElementById('tierSelectorRow').style.opacity = showPrice ? '1' : '0.4';
+      document.getElementById('tierSelectorRow').style.pointerEvents = showPrice ? 'auto' : 'none';
+      updateLabelPreview();
+    }
+
+    function togglePriceCard() {
+      toggleShowPrice();
+    }
+
+    function toggleCodeNumber() {
+      showCodeNumber = !showCodeNumber;
+      document.getElementById('checkShowCodeNum').classList.toggle('unchecked', !showCodeNumber);
+      applyVisibilityToggles();
+    }
+
+    function toggleDateTracking() {
+      showDateTracking = !showDateTracking;
+      document.getElementById('checkDateTracking').classList.toggle('unchecked', !showDateTracking);
+      document.getElementById('dateTrackingCard').style.display = showDateTracking ? 'block' : 'none';
+      applyVisibilityToggles();
+    }
+
+    function setDateType(type) {
+      mfgOrPkg = type;
+      document.getElementById('btnMfg').classList.toggle('active', type === 'Mfg');
+      document.getElementById('btnPkg').classList.toggle('active', type === 'Pkg');
+      document.getElementById('lblMfgPkg').textContent = type === 'Pkg' ? 'Pkg Date' : 'Mfg Date';
+      updateLabelPreview();
+    }
+
+    function toggleUnitDisplay() {
+      showUnit = !showUnit;
+      document.getElementById('optUnitPcs').classList.toggle('active', showUnit);
+      document.getElementById('unitToggleIndicator').textContent = showUnit ? 'ON' : 'OFF';
+      updateLabelPreview();
+    }
+
+    function toggleBanglaNumerals() {
+      showBanglaDigits = !showBanglaDigits;
+      document.getElementById('optBanglaDigits').classList.toggle('active', showBanglaDigits);
+      document.getElementById('digitToggleIndicator').textContent = showBanglaDigits ? 'ON' : 'OFF';
+      onPriceValuesChanged();
+    }
+
+    function onPrefixChanged() {
+      prefixMode = document.getElementById('sandPrefix').value;
+      updateLabelPreview();
+    }
+
+    function onPriceValuesChanged() {
+      prices.selling = Number(document.getElementById('sandSelling').value) || 0;
+      prices.mrp = Number(document.getElementById('sandMRP').value) || 0;
+      prices.wholesale = Number(document.getElementById('sandWholesale').value) || 0;
+
+      // Update pills
+      document.getElementById('dispSellingVal').textContent = formatTaka(prices.selling);
+      document.getElementById('dispMrpVal').textContent = formatTaka(prices.mrp);
+      document.getElementById('dispWholesaleVal').textContent = formatTaka(prices.wholesale);
+
+      // Update workbench quick buttons
+      document.getElementById('wbSpanSell').textContent = showBanglaDigits ? toBn(prices.selling) : prices.selling;
+      document.getElementById('wbSpanMrp').textContent = showBanglaDigits ? toBn(prices.mrp) : prices.mrp;
+      document.getElementById('wbSpanWhole').textContent = showBanglaDigits ? toBn(prices.wholesale) : prices.wholesale;
+
+      // Update dual button
+      document.getElementById('dispDualVal').innerHTML = `
+        <span style="text-decoration: line-through; color: #64748B; font-weight: 500; font-size: 11px;">MRP ${formatTaka(prices.mrp)}</span> ${formatTaka(prices.selling)}
+      `;
+
+      // Update comparative preview boxes
+      document.getElementById('cmpPrevSelling').textContent = formatPriceText('SELLING');
+      document.getElementById('cmpPrevMRP').textContent = formatPriceText('MRP');
+      document.getElementById('cmpPrevWholesale').textContent = formatPriceText('WHOLESALE');
+      document.getElementById('cmpPrevDual').textContent = formatPriceText('DUAL');
+
+      updateLabelPreview();
+    }
+
+    function formatPriceText(tier) {
+      const unitStr = showUnit ? (showBanglaDigits ? '/পিস' : '/Pcs') : '';
+
+      if (tier === 'SELLING') {
+        if (prefixMode === 'SIMPLE') return `${formatTaka(prices.selling)}${unitStr}`;
+        if (prefixMode === 'SPECIAL') return showBanglaDigits ? `অফার: ${formatTaka(prices.selling)}${unitStr}` : `Offer: ${formatTaka(prices.selling)}${unitStr}`;
+        return showBanglaDigits ? `মূল্য: ${formatTaka(prices.selling)}${unitStr}` : `Price: ${formatTaka(prices.selling)}${unitStr}`;
+      }
+
+      if (tier === 'MRP') {
+        if (prefixMode === 'SIMPLE') return `${formatTaka(prices.mrp)}${unitStr}`;
+        return showBanglaDigits ? `এমআরপি মূল্য: ${formatTaka(prices.mrp)}${unitStr}` : `MRP Price: ${formatTaka(prices.mrp)}${unitStr}`;
+      }
+
+      if (tier === 'WHOLESALE') {
+        if (prefixMode === 'SIMPLE') return `${formatTaka(prices.wholesale)}${unitStr}`;
+        if (prefixMode === 'TRADE') return `TP: ${formatTaka(prices.wholesale)}${unitStr}`;
+        return showBanglaDigits ? `পাইকারি মূল্য: ${formatTaka(prices.wholesale)}${unitStr}` : `Wholesale Price: ${formatTaka(prices.wholesale)}${unitStr}`;
+      }
+
+      if (tier === 'DUAL') {
+        const mrpStr = showBanglaDigits ? `এমআরপি মূল্য: ${formatTaka(prices.mrp)}` : `MRP Price: ${formatTaka(prices.mrp)}`;
+        const sellStr = showBanglaDigits ? `অফার: ${formatTaka(prices.selling)}` : `Offer: ${formatTaka(prices.selling)}`;
+        return `${mrpStr}  |  ${sellStr}${unitStr}`;
+      }
+
+      return `Price: ${formatTaka(prices.selling)}`;
+    }
+
+    function updateLabelPreview() {
+      const priceElement = document.getElementById('stickerPrice');
+      if (!showPrice) {
+        priceElement.style.display = 'none';
+      } else {
+        priceElement.style.display = 'flex';
+        priceElement.textContent = formatPriceText(currentPriceTier);
+      }
+
+      // Store name
+      const storeName = document.getElementById('inputStoreName').value;
+      const storeElem = document.getElementById('stickerStoreName');
+      if (storeElem) {
+        storeElem.textContent = storeName.toUpperCase();
+      }
+
+      // Date tracking row
+      const dateElem = document.getElementById('stickerDateRow');
+      if (dateElem) {
+        dateElem.textContent = `${mfgOrPkg.toUpperCase()}: 12-09-26 | EXP: 11-09-28`;
+      }
+
+      applyVisibilityToggles();
+    }
+
+    function applyVisibilityToggles() {
+      const storeElem = document.getElementById('stickerStoreName');
+      if (storeElem) storeElem.style.display = showStoreName ? 'block' : 'none';
+
+      const codeNumElem = document.getElementById('stickerBarcodeNum');
+      if (codeNumElem) codeNumElem.style.display = showCodeNumber ? 'block' : 'none';
+
+      const dateElem = document.getElementById('stickerDateRow');
+      if (dateElem) dateElem.style.display = showDateTracking ? 'block' : 'none';
+    }
+
+    // Initial run
+    window.addEventListener('DOMContentLoaded', () => {
+      drawBarcodeSvg('phoneBarcodeSvg');
+      onPriceValuesChanged();
+      selectPriceTier('SELLING');
+    });
+  </script>
+</body>
+</html>

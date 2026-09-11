@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS — Section Subheadings Removal UX Review & Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-gradient: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      --accent-blue: #3B82F6;
+      --accent-amber: #F59E0B;
+      --accent-emerald: #10B981;
+      --accent-rose: #EF4444;
+      --accent-purple: #8B5CF6;
+      
+      --bg-canvas: #0A0F1D;
+      --bg-surface: #111827;
+      --bg-card: #182234;
+      --bg-card-hover: #1E293B;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(79, 70, 229, 0.4);
+      
+      --text-primary: #F9FAFB;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      
+      --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-bn: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-canvas: #F1F5F9;
+      --bg-surface: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F8FAFC;
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --border-highlight: rgba(79, 70, 229, 0.3);
+      
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-muted: #94A3B8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background: var(--bg-canvas);
+      color: var(--text-primary);
+      line-height: 1.5;
+      padding: 24px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    body.lang-bn {
+      font-family: var(--font-bn);
+    }
+
+    .container {
+      max-width: 1280px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    /* Top Navigation Header */
+    .preview-navbar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-badge {
+      background: var(--primary-gradient);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-subtitle {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .control-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      padding: 7px 14px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .control-chip:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-primary);
+      border-color: var(--border-highlight);
+    }
+
+    .control-chip.active {
+      background: rgba(79, 70, 229, 0.2);
+      border-color: var(--primary);
+      color: #818CF8;
+    }
+
+    /* Direction Confirmed Banner */
+    .confirmed-banner {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(59, 130, 246, 0.08) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: var(--radius-lg);
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .banner-text-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .banner-heading {
+      font-size: 15px;
+      font-weight: 800;
+      color: #34D399;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .banner-sub {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+
+    .untouched-badge {
+      background: rgba(245, 158, 11, 0.18);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #FDE68A;
+      font-size: 11.5px;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Section Tabs */
+    .tabs-wrapper {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: thin;
+    }
+
+    .section-tab {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .section-tab:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .section-tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+    }
+
+    .section-tab.special-hub {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: rgba(245, 158, 11, 0.08);
+      color: #FDE68A;
+    }
+
+    .section-tab.special-hub.active {
+      background: #D97706;
+      color: #fff;
+    }
+
+    /* Main 2-Column Grid */
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .grid-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .ux-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 14px;
+    }
+
+    .card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .card-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 9999px;
+    }
+
+    .badge-success {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34D399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-amber {
+      background: rgba(245, 158, 11, 0.15);
+      color: #FDE68A;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    /* Viewport Simulator bar */
+    .sim-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      margin-bottom: 12px;
+      justify-content: center;
+      background: var(--bg-surface);
+      padding: 8px 14px;
+      border-radius: 9999px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .sim-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .sim-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .sim-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .sim-slider {
+      flex: 1;
+      max-width: 140px;
+      accent-color: var(--primary);
+    }
+
+    /* Mockup Canvas */
+    .mockup-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      background: var(--bg-canvas);
+      border-radius: var(--radius-md);
+      border: 1px dashed var(--border-subtle);
+    }
+
+    .device-viewport {
+      width: 380px;
+      max-width: 100%;
+      background: #FFFFFF;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid #CBD5E1;
+      transition: width 0.3s ease;
+    }
+
+    [data-theme="dark"] .device-viewport.app-dark {
+      background: #0F172A;
+      border-color: #334155;
+    }
+
+    /* TopAppBar Simulation */
+    .android-top-bar {
+      height: 64px;
+      background: #FFFFFF;
+      padding: 0 8px 0 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #E2E8F0;
+      user-select: none;
+    }
+
+    [data-theme="dark"] .android-top-bar.app-dark {
+      background: #0F172A;
+      border-bottom-color: #1E293B;
+    }
+
+    .nav-back-btn {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      cursor: pointer;
+      color: #0F172A;
+      flex-shrink: 0;
+    }
+
+    [data-theme="dark"] .nav-back-btn.app-dark {
+      color: #F8FAFC;
+    }
+
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+      margin-left: 2px;
+    }
+
+    .squircle-container {
+      width: 40px;
+      height: 40px;
+      background: rgba(59, 130, 246, 0.16);
+      border: 1px solid rgba(59, 130, 246, 0.38);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
+      font-size: 20px;
+    }
+
+    .text-column {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .bar-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: -0.2px;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    [data-theme="dark"] .bar-title.app-dark {
+      color: #F8FAFC;
+    }
+
+    .bar-subtitle {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #64748B;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    [data-theme="dark"] .bar-subtitle.app-dark {
+      color: #94A3B8;
+    }
+
+    .actions-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* Comparison Box */
+    .comp-item-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .comp-section-name {
+      font-weight: 700;
+      font-size: 13.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pill-removed {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34D399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .pill-untouched {
+      background: rgba(245, 158, 11, 0.15);
+      color: #FDE68A;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    /* More Hub Mock Card (Store Operations & Tools) */
+    .hub-sheet-preview {
+      background: #FFFFFF;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid #CBD5E1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    [data-theme="dark"] .hub-sheet-preview {
+      background: #0F172A;
+      border-color: #334155;
+    }
+
+    .hub-item-row {
+      background: rgba(148, 163, 184, 0.08);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .hub-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hub-item-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(79, 70, 229, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .hub-item-texts {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hub-item-title {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .hub-item-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Navbar -->
+    <header class="preview-navbar">
+      <div class="brand-section">
+        <div class="brand-badge">TECHYFI POS</div>
+        <div>
+          <div class="brand-title">Subheading Text Removal Review (All Sections)</div>
+          <div class="brand-subtitle">Store Operations & Tools 100% Untouched</div>
+        </div>
+      </div>
+
+      <div class="nav-controls">
+        <div class="control-chip" id="langToggle" title="Switch English / বাংলা">
+          <span>🌐</span>
+          <span id="langText">English</span>
+        </div>
+        <div class="control-chip" id="themeToggle" title="Switch Light / Dark UI">
+          <span id="themeIcon">🌙</span>
+          <span id="themeText">Dark Theme</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Confirmed Instruction Banner -->
+    <section class="confirmed-banner">
+      <div class="banner-text-group">
+        <div class="banner-heading">
+          <span>✓</span>
+          <span>Design Decision: Clean TopAppBars Without Subheading Text</span>
+        </div>
+        <p class="banner-sub">
+          All section TopAppBars will display their clean Title + 3D Icon with <strong>zero subheadings</strong>, eliminating truncation on all phone sizes. <strong>Store Operations & Tools</strong> stays completely untouched with its full subtitle.
+        </p>
+      </div>
+      <div class="untouched-badge">
+        <span>⚡</span> Store Operations: PRESERVED
+      </div>
+    </section>
+
+    <!-- Section Tabs -->
+    <div class="tabs-wrapper" id="sectionTabs">
+      <div class="section-tab active" data-section="history">🕒 History</div>
+      <div class="section-tab" data-section="products">📦 Products</div>
+      <div class="section-tab" data-section="cart">🛒 Cart</div>
+      <div class="section-tab" data-section="dues">📋 Dues</div>
+      <div class="section-tab" data-section="expenses">💵 Expenses</div>
+      <div class="section-tab" data-section="suppliers">🚚 Suppliers</div>
+      <div class="section-tab" data-section="reports">📊 Sales Report</div>
+      <div class="section-tab" data-section="customers">👥 Customers</div>
+      <div class="section-tab" data-section="loyalty">⭐ Loyalty</div>
+      <div class="section-tab" data-section="register">🧾 Cash Register</div>
+      <div class="section-tab" data-section="settings">⚙️ Settings</div>
+      <div class="section-tab special-hub" data-section="hub">⚡ Store Operations & Tools (Untouched)</div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid-layout">
+
+      <!-- LEFT COLUMN: Live Simulator of Selected Section -->
+      <section class="ux-card">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <span class="card-icon">📱</span>
+            <span class="card-title" id="simTitle">Live Preview: Sales History Screen</span>
+          </div>
+          <span class="card-badge badge-success" id="simBadge">CLEAN 1-LINE TITLE</span>
+        </div>
+
+        <!-- Viewport Controls -->
+        <div class="sim-bar">
+          <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">VIEWPORT:</span>
+          <button class="sim-btn" data-width="320">320px (Mini)</button>
+          <button class="sim-btn" data-width="340">340px (Small)</button>
+          <button class="sim-btn active" data-width="380">380px (Standard)</button>
+          <button class="sim-btn" data-width="412">412px (Large)</button>
+          <input type="range" min="320" max="480" value="380" class="sim-slider" id="widthSlider" title="Resize device width">
+          <span style="font-size: 11px; font-family: var(--font-code); color: var(--text-secondary);" id="widthVal">380px</span>
+        </div>
+
+        <!-- Phone Mockup Container -->
+        <div class="mockup-wrapper">
+          <div class="device-viewport app-dark" id="deviceViewport">
+            <!-- Android TopAppBar -->
+            <div class="android-top-bar app-dark" id="mockTopBar">
+              <div class="nav-back-btn app-dark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="22" height="22" stroke-width="2.2">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+              </div>
+
+              <div class="title-group">
+                <div class="squircle-container" id="mockIconContainer">
+                  <span id="mockIcon">🕒</span>
+                </div>
+                <div class="text-column">
+                  <span class="bar-title app-dark" id="mockBarTitle">History</span>
+                  <span class="bar-subtitle app-dark" id="mockBarSubtitle" style="display: none;"></span>
+                </div>
+              </div>
+
+              <div class="actions-group" id="mockActions">
+                <!-- Action buttons rendered dynamically based on section -->
+              </div>
+            </div>
+
+            <!-- Body placeholder -->
+            <div style="padding: 16px; display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.03);" id="mockBodyContent">
+              <div style="height: 38px; background: rgba(148,163,184,0.12); border-radius: 10px; display: flex; align-items: center; padding: 0 12px; font-size: 12px; color: var(--text-muted);" id="mockSearchPlaceholder">
+                🔍 Search records...
+              </div>
+              <div style="height: 60px; background: rgba(148,163,184,0.08); border-radius: 12px; border: 1px dashed var(--border-subtle); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-muted);" id="mockBodyText">
+                Content loaded cleanly below top bar with ample vertical breathing room.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Explanation Box -->
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-weight: 800; font-size: 13px; color: #34D399; display: flex; align-items: center; gap: 6px;">
+            <span>✓</span> Zero Truncation Guarantee
+          </div>
+          <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.45;" id="metricSummary">
+            With the subheading removed, <strong>"History"</strong> (and every other section title) centers vertically next to the 3D icon and has ample horizontal room. It will <strong>never cut off</strong>, even on compact 320px screens!
+          </p>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: Section Audit Checklist -->
+      <section class="ux-card">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <span class="card-icon">📋</span>
+            <span class="card-title">All Sections Subheading Status</span>
+          </div>
+          <span class="card-badge badge-amber">12 Modified / 1 Untouched</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; padding-right: 4px;">
+          
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>🕒</span>
+              <div>
+                <div>Sales History</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">SalesHistoryScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>📦</span>
+              <div>
+                <div>Products</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">ProductsScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>🛒</span>
+              <div>
+                <div>Cart &amp; Checkout</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">CartScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>📋</span>
+              <div>
+                <div>Dues (বাকির খাতা)</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">DuesScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>💵</span>
+              <div>
+                <div>Expenses</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">ExpensesScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>🚚</span>
+              <div>
+                <div>Suppliers</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">SuppliersScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>📊</span>
+              <div>
+                <div>Sales Report</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">SalesReportScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>👥</span>
+              <div>
+                <div>Customers CRM</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">CustomersScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>⭐</span>
+              <div>
+                <div>Customer Loyalty</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">LoyaltyScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>🧾</span>
+              <div>
+                <div>Cash Register / Day Close</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">RegisterCloseScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>👤</span>
+              <div>
+                <div>Manage Users</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">ManageUsersScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card">
+            <div class="comp-section-name">
+              <span>⚙️</span>
+              <div>
+                <div>Settings</div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-code);">SettingsScreen.kt</div>
+              </div>
+            </div>
+            <span class="pill-removed">Subheading Removed</span>
+          </div>
+
+          <div class="comp-item-card" style="border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.06);">
+            <div class="comp-section-name">
+              <span>⚡</span>
+              <div>
+                <div style="color: #FDE68A; font-weight: 800;">Store Operations &amp; Tools</div>
+                <div style="font-size: 11px; color: #F59E0B; font-family: var(--font-code);">Navigation.kt (Line 1383)</div>
+              </div>
+            </div>
+            <span class="pill-untouched">100% UNTOUCHED</span>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Store Operations & Tools Dedicated Section (Untouched Proof) -->
+    <section class="ux-card" id="hubProofSection" style="margin-top: 8px;">
+      <div class="card-header-row">
+        <div class="card-title-group">
+          <span class="card-icon">⚡</span>
+          <span class="card-title">Store Operations &amp; Tools (Bottom Sheet Hub — Preserved Exactly As Is)</span>
+        </div>
+        <span class="card-badge badge-amber">100% UNTOUCHED AS REQUESTED</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start;">
+        <div class="hub-sheet-preview">
+          <!-- Hub Header -->
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="squircle-container" style="background: rgba(245, 158, 11, 0.16); border-color: rgba(245, 158, 11, 0.4);">
+                ⚡
+              </div>
+              <div>
+                <div style="font-size: 16px; font-weight: 800;" id="hubHeaderTitle">Store Operations &amp; Tools</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);" id="hubHeaderSub">Management &amp; financial ledgers</div>
+              </div>
+            </div>
+            <div style="font-size: 18px; color: var(--text-muted); cursor: pointer;">✕</div>
+          </div>
+
+          <!-- Hub items identical to your screenshot -->
+          <div class="hub-item-row">
+            <div class="hub-item-left">
+              <div class="hub-item-icon">🧾</div>
+              <div class="hub-item-texts">
+                <span class="hub-item-title">Cash Register</span>
+                <span class="hub-item-sub">Shift float &amp; day close audit</span>
+              </div>
+            </div>
+            <span style="font-size: 11px; font-weight: 800; color: #F59E0B; background: rgba(245, 158, 11, 0.15); padding: 2px 8px; border-radius: 6px;">Audit</span>
+          </div>
+
+          <div class="hub-item-row">
+            <div class="hub-item-left">
+              <div class="hub-item-icon">💵</div>
+              <div class="hub-item-texts">
+                <span class="hub-item-title">Expenses</span>
+                <span class="hub-item-sub">Petty cash, bills &amp; salaries</span>
+              </div>
+            </div>
+            <span style="font-size: 11px; font-weight: 800; color: #EF4444; background: rgba(239, 68, 68, 0.15); padding: 2px 8px; border-radius: 6px;">Cash Out</span>
+          </div>
+
+          <div class="hub-item-row">
+            <div class="hub-item-left">
+              <div class="hub-item-icon">📊</div>
+              <div class="hub-item-texts">
+                <span class="hub-item-title">Report</span>
+                <span class="hub-item-sub">Sales analysis, profit &amp; trends</span>
+              </div>
+            </div>
+            <span style="font-size: 11px; font-weight: 800; color: #3B82F6; background: rgba(59, 130, 246, 0.15); padding: 2px 8px; border-radius: 6px;">Insights</span>
+          </div>
+
+          <div class="hub-item-row">
+            <div class="hub-item-left">
+              <div class="hub-item-icon">🚚</div>
+              <div class="hub-item-texts">
+                <span class="hub-item-title">Suppliers</span>
+                <span class="hub-item-sub">Vendor ledger, stock &amp; bills</span>
+              </div>
+            </div>
+            <span style="font-size: 11px; font-weight: 800; color: #10B981; background: rgba(16, 185, 129, 0.15); padding: 2px 8px; border-radius: 6px;">Purchases</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <h3 style="font-size: 15px; font-weight: 800; color: #FDE68A;">Strict Preservation Guarantee</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+            As explicitly requested, <strong>Store Operations &amp; Tools</strong> (<code style="font-family: var(--font-code); color: #818CF8;">Navigation.kt</code> line 1385) will <strong>NOT</strong> be touched:
+          </p>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; color: var(--text-secondary);">
+            <li>✓ Header title remains: <strong style="color: var(--text-primary);">"Store Operations &amp; Tools"</strong></li>
+            <li>✓ Header subheading remains: <strong style="color: #34D399;">"Management &amp; financial ledgers"</strong></li>
+            <li>✓ All 7 tool cards (Cash Register, Expenses, Report, Suppliers, Loyalty, CRM, Settings) retain their descriptive subheadings and badges.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    const sectionsData = {
+      history: {
+        titleEn: 'History',
+        titleBn: 'ইতিহাস',
+        icon: '🕒',
+        actions: `
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 9px; border-radius:12px; background:#1E293B; border:1px solid #F59E0B; color:#FDE68A; font-size:11px; font-weight:700;">
+            🛡️ Stealth: ON
+          </div>
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; background:rgba(124, 58, 237, 0.25); color:#C4B5FD; font-size:12px; font-weight:700;">
+            📊 Reports
+          </div>
+        `,
+        searchPlace: '🔍 Search invoices, customer phone, memo...',
+        summary: 'With subtitle removed, "History" centers vertically with zero truncation on all screen sizes.'
+      },
+      products: {
+        titleEn: 'Products',
+        titleBn: 'পণ্যসমূহ',
+        icon: '📦',
+        actions: `
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; background:rgba(59, 130, 246, 0.2); color:#60A5FA; font-size:12px; font-weight:700;">
+            + Add Product
+          </div>
+        `,
+        searchPlace: '🔍 Search product name, barcode, SKU...',
+        summary: 'Products top bar is completely clean and spacious.'
+      },
+      cart: {
+        titleEn: 'Cart',
+        titleBn: 'কার্ট',
+        icon: '🛒',
+        actions: `
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; background:rgba(239, 68, 68, 0.2); color:#F87171; font-size:12px; font-weight:700;">
+            Clear Cart
+          </div>
+        `,
+        searchPlace: '🔍 Scan or type product to add...',
+        summary: 'Cart top bar displays Title cleanly with full room for action buttons.'
+      },
+      dues: {
+        titleEn: 'Dues',
+        titleBn: 'বাকি',
+        icon: '📋',
+        actions: `
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; background:rgba(16, 185, 129, 0.2); color:#34D399; font-size:12px; font-weight:700;">
+            + New Due
+          </div>
+        `,
+        searchPlace: '🔍 Search debtors by name or phone...',
+        summary: 'Dues top bar is neat and focused.'
+      },
+      expenses: {
+        titleEn: 'Expenses',
+        titleBn: 'খরচ',
+        icon: '💵',
+        actions: `
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; background:rgba(239, 68, 68, 0.2); color:#F87171; font-size:12px; font-weight:700;">
+            + Cash Out
+          </div>
+        `,
+        searchPlace: '🔍 Search expenses, category, voucher...',
+        summary: 'Expenses top bar is uncluttered and clean.'
+      },
+      suppliers: {
+        titleEn: 'Suppliers',
+        titleBn: 'সাপ্লায়ার',
+        icon: '🚚',
+        actions: `
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; background:rgba(16, 185, 129, 0.2); color:#34D399; font-size:12px; font-weight:700;">
+            + Add Vendor
+          </div>
+        `,
+        searchPlace: '🔍 Search suppliers, company, phone...',
+        summary: 'Suppliers top bar is clean with full title visibility.'
+      },
+      reports: {
+        titleEn: 'Sales Report',
+        titleBn: 'বিক্রয় রিপোর্ট',
+        icon: '📊',
+        actions: `
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; background:rgba(59, 130, 246, 0.2); color:#60A5FA; font-size:12px; font-weight:700;">
+            Export Excel
+          </div>
+        `,
+        searchPlace: '📅 Select date range (Today, 7 Days, Month)...',
+        summary: 'Sales Report top bar is simple, balanced, and elegant.'
+      },
+      customers: {
+        titleEn: 'Customers',
+        titleBn: 'ক্রেতা তালিকা',
+        icon: '👥',
+        actions: `
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; background:rgba(13, 148, 136, 0.2); color:#2DD4BF; font-size:12px; font-weight:700;">
+            + Add Customer
+          </div>
+        `,
+        searchPlace: '🔍 Search customer by name or mobile...',
+        summary: 'Customers screen header is clean and spacious.'
+      },
+      loyalty: {
+        titleEn: 'Customer Loyalty',
+        titleBn: 'লয়্যালটি পয়েন্ট',
+        icon: '⭐',
+        actions: `
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; background:rgba(236, 72, 153, 0.2); color:#F472B6; font-size:12px; font-weight:700;">
+            Filter
+          </div>
+        `,
+        searchPlace: '🔍 Search loyalty members...',
+        summary: 'Loyalty screen header is completely uncluttered.'
+      },
+      register: {
+        titleEn: 'Cash Register',
+        titleBn: 'ক্যাশ রেজিস্টার',
+        icon: '🧾',
+        actions: `
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; background:rgba(245, 158, 11, 0.2); color:#FDE68A; font-size:12px; font-weight:700;">
+            Print Z-Report
+          </div>
+        `,
+        searchPlace: '🔍 Shift summaries and cash audits...',
+        summary: 'Register Close screen top bar is clean and clear.'
+      },
+      settings: {
+        titleEn: 'Settings',
+        titleBn: 'সেটিংস',
+        icon: '⚙️',
+        actions: `
+          <div style="display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:12px; background:rgba(139, 92, 246, 0.2); color:#C4B5FD; font-size:12px; font-weight:700;">
+            v2.6 POS
+          </div>
+        `,
+        searchPlace: '🔍 Search setting options, printer, shop info...',
+        summary: 'Settings screen header is neat and elegant.'
+      },
+      hub: {
+        titleEn: 'Store Operations & Tools',
+        titleBn: 'দোকান পরিচালনা ও টুলস',
+        subEn: 'Management & financial ledgers',
+        subBn: 'ব্যবস্থাপনা ও আর্থিক খাতা',
+        icon: '⚡',
+        actions: `
+          <div style="font-size:18px; color:var(--text-muted);">✕</div>
+        `,
+        searchPlace: '⚡ Quick shortcuts to all tools...',
+        summary: 'Store Operations & Tools bottom sheet header is 100% untouched and retains "Management & financial ledgers".'
+      }
+    };
+
+    const state = {
+      isBangla: false,
+      isDark: true,
+      currentSection: 'history',
+      viewportWidth: 380
+    };
+
+    const simTitle = document.getElementById('simTitle');
+    const simBadge = document.getElementById('simBadge');
+    const mockBarTitle = document.getElementById('mockBarTitle');
+    const mockBarSubtitle = document.getElementById('mockBarSubtitle');
+    const mockIcon = document.getElementById('mockIcon');
+    const mockActions = document.getElementById('mockActions');
+    const mockSearchPlaceholder = document.getElementById('mockSearchPlaceholder');
+    const metricSummary = document.getElementById('metricSummary');
+    const deviceViewport = document.getElementById('deviceViewport');
+    const widthSlider = document.getElementById('widthSlider');
+    const widthVal = document.getElementById('widthVal');
+    const langToggle = document.getElementById('langToggle');
+    const langText = document.getElementById('langText');
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+
+    function updateView() {
+      const data = sectionsData[state.currentSection];
+
+      // Update TopBar text
+      if (state.currentSection === 'hub') {
+        mockBarTitle.textContent = state.isBangla ? data.titleBn : data.titleEn;
+        mockBarSubtitle.textContent = state.isBangla ? data.subBn : data.subEn;
+        mockBarSubtitle.style.display = 'block';
+        simBadge.textContent = 'UNTOUCHED - RETAINS SUBTITLE';
+        simBadge.className = 'card-badge badge-amber';
+      } else {
+        mockBarTitle.textContent = state.isBangla ? data.titleBn : data.titleEn;
+        mockBarSubtitle.textContent = '';
+        mockBarSubtitle.style.display = 'none';
+        simBadge.textContent = 'SUBHEADING REMOVED (CLEAN TITLE)';
+        simBadge.className = 'card-badge badge-success';
+      }
+
+      mockIcon.textContent = data.icon;
+      mockActions.innerHTML = data.actions;
+      mockSearchPlaceholder.textContent = data.searchPlace;
+      metricSummary.textContent = data.summary;
+      simTitle.textContent = `Live Preview: ${data.titleEn} Screen`;
+
+      // Language text in banner
+      document.getElementById('hubHeaderTitle').textContent = state.isBangla ? 'দোকান পরিচালনা ও টুলস' : 'Store Operations & Tools';
+      document.getElementById('hubHeaderSub').textContent = state.isBangla ? 'ব্যবস্থাপনা ও আর্থিক খাতা' : 'Management & financial ledgers';
+      langText.textContent = state.isBangla ? 'বাংলা' : 'English';
+      document.body.classList.toggle('lang-bn', state.isBangla);
+    }
+
+    // Tab switching
+    document.querySelectorAll('.section-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        state.currentSection = tab.dataset.section;
+        updateView();
+      });
+    });
+
+    // Viewport Width
+    widthSlider.addEventListener('input', (e) => {
+      state.viewportWidth = parseInt(e.target.value);
+      deviceViewport.style.width = state.viewportWidth + 'px';
+      widthVal.textContent = state.viewportWidth + 'px';
+      document.querySelectorAll('.sim-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.width) === state.viewportWidth);
+      });
+    });
+
+    document.querySelectorAll('.sim-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const w = parseInt(btn.dataset.width);
+        state.viewportWidth = w;
+        widthSlider.value = w;
+        deviceViewport.style.width = w + 'px';
+        widthVal.textContent = w + 'px';
+        document.querySelectorAll('.sim-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // Language Toggle
+    langToggle.addEventListener('click', () => {
+      state.isBangla = !state.isBangla;
+      langToggle.classList.toggle('active', state.isBangla);
+      updateView();
+    });
+
+    // Theme Toggle
+    themeToggle.addEventListener('click', () => {
+      state.isDark = !state.isDark;
+      document.documentElement.setAttribute('data-theme', state.isDark ? 'dark' : 'light');
+      themeIcon.textContent = state.isDark ? '🌙' : '☀️';
+      themeText.textContent = state.isDark ? 'Dark Theme' : 'Light Theme';
+      deviceViewport.classList.toggle('app-dark', state.isDark);
+      document.getElementById('mockTopBar').classList.toggle('app-dark', state.isDark);
+      document.querySelector('.nav-back-btn').classList.toggle('app-dark', state.isDark);
+      mockBarTitle.classList.toggle('app-dark', state.isDark);
+      mockBarSubtitle.classList.toggle('app-dark', state.isDark);
+    });
+
+    updateView();
+  </script>
+</body>
+</html>

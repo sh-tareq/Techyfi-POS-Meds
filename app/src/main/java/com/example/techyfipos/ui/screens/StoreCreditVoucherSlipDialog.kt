@@ -3,16 +3,17 @@ package com.example.techyfipos.ui.screens
 import android.app.Activity
 import android.graphics.BitmapFactory
 import android.widget.Toast
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,14 +23,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -37,6 +44,8 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.R
 import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.data.db.StoreCreditVoucher
+import com.example.techyfipos.ui.components.Realistic3DMessageReminderIcon
+import com.example.techyfipos.ui.components.Realistic3DWhatsAppIcon
 import com.example.techyfipos.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,8 +53,15 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Interactive Dialog for viewing, printing (ESC/POS 58mm/80mm),
+ * Redesigned Compact, Intuitive Dialog for viewing, printing (ESC/POS 58mm/80mm),
  * and sharing (Image, WhatsApp, SMS Text) Store Credit Voucher Slips.
+ *
+ * Features:
+ * - Realistic animated 3D icons (Voucher Ticket, POS Thermal Printer, Instant Share Portal).
+ * - Accurate 58mm vs 80mm thermal receipt print preview formatting.
+ * - Language switcher affects ONLY the thermal receipt print content, preserving the app/window interface language.
+ * - Anti-wrapping single-line action buttons with direct 1-tap WhatsApp quick button.
+ * - Cashier Quick-Scan Card mode for rapid counter redemption.
  */
 @Composable
 fun StoreCreditVoucherSlipDialog(
@@ -63,12 +79,37 @@ fun StoreCreditVoucherSlipDialog(
     var selectedRollWidth by rememberSaveable {
         mutableIntStateOf(invoiceSettingsData.paperRollWidthMm.takeIf { it == 58 || it == 80 } ?: 80)
     }
+    // Receipt-only language toggle (affects printed receipt content, NOT the window UI)
     var isBangla by rememberSaveable { mutableStateOf(false) }
     var isZoomed by rememberSaveable { mutableStateOf(false) }
+    var isQuickScanMode by rememberSaveable { mutableStateOf(false) }
     var showShareOptionsSheet by remember { mutableStateOf(false) }
     var isPrinting by remember { mutableStateOf(false) }
 
-    // Generates the slip JPEG asynchronously whenever roll width or language toggles
+    // Micro-animation for 3D ticket breathing
+    val infiniteTransition = rememberInfiniteTransition(label = "3d_ticket_anim")
+    val ticketScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ticket_scale"
+    )
+
+    // Micro-animation for 3D printer pulse
+    val printerPulse by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "printer_pulse"
+    )
+
+    // Generates the slip JPEG asynchronously whenever roll width or receipt language toggles
     val slipJpegFile by produceState<File?>(initialValue = null, voucher, selectedRollWidth, isBangla) {
         value = withContext(Dispatchers.IO) {
             try {
@@ -101,6 +142,7 @@ fun StoreCreditVoucherSlipDialog(
         } else null
     }
 
+    // Formatted voucher text for WhatsApp and SMS sharing
     val voucherText = remember(voucher, shopName, shopPhone, isBangla) {
         buildStoreCreditVoucherText(
             voucher = voucher,
@@ -116,21 +158,21 @@ fun StoreCreditVoucherSlipDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.96f)
-                .fillMaxHeight(0.94f)
-                .clip(RoundedCornerShape(20.dp)),
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.82f)
+                .clip(RoundedCornerShape(22.dp)),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp
         ) {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // --- TOP HEADER ---
+                // --- 1. COMPACT ERGONOMIC HEADER WITH 3D TICKET ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -138,199 +180,438 @@ fun StoreCreditVoucherSlipDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        // 3D Iridescent Voucher Ticket Icon with subtle breathing animation
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFF6366F1).copy(alpha = 0.15f),
-                            modifier = Modifier.size(38.dp)
+                            color = Color(0xFF4F46E5).copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, Color(0xFF4F46E5).copy(alpha = 0.3f)),
+                            modifier = Modifier
+                                .size(40.dp)
+                                .graphicsLayer {
+                                    scaleX = ticketScale
+                                    scaleY = ticketScale
+                                }
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text("🎟️", fontSize = 18.sp)
-                            }
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_3d_voucher_ticket),
+                                contentDescription = "3D Voucher Ticket",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
                         }
+
                         Column {
+                            // Dialog title always adheres to the main window interface language
                             Text(
                                 text = stringResource(R.string.store_credit_voucher_slip_title),
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurface
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            Text(
-                                text = "${voucher.code} · ${formatTaka(voucher.remainingBalance)}",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF4F46E5)
-                            )
+
+                            // Voucher Code Pill (with 1-tap copy) + Balance Badge
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(top = 2.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFF4F46E5).copy(alpha = 0.12f),
+                                    border = BorderStroke(1.dp, Color(0xFF4F46E5).copy(alpha = 0.25f)),
+                                    modifier = Modifier.clickable {
+                                        clipboardManager.setText(AnnotatedString(voucher.code))
+                                        Toast.makeText(context, context.getString(R.string.store_credit_code_copied), Toast.LENGTH_SHORT).show()
+                                    }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = voucher.code,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace,
+                                            color = Color(0xFF4F46E5)
+                                        )
+                                        Icon(
+                                            Icons.Default.ContentCopy,
+                                            contentDescription = "Copy",
+                                            tint = Color(0xFF4F46E5),
+                                            modifier = Modifier.size(11.dp)
+                                        )
+                                    }
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFF10B981).copy(alpha = 0.14f),
+                                    border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.3f))
+                                ) {
+                                    Text(
+                                        text = formatTaka(voucher.remainingBalance),
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF059669),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                         }
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = {
-                                clipboardManager.setText(AnnotatedString(voucher.code))
-                                Toast.makeText(context, context.getString(R.string.store_credit_code_copied), Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy Code", tint = MaterialTheme.colorScheme.primary)
-                        }
-                        IconButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+                    // Close Button (Ergonomic 48dp touch target)
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
-                // --- CONTROLS BAR (Roll Width, Language, Zoom) ---
+                // --- 2. COMPACT SEGMENTED PILL TOOLBAR ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 58mm / 80mm Segmented Toggle
+                    // Roll Width Segment: 58mm / 80mm
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
                         Row(modifier = Modifier.padding(2.dp)) {
                             FilterChip(
                                 selected = selectedRollWidth == 58,
                                 onClick = { selectedRollWidth = 58 },
-                                label = { Text("58mm", fontSize = 12.sp, fontWeight = if (selectedRollWidth == 58) FontWeight.Bold else FontWeight.Normal) },
-                                modifier = Modifier.height(32.dp),
+                                label = {
+                                    Text(
+                                        "58mm",
+                                        fontSize = 11.sp,
+                                        fontWeight = if (selectedRollWidth == 58) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                modifier = Modifier.height(28.dp),
                                 shape = RoundedCornerShape(6.dp)
                             )
-                            Spacer(Modifier.width(4.dp))
+                            Spacer(Modifier.width(2.dp))
                             FilterChip(
                                 selected = selectedRollWidth == 80,
                                 onClick = { selectedRollWidth = 80 },
-                                label = { Text("80mm", fontSize = 12.sp, fontWeight = if (selectedRollWidth == 80) FontWeight.Bold else FontWeight.Normal) },
-                                modifier = Modifier.height(32.dp),
+                                label = {
+                                    Text(
+                                        "80mm",
+                                        fontSize = 11.sp,
+                                        fontWeight = if (selectedRollWidth == 80) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                modifier = Modifier.height(28.dp),
                                 shape = RoundedCornerShape(6.dp)
                             )
                         }
                     }
 
-                    // Language Toggle: EN / বাংলা
+                    // Receipt Print Language: EN / বাংলা (Affects ONLY the receipt slip content)
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
                         Row(modifier = Modifier.padding(2.dp)) {
                             FilterChip(
                                 selected = !isBangla,
                                 onClick = { isBangla = false },
-                                label = { Text("EN", fontSize = 12.sp, fontWeight = if (!isBangla) FontWeight.Bold else FontWeight.Normal) },
-                                modifier = Modifier.height(32.dp),
+                                label = {
+                                    Text(
+                                        "EN",
+                                        fontSize = 11.sp,
+                                        fontWeight = if (!isBangla) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                modifier = Modifier.height(28.dp),
                                 shape = RoundedCornerShape(6.dp)
                             )
-                            Spacer(Modifier.width(4.dp))
+                            Spacer(Modifier.width(2.dp))
                             FilterChip(
                                 selected = isBangla,
                                 onClick = { isBangla = true },
-                                label = { Text("বাংলা", fontSize = 12.sp, fontWeight = if (isBangla) FontWeight.Bold else FontWeight.Normal) },
-                                modifier = Modifier.height(32.dp),
+                                label = {
+                                    Text(
+                                        "বাংলা",
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isBangla) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                modifier = Modifier.height(28.dp),
                                 shape = RoundedCornerShape(6.dp)
                             )
                         }
                     }
 
-                    // Zoom / Fit Toggle
-                    IconButton(
-                        onClick = { isZoomed = !isZoomed },
-                        modifier = Modifier.size(36.dp)
+                    // View Mode Switcher: Slip vs Quick Scan
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
-                        Icon(
-                            imageVector = if (isZoomed) Icons.Default.ZoomOut else Icons.Default.ZoomIn,
-                            contentDescription = if (isZoomed) "Fit Preview" else "Zoom Preview",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        Row(modifier = Modifier.padding(2.dp)) {
+                            FilterChip(
+                                selected = !isQuickScanMode,
+                                onClick = { isQuickScanMode = false },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(13.dp))
+                                },
+                                label = {
+                                    Text(
+                                        stringResource(R.string.store_credit_view_mode_slip),
+                                        fontSize = 11.sp,
+                                        fontWeight = if (!isQuickScanMode) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                modifier = Modifier.height(28.dp),
+                                shape = RoundedCornerShape(6.dp)
+                            )
+                            Spacer(Modifier.width(2.dp))
+                            FilterChip(
+                                selected = isQuickScanMode,
+                                onClick = { isQuickScanMode = true },
+                                leadingIcon = {
+                                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(13.dp))
+                                },
+                                label = {
+                                    Text(
+                                        stringResource(R.string.store_credit_view_mode_card),
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isQuickScanMode) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                modifier = Modifier.height(28.dp),
+                                shape = RoundedCornerShape(6.dp)
+                            )
+                        }
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-                // --- THERMAL PREVIEW CONTAINER ---
+                // --- 3. ACCURATE THERMAL RECEIPT & QUICK-SCAN PREVIEW AREA ---
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .background(Color(0xFFE2E8F0)) // subtle slate preview background
-                        .padding(12.dp),
+                        .background(Color(0xFFCBD5E1).copy(alpha = 0.6f))
+                        .padding(10.dp),
                     contentAlignment = Alignment.TopCenter
                 ) {
-                    if (slipBitmap == null) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                    if (isQuickScanMode) {
+                        // VIEW MODE B: CASHIER QUICK-SCAN CARD (High contrast, instant gun scanning)
+                        Card(
+                            modifier = Modifier
+                                .widthIn(max = 340.dp)
+                                .padding(top = 8.dp)
+                                .shadow(10.dp, RoundedCornerShape(16.dp)),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1B4B))
                         ) {
                             Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                                Text(
-                                    text = "Rendering thermal voucher...",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = Color(0xFFFDE047),
+                                        modifier = Modifier.size(width = 28.dp, height = 20.dp)
+                                    ) {}
+                                    Text(
+                                        text = shopName.uppercase(),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = Color(0xFFE0E7FF)
+                                    )
+                                }
+
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = "STORE CREDIT PASS",
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFA5B4FC),
+                                        letterSpacing = 1.sp
+                                    )
+                                    Text(
+                                        text = formatTaka(voucher.remainingBalance),
+                                        fontSize = 28.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.White
+                                    )
+                                }
+
+                                // Barcode Card Container
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color.White,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 4.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(10.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        if (slipBitmap != null) {
+                                            Image(
+                                                bitmap = slipBitmap!!,
+                                                contentDescription = "Barcode",
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(80.dp),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Text(
+                                                text = "||||||||||||||||||||||||||||||||||||",
+                                                fontFamily = FontFamily.Monospace,
+                                                fontWeight = FontWeight.Bold,
+                                                letterSpacing = 2.sp,
+                                                color = Color.Black
+                                            )
+                                        }
+                                        Text(
+                                            text = voucher.code,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF1E1B4B),
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_3d_barcode_scanner),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "Ready for Cashier Barcode Scanner",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFFC7D2FE)
+                                    )
+                                }
                             }
                         }
                     } else {
-                        // Paper slip styling: white sheet with shadow
-                        val verticalScrollState = rememberScrollState()
-                        val horizontalScrollState = rememberScrollState()
+                        // VIEW MODE A: ACCURATE PRINT PREVIEW FOR 58mm & 80mm
+                        if (slipBitmap == null) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 2.5.dp,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Text(
+                                        text = "Rendering ${selectedRollWidth}mm thermal voucher...",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        } else {
+                            val verticalScrollState = rememberScrollState()
 
-                        Card(
-                            modifier = Modifier
-                                .then(
-                                    if (isZoomed) {
-                                        Modifier
-                                            .fillMaxHeight()
-                                            .horizontalScroll(horizontalScrollState)
-                                            .verticalScroll(verticalScrollState)
-                                    } else {
-                                        Modifier
-                                            .widthIn(max = if (selectedRollWidth == 58) 320.dp else 420.dp)
-                                            .verticalScroll(verticalScrollState)
-                                    }
-                                )
-                                .shadow(8.dp, RoundedCornerShape(4.dp)),
-                            shape = RoundedCornerShape(4.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                        ) {
-                            Image(
-                                bitmap = slipBitmap!!,
-                                contentDescription = "Store Credit Voucher Slip Preview",
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier
-                                    .padding(8.dp)
-                                    .then(
-                                        if (isZoomed) Modifier.wrapContentSize()
-                                        else Modifier.fillMaxWidth()
-                                    ),
-                                contentScale = if (isZoomed) ContentScale.None else ContentScale.FillWidth
-                            )
+                                    .fillMaxSize()
+                                    .verticalScroll(verticalScrollState)
+                            ) {
+                                // Accurate format badge indicator
+                                Surface(
+                                    shape = RoundedCornerShape(9999.dp),
+                                    color = Color(0xFF4F46E5).copy(alpha = 0.12f),
+                                    border = BorderStroke(1.dp, Color(0xFF4F46E5).copy(alpha = 0.25f)),
+                                    modifier = Modifier.padding(bottom = 6.dp)
+                                ) {
+                                    Text(
+                                        text = if (selectedRollWidth == 58) "58mm ESC/POS (Narrow 32 Col)" else "80mm ESC/POS (Standard 42 Col)",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF4F46E5),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+
+                                // Realistic Thermal Paper Card with accurate roll width formatting
+                                Card(
+                                    modifier = Modifier
+                                        .width(if (selectedRollWidth == 58) 260.dp else 360.dp)
+                                        .shadow(8.dp, RoundedCornerShape(2.dp)),
+                                    shape = RoundedCornerShape(2.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(if (selectedRollWidth == 58) 6.dp else 10.dp)
+                                    ) {
+                                        Image(
+                                            bitmap = slipBitmap!!,
+                                            contentDescription = "Store Credit Voucher Slip ${selectedRollWidth}mm",
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentScale = ContentScale.FillWidth
+                                        )
+                                    }
+                                }
+
+                                Spacer(Modifier.height(14.dp))
+                            }
                         }
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-                // --- BOTTOM ACTIONS BAR ---
+                // --- 4. ERGONOMIC ZERO-WRAPPING ACTIONS BAR WITH 3D ICONS ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.surface)
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // PRINT BUTTON (Primary)
+                    // PRINT VOUCHER (Primary Action with 3D Printer Icon)
                     Button(
                         onClick = {
                             val file = slipJpegFile
@@ -342,7 +623,7 @@ fun StoreCreditVoucherSlipDialog(
                                             context = context,
                                             voucherFile = file,
                                             voucherCode = voucher.code,
-                                            settings = invoiceSettingsData
+                                            settings = invoiceSettingsData.copy(paperRollWidthMm = selectedRollWidth)
                                         )
                                     } catch (e: Exception) {
                                         android.util.Log.e("StoreCreditVoucher", "Print voucher failed", e)
@@ -356,7 +637,7 @@ fun StoreCreditVoucherSlipDialog(
                             }
                         },
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(1.35f)
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
@@ -368,17 +649,29 @@ fun StoreCreditVoucherSlipDialog(
                                 modifier = Modifier.size(18.dp)
                             )
                         } else {
-                            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_3d_thermal_printer),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .graphicsLayer {
+                                        scaleX = printerPulse
+                                        scaleY = printerPulse
+                                    }
+                            )
                         }
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = stringResource(R.string.store_credit_voucher_print),
+                            text = stringResource(R.string.store_credit_voucher_print_compact),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
-                    // SHARE BUTTON (Launches Modal Share Options Sheet)
+                    // SHARE SLIP (Secondary Action with 3D Share Hub Icon)
                     OutlinedButton(
                         onClick = { showShareOptionsSheet = true },
                         modifier = Modifier
@@ -388,31 +681,63 @@ fun StoreCreditVoucherSlipDialog(
                         border = BorderStroke(1.5.dp, Color(0xFF0D9488)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF0D9488))
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_3d_share_hub),
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp)
+                        )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = stringResource(R.string.store_credit_voucher_share),
+                            text = stringResource(R.string.store_credit_voucher_share_compact),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
+                    }
+
+                    // 1-TAP WHATSAPP QUICK BUTTON (Ergonomic 48dp with 3D Animated WhatsApp Icon)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF25D366).copy(alpha = 0.12f),
+                        border = BorderStroke(1.2.dp, Color(0xFF25D366)),
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clickable {
+                                val phone = voucher.customerPhone ?: ""
+                                shareStoreCreditVoucherWhatsApp(context, phone, voucherText)
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Realistic3DWhatsAppIcon(
+                                size = 28.dp,
+                                animate = true
+                            )
+                        }
                     }
                 }
             }
         }
     }
 
-    // --- MODAL SHARE OPTIONS DIALOG ---
+    // --- MODAL SHARE OPTIONS DIALOG WITH 3D SHARE PORTAL ---
     if (showShareOptionsSheet) {
         AlertDialog(
             onDismissRequest = { showShareOptionsSheet = false },
             icon = {
                 Surface(
-                    shape = CircleShape,
+                    shape = RoundedCornerShape(14.dp),
                     color = Color(0xFF0D9488).copy(alpha = 0.12f),
-                    modifier = Modifier.size(48.dp)
+                    border = BorderStroke(1.dp, Color(0xFF0D9488).copy(alpha = 0.3f)),
+                    modifier = Modifier.size(56.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Share, contentDescription = null, tint = Color(0xFF0D9488), modifier = Modifier.size(24.dp))
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_3d_share_hub),
+                            contentDescription = "3D Share Hub",
+                            modifier = Modifier.size(42.dp)
+                        )
                     }
                 }
             },
@@ -420,7 +745,7 @@ fun StoreCreditVoucherSlipDialog(
                 Text(
                     text = stringResource(R.string.store_credit_voucher_share),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
+                    fontSize = 17.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -429,10 +754,49 @@ fun StoreCreditVoucherSlipDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 6.dp),
+                        .padding(top = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Option 1: Share Image (FileProvider Intent Chooser)
+                    // Option 1: WhatsApp Direct
+                    Surface(
+                        onClick = {
+                            showShareOptionsSheet = false
+                            val phone = voucher.customerPhone ?: ""
+                            shareStoreCreditVoucherWhatsApp(context, phone, voucherText)
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF25D366).copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, Color(0xFF25D366).copy(alpha = 0.4f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Realistic3DWhatsAppIcon(
+                                size = 30.dp,
+                                animate = true
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.store_credit_share_whatsapp),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.5.sp,
+                                    color = Color(0xFF075E54)
+                                )
+                                Text(
+                                    text = "Send formatted voucher to customer's WhatsApp",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    // Option 2: Share Image (FileProvider Intent Chooser)
                     Surface(
                         onClick = {
                             showShareOptionsSheet = false
@@ -448,59 +812,27 @@ fun StoreCreditVoucherSlipDialog(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 54.dp)
+                            .heightIn(min = 52.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("🖼️", fontSize = 22.sp)
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_3d_voucher_ticket),
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp)
+                            )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(R.string.store_credit_share_image),
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
+                                    fontSize = 13.5.sp
                                 )
                                 Text(
-                                    text = "JPEG voucher slip via Bluetooth, AirDrop/QuickShare, etc.",
-                                    fontSize = 11.5.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-
-                    // Option 2: WhatsApp
-                    Surface(
-                        onClick = {
-                            showShareOptionsSheet = false
-                            val phone = voucher.customerPhone ?: ""
-                            shareStoreCreditVoucherWhatsApp(context, phone, voucherText)
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFF25D366).copy(alpha = 0.08f),
-                        border = BorderStroke(1.dp, Color(0xFF25D366).copy(alpha = 0.4f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 54.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text("💬", fontSize = 22.sp)
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.store_credit_share_whatsapp),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    color = Color(0xFF075E54)
-                                )
-                                Text(
-                                    text = "Send formatted voucher to customer's WhatsApp",
-                                    fontSize = 11.5.sp,
+                                    text = "JPEG voucher slip via Bluetooth, QuickShare, etc.",
+                                    fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -518,23 +850,25 @@ fun StoreCreditVoucherSlipDialog(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 54.dp)
+                            .heightIn(min = 52.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("✉️", fontSize = 22.sp)
+                            Realistic3DMessageReminderIcon(
+                                size = 26.dp
+                            )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(R.string.store_credit_share_sms),
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
+                                    fontSize = 13.5.sp
                                 )
                                 Text(
                                     text = "Send voucher code and details via SMS app",
-                                    fontSize = 11.5.sp,
+                                    fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -553,23 +887,28 @@ fun StoreCreditVoucherSlipDialog(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 54.dp)
+                            .heightIn(min = 52.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("📋", fontSize = 22.sp)
+                            Icon(
+                                Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(R.string.store_credit_copy_code),
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
+                                    fontSize = 13.5.sp
                                 )
                                 Text(
                                     text = "${voucher.code} (${formatTaka(voucher.remainingBalance)})",
-                                    fontSize = 11.5.sp,
+                                    fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -581,7 +920,7 @@ fun StoreCreditVoucherSlipDialog(
             dismissButton = {
                 TextButton(
                     onClick = { showShareOptionsSheet = false },
-                    modifier = Modifier.height(48.dp)
+                    modifier = Modifier.height(44.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.cancel),

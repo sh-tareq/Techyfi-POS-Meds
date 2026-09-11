@@ -3687,7 +3687,6 @@ fun SettingsScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = settingsTitle,
-                        subtitle = settingsSubtitle,
                         metricBadge = "v2.6 POS",
                         badgeColor = PosSectionColors.Settings,
                         icon = { size -> Realistic3DSettingsGearIcon(size = size) }

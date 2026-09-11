@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-11 (app version 2.6.34-V11-09-2026, build `Techyfi-POS-Final-V11-09-2026.apk` / `Techyfi-POS-Final-V29.apk`; versionCode 220911; DB schema version 27)
+Last updated: 2026-09-12 (app version 2.6.38-V12-09-2026, build `Techyfi-POS-Final-V12-09-2026.apk` / `Techyfi-POS-Final-V36.apk`; versionCode 220913; DB schema version 27)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -76,12 +76,9 @@ mindmap
               2-Column Horizontal Cards in Grid Mode (354dp per card) with Zero-Cutoff 2-Line Subheadings
               Executive Full-Width Ledger Rows in List Mode with generous touch padding
               Persistent rememberSaveable view state & bilingual accessibility labels
-      Bilingual Localization Engine & Strict Language Separation
-        Zero Hardcoded Bilingual Slash Strings (Clean 100% English vs 100% Natural Retail Bangla)
-        Android Resource-Backed Strings (res/values/strings.xml & res/values-bn/strings.xml)
-        Navigation and permission denial toasts localized to natural retail Bangla
-        Dynamic Runtime Switching via LocaleWrapper & LocalConfiguration
-        Bengali Sans-Serif font rendering eliminates complex conjunct glyph clipping (যুক্তাক্ষর)
+      Bangla Localization & Multilingual Typography
+        Natural Bangladeshi retail terminology (বাকি, জমা, হালখাতা, ক্যাশ রেজিস্ট্রার, ভাউচার)
+        Font padding disabled and line heights tuned across all typography tokens
         PDF Invoice and X/Z report canvas headers use Typeface.SANS_SERIF preventing tofu glyphs
       Accessibility & Ergonomic Touch Architecture
         Minimum 48dp touch target sizing enforced across icon buttons, chips, and steppers
@@ -101,16 +98,15 @@ mindmap
             - System Settings: Realistic3DSettingsGearIcon (Slate #64748B badge, POS hardware config)
             - Staff Management: Realistic3DCustomerHubIcon (Emerald #059669 badge, RBAC permissions)
             - More Operations Hub: Realistic3DMoreZapIcon (Indigo #6366F1 badge, management shortcuts)
-        Ergonomic Responsive Header Typography & Zero-Cutoff Architecture
-          Phone (<600dp, e.g. 360dp Galaxy A & 412dp Pixel):
-            - 40dp Squircle Container (RoundedCornerShape(12.dp)) with 25dp Photorealistic 3D Canvas Icon
-            - 18sp ExtraBold Title (lineHeight = 24.sp preventing Bengali ascender/descender clipping)
-            - 11.5sp Medium Subtitle (lineHeight = (fontSize * 1.30f).sp) with concise single-line standard (subtitleMaxLines = 1, softWrap = false) and text-ellipsis fallback preventing vertical layout stretching and awkward orphan word wrapping (e.g. 'Petty cash & daily expenses', 'Management & financial ledgers', 'Shift float & day close audit')
-            - Modifier.weight(1f, fill = false) to prevent collision with action buttons
-          Tablet (>=600dp, e.g. 10"-12" POS Tablets):
-            - 48dp Squircle Container (RoundedCornerShape(16.dp)) with 32dp Photorealistic 3D Canvas Icon
-            - 22sp ExtraBold Title (lineHeight = 28.sp) and 13sp Subtitle
-            - Prominent Inline Metric Pill Badge (RoundedCornerShape(50)) alongside title row
+        Ergonomic Clean Header Architecture & Subheading Standardization
+          Section TopAppBars (12 Sections):
+            - Subheading text removed across all 12 section screens (History, Products, Cart, Dues, Expenses, Suppliers, Reports, Customers, Loyalty, Register Close, Users, Settings)
+            - Title and 3D squircle icon are vertically centered with generous breathing room
+            - 100% elimination of text-truncation/ellipsis issues on narrow phone viewports (320-380dp)
+            - Action buttons (Stealth/Privacy, Reports, Filters, Export, Add) gain unimpeded touch targets
+          Store Operations & Tools Bottom Sheet (Untouched):
+            - Retains descriptive header subtitle: 'Management & financial ledgers'
+            - Retains all 7 tool cards with dual descriptions and category badges
     Selling workflow
       Selling Form Factors
         Phone POS Terminal
@@ -356,6 +352,20 @@ mindmap
         Store Name branding (M/S AL KAWSAR STORE)
         Live visual thermal label preview
         Show/Hide Price, Code Number, Store Name, Date Tracking
+        Price Tier on Label Selector:
+          Selling Price: rendered as "Price: <Amount>" (e.g. Price: ৳70)
+          MRP Price: rendered as "MRP Price: <Amount>" (e.g. MRP Price: ৳85)
+          Wholesale Price: rendered as "Wholesale Price: <Amount>" (e.g. Wholesale Price: ৳62)
+          Dual Display (MRP + Offer): supermarket style bargain label rendered as "MRP: ৳90 | Offer: ৳70" (or Bengali "এমআরপি: ৳৯০ | অফার: ৳৭০")
+          Uppercase category tags: SELLING PRICE, MRP PRICE, WHOLESALE
+          Micro-customization toggles:
+            Show Unit (/Pcs): appends unit (e.g. /Pcs, /পিস) to offer price
+            Bangla Digits (৳৭০): renders numerals in native Bengali script (০-৯)
+          Real-time dynamic canvas preview updating with "Not set" / "নির্ধারিত নয়" indicator when price is 0
+          Persistent user preference saved via SharedPreferences ("product_code_image_settings")
+        Batch Barcode Printing:
+          Direct selection for Selling, MRP, Wholesale, and Dual Display price tiers with Unit & Bangla Digits support
+          Bulk PDF multi-page label generation applying active price tier formatting across all items
         Mfg/Pkg & Expiry Date pickers
         Physical label dimensions (25×15, 30×20, 40×25, 45×35, 50×30, 60×40, 100×150mm, plus custom — 7 presets)
         Thermal label direct printing & high-resolution PNG/PDF image export
@@ -1623,6 +1633,149 @@ mindmap
       - Verified 80mm and 58mm voucher slip rendering with Code-128 barcode bitmap.
       - Verified English and natural Bangla bilingual slip translations.
       - Verified modal share options sheet and Android system image share chooser.
+
+## V31 - Store Credit Voucher Slip Redesign: Compact Ergonomic Layout, Photorealistic 3D Animated Icons, Accurate 58mm/80mm Formatting & Independent Receipt Language Isolation (V31 / V11-09-2026)
+
+- **Architecture & UX Enhancements**:
+  - **[V31-1] Compact, Non-Clipping Dialog Frame (`StoreCreditVoucherSlipDialog.kt`)**:
+    - Reduced dialog footprint to `fillMaxWidth(0.92f)` and `fillMaxHeight(0.82f)` (down from `0.94f`), preventing cutoff on smaller screens and mobile POS hardware.
+    - Added subtle outer elevation, 18dp rounded corners, and clean divider separation.
+  - **[V31-2] Photorealistic 3D Animated Visual Assets**:
+    - Integrated high-fidelity 3D assets with micro-animations:
+      - `ic_3d_voucher_ticket.png`: Iridescent holographic voucher ticket hero icon with continuous breathing animation (`scale` 1.0f <-> 1.05f).
+      - `ic_3d_thermal_printer.png`: Realistic POS thermal receipt printer with glowing LED and paper roll pulse.
+      - `ic_3d_share_hub.png`: Futuristic holographic multi-channel share portal icon.
+      - `ic_3d_barcode_scanner.png`: Precision handheld laser scanner icon on quick-scan card.
+      - `Realistic3DWhatsAppIcon`: Canvas-rendered 3D glossy emerald chat bubble with specular reflection and breathing pulse on both the 1-tap WhatsApp quick button and share options sheet.
+      - `Realistic3DMessageReminderIcon`: 3D messaging icon for SMS notification option.
+  - **[V31-3] Strict Receipt-Only Language Isolation**:
+    - Toggling between English (EN) and Bengali (বাংলা) in the voucher dialog controls **only** the printed thermal receipt slip rendering (`receiptLanguage = if (isBangla) "BN" else "EN"`), leaving the dialog window interface labels (title, buttons, badges) strictly anchored to the active app-wide locale.
+  - **[V31-4] Proportional 58mm vs 80mm Print Preview**:
+    - 58mm mode renders on a narrow `260.dp` card mimicking 32-column roll proportions.
+    - 80mm mode renders on a standard `360.dp` card mimicking 42-column roll proportions.
+    - Dynamic roll format indicator pill badge (`58mm ESC/POS (Narrow 32 Col)` vs `80mm ESC/POS (Standard 42 Col)`).
+  - **[V31-5] Dual View Modes (Slip vs Quick Scan Card)**:
+    - **Slip Mode**: Full thermal receipt view with store branding, barcode, amounts, and bilingual redemption guidelines.
+    - **Quick Scan Card Mode**: Deep indigo high-contrast digital card with store name, 28sp Taka balance, and prominent Code-128 barcode ready for cashier hardware scanner guns without scrolling.
+  - **[V31-6] Ergonomic Zero-Wrapping Actions Bar**:
+    - Shortened button copy with single-line guarantee (`softWrap = false`, `maxLines = 1`).
+    - Full $\ge 48\text{dp}$ touch target compliance across all buttons (Close 48dp, Print 48dp, Share 48dp, 1-Tap WhatsApp 48dp).
+  - **[V31-7] Deliverables**:
+    - Final APK deliverables assembled and verified:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V31.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V11-09-2026.apk`
+
+## V32 - Realistic 3D Animated Icons Suite, Invoice Return Tracking & Owner Invoice Profit Engine (V32 / V12-09-2026)
+
+- **Architecture & Feature Implementations**:
+  - **[V32-1] Realistic 3D Animated Icons Suite (`Realistic3DProfitIcons.kt`)**:
+    - Created canvas-driven, multi-layer volumetric 3D animated icons using specular highlights, bevel lighting, and harmonic micro-choreographies:
+      - `Realistic3DProfitVaultIcon`: Hexagonal gold chassis, deep emerald vault core, continuous specular glint sweep, upward profit chevron, and dual orbital gold coin rings.
+      - `Realistic3DReturnOrbIcon`: Deep volumetric ruby orb with radial equator pulse and counter-rotating metallic reversal arrow.
+      - `Realistic3DStealthShieldIcon`: Obsidian & sapphire stealth shield with animated brushed-steel security shutters and 3D gold padlock.
+      - `Realistic3DHighMarginGemIcon`: Emerald faceted crystal with light refraction (margins $\ge 20\%$).
+      - `Realistic3DLowMarginCoreIcon`: Amber energy core with radiating containment rings (margins $0\% - 20\%$).
+      - `Realistic3DLossPrismIcon`: Crimson alert prism with interior warning core (negative profit).
+      - `Realistic3DGoldTakaCoinIcon`: Thick 3D gold bullion coin with minted Bengali Taka (`৳`) symbol and rim bevel.
+      - `Realistic3DTopContributorStarIcon`: Golden starburst with central ruby core highlighting top invoice profit drivers.
+  - **[V32-2] Real-Time Invoice Return Intelligence & Audit**:
+    - Combined `allReturnsFlow` and `allReturnItemsFlow` into reactive `returnsBySaleId: StateFlow<Map<Long, SaleReturnSummary>>` in `SalesViewModel`.
+    - Real-time indicator on `SaleCard` in `SalesHistoryScreen`:
+      - Prominent crimson Return Alert Badge (`Realistic3DReturnOrbIcon`, return item count, and refunded amount).
+      - Strikethrough original sale total with updated net total after refund deductions.
+    - Added quick toolbar filter chip `[ ↩️ Has Returns (N) ]` to instantly isolate invoices with customer returns.
+    - Integrated Return & Refund Audit Card in Owner Profit analytics detailing refund total, reversed item count, timestamp, processing cashier, and notes.
+  - **[V32-3] Owner Invoice Profit Engine & Analytics Dialog (`OwnerProfitAnalyticsComponents.kt`, `CartScreen.kt`)**:
+    - Implemented `calculateInvoiceProfit(saleWithItems, returnSummary)` factoring in historical `purchasePriceAtSale`, promotional discounts, line revenues, returned COGS reversals, and refunds.
+    - Segmented Tab Selector in `ReceiptSummaryDialog`:
+      - `🧾 Customer Slip`: Full standard customer-facing thermal receipt preview, 58mm/80mm roll width toggle, JPEG/PDF generation, WhatsApp sharing, and printer controls.
+      - `💎 Owner Profit`: Executive analysis panel showing 3D Vault banner, Return Audit card, 6 KPI cards (Gross Revenue, Discounts, COGS, Net Profit, Net Margin %, Markup %), Revenue vs Cost distribution bar, and itemized table with ⭐ Top Contributor badge.
+  - **[V32-4] Owner Confidentiality & Counter Stealth Guardrails**:
+    - Role-based visibility strictly enforces `isOwner == true` for all profit pills, metrics, tabs, and stealth toggles.
+    - Cashiers and non-elevated staff never see cost valuations, margins, or owner analytics tabs.
+    - Customer thermal print receipts and PDF slips never print cost or profit metrics.
+    - Counter Stealth Mode: Integrated top-bar shield toggle with mechanical 3D shutters that masks all profit numbers into `•••• (•••%)` during customer interactions.
+    - Added "Highest profit" and "Lowest profit" sort options to the Sales History menu.
+  - **[V32-5] Non-Breaking Integration**:
+    - Preserved 100% of existing features, buttons, icons, and receipt layouts — strictly augmented.
+## V33 - Barcode & QR Label Price Tier Switching (Selling, MRP, Wholesale) (V33 / V12-09-2026)
+
+- **Architecture & Feature Implementations**:
+  - **[V33-1] Price Tier Data Model & Formatting (`ProductCodeImageUtils.kt`)**:
+    - Added `enum class ProductCodePriceTier { SELLING, MRP, WHOLESALE }`.
+    - Enhanced `formatProductCodeLabelPrice(formattedPrice: String)` to preserve existing price prefixes:
+      - Selling Price: `Price: <Amount>` (e.g., `Price: ৳70`)
+      - MRP Price: `MRP Price: <Amount>` (e.g., `MRP Price: ৳85`)
+      - Wholesale Price: `Wholesale Price: <Amount>` (e.g., `Wholesale Price: ৳62`)
+  - **[V33-2] Single Product Label Dialog (`ProductCodeImageDialog` in `ProductsScreen.kt`)**:
+    - Integrated persistent `priceTier` preference in `SharedPreferences("product_code_image_settings")`.
+    - Real-time responsive `SingleChoiceSegmentedButtonRow` (Selling Price, MRP Price, Wholesale Price) with active price indicator and `Not set` (`নির্ধারিত নয়`) badge when 0.
+    - Full reactivity across canvas bitmap rendering, image saving, PDF export, sharing, and thermal printing.
+    - Zero breaking changes to existing features, text scales, or 3D icons.
+  - **[V33-3] Batch Barcode Printing Integration (`BatchProductCodePrintDialog` in `ProductsScreen.kt`)**:
+    - Embedded 3-way `SingleChoiceSegmentedButtonRow` under the `Show Price` switch.
+    - Batch label mapper formats each label item according to selected price tier.
+  - **[V33-4] Bilingual Localization (`strings.xml` & `values-bn/strings.xml`)**:
+    - Added localized keys `products_price_tier_label`, `products_price_tier_selling`, `products_price_tier_mrp`, `products_price_tier_wholesale`, `products_price_tier_not_set`.
+  - **[V33-5] Deliverables**:
+    - Saved in project root:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V33.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V12-09-2026.apk`
+
+## V34 - Custom Price Tier Switcher Card UI (Exact Match to Interactive Preview) (V34 / V12-09-2026)
+
+- **UI/UX Overhaul & Pixel-Perfect Alignment**:
+  - **[V34-1] Custom `PriceTierSwitcherCard` Implementation**:
+    - Replaced the generic Material 3 `SingleChoiceSegmentedButtonRow` in both `ProductCodeImageDialog` and `BatchProductCodePrintDialog` with the custom designed card specified in `code_image_price_switch_preview.html`:
+      - **Container**: Card surface with 16dp rounded corners, 2dp purple accent border (`#C084FC`), subtle 4dp shadow elevation, and 14dp internal padding.
+      - **Header**:
+        - Left: 🏷️ Price Tag icon + "Price Tier on Label" in bold purple (`#581C87`), paired with a vibrant `NEW FEATURE` gradient badge pill (linear gradient `#A855F7` to `#6366F1`, 8.5sp bold white text).
+        - Right: Inline `Show Price` toggle checkbox styled in teal (`#00897B`) with no text wrapping.
+      - **3-Way Button Grid**:
+        - 3 equal-width cards spaced by 6dp for **Selling Price**, **MRP Price**, and **Wholesale Price**.
+        - Dual-line layout inside each button: top category tag (`tier-tag`, 10sp semi-bold) and bottom monetary value (`tier-val`, 14sp bold).
+        - Distinct active color palettes:
+          - **Selling**: Light blue surface (`#E0F2FE`), sky blue border (`#0284C7`), dark sky blue text (`#0284C7`).
+          - **MRP**: Soft amber surface (`#FEF3C7`), amber border (`#D97706`), rich amber text (`#D97706`).
+          - **Wholesale**: Lavender purple surface (`#F3E8FF`), purple border (`#7C3AED`), deep purple text (`#7C3AED`).
+          - **Inactive**: Crisp off-white surface (`#F8FAFC`), subtle slate border (`#E2E8F0`), muted tag (`#64748B`), dark value (`#0F172A`).
+      - **Disabled & Alpha States**:
+        - When `Show Price` is unchecked, the 3-button grid is dynamically disabled and dimmed to 0.4f alpha, while the price label line is completely removed from the sticker preview and generated output.
+  - **[V34-2] Sticker Price Fallback & Reorganization**:
+    - Isolated "Show Code Number" into its own clean separate card directly below the price switcher card.
+    - Updated `formattedPriceString` with graceful fallback logic: if MRP or Wholesale price is 0 / not set, the sticker preview automatically falls back to the product's selling price instead of rendering `৳0`.
+  - **[V34-3] Deliverables**:
+    - Saved strictly in project root:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V34.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V12-09-2026.apk`
+
+## V35 - Removed "NEW FEATURE" Badge, Added Dual Display & Micro-Customizations (V35 / V12-09-2026)
+
+- **User Directives & Visual Perfection**:
+  - **[V35-1] Removed "NEW FEATURE" Badge**:
+    - Completely removed the `NEW FEATURE` gradient badge pill from the `🏷️ Price Tier on Label` header row in `PriceTierSwitcherCard`, restoring a clean, minimal header alongside the `[✓] Show Price` toggle.
+  - **[V35-2] Uppercase Category Tags**:
+    - Converted tier tags to uppercase (`SELLING PRICE`, `MRP PRICE`, `WHOLESALE`) matching `code_image_price_switch_preview.html`.
+  - **[V35-3] Added Dual Display (MRP + Offer) Button**:
+    - Added dedicated full-width supermarket bargain card directly beneath the 3 tier buttons.
+    - Features:
+      - Inactive state: light green surface (`#F0FDF4`) with custom dashed border (`#86EFAC`).
+      - Active state: mint green surface (`#D1FAE5`) with solid emerald border (`#10B981`) and elevation.
+      - Left column: Sparkle icon (`✨`), title `Dual Display (MRP + Offer)`, subtitle `Supermarket style bargain label`.
+      - Right badge: Pill showing `MRP <MRP_PRICE>` (strikethrough text decoration) and `<SELLING_PRICE>` (bold green).
+      - Canvas rendering: outputs `MRP: ৳90 | Offer: ৳70` (or `এমআরপি: ৳৯০ | অফার: ৳৭০`), with automatic barcode canvas wrapping and scaling.
+  - **[V35-4] Micro-Customizations Row**:
+    - Separated by dotted / dashed divider line (`Canvas` with `dashPathEffect(4.dp, 4.dp)`).
+    - Added two toggle chips:
+      - `Show Unit (/Pcs)` (ON/OFF): Appends `/Pcs` or Bengali `/পিস` to the offer price.
+      - `Bangla Digits (৳৭০)` (ON/OFF): Converts numeric digits to Bengali numerals (`০-৯`) across both UI buttons and barcode canvas sticker.
+    - User selections persist across sessions in `SharedPreferences`.
+  - **[V35-5] Batch Barcode Print Dialog Parity**:
+    - Wired `showUnit` and `showBanglaDigits` into `BatchProductCodePrintDialog` and batch PDF label generator.
+  - **[V35-6] Deliverables**:
+    - Saved strictly in project root:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V35.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V12-09-2026.apk`
 
 ## Maintenance note
 

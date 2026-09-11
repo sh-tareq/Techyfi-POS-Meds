@@ -401,9 +401,6 @@ fun CartScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = if (showCheckout) stringResource(R.string.complete_sale) else stringResource(R.string.cart),
-                        subtitle = if (cartItems.isNotEmpty() && !showCheckout) {
-                            stringResource(R.string.cart_header_subtitle, cartItems.size)
-                        } else null,
                         metricBadge = if (cartItems.isNotEmpty() && !showCheckout) "${cartItems.size} Items" else null,
                         badgeColor = PosSectionColors.Cart,
                         icon = { size ->
@@ -2188,7 +2185,8 @@ fun CartScreen(
                                         lineTotal = chargedUnitPrice * item.quantity,
                                         unit = item.product.unit,
                                         note = item.note,
-                                        mrpPrice = if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice
+                                        mrpPrice = if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice,
+                                        purchasePrice = item.product.purchasePrice
                                     )
                                 }
                                 val snapshotSubtotal = subtotal
@@ -2383,7 +2381,8 @@ fun CartScreen(
             } else null,
             onEdit = if (isOwner && completedSale != null) {
                 { showEditConfirmForCompletedSale = true }
-            } else null
+            } else null,
+            isOwner = isOwner
         )
     }
 
@@ -2446,7 +2445,8 @@ fun CartScreen(
                         lineTotal = chargedUnitPrice * item.quantity,
                         unit = item.product.unit,
                         note = item.note,
-                        mrpPrice = if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice
+                        mrpPrice = if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice,
+                        purchasePrice = item.product.purchasePrice
                     )
                 }
                 val snapshotSubtotal = subtotal
@@ -3343,11 +3343,14 @@ fun ReceiptSummaryDialog(
     onDelete: (() -> Unit)? = null,
     onEdit: (() -> Unit)? = null,
     onAddToCartAgain: (() -> Unit)? = null,
-    onViewVoucherSlip: (() -> Unit)? = null
+    onViewVoucherSlip: (() -> Unit)? = null,
+    isOwner: Boolean = false,
+    returnSummary: com.example.techyfipos.ui.viewmodel.SaleReturnSummary? = null
 ) {
     val context = LocalContext.current
     val activity = androidx.activity.compose.LocalActivity.current
     val scope = rememberCoroutineScope()
+    var selectedDialogTab by rememberSaveable { mutableIntStateOf(0) }
     val receiptLanguageState = rememberSaveable { mutableStateOf("EN") }
     var receiptLanguage by receiptLanguageState
     val receiptText = remember(bill, receiptLanguage) { buildBillReceiptText(bill, receiptLanguage = receiptLanguage) }
@@ -3644,6 +3647,77 @@ fun ReceiptSummaryDialog(
                     }
                 }
 
+                // Segmented Tabs: 🧾 Customer Slip vs 💎 Owner Profit
+                if (isOwner) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(3.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Surface(
+                                onClick = { selectedDialogTab = 0 },
+                                shape = RoundedCornerShape(9.dp),
+                                color = if (selectedDialogTab == 0) MaterialTheme.colorScheme.surface else Color.Transparent,
+                                shadowElevation = if (selectedDialogTab == 0) 2.dp else 0.dp,
+                                modifier = Modifier.weight(1f).height(36.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text("🧾", fontSize = 13.sp)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = stringResource(R.string.invoice_tab_receipt_slip),
+                                        fontSize = 12.sp,
+                                        fontWeight = if (selectedDialogTab == 0) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selectedDialogTab == 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                onClick = { selectedDialogTab = 1 },
+                                shape = RoundedCornerShape(9.dp),
+                                color = if (selectedDialogTab == 1) Color(0xFF0F172A) else Color.Transparent,
+                                shadowElevation = if (selectedDialogTab == 1) 2.dp else 0.dp,
+                                modifier = Modifier.weight(1f).height(36.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Realistic3DProfitVaultIcon(size = 14.dp, animated = selectedDialogTab == 1)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = stringResource(R.string.invoice_tab_profit_analytics),
+                                        fontSize = 12.sp,
+                                        fontWeight = if (selectedDialogTab == 1) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selectedDialogTab == 1) Color(0xFFFDE68A) else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (isOwner && selectedDialogTab == 1) {
+                    OwnerProfitAnalyticsContent(
+                        bill = activeBill,
+                        returnSummary = returnSummary,
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
                 // 2. Part 1: Quick Financial Metrics Ribbon (Photorealistic 3D Animated Icons)
                 Surface(
                     color = Color(0xFFE8F8F5),
@@ -3906,6 +3980,7 @@ fun ReceiptSummaryDialog(
                             }
                         }
                     }
+                }
                 }
 
                 // 4. Ergonomic Bottom Action Deck

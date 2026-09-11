@@ -277,7 +277,6 @@ fun DayStartCloseScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.register_close_screen_title),
-                        subtitle = stringResource(R.string.register_close_screen_subtitle),
                         metricBadge = "Z-Report",
                         badgeColor = PosSectionColors.RegisterClose,
                         isTablet = isTablet,

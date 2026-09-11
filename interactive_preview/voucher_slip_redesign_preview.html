@@ -1,0 +1,2561 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS — Store Credit Voucher Slip Redesign (Compact & 3D Animated)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=Libre+Barcode+128&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --primary-gradient: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      --primary-glow: rgba(79, 70, 229, 0.35);
+      --primary-light: rgba(79, 70, 229, 0.12);
+
+      --emerald: #10B981;
+      --emerald-gradient: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      --emerald-glow: rgba(16, 185, 129, 0.3);
+      --emerald-light: rgba(16, 185, 129, 0.12);
+
+      --whatsapp: #25D366;
+      --whatsapp-dark: #128C7E;
+      --whatsapp-gradient: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+
+      --amber: #F59E0B;
+      --amber-light: rgba(245, 158, 11, 0.14);
+      --rose: #F43F5E;
+      --rose-light: rgba(244, 63, 94, 0.14);
+
+      /* Dark Theme (Default) */
+      --bg-canvas: #090D16;
+      --bg-surface: #111827;
+      --bg-card: #182234;
+      --bg-card-hover: #1F2E45;
+      --bg-phone: #0D1525;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(79, 70, 229, 0.45);
+      --border-emerald: rgba(16, 185, 129, 0.45);
+
+      --text-primary: #F9FAFB;
+      --text-secondary: #9CA3AF;
+      --text-tertiary: #6B7280;
+
+      --shadow-phone: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
+
+      --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-bn: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-canvas: #F1F5F9;
+      --bg-surface: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F8FAFC;
+      --bg-phone: #F8FAFC;
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --border-highlight: rgba(79, 70, 229, 0.3);
+      --border-emerald: rgba(16, 185, 129, 0.35);
+
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-tertiary: #94A3B8;
+
+      --shadow-phone: 0 20px 45px -10px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.08);
+      --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    .main-wrapper {
+      width: 100%;
+      max-width: 1400px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 1px 6px;
+      border-radius: 5px;
+      border: 1px solid rgba(79, 70, 229, 0.25);
+    }
+
+    /* Top Control Hub */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding: 16px 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon-3d {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(79, 70, 229, 0.4);
+      flex-shrink: 0;
+      transform: perspective(400px) rotateY(-8deg) rotateX(4deg);
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+
+    .brand-icon-3d:hover {
+      transform: perspective(400px) rotateY(0deg) rotateX(0deg) scale(1.08);
+    }
+
+    .brand-icon-3d img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-tag {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--border-highlight);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .brand-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .control-pills {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 14px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .pill-btn:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-primary);
+      border-color: var(--border-highlight);
+    }
+
+    .pill-btn.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: var(--primary);
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    /* Comparison Stage */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 4px;
+      transition: all 0.3s ease;
+    }
+
+    .comparison-grid.single-proposed {
+      grid-template-columns: 1fr;
+    }
+
+    .comparison-grid.single-proposed .panel-card:not(.featured) {
+      display: none;
+    }
+
+    .comparison-grid.single-legacy {
+      grid-template-columns: 1fr;
+    }
+
+    .comparison-grid.single-legacy .panel-card.featured {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-card);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel-card.featured {
+      border-color: var(--primary);
+      box-shadow: 0 8px 32px var(--primary-glow), var(--shadow-card);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-tag-redesign {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      background: var(--emerald-light);
+      color: var(--emerald);
+      border: 1px solid var(--emerald);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .panel-tag-legacy {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      background: var(--rose-light);
+      color: var(--rose);
+      border: 1px solid var(--rose);
+      font-weight: 700;
+    }
+
+    /* Device Container */
+    .device-stage {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 720px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.3) 100%);
+      border-radius: 20px;
+      padding: 24px 12px;
+      position: relative;
+    }
+
+    /* Phone Shell */
+    .phone-frame {
+      width: 380px;
+      background: var(--bg-phone);
+      border-radius: 40px;
+      padding: 12px;
+      box-shadow: var(--shadow-phone);
+      position: relative;
+      border: 8px solid #1E293B;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width 0.3s ease;
+    }
+
+    .phone-frame.tablet {
+      width: 520px;
+      border-radius: 28px;
+    }
+
+    .phone-notch {
+      width: 110px;
+      height: 22px;
+      background: #1E293B;
+      border-bottom-left-radius: 14px;
+      border-bottom-right-radius: 14px;
+      margin: 0 auto 10px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .phone-camera {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #090D16;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .phone-speaker {
+      width: 40px;
+      height: 3px;
+      border-radius: 2px;
+      background: #334155;
+    }
+
+    /* Redesigned Dialog Modal inside Phone */
+    .dialog-container-redesign {
+      background: var(--bg-surface);
+      border-radius: 22px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      max-height: 660px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Compact Header with 3D Ticket */
+    .redesign-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, rgba(79, 70, 229, 0.02) 100%);
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ticket-3d-box {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      perspective: 300px;
+      flex-shrink: 0;
+    }
+
+    .ticket-3d-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .ticket-3d-box:hover img {
+      transform: scale(1.15) rotate(-6deg);
+    }
+
+    .ticket-3d-shimmer {
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      animation: shimmerSweep 3.5s infinite;
+      pointer-events: none;
+    }
+
+    @keyframes shimmerSweep {
+      0% { left: -100%; }
+      30% { left: 100%; }
+      100% { left: 100%; }
+    }
+
+    .header-meta {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .header-subtitle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 1px;
+    }
+
+    .voucher-code-pill {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 1px 6px;
+      border-radius: 5px;
+      border: 1px solid rgba(79, 70, 229, 0.25);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .voucher-code-pill:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    .voucher-amount-badge {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--emerald);
+      background: var(--emerald-light);
+      padding: 1px 7px;
+      border-radius: 9999px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .icon-btn-compact {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn-compact:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-primary);
+      border-color: var(--border-subtle);
+    }
+
+    .icon-btn-compact.close:hover {
+      background: var(--rose-light);
+      color: var(--rose);
+      border-color: var(--rose);
+    }
+
+    /* Compact Segmented Pill Toolbar */
+    .redesign-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-subtle);
+      gap: 6px;
+    }
+
+    .segmented-capsule {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 2px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .segment-item {
+      padding: 4px 9px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .segment-item.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px var(--primary-glow);
+    }
+
+    .segment-item:hover:not(.active) {
+      color: var(--text-primary);
+    }
+
+    .view-toggle-capsule {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 2px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .view-item {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.18s ease;
+    }
+
+    .view-item.active {
+      background: var(--emerald);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px var(--emerald-glow);
+    }
+
+    /* Thermal Slip Viewer Arena */
+    .thermal-preview-viewport {
+      background: #CBD5E1;
+      padding: 14px 10px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      overflow-y: auto;
+      max-height: 440px;
+      position: relative;
+    }
+
+    [data-theme="dark"] .thermal-preview-viewport {
+      background: #1E293B;
+    }
+
+    /* Realistic Thermal Receipt Slip */
+    .thermal-slip {
+      background: #FFFFFF;
+      color: #111827;
+      width: 100%;
+      max-width: 310px; /* 80mm default */
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.12);
+      position: relative;
+      padding: 16px 14px 18px 14px;
+      font-family: var(--font-mono);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: max-width 0.25s ease, transform 0.2s ease;
+    }
+
+    .thermal-slip.width-58 {
+      max-width: 250px;
+      padding: 12px 10px 14px 10px;
+      font-size: 10.5px;
+    }
+
+    /* Perforated Sawtooth Tear Edge */
+    .tear-edge-top {
+      position: absolute;
+      top: -6px;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      background: radial-gradient(circle, transparent, transparent 50%, #FFFFFF 50%, #FFFFFF 100%);
+      background-size: 10px 6px;
+    }
+
+    .tear-edge-bottom {
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      width: 100%;
+      height: 8px;
+      background: radial-gradient(circle, transparent, transparent 50%, #FFFFFF 50%, #FFFFFF 100%);
+      background-size: 10px 8px;
+      transform: rotate(180deg);
+    }
+
+    .store-logo-mark {
+      width: 76px;
+      height: auto;
+      margin-bottom: 4px;
+      filter: contrast(160%) grayscale(100%);
+    }
+
+    .slip-store-title {
+      font-family: var(--font-main);
+      font-weight: 800;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-align: center;
+      color: #000000;
+      margin-top: 2px;
+    }
+
+    .slip-store-sub {
+      font-size: 10px;
+      text-align: center;
+      color: #374151;
+      margin-top: 1px;
+      line-height: 1.3;
+    }
+
+    .slip-divider-double {
+      width: 100%;
+      text-align: center;
+      color: #4B5563;
+      font-size: 10px;
+      margin: 6px 0;
+      letter-spacing: -1px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .slip-section-title {
+      font-family: var(--font-main);
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: center;
+      margin: 1px 0;
+      color: #000000;
+    }
+
+    .slip-section-sub {
+      font-size: 9.5px;
+      color: #4B5563;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    /* Voucher Value Box */
+    .slip-value-box {
+      width: 100%;
+      border: 1.5px solid #000000;
+      border-radius: 6px;
+      padding: 6px 4px;
+      text-align: center;
+      margin: 6px 0;
+      background: #F9FAFB;
+    }
+
+    .slip-value-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #4B5563;
+    }
+
+    .slip-value-amount {
+      font-family: var(--font-main);
+      font-size: 20px;
+      font-weight: 900;
+      color: #000000;
+      letter-spacing: -0.02em;
+      margin-top: 1px;
+    }
+
+    /* Barcode Box with Interactive Laser Beam */
+    .barcode-container {
+      width: 100%;
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .barcode-container:hover {
+      background: rgba(79, 70, 229, 0.04);
+    }
+
+    .barcode-svg {
+      width: 88%;
+      height: 48px;
+      display: block;
+    }
+
+    .barcode-code-text {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #111827;
+      margin-top: 3px;
+      letter-spacing: 0.12em;
+    }
+
+    /* Animated Laser Scanner Line */
+    .laser-scan-line {
+      position: absolute;
+      left: 6%;
+      width: 88%;
+      height: 2px;
+      background: #EF4444;
+      box-shadow: 0 0 8px #EF4444, 0 0 14px rgba(239, 68, 68, 0.8);
+      top: 14px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .barcode-container:hover .laser-scan-line,
+    .barcode-container.scanning .laser-scan-line {
+      opacity: 1;
+      animation: laserSweep 1.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes laserSweep {
+      0% { top: 12px; }
+      100% { top: 48px; }
+    }
+
+    .scan-hint {
+      font-size: 8.5px;
+      color: #6B7280;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    /* Slip Meta Table */
+    .slip-details-table {
+      width: 100%;
+      margin-top: 6px;
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
+    .slip-row {
+      display: flex;
+      justify-content: space-between;
+      color: #111827;
+    }
+
+    .slip-row-label {
+      color: #4B5563;
+    }
+
+    .slip-row-value {
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .slip-footer-terms {
+      margin-top: 8px;
+      font-size: 8.5px;
+      text-align: center;
+      color: #6B7280;
+      border-top: 1px dashed #9CA3AF;
+      padding-top: 6px;
+      width: 100%;
+      line-height: 1.35;
+    }
+
+    /* Quick Scan Card Mode */
+    .quick-scan-card {
+      width: 100%;
+      max-width: 320px;
+      background: linear-gradient(145deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%);
+      border-radius: 18px;
+      padding: 18px;
+      color: #FFFFFF;
+      box-shadow: 0 12px 35px rgba(79, 70, 229, 0.4), inset 0 1px 1px rgba(255,255,255,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .card-hologram-strip {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 120px;
+      height: 100%;
+      background: radial-gradient(circle at 100% 0%, rgba(245, 158, 11, 0.25) 0%, rgba(16, 185, 129, 0.2) 50%, transparent 80%);
+      pointer-events: none;
+    }
+
+    .card-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .card-chip {
+      width: 34px;
+      height: 26px;
+      background: linear-gradient(135deg, #FDE047 0%, #D97706 100%);
+      border-radius: 5px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-chip::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border: 1px solid rgba(0,0,0,0.25);
+      border-radius: 4px;
+    }
+
+    .card-store-name {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-align: right;
+      color: #E0E7FF;
+    }
+
+    .card-amount-block {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-amount-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #A5B4FC;
+      font-weight: 600;
+    }
+
+    .card-amount-num {
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: #FFFFFF;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .card-barcode-box {
+      background: #FFFFFF;
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+
+    .card-barcode-box .barcode-svg {
+      height: 42px;
+    }
+
+    .card-meta-pills {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #C7D2FE;
+    }
+
+    /* Ergonomic Bottom Actions Bar (Zero Wrapping!) */
+    .redesign-actions-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .btn-action-primary {
+      flex: 1.4;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--primary-gradient);
+      color: #FFFFFF;
+      border: none;
+      font-family: var(--font-main);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px var(--primary-glow);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-action-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px var(--primary-glow);
+    }
+
+    .btn-action-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-icon-3d {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+
+    .btn-action-share {
+      flex: 1;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--emerald-light);
+      color: var(--emerald);
+      border: 1.5px solid var(--emerald);
+      font-family: var(--font-main);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-action-share:hover {
+      background: var(--emerald);
+      color: #FFFFFF;
+      box-shadow: 0 4px 14px var(--emerald-glow);
+    }
+
+    .btn-action-whatsapp {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(37, 211, 102, 0.12);
+      border: 1.5px solid var(--whatsapp);
+      color: var(--whatsapp);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .btn-action-whatsapp:hover {
+      background: var(--whatsapp);
+      color: #FFFFFF;
+      box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
+      transform: scale(1.05);
+    }
+
+    /* Legacy Clunky Side for Direct Comparison */
+    .legacy-dialog-box {
+      background: #FFFFFF;
+      border-radius: 20px;
+      border: 1px solid #E2E8F0;
+      display: flex;
+      flex-direction: column;
+      color: #0F172A;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      overflow: hidden;
+      max-height: 660px;
+    }
+
+    .legacy-header {
+      background: #F1F5F9;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #E2E8F0;
+    }
+
+    .legacy-ticket-box {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(99, 102, 241, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .legacy-toolbar {
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #FFFFFF;
+      border-bottom: 1px solid #E2E8F0;
+    }
+
+    .legacy-buttons-row {
+      padding: 14px;
+      display: flex;
+      gap: 10px;
+      background: #FFFFFF;
+      border-top: 1px solid #E2E8F0;
+    }
+
+    .legacy-btn-print {
+      flex: 1;
+      height: 48px;
+      background: #4F46E5;
+      color: white;
+      border-radius: 12px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13.5px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .legacy-btn-share {
+      flex: 1;
+      height: 48px;
+      background: transparent;
+      color: #0D9488;
+      border: 1.5px solid #0D9488;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13.5px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    /* Feature Highlights & UX Audit Cards */
+    .critique-pills-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .critique-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .critique-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .critique-icon.fix {
+      background: var(--emerald-light);
+      color: var(--emerald);
+    }
+
+    .critique-icon.warn {
+      background: var(--rose-light);
+      color: var(--rose);
+    }
+
+    .critique-text h4 {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .critique-text p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    /* Modal Share Sheet Simulation */
+    .share-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      padding: 16px;
+    }
+
+    .share-modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .share-modal-box {
+      width: 100%;
+      max-width: 440px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      transform: scale(0.92) translateY(20px);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .share-modal-overlay.open .share-modal-box {
+      transform: scale(1) translateY(0);
+    }
+
+    .share-hero-3d {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 12px auto;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px var(--emerald-glow);
+    }
+
+    .share-hero-3d img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .share-channel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .share-channel-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .share-channel-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--primary);
+      transform: translateX(4px);
+    }
+
+    .channel-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .channel-info h5 {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .channel-info p {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    /* Interactive Printer Eject Toast / Animation */
+    .print-animation-banner {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120px);
+      background: var(--bg-surface);
+      border: 1px solid var(--primary);
+      padding: 12px 20px;
+      border-radius: 16px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 20px var(--primary-glow);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      z-index: 900;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .print-animation-banner.active {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .printer-anim-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      overflow: hidden;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .printer-anim-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .toast-message {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: var(--emerald-gradient);
+      color: white;
+      padding: 10px 18px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 8px 24px var(--emerald-glow);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transform: translateY(-80px);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 2000;
+    }
+
+    /* 3D Icon Showcase Gallery */
+    .showcase-3d-section {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 26px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 6px;
+    }
+
+    .gallery-3d-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .gallery-3d-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 14px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .gallery-3d-card:hover {
+      transform: translateY(-6px) scale(1.02);
+      border-color: var(--primary);
+      box-shadow: 0 16px 36px rgba(79, 70, 229, 0.25);
+    }
+
+    .gallery-3d-img-box {
+      width: 130px;
+      height: 130px;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+      position: relative;
+      perspective: 600px;
+      transform-style: preserve-3d;
+      transition: transform 0.4s ease;
+    }
+
+    .gallery-3d-card:hover .gallery-3d-img-box {
+      transform: rotateY(12deg) rotateX(-8deg) scale(1.06);
+    }
+
+    .gallery-3d-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .gallery-3d-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .gallery-3d-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .gallery-3d-tag {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--border-highlight);
+      text-transform: uppercase;
+    }
+
+    /* Architecture Blueprint Box */
+    .blueprint-card {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%);
+      border: 1.5px solid var(--primary);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .blueprint-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .blueprint-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .blueprint-col {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .blueprint-col h5 {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .blueprint-col p, .blueprint-col li {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .blueprint-col ul {
+      padding-left: 18px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+
+  <!-- TOP HUB -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <div class="brand-icon-3d" title="Click for 3D Hologram Tilt">
+        <img src="assets/3d_voucher_ticket.jpg" alt="3D Voucher Ticket">
+      </div>
+      <div>
+        <div class="brand-title">
+          Techyfi POS — Store Credit Slip
+          <span class="badge-tag">UX Redesign</span>
+        </div>
+        <div class="brand-sub">
+          Compact Layout · Photorealistic 3D Animated Icons · Anti-Text-Wrap Ergonomics
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Controls -->
+    <div class="control-pills">
+      <!-- Layout Modes -->
+      <div class="segmented-capsule" style="background: var(--bg-card);">
+        <div class="segment-item active" id="layoutBtnSplit" onclick="setLayoutMode('split')">
+          <span>⊞ Split View</span>
+        </div>
+        <div class="segment-item" id="layoutBtnProposed" onclick="setLayoutMode('proposed')">
+          <span>✨ Proposed</span>
+        </div>
+        <div class="segment-item" id="layoutBtnLegacy" onclick="setLayoutMode('legacy')">
+          <span>⚠️ Legacy</span>
+        </div>
+      </div>
+
+      <button class="pill-btn" id="appLangBtn" onclick="toggleAppWindowLanguage()" title="Toggle App Interface Language (Controls window strings)">
+        <span>🌐</span> <span id="appLangLabel">App Language: EN</span>
+      </button>
+
+      <button class="pill-btn" id="themeToggleBtn" onclick="toggleTheme()">
+        <span id="themeIcon">☀️</span> <span id="themeLabel">Light Mode</span>
+      </button>
+
+      <button class="pill-btn" id="deviceToggleBtn" onclick="toggleDevice()">
+        <span>📱</span> <span id="deviceLabel">Mobile View (380px)</span>
+      </button>
+
+      <button class="pill-btn active" id="audioToggleBtn" onclick="toggleAudio()">
+        <span>🔊</span> <span id="audioLabel">Haptics / Sound ON</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- SIDE BY SIDE COMPARISON STAGE -->
+  <div class="comparison-grid" id="comparisonGrid">
+
+    <!-- PROPOSED REDESIGNED COMPONENT (FEATURED) -->
+    <div class="panel-card featured">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>✨</span> Proposed Compact Redesign
+          <span class="panel-tag-redesign">✓ Recommended</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-secondary);">
+          Zero Text-Wrap · 3D Tactile Depth
+        </div>
+      </div>
+
+      <div class="device-stage">
+        <div class="phone-frame" id="redesignPhoneFrame">
+          <div class="phone-notch">
+            <div class="phone-camera"></div>
+            <div class="phone-speaker"></div>
+          </div>
+
+          <!-- THE REDESIGNED DIALOG -->
+          <div class="dialog-container-redesign" id="voucherDialog">
+
+            <!-- 1. COMPACT ERGONOMIC HEADER -->
+            <div class="redesign-header">
+              <div class="header-left">
+                <div class="ticket-3d-box" onclick="triggerTicketHoloEffect()" title="Interactive 3D Voucher Ticket">
+                  <img src="assets/3d_voucher_ticket.jpg" alt="3D Ticket" id="ticket3dImg">
+                  <div class="ticket-3d-shimmer"></div>
+                </div>
+                <div class="header-meta">
+                  <div class="header-title-row">
+                    <span class="header-title" id="dynDialogTitle">Store Credit Voucher</span>
+                  </div>
+                  <div class="header-subtitle">
+                    <span class="voucher-code-pill" onclick="copyVoucherCode('SC-1738-6003')" title="Click to copy voucher code">
+                      <span id="dynVoucherCode">SC-1738-6003</span>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </span>
+                    <span class="voucher-amount-badge" id="dynVoucherAmountBadge">৳550</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="header-actions">
+                <button class="icon-btn-compact" onclick="copyVoucherCode('SC-1738-6003')" title="Copy Code">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+                <button class="icon-btn-compact close" onclick="showDismissFeedback()" title="Close Dialog">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- 2. COMPACT SEGMENTED PILL TOOLBAR -->
+            <div class="redesign-toolbar">
+              <!-- Roll Width Toggle (58mm / 80mm) -->
+              <div class="segmented-capsule">
+                <div class="segment-item" id="segWidth58" onclick="setRollWidth(58)">
+                  <span>58mm</span>
+                </div>
+                <div class="segment-item active" id="segWidth80" onclick="setRollWidth(80)">
+                  <span>80mm</span>
+                </div>
+              </div>
+
+              <!-- Language Toggle (EN / বাংলা) -->
+              <div class="segmented-capsule">
+                <div class="segment-item active" id="segLangEN" onclick="setLanguage('EN')">
+                  <span>EN</span>
+                </div>
+                <div class="segment-item" id="segLangBN" onclick="setLanguage('BN')">
+                  <span>বাংলা</span>
+                </div>
+              </div>
+
+              <!-- View Switcher (Slip vs Quick Scan Card) -->
+              <div class="view-toggle-capsule">
+                <div class="view-item active" id="viewModeSlip" onclick="setViewMode('slip')" title="Thermal Receipt Slip View">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                  <span>Slip</span>
+                </div>
+                <div class="view-item" id="viewModeCard" onclick="setViewMode('card')" title="Cashier Quick-Scan Card">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                  <span>Scan</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. THERMAL PREVIEW VIEWPORT -->
+            <div class="thermal-preview-viewport" id="previewViewport">
+
+              <!-- VIEW A: REALISTIC THERMAL PAPER SLIP -->
+              <div class="thermal-slip" id="thermalSlip">
+                <div class="tear-edge-top"></div>
+
+                <!-- Store Logo & Header -->
+                <svg class="store-logo-mark" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <polygon points="50,5 95,50 50,95 5,50" stroke="#000" stroke-width="5" fill="none" stroke-dasharray="2 2"/>
+                  <polygon points="50,15 85,50 50,85 15,50" fill="#000"/>
+                  <text x="50" y="44" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="16" fill="#FFF" text-anchor="middle">MAKS</text>
+                  <text x="50" y="60" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="11" fill="#FFF" text-anchor="middle">KAWSAR STORE</text>
+                </svg>
+
+                <div class="slip-store-title" id="dynStoreName">M/S AL KAWSAR STORE</div>
+                <div class="slip-store-sub" id="dynStoreAddr">121 WEST KAFRUL, TALTOLA, DHAKA<br>01711352148 | 01712-650307</div>
+
+                <!-- Format Tag Badge -->
+                <div style="font-size: 9px; font-weight: 800; color: #4F46E5; background: #EEF2FF; padding: 2px 8px; border-radius: 9999px; margin-bottom: 6px; letter-spacing: 0.05em; border: 1px solid #C7D2FE;" id="slipFormatBadge">
+                  80mm ESC/POS (42 Col)
+                </div>
+
+                <div class="slip-divider-double" id="dividerTop">==========================================</div>
+
+                <div class="slip-section-title" id="dynVoucherTitle">*** STORE CREDIT VOUCHER ***</div>
+                <div class="slip-section-sub" id="dynVoucherSub">(Customer Bearer Slip)</div>
+
+                <!-- Voucher Value Box -->
+                <div class="slip-value-box">
+                  <div class="slip-value-label" id="dynValueLabel">VOUCHER VALUE</div>
+                  <div class="slip-value-amount" id="dynValueNum">৳550</div>
+                </div>
+
+                <div class="slip-divider-double" id="dividerMid" style="margin: 4px 0;">------------------------------------------</div>
+
+                <!-- Barcode Container with Interactive Red Laser Scanner -->
+                <div class="barcode-container" id="barcodeBox" onclick="simulateBarcodeBeep()" title="Click to trigger Cashier Laser Scan">
+                  <div class="laser-scan-line"></div>
+                  <!-- SVG Barcode (Code 128 rendering for SC-1738-6003) -->
+                  <svg class="barcode-svg" viewBox="0 0 260 50" preserveAspectRatio="none">
+                    <rect x="0" y="0" width="260" height="50" fill="#FFFFFF"/>
+                    <!-- Crisp bar pattern -->
+                    <g fill="#000000">
+                      <rect x="10" y="2" width="3" height="46"/>
+                      <rect x="15" y="2" width="2" height="46"/>
+                      <rect x="20" y="2" width="5" height="46"/>
+                      <rect x="28" y="2" width="2" height="46"/>
+                      <rect x="33" y="2" width="4" height="46"/>
+                      <rect x="40" y="2" width="2" height="46"/>
+                      <rect x="44" y="2" width="6" height="46"/>
+                      <rect x="53" y="2" width="3" height="46"/>
+                      <rect x="59" y="2" width="2" height="46"/>
+                      <rect x="64" y="2" width="5" height="46"/>
+                      <rect x="72" y="2" width="3" height="46"/>
+                      <rect x="78" y="2" width="6" height="46"/>
+                      <rect x="87" y="2" width="2" height="46"/>
+                      <rect x="92" y="2" width="4" height="46"/>
+                      <rect x="99" y="2" width="3" height="46"/>
+                      <rect x="105" y="2" width="5" height="46"/>
+                      <rect x="113" y="2" width="2" height="46"/>
+                      <rect x="118" y="2" width="4" height="46"/>
+                      <rect x="125" y="2" width="6" height="46"/>
+                      <rect x="134" y="2" width="2" height="46"/>
+                      <rect x="139" y="2" width="5" height="46"/>
+                      <rect x="147" y="2" width="3" height="46"/>
+                      <rect x="153" y="2" width="4" height="46"/>
+                      <rect x="160" y="2" width="2" height="46"/>
+                      <rect x="165" y="2" width="6" height="46"/>
+                      <rect x="174" y="2" width="3" height="46"/>
+                      <rect x="180" y="2" width="2" height="46"/>
+                      <rect x="185" y="2" width="5" height="46"/>
+                      <rect x="193" y="2" width="4" height="46"/>
+                      <rect x="200" y="2" width="2" height="46"/>
+                      <rect x="205" y="2" width="6" height="46"/>
+                      <rect x="214" y="2" width="3" height="46"/>
+                      <rect x="220" y="2" width="2" height="46"/>
+                      <rect x="225" y="2" width="5" height="46"/>
+                      <rect x="233" y="2" width="3" height="46"/>
+                      <rect x="239" y="2" width="5" height="46"/>
+                      <rect x="247" y="2" width="3" height="46"/>
+                    </g>
+                  </svg>
+                  <div class="barcode-code-text">[ SC-1738-6003 ]</div>
+                  <div class="scan-hint">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>
+                    <span id="dynScanHint">Click to simulate laser scan</span>
+                  </div>
+                </div>
+
+                <div class="slip-divider-double" id="dividerBot" style="margin: 4px 0;">------------------------------------------</div>
+
+                <!-- Slip Meta Info Details -->
+                <div class="slip-details-table">
+                  <div class="slip-row">
+                    <span class="slip-row-label" id="lblCode">Voucher Code</span>
+                    <span class="slip-row-value">: SC-1738-6003</span>
+                  </div>
+                  <div class="slip-row">
+                    <span class="slip-row-label" id="lblIssue">Issue Date</span>
+                    <span class="slip-row-value" id="valIssue">: 11-Sep-2026 06:52 PM</span>
+                  </div>
+                  <div class="slip-row">
+                    <span class="slip-row-label" id="lblValid">Valid Until</span>
+                    <span class="slip-row-value" id="valValid">: 10-Dec-2026 06:52 PM</span>
+                  </div>
+                  <div class="slip-row">
+                    <span class="slip-row-label" id="lblSource">Source Inv</span>
+                    <span class="slip-row-value">: #651</span>
+                  </div>
+                  <div class="slip-row">
+                    <span class="slip-row-label" id="lblCustomer">Customer</span>
+                    <span class="slip-row-value" id="valCustomer">: Walk-in Customer</span>
+                  </div>
+                </div>
+
+                <div class="slip-footer-terms" id="dynTermsNotice">
+                  Present this bearer voucher slip at counter checkout.<br>Valid for 90 days from issue date. Non-refundable.
+                </div>
+
+                <div class="tear-edge-bottom"></div>
+              </div>
+
+              <!-- VIEW B: CASHIER QUICK-SCAN CARD (HIDDEN IN SLIP MODE) -->
+              <div class="quick-scan-card" id="quickScanCard" style="display: none;">
+                <div class="card-hologram-strip"></div>
+                <div class="card-top-row">
+                  <div class="card-chip"></div>
+                  <div class="card-store-name" id="cardStoreName">M/S AL KAWSAR STORE</div>
+                </div>
+
+                <div class="card-amount-block">
+                  <span class="card-amount-title" id="cardAmtLabel">STORE CREDIT PASS</span>
+                  <span class="card-amount-num" id="cardAmtNum">৳550</span>
+                </div>
+
+                <div class="card-barcode-box" onclick="simulateBarcodeBeep()">
+                  <svg class="barcode-svg" viewBox="0 0 260 50" preserveAspectRatio="none">
+                    <g fill="#000000">
+                      <rect x="10" y="2" width="3" height="46"/><rect x="15" y="2" width="2" height="46"/><rect x="20" y="2" width="5" height="46"/><rect x="28" y="2" width="2" height="46"/><rect x="33" y="2" width="4" height="46"/><rect x="40" y="2" width="2" height="46"/><rect x="44" y="2" width="6" height="46"/><rect x="53" y="2" width="3" height="46"/><rect x="59" y="2" width="2" height="46"/><rect x="64" y="2" width="5" height="46"/><rect x="72" y="2" width="3" height="46"/><rect x="78" y="2" width="6" height="46"/><rect x="87" y="2" width="2" height="46"/><rect x="92" y="2" width="4" height="46"/><rect x="99" y="2" width="3" height="46"/><rect x="105" y="2" width="5" height="46"/><rect x="113" y="2" width="2" height="46"/><rect x="118" y="2" width="4" height="46"/><rect x="125" y="2" width="6" height="46"/><rect x="134" y="2" width="2" height="46"/><rect x="139" y="2" width="5" height="46"/><rect x="147" y="2" width="3" height="46"/><rect x="153" y="2" width="4" height="46"/><rect x="160" y="2" width="2" height="46"/><rect x="165" y="2" width="6" height="46"/><rect x="174" y="2" width="3" height="46"/><rect x="180" y="2" width="2" height="46"/><rect x="185" y="2" width="5" height="46"/><rect x="193" y="2" width="4" height="46"/><rect x="200" y="2" width="2" height="46"/><rect x="205" y="2" width="6" height="46"/><rect x="214" y="2" width="3" height="46"/><rect x="220" y="2" width="2" height="46"/><rect x="225" y="2" width="5" height="46"/><rect x="233" y="2" width="3" height="46"/><rect x="239" y="2" width="5" height="46"/><rect x="247" y="2" width="3" height="46"/>
+                    </g>
+                  </svg>
+                  <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 800; color: #1E1B4B; margin-top: 4px;">
+                    SC-1738-6003
+                  </div>
+                </div>
+
+                <div class="card-meta-pills">
+                  <span>Source: #651</span>
+                  <span>Valid: 90 Days</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- 4. ERGONOMIC ZERO-WRAP ACTION BAR -->
+            <div class="redesign-actions-bar">
+              <!-- PRIMARY PRINT BUTTON with 3D THERMAL PRINTER ICON -->
+              <button class="btn-action-primary" onclick="simulatePrintSlip()" id="dynPrintBtn" title="Print to ESC/POS Bluetooth Thermal Printer">
+                <img src="assets/3d_thermal_printer.jpg" class="btn-icon-3d" alt="3D Printer">
+                <span id="txtPrintBtn">Print Voucher</span>
+              </button>
+
+              <!-- SECONDARY SHARE BUTTON with 3D SHARE PORTAL ICON -->
+              <button class="btn-action-share" onclick="openShareSheet()" id="dynShareBtn" title="Share via WhatsApp, Image, SMS">
+                <img src="assets/3d_share_hub.jpg" class="btn-icon-3d" alt="3D Share">
+                <span id="txtShareBtn">Share Slip</span>
+              </button>
+
+              <!-- 1-TAP WHATSAPP QUICK BUTTON -->
+              <button class="btn-action-whatsapp" onclick="directWhatsAppShare()" title="Direct 1-Tap WhatsApp Share">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.4-.42-.56-.42h-.47c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.41 1.44.53.61.19 1.16.17 1.6.1.49-.07 1.47-.6 1.68-1.18.21-.59.21-1.09.15-1.18-.06-.1-.22-.16-.47-.28"/></svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- IMPROVEMENTS SUMMARY -->
+      <div class="critique-pills-list">
+        <div class="critique-item">
+          <div class="critique-icon fix">✓</div>
+          <div class="critique-text">
+            <h4>No More Text Wrapping on Action Buttons</h4>
+            <p>Shortened button labels to <code>Print Voucher</code> & <code>Share Slip</code> with dedicated 1-line layout, plus a direct 1-tap WhatsApp pill for ultra-fast customer dispatch.</p>
+          </div>
+        </div>
+
+        <div class="critique-item">
+          <div class="critique-icon fix">✓</div>
+          <div class="critique-text">
+            <h4>Photorealistic 3D Animated Icons</h4>
+            <p>Embedded 3D Iridescent Voucher Ticket (with dynamic hologram shimmer), 3D Thermal POS Printer (with real paper eject animation), and 3D Instant Share Hub.</p>
+          </div>
+        </div>
+
+        <div class="critique-item">
+          <div class="critique-icon fix">✓</div>
+          <div class="critique-text">
+            <h4>Compact Unified Toolbar & 35% Height Reduction</h4>
+            <p>Merged width (58/80mm), language (EN/বাংলা), and view mode into a sleek floating capsule, removing bloated margins so the receipt fits screens comfortably.</p>
+          </div>
+        </div>
+
+        <div class="critique-item">
+          <div class="critique-icon fix">✓</div>
+          <div class="critique-text">
+            <h4>Cashier Quick-Scan Mode & Laser Simulator</h4>
+            <p>1-tap switcher allows cashiers to toggle from the long receipt slip to a compact high-contrast digital voucher pass for rapid barcode gun scanning.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEGACY CLUNKY VERSION (FOR ACCURATE VISUAL CRITIQUE) -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>⚠️</span> Current Legacy Dialog
+          <span class="panel-tag-legacy">Current State</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-secondary);">
+          Observed Issues & Pain Points
+        </div>
+      </div>
+
+      <div class="device-stage">
+        <div class="phone-frame">
+          <div class="phone-notch">
+            <div class="phone-camera"></div>
+            <div class="phone-speaker"></div>
+          </div>
+
+          <!-- The Current Dialog -->
+          <div class="legacy-dialog-box">
+            <!-- Bloated Header -->
+            <div class="legacy-header">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="legacy-ticket-box">🎟️</div>
+                <div>
+                  <div style="font-weight: 700; font-size: 15px;">Store Credit Voucher Slip</div>
+                  <div style="font-size: 12px; font-weight: 600; color: #4F46E5;">SC-1738-6003 · ৳550</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <span style="color: #059669; font-size: 16px;">⧉</span>
+                <span style="color: #64748B; font-size: 16px;">✕</span>
+              </div>
+            </div>
+
+            <!-- Disconnected Spaced Toolbar -->
+            <div class="legacy-toolbar">
+              <div style="display: flex; gap: 4px; background: #F1F5F9; padding: 2px; border-radius: 8px;">
+                <span style="padding: 4px 8px; font-size: 11px; background: #E2E8F0; border-radius: 6px; font-weight: 600;">58mm</span>
+                <span style="padding: 4px 8px; font-size: 11px; background: #EDE9FE; color: #4F46E5; border-radius: 6px; font-weight: 700;">80mm</span>
+              </div>
+              <div style="display: flex; gap: 4px; background: #F1F5F9; padding: 2px; border-radius: 8px;">
+                <span style="padding: 4px 8px; font-size: 11px; background: #EDE9FE; color: #4F46E5; border-radius: 6px; font-weight: 700;">EN</span>
+                <span style="padding: 4px 8px; font-size: 11px; background: #E2E8F0; border-radius: 6px; font-weight: 600;">বাংলা</span>
+              </div>
+              <div style="color: #059669; font-size: 16px;">🔍</div>
+            </div>
+
+            <!-- Thermal Preview with huge grey paddings -->
+            <div style="background: #E2E8F0; padding: 16px 12px; display: flex; justify-content: center; height: 380px; overflow-y: auto;">
+              <div style="background: #FFFFFF; width: 280px; padding: 16px 12px; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); font-family: monospace; font-size: 10px;">
+                <div style="text-align: center; font-weight: bold; font-size: 12px;">M/S AL KAWSAR STORE</div>
+                <div style="text-align: center; color: #475569; font-size: 9px;">121 WEST KAFRUL, TALTOLA, DHAKA</div>
+                <div style="text-align: center; color: #475569; font-size: 9px; margin-bottom: 6px;">01711352148 | 01712-650307</div>
+                <div style="text-align: center; color: #94A3B8;">========================</div>
+                <div style="text-align: center; font-weight: bold; margin: 4px 0;">*** STORE CREDIT VOUCHER ***</div>
+                <div style="border: 1px solid #000; border-radius: 4px; text-align: center; padding: 4px; margin: 6px 0;">
+                  <div style="font-size: 8px; color: #64748B;">VOUCHER VALUE</div>
+                  <div style="font-size: 16px; font-weight: bold;">৳550</div>
+                </div>
+                <div style="text-align: center; color: #94A3B8;">------------------------</div>
+                <div style="height: 36px; background: #F8FAFC; border: 1px dashed #CBD5E1; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #64748B;">
+                  |||||||||||||||||||||||||||||||||||||
+                </div>
+                <div style="text-align: center; font-weight: bold; font-size: 9px; margin-top: 2px;">[ SC-1738-6003 ]</div>
+                <div style="text-align: center; color: #94A3B8; margin-top: 4px;">------------------------</div>
+                <div style="line-height: 1.4; color: #334155; margin-top: 4px;">
+                  Voucher Code : SC-1738-6003<br>
+                  Issue Date   : 11-Sep-2026<br>
+                  Valid Until  : 10-Dec-2026<br>
+                  Source Inv   : #651
+                </div>
+              </div>
+            </div>
+
+            <!-- The Awkward Wrapped Bottom Buttons -->
+            <div class="legacy-buttons-row">
+              <div class="legacy-btn-print">
+                🖨️ Print Voucher<br>Slip
+              </div>
+              <div class="legacy-btn-share">
+                🔗 Share Voucher<br>Slip
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- CRITIQUE HIGHLIGHTS -->
+      <div class="critique-pills-list">
+        <div class="critique-item">
+          <div class="critique-icon warn">⚠️</div>
+          <div class="critique-text">
+            <h4>Awkward 2-Line Text Wrapping</h4>
+            <p>Buttons wrap into <code>Print Voucher \n Slip</code> and <code>Share Voucher \n Slip</code>, looking unpolished and cutting into vertical screen budget.</p>
+          </div>
+        </div>
+
+        <div class="critique-item">
+          <div class="critique-icon warn">⚠️</div>
+          <div class="critique-text">
+            <h4>Excessive Vertical Height (Takes 94% Screen)</h4>
+            <p>Three separate rows for header, segmented controls, and button bar eat away vertical space, making it difficult to view the full receipt without scrolling.</p>
+          </div>
+        </div>
+
+        <div class="critique-item">
+          <div class="critique-icon warn">⚠️</div>
+          <div class="critique-text">
+            <h4>Flat Emoji Visuals & No Real Paper Physics</h4>
+            <p>Standard flat emoji 🎟️ with no lighting or depth; plain white card with no tear-off jagged edges or barcode laser scan line.</p>
+          </div>
+        </div>
+
+        <div class="critique-item">
+          <div class="critique-icon warn">⚠️</div>
+          <div class="critique-text">
+            <h4>Multi-Step WhatsApp Friction</h4>
+            <p>WhatsApp sharing requires tapping "Share Voucher Slip", opening a secondary modal dialog, and finding the WhatsApp tile instead of a fast 1-tap dispatch.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div> <!-- /comparison-grid -->
+
+  <!-- 3D ASSETS SHOWCASE GALLERY -->
+  <section class="showcase-3d-section">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <div style="font-size: 18px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 10px;">
+          <span>🎨</span> Photorealistic 3D Icon Suite & Physics Engine
+          <span class="badge-tag">Octane Render 8K</span>
+        </div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+          Hover or click each 3D asset to preview interactive gyro tilt, dynamic holographic sweep, and audio pings.
+        </div>
+      </div>
+      <div style="font-size: 12px; color: var(--text-tertiary);">
+        Custom Rendered for Techyfi POS Store Credit System
+      </div>
+    </div>
+
+    <div class="gallery-3d-grid">
+      <!-- 1. Holographic Voucher Ticket -->
+      <div class="gallery-3d-card" onclick="triggerTicketHoloEffect()">
+        <div class="gallery-3d-tag">Header Hero Icon</div>
+        <div class="gallery-3d-img-box">
+          <img src="assets/3d_voucher_ticket.jpg" alt="3D Iridescent Ticket">
+        </div>
+        <div>
+          <div class="gallery-3d-title">3D Iridescent Voucher Ticket</div>
+          <div class="gallery-3d-desc" style="margin-top: 4px;">
+            Holographic gold foil voucher with embossed barcode, micro-perforations, and dynamic specular prism reflection.
+          </div>
+        </div>
+        <button class="pill-btn" style="width: 100%; justify-content: center;">
+          <span>✨</span> Preview Hologram Sweep
+        </button>
+      </div>
+
+      <!-- 2. Thermal POS Receipt Printer -->
+      <div class="gallery-3d-card" onclick="simulatePrintSlip()">
+        <div class="gallery-3d-tag" style="color: var(--primary); border-color: var(--primary);">Print Action Icon</div>
+        <div class="gallery-3d-img-box">
+          <img src="assets/3d_thermal_printer.jpg" alt="3D POS Thermal Printer">
+        </div>
+        <div>
+          <div class="gallery-3d-title">3D Desktop POS Thermal Printer</div>
+          <div class="gallery-3d-desc" style="margin-top: 4px;">
+            High-speed thermal receipt printer with glowing operational LED, serrated tear bar, and ejecting paper slip.
+          </div>
+        </div>
+        <button class="pill-btn" style="width: 100%; justify-content: center;">
+          <span>🖨️</span> Test Printer Eject Sound
+        </button>
+      </div>
+
+      <!-- 3. Multi-Channel Share Hub -->
+      <div class="gallery-3d-card" onclick="openShareSheet()">
+        <div class="gallery-3d-tag" style="color: var(--emerald); border-color: var(--emerald);">Share Action Icon</div>
+        <div class="gallery-3d-img-box">
+          <img src="assets/3d_share_hub.jpg" alt="3D Multi-Channel Share Portal">
+        </div>
+        <div>
+          <div class="gallery-3d-title">3D Instant Share Portal</div>
+          <div class="gallery-3d-desc" style="margin-top: 4px;">
+            Translucent glass pedestal featuring WhatsApp emerald crystal orb, neon paper aero-wings, and wireless waves.
+          </div>
+        </div>
+        <button class="pill-btn" style="width: 100%; justify-content: center;">
+          <span>🚀</span> Open Share Sheet Modal
+        </button>
+      </div>
+
+      <!-- 4. Wireless Barcode Scanner & Paper Rolls -->
+      <div class="gallery-3d-card" onclick="simulateBarcodeBeep()">
+        <div class="gallery-3d-tag" style="color: var(--rose); border-color: var(--rose);">Cashier Scan Gun</div>
+        <div class="gallery-3d-img-box">
+          <img src="assets/3d_barcode_scanner.jpg" alt="3D Laser Scanner">
+        </div>
+        <div>
+          <div class="gallery-3d-title">3D Wireless Scanner & Paper Rolls</div>
+          <div class="gallery-3d-desc" style="margin-top: 4px;">
+            Ergonomic POS barcode gun emitting a ruby laser beam with gold-core thermal receipt rolls on a steel pedestal.
+          </div>
+        </div>
+        <button class="pill-btn" style="width: 100%; justify-content: center;">
+          <span>🔴</span> Trigger Scanner Laser Beep
+        </button>
+      </div>
+    </div>
+
+    <!-- IMPLEMENTATION ARCHITECTURE BLUEPRINT -->
+    <div class="blueprint-card">
+      <div class="blueprint-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 20px;">📐</span>
+          <div>
+            <h4 style="font-size: 15px; font-weight: 800; color: var(--text-primary);">Proposed Android / Jetpack Compose Architecture Plan</h4>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 1px;">
+              Component refactoring plan for <code>StoreCreditVoucherSlipDialog.kt</code> (Awaiting your confirmation before implementation).
+            </p>
+          </div>
+        </div>
+        <span class="panel-tag-redesign">Strict Confirmation Gate</span>
+      </div>
+
+      <div class="blueprint-grid">
+        <div class="blueprint-col">
+          <h5><span>1️⃣</span> Compact Dialog Surface</h5>
+          <ul>
+            <li>Reduce dialog width from <code>0.96f</code> to <code>0.90f</code> and height from <code>0.94f</code> to <code>0.78f</code>.</li>
+            <li>Reclaims <strong>35% vertical screen space</strong>, ensuring full visibility on compact 5-inch retail handhelds.</li>
+            <li>Integrated floating pill toolbar with <code>58mm/80mm</code> and <code>EN/BN</code> toggles in a single compact row.</li>
+          </ul>
+        </div>
+
+        <div class="blueprint-col">
+          <h5><span>2️⃣</span> Zero-Wrapping Action Bar</h5>
+          <ul>
+            <li>Refactor bottom action bar into a responsive row:
+              <code>[ 🖨️ Print Voucher ]</code> + <code>[ 🔗 Share Slip ]</code> + <code>[ 💬 WhatsApp ]</code>.</li>
+            <li>Fixes the unsightly 2-line wrapped text (<code>Print Voucher \n Slip</code>) permanently.</li>
+            <li>Maintains <code>>= 48dp</code> touch targets for fast counter operation.</li>
+          </ul>
+        </div>
+
+        <div class="blueprint-col">
+          <h5><span>3️⃣</span> Cashier Dual-View Mode</h5>
+          <ul>
+            <li>Toggle between <strong>Thermal Slip Mode</strong> (full print preview) and <strong>Quick-Scan Card Mode</strong>.</li>
+            <li>Quick-Scan mode displays high-contrast barcode + large ৳550 voucher balance for instant gun scanning.</li>
+            <li>Reduces cashier checkout friction from 4 taps down to 1 tap.</li>
+          </ul>
+        </div>
+
+        <div class="blueprint-col">
+          <h5><span>4️⃣</span> 3D Assets & Micro-Interactions</h5>
+          <ul>
+            <li>Embed high-resolution 3D painter drawables for the ticket badge, thermal printer, and share hub.</li>
+            <li>Smooth Compose transitions (<code>AnimatedVisibility</code>, <code>animateDpAsState</code>) for width/language toggles.</li>
+            <li>Full adherence to <code>bangla-language</code> guidelines with natural retail phrasing.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div> <!-- /main-wrapper -->
+<div class="share-modal-overlay" id="shareSheetModal" onclick="closeShareSheetOnBackdrop(event)">
+  <div class="share-modal-box">
+    <div class="share-hero-3d">
+      <img src="assets/3d_share_hub.jpg" alt="3D Share Hub">
+    </div>
+    <div style="text-align: center;">
+      <h3 style="font-size: 17px; font-weight: 800; color: var(--text-primary);" id="dynShareSheetTitle">Share Store Credit Voucher</h3>
+      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">
+        Voucher <strong style="color: var(--primary);">SC-1738-6003</strong> · Balance <strong style="color: var(--emerald);">৳550</strong>
+      </p>
+    </div>
+
+    <div class="share-channel-list">
+      <!-- 1. WhatsApp Direct -->
+      <div class="share-channel-card" onclick="simulateChannelSelect('WhatsApp')" style="border-color: rgba(37, 211, 102, 0.35);">
+        <div class="channel-icon" style="background: rgba(37, 211, 102, 0.15); color: #25D366;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.4-.42-.56-.42h-.47c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.72 4.31 3.81.6.26 1.07.41 1.44.53.61.19 1.16.17 1.6.1.49-.07 1.47-.6 1.68-1.18.21-.59.21-1.09.15-1.18-.06-.1-.22-.16-.47-.28"/></svg>
+        </div>
+        <div class="channel-info">
+          <h5>Send to Customer's WhatsApp</h5>
+          <p>Instant formatted receipt message with voucher code & store details</p>
+        </div>
+      </div>
+
+      <!-- 2. Thermal Slip JPEG Image -->
+      <div class="share-channel-card" onclick="simulateChannelSelect('Image')">
+        <div class="channel-icon" style="background: var(--primary-light); color: var(--primary);">
+          🖼️
+        </div>
+        <div class="channel-info">
+          <h5>Share Slip Image (JPEG)</h5>
+          <p>High-resolution monochrome slip for QuickShare, Bluetooth, Email</p>
+        </div>
+      </div>
+
+      <!-- 3. SMS Message -->
+      <div class="share-channel-card" onclick="simulateChannelSelect('SMS')">
+        <div class="channel-icon" style="background: rgba(14, 165, 233, 0.15); color: #0EA5E9;">
+          ✉️
+        </div>
+        <div class="channel-info">
+          <h5>Send via SMS Text</h5>
+          <p>SMS text with voucher code and balance amount for customer</p>
+        </div>
+      </div>
+
+      <!-- 4. Copy Code -->
+      <div class="share-channel-card" onclick="simulateChannelSelect('Copy')">
+        <div class="channel-icon" style="background: var(--emerald-light); color: var(--emerald);">
+          📋
+        </div>
+        <div class="channel-info">
+          <h5>Copy Voucher Code Only</h5>
+          <p>Copies "SC-1738-6003" to clipboard for counter POS entry</p>
+        </div>
+      </div>
+    </div>
+
+    <button style="width: 100%; height: 42px; margin-top: 18px; border-radius: 12px; background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-subtle); font-weight: 700; font-size: 13px; cursor: pointer;" onclick="closeShareSheet()">
+      Cancel
+    </button>
+  </div>
+</div>
+
+<!-- INTERACTIVE PRINTING ANIMATION NOTIFICATION -->
+<div class="print-animation-banner" id="printBanner">
+  <div class="printer-anim-icon">
+    <img src="assets/3d_thermal_printer.jpg" alt="Printing Slip">
+  </div>
+  <div>
+    <div style="font-weight: 800; font-size: 13.5px; color: var(--text-primary);" id="printBannerTitle">
+      🖨️ Printing 80mm Voucher Slip...
+    </div>
+    <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px;">
+      ESC/POS command sent to Bluetooth Thermal Printer
+    </div>
+  </div>
+</div>
+
+<!-- TOAST MESSAGE -->
+<div class="toast-message" id="toast">
+  <span>✓</span> <span id="toastText">Voucher Code Copied to Clipboard!</span>
+</div>
+
+<script>
+  // State
+  let currentTheme = 'dark';
+  let isTablet = false;
+  let currentLayoutMode = 'split';
+  let currentRollWidth = 80;
+  let currentLang = 'EN';
+  let currentViewMode = 'slip';
+  let audioEnabled = true;
+
+  function setLayoutMode(mode) {
+    currentLayoutMode = mode;
+    const grid = document.getElementById('comparisonGrid');
+    const btnSplit = document.getElementById('layoutBtnSplit');
+    const btnProposed = document.getElementById('layoutBtnProposed');
+    const btnLegacy = document.getElementById('layoutBtnLegacy');
+
+    btnSplit.classList.remove('active');
+    btnProposed.classList.remove('active');
+    btnLegacy.classList.remove('active');
+
+    grid.classList.remove('single-proposed', 'single-legacy');
+
+    if (mode === 'proposed') {
+      btnProposed.classList.add('active');
+      grid.classList.add('single-proposed');
+      showToast('Viewing: Proposed Redesign');
+    } else if (mode === 'legacy') {
+      btnLegacy.classList.add('active');
+      grid.classList.add('single-legacy');
+      showToast('Viewing: Legacy Dialog');
+    } else {
+      btnSplit.classList.add('active');
+      showToast('Viewing: Split Side-by-Side View');
+    }
+    playTone(750, 0.08);
+  }
+
+  // Web Audio Context for realistic sound feedback
+  let audioCtx = null;
+
+  function initAudio() {
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) {
+        audioCtx = new AudioContext();
+      }
+    }
+  }
+
+  function playTone(freq, duration, type = 'sine', gainVal = 0.1) {
+    if (!audioEnabled) return;
+    try {
+      initAudio();
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+  }
+
+  function playBarcodeBeep() {
+    // POS barcode scanner beep (2400Hz sharp ping)
+    playTone(2400, 0.09, 'sine', 0.15);
+  }
+
+  function playPrintFeedSound() {
+    // Simulation of thermal printer stepper motor feed
+    if (!audioEnabled) return;
+    try {
+      initAudio();
+      if (!audioCtx) return;
+      let startTime = audioCtx.currentTime;
+      for (let i = 0; i < 7; i++) {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140 + (i * 20), startTime + (i * 0.08));
+        gain.gain.setValueAtTime(0.04, startTime + (i * 0.08));
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + ((i + 1) * 0.08));
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(startTime + (i * 0.08));
+        osc.stop(startTime + ((i + 1) * 0.08));
+      }
+    } catch(e) {}
+  }
+
+  function toggleAudio() {
+    audioEnabled = !audioEnabled;
+    const btn = document.getElementById('audioToggleBtn');
+    const lbl = document.getElementById('audioLabel');
+    if (audioEnabled) {
+      btn.classList.add('active');
+      lbl.innerText = 'Haptics / Sound ON';
+      playTone(800, 0.1);
+    } else {
+      btn.classList.remove('active');
+      lbl.innerText = 'Sound Muted';
+    }
+  }
+
+  function toggleTheme() {
+    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+    if (currentTheme === 'dark') {
+      themeIcon.innerText = '☀️';
+      themeLabel.innerText = 'Light Mode';
+    } else {
+      themeIcon.innerText = '🌙';
+      themeLabel.innerText = 'Dark Mode';
+    }
+    playTone(600, 0.08);
+  }
+
+  function toggleDevice() {
+    isTablet = !isTablet;
+    const redesignFrame = document.getElementById('redesignPhoneFrame');
+    const deviceLabel = document.getElementById('deviceLabel');
+    const deviceBtn = document.getElementById('deviceToggleBtn');
+    if (isTablet) {
+      redesignFrame.classList.add('tablet');
+      deviceLabel.innerText = 'Tablet View (520px)';
+      deviceBtn.classList.add('active');
+    } else {
+      redesignFrame.classList.remove('tablet');
+      deviceLabel.innerText = 'Mobile View (380px)';
+      deviceBtn.classList.remove('active');
+    }
+    playTone(500, 0.08);
+  }
+
+  function setRollWidth(width) {
+    currentRollWidth = width;
+    const seg58 = document.getElementById('segWidth58');
+    const seg80 = document.getElementById('segWidth80');
+    const slip = document.getElementById('thermalSlip');
+
+    if (width === 58) {
+      seg58.classList.add('active');
+      seg80.classList.remove('active');
+      slip.classList.add('width-58');
+      document.getElementById('dividerTop').innerText = '================================';
+      document.getElementById('dividerMid').innerText = '--------------------------------';
+      document.getElementById('dividerBot').innerText = '--------------------------------';
+      document.getElementById('slipFormatBadge').innerText = '58mm ESC/POS (32 Col)';
+      showToast('Receipt Format: 58mm Thermal (Narrow 32 Col)');
+    } else {
+      seg80.classList.add('active');
+      seg58.classList.remove('active');
+      slip.classList.remove('width-58');
+      document.getElementById('dividerTop').innerText = '==========================================';
+      document.getElementById('dividerMid').innerText = '------------------------------------------';
+      document.getElementById('dividerBot').innerText = '------------------------------------------';
+      document.getElementById('slipFormatBadge').innerText = '80mm ESC/POS (42 Col)';
+      showToast('Receipt Format: 80mm Thermal (Standard 42 Col)');
+    }
+    playTone(700, 0.08);
+  }
+
+  // App Interface Language (Changes Window Dialog Strings)
+  let appInterfaceLang = 'EN';
+
+  function toggleAppWindowLanguage() {
+    appInterfaceLang = appInterfaceLang === 'EN' ? 'BN' : 'EN';
+    const appLangBtn = document.getElementById('appLangLabel');
+
+    if (appInterfaceLang === 'BN') {
+      appLangBtn.innerText = 'App Language: বাংলা';
+      document.getElementById('dynDialogTitle').innerText = 'স্টোর ক্রেডিট ভাউচার স্লিপ';
+      document.getElementById('txtPrintBtn').innerText = 'ভাউচার প্রিন্ট';
+      document.getElementById('txtShareBtn').innerText = 'স্লিপ শেয়ার';
+      document.getElementById('dynShareSheetTitle').innerText = 'স্টোর ক্রেডিট ভাউচার শেয়ার';
+      showToast('Window UI Language: বাংলা (Bengali)');
+    } else {
+      appLangBtn.innerText = 'App Language: EN';
+      document.getElementById('dynDialogTitle').innerText = 'Store Credit Voucher';
+      document.getElementById('txtPrintBtn').innerText = 'Print Voucher';
+      document.getElementById('txtShareBtn').innerText = 'Share Slip';
+      document.getElementById('dynShareSheetTitle').innerText = 'Share Store Credit Voucher';
+      showToast('Window UI Language: English');
+    }
+    playTone(850, 0.08);
+  }
+
+  // Receipt Slip Language (Affects ONLY the thermal printed slip, NOT the window UI)
+  function setLanguage(lang) {
+    currentLang = lang;
+    const segEN = document.getElementById('segLangEN');
+    const segBN = document.getElementById('segLangBN');
+
+    if (lang === 'BN') {
+      segBN.classList.add('active');
+      segEN.classList.remove('active');
+      applyBanglaReceiptOnly();
+      showToast('Receipt Print Language: বাংলা (Window UI Unchanged)');
+    } else {
+      segEN.classList.add('active');
+      segBN.classList.remove('active');
+      applyEnglishReceiptOnly();
+      showToast('Receipt Print Language: English (Window UI Unchanged)');
+    }
+    playTone(900, 0.08);
+  }
+
+  // Translates ONLY the receipt slip content
+  function applyBanglaReceiptOnly() {
+    document.getElementById('dynVoucherTitle').innerText = '*** স্টোর ক্রেডিট ভাউচার ***';
+    document.getElementById('dynVoucherSub').innerText = '(গ্রাহক বাহক কপি)';
+    document.getElementById('dynValueLabel').innerText = 'ভাউচার মূল্য';
+    document.getElementById('dynValueNum').innerText = '৳৫৫০';
+    document.getElementById('dynScanHint').innerText = 'লেজার স্ক্যান করতে ক্লিক করুন';
+    document.getElementById('lblCode').innerText = 'ভাউচার কোড';
+    document.getElementById('lblIssue').innerText = 'ইস্যুর তারিখ';
+    document.getElementById('valIssue').innerText = ': ১১-সেপ্টেম্বর-২০২৬ সন্ধ্যা ০৬:৫২';
+    document.getElementById('lblValid').innerText = 'মেয়াদ উত্তীর্ণ';
+    document.getElementById('valValid').innerText = ': ১০-ডিসেম্বর-২০২৬ সন্ধ্যা ০৬:৫২';
+    document.getElementById('lblSource').innerText = 'উৎস ইনভয়েস';
+    document.getElementById('lblCustomer').innerText = 'কাস্টমার';
+    document.getElementById('valCustomer').innerText = ': সাধারণ ক্রেতা';
+    document.getElementById('dynTermsNotice').innerHTML = 'কাউন্টারে চেকআউটের সময় এই ভাউচার স্লিপটি প্রদর্শন করুন।<br>ইস্যুর তারিখ থেকে ৯০ দিন মেয়াদ থাকবে। অফেরতযোগ্য।';
+    document.getElementById('cardAmtLabel').innerText = 'স্টোর ক্রেডিট পাস';
+    document.getElementById('cardAmtNum').innerText = '৳৫৫০';
+  }
+
+  // Translates ONLY the receipt slip content
+  function applyEnglishReceiptOnly() {
+    document.getElementById('dynVoucherTitle').innerText = '*** STORE CREDIT VOUCHER ***';
+    document.getElementById('dynVoucherSub').innerText = '(Customer Bearer Slip)';
+    document.getElementById('dynValueLabel').innerText = 'VOUCHER VALUE';
+    document.getElementById('dynValueNum').innerText = '৳550';
+    document.getElementById('dynScanHint').innerText = 'Click to simulate laser scan';
+    document.getElementById('lblCode').innerText = 'Voucher Code';
+    document.getElementById('lblIssue').innerText = 'Issue Date';
+    document.getElementById('valIssue').innerText = ': 11-Sep-2026 06:52 PM';
+    document.getElementById('lblValid').innerText = 'Valid Until';
+    document.getElementById('valValid').innerText = ': 10-Dec-2026 06:52 PM';
+    document.getElementById('lblSource').innerText = 'Source Inv';
+    document.getElementById('lblCustomer').innerText = 'Customer';
+    document.getElementById('valCustomer').innerText = ': Walk-in Customer';
+    document.getElementById('dynTermsNotice').innerHTML = 'Present this bearer voucher slip at counter checkout.<br>Valid for 90 days from issue date. Non-refundable.';
+    document.getElementById('cardAmtLabel').innerText = 'STORE CREDIT PASS';
+    document.getElementById('cardAmtNum').innerText = '৳550';
+  }
+
+  function setViewMode(mode) {
+    currentViewMode = mode;
+    const modeSlip = document.getElementById('viewModeSlip');
+    const modeCard = document.getElementById('viewModeCard');
+    const slip = document.getElementById('thermalSlip');
+    const card = document.getElementById('quickScanCard');
+
+    if (mode === 'card') {
+      modeCard.classList.add('active');
+      modeSlip.classList.remove('active');
+      slip.style.display = 'none';
+      card.style.display = 'flex';
+      showToast('Cashier Quick-Scan Card Mode Active');
+    } else {
+      modeSlip.classList.add('active');
+      modeCard.classList.remove('active');
+      slip.style.display = 'flex';
+      card.style.display = 'none';
+      showToast('Thermal Receipt Slip Mode Active');
+    }
+    playTone(650, 0.08);
+  }
+
+  function copyVoucherCode(code) {
+    navigator.clipboard?.writeText(code);
+    playTone(1200, 0.12, 'triangle', 0.2);
+    showToast(`Voucher Code "${code}" Copied!`);
+  }
+
+  function simulateBarcodeBeep() {
+    const box = document.getElementById('barcodeBox');
+    box.classList.add('scanning');
+    playBarcodeBeep();
+    showToast('🔴 Barcode Scanned: SC-1738-6003 (৳550)');
+    setTimeout(() => {
+      box.classList.remove('scanning');
+    }, 1200);
+  }
+
+  function simulatePrintSlip() {
+    const banner = document.getElementById('printBanner');
+    const title = document.getElementById('printBannerTitle');
+    title.innerText = `🖨️ Printing ${currentRollWidth}mm Voucher Slip...`;
+    banner.classList.add('active');
+    playPrintFeedSound();
+
+    setTimeout(() => {
+      banner.classList.remove('active');
+      playTone(1600, 0.15, 'sine', 0.2);
+      showToast('✓ Voucher Slip Printed Successfully!');
+    }, 2400);
+  }
+
+  function openShareSheet() {
+    document.getElementById('shareSheetModal').classList.add('open');
+    playTone(850, 0.08);
+  }
+
+  function closeShareSheet() {
+    document.getElementById('shareSheetModal').classList.remove('open');
+  }
+
+  function closeShareSheetOnBackdrop(e) {
+    if (e.target.id === 'shareSheetModal') {
+      closeShareSheet();
+    }
+  }
+
+  function directWhatsAppShare() {
+    playTone(1100, 0.1, 'sine', 0.2);
+    showToast('💬 Opening WhatsApp formatted voucher text...');
+  }
+
+  function simulateChannelSelect(channel) {
+    closeShareSheet();
+    playTone(1300, 0.1, 'triangle', 0.2);
+    if (channel === 'WhatsApp') {
+      showToast('💬 WhatsApp voucher message sent!');
+    } else if (channel === 'Image') {
+      showToast('🖼️ JPEG voucher slip exported!');
+    } else if (channel === 'SMS') {
+      showToast('✉️ SMS voucher link prepared!');
+    } else if (channel === 'Copy') {
+      copyVoucherCode('SC-1738-6003');
+    }
+  }
+
+  function triggerTicketHoloEffect() {
+    playTone(1400, 0.15, 'sine', 0.25);
+    const img = document.getElementById('ticket3dImg');
+    img.style.transform = 'scale(1.25) rotate(10deg)';
+    setTimeout(() => {
+      img.style.transform = 'scale(1) rotate(0deg)';
+    }, 400);
+    showToast('✨ 3D Holographic Voucher Token');
+  }
+
+  function showDismissFeedback() {
+    playTone(400, 0.08);
+    showToast('Dialog onDismiss event triggered');
+  }
+
+  function showToast(text) {
+    const toast = document.getElementById('toast');
+    const toastText = document.getElementById('toastText');
+    toastText.innerText = text;
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2800);
+  }
+</script>
+
+</body>
+</html>

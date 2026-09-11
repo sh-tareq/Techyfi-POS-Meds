@@ -145,7 +145,6 @@ fun ExpensesScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.expense_screen_title),
-                        subtitle = stringResource(R.string.expense_screen_subtitle),
                         metricBadge = "Today",
                         badgeColor = PosSectionColors.Expenses,
                         icon = { size -> Realistic3DExpensesCashIcon(size = size) }

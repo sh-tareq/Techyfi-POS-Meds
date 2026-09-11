@@ -335,11 +335,6 @@ fun DuesScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = if (selectedCustomer != null) selectedCustomer!!.customerName else stringResource(R.string.dues_title),
-                        subtitle = if (selectedCustomer == null) {
-                            stringResource(R.string.dues_debtors_summary, outstandingDues.size, formatTaka(totalOutstanding))
-                        } else {
-                            stringResource(R.string.dues_digital_khata_ledger)
-                        },
                         metricBadge = if (selectedCustomer == null && outstandingDues.isNotEmpty()) formatTaka(totalOutstanding) else null,
                         badgeColor = PosSectionColors.Dues,
                         icon = { size -> Realistic3DClipboardDuesIcon(size = size) }

@@ -1460,6 +1460,47 @@ data class InventoryAlertsData(
     val totalCount: Int get() = expiredProducts.size + expiringSoonProducts.size + lowStockProducts.size
 }
 
+data class SaleReturnSummary(
+    val hasReturns: Boolean = false,
+    val returnCount: Int = 0,
+    val totalRefundAmount: Double = 0.0,
+    val returnedItemsCount: Double = 0.0,
+    val latestReturnTimestamp: Long? = null,
+    val performedByName: String? = null,
+    val refundMethod: String? = null,
+    val note: String? = null,
+    val returns: List<com.example.techyfipos.data.db.Return> = emptyList(),
+    val returnItems: List<com.example.techyfipos.data.db.ReturnItem> = emptyList()
+)
+
+data class InvoiceItemProfit(
+    val barcode: String,
+    val name: String,
+    val quantity: Double,
+    val unitPrice: Double,
+    val unitCost: Double,
+    val lineRevenue: Double,
+    val lineCost: Double,
+    val lineProfit: Double,
+    val lineMarginPercent: Double,
+    val isTopContributor: Boolean = false
+)
+
+data class InvoiceProfitSummary(
+    val grossRevenue: Double,
+    val discountAmount: Double,
+    val netRevenue: Double,
+    val grossCogs: Double,
+    val returnRefundTotal: Double,
+    val returnCogsReversal: Double,
+    val netCogs: Double,
+    val netProfit: Double,
+    val netMarginPercent: Double,
+    val markupPercent: Double,
+    val hasReturns: Boolean,
+    val itemsProfit: List<InvoiceItemProfit>
+)
+
 class SalesViewModel(private val repository: DataRepository) : ViewModel() {
     val salesWithItems: StateFlow<List<SaleWithItems>> = repository.allSalesWithItems
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -1468,6 +1509,93 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     private val allReturnItems: StateFlow<List<com.example.techyfipos.data.db.ReturnItem>> = repository.allReturnItems
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val allReturnsFlow: StateFlow<List<com.example.techyfipos.data.db.Return>> = allReturns
+    val allReturnItemsFlow: StateFlow<List<com.example.techyfipos.data.db.ReturnItem>> = allReturnItems
+
+    val returnsBySaleId: StateFlow<Map<Long, SaleReturnSummary>> = combine(allReturns, allReturnItems) { returns, items ->
+        val returnsBySale = returns.groupBy { it.saleId }
+        returnsBySale.mapValues { (saleId, saleReturns) ->
+            val saleReturnIds = saleReturns.map { it.id }.toSet()
+            val saleReturnItems = items.filter { it.returnId in saleReturnIds }
+            val latest = saleReturns.maxByOrNull { it.timestamp }
+            SaleReturnSummary(
+                hasReturns = saleReturns.isNotEmpty(),
+                returnCount = saleReturns.size,
+                totalRefundAmount = saleReturns.sumOf { it.refundAmount },
+                returnedItemsCount = saleReturnItems.sumOf { it.quantity },
+                latestReturnTimestamp = latest?.timestamp,
+                performedByName = latest?.performedByName,
+                refundMethod = latest?.refundMethod,
+                note = latest?.note,
+                returns = saleReturns,
+                returnItems = saleReturnItems
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    fun calculateInvoiceProfit(saleWithItems: SaleWithItems, returnSummary: SaleReturnSummary? = null): InvoiceProfitSummary {
+        val sale = saleWithItems.sale
+        val grossRevenue = sale.subtotal
+        val discount = calculateDiscountValue(sale.subtotal, sale.discountAmount, sale.isPercentageDiscount)
+        val netRevBeforeRefund = (grossRevenue - discount).coerceAtLeast(0.0)
+
+        var totalGrossCogs = 0.0
+        val itemsProfitList = saleWithItems.items.map { item ->
+            val cost = item.purchasePriceAtSale ?: fallbackPurchasePrice(item.productBarcode, item.price)
+            val lineRev = item.price * item.quantity
+            val lineC = cost * item.quantity
+            val lineP = lineRev - lineC
+            val lineMargin = if (lineRev > 0) (lineP / lineRev) * 100.0 else 0.0
+            totalGrossCogs += lineC
+            InvoiceItemProfit(
+                barcode = item.productBarcode,
+                name = item.productName,
+                quantity = item.quantity,
+                unitPrice = item.price,
+                unitCost = cost,
+                lineRevenue = lineRev,
+                lineCost = lineC,
+                lineProfit = lineP,
+                lineMarginPercent = lineMargin
+            )
+        }
+
+        val maxProfit = itemsProfitList.maxOfOrNull { it.lineProfit } ?: 0.0
+        val taggedItems = itemsProfitList.map {
+            if (maxProfit > 0 && it.lineProfit == maxProfit) it.copy(isTopContributor = true) else it
+        }
+
+        val refundAmount = returnSummary?.totalRefundAmount ?: 0.0
+        val returnedItems = returnSummary?.returnItems ?: emptyList()
+        var returnCogsReversal = 0.0
+        for (retItem in returnedItems) {
+            val originalSaleItem = saleWithItems.items.find { it.productBarcode == retItem.productBarcode }
+            val unitCost = originalSaleItem?.purchasePriceAtSale ?: fallbackPurchasePrice(retItem.productBarcode, retItem.price)
+            returnCogsReversal += unitCost * retItem.quantity
+        }
+
+        val netRev = (netRevBeforeRefund - refundAmount).coerceAtLeast(0.0)
+        val netCogs = (totalGrossCogs - returnCogsReversal).coerceAtLeast(0.0)
+        val netProfit = netRev - netCogs
+        val netMargin = if (netRev > 0) (netProfit / netRev) * 100.0 else 0.0
+        val markup = if (netCogs > 0) (netProfit / netCogs) * 100.0 else 0.0
+
+        return InvoiceProfitSummary(
+            grossRevenue = grossRevenue,
+            discountAmount = discount,
+            netRevenue = netRev,
+            grossCogs = totalGrossCogs,
+            returnRefundTotal = refundAmount,
+            returnCogsReversal = returnCogsReversal,
+            netCogs = netCogs,
+            netProfit = netProfit,
+            netMarginPercent = netMargin,
+            markupPercent = markup,
+            hasReturns = returnSummary?.hasReturns == true,
+            itemsProfit = taggedItems
+        )
+    }
 
     /** Current outstanding due for a customer — used to show the live "Total Due" on a reopened historical receipt, since that figure isn't stored on the Sale row itself. */
     suspend fun getCustomerDue(phone: String) = repository.getCustomerDueByPhone(phone)

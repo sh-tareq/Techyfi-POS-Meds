@@ -1292,6 +1292,17 @@
     <string name="products_store_name_label">Store Name</string>
     <string name="products_store_name_supporting_text">Shown below the code number</string>
     <string name="products_show_date_tracking">Show Date Tracking</string>
+    <string name="products_price_tier_label">Price Tier on Label</string>
+    <string name="products_price_tier_selling">Selling Price</string>
+    <string name="products_price_tier_mrp">MRP Price</string>
+    <string name="products_price_tier_wholesale">Wholesale</string>
+    <string name="products_price_tier_not_set">Not set</string>
+    <string name="products_price_tier_dual_title">Dual Display (MRP + Offer)</string>
+    <string name="products_price_tier_dual_hint">Supermarket style bargain label</string>
+    <string name="products_price_opt_unit">Show Unit (/Pcs)</string>
+    <string name="products_price_opt_bangla_digits">Bangla Digits (৳৭০)</string>
+    <string name="opt_on">ON</string>
+    <string name="opt_off">OFF</string>
     <string name="products_date_tracking_info_label">Date Tracking Info</string>
     <string name="products_width_mm_label">Width (mm)</string>
     <string name="products_width_range_hint">15–150</string>
@@ -1854,6 +1865,43 @@
     <string name="store_credit_remaining_label">Remaining Store Credit</string>
     <string name="voucher_applied_label">Voucher Applied</string>
     <string name="voucher_rem_bal_label">Voucher Remaining Balance</string>
+    <string name="store_credit_voucher_print_compact">Print Voucher</string>
+    <string name="store_credit_voucher_share_compact">Share Slip</string>
+    <string name="store_credit_view_mode_slip">Slip</string>
+    <string name="store_credit_view_mode_card">Scan</string>
+    <string name="store_credit_direct_whatsapp_hint">Direct WhatsApp</string>
+    <!-- Owner Per-Invoice Profit & Privacy Shield Strings -->
+    <string name="invoice_profit_label">Profit</string>
+    <string name="invoice_net_profit_title">Net Profit</string>
+    <string name="invoice_profit_margin_label">Margin</string>
+    <string name="invoice_total_cogs_label">Total COGS</string>
+    <string name="invoice_purchase_cost_sub">Wholesale Purchase Cost</string>
+    <string name="invoice_net_revenue_label">Net Revenue</string>
+    <string name="invoice_markup_label">Markup</string>
+    <string name="invoice_top_contributor_label">Top Contributor</string>
+    <string name="invoice_tab_profit_analytics">Owner Profit</string>
+    <string name="invoice_tab_receipt_slip">Receipt Slip</string>
+    <string name="invoice_stealth_mode_on">Stealth: ON</string>
+    <string name="invoice_stealth_mode_off">Privacy</string>
+    <string name="invoice_itemized_breakdown_title">Itemized Product Profit Breakdown</string>
+    <string name="invoice_sort_profit_high">Highest Profit (📈)</string>
+    <string name="invoice_sort_profit_low">Lowest Profit (📉)</string>
+    <string name="invoice_cost_share_label">Cost: %1$d%%</string>
+    <string name="invoice_profit_share_label">Profit: %1$d%%</string>
+    <string name="invoice_owner_required_notice">Owner Privilege Required to view profit analytics.</string>
+    <string name="invoice_return_processed_label">Return Items Processed</string>
+    <string name="invoice_return_badge_desc">%1$s Items · -%2$s</string>
+    <string name="invoice_has_returns_filter">Has Returns</string>
+    <string name="invoice_return_audit_title">Return &amp; Refund Audit</string>
+    <string name="invoice_return_date_label">Return Date</string>
+    <string name="invoice_return_by_label">Processed By</string>
+    <string name="invoice_return_refund_method">Refund Method</string>
+    <string name="invoice_return_items_list_label">Returned Items</string>
+    <string name="invoice_net_adjusted_profit_label">Adjusted Profit</string>
+    <string name="invoice_original_profit_label">Original Profit</string>
+    <string name="invoice_return_note_label">Note</string>
+    <string name="invoice_original_total_label">Original</string>
+    <string name="invoice_refunded_total_label">Refunded</string>
 </resources>
 
 

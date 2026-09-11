@@ -30,6 +30,13 @@ import kotlin.math.roundToInt
 
 enum class ProductCodeType { BARCODE, QR_CODE }
 
+enum class ProductCodePriceTier {
+    SELLING,
+    MRP,
+    WHOLESALE,
+    DUAL
+}
+
 enum class ProductCodeLabelSize(
     val widthMm: Float,
     val heightMm: Float,
@@ -348,7 +355,65 @@ fun generateProductCodeLabelBitmap(
 
 internal fun formatProductCodeLabelPrice(formattedPrice: String): String {
     val value = formattedPrice.trim()
-    return if (value.startsWith("Price:", ignoreCase = true)) value else "Price: $value"
+    return when {
+        value.startsWith("Price:", ignoreCase = true) ||
+        value.startsWith("MRP Price:", ignoreCase = true) ||
+        value.startsWith("Wholesale Price:", ignoreCase = true) ||
+        value.startsWith("MRP:", ignoreCase = true) ||
+        value.startsWith("Wholesale:", ignoreCase = true) ||
+        value.contains("|") ||
+        value.startsWith("মূল্য:") ||
+        value.startsWith("এমআরপি:") ||
+        value.startsWith("এমআরপি মূল্য:") ||
+        value.startsWith("পাইকারি:") ||
+        value.startsWith("পাইকারি মূল্য:") -> value
+        else -> "Price: $value"
+    }
+}
+
+fun formatProductCodeLabelPriceString(
+    tier: ProductCodePriceTier,
+    sellingPrice: Double,
+    mrpPrice: Double,
+    wholesalePrice: Double,
+    showUnit: Boolean = false,
+    showBanglaDigits: Boolean = false
+): String {
+    val unitStr = if (showUnit) {
+        if (showBanglaDigits) "/পিস" else "/Pcs"
+    } else ""
+
+    fun formatVal(amount: Double): String {
+        val base = formatTaka(amount)
+        return if (showBanglaDigits) toBanglaDigits(base) else base
+    }
+
+    return when (tier) {
+        ProductCodePriceTier.SELLING -> {
+            val priceStr = formatVal(sellingPrice)
+            if (showBanglaDigits) "মূল্য: $priceStr$unitStr" else "Price: $priceStr$unitStr"
+        }
+        ProductCodePriceTier.MRP -> {
+            val effective = if (mrpPrice > 0) mrpPrice else sellingPrice
+            val priceStr = formatVal(effective)
+            if (showBanglaDigits) "এমআরপি মূল্য: $priceStr$unitStr" else "MRP Price: $priceStr$unitStr"
+        }
+        ProductCodePriceTier.WHOLESALE -> {
+            val effective = if (wholesalePrice > 0) wholesalePrice else sellingPrice
+            val priceStr = formatVal(effective)
+            if (showBanglaDigits) "পাইকারি মূল্য: $priceStr$unitStr" else "Wholesale Price: $priceStr$unitStr"
+        }
+        ProductCodePriceTier.DUAL -> {
+            val effectiveMrp = if (mrpPrice > 0) mrpPrice else (sellingPrice * 1.15)
+            val mrpVal = formatVal(effectiveMrp)
+            val sellVal = formatVal(sellingPrice)
+            if (showBanglaDigits) {
+                "এমআরপি: $mrpVal | অফার: $sellVal$unitStr"
+            } else {
+                "MRP: $mrpVal | Offer: $sellVal$unitStr"
+            }
+        }
+    }
 }
 
 private fun drawFittedCenteredText(

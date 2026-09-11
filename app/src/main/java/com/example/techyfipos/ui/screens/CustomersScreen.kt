@@ -122,7 +122,6 @@ fun CustomersScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.customers_screen_title),
-                        subtitle = stringResource(R.string.customers_count_subtitle, totalCount),
                         metricBadge = "$totalCount Total",
                         badgeColor = PosSectionColors.Customers,
                         isTablet = isTablet,

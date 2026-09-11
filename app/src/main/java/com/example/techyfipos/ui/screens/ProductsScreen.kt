@@ -18,10 +18,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.techyfipos.ui.components.*
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -79,6 +81,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -101,6 +104,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import com.example.techyfipos.ui.components.*
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -125,9 +129,12 @@ import com.example.techyfipos.data.CategoryItem
 import com.example.techyfipos.ui.viewmodel.ProductsViewModel
 import com.example.techyfipos.utils.HardwareBarcodeScanner
 import com.example.techyfipos.utils.toEnglishDigits
+import com.example.techyfipos.utils.toBanglaDigits
 import com.example.techyfipos.utils.beepAndVibrate
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.formatProductCodeLabelPriceString
 import com.example.techyfipos.utils.ProductCodeLabelSize
+import com.example.techyfipos.utils.ProductCodePriceTier
 import com.example.techyfipos.utils.ProductCodeType
 import com.example.techyfipos.utils.ProductLabelItem
 import com.example.techyfipos.utils.cacheBatchProductCodeLabelsPdf
@@ -669,9 +676,6 @@ fun ProductsScreen(
                     title = {
                         PosTopAppBarTitle(
                             title = stringResource(R.string.products),
-                            subtitle = if (allProductsList.isNotEmpty()) {
-                                stringResource(R.string.products_header_subtitle, allProductsList.size)
-                            } else null,
                             metricBadge = if (allProductsList.isNotEmpty()) "${allProductsList.size} SKUs" else null,
                             badgeColor = PosSectionColors.Products,
                             isTablet = isTablet,
@@ -6847,6 +6851,520 @@ fun ProductBarcodeScanDialog(
 }
 
 @Composable
+fun PriceTierSwitcherCard(
+    showPrice: Boolean,
+    onShowPriceChange: (Boolean) -> Unit,
+    selectedTier: ProductCodePriceTier,
+    onTierSelect: (ProductCodePriceTier) -> Unit,
+    sellingPriceDisplay: String,
+    mrpPriceDisplay: String,
+    wholesalePriceDisplay: String,
+    showUnit: Boolean = false,
+    onShowUnitChange: (Boolean) -> Unit = {},
+    showBanglaDigits: Boolean = false,
+    onShowBanglaDigitsChange: (Boolean) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val isDark = isSystemInDarkTheme()
+    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
+    val cardBorderColor = Color(0xFFC084FC)
+    val headerTitleColor = if (isDark) Color(0xFFE9D5FF) else Color(0xFF581C87)
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = cardBg,
+        border = BorderStroke(2.dp, cardBorderColor),
+        shadowElevation = 4.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            // Header Row: 🏷️ Price Tier on Label (NO "NEW FEATURE" badge) | Show Price Checkbox
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    Text(
+                        text = "🏷️",
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = stringResource(R.string.products_price_tier_label),
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = headerTitleColor,
+                        maxLines = 1
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onShowPriceChange(!showPrice) }
+                        .padding(horizontal = 2.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = showPrice,
+                        onCheckedChange = { onShowPriceChange(it) },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = Color(0xFF0D9488)
+                        ),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.show_price),
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Body content dimmed and disabled if showPrice is false
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = if (showPrice) 1f else 0.4f }
+            ) {
+                // 3-Way Segmented Grid (Selling, MRP, Wholesale)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // 1. Selling Price
+                    val isSellingActive = selectedTier == ProductCodePriceTier.SELLING
+                    val sellingBg = if (isSellingActive) {
+                        if (isDark) Color(0xFF0C4A6E) else Color(0xFFE0F2FE)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8FAFC)
+                    }
+                    val sellingBorder = if (isSellingActive) Color(0xFF0284C7) else if (isDark) MaterialTheme.colorScheme.outlineVariant else Color(0xFFE2E8F0)
+                    val sellingTagColor = if (isSellingActive) {
+                        if (isDark) Color(0xFF7DD3FC) else Color(0xFF0369A1)
+                    } else {
+                        Color(0xFF64748B)
+                    }
+                    val sellingValColor = if (isSellingActive) {
+                        if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF0F172A)
+                    }
+
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(enabled = showPrice) { onTierSelect(ProductCodePriceTier.SELLING) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = sellingBg,
+                        border = BorderStroke(1.5.dp, sellingBorder),
+                        shadowElevation = if (isSellingActive) 3.dp else 0.dp
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.products_price_tier_selling).uppercase(),
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.4.sp,
+                                color = sellingTagColor,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = sellingPriceDisplay,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = sellingValColor,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // 2. MRP Price
+                    val isMrpActive = selectedTier == ProductCodePriceTier.MRP
+                    val mrpBg = if (isMrpActive) {
+                        if (isDark) Color(0xFF451A03) else Color(0xFFFEF3C7)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8FAFC)
+                    }
+                    val mrpBorder = if (isMrpActive) Color(0xFFD97706) else if (isDark) MaterialTheme.colorScheme.outlineVariant else Color(0xFFE2E8F0)
+                    val mrpTagColor = if (isMrpActive) {
+                        if (isDark) Color(0xFFFCD34D) else Color(0xFFB45309)
+                    } else {
+                        Color(0xFF64748B)
+                    }
+                    val mrpValColor = if (isMrpActive) {
+                        if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF0F172A)
+                    }
+
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(enabled = showPrice) { onTierSelect(ProductCodePriceTier.MRP) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = mrpBg,
+                        border = BorderStroke(1.5.dp, mrpBorder),
+                        shadowElevation = if (isMrpActive) 3.dp else 0.dp
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.products_price_tier_mrp).uppercase(),
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.4.sp,
+                                color = mrpTagColor,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = mrpPriceDisplay,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = mrpValColor,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // 3. Wholesale Price
+                    val isWholesaleActive = selectedTier == ProductCodePriceTier.WHOLESALE
+                    val wholesaleBg = if (isWholesaleActive) {
+                        if (isDark) Color(0xFF3B0764) else Color(0xFFF3E8FF)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8FAFC)
+                    }
+                    val wholesaleBorder = if (isWholesaleActive) Color(0xFF7C3AED) else if (isDark) MaterialTheme.colorScheme.outlineVariant else Color(0xFFE2E8F0)
+                    val wholesaleTagColor = if (isWholesaleActive) {
+                        if (isDark) Color(0xFFD8B4FE) else Color(0xFF6D28D9)
+                    } else {
+                        Color(0xFF64748B)
+                    }
+                    val wholesaleValColor = if (isWholesaleActive) {
+                        if (isDark) Color(0xFFA855F7) else Color(0xFF7C3AED)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF0F172A)
+                    }
+
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(enabled = showPrice) { onTierSelect(ProductCodePriceTier.WHOLESALE) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = wholesaleBg,
+                        border = BorderStroke(1.5.dp, wholesaleBorder),
+                        shadowElevation = if (isWholesaleActive) 3.dp else 0.dp
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.products_price_tier_wholesale).uppercase(),
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.4.sp,
+                                color = wholesaleTagColor,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = wholesalePriceDisplay,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = wholesaleValColor,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Dual Display (MRP + Offer) Button
+                val isDualActive = selectedTier == ProductCodePriceTier.DUAL
+                val dualBg = if (isDualActive) {
+                    if (isDark) Color(0xFF064E3B) else Color(0xFFD1FAE5)
+                } else {
+                    if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF0FDF4)
+                }
+                val dualBorderDashedColor = if (isDark) Color(0xFF059669).copy(alpha = 0.7f) else Color(0xFF86EFAC)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(dualBg)
+                        .then(
+                            if (isDualActive) {
+                                Modifier.border(1.5.dp, Color(0xFF10B981), RoundedCornerShape(12.dp))
+                            } else {
+                                Modifier.drawBehind {
+                                    drawRoundRect(
+                                        color = dualBorderDashedColor,
+                                        style = Stroke(
+                                            width = 1.5.dp.toPx(),
+                                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))
+                                        ),
+                                        cornerRadius = CornerRadius(12.dp.toPx(), 12.dp.toPx())
+                                    )
+                                }
+                            }
+                        )
+                        .clickable(enabled = showPrice) { onTierSelect(ProductCodePriceTier.DUAL) }
+                        .padding(horizontal = 12.dp, vertical = 9.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            Text(
+                                text = "✨",
+                                fontSize = 16.sp
+                            )
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.products_price_tier_dual_title),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color(0xFFA7F3D0) else Color(0xFF065F46),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = stringResource(R.string.products_price_tier_dual_hint),
+                                    fontSize = 10.sp,
+                                    color = if (isDark) Color(0xFF6EE7B7) else Color(0xFF059669),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        val notSetText = stringResource(R.string.products_price_tier_not_set)
+                        val mrpCandidate = if (mrpPriceDisplay.isNotBlank() && mrpPriceDisplay != notSetText && mrpPriceDisplay != "—") {
+                            mrpPriceDisplay
+                        } else {
+                            sellingPriceDisplay
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isDark) Color(0xFF064E3B).copy(alpha = 0.85f) else Color.White.copy(alpha = 0.85f),
+                            border = BorderStroke(1.dp, Color(0xFF059669).copy(alpha = 0.25f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "MRP $mrpCandidate",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF64748B),
+                                    textDecoration = TextDecoration.LineThrough,
+                                    maxLines = 1
+                                )
+                                Text(
+                                    text = sellingPriceDisplay,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (isDark) Color(0xFF34D399) else Color(0xFF047857),
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Dotted / Dashed Divider Line
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                ) {
+                    drawLine(
+                        color = if (isDark) Color.White.copy(alpha = 0.15f) else Color.Black.copy(alpha = 0.08f),
+                        start = Offset(0f, 0f),
+                        end = Offset(size.width, 0f),
+                        strokeWidth = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Micro-customizations (Unit & Language options)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Option 1: Show Unit (/Pcs)
+                    val unitBg = if (showUnit) {
+                        if (isDark) Color(0xFF312E81) else Color(0xFFE0E7FF)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF1F5F9)
+                    }
+                    val unitBorder = if (showUnit) {
+                        Color(0xFF818CF8)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.outlineVariant else Color(0xFFE2E8F0)
+                    }
+                    val unitTextColor = if (showUnit) {
+                        if (isDark) Color(0xFFC7D2FE) else Color(0xFF3730A3)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF475569)
+                    }
+                    val unitIndicatorColor = if (showUnit) {
+                        if (isDark) Color(0xFFA5B4FC) else Color(0xFF4338CA)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else Color(0xFF64748B)
+                    }
+
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(enabled = showPrice) { onShowUnitChange(!showUnit) },
+                        shape = RoundedCornerShape(8.dp),
+                        color = unitBg,
+                        border = BorderStroke(1.dp, unitBorder)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.products_price_opt_unit),
+                                fontSize = 11.sp,
+                                fontWeight = if (showUnit) FontWeight.Bold else FontWeight.SemiBold,
+                                color = unitTextColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = if (showUnit) stringResource(R.string.opt_on) else stringResource(R.string.opt_off),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = unitIndicatorColor
+                            )
+                        }
+                    }
+
+                    // Option 2: Bangla Digits (৳৭০)
+                    val banglaBg = if (showBanglaDigits) {
+                        if (isDark) Color(0xFF312E81) else Color(0xFFE0E7FF)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF1F5F9)
+                    }
+                    val banglaBorder = if (showBanglaDigits) {
+                        Color(0xFF818CF8)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.outlineVariant else Color(0xFFE2E8F0)
+                    }
+                    val banglaTextColor = if (showBanglaDigits) {
+                        if (isDark) Color(0xFFC7D2FE) else Color(0xFF3730A3)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF475569)
+                    }
+                    val banglaIndicatorColor = if (showBanglaDigits) {
+                        if (isDark) Color(0xFFA5B4FC) else Color(0xFF4338CA)
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else Color(0xFF64748B)
+                    }
+
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(enabled = showPrice) { onShowBanglaDigitsChange(!showBanglaDigits) },
+                        shape = RoundedCornerShape(8.dp),
+                        color = banglaBg,
+                        border = BorderStroke(1.dp, banglaBorder)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.products_price_opt_bangla_digits),
+                                fontSize = 11.sp,
+                                fontWeight = if (showBanglaDigits) FontWeight.Bold else FontWeight.SemiBold,
+                                color = banglaTextColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = if (showBanglaDigits) stringResource(R.string.opt_on) else stringResource(R.string.opt_off),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = banglaIndicatorColor
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun BatchProductCodePrintDialog(
     products: List<Product>,
     onDismiss: () -> Unit
@@ -6859,6 +7377,10 @@ fun BatchProductCodePrintDialog(
     var filterInStockOnly by rememberSaveable { mutableStateOf(false) }
     var copiesModeByStock by rememberSaveable { mutableStateOf(false) }
     var showPrice by rememberSaveable { mutableStateOf(true) }
+    var priceTierName by rememberSaveable { mutableStateOf(ProductCodePriceTier.SELLING.name) }
+    val priceTier = ProductCodePriceTier.entries.firstOrNull { it.name == priceTierName } ?: ProductCodePriceTier.SELLING
+    var showUnit by rememberSaveable { mutableStateOf(false) }
+    var showBanglaDigits by rememberSaveable { mutableStateOf(false) }
     var showCodeNumber by rememberSaveable { mutableStateOf(true) }
     var showStoreName by rememberSaveable { mutableStateOf(true) }
     var labelSizeName by rememberSaveable { mutableStateOf(ProductCodeLabelSize.SIZE_50_X_30.name) }
@@ -7032,15 +7554,34 @@ fun BatchProductCodePrintDialog(
                     }
                 }
 
-                // Toggles: Show Price, Code, Store Name
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.show_price), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                    Switch(checked = showPrice, onCheckedChange = { showPrice = it })
-                }
+                // Price Tier Switcher Card
+                val sampleProd = candidateProducts.firstOrNull()
+                val batchSellingDisplay = if (sampleProd != null) {
+                    val base = formatTaka(sampleProd.sellingPrice)
+                    if (showBanglaDigits) toBanglaDigits(base) else base
+                } else "—"
+                val batchMrpDisplay = if (sampleProd != null && sampleProd.mrpPrice > 0) {
+                    val base = formatTaka(sampleProd.mrpPrice)
+                    if (showBanglaDigits) toBanglaDigits(base) else base
+                } else stringResource(R.string.products_price_tier_not_set)
+                val batchWholesaleDisplay = if (sampleProd != null && sampleProd.wholesalePrice > 0) {
+                    val base = formatTaka(sampleProd.wholesalePrice)
+                    if (showBanglaDigits) toBanglaDigits(base) else base
+                } else stringResource(R.string.products_price_tier_not_set)
+
+                PriceTierSwitcherCard(
+                    showPrice = showPrice,
+                    onShowPriceChange = { showPrice = it },
+                    selectedTier = priceTier,
+                    onTierSelect = { priceTierName = it.name },
+                    sellingPriceDisplay = batchSellingDisplay,
+                    mrpPriceDisplay = batchMrpDisplay,
+                    wholesalePriceDisplay = batchWholesaleDisplay,
+                    showUnit = showUnit,
+                    onShowUnitChange = { showUnit = it },
+                    showBanglaDigits = showBanglaDigits,
+                    onShowBanglaDigitsChange = { showBanglaDigits = it }
+                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -7095,10 +7636,18 @@ fun BatchProductCodePrintDialog(
                         scope.launch(Dispatchers.IO) {
                             val items = candidateProducts.map { prod ->
                                 val qty = if (copiesModeByStock) kotlin.math.max(1, prod.stockQty.toInt()) else 1
+                                val priceString = formatProductCodeLabelPriceString(
+                                    tier = priceTier,
+                                    sellingPrice = prod.sellingPrice,
+                                    mrpPrice = prod.mrpPrice,
+                                    wholesalePrice = prod.wholesalePrice,
+                                    showUnit = showUnit,
+                                    showBanglaDigits = showBanglaDigits
+                                )
                                 ProductLabelItem(
                                     productName = prod.name,
                                     barcode = prod.barcode,
-                                    formattedPrice = formatTaka(prod.sellingPrice),
+                                    formattedPrice = priceString,
                                     quantity = qty
                                 )
                             }
@@ -7175,12 +7724,27 @@ fun ProductCodeImageDialog(
         )
     }
     var showPrice by rememberSaveable { mutableStateOf(preferences.getBoolean("show_price", true)) }
+    var priceTierName by rememberSaveable {
+        mutableStateOf(preferences.getString("price_tier", ProductCodePriceTier.SELLING.name) ?: ProductCodePriceTier.SELLING.name)
+    }
+    val priceTier = ProductCodePriceTier.entries.firstOrNull { it.name == priceTierName } ?: ProductCodePriceTier.SELLING
+    var showUnit by rememberSaveable { mutableStateOf(preferences.getBoolean("show_price_unit", false)) }
+    var showBanglaDigits by rememberSaveable { mutableStateOf(preferences.getBoolean("show_bangla_digits", false)) }
     var showCodeNumber by rememberSaveable { mutableStateOf(preferences.getBoolean("show_code_number", true)) }
     var showStoreName by rememberSaveable { mutableStateOf(preferences.getBoolean("show_store_name", true)) }
     var showDateTracking by rememberSaveable { mutableStateOf(preferences.getBoolean("show_date_tracking", true)) }
     var mfgOrPkgType by rememberSaveable { mutableStateOf(product.mfgOrPkgType ?: "Mfg") }
     var mfgOrPkgDate by rememberSaveable { mutableStateOf(product.mfgOrPkgDate ?: "") }
     var expDate by rememberSaveable { mutableStateOf(product.expiryDate ?: "") }
+
+    val formattedPriceString = formatProductCodeLabelPriceString(
+        tier = priceTier,
+        sellingPrice = product.sellingPrice,
+        mrpPrice = product.mrpPrice,
+        wholesalePrice = product.wholesalePrice,
+        showUnit = showUnit,
+        showBanglaDigits = showBanglaDigits
+    )
 
     var storeNameInput by rememberSaveable {
         mutableStateOf(preferences.getString("store_name", "") ?: "")
@@ -7228,7 +7792,7 @@ fun ProductCodeImageDialog(
     }
 
     val bitmap = remember(
-        product, codeType, labelSize, showPrice, showCodeNumber, showStoreName, storeNameInput,
+        product, codeType, labelSize, showPrice, priceTierName, showUnit, showBanglaDigits, showCodeNumber, showStoreName, storeNameInput,
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
         codeNumberTextScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale
@@ -7236,7 +7800,7 @@ fun ProductCodeImageDialog(
         generateProductCodeLabelBitmap(
             productName = product.name,
             barcode = product.barcode,
-            formattedPrice = formatTaka(product.sellingPrice),
+            formattedPrice = formattedPriceString,
             codeType = codeType,
             labelSize = labelSize,
             showPrice = showPrice,
@@ -7259,7 +7823,7 @@ fun ProductCodeImageDialog(
     }
 
     LaunchedEffect(
-        codeTypeName, labelSizeName, showPrice, showCodeNumber, showStoreName, storeNameInput,
+        codeTypeName, labelSizeName, showPrice, priceTierName, showUnit, showBanglaDigits, showCodeNumber, showStoreName, storeNameInput,
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
         codeNumberTextScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale
@@ -7268,6 +7832,9 @@ fun ProductCodeImageDialog(
             .putString("code_type", codeTypeName)
             .putString("label_size", labelSizeName)
             .putBoolean("show_price", showPrice)
+            .putString("price_tier", priceTierName)
+            .putBoolean("show_price_unit", showUnit)
+            .putBoolean("show_bangla_digits", showBanglaDigits)
             .putBoolean("show_code_number", showCodeNumber)
             .putBoolean("show_store_name", showStoreName)
             .putBoolean("show_date_tracking", showDateTracking)
@@ -7399,42 +7966,49 @@ fun ProductCodeImageDialog(
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(
-                        modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(12.dp)
+                val singleSellingDisplay = if (showBanglaDigits) toBanglaDigits(formatTaka(product.sellingPrice)) else formatTaka(product.sellingPrice)
+                val singleMrpDisplay = if (product.mrpPrice > 0) {
+                    val base = formatTaka(product.mrpPrice)
+                    if (showBanglaDigits) toBanglaDigits(base) else base
+                } else stringResource(R.string.products_price_tier_not_set)
+                val singleWholesaleDisplay = if (product.wholesalePrice > 0) {
+                    val base = formatTaka(product.wholesalePrice)
+                    if (showBanglaDigits) toBanglaDigits(base) else base
+                } else stringResource(R.string.products_price_tier_not_set)
+
+                PriceTierSwitcherCard(
+                    showPrice = showPrice,
+                    onShowPriceChange = { showPrice = it },
+                    selectedTier = priceTier,
+                    onTierSelect = { priceTierName = it.name },
+                    sellingPriceDisplay = singleSellingDisplay,
+                    mrpPriceDisplay = singleMrpDisplay,
+                    wholesalePriceDisplay = singleWholesaleDisplay,
+                    showUnit = showUnit,
+                    onShowUnitChange = { showUnit = it },
+                    showBanglaDigits = showBanglaDigits,
+                    onShowBanglaDigitsChange = { showBanglaDigits = it }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showCodeNumber = !showCodeNumber }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showPrice = !showPrice }
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(checked = showPrice, onCheckedChange = { showPrice = it })
-                            Text(stringResource(R.string.show_price), style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                    Surface(
-                        modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showCodeNumber = !showCodeNumber }
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(checked = showCodeNumber, onCheckedChange = { showCodeNumber = it })
-                            Text(
-                                stringResource(R.string.show_code_number),
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 2
-                            )
-                        }
+                        Checkbox(checked = showCodeNumber, onCheckedChange = { showCodeNumber = it })
+                        Text(
+                            stringResource(R.string.show_code_number),
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2
+                        )
                     }
                 }
 

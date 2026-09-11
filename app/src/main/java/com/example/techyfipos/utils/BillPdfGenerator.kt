@@ -34,7 +34,8 @@ data class BillLineItem(
     val lineTotal: Double,
     val unit: String = "Pcs",
     val note: String? = null,
-    val mrpPrice: Double = 0.0
+    val mrpPrice: Double = 0.0,
+    val purchasePrice: Double? = null
 )
 
 data class BillData(
@@ -74,7 +75,10 @@ data class BillData(
     val voucherCode: String? = null,
     val voucherAmount: Double? = null,
     val customerRemainingStoreCredit: Double? = null,
-    val voucherRemainingBalance: Double? = null
+    val voucherRemainingBalance: Double? = null,
+    val hasReturns: Boolean = false,
+    val returnRefundAmount: Double = 0.0,
+    val returnCount: Int = 0
 ) {
     /** True when this sale (fully or partially, via Split) put money on the customer's due account. */
     fun hasDuePortion(): Boolean {

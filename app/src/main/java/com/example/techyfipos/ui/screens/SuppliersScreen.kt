@@ -101,7 +101,6 @@ fun SuppliersScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.supplier_screen_title),
-                        subtitle = stringResource(R.string.supplier_screen_subtitle),
                         metricBadge = "${suppliers.size} Vendors",
                         badgeColor = PosSectionColors.Suppliers,
                         icon = { size -> Realistic3DSupplierTruckIcon(size = size) }
