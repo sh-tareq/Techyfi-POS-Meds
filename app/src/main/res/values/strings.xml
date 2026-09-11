@@ -1418,7 +1418,7 @@
     <string name="loyalty_sort_spend_desc">Highest Lifetime Spend</string>
     <string name="loyalty_sort_recent">Recently Active</string>
     <string name="loyalty_sort_name">Name (A–Z)</string>
-    <string name="loyalty_action_view_profile">Customer 360° Profile</string>
+    <string name="loyalty_action_view_profile">Customer Profile</string>
     <string name="loyalty_action_add_points">Add Points</string>
     <string name="loyalty_action_redeem_points">Redeem Points</string>
     <string name="loyalty_action_adjust_points">Adjust Points</string>
@@ -1557,7 +1557,7 @@
     <string name="customer_add_title">Add New Customer</string>
     <string name="customer_edit_title">Edit Customer Profile</string>
     <string name="customers_hub_title">Customers &amp; CRM</string>
-    <string name="customers_hub_subtitle">Directory, buying habits, dossiers</string>
+    <string name="customers_hub_subtitle">Directory, buying habits, profiles</string>
     <string name="customers_badge">CRM</string>
     <!-- Customer CRM Extra Strings -->
     <string name="customer_sort_recent">Recent Activity</string>

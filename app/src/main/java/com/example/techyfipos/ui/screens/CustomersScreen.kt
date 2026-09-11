@@ -956,7 +956,7 @@ fun CustomerDataTable(
                                 onClick = { onCustomerClick(customer) },
                                 modifier = Modifier.size(26.dp)
                             ) {
-                                Icon(Icons.Default.ChevronRight, contentDescription = "Dossier", modifier = Modifier.size(15.dp))
+                                Icon(Icons.Default.ChevronRight, contentDescription = "Customer Profile", modifier = Modifier.size(15.dp))
                             }
                         }
                     }

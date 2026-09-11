@@ -1418,7 +1418,7 @@
     <string name="loyalty_sort_spend_desc">সর্বোচ্চ মোট কেনাকাটা</string>
     <string name="loyalty_sort_recent">সাম্প্রতিক সক্রিয়</string>
     <string name="loyalty_sort_name">নাম (অ–হ)</string>
-    <string name="loyalty_action_view_profile">কাস্টমার ৩৬০° প্রোফাইল</string>
+    <string name="loyalty_action_view_profile">কাস্টমার প্রোফাইল</string>
     <string name="loyalty_action_add_points">পয়েন্ট যোগ করুন</string>
     <string name="loyalty_action_redeem_points">পয়েন্ট রিডিম করুন</string>
     <string name="loyalty_action_adjust_points">পয়েন্ট সমন্বয়</string>
@@ -1557,7 +1557,7 @@
     <string name="customer_add_title">নতুন গ্রাহক যোগ করুন</string>
     <string name="customer_edit_title">গ্রাহকের প্রোফাইল সম্পাদনা</string>
     <string name="customers_hub_title">কাস্টমার ও CRM</string>
-    <string name="customers_hub_subtitle">গ্রাহক তালিকা, ক্রয়ের হিসাব ও পূর্ণাঙ্গ ডসিয়ার</string>
+    <string name="customers_hub_subtitle">গ্রাহক তালিকা, ক্রয়ের হিসাব ও কাস্টমার প্রোফাইল</string>
     <string name="customers_badge">CRM</string>
     <!-- Customer CRM Extra Strings -->
     <string name="customer_sort_recent">সাম্প্রতিক কার্যক্রম</string>

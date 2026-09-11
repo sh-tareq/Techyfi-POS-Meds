@@ -4787,7 +4787,7 @@ fun CustomerDueDetailsView(
                     .padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Row 1: Statement Share & 360° Dossier
+                // Row 1: Statement Share & Customer Profile
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -4821,7 +4821,7 @@ fun CustomerDueDetailsView(
                             Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "360° Dossier",
+                                text = "Customer Profile",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
