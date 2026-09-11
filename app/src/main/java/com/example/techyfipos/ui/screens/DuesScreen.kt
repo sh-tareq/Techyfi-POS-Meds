@@ -236,6 +236,7 @@ fun DuesScreen(
     var repaymentReceiptData by remember { mutableStateOf<DueRepaymentReceiptData?>(null) }
     var customerToDelete by remember { mutableStateOf<CustomerDue?>(null) }
     var customerToEditDue by remember { mutableStateOf<CustomerDue?>(null) }
+    var collisionMergeCustomer by remember { mutableStateOf<Pair<CustomerDue, com.example.techyfipos.data.db.Customer>?>(null) }
     var paymentToDelete by remember { mutableStateOf<DuePayment?>(null) }
     var chargeToDelete by remember { mutableStateOf<com.example.techyfipos.data.db.DueCharge?>(null) }
     var showScheduledReminders by remember { mutableStateOf(false) }
@@ -1168,27 +1169,112 @@ fun DuesScreen(
         EditDueCustomerDialog(
             customer = editingCustomer,
             onDismiss = { customerToEditDue = null },
-            onSave = { newName, newLimit, notes ->
-                duesViewModel.addOrUpdateDue(
-                    name = newName,
-                    phone = editingCustomer.customerPhone,
-                    amount = 0.0,
-                    creditLimit = newLimit,
-                    note = notes
-                ) { success ->
-                    if (success) {
-                        Toast.makeText(context, "Customer due info updated", Toast.LENGTH_SHORT).show()
-                        val updatedDue = editingCustomer.copy(
-                            customerName = newName,
-                            creditLimit = newLimit,
-                            updatedAt = System.currentTimeMillis()
-                        )
-                        if (selectedCustomer?.customerPhone == editingCustomer.customerPhone) {
-                            duesViewModel.selectCustomer(updatedDue)
+            onSave = { newPhone, newName, newLimit, notes ->
+                val oldPhone = editingCustomer.customerPhone
+                val cleanNewPhone = newPhone.trim()
+                if (cleanNewPhone != oldPhone) {
+                    duesViewModel.migrateCustomerDuePhone(
+                        oldPhone = oldPhone,
+                        newPhone = cleanNewPhone,
+                        newName = newName,
+                        creditLimit = newLimit,
+                        note = notes,
+                        onSuccess = { finalPhone ->
+                            Toast.makeText(context, "ফোন নম্বর সফলভাবে পরিবর্তন করা হয়েছে", Toast.LENGTH_SHORT).show()
+                            val updatedDue = editingCustomer.copy(
+                                customerPhone = finalPhone,
+                                customerName = newName,
+                                creditLimit = newLimit,
+                                updatedAt = System.currentTimeMillis()
+                            )
+                            if (selectedCustomer?.customerPhone == oldPhone || selectedCustomer?.customerPhone == finalPhone) {
+                                duesViewModel.selectCustomer(updatedDue)
+                            }
+                            customerToEditDue = null
+                        },
+                        onCollision = { existingCust ->
+                            customerToEditDue = null
+                            collisionMergeCustomer = Pair(editingCustomer, existingCust)
+                        },
+                        onError = { err ->
+                            Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                        }
+                    )
+                } else {
+                    duesViewModel.addOrUpdateDue(
+                        name = newName,
+                        phone = editingCustomer.customerPhone,
+                        amount = 0.0,
+                        creditLimit = newLimit,
+                        note = notes
+                    ) { success ->
+                        if (success) {
+                            Toast.makeText(context, "Customer due info updated", Toast.LENGTH_SHORT).show()
+                            val updatedDue = editingCustomer.copy(
+                                customerName = newName,
+                                creditLimit = newLimit,
+                                updatedAt = System.currentTimeMillis()
+                            )
+                            if (selectedCustomer?.customerPhone == editingCustomer.customerPhone) {
+                                duesViewModel.selectCustomer(updatedDue)
+                            }
                         }
                     }
+                    customerToEditDue = null
                 }
-                customerToEditDue = null
+            }
+        )
+    }
+
+    if (collisionMergeCustomer != null) {
+        val (dueCustomer, existingCustomer) = collisionMergeCustomer!!
+        AlertDialog(
+            onDismissRequest = { collisionMergeCustomer = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("🔗", fontSize = 20.sp)
+                    Text("অ্যাকাউন্ট মার্জ করুন (Merge Accounts)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "নতুন ফোন নম্বরটি (${existingCustomer.phone}) ইতিমধ্যে '${existingCustomer.name}' এর নামে নিবন্ধিত রয়েছে।",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "আপনি কি '${dueCustomer.customerName}' (পূর্বের নম্বর: ${dueCustomer.customerPhone}) এর সমস্ত বকেয়া ও লেনদেনের রেকর্ড '${existingCustomer.name}' (${existingCustomer.phone}) এর অ্যাকাউন্টে একত্রিত (Merge) করতে চান?",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        duesViewModel.mergeCustomers(
+                            masterPhone = existingCustomer.phone,
+                            secondaryPhone = dueCustomer.customerPhone,
+                            onSuccess = {
+                                Toast.makeText(context, "অ্যাকাউন্ট দুটি সফলভাবে একত্রিত (Merge) করা হয়েছে", Toast.LENGTH_SHORT).show()
+                                collisionMergeCustomer = null
+                            },
+                            onError = { err ->
+                                Toast.makeText(context, "Merge ব্যর্থ হয়েছে: $err", Toast.LENGTH_LONG).show()
+                                collisionMergeCustomer = null
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("হ্যাঁ, মার্জ করুন (Merge)")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { collisionMergeCustomer = null }) {
+                    Text("বাতিল (Cancel)")
+                }
             }
         )
     }
@@ -6648,8 +6734,9 @@ fun SetCreditLimitDialog(
 fun EditDueCustomerDialog(
     customer: CustomerDue,
     onDismiss: () -> Unit,
-    onSave: (name: String, creditLimit: Double, notes: String?) -> Unit
+    onSave: (newPhone: String, name: String, creditLimit: Double, notes: String?) -> Unit
 ) {
+    var phone by remember(customer.customerPhone) { mutableStateOf(customer.customerPhone) }
     var name by remember(customer.customerPhone) { mutableStateOf(customer.customerName) }
     var creditLimitStr by remember(customer.customerPhone) {
         mutableStateOf(if (customer.creditLimit > 0) customer.creditLimit.toLong().toString() else "")
@@ -6677,11 +6764,12 @@ fun EditDueCustomerDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedTextField(
-                    value = customer.customerPhone,
-                    onValueChange = {},
-                    enabled = false,
-                    label = { Text("Phone Number") },
+                    value = phone,
+                    onValueChange = { phone = it },
+                    enabled = true,
+                    label = { Text("Phone Number *") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
@@ -6713,9 +6801,9 @@ fun EditDueCustomerDialog(
             Button(
                 onClick = {
                     val limit = creditLimitStr.toDoubleOrNull() ?: 0.0
-                    onSave(name.trim(), limit, notes.trim().takeIf { it.isNotBlank() })
+                    onSave(phone.trim(), name.trim(), limit, notes.trim().takeIf { it.isNotBlank() })
                 },
-                enabled = name.isNotBlank(),
+                enabled = name.isNotBlank() && phone.isNotBlank(),
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text(stringResource(R.string.save))

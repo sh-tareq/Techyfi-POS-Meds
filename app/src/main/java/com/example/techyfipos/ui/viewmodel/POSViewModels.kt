@@ -2139,6 +2139,58 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
+    fun migrateCustomerDuePhone(
+        oldPhone: String,
+        newPhone: String,
+        newName: String,
+        creditLimit: Double,
+        note: String?,
+        onSuccess: (newPhone: String) -> Unit,
+        onCollision: (existingCustomer: com.example.techyfipos.data.db.Customer) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                when (val res = repository.migrateCustomerPhone(oldPhone, newPhone, newName, creditLimit, note)) {
+                    is com.example.techyfipos.data.CustomerPhoneUpdateResult.Success -> {
+                        val fresh = repository.getCustomerDueByPhone(res.finalPhone)
+                        if (fresh != null) {
+                            _selectedCustomer.value = fresh
+                        }
+                        onSuccess(res.finalPhone)
+                    }
+                    is com.example.techyfipos.data.CustomerPhoneUpdateResult.Collision -> {
+                        onCollision(res.existingCustomer)
+                    }
+                    is com.example.techyfipos.data.CustomerPhoneUpdateResult.Error -> {
+                        onError(res.message)
+                    }
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "Failed to update phone number")
+            }
+        }
+    }
+
+    fun mergeCustomers(masterPhone: String, secondaryPhone: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val ok = repository.mergeCustomers(masterPhone, secondaryPhone)
+                if (ok) {
+                    val fresh = repository.getCustomerDueByPhone(masterPhone)
+                    if (fresh != null) {
+                        _selectedCustomer.value = fresh
+                    }
+                    onSuccess()
+                } else {
+                    onError("Could not merge customer accounts")
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "Merge failed")
+            }
+        }
+    }
+
     /** Reverses a mistakenly recorded collection — restores the amount to the outstanding balance
      * and removes it from Transaction History. */
     fun deletePayment(phone: String, paymentId: Long, onComplete: (Boolean) -> Unit = {}) {
@@ -3770,6 +3822,50 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                 }
             } catch (e: Exception) {
                 onError(e.message ?: "Merge failed")
+            }
+        }
+    }
+
+    fun migrateCustomerPhone(
+        oldPhone: String,
+        newPhone: String,
+        name: String,
+        email: String?,
+        address: String?,
+        notes: String?,
+        tag: String,
+        creditLimit: Double,
+        onSuccess: (newPhone: String) -> Unit,
+        onCollision: (existingCustomer: com.example.techyfipos.data.db.Customer) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                when (val res = repository.migrateCustomerPhone(oldPhone, newPhone, name, creditLimit, notes)) {
+                    is com.example.techyfipos.data.CustomerPhoneUpdateResult.Success -> {
+                        val created = repository.getCustomerByPhone(res.finalPhone)
+                        if (created != null) {
+                            repository.upsertCustomer(
+                                created.copy(
+                                    email = email,
+                                    address = address,
+                                    tag = tag,
+                                    updatedAt = System.currentTimeMillis()
+                                )
+                            )
+                        }
+                        loadCustomerDossier(res.finalPhone)
+                        onSuccess(res.finalPhone)
+                    }
+                    is com.example.techyfipos.data.CustomerPhoneUpdateResult.Collision -> {
+                        onCollision(res.existingCustomer)
+                    }
+                    is com.example.techyfipos.data.CustomerPhoneUpdateResult.Error -> {
+                        onError(res.message)
+                    }
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "Failed to migrate customer phone")
             }
         }
     }

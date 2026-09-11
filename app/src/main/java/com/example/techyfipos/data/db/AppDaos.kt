@@ -343,6 +343,9 @@ interface HeldCartDao {
 
     @Query("SELECT COUNT(*) FROM held_carts")
     fun getHeldCartCount(): Flow<Int>
+
+    @Query("UPDATE held_carts SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
+    suspend fun reassignHeldCartsPhone(oldPhone: String, newPhone: String): Int
 }
 
 @Dao
@@ -532,6 +535,9 @@ interface ScheduledDueReminderDao {
 
     @Query("DELETE FROM scheduled_due_reminders WHERE customerPhone = :phone")
     suspend fun deleteByPhone(phone: String)
+
+    @Query("UPDATE scheduled_due_reminders SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
+    suspend fun reassignScheduledRemindersPhone(oldPhone: String, newPhone: String): Int
 }
 
 @Dao
@@ -553,6 +559,9 @@ interface DueReminderLogDao {
 
     @Query("DELETE FROM due_reminder_logs")
     suspend fun clearAllLogs()
+
+    @Query("UPDATE due_reminder_logs SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
+    suspend fun reassignDueReminderLogsPhone(oldPhone: String, newPhone: String): Int
 }
 
 @Dao

@@ -48,6 +48,12 @@ private suspend fun <T> AppDatabase.withDriverTransaction(block: suspend () -> T
 
 enum class BackupImportMode { REPLACE, MERGE }
 
+sealed class CustomerPhoneUpdateResult {
+    data class Success(val finalPhone: String) : CustomerPhoneUpdateResult()
+    data class Collision(val existingCustomer: Customer) : CustomerPhoneUpdateResult()
+    data class Error(val message: String) : CustomerPhoneUpdateResult()
+}
+
 class DataRepository(
     private val context: Context,
     private val database: AppDatabase,
@@ -1151,6 +1157,121 @@ class DataRepository(
             customerDao.archiveCustomer(secNorm, System.currentTimeMillis())
         }
         true
+    }
+
+    suspend fun migrateCustomerPhone(
+        oldPhone: String,
+        newPhone: String,
+        newName: String? = null,
+        creditLimit: Double? = null,
+        notes: String? = null
+    ): CustomerPhoneUpdateResult = withContext(Dispatchers.IO) {
+        val oldNorm = normalizePhone(oldPhone)
+        val newNorm = normalizePhone(newPhone)
+
+        if (newNorm.isBlank() || newNorm.replace(Regex("[^0-9]"), "").length < 5) {
+            return@withContext CustomerPhoneUpdateResult.Error("Invalid phone number (minimum 5 digits required)")
+        }
+
+        if (oldNorm == newNorm) {
+            val existing = customerDao.getCustomerByPhone(oldNorm)
+            if (existing != null) {
+                customerDao.upsertCustomer(
+                    existing.copy(
+                        name = newName?.ifBlank { null } ?: existing.name,
+                        creditLimit = creditLimit ?: existing.creditLimit,
+                        notes = notes ?: existing.notes,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+            }
+            val existingDue = customerDueDao.getCustomerDueByPhone(oldNorm)
+            if (existingDue != null) {
+                customerDueDao.upsertCustomerDue(
+                    existingDue.copy(
+                        customerName = newName?.ifBlank { null } ?: existingDue.customerName,
+                        creditLimit = creditLimit ?: existingDue.creditLimit,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+            }
+            return@withContext CustomerPhoneUpdateResult.Success(newNorm)
+        }
+
+        // Check if newPhone already belongs to an existing active customer
+        val collisionCustomer = customerDao.getCustomerByPhone(newNorm)
+        if (collisionCustomer != null && !collisionCustomer.isArchived) {
+            return@withContext CustomerPhoneUpdateResult.Collision(collisionCustomer)
+        }
+
+        val collisionDue = customerDueDao.getActiveCustomerDueByPhone(newNorm)
+        if (collisionDue != null) {
+            val dummy = Customer(phone = collisionDue.customerPhone, name = collisionDue.customerName, totalDue = collisionDue.outstandingAmount)
+            return@withContext CustomerPhoneUpdateResult.Collision(dummy)
+        }
+
+        database.withDriverTransaction {
+            val oldCustomer = customerDao.getCustomerByPhone(oldNorm)
+            val oldDue = customerDueDao.getCustomerDueByPhone(oldNorm)
+            val finalName = newName?.ifBlank { null } ?: oldCustomer?.name ?: oldDue?.customerName ?: "Customer"
+            val finalCreditLimit = creditLimit ?: oldCustomer?.creditLimit ?: oldDue?.creditLimit ?: 0.0
+            val finalNotes = notes ?: oldCustomer?.notes
+
+            // 1. Insert new CustomerDue first so foreign key constraints on newNorm are satisfied
+            val dueAmount = oldDue?.outstandingAmount ?: oldCustomer?.totalDue ?: 0.0
+            customerDueDao.upsertCustomerDue(
+                CustomerDue(
+                    customerPhone = newNorm,
+                    customerName = finalName,
+                    outstandingAmount = dueAmount,
+                    creditLimit = finalCreditLimit,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+
+            // 2. Reassign dues payments and charges to newNorm
+            customerDueDao.reassignDuePaymentsPhone(oldNorm, newNorm)
+            customerDueDao.reassignDueChargesPhone(oldNorm, newNorm)
+
+            // 3. Delete old CustomerDue row (safe: payments/charges no longer point to oldNorm)
+            customerDueDao.deleteCustomerDueByPhone(oldNorm)
+
+            // 4. Reassign sales records
+            saleDao.reassignCustomerForSales(oldNorm, newNorm, finalName)
+
+            // 5. Reassign loyalty
+            loyaltyTransactionDao.reassignCustomerPhone(oldNorm, newNorm)
+            val oldLoyalty = customerLoyaltyDao.getLoyaltyByPhone(oldNorm)
+            if (oldLoyalty != null) {
+                customerLoyaltyDao.upsertLoyalty(
+                    oldLoyalty.copy(
+                        phone = newNorm,
+                        name = finalName,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+                customerLoyaltyDao.deleteLoyaltyByPhone(oldNorm)
+            }
+
+            // 6. Reassign held carts & due reminders
+            heldCartDao.reassignHeldCartsPhone(oldNorm, newNorm)
+            scheduledDueReminderDao.reassignScheduledRemindersPhone(oldNorm, newNorm)
+            dueReminderLogDao.reassignDueReminderLogsPhone(oldNorm, newNorm)
+
+            // 7. Upsert Customer with newNorm & clean up old customer record
+            val updatedCustomer = (oldCustomer ?: Customer(phone = newNorm, name = finalName))
+                .copy(
+                    phone = newNorm,
+                    name = finalName,
+                    creditLimit = finalCreditLimit,
+                    notes = finalNotes,
+                    updatedAt = System.currentTimeMillis()
+                )
+            customerDao.upsertCustomer(updatedCustomer)
+            customerDao.deleteCustomerPermanently(oldNorm)
+        }
+
+        CustomerPhoneUpdateResult.Success(newNorm)
     }
 
     suspend fun addCustomerNote(phone: String, noteText: String, category: String = "General"): Boolean = withContext(Dispatchers.IO) {

@@ -85,6 +85,7 @@ fun CustomersScreen(
     var showExportMenu by remember { mutableStateOf(false) }
     var showMergeDialog by remember { mutableStateOf(false) }
     var showBulkTagDialog by remember { mutableStateOf(false) }
+    var collisionMergePair by remember { mutableStateOf<com.example.techyfipos.ui.viewmodel.DuplicateCustomerPair?>(null) }
 
     val scope = rememberCoroutineScope()
     val exportSuccessMessage = stringResource(R.string.customer_export_excel_success)
@@ -737,25 +738,79 @@ fun CustomersScreen(
                 customerToEdit = null
             },
             onSave = { phone, name, email, address, notes, tag, creditLimit ->
-                customerViewModel.upsertCustomer(
-                    phone = phone,
-                    name = name,
-                    email = email,
-                    address = address,
-                    notes = notes,
-                    tag = tag,
-                    creditLimit = creditLimit,
-                    onSuccess = {
-                        Toast.makeText(context, customerSavedMessage, Toast.LENGTH_SHORT).show()
-                        showAddCustomerDialog = false
-                        val wasEditing = editingCustomer != null
-                        customerToEdit = null
-                        if (wasEditing) {
-                            customerViewModel.loadCustomerDossier(phone)
+                val cleanPhone = phone.trim()
+                if (editingCustomer != null && cleanPhone != editingCustomer.phone) {
+                    customerViewModel.migrateCustomerPhone(
+                        oldPhone = editingCustomer.phone,
+                        newPhone = cleanPhone,
+                        name = name,
+                        email = email,
+                        address = address,
+                        notes = notes,
+                        tag = tag,
+                        creditLimit = creditLimit,
+                        onSuccess = { finalPhone ->
+                            Toast.makeText(context, customerSavedMessage, Toast.LENGTH_SHORT).show()
+                            showAddCustomerDialog = false
+                            customerToEdit = null
+                            customerViewModel.loadCustomerDossier(finalPhone)
+                        },
+                        onCollision = { existingCust ->
+                            collisionMergePair = com.example.techyfipos.ui.viewmodel.DuplicateCustomerPair(
+                                customerA = existingCust,
+                                customerB = editingCustomer,
+                                matchReason = "Phone Collision (${existingCust.phone})"
+                            )
+                        },
+                        onError = { err ->
+                            Toast.makeText(context, err, Toast.LENGTH_LONG).show()
                         }
+                    )
+                } else {
+                    customerViewModel.upsertCustomer(
+                        phone = cleanPhone,
+                        name = name,
+                        email = email,
+                        address = address,
+                        notes = notes,
+                        tag = tag,
+                        creditLimit = creditLimit,
+                        onSuccess = {
+                            Toast.makeText(context, customerSavedMessage, Toast.LENGTH_SHORT).show()
+                            showAddCustomerDialog = false
+                            val wasEditing = editingCustomer != null
+                            customerToEdit = null
+                            if (wasEditing) {
+                                customerViewModel.loadCustomerDossier(cleanPhone)
+                            }
+                        },
+                        onError = { err ->
+                            Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                        }
+                    )
+                }
+            }
+        )
+    }
+
+    // Collision Merge Dialog
+    if (collisionMergePair != null) {
+        CustomerMergeDialog(
+            pair = collisionMergePair!!,
+            onDismiss = { collisionMergePair = null },
+            onConfirmMerge = { masterPhone, secondaryPhone ->
+                customerViewModel.mergeCustomers(
+                    masterPhone = masterPhone,
+                    secondaryPhone = secondaryPhone,
+                    onSuccess = {
+                        Toast.makeText(context, context.getString(R.string.customer_merge_success), Toast.LENGTH_SHORT).show()
+                        collisionMergePair = null
+                        showAddCustomerDialog = false
+                        customerToEdit = null
+                        customerViewModel.loadCustomerDossier(masterPhone)
                     },
                     onError = { err ->
-                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.customer_merge_failed, err), Toast.LENGTH_LONG).show()
                     }
                 )
             }
@@ -1332,7 +1387,7 @@ fun CustomerAddEditDialog(
                     onValueChange = { phone = it },
                     label = { Text("Phone Number *") },
                     singleLine = true,
-                    enabled = customer == null,
+                    enabled = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth()
                 )
