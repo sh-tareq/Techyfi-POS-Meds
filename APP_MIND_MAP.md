@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-12 (app version 2.6.38-V12-09-2026, build `Techyfi-POS-Final-V12-09-2026.apk` / `Techyfi-POS-Final-V36.apk`; versionCode 220913; DB schema version 27)
+Last updated: 2026-09-12 (app version 2.6.40-V12-09-2026, build `Techyfi-POS-Final-V12-09-2026.apk` / `Techyfi-POS-Final-V38.apk`; versionCode 220915; DB schema version 27)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -28,8 +28,9 @@ mindmap
             Max discount limit (default 10%, supervisor PIN required for higher)
             Cost valuations, profit margins, danger zone, and settings locked
           Supervisor PIN Elevation
-            Privileged cashier operations (discounts > cap, cart void, returns, credit limit bypass, negative inventory) prompt for Manager/Owner PIN elevation without switching session
-            Scoped Single-Use Elevation Tokens (phone, maxAmount, cartHash, auto-expiry)
+            Managers or Owners can elevate restricted actions without logging out the cashier
+            Required for discount over limit, cart void, sales return, khata write-off, and danger zone settings
+            Elevation auto-expires after action completion or 5 minutes
           Granular 28-Permission Matrix across 8 Categories
             Sales & Checkout, Returns & Refunds, Inventory & Catalog, Cash & Register, Customers & Dues, Suppliers, Staff & Security, System Settings
           Repository-enforced mutation security
@@ -149,6 +150,11 @@ mindmap
           Keep Scanning dismisses and resumes
       Cart review
         Cart badge shows total units
+        Review Cart modal bottom sheet (`CartPreviewBottomSheet`)
+          Line items with full-width names, unit price, total amount pill, and steppers
+          Interactive quantity badge opens `ManualQuantityDialog` (identical to Cart screen) for instant manual decimal/whole number entry
+          Negative inventory aware with `[Negative Stock Allowed]` pill and stock limits enforcement
+          Hold cart & Continue to checkout quick actions
         Hardware barcode scanner adds or increments products
         Live scanned-product update shows quantity and running total
         Unknown products and stock limits show clear scan feedback
@@ -165,6 +171,11 @@ mindmap
           Ergonomic 38dp Stepper Buttons with minimum interactive touch padding (>= 48dp target)
           Negative Inventory Policy: enforces stock sufficiency unless enabled in Settings or elevated by Supervisor PIN
         Enter quantity manually
+          Manual decimal & whole-number entry dialog (`ManualQuantityDialog`)
+          Accurate available stock display: cleanly decoupled from validation limits (never displays raw `Long.MAX_VALUE` / `Double.MAX_VALUE`)
+          Negative Inventory Awareness: displays an amber `[Negative Stock Allowed]` (`[অতিরিক্ত স্টক অনুমোদিত]`) badge when quantity exceeds on-hand stock and negative stock is authorized
+          Custom & Synthetic Sale Items: omits stock counter for ad-hoc quick sale products/services
+          Dynamic quick-add increment and preset chips clamped to actual stock only when negative inventory is disallowed
         Remove product
         Clear cart
         Quick Sale (ad-hoc custom line item)

@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import com.example.techyfipos.data.AppPermissions
 import com.example.techyfipos.utils.parseExpiryDateToMillis
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
+import com.example.techyfipos.ui.viewmodel.isSyntheticSaleBarcode
 import android.database.Cursor
 import android.provider.ContactsContract
 import android.widget.Toast
@@ -717,7 +718,13 @@ fun CartScreen(
                             item = item,
                             unitPrice = cartViewModel.effectivePriceFor(item),
                             allowNegativeInventory = invoiceSettingsData.allowNegativeInventory || isOwner || isSupervisor,
-                            onQuantityChanged = { qty -> cartViewModel.updateQuantity(item.product, qty) },
+                            onQuantityChanged = { qty ->
+                                cartViewModel.updateQuantity(
+                                    product = item.product,
+                                    newQty = qty,
+                                    allowNegative = invoiceSettingsData.allowNegativeInventory || isOwner || isSupervisor
+                                )
+                            },
                             onRemove = {
                                 if (canRemoveItem) {
                                     cartViewModel.removeFromCart(item.product)
@@ -2755,9 +2762,16 @@ fun CartItemRow(
     }
 
     if (showQuantityDialog) {
+        val isCustomItem = isSyntheticSaleBarcode(item.product.barcode) ||
+                item.product.barcode.startsWith("CUSTOM-") ||
+                item.product.barcode.startsWith("ADHOC-") ||
+                item.product.stockQty >= 999999.0
+
         ManualQuantityDialog(
             currentQuantity = item.quantity,
-            maxQuantity = if (allowNegativeInventory) Double.MAX_VALUE else item.product.stockQty,
+            availableStock = item.product.stockQty,
+            allowNegativeInventory = allowNegativeInventory,
+            isCustomItem = isCustomItem,
             unit = item.product.unit,
             onConfirm = { qty ->
                 onQuantityChanged(qty)
@@ -2982,7 +2996,7 @@ fun CartItemRow(
                                 plusAnim.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
                             }
                             val next = Math.round((item.quantity + stepVal) * 100.0) / 100.0
-                            if (allowNegativeInventory || item.product.stockQty <= 0.0 || next <= item.product.stockQty) {
+                            if (allowNegativeInventory || next <= item.product.stockQty) {
                                 onQuantityChanged(next)
                             }
                         },
@@ -3036,7 +3050,9 @@ fun CartItemRow(
 @Composable
 fun ManualQuantityDialog(
     currentQuantity: Double,
-    maxQuantity: Double,
+    availableStock: Double,
+    allowNegativeInventory: Boolean = false,
+    isCustomItem: Boolean = false,
     unit: String = "Pcs",
     onConfirm: (Double) -> Unit,
     onDismiss: () -> Unit
@@ -3048,8 +3064,9 @@ fun ManualQuantityDialog(
         )
     }
     val parsed = text.toDoubleOrNull()
-    val isStockCheckEnabled = maxQuantity > 0.0
-    val isValid = parsed != null && parsed > 0.0 && (!isStockCheckEnabled || parsed <= maxQuantity)
+    val isStockTracked = !isCustomItem
+    val isExceedingStock = isStockTracked && parsed != null && parsed > availableStock
+    val isValid = parsed != null && parsed > 0.0 && (!isStockTracked || allowNegativeInventory || !isExceedingStock)
 
     val cleanUnit = unit.trim()
     val isFractional = cleanUnit.lowercase() in listOf("kg", "gm", "g", "ltr", "liter", "litre", "mtr", "meter", "ml")
@@ -3095,7 +3112,11 @@ fun ManualQuantityDialog(
                             onClick = {
                                 val cur = text.toDoubleOrNull() ?: 0.0
                                 val added = Math.round((cur + inc) * 100.0) / 100.0
-                                val n = if (isStockCheckEnabled) added.coerceAtMost(maxQuantity) else added
+                                val n = if (isStockTracked && !allowNegativeInventory && availableStock > 0.0) {
+                                    added.coerceAtMost(availableStock)
+                                } else {
+                                    added
+                                }
                                 text = if (n % 1.0 == 0.0) n.toLong().toString() else String.format(Locale.US, "%.2f", n).trimEnd('0').trimEnd('.')
                             },
                             contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp),
@@ -3124,7 +3145,11 @@ fun ManualQuantityDialog(
                     presets.forEach { preset ->
                         Surface(
                             onClick = {
-                                val n = if (isStockCheckEnabled) preset.coerceAtMost(maxQuantity) else preset
+                                val n = if (isStockTracked && !allowNegativeInventory && availableStock > 0.0) {
+                                    preset.coerceAtMost(availableStock)
+                                } else {
+                                    preset
+                                }
                                 text = if (n % 1.0 == 0.0) n.toLong().toString() else String.format(Locale.US, "%.2f", n).trimEnd('0').trimEnd('.')
                             },
                             shape = RoundedCornerShape(8.dp),
@@ -3150,16 +3175,36 @@ fun ManualQuantityDialog(
                     }
                 }
 
-                if (isStockCheckEnabled) {
-                    val maxStr = if (maxQuantity % 1.0 == 0.0) maxQuantity.toLong().toString() else String.format(Locale.US, "%.2f", maxQuantity).trimEnd('0').trimEnd('.')
-                    Text(
-                        stringResource(R.string.cart_available_stock, maxStr, cleanUnit),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                    if (text.isNotEmpty() && !isValid) {
+                if (isStockTracked) {
+                    val stockStr = if (availableStock % 1.0 == 0.0) availableStock.toLong().toString() else String.format(Locale.US, "%.2f", availableStock).trimEnd('0').trimEnd('.')
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Text(
-                            stringResource(R.string.cart_quantity_range_error, maxStr),
+                            text = stringResource(R.string.cart_available_stock, stockStr, cleanUnit),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (availableStock <= 0.0) MaterialTheme.colorScheme.error else Color.Gray
+                        )
+                        if (allowNegativeInventory && isExceedingStock) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFFFEF3C7)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.cart_negative_stock_allowed_badge),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFB45309),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                    if (text.isNotEmpty() && !isValid && !allowNegativeInventory && isExceedingStock) {
+                        Text(
+                            stringResource(R.string.cart_quantity_range_error, stockStr),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )

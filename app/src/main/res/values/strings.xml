@@ -597,6 +597,7 @@
     <string name="cart_quantity_placeholder_whole">e.g. 5</string>
     <string name="cart_available_stock">Available stock: %1$s %2$s</string>
     <string name="cart_quantity_range_error">Enter a quantity between 0.01 and %1$s</string>
+    <string name="cart_negative_stock_allowed_badge">Negative Stock Allowed</string>
     <string name="cart_credit_limit_exceeded_title">Credit Limit Exceeded</string>
     <string name="cart_credit_ceiling_reached">%1$s has reached credit ceiling!</string>
     <string name="cart_credit_limit_line">• Credit Limit: %1$s</string>

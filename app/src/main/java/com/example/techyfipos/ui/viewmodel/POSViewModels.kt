@@ -168,7 +168,7 @@ internal fun decodeHeldCartPayload(json: String): HeldCartPayload {
                     category = item.optString("category", "Quick Sale"),
                     purchasePrice = item.optDouble("purchasePrice", 0.0),
                     sellingPrice = item.optDouble("sellingPrice", item.optDouble("price", 0.0)),
-                    stockQty = Double.MAX_VALUE,
+                    stockQty = 999999.0,
                     reorderLevel = 0,
                     unit = item.optString("unit", "Pcs"),
                     wholesalePrice = item.optDouble("wholesalePrice", 0.0),
@@ -893,7 +893,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         )
     }
 
-    fun updateQuantity(product: Product, newQty: Double) {
+    fun updateQuantity(product: Product, newQty: Double, allowNegative: Boolean = false) {
         if (newQty <= 0.0) {
             removeFromCart(product)
             return
@@ -901,7 +901,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val currentList = _cartItems.value.toMutableList()
         val index = currentList.indexOfFirst { it.product.barcode == product.barcode }
         if (index != -1) {
-            val safeQuantity = if (isSyntheticSaleBarcode(product.barcode)) {
+            val safeQuantity = if (isSyntheticSaleBarcode(product.barcode) || allowNegative) {
                 newQty
             } else {
                 newQty.coerceAtMost(product.stockQty)

@@ -597,6 +597,7 @@
     <string name="cart_quantity_placeholder_whole">যেমন ৫</string>
     <string name="cart_available_stock">উপলব্ধ স্টক: %1$s %2$s</string>
     <string name="cart_quantity_range_error">০.০১ থেকে %1$s এর মধ্যে একটি পরিমাণ লিখুন</string>
+    <string name="cart_negative_stock_allowed_badge">অতিরিক্ত স্টক অনুমোদিত</string>
     <string name="cart_credit_limit_exceeded_title">ক্রেডিট সীমা অতিক্রান্ত</string>
     <string name="cart_credit_ceiling_reached">%1$s ক্রেডিট সীমায় পৌঁছেছে!</string>
     <string name="cart_credit_limit_line">• ক্রেডিট সীমা: %1$s</string>

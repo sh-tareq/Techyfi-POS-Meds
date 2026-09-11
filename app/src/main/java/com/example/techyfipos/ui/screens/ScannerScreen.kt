@@ -75,6 +75,8 @@ import com.example.techyfipos.data.db.Product
 import com.example.techyfipos.ui.viewmodel.CartViewModel
 import com.example.techyfipos.ui.viewmodel.ScannerViewModel
 import com.example.techyfipos.ui.viewmodel.ProductsViewModel
+import com.example.techyfipos.ui.viewmodel.SettingsViewModel
+import com.example.techyfipos.ui.viewmodel.isSyntheticSaleBarcode
 import com.example.techyfipos.ui.viewmodel.CartItem
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -100,8 +102,10 @@ fun ScannerScreen(
     scannerViewModel: ScannerViewModel,
     cartViewModel: CartViewModel,
     productsViewModel: ProductsViewModel? = null,
+    settingsViewModel: SettingsViewModel? = null,
     isTablet: Boolean = false,
     isOwner: Boolean = true,
+    isSupervisor: Boolean = false,
     canCheckStock: Boolean = isOwner,
     onNavigateToCart: () -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -110,6 +114,9 @@ fun ScannerScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    val invoiceSettingsData by settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
+    val allowNegativeInventory = invoiceSettingsData?.allowNegativeInventory == true || isOwner || isSupervisor
 
     val isSellMode by scannerViewModel.isSellMode.collectAsStateWithLifecycle()
 
@@ -222,6 +229,7 @@ fun ScannerScreen(
                 onManualEntry = { scannerViewModel.showManualDialog.value = true },
                 cartItems = cartItems,
                 grandTotal = grandTotal,
+                allowNegativeInventory = allowNegativeInventory,
                 onNavigateToCart = onNavigateToCart,
                 modifier = Modifier.fillMaxSize()
             )
@@ -465,7 +473,10 @@ fun ScannerScreen(
                 CartPreviewBottomSheet(
                     cartItems = cartItems,
                     total = grandTotal,
-                    onQuantityChanged = { prod, qty -> cartViewModel.updateQuantity(prod, qty) },
+                    allowNegativeInventory = allowNegativeInventory,
+                    onQuantityChanged = { prod, qty ->
+                        cartViewModel.updateQuantity(prod, qty, allowNegative = allowNegativeInventory)
+                    },
                     onRemove = { prod -> cartViewModel.removeFromCart(prod) },
                     onDismiss = { showCartPreview = false },
                     onHoldCart = {
@@ -523,6 +534,7 @@ private fun TabletSplitTerminal(
     onManualEntry: () -> Unit,
     cartItems: List<CartItem>,
     grandTotal: Double,
+    allowNegativeInventory: Boolean = false,
     onNavigateToCart: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -898,8 +910,9 @@ private fun TabletSplitTerminal(
                         items(cartItems, key = { it.product.barcode }) { item ->
                             TabletCartItemRow(
                                 item = item,
+                                allowNegativeInventory = allowNegativeInventory,
                                 onQuantityChange = { newQty ->
-                                    cartViewModel.updateQuantity(item.product, newQty)
+                                    cartViewModel.updateQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
                                 },
                                 onRemove = {
                                     cartViewModel.removeFromCart(item.product)
@@ -1062,9 +1075,32 @@ private fun TabletProductGridCard(
 @Composable
 private fun TabletCartItemRow(
     item: CartItem,
+    allowNegativeInventory: Boolean = false,
     onQuantityChange: (Double) -> Unit,
     onRemove: () -> Unit
 ) {
+    var showQuantityDialog by remember { mutableStateOf(false) }
+
+    if (showQuantityDialog) {
+        val isCustomItem = isSyntheticSaleBarcode(item.product.barcode) ||
+                item.product.barcode.startsWith("CUSTOM-") ||
+                item.product.barcode.startsWith("ADHOC-") ||
+                item.product.stockQty >= 999999.0
+
+        ManualQuantityDialog(
+            currentQuantity = item.quantity,
+            availableStock = item.product.stockQty,
+            allowNegativeInventory = allowNegativeInventory,
+            isCustomItem = isCustomItem,
+            unit = item.product.unit,
+            onConfirm = { qty ->
+                onQuantityChange(qty)
+                showQuantityDialog = false
+            },
+            onDismiss = { showQuantityDialog = false }
+        )
+    }
+
     Card(
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
@@ -1086,8 +1122,9 @@ private fun TabletCartItemRow(
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                val itemQtyDisplay = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
                 Text(
-                    text = "${formatTaka(item.product.sellingPrice)} × ${item.quantity.toInt()} = ${formatTaka(item.product.sellingPrice * item.quantity)}",
+                    text = "${formatTaka(item.product.sellingPrice)} × $itemQtyDisplay = ${formatTaka(item.product.sellingPrice * item.quantity)}",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium
@@ -1099,21 +1136,33 @@ private fun TabletCartItemRow(
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 IconButton(
-                    onClick = { onQuantityChange(item.quantity - 1.0) },
+                    onClick = { onQuantityChange((item.quantity - 1.0).coerceAtLeast(0.0)) },
                     modifier = Modifier.size(28.dp)
                 ) {
                     Icon(Icons.Default.Remove, contentDescription = "Decrease", modifier = Modifier.size(16.dp))
                 }
 
-                Text(
-                    text = "${item.quantity.toInt()}",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
+                Surface(
+                    onClick = { showQuantityDialog = true },
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(horizontal = 2.dp)
+                ) {
+                    val displayQty = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
+                    Text(
+                        text = displayQty,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
 
                 IconButton(
-                    onClick = { onQuantityChange(item.quantity + 1.0) },
+                    onClick = {
+                        if (allowNegativeInventory || item.product.stockQty <= 0.0 || item.quantity + 1.0 <= item.product.stockQty) {
+                            onQuantityChange(item.quantity + 1.0)
+                        }
+                    },
                     modifier = Modifier.size(28.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Increase", modifier = Modifier.size(16.dp))
@@ -1561,6 +1610,7 @@ private fun SellCheckoutBar(
 private fun CartPreviewBottomSheet(
     cartItems: List<com.example.techyfipos.ui.viewmodel.CartItem>,
     total: Double,
+    allowNegativeInventory: Boolean = false,
     onQuantityChanged: (Product, Double) -> Unit,
     onRemove: (Product) -> Unit,
     onDismiss: () -> Unit,
@@ -1568,6 +1618,28 @@ private fun CartPreviewBottomSheet(
     onContinue: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    var itemToSetQuantity by remember { mutableStateOf<com.example.techyfipos.ui.viewmodel.CartItem?>(null) }
+
+    if (itemToSetQuantity != null) {
+        val currentItem = itemToSetQuantity!!
+        val isCustomItem = isSyntheticSaleBarcode(currentItem.product.barcode) ||
+                currentItem.product.barcode.startsWith("CUSTOM-") ||
+                currentItem.product.barcode.startsWith("ADHOC-") ||
+                currentItem.product.stockQty >= 999999.0
+
+        ManualQuantityDialog(
+            currentQuantity = currentItem.quantity,
+            availableStock = currentItem.product.stockQty,
+            allowNegativeInventory = allowNegativeInventory,
+            isCustomItem = isCustomItem,
+            unit = currentItem.product.unit,
+            onConfirm = { qty ->
+                onQuantityChanged(currentItem.product, qty)
+                itemToSetQuantity = null
+            },
+            onDismiss = { itemToSetQuantity = null }
+        )
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1715,12 +1787,14 @@ private fun CartPreviewBottomSheet(
                                             }
                                         }
 
-                                        // Quantity counter badge
+                                        // Quantity counter badge (tap to enter manual quantity)
                                         Surface(
+                                            onClick = { itemToSetQuantity = item },
                                             shape = RoundedCornerShape(9.dp),
                                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                                             modifier = Modifier
                                                 .height(32.dp)
+                                                .defaultMinSize(minWidth = 36.dp)
                                                 .padding(horizontal = 1.dp)
                                         ) {
                                             Box(
@@ -1743,7 +1817,7 @@ private fun CartPreviewBottomSheet(
                                         Surface(
                                             onClick = {
                                                 val next = Math.round((item.quantity + stepVal) * 100.0) / 100.0
-                                                if (item.product.stockQty <= 0.0 || next <= item.product.stockQty) {
+                                                if (allowNegativeInventory || item.product.stockQty <= 0.0 || next <= item.product.stockQty) {
                                                     scope.launch {
                                                         plusAnim.animateTo(1.35f, tween(70))
                                                         plusAnim.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
