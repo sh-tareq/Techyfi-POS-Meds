@@ -3,6 +3,7 @@ package com.example.techyfipos.data
 import android.content.Context
 import com.example.techyfipos.data.db.*
 import com.example.techyfipos.utils.normalizePhone
+import com.example.techyfipos.utils.toEnglishDigits
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -108,7 +109,7 @@ class DataRepository(
     val allInventoryAdjustments: Flow<List<InventoryAdjustment>> = inventoryAdjustmentDao.getAllAdjustments()
 
     fun getAdjustmentsForProduct(barcode: String): Flow<List<InventoryAdjustment>> =
-        inventoryAdjustmentDao.getAdjustmentsForProduct(barcode)
+        inventoryAdjustmentDao.getAdjustmentsForProduct(toEnglishDigits(barcode.trim()))
 
     suspend fun recordInventoryAdjustment(adjustment: InventoryAdjustment): Long = withContext(Dispatchers.IO) {
         requireOwnerSession()
@@ -230,11 +231,18 @@ class DataRepository(
     val allProducts: Flow<List<Product>> = productDao.getAllProducts()
     
     fun searchProducts(query: String): Flow<List<Product>> {
-        return productDao.searchProducts("%$query%")
+        val clean = query.trim()
+        val english = toEnglishDigits(clean)
+        return if (english != clean) {
+            productDao.searchProductsWithAlt("%$clean%", "%$english%")
+        } else {
+            productDao.searchProducts("%$clean%")
+        }
     }
 
     suspend fun getProductByBarcode(barcode: String): Product? = withContext(Dispatchers.IO) {
-        productDao.getProductByBarcode(barcode)
+        val normalized = toEnglishDigits(barcode.trim())
+        productDao.getProductByBarcode(normalized)
     }
 
     suspend fun insertProduct(product: Product) = withContext(Dispatchers.IO) {
@@ -303,10 +311,11 @@ class DataRepository(
         note: String? = null
     ): Product? = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADJUST_STOCK)
+        val cleanBarcode = toEnglishDigits(barcode.trim())
         database.withDriverTransaction {
-            val before = productDao.getProductByBarcode(barcode) ?: return@withDriverTransaction null
-            productDao.adjustStockQty(barcode, delta)
-            val after = productDao.getProductByBarcode(barcode) ?: return@withDriverTransaction null
+            val before = productDao.getProductByBarcode(cleanBarcode) ?: return@withDriverTransaction null
+            productDao.adjustStockQty(cleanBarcode, delta)
+            val after = productDao.getProductByBarcode(cleanBarcode) ?: return@withDriverTransaction null
             if (after.stockQty != before.stockQty) {
                 inventoryAdjustmentDao.insertAdjustment(
                     InventoryAdjustment(

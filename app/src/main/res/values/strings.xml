@@ -25,6 +25,9 @@
     <string name="customer_phone">Customer Phone</string>
     <string name="due_receivable">Due Amount</string>
     <string name="products">Products</string>
+    <string name="products_header_subtitle">%1$d inventory SKUs registered</string>
+    <string name="cart_header_subtitle">%1$d items in cart</string>
+    <string name="sales_history_header_subtitle">%1$d completed orders logged</string>
     <string name="sales_history">History</string>
     <string name="dues_list">Dues</string>
     <string name="expenses">Expenses</string>
@@ -32,7 +35,7 @@
     <string name="settings">Settings</string>
     <string name="more_hub">More ⋯</string>
     <string name="store_operations">Store Operations &amp; Tools</string>
-    <string name="store_operations_sub">Quick access to management and financial ledgers</string>
+    <string name="store_operations_sub">Management &amp; financial ledgers</string>
     <string name="language">Language</string>
     <string name="shop_name">Shop Name</string>
     <string name="shop_address">Shop Address</string>
@@ -226,8 +229,8 @@
     <string name="supplier_payment_note_hint">e.g. Paid via Bank transfer / Cash</string>
 
     <!-- Expenses Screen -->
-    <string name="expense_screen_title">Expenses &amp; Cash</string>
-    <string name="expense_screen_subtitle">Petty cash &amp; daily drawer register</string>
+    <string name="expense_screen_title">Expenses</string>
+    <string name="expense_screen_subtitle">Petty cash &amp; daily expenses</string>
     <string name="expense_shift_active">Shift Active</string>
     <string name="expense_search_hint">Search reason, category, notes...</string>
     <string name="expense_filter_all">All</string>
@@ -358,11 +361,11 @@
     <string name="zreport_surplus">Surplus: +%1$s</string>
     <string name="zreport_complete_button">Lock &amp; Complete Z-Report</string>
 
-    <!-- Day Start & Close (Cash Drawer, Float & Day-end Reconciliation) -->
-    <string name="register_close_section">Day Start &amp; Close</string>
-    <string name="register_close_hub_subtitle">Shift open, drawer cash float &amp; day close audit</string>
+    <!-- Cash Register (Cash Drawer, Float & Day-end Reconciliation) -->
+    <string name="register_close_section">Cash Register</string>
+    <string name="register_close_hub_subtitle">Shift float &amp; day close audit</string>
     <string name="register_close_screen_title">Cash Register</string>
-    <string name="register_close_screen_subtitle">Day Start &amp; Close • Shift reconciliation</string>
+    <string name="register_close_screen_subtitle">Cash drawer &amp; shift reconciliation</string>
     <string name="register_close_today_summary">CURRENT SHIFT SUMMARY</string>
     <string name="register_close_cash_sales">Cash Sales</string>
     <string name="register_close_digital_sales">Digital Sales</string>
@@ -434,7 +437,7 @@
     <!-- Expenses Redesign -->
     <string name="expense_hero_total_label">TOTAL TODAY\'S EXPENSES</string>
     <string name="expense_hero_disbursements">%1$d petty cash disbursements today</string>
-    <string name="expense_cash_moved_banner">Cash Drawer &amp; Float balance is now securely tracked in Day Start &amp; Close</string>
+    <string name="expense_cash_moved_banner">Cash Drawer &amp; Float balance is now securely tracked in Cash Register</string>
     <string name="expense_view_drawer_btn">View Drawer ➔</string>
     <string name="owner_only_loyalty">Loyalty management is owner-only</string>
     <string name="loyalty_screen_title">Customer Loyalty</string>

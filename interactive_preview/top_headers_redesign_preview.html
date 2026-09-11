@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS — Top Header Icons & Title Redesign Interactive Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-gradient: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      --primary-light: rgba(79, 70, 229, 0.12);
+      
+      --accent-indigo: #4F46E5;
+      --accent-violet: #8B5CF6;
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-rose: #F43F5E;
+      --accent-sky: #0284C7;
+      --accent-teal: #0D9488;
+      --accent-slate: #64748B;
+      
+      --bg-canvas: #090D16;
+      --bg-surface: #111827;
+      --bg-card: #182234;
+      --bg-card-hover: #1F2E45;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(79, 70, 229, 0.4);
+      
+      --text-primary: #F9FAFB;
+      --text-secondary: #9CA3AF;
+      --text-tertiary: #6B7280;
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 22px;
+      --radius-full: 9999px;
+      
+      --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-bn: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-canvas: #F8FAFC;
+      --bg-surface: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F1F5F9;
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --border-highlight: rgba(79, 70, 229, 0.35);
+      
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-tertiary: #94A3B8;
+    }
+
+    body.lang-bn {
+      font-family: var(--font-bn);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      line-height: 1.5;
+      padding: 24px 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    .main-container {
+      width: 100%;
+      max-width: 1400px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Top Control Hub */
+    .hero-header {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 22px 28px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+
+    .hero-info h1 {
+      font-size: 25px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, #FFF 30%, #A5B4FC 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    [data-theme="light"] .hero-info h1 {
+      background: linear-gradient(135deg, #0F172A 30%, #4F46E5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-info p {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .controls-deck {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .toggle-group {
+      display: inline-flex;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      padding: 4px;
+      gap: 4px;
+    }
+    [data-theme="light"] .toggle-group {
+      background: rgba(0,0,0,0.05);
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .toggle-btn.active {
+      background: var(--primary-gradient);
+      color: #FFF;
+      box-shadow: 0 2px 10px rgba(79, 70, 229, 0.4);
+    }
+
+    /* Section Navigator Pills */
+    .section-selector-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 6px 4px 10px;
+      scrollbar-width: thin;
+    }
+
+    .section-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 9px 16px;
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .section-pill:hover {
+      border-color: var(--primary);
+      color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+
+    .section-pill.active {
+      background: var(--primary);
+      color: #FFF;
+      border-color: var(--primary);
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.45);
+    }
+
+    /* Interactive Showcase Stage */
+    .showcase-stage {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      transition: all 0.3s ease;
+    }
+    .showcase-stage.device-tablet {
+      grid-template-columns: 1fr;
+      gap: 28px;
+    }
+    @media (max-width: 1024px) {
+      .showcase-stage {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .stage-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+
+    .stage-card.recommended {
+      border: 2px solid var(--primary);
+      box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
+    }
+
+    .stage-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .badge-tag {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      background: rgba(239, 68, 68, 0.15);
+      color: #EF4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .badge-tag.rec {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10B981;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    /* Mock Mobile & Tablet Header Viewports with Physical Device Framing */
+    .mock-viewport {
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 0;
+      overflow: hidden;
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.25);
+      transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+      width: 100%;
+    }
+
+    .device-phone-360 .mock-viewport {
+      max-width: 360px;
+      margin: 0 auto;
+      border: 2px solid rgba(79, 70, 229, 0.4);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.1);
+    }
+
+    .device-phone-412 .mock-viewport {
+      max-width: 412px;
+      margin: 0 auto;
+      border: 2px solid rgba(79, 70, 229, 0.4);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.1);
+    }
+
+    .device-tablet .mock-viewport {
+      max-width: 100%;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.45);
+    }
+
+    .tablet-frame-wrapper {
+      display: flex;
+      width: 100%;
+      min-height: 180px;
+      background: var(--bg-canvas);
+    }
+
+    /* Tablet Persistent Navigation Rail (80px) */
+    .tablet-nav-rail {
+      width: 80px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+      gap: 18px;
+      flex-shrink: 0;
+    }
+
+    .rail-app-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%);
+      border: 1.5px solid rgba(99, 102, 241, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+      position: relative;
+    }
+
+    .rail-status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #10B981;
+      border: 1.5px solid var(--bg-surface);
+      position: absolute;
+      top: -2px;
+      right: -2px;
+    }
+
+    .rail-item-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 700;
+      transition: all 0.2s;
+    }
+
+    .rail-item-icon.active {
+      background: rgba(79, 70, 229, 0.16);
+      color: var(--primary);
+      border: 1px solid rgba(79, 70, 229, 0.35);
+    }
+
+    .tablet-content-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .android-status-bar {
+      height: 28px;
+      background: transparent;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 16px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+
+    /* Top App Bar Container */
+    .pos-top-app-bar {
+      height: 64px;
+      background: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      position: relative;
+      border-bottom: 1px solid var(--border-subtle);
+      transition: all 0.25s ease;
+    }
+    .pos-top-app-bar.tablet-bar {
+      height: 76px;
+      padding: 0 24px;
+    }
+
+    .bar-nav-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .nav-back-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-primary);
+      cursor: pointer;
+      background: transparent;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .nav-back-icon:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+    /* CURRENT IMPLEMENTATION (BEFORE): The Problem */
+    .header-before-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-before-tiny {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .icon-before-tiny.tablet-icon {
+      width: 24px;
+      height: 24px;
+    }
+
+    .title-before-col {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+    }
+
+    .title-before-text {
+      font-size: 16.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .title-before-text.tablet-title {
+      font-size: 18px;
+    }
+
+    .subtitle-before-text {
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    /* REDESIGNED IMPLEMENTATION (AFTER - VARIANT 1: TONAL SQUIRCLE) */
+    .header-after-v1 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .header-after-v1.tablet-header {
+      gap: 14px;
+    }
+
+    .icon-tonal-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .icon-tonal-badge.tablet-badge {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+    }
+    .icon-tonal-badge:hover {
+      transform: scale(1.08) rotate(-2deg);
+    }
+
+    .icon-tonal-badge svg, .icon-tonal-badge .icon-3d {
+      width: 25px;
+      height: 25px;
+      filter: drop-shadow(0 3px 5px rgba(0,0,0,0.3));
+    }
+    .icon-tonal-badge.tablet-badge svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    .title-after-col {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .title-after-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .title-after-text {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      color: var(--text-primary);
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 1px 0;
+    }
+    .title-after-text.tablet-title {
+      font-size: 22px;
+      letter-spacing: -0.35px;
+      line-height: 1.35;
+    }
+
+    .subtitle-after-text {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .subtitle-after-text.tablet-sub {
+      font-size: 13px;
+    }
+
+    .metric-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      line-height: 1.3;
+    }
+    .metric-pill.tablet-pill {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 8px;
+    }
+
+    /* Right Action Buttons in Bar */
+    .bar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-chip-btn {
+      height: 38px;
+      padding: 0 14px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .action-chip-btn:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: var(--primary);
+    }
+
+    .action-circle-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--border-subtle);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      position: relative;
+    }
+
+    .action-pill-btn {
+      height: 40px;
+      padding: 0 16px;
+      border-radius: var(--radius-full);
+      background: var(--primary-gradient);
+      color: #FFF;
+      font-weight: 700;
+      font-size: 13.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+    }
+
+    /* Diagnostics & Alignment Inspector */
+    .diagnostic-panel {
+      background: rgba(0,0,0,0.3);
+      border: 1px dashed var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-family: var(--font-code);
+      font-size: 12px;
+    }
+    [data-theme="light"] .diagnostic-panel {
+      background: rgba(0,0,0,0.03);
+    }
+
+    .diag-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-secondary);
+    }
+
+    .diag-val {
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .diag-val.bad { color: #EF4444; }
+    .diag-val.good { color: #10B981; }
+
+    /* Alignment Grid Overlay lines */
+    .inspector-active .pos-top-app-bar::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 1px;
+      background: rgba(239, 68, 68, 0.7);
+      z-index: 100;
+      pointer-events: none;
+    }
+    .inspector-active .pos-top-app-bar::after {
+      content: 'Center Axis';
+      position: absolute;
+      right: 8px;
+      top: calc(50% - 14px);
+      font-size: 9px;
+      font-family: var(--font-code);
+      color: #EF4444;
+      background: rgba(0,0,0,0.8);
+      padding: 1px 4px;
+      border-radius: 3px;
+      z-index: 101;
+      pointer-events: none;
+    }
+
+    /* Text Fit & Formatting Safety Audit Deck */
+    .safety-audit-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-highlight);
+      border-radius: var(--radius-xl);
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .safety-audit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .safety-audit-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .safety-audit-title h3 {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+    .safety-audit-title p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .safety-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .safety-pill.good {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10B981;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulseGreen 1.8s infinite;
+    }
+    @keyframes pulseGreen {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .safety-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .safety-metric-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .safety-metric-lbl {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-tertiary);
+    }
+    .safety-metric-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-primary);
+      font-family: var(--font-code);
+    }
+    .safety-metric-val.good {
+      color: #10B981;
+    }
+    .safety-metric-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .safety-checklist-deck {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 800px) {
+      .safety-checklist-deck {
+        grid-template-columns: 1fr;
+      }
+    }
+    .safety-check-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+    .safety-check-item .check-icon {
+      font-size: 16px;
+      line-height: 1;
+      margin-top: 2px;
+    }
+    .safety-check-item strong {
+      color: var(--text-primary);
+      display: block;
+      margin-bottom: 2px;
+    }
+    .safety-check-item span {
+      color: var(--text-secondary);
+    }
+
+    /* Variants Grid for Comparison */
+    .variants-section {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 24px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .variants-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    @media (max-width: 1024px) {
+      .variants-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .variant-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .variant-card:hover {
+      border-color: var(--primary);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+    }
+
+    .variant-card.selected {
+      border: 2px solid var(--primary);
+      box-shadow: 0 8px 24px rgba(79, 70, 229, 0.25);
+    }
+
+    .variant-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .variant-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Live Interactive Tweaker Controls */
+    .tweaker-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 20px 26px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .tweaker-box {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .slider-control {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .slider-control label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .slider-control input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-container">
+
+    <!-- Top Action Bar -->
+    <header class="hero-header">
+      <div class="hero-info">
+        <h1>
+          <span>✨</span>
+          <span>Top Header Icons & Title Redesign</span>
+        </h1>
+        <p>Interactive Design System Preview & Alignment Audit for Mobile Phone & POS Tablet</p>
+      </div>
+
+      <div class="controls-deck">
+        <!-- Device Switcher (Phone 360dp, Phone 412dp, Tablet 1280dp) -->
+        <div class="toggle-group">
+          <button class="toggle-btn" id="devicePhone360Btn" onclick="setDevice('phone-360')">📱 Phone (360dp)</button>
+          <button class="toggle-btn active" id="devicePhone412Btn" onclick="setDevice('phone-412')">📱 Phone (412dp)</button>
+          <button class="toggle-btn" id="deviceTabletBtn" onclick="setDevice('tablet')">📟 Tablet (1280dp)</button>
+        </div>
+
+        <!-- Language Switcher -->
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="langEnBtn" onclick="setLanguage('en')">English</button>
+          <button class="toggle-btn" id="langBnBtn" onclick="setLanguage('bn')">বাংলা</button>
+        </div>
+
+        <!-- Theme Switcher -->
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="themeDarkBtn" onclick="setTheme('dark')">🌙 Dark</button>
+          <button class="toggle-btn" id="themeLightBtn" onclick="setTheme('light')">☀️ Light</button>
+        </div>
+
+        <!-- Inspector Grid -->
+        <div class="toggle-group">
+          <button class="toggle-btn" id="inspectBtn" onclick="toggleInspector()">📐 Alignment Grid</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Section Pills Selector -->
+    <div class="section-selector-bar" id="sectionBar">
+      <!-- Injected by JS -->
+    </div>
+
+    <!-- Live Comparison Stage -->
+    <section class="showcase-stage" id="comparisonStage">
+
+      <!-- LEFT: CURRENT BEFORE -->
+      <div class="stage-card" id="cardBefore">
+        <div class="stage-card-header">
+          <div>
+            <h3 style="font-size: 16px; font-weight: 700;" id="labelBeforeTitle">Current Implementation (Before)</h3>
+            <p style="font-size: 12px; color: var(--text-secondary);" id="labelBeforeSub">Small 22dp/24dp icon, floating off-center, small font</p>
+          </div>
+          <span class="badge-tag">Disoriented</span>
+        </div>
+
+        <div class="mock-viewport" id="viewportBefore">
+          <div class="tablet-frame-wrapper" id="tabletFrameBefore">
+            <!-- Tablet Nav Rail (Visible only in tablet mode) -->
+            <div class="tablet-nav-rail" id="navRailBefore" style="display: none;">
+              <div class="rail-app-logo">
+                <span style="font-weight: 900; font-size: 16px; color: #60A5FA;">T</span>
+                <div class="rail-status-dot"></div>
+              </div>
+              <div class="rail-item-icon" title="Sell">🛒<span>Sell</span></div>
+              <div class="rail-item-icon active" title="Products">📦<span>Products</span></div>
+              <div class="rail-item-icon" title="History">🕒<span>History</span></div>
+              <div class="rail-item-icon" title="Dues">📋<span>Dues</span></div>
+              <div class="rail-item-icon" title="More">⚡<span>More</span></div>
+            </div>
+
+            <div class="tablet-content-pane">
+              <div class="android-status-bar">
+                <span id="statusBarTimeBefore">10:30</span>
+                <span>LTE • 98% 🔋</span>
+              </div>
+
+              <div class="pos-top-app-bar" id="barBefore">
+                <div class="bar-nav-left">
+                  <div class="nav-back-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                  </div>
+
+                  <div class="header-before-title-row">
+                    <div class="icon-before-tiny" id="iconBefore">
+                      <!-- Injected SVG -->
+                    </div>
+                    <div class="title-before-col">
+                      <span class="title-before-text" id="titleBefore">Products</span>
+                      <span class="subtitle-before-text" id="subBefore">621 SKUs</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bar-actions" id="actionsBefore">
+                  <!-- Injected Actions -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Diagnostics -->
+        <div class="diagnostic-panel" id="diagBefore">
+          <div class="diag-row">
+            <span>Icon Target Size:</span>
+            <span class="diag-val bad" id="diagBeforeIcon">22dp Phone / 24dp Tablet (Lost in vast header)</span>
+          </div>
+          <div class="diag-row">
+            <span>Vertical Alignment:</span>
+            <span class="diag-val bad">Centered over Title + Sub (~40dp total) ➔ Drifting</span>
+          </div>
+          <div class="diag-row">
+            <span>Title Typography:</span>
+            <span class="diag-val bad" id="diagBeforeFont">16.5sp Phone / 18sp Tablet (Under-scaled)</span>
+          </div>
+          <div class="diag-row">
+            <span>Frame Balance:</span>
+            <span class="diag-val bad">No squircle container; floats adrift against back button</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: PROPOSED REDESIGN (AFTER) -->
+      <div class="stage-card recommended" id="cardAfter">
+        <div class="stage-card-header">
+          <div>
+            <h3 style="font-size: 16px; font-weight: 700; color: #10B981;" id="labelAfterTitle">Redesigned Header (After)</h3>
+            <p style="font-size: 12px; color: var(--text-secondary);" id="labelAfterSub">48dp Tonal Squircle Badge, 22sp Bold Title, Geometric Balance</p>
+          </div>
+          <span class="badge-tag rec">✨ Recommended Fix</span>
+        </div>
+
+        <div class="mock-viewport" id="viewportAfter">
+          <div class="tablet-frame-wrapper" id="tabletFrameAfter">
+            <!-- Tablet Nav Rail (Visible only in tablet mode) -->
+            <div class="tablet-nav-rail" id="navRailAfter" style="display: none;">
+              <div class="rail-app-logo">
+                <span style="font-weight: 900; font-size: 16px; color: #60A5FA;">T</span>
+                <div class="rail-status-dot"></div>
+              </div>
+              <div class="rail-item-icon" title="Sell">🛒<span>Sell</span></div>
+              <div class="rail-item-icon active" title="Products">📦<span>Products</span></div>
+              <div class="rail-item-icon" title="History">🕒<span>History</span></div>
+              <div class="rail-item-icon" title="Dues">📋<span>Dues</span></div>
+              <div class="rail-item-icon" title="More">⚡<span>More</span></div>
+            </div>
+
+            <div class="tablet-content-pane">
+              <div class="android-status-bar">
+                <span id="statusBarTimeAfter">10:30</span>
+                <span>LTE • 98% 🔋</span>
+              </div>
+
+              <div class="pos-top-app-bar" id="barAfter">
+                <div class="bar-nav-left">
+                  <div class="nav-back-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                  </div>
+
+                  <div class="header-after-v1" id="headerAfterContainer">
+                    <!-- Tonal Badge Container -->
+                    <div class="icon-tonal-badge" id="iconBadgeAfter">
+                      <!-- Injected SVG -->
+                    </div>
+
+                    <div class="title-after-col">
+                      <div class="title-after-row">
+                        <span class="title-after-text" id="titleAfter">Products</span>
+                        <span id="metricPillAfter"></span>
+                      </div>
+                      <span class="subtitle-after-text" id="subAfter">621 inventory SKUs registered</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bar-actions" id="actionsAfter">
+                  <!-- Injected Actions -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Diagnostics -->
+        <div class="diagnostic-panel" id="diagAfter">
+          <div class="diag-row">
+            <span>Badge Container Size:</span>
+            <span class="diag-val good" id="diagBadgeSize">48dp × 48dp (Rounded 16dp Squircle)</span>
+          </div>
+          <div class="diag-row">
+            <span>3D Icon Scaled Size:</span>
+            <span class="diag-val good" id="diagIconSize">32dp × 32dp (Crisp Depth, Lighting & Reflections)</span>
+          </div>
+          <div class="diag-row">
+            <span>Vertical Alignment:</span>
+            <span class="diag-val good">100% Balanced with 2-line Text Block & Tablet Deck</span>
+          </div>
+          <div class="diag-row">
+            <span>Title Typography:</span>
+            <span class="diag-val good" id="diagTitleSize">22sp ExtraBold (M3 Tablet Headline Standard)</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TEXT FIT & FORMATTING INTEGRITY AUDIT -->
+    <div class="safety-audit-card">
+      <div class="safety-audit-header">
+        <div class="safety-audit-title">
+          <span style="font-size: 22px;">🛡️</span>
+          <div>
+            <h3>Text Fit & Formatting Safety Guarantee</h3>
+            <p>Real-time width calculation, glyph clearance, and ascender/descender stress testing</p>
+          </div>
+        </div>
+        <div class="safety-pill good">
+          <span class="pulse-dot"></span>
+          <span>ZERO TEXT CUT-OFF VERIFIED</span>
+        </div>
+      </div>
+
+      <div class="safety-metrics-grid">
+        <div class="safety-metric-box">
+          <span class="safety-metric-lbl">Device Width Budget</span>
+          <span class="safety-metric-val" id="auditDeviceWidth">412dp</span>
+          <span class="safety-metric-sub">Physical viewport constraint</span>
+        </div>
+
+        <div class="safety-metric-box">
+          <span class="safety-metric-lbl">Available Title Slot</span>
+          <span class="safety-metric-val" id="auditSlotWidth">176px</span>
+          <span class="safety-metric-sub">Width between Nav & Actions</span>
+        </div>
+
+        <div class="safety-metric-box">
+          <span class="safety-metric-lbl">Title Text Rendered</span>
+          <span class="safety-metric-val" id="auditTextWidth">84px</span>
+          <span class="safety-metric-sub" id="auditTitleStr">"Products"</span>
+        </div>
+
+        <div class="safety-metric-box">
+          <span class="safety-metric-lbl">Safety Headroom Buffer</span>
+          <span class="safety-metric-val good" id="auditBufferWidth">+92px Free Space</span>
+          <span class="safety-metric-sub">Zero ellipsis, no text wrapping</span>
+        </div>
+      </div>
+
+      <div class="safety-checklist-deck">
+        <div class="safety-check-item">
+          <span class="check-icon">✅</span>
+          <div>
+            <strong>Ascender Clearance (রেফ র্, হ্রস্ব-ই ি):</strong>
+            <span>Generous 1.35x line-height prevents top matra clipping in all Bangla words (যেমন: "রিপোর্ট", "খরিদ্দার", "খরচপাতি").</span>
+          </div>
+        </div>
+        <div class="safety-check-item">
+          <span class="check-icon">✅</span>
+          <div>
+            <strong>Descender Clearance (উ-কার ু, ঋ-কার ৃ):</strong>
+            <span>Bottom glyph strokes maintain 4px minimum floor clearance from top bar divider (যেমন: "পণ্যসমূহ", "বকেয়া").</span>
+          </div>
+        </div>
+        <div class="safety-check-item">
+          <span class="check-icon">✅</span>
+          <div>
+            <strong>Action Deck Isolation:</strong>
+            <span>Right-side action icons and cart capsules have fixed priority and never wrap or dislocate across screen rotations.</span>
+          </div>
+        </div>
+        <div class="safety-check-item">
+          <span class="check-icon">✅</span>
+          <div>
+            <strong>Responsive Font & Badge Stepping:</strong>
+            <span>Compact phones auto-scale to 40dp badge / 18sp title; tablets expand to 48dp badge / 22sp headline.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Real-time Customizer Tweaker -->
+    <div class="tweaker-box">
+      <div class="slider-control">
+        <label>
+          <span>Badge Container Size</span>
+          <span id="valBadgeSize">44dp</span>
+        </label>
+        <input type="range" min="36" max="56" value="44" id="rangeBadgeSize" oninput="updateCustomizer()">
+      </div>
+
+      <div class="slider-control">
+        <label>
+          <span>3D Icon Inner Size</span>
+          <span id="valIconSize">28dp</span>
+        </label>
+        <input type="range" min="20" max="40" value="28" id="rangeIconSize" oninput="updateCustomizer()">
+      </div>
+
+      <div class="slider-control">
+        <label>
+          <span>Title Font Size</span>
+          <span id="valFontSize">20sp</span>
+        </label>
+        <input type="range" min="16" max="26" value="20" id="rangeFontSize" oninput="updateCustomizer()">
+      </div>
+
+      <div class="slider-control">
+        <label>
+          <span>Corner Rounding</span>
+          <span id="valRadius">14dp</span>
+        </label>
+        <input type="range" min="8" max="24" value="14" id="rangeRadius" oninput="updateCustomizer()">
+      </div>
+    </div>
+
+    <!-- 3 Design Variations for Confirmation -->
+    <section class="variants-section">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 800;">Select Preferred Design Style</h2>
+          <p style="font-size: 13px; color: var(--text-secondary);">Choose which variation you want implemented across Phone and Tablet</p>
+        </div>
+        <span class="badge-tag rec">Interactive Options</span>
+      </div>
+
+      <div class="variants-grid">
+        <!-- Variant A -->
+        <div class="variant-card selected" id="varCardA" onclick="selectVariant('A')">
+          <div class="variant-head">
+            <div class="variant-title">
+              <span style="color: var(--primary);">🅰️</span>
+              <span>Variant 1: Tonal Squircle Badge</span>
+            </div>
+            <span class="badge-tag rec">Recommended</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary);">
+            Icon placed inside a 44dp (Phone) / 48dp (Tablet) soft-tinted squircle with category color background and 1px highlight stroke. Creates 100% geometric balance with the 2-line title block.
+          </p>
+          <div style="padding: 12px; background: rgba(0,0,0,0.25); border-radius: 10px; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 42px; height: 42px; border-radius: 14px; background: rgba(79, 70, 229, 0.2); border: 1px solid rgba(79, 70, 229, 0.4); display: flex; align-items: center; justify-content: center; font-size: 24px;">📦</div>
+            <div>
+              <div style="font-weight: 800; font-size: 17px;">Products</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">621 SKUs registered</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Variant B -->
+        <div class="variant-card" id="varCardB" onclick="selectVariant('B')">
+          <div class="variant-head">
+            <div class="variant-title">
+              <span style="color: #38BDF8;">🅱️</span>
+              <span>Variant 2: Frameless 3D Emblem</span>
+            </div>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary);">
+            Standalone 36dp (Phone) / 40dp (Tablet) large 3D icon without background squircle. Scaled 60% larger than current 22dp/24dp icon with optical baseline alignment to the title.
+          </p>
+          <div style="padding: 12px; background: rgba(0,0,0,0.25); border-radius: 10px; display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 32px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));">📦</div>
+            <div>
+              <div style="font-weight: 800; font-size: 18px;">Products</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">621 SKUs registered</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Variant C -->
+        <div class="variant-card" id="varCardC" onclick="selectVariant('C')">
+          <div class="variant-head">
+            <div class="variant-title">
+              <span style="color: #EC4899;">🅲</span>
+              <span>Variant 3: Pill Header with Metric Badge</span>
+            </div>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary);">
+            Frosted pill wrapper encasing the 3D icon and title with a live pulsating metric chip (e.g. "621 SKUs", "24 Debtors"). Maximum visual polish.
+          </p>
+          <div style="padding: 8px 16px; background: rgba(79, 70, 229, 0.12); border: 1px solid rgba(79, 70, 229, 0.3); border-radius: 9999px; display: inline-flex; align-items: center; gap: 10px; align-self: flex-start;">
+            <div style="font-size: 22px;">📦</div>
+            <div style="font-weight: 800; font-size: 16px;">Products</div>
+            <span style="background: #4F46E5; color: #FFF; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px;">621 SKUs</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // Section Definitions with exact metadata, colors, and titles
+    const SECTIONS = [
+      {
+        id: 'products',
+        iconEmoji: '📦',
+        nameEn: 'Products',
+        nameBn: 'পণ্যসমূহ',
+        subEn: '621 inventory SKUs registered',
+        subBn: 'মজুদ ভান্ডারে মোট ৬২১টি এসকেইউ',
+        pillEn: '621 SKUs',
+        pillBn: '৬২১ এসকেইউ',
+        themeColor: '#4F46E5',
+        themeBg: 'rgba(79, 70, 229, 0.16)',
+        themeBorder: 'rgba(79, 70, 229, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradProd)"/><path d="M18 7l11 6.3v12.7L18 32 7 26V13.3L18 7z" fill="#818CF8"/><path d="M18 7l11 6.3-11 6.4-11-6.4L18 7z" fill="#C7D2FE"/><path d="M18 19.7v12.3l11-6V13.3L18 19.7z" fill="#6366F1"/><path d="M7 13.3l11 6.4V32L7 26V13.3z" fill="#4F46E5"/><defs><linearGradient id="gradProd" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#4F46E5"/><stop offset="1" stop-color="#312E81"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" title="Alerts">🔔</div><div class="action-circle-btn" title="Cart" style="background:#4F46E5;color:#fff;">🛒</div>`,
+        actionsTablet: `<button class="action-chip-btn">📄 Excel Tools ▾</button><button class="action-chip-btn">⚏ Batch Select</button><button class="action-chip-btn">📋 Stock Audit</button><button class="action-pill-btn">+ Add Product</button>`
+      },
+      {
+        id: 'customers',
+        iconEmoji: '👥',
+        nameEn: 'Customers',
+        nameBn: 'ক্রেতা ও খরিদ্দার',
+        subEn: '84 active khata accounts',
+        subBn: '৮৪ জন সক্রিয় হিসাবধারী ক্রেতা',
+        pillEn: '84 Total',
+        pillBn: '৮৪ জন মোট',
+        themeColor: '#8B5CF6',
+        themeBg: 'rgba(139, 92, 246, 0.16)',
+        themeBorder: 'rgba(139, 92, 246, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradCust)"/><circle cx="15" cy="14" r="5" fill="#C4B5FD"/><path d="M7 27c0-4.4 3.6-8 8-8s8 3.6 8 8" fill="#A78BFA"/><circle cx="24" cy="13" r="3.5" fill="#E9D5FF"/><path d="M21 27c0-2.8 1.8-5.2 4.4-6.1" stroke="#DDD6FE" stroke-width="2"/><defs><linearGradient id="gradCust" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#7C3AED"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" title="Search">🔍</div><div class="action-circle-btn" title="Add Customer" style="background:#8B5CF6;color:#fff;">+</div>`,
+        actionsTablet: `<button class="action-chip-btn">📄 Export Khata</button><button class="action-chip-btn">💬 SMS Broadcast</button><button class="action-pill-btn">+ Add Customer</button>`
+      },
+      {
+        id: 'dues',
+        iconEmoji: '📋',
+        nameEn: 'Dues & Khata',
+        nameBn: 'বকেয়া ও বাকি খাতা',
+        subEn: '24 debtors • ৳1,42,850 total due',
+        subBn: '২৪ জন বাকিদার • মোট ১,৪২,৮৫০ টাকা',
+        pillEn: '৳1.42L Due',
+        pillBn: '৳১.৪২ লাখ',
+        themeColor: '#EF4444',
+        themeBg: 'rgba(239, 68, 68, 0.16)',
+        themeBorder: 'rgba(239, 68, 68, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradDue)"/><rect x="10" y="8" width="16" height="21" rx="2" fill="#FECACA" stroke="#EF4444" stroke-width="1.5"/><path d="M14 14h8M14 18h8M14 22h5" stroke="#DC2626" stroke-width="2" stroke-linecap="round"/><defs><linearGradient id="gradDue" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#DC2626"/><stop offset="1" stop-color="#7F1D1D"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" title="Statement">📋</div><div class="action-circle-btn" title="Add Due" style="background:#EF4444;color:#fff;">+</div>`,
+        actionsTablet: `<button class="action-chip-btn">📊 Due Summary</button><button class="action-chip-btn">🔔 Send Reminder</button><button class="action-pill-btn">+ Collect Due</button>`
+      },
+      {
+        id: 'suppliers',
+        iconEmoji: '🚚',
+        nameEn: 'Suppliers',
+        nameBn: 'মহাজন ও সরবরাহকারী',
+        subEn: '18 active wholesale vendors',
+        subBn: '১৮ জন নিবন্ধিত পাইকারি মহাজন',
+        pillEn: '18 Vendors',
+        pillBn: '১৮ মহাজন',
+        themeColor: '#0D9488',
+        themeBg: 'rgba(13, 148, 136, 0.16)',
+        themeBorder: 'rgba(13, 148, 136, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradSup)"/><path d="M7 14h13v12H7z" fill="#5EEAD4"/><path d="M20 18h6l3 4v4h-9v-8z" fill="#2DD4BF"/><circle cx="12" cy="26" r="3" fill="#134E4A"/><circle cx="25" cy="26" r="3" fill="#134E4A"/><defs><linearGradient id="gradSup" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#0F766E"/><stop offset="1" stop-color="#042F2E"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" title="Ledger">🚚</div><div class="action-circle-btn" title="Add Supplier" style="background:#0D9488;color:#fff;">+</div>`,
+        actionsTablet: `<button class="action-chip-btn">📦 Purchase Orders</button><button class="action-chip-btn">🚚 Inward Stock</button><button class="action-pill-btn">+ Add Supplier</button>`
+      },
+      {
+        id: 'expenses',
+        iconEmoji: '💸',
+        nameEn: 'Expenses',
+        nameBn: 'দোকানের খরচপাতি',
+        subEn: 'Today: ৳3,450 • 6 entries',
+        subBn: 'আজকের মোট খরচ: ৩,৪৫০ টাকা',
+        pillEn: '৳3.45k Today',
+        pillBn: '৳৩,৪৫০ আজ',
+        themeColor: '#F43F5E',
+        themeBg: 'rgba(244, 63, 94, 0.16)',
+        themeBorder: 'rgba(244, 63, 94, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradExp)"/><rect x="8" y="11" width="20" height="14" rx="2" fill="#FECDD3" stroke="#F43F5E" stroke-width="1.5"/><circle cx="18" cy="18" r="3" fill="#E11D48"/><defs><linearGradient id="gradExp" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#E11D48"/><stop offset="1" stop-color="#881337"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" title="Export Excel">📥</div><div class="action-circle-btn" title="Add Expense" style="background:#F43F5E;color:#fff;">+</div>`,
+        actionsTablet: `<button class="action-chip-btn">📅 Date Filter</button><button class="action-chip-btn">📊 Category Pie</button><button class="action-pill-btn">+ Add Expense</button>`
+      },
+      {
+        id: 'sales_report',
+        iconEmoji: '📊',
+        nameEn: 'Sales Report',
+        nameBn: 'বিক্রয় ও লাভ রিপোর্ট',
+        subEn: 'Analytics, P&L & Category metrics',
+        subBn: 'লাভ-ক্ষতি, মার্জিন ও দৈনিক বিবরণী',
+        pillEn: 'Realtime',
+        pillBn: 'লাইভ',
+        themeColor: '#0284C7',
+        themeBg: 'rgba(2, 132, 199, 0.16)',
+        themeBorder: 'rgba(2, 132, 199, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradRep)"/><path d="M10 24v-4M15 24v-8M20 24v-11M25 24v-6" stroke="#38BDF8" stroke-width="3" stroke-linecap="round"/><defs><linearGradient id="gradRep" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#0284C7"/><stop offset="1" stop-color="#0C4A6E"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" title="Export Excel">📥</div><div class="action-circle-btn" title="Filter Date">📅</div>`,
+        actionsTablet: `<button class="action-chip-btn">📅 Custom Range</button><button class="action-chip-btn">📈 Profit Matrix</button><button class="action-pill-btn">Export PDF</button>`
+      },
+      {
+        id: 'sales_history',
+        iconEmoji: '🕒',
+        nameEn: 'Sales History',
+        nameBn: 'বিক্রয় ইতিহাস ও চালান',
+        subEn: '642 completed orders logged',
+        subBn: 'সর্বমোট ৬৪২টি সফল বিক্রয়ের ইতিহাস',
+        pillEn: '642 Sales',
+        pillBn: '৬৪২ বিক্রয়',
+        themeColor: '#3B82F6',
+        themeBg: 'rgba(59, 130, 246, 0.16)',
+        themeBorder: 'rgba(59, 130, 246, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradHist)"/><circle cx="18" cy="18" r="10" stroke="#93C5FD" stroke-width="2.5"/><path d="M18 12v6l4 3" stroke="#BFDBFE" stroke-width="2" stroke-linecap="round"/><defs><linearGradient id="gradHist" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#2563EB"/><stop offset="1" stop-color="#1E3A8A"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" title="Search">🔍</div><div class="action-circle-btn" title="Calendar">📅</div>`,
+        actionsTablet: `<button class="action-chip-btn">🔍 Search Invoices</button><button class="action-chip-btn">🖨️ Batch Print</button>`
+      },
+      {
+        id: 'register_close',
+        iconEmoji: '🧾',
+        nameEn: 'Cash Register',
+        nameBn: 'ক্যাশ রেজিস্টার',
+        subEn: 'Shift #2 • Cashier: Owner',
+        subBn: 'শিফট নং ২ • দায়িত্বে: মালিক',
+        pillEn: 'Z-Report',
+        pillBn: 'জেড-রিপোর্ট',
+        themeColor: '#D97706',
+        themeBg: 'rgba(217, 119, 6, 0.16)',
+        themeBorder: 'rgba(217, 119, 6, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradReg)"/><rect x="11" y="9" width="14" height="19" rx="2" fill="#FDE68A"/><path d="M14 14h8M14 18h8M14 22h4" stroke="#D97706" stroke-width="1.5" stroke-linecap="round"/><defs><linearGradient id="gradReg" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#D97706"/><stop offset="1" stop-color="#78350F"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" title="X-Report">📜</div><div class="action-circle-btn" title="End Shift" style="background:#D97706;color:#fff;">✓</div>`,
+        actionsTablet: `<button class="action-chip-btn">📜 Shift History</button><button class="action-chip-btn">💵 Cash Drawer</button><button class="action-pill-btn">End Shift</button>`
+      },
+      {
+        id: 'cart',
+        iconEmoji: '🛒',
+        nameEn: 'Cart & Checkout',
+        nameBn: 'কার্ট ও বিল তৈরি',
+        subEn: '3 items • ৳1,250 payable',
+        subBn: '৩টি পণ্য • পরিশোধযোগ্য ১,২৫০ টাকা',
+        pillEn: '3 Items',
+        pillBn: '৩টি পণ্য',
+        themeColor: '#10B981',
+        themeBg: 'rgba(16, 185, 129, 0.16)',
+        themeBorder: 'rgba(16, 185, 129, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradCart)"/><circle cx="14" cy="27" r="2.5" fill="#A7F3D0"/><circle cx="24" cy="27" r="2.5" fill="#A7F3D0"/><path d="M8 10h4l3 12h11l3-8H14" stroke="#6EE7B7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="gradCart" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#059669"/><stop offset="1" stop-color="#064E3B"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" title="Hold Cart">⏸️</div><div class="action-circle-btn" title="Void Cart">🗑️</div>`,
+        actionsTablet: `<button class="action-chip-btn">⏸️ Hold Cart</button><button class="action-chip-btn">🗑️ Void Cart</button><button class="action-pill-btn">Checkout ➔</button>`
+      },
+      {
+        id: 'loyalty',
+        iconEmoji: '⭐',
+        nameEn: 'Customer Loyalty',
+        nameBn: 'লয়ালটি ও রিওয়ার্ড পয়েন্ট',
+        subEn: '142 VIP members enrolled',
+        subBn: '১৪২ জন নিবন্ধিত রিওয়ার্ড সদস্য',
+        pillEn: 'VIP Club',
+        pillBn: 'ভিআইপি',
+        themeColor: '#F59E0B',
+        themeBg: 'rgba(245, 158, 11, 0.16)',
+        themeBorder: 'rgba(245, 158, 11, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradLoy)"/><path d="M18 9l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.8-5.4 2.8 1-6.1-4.4-4.3 6.1-.9L18 9z" fill="#FDE68A" stroke="#F59E0B" stroke-width="1.5"/><defs><linearGradient id="gradLoy" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#D97706"/><stop offset="1" stop-color="#78350F"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" title="Rules">⚙️</div><div class="action-circle-btn" title="Add Member" style="background:#F59E0B;color:#fff;">+</div>`,
+        actionsTablet: `<button class="action-chip-btn">⚙️ Loyalty Rules</button><button class="action-pill-btn">+ Add Member</button>`
+      },
+      {
+        id: 'settings',
+        iconEmoji: '⚙️',
+        nameEn: 'Settings',
+        nameBn: 'সিস্টেম ও প্রিন্টার সেটিংস',
+        subEn: 'Receipt, POS hardware & Backup',
+        subBn: 'রশিদ, প্রিন্টার ও ব্যাকআপ সেটআপ',
+        pillEn: 'v2.6 POS',
+        pillBn: 'ভার্সন ২.৬',
+        themeColor: '#64748B',
+        themeBg: 'rgba(100, 116, 139, 0.16)',
+        themeBorder: 'rgba(100, 116, 139, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradSet)"/><circle cx="18" cy="18" r="7" stroke="#CBD5E1" stroke-width="3"/><path d="M18 7v4M18 25v4M7 18h4M25 18h4M10 10l3 3M23 23l3 3M10 26l3-3M23 13l3-3" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round"/><defs><linearGradient id="gradSet" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#475569"/><stop offset="1" stop-color="#1E293B"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" title="Save Settings" style="background:#4F46E5;color:#fff;">💾</div>`,
+        actionsTablet: `<button class="action-chip-btn">🔄 Factory Reset</button><button class="action-pill-btn">Save Settings</button>`
+      },
+      {
+        id: 'users',
+        iconEmoji: '🛡️',
+        nameEn: 'User Management',
+        nameBn: 'ব্যবহারকারী ও পদবি',
+        subEn: '4 active staff accounts • RBAC active',
+        subBn: '৪ জন সক্রিয় বিক্রয়কর্মী ও পদবি',
+        pillEn: 'RBAC',
+        pillBn: 'নিরাপত্তা',
+        themeColor: '#059669',
+        themeBg: 'rgba(5, 150, 105, 0.16)',
+        themeBorder: 'rgba(5, 150, 105, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradUsr)"/><path d="M18 8l9 4v7c0 5.5-3.8 10.7-9 12-5.2-1.3-9-6.5-9-12v-7l9-4z" fill="#6EE7B7" stroke="#059669" stroke-width="1.5"/><defs><linearGradient id="gradUsr" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#047857"/><stop offset="1" stop-color="#064E3B"/></linearGradient></defs></svg>`,
+        actionsPhone: `<button class="action-pill-btn">+ Add User</button>`,
+        actionsTablet: `<button class="action-chip-btn">🔒 Roles & Permissions</button><button class="action-pill-btn">+ Add User</button>`
+      },
+      {
+        id: 'more',
+        iconEmoji: '⚡',
+        nameEn: 'Store Operations & Tools',
+        nameBn: 'দোকান পরিচালনা ও টুলস',
+        subEn: 'Management & financial ledgers',
+        subBn: 'ব্যবস্থাপনা ও আর্থিক খাতা',
+        pillEn: 'Operations',
+        pillBn: 'অপারেশনস',
+        themeColor: '#6366F1',
+        themeBg: 'rgba(99, 102, 241, 0.16)',
+        themeBorder: 'rgba(99, 102, 241, 0.38)',
+        svgIcon: `<svg viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="url(#gradZap)"/><path d="M19 8L11 20h6l-2 8 8-12h-6l2-8z" fill="#FDE047" stroke="#EAB308" stroke-width="1.5"/><defs><linearGradient id="gradZap" x1="0" y1="0" x2="36" y2="36"><stop stop-color="#4F46E5"/><stop offset="1" stop-color="#312E81"/></linearGradient></defs></svg>`,
+        actionsPhone: `<div class="action-circle-btn" style="border-radius:8px;font-size:12px;padding:0 6px;width:auto;">☰ ⊞</div><div class="action-circle-btn">✕</div>`,
+        actionsTablet: `<button class="action-chip-btn">☰ List</button><button class="action-chip-btn">⊞ Grid</button>`
+      }
+    ];
+
+    let currentSection = SECTIONS[0];
+    let currentLang = 'en';
+    let currentDevice = 'phone-412'; // 'phone-360', 'phone-412', or 'tablet'
+    let currentVariant = 'A'; // A = Tonal Squircle, B = Standalone, C = Pill
+
+    // Initialize Navigator
+    function initSectionBar() {
+      const container = document.getElementById('sectionBar');
+      container.innerHTML = SECTIONS.map(sec => `
+        <button class="section-pill ${sec.id === currentSection.id ? 'active' : ''}" 
+                onclick="selectSection('${sec.id}')">
+          <span>${sec.iconEmoji}</span>
+          <span class="pill-name">${currentLang === 'bn' ? sec.nameBn : sec.nameEn}</span>
+        </button>
+      `).join('');
+    }
+
+    function selectSection(id) {
+      currentSection = SECTIONS.find(s => s.id === id) || SECTIONS[0];
+      initSectionBar();
+      renderShowcase();
+    }
+
+    function setDevice(device) {
+      currentDevice = device;
+      document.getElementById('devicePhone360Btn').classList.toggle('active', device === 'phone-360');
+      document.getElementById('devicePhone412Btn').classList.toggle('active', device === 'phone-412');
+      document.getElementById('deviceTabletBtn').classList.toggle('active', device === 'tablet');
+      
+      const isTablet = device === 'tablet';
+      const stage = document.getElementById('comparisonStage');
+      stage.classList.remove('device-phone-360', 'device-phone-412', 'device-tablet');
+      stage.classList.add(`device-${device}`);
+
+      // Default slider values by device
+      if (isTablet) {
+        document.getElementById('rangeBadgeSize').value = 48;
+        document.getElementById('rangeIconSize').value = 32;
+        document.getElementById('rangeFontSize').value = 22;
+        document.getElementById('rangeRadius').value = 16;
+      } else if (device === 'phone-360') {
+        document.getElementById('rangeBadgeSize').value = 40;
+        document.getElementById('rangeIconSize').value = 25;
+        document.getElementById('rangeFontSize').value = 17.5;
+        document.getElementById('rangeRadius').value = 12;
+      } else {
+        document.getElementById('rangeBadgeSize').value = 42;
+        document.getElementById('rangeIconSize').value = 26;
+        document.getElementById('rangeFontSize').value = 18.5;
+        document.getElementById('rangeRadius').value = 13;
+      }
+
+      renderShowcase();
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.body.classList.toggle('lang-bn', lang === 'bn');
+      document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
+      document.getElementById('langBnBtn').classList.toggle('active', lang === 'bn');
+      initSectionBar();
+      renderShowcase();
+    }
+
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('themeDarkBtn').classList.toggle('active', theme === 'dark');
+      document.getElementById('themeLightBtn').classList.toggle('active', theme === 'light');
+    }
+
+    function toggleInspector() {
+      const btn = document.getElementById('inspectBtn');
+      const stage = document.getElementById('comparisonStage');
+      stage.classList.toggle('inspector-active');
+      btn.classList.toggle('active');
+    }
+
+    function selectVariant(varId) {
+      currentVariant = varId;
+      document.querySelectorAll('.variant-card').forEach(c => c.classList.remove('selected'));
+      document.getElementById(`varCard${varId}`).classList.add('selected');
+      renderShowcase();
+    }
+
+    function updateSafetyAudit() {
+      const isTablet = currentDevice === 'tablet';
+      const isPhone360 = currentDevice === 'phone-360';
+      const devWidth = isTablet ? 1280 : (isPhone360 ? 360 : 412);
+      
+      const elDev = document.getElementById('auditDeviceWidth');
+      if (elDev) elDev.innerText = `${devWidth}dp`;
+      
+      const titleEl = document.getElementById('titleAfter');
+      const textWidth = titleEl ? titleEl.scrollWidth : 0;
+      const titleStr = titleEl ? titleEl.innerText : '';
+      
+      const navWidth = 40 + 10;
+      const badgeSize = parseInt(document.getElementById('rangeBadgeSize').value) || (isTablet ? 48 : 40);
+      const badgeTotal = badgeSize + 10;
+      
+      const actionsEl = document.getElementById('actionsAfter');
+      const actionsWidth = actionsEl ? actionsEl.offsetWidth : 120;
+      
+      const availableSlot = Math.max(80, devWidth - (navWidth + badgeTotal + actionsWidth + 24));
+      const buffer = Math.max(0, availableSlot - textWidth);
+      
+      const elSlot = document.getElementById('auditSlotWidth');
+      const elTxt = document.getElementById('auditTextWidth');
+      const elTitle = document.getElementById('auditTitleStr');
+      const elBuffer = document.getElementById('auditBufferWidth');
+      
+      if (elSlot) elSlot.innerText = `${Math.round(availableSlot)}px`;
+      if (elTxt) elTxt.innerText = `${Math.round(textWidth)}px`;
+      if (elTitle) elTitle.innerText = `"${titleStr}"`;
+      if (elBuffer) elBuffer.innerText = `+${Math.round(buffer)}px Free Space (Zero Cut-off)`;
+    }
+
+    function updateCustomizer() {
+      const isTablet = currentDevice === 'tablet';
+      const badgeSize = document.getElementById('rangeBadgeSize').value;
+      const iconSize = document.getElementById('rangeIconSize').value;
+      const fontSize = document.getElementById('rangeFontSize').value;
+      const radius = document.getElementById('rangeRadius').value;
+
+      document.getElementById('valBadgeSize').innerText = `${badgeSize}dp`;
+      document.getElementById('valIconSize').innerText = `${iconSize}dp`;
+      document.getElementById('valFontSize').innerText = `${fontSize}sp`;
+      document.getElementById('valRadius').innerText = `${radius}dp`;
+
+      const badge = document.getElementById('iconBadgeAfter');
+      if (badge) {
+        badge.style.width = `${badgeSize}px`;
+        badge.style.height = `${badgeSize}px`;
+        badge.style.borderRadius = `${radius}px`;
+        const svg = badge.querySelector('svg');
+        if (svg) {
+          svg.style.width = `${iconSize}px`;
+          svg.style.height = `${iconSize}px`;
+        }
+      }
+
+      const title = document.getElementById('titleAfter');
+      if (title) {
+        title.style.fontSize = `${fontSize}px`;
+      }
+
+      const deviceLabel = isTablet ? 'Tablet' : (currentDevice === 'phone-360' ? 'Compact Phone' : 'Phone');
+      document.getElementById('diagBadgeSize').innerText = `${badgeSize}dp × ${badgeSize}dp (${deviceLabel} Rounded ${radius}dp Squircle)`;
+      document.getElementById('diagIconSize').innerText = `${iconSize}dp × ${iconSize}dp (${deviceLabel} High-Definition 3D Depth)`;
+      document.getElementById('diagTitleSize').innerText = `${fontSize}sp ExtraBold (${deviceLabel} Hierarchy)`;
+
+      setTimeout(updateSafetyAudit, 50);
+    }
+
+    function renderShowcase() {
+      const isBn = currentLang === 'bn';
+      const isTablet = currentDevice === 'tablet';
+      const sec = currentSection;
+
+      // Update Navigation Rails visibility
+      document.getElementById('navRailBefore').style.display = isTablet ? 'flex' : 'none';
+      document.getElementById('navRailAfter').style.display = isTablet ? 'flex' : 'none';
+
+      // Bar heights
+      document.getElementById('barBefore').classList.toggle('tablet-bar', isTablet);
+      document.getElementById('barAfter').classList.toggle('tablet-bar', isTablet);
+
+      // 1. Render BEFORE (Current)
+      const iconBefore = document.getElementById('iconBefore');
+      iconBefore.innerHTML = sec.svgIcon;
+      iconBefore.classList.toggle('tablet-icon', isTablet);
+      
+      const svgBefore = iconBefore.querySelector('svg');
+      if (svgBefore) {
+        const sizePx = isTablet ? '24px' : '22px';
+        svgBefore.style.width = sizePx;
+        svgBefore.style.height = sizePx;
+      }
+
+      const titleBefore = document.getElementById('titleBefore');
+      titleBefore.innerText = isBn ? sec.nameBn : sec.nameEn;
+      titleBefore.classList.toggle('tablet-title', isTablet);
+
+      document.getElementById('subBefore').innerText = isBn ? sec.subBn : sec.subEn;
+      document.getElementById('actionsBefore').innerHTML = isTablet ? sec.actionsTablet : sec.actionsPhone;
+
+      document.getElementById('labelBeforeTitle').innerText = isTablet ? 'Current Tablet Implementation (Before)' : `Current Phone (${currentDevice === 'phone-360' ? '360dp' : '412dp'}) (Before)`;
+      document.getElementById('labelBeforeSub').innerText = isTablet ? 'Small 24dp icon lost in expansive 1280px landscape header' : 'Small 22dp icon, floating off-center, small font';
+      document.getElementById('diagBeforeIcon').innerText = isTablet ? '24dp (Minute stamp on 1280px screen)' : '22dp (Smudged / Legibility Loss)';
+      document.getElementById('diagBeforeFont').innerText = isTablet ? '18sp (Under-scaled for counter distance)' : '16.5sp (Weak visual hierarchy)';
+
+      // 2. Render AFTER (Redesign)
+      const badgeAfter = document.getElementById('iconBadgeAfter');
+      const headerContainer = document.getElementById('headerAfterContainer');
+      const metricPill = document.getElementById('metricPillAfter');
+      const titleAfter = document.getElementById('titleAfter');
+      const subAfter = document.getElementById('subAfter');
+
+      titleAfter.innerText = isBn ? sec.nameBn : sec.nameEn;
+      titleAfter.classList.toggle('tablet-title', isTablet);
+      subAfter.innerText = isBn ? sec.subBn : sec.subEn;
+      subAfter.classList.toggle('tablet-sub', isTablet);
+      document.getElementById('actionsAfter').innerHTML = isTablet ? sec.actionsTablet : sec.actionsPhone;
+
+      document.getElementById('labelAfterTitle').innerText = isTablet ? 'Redesigned Tablet Header (After)' : `Redesigned Phone (${currentDevice === 'phone-360' ? '360dp' : '412dp'}) (After)`;
+      document.getElementById('labelAfterSub').innerText = isTablet ? '48dp Tonal Squircle Badge, 22sp Bold Title, Integrated Action Deck' : '40dp Tonal Squircle Badge, 18sp Bold Title, Zero Cut-off Balance';
+
+      // Metric pill content (Visible ONLY on Tablet mode where width is vast, ensuring ZERO text cut-off on Phone)
+      const pillText = isBn ? sec.pillBn : sec.pillEn;
+      if (isTablet) {
+        metricPill.innerHTML = `
+          <span class="metric-pill tablet-pill" style="background: ${sec.themeBg}; color: ${sec.themeColor}; border: 1px solid ${sec.themeBorder};">
+            ${pillText}
+          </span>
+        `;
+        metricPill.style.display = 'inline-flex';
+      } else {
+        metricPill.innerHTML = '';
+        metricPill.style.display = 'none';
+      }
+
+      badgeAfter.classList.toggle('tablet-badge', isTablet);
+      headerContainer.classList.toggle('tablet-header', isTablet);
+
+      if (currentVariant === 'A') {
+        // Variant A: Tonal Squircle Badge
+        badgeAfter.style.display = 'flex';
+        badgeAfter.style.background = sec.themeBg;
+        badgeAfter.style.border = `1px solid ${sec.themeBorder}`;
+        badgeAfter.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.2)';
+        badgeAfter.innerHTML = sec.svgIcon;
+        headerContainer.className = `header-after-v1 ${isTablet ? 'tablet-header' : ''}`;
+        subAfter.style.display = 'block';
+      } else if (currentVariant === 'B') {
+        // Variant B: Frameless 3D Icon
+        badgeAfter.style.display = 'flex';
+        badgeAfter.style.background = 'transparent';
+        badgeAfter.style.border = 'none';
+        badgeAfter.style.boxShadow = 'none';
+        badgeAfter.innerHTML = sec.svgIcon;
+        const svg = badgeAfter.querySelector('svg');
+        if (svg) {
+          const sz = isTablet ? '38px' : '32px';
+          svg.style.width = sz;
+          svg.style.height = sz;
+        }
+        headerContainer.className = `header-after-v1 ${isTablet ? 'tablet-header' : ''}`;
+        subAfter.style.display = 'block';
+      } else if (currentVariant === 'C') {
+        // Variant C: Frosted Glass Pill
+        badgeAfter.style.display = 'flex';
+        badgeAfter.style.background = sec.themeBg;
+        badgeAfter.style.border = `1px solid ${sec.themeBorder}`;
+        badgeAfter.innerHTML = sec.svgIcon;
+        headerContainer.className = `header-after-v1 ${isTablet ? 'tablet-header' : ''}`;
+      }
+
+      updateCustomizer();
+      setTimeout(updateSafetyAudit, 50);
+    }
+
+    // Startup
+    window.addEventListener('DOMContentLoaded', () => {
+      initSectionBar();
+      setDevice('phone-412');
+    });
+  </script>
+</body>
+</html>

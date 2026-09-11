@@ -58,6 +58,7 @@ import android.widget.Toast
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.R
 import com.example.techyfipos.data.DueTemplate
 import com.example.techyfipos.data.InvoiceSettingsData
@@ -331,40 +332,17 @@ fun DuesScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 2.dp)
-                    ) {
-                        com.example.techyfipos.ui.components.Realistic3DClipboardDuesIcon(size = 22.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Column(
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = if (selectedCustomer != null) selectedCustomer!!.customerName else stringResource(R.string.dues_title),
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 17.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (selectedCustomer == null) {
-                                Text(
-                                    text = stringResource(R.string.dues_debtors_summary, outstandingDues.size, formatTaka(totalOutstanding)),
-                                    fontSize = 11.5.sp,
-                                    color = MaterialTheme.colorScheme.outline,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            } else {
-                                Text(
-                                    text = stringResource(R.string.dues_digital_khata_ledger),
-                                    fontSize = 11.5.sp,
-                                    color = MaterialTheme.colorScheme.outline,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
+                    PosTopAppBarTitle(
+                        title = if (selectedCustomer != null) selectedCustomer!!.customerName else stringResource(R.string.dues_title),
+                        subtitle = if (selectedCustomer == null) {
+                            stringResource(R.string.dues_debtors_summary, outstandingDues.size, formatTaka(totalOutstanding))
+                        } else {
+                            stringResource(R.string.dues_digital_khata_ledger)
+                        },
+                        metricBadge = if (selectedCustomer == null && outstandingDues.isNotEmpty()) formatTaka(totalOutstanding) else null,
+                        badgeColor = PosSectionColors.Dues,
+                        icon = { size -> Realistic3DClipboardDuesIcon(size = size) }
+                    )
                 },
                 navigationIcon = {
                     IconButton(

@@ -32,6 +32,9 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE name LIKE :query OR barcode LIKE :query OR category LIKE :query ORDER BY name ASC")
     fun searchProducts(query: String): Flow<List<Product>>
 
+    @Query("SELECT * FROM products WHERE name LIKE :query OR barcode LIKE :query OR barcode LIKE :altQuery OR category LIKE :query ORDER BY name ASC")
+    fun searchProductsWithAlt(query: String, altQuery: String): Flow<List<Product>>
+
     @Query("UPDATE products SET category = :newCategory WHERE category = :oldCategory")
     suspend fun renameCategory(oldCategory: String, newCategory: String)
 }

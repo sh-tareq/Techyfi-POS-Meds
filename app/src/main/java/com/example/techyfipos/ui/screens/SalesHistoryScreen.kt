@@ -221,31 +221,15 @@ fun SalesHistoryScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 2.dp)
-                    ) {
-                        com.example.techyfipos.ui.components.Realistic3DHistoryClockIcon(size = 22.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = stringResource(R.string.sales_history),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.5.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (filteredSales.isNotEmpty()) {
-                                Text(
-                                    text = "${filteredSales.size} transactions",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
+                    PosTopAppBarTitle(
+                        title = stringResource(R.string.sales_history),
+                        subtitle = if (filteredSales.isNotEmpty()) {
+                            stringResource(R.string.sales_history_header_subtitle, filteredSales.size)
+                        } else null,
+                        metricBadge = if (filteredSales.isNotEmpty()) "${filteredSales.size} Sales" else null,
+                        badgeColor = PosSectionColors.SalesHistory,
+                        icon = { size -> Realistic3DHistoryClockIcon(size = size) }
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

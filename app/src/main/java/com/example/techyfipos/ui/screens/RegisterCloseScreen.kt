@@ -55,7 +55,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.techyfipos.R
 import com.example.techyfipos.data.db.RegisterClosing
-import com.example.techyfipos.ui.components.Realistic3DCashInStashIcon
+import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.components.Realistic3DCashVaultRegisterIcon
 import com.example.techyfipos.ui.components.Realistic3DClipboardDuesIcon
 import com.example.techyfipos.ui.components.Realistic3DExpenseReceiptIcon
@@ -272,31 +272,14 @@ fun DayStartCloseScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 4.dp)
-                    ) {
-                        com.example.techyfipos.ui.components.Realistic3DRegisterReceiptIcon(size = if (isTablet) 24.dp else 22.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = stringResource(R.string.register_close_screen_title),
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = if (isTablet) 18.sp else 16.sp,
-                                maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = stringResource(R.string.register_close_screen_subtitle),
-                                fontSize = if (isTablet) 11.5.sp else 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+                    PosTopAppBarTitle(
+                        title = stringResource(R.string.register_close_screen_title),
+                        subtitle = stringResource(R.string.register_close_screen_subtitle),
+                        metricBadge = "Z-Report",
+                        badgeColor = PosSectionColors.RegisterClose,
+                        isTablet = isTablet,
+                        icon = { size -> Realistic3DRegisterReceiptIcon(size = size) }
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -1024,7 +1007,7 @@ fun DayStartCloseScreen(
                     title = reason.ifBlank { "Cash Float Top-up" },
                     amount = amount,
                     paymentSource = "Cash",
-                    note = "Added from Day Start & Close"
+                    note = "Added from Cash Register"
                 )
                 showCashInDialog = false
                 coroutineScope.launch {

@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import com.example.techyfipos.ui.components.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -142,29 +143,13 @@ fun ExpensesScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 2.dp)
-                    ) {
-                        com.example.techyfipos.ui.components.Realistic3DExpensesCashIcon(size = 22.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = stringResource(R.string.expense_screen_title),
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 17.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = stringResource(R.string.expense_screen_subtitle),
-                                fontSize = 11.5.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+                    PosTopAppBarTitle(
+                        title = stringResource(R.string.expense_screen_title),
+                        subtitle = stringResource(R.string.expense_screen_subtitle),
+                        metricBadge = "Today",
+                        badgeColor = PosSectionColors.Expenses,
+                        icon = { size -> Realistic3DExpensesCashIcon(size = size) }
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -232,7 +217,7 @@ fun ExpensesScreen(
                 )
             }
 
-            // 2. Relocation Banner: Cash Drawer has moved to Day Start & Close
+            // 2. Relocation Banner: Cash Drawer has moved to Cash Register
             item {
                 ExpenseRelocationNoticeBanner(
                     onViewDrawer = onNavigateToDayStartClose

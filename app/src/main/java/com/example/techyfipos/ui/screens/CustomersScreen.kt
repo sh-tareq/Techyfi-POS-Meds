@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.techyfipos.R
 import com.example.techyfipos.data.db.Customer
+import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.viewmodel.CustomerFilterSegment
 import com.example.techyfipos.ui.viewmodel.CustomerSortOption
 import com.example.techyfipos.ui.viewmodel.CustomerViewModel
@@ -118,30 +119,14 @@ fun CustomersScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 2.dp)
-                    ) {
-                        com.example.techyfipos.ui.components.Realistic3DCustomerHubIcon(size = if (isTablet) 24.dp else 22.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = stringResource(R.string.customers_screen_title),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = if (isTablet) 17.sp else 16.sp,
-                                maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = stringResource(R.string.customers_count_subtitle, totalCount),
-                                fontSize = if (isTablet) 11.5.sp else 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+                    PosTopAppBarTitle(
+                        title = stringResource(R.string.customers_screen_title),
+                        subtitle = stringResource(R.string.customers_count_subtitle, totalCount),
+                        metricBadge = "$totalCount Total",
+                        badgeColor = PosSectionColors.Customers,
+                        isTablet = isTablet,
+                        icon = { size -> Realistic3DCustomerHubIcon(size = size) }
+                    )
                 },
                 navigationIcon = {
                     IconButton(

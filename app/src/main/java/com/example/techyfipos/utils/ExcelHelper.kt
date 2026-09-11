@@ -333,7 +333,7 @@ object ExcelHelper {
                 if (isRowEmpty) continue
 
                 try {
-                    val barcode = colMap["barcode"]?.let { getCellStringValue(row.getCell(it)) } ?: ""
+                    val barcode = toEnglishDigits(colMap["barcode"]?.let { getCellStringValue(row.getCell(it)) } ?: "").trim()
                     val name = colMap["name"]?.let { getCellStringValue(row.getCell(it)) } ?: ""
                     
                     if (barcode.isBlank() || name.isBlank()) {

@@ -190,3 +190,24 @@ fun restartApp(context: Context) {
         (context as? android.app.Activity)?.recreate()
     }
 }
+
+/**
+ * Converts Bengali (০-৯), Arabic-Indic (٠-٩), and Persian (۰-۹) digits to standard
+ * English ASCII digits ('0'-'9'). Leaves ASCII digits, letters, and symbols unchanged.
+ * Essential for barcodes, phone numbers, quantities, and numeric identifiers so that
+ * switching app language to Bangla never leaks Bengali numerals into barcodes or DB queries.
+ */
+fun toEnglishDigits(input: String): String {
+    if (input.isEmpty()) return input
+    val sb = StringBuilder(input.length)
+    for (ch in input) {
+        val converted = when (ch) {
+            in '০'..'৯' -> '0' + (ch - '০')
+            in '٠'..'٩' -> '0' + (ch - '٠')
+            in '۰'..'۹' -> '0' + (ch - '۰')
+            else -> ch
+        }
+        sb.append(converted)
+    }
+    return sb.toString()
+}

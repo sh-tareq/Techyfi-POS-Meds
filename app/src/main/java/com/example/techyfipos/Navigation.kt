@@ -1371,20 +1371,15 @@ private fun MoreOperationsHubContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.store_operations),
-                    fontSize = 17.5.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.height(1.dp))
-                Text(
-                    text = stringResource(R.string.store_operations_sub),
-                    fontSize = 11.5.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            PosTopAppBarTitle(
+                title = stringResource(R.string.store_operations),
+                subtitle = stringResource(R.string.store_operations_sub),
+                metricBadge = "Operations",
+                badgeColor = PosSectionColors.More,
+                isTablet = isTablet,
+                modifier = Modifier.weight(1f),
+                icon = { size -> Realistic3DMoreZapIcon(size = size) }
+            )
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,

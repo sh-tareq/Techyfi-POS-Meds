@@ -19,6 +19,7 @@ import java.io.File
 import android.content.Context
 import com.example.techyfipos.utils.parseExpiryDateToMillis
 import com.example.techyfipos.utils.roundMoney
+import com.example.techyfipos.utils.toEnglishDigits
 import com.example.techyfipos.utils.BillData
 
 // Cart Item Wrapper
@@ -820,7 +821,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
 
     /** Looks up a hardware-scanned barcode and updates the live cart atomically. */
     suspend fun addBarcodeToCart(barcode: String): CartBarcodeResult {
-        val normalizedBarcode = barcode.trim()
+        val normalizedBarcode = toEnglishDigits(barcode.trim())
         val product = repository.getProductByBarcode(normalizedBarcode)
             ?: return CartBarcodeResult(
                 barcode = normalizedBarcode,
@@ -1071,29 +1072,31 @@ class ScannerViewModel(private val repository: DataRepository) : ViewModel() {
         onShowSnackbar: (String, Double, Double, Double, Boolean) -> Unit,
         fromHardwareScanner: Boolean = false
     ) {
+        val cleanBarcode = toEnglishDigits(barcode.trim())
+        if (cleanBarcode.isBlank()) return
         val now = System.currentTimeMillis()
         // The camera and a HID scanner can report the same visible code almost
         // simultaneously. Treat that as one scan while still allowing deliberate,
         // repeated hardware trigger presses after the short guard window.
-        if (barcode == lastAcceptedBarcode && now - lastAcceptedTime < CROSS_SOURCE_DUPLICATE_WINDOW_MS) {
+        if (cleanBarcode == lastAcceptedBarcode && now - lastAcceptedTime < CROSS_SOURCE_DUPLICATE_WINDOW_MS) {
             return
         }
         // Same code still in view (or re-shown before it fully left frame): ignore.
-        if (!fromHardwareScanner && barcode == lockedBarcode) {
+        if (!fromHardwareScanner && cleanBarcode == lockedBarcode) {
             missFrameCount = 0
             lastDetectionTime = now
             return
         }
-        lockedBarcode = barcode
+        lockedBarcode = cleanBarcode
         missFrameCount = 0
         lastDetectionTime = now
-        lastAcceptedBarcode = barcode
+        lastAcceptedBarcode = cleanBarcode
         lastAcceptedTime = now
 
         onSoundVibrate()
 
         viewModelScope.launch {
-            val product = repository.getProductByBarcode(barcode)
+            val product = repository.getProductByBarcode(cleanBarcode)
             if (product != null) {
                 if (_isSellMode.value) {
                     val added = cartViewModel.addToCart(product)
@@ -1110,7 +1113,7 @@ class ScannerViewModel(private val repository: DataRepository) : ViewModel() {
                     _scannedProduct.value = product
                 }
             } else {
-                _scannedBarcode.value = barcode
+                _scannedBarcode.value = cleanBarcode
                 _scannedProduct.value = null
             }
         }
@@ -1229,7 +1232,7 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     suspend fun getProductByBarcode(barcode: String): Product? {
-        return repository.getProductByBarcode(barcode)
+        return repository.getProductByBarcode(toEnglishDigits(barcode.trim()))
     }
 
     /** Re-tags every product carrying [oldCategory] to [newCategory] so a category-manager rename doesn't orphan existing inventory. */

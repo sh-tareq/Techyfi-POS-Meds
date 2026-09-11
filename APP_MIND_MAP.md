@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-07 (app version 2.6.29-V07-09-2026, build `Techyfi-POS-Final-V07-09-2026.apk` / `Techyfi-POS-Final-V21.apk`; versionCode 220908; DB schema version 26)
+Last updated: 2026-09-08 (app version 2.6.32-V08-09-2026, build `Techyfi-POS-Final-V08-09-2026.apk` / `Techyfi-POS-Final-V25.apk`; versionCode 220911; DB schema version 26)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -86,30 +86,31 @@ mindmap
       Accessibility & Ergonomic Touch Architecture
         Minimum 48dp touch target sizing enforced across icon buttons, chips, and steppers
         High-contrast Material 3 surfaces adhering to WCAG AA guidelines
-        Universal 3D Navigation Icon Harmonization across All Screen Headers
-          Every top header across both Phone and Tablet modes embeds its matched photorealistic 3D navigation vector icon:
-            - Products: Realistic3DProductsBoxIcon (22dp phone / 24dp tablet)
-            - Customers & CRM: Realistic3DCustomerHubIcon (22dp phone / 24dp tablet)
-            - Cash Register: Realistic3DRegisterReceiptIcon (22dp phone / 24dp tablet)
-            - Sales History: Realistic3DHistoryClockIcon (22dp)
-            - Dues & Khata: Realistic3DClipboardDuesIcon (22dp)
-            - Expense Tracking: Realistic3DExpensesCashIcon (22dp)
-            - Suppliers: Realistic3DSupplierTruckIcon (22dp)
-            - Sales Reports & Analytics: Realistic3DReportChartIcon (22dp)
-            - System Settings: Realistic3DSettingsGearIcon (22dp)
-            - Shopping Cart & Quick Sale: Realistic3DSupermarketCartIcon (22dp) and Realistic3DSellTerminalIcon (22dp), eliminating flat unicode emojis (🛒/💳)
-            - Customer Loyalty: Realistic3DLoyaltyStarIcon (22dp)
-            - Staff Management: Realistic3DCustomerHubIcon (22dp)
-        Responsive Zero-Cutoff Top AppBars on Compact Phone Screens (< 600dp, e.g. 360dp Galaxy A)
-          Customers Screen: Renamed to "Customers & CRM" (Bengali: "কাস্টমার ও CRM"); consolidates Table/Cards view switcher, Excel export, and CSV export into an overflow menu, guaranteeing 230dp+ for the title and subtitle
-          Cash Register Screen: Renamed to "Cash Register" (Bengali: "ক্যাশ রেজিস্টার") with subtitle "Day Start & Close • Shift reconciliation"; compact 3D X-Report (Realistic3DClipboardDuesIcon) and 3D Z-Report (Realistic3DRegisterAuditZReportIcon) buttons prevent title cutoff
-          Products Screen: 2-Tier Master POS Header architecture — Tier 1 features Back button, 3D Products Box Icon, zero-cutoff "Products" title with live SKU badge ("621 SKUs"), 3D Ringing Alert Bell (99+), and 3D Cart Capsule. Tier 2 features an integrated horizontal Quick-Tool Ribbon with dedicated 48dp chips for Excel Tools [ 📄 ], Batch Selection [ ✓≡ ], Stock Audit Ledger [ 📋 ], and Print Labels [ 🏷️ ], guaranteeing instantaneous 1-tap access and zero text clipping
-        Adaptive Tablet Mode (>= 600dp) POS Architecture
-          Products Screen: Shows 24dp 3D Box icon, live SKU badge, and direct 1-tap [ 🖨️ Print Labels ] button beside Excel Tools, Batch Selection, and Stock Audit
-          Customers & CRM: Displays 24dp 3D Customer Hub icon, unclipped title, and responsive [ + Add New Customer ] button with 48dp touch target
-          Cash Register: Pinned 24dp 3D Register Receipt icon with full-label 3D X-Report and Z-Report buttons
-          Tablet Split Terminal (TabletSplitTerminal): Pinned Live Cart header with 24dp Realistic3DSupermarketCartIcon and Emerald Green Checkout CTA with 22dp Realistic3DSellTerminalIcon
-          Staff Management: Pinned 22dp Realistic3DCustomerHubIcon in title row
+        Universal 3D Navigation Icon & Header Harmonization (`PosSectionHeader.kt`)
+          Every top header across all 12 POS sections embeds the unified `PosTopAppBarTitle` with photorealistic 3D squircle badges:
+            - Products: Realistic3DProductsBoxIcon (Indigo #4F46E5 badge, dynamic inventory SKU counter)
+            - Customers & CRM: Realistic3DCustomerHubIcon (Violet #8B5CF6 badge, active customer counter)
+            - Suppliers: Realistic3DSupplierTruckIcon (Teal #0D9488 badge, vendor & payment terms ledger)
+            - Expenses: Realistic3DExpensesCashIcon (Rose #F43F5E badge, daily disbursements tracking)
+            - Dues & Khata: Realistic3DClipboardDuesIcon (Red #EF4444 badge, debtor counts & receivables)
+            - Sales Reports & Analytics: Realistic3DReportChartIcon (Sky Blue #0284C7 badge, revenue insights)
+            - Sales History: Realistic3DHistoryClockIcon (Blue #3B82F6 badge, completed transactions ledger)
+            - Cash Register: Realistic3DRegisterReceiptIcon (Amber #D97706 badge, shift reconciliation & Z-Report)
+            - Cart & Checkout: Realistic3DSupermarketCartIcon / Realistic3DSellTerminalIcon (Emerald #10B981 badge)
+            - Customer Loyalty: Realistic3DLoyaltyStarIcon (Gold #F59E0B badge, VIP tiers & rewards)
+            - System Settings: Realistic3DSettingsGearIcon (Slate #64748B badge, POS hardware config)
+            - Staff Management: Realistic3DCustomerHubIcon (Emerald #059669 badge, RBAC permissions)
+            - More Operations Hub: Realistic3DMoreZapIcon (Indigo #6366F1 badge, management shortcuts)
+        Ergonomic Responsive Header Typography & Zero-Cutoff Architecture
+          Phone (<600dp, e.g. 360dp Galaxy A & 412dp Pixel):
+            - 40dp Squircle Container (RoundedCornerShape(12.dp)) with 25dp Photorealistic 3D Canvas Icon
+            - 18sp ExtraBold Title (lineHeight = 24.sp preventing Bengali ascender/descender clipping)
+            - 11.5sp Medium Subtitle (lineHeight = (fontSize * 1.30f).sp) with concise single-line standard (subtitleMaxLines = 1, softWrap = false) and text-ellipsis fallback preventing vertical layout stretching and awkward orphan word wrapping (e.g. 'Petty cash & daily expenses', 'Management & financial ledgers', 'Shift float & day close audit')
+            - Modifier.weight(1f, fill = false) to prevent collision with action buttons
+          Tablet (>=600dp, e.g. 10"-12" POS Tablets):
+            - 48dp Squircle Container (RoundedCornerShape(16.dp)) with 32dp Photorealistic 3D Canvas Icon
+            - 22sp ExtraBold Title (lineHeight = 28.sp) and 13sp Subtitle
+            - Prominent Inline Metric Pill Badge (RoundedCornerShape(50)) alongside title row
     Selling workflow
       Selling Form Factors
         Phone POS Terminal
@@ -1288,7 +1289,6 @@ mindmap
 
 - Final artifact: `Techyfi-POS-Final-V1.apk`, versionCode `220896`, versionName `2.6.21-V06-09-2026`.
 - Verified file locations:
-  - `/Users/shahidulhaque/App Dev/Techyfi POS Gemini/Techyfi-POS-Final-V1.apk`
   - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V1.apk`
 - Database Schema Version: `25` (added `sale_audit_logs` table via `MIGRATION_24_25`).
 - Fixes implemented:
@@ -1306,7 +1306,7 @@ mindmap
 
 - Final artifact: `Techyfi-POS-Final-V2.apk`, versionCode `220896`, versionName `2.6.21-V06-09-2026`.
 - Verified file locations:
-  - `/Users/shahidulhaque/App Dev/Techyfi POS Gemini/Techyfi-POS-Final-V2.apk`
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V2.apk`
   - `/Users/shahidulhaque/App Dev/Techyfi POS/app/build/outputs/apk/release/app-release.apk`
 - Fixes implemented:
   - **[G1] Supplier Cash Outflows Linked to Expenses & Cash Drawer**:
@@ -1373,7 +1373,7 @@ mindmap
     - Repayment Receipt Zoom & Width Preview: Multi-width thermal printing preview (58mm, 80mm, PDF, Canvas) with verified verification QR code and zero text distortion.
   - **[V18 - V06-09-2026] Store Operations More Hub Dual View Mode & Zero-Cutoff Subheadings (VersionCode 220907)**:
     - Subheading & Title Cutoff Elimination: Upgraded all operation cards in `Navigation.kt` to support 2-line wrapped subtitles (`maxLines = 2`, `fontSize = 11.sp`, `lineHeight = 14.sp`), eliminating unsightly ellipsis clipping across Phone and Tablet.
-    - Expanded dialog constraint ceiling to `widthIn(max = 760.dp)` on tablet, providing 354dp per card in the 2-column grid so long titles ("Day Start & Close", "Customer Loyalty") render 100% visible.
+    - Expanded dialog constraint ceiling to `widthIn(max = 760.dp)` on tablet, providing 354dp per card in the 2-column grid so titles ("Cash Register", "Customer Loyalty") render 100% visible.
     - Interactive Material 3 Segmented Toggle `[ ☰ List ] [ ⊞ Grid ]` integrated directly into the header row next to the close button on both Phone bottom sheet and Tablet dialog, backed by `rememberSaveable`.
     - Phone Grid view with 2-column compact tiles and 1-column full-width featured Settings banner; Phone List view with 42dp icon, title, 2-line subtitle, status pill, and chevron.
     - Tablet Grid view with horizontal 2-column layout and Tablet List view with full-width ledger rows.
@@ -1386,8 +1386,6 @@ mindmap
 - Final artifact: `Techyfi-POS-Final-V07-09-2026.apk` (also archived as `Techyfi-POS-Final-V21.apk`), versionCode `220908`, versionName `2.6.29-V07-09-2026`.
 - Verified file locations:
   - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V07-09-2026.apk`
-  - `/Users/shahidulhaque/App Dev/Techyfi POS Gemini/Techyfi-POS-Final-V07-09-2026.apk`
-  - `/Users/shahidulhaque/App Dev/Techyfi POS Gemini/Techyfi-POS-Final-V21.apk`
 - Database Schema Version: `26` (added `cashierId`, `shiftId`, enhanced audit logging & indexes via `MIGRATION_25_26`).
 - **Pass 1 Audit Fixes (M1 - M12: Financial, Cash Drawer & Shift Integrity)**:
   - **[M1] Due Down Payments in Cash Drawer & Cash Sales**: Captured partial down payments on Due sales into `Sale.amountPaid` and included in `liveDrawerCash` and cash sales reconciliation.
@@ -1428,7 +1426,53 @@ mindmap
   - **[G12] Typography - Bengali Unicode Sans-Serif Rendering (LOW)**:
     - Standardized PDF invoice and X/Z report canvas headers to `Typeface.SANS_SERIF` in `BillPdfGenerator.kt`, preventing Bengali store names from rendering as tofu square blocks.
 
+## V08-09-2026 Hardware Barcode Scanner & English Barcode Guarantee (V25)
+
+- Final artifact: `Techyfi-POS-Final-V08-09-2026.apk` (also indexed as `Techyfi-POS-Final-V25.apk`), versionCode `220911`, versionName `2.6.32-V08-09-2026`.
+- Verified file locations:
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V08-09-2026.apk`
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V25.apk`
+- Deliverables Convention:
+  - All updated APKs and mind maps (`APP_MIND_MAP.md`) must reside strictly in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+- Features & Fixes implemented:
+  - **[B1] Hardware Barcode Scanner Keystroke Interceptor (`HardwareBarcodeScanner.kt`)**:
+    - Replaced raw ASCII range check with `extractAsciiBarcodeChar` mapping hardware keycodes (`KEYCODE_0..9`, `KEYCODE_NUMPAD_0..9`), Bengali Unicode digits (`0x09E6..0x09EF`), Arabic digits, and ASCII symbols directly to English ASCII digits `'0'..'9'`.
+    - Added `isTerminatorKey` supporting `KEYCODE_ENTER`, `KEYCODE_NUMPAD_ENTER`, and `KEYCODE_TAB` (`\t`, ASCII 9).
+    - Fixed dangling `ACTION_UP` events by consuming `ACTION_UP` for consumed keys and terminators, preventing unwanted dialog dismissals or accidental button clicks.
+    - Added burst handling in `dispatchKeyEventWithEditorCheck` that dispatches synthetic `KEYCODE_DEL` to cleanly erase the leaked first character in focused input fields.
+  - **[B2] Universal English Digit Normalization Across Entire POS (`toEnglishDigits`)**:
+    - Created `toEnglishDigits` in `AppUtils.kt` to normalize Bengali (`০-৯`), Arabic-Indic (`٠-٩`), and Persian (`۰-۹`) numerals to English ASCII (`0-9`).
+    - Enforced in `AddEditProductDialog`, `ManualBarcodeDialog`, `CartScreen`, `ScannerScreen`, `POSViewModels` (`ScannerViewModel`, `CartViewModel`, `ProductsViewModel`).
+    - Enforced in `DataRepository.kt` & `AppDaos.kt` (`searchProductsWithAlt` allows dual search with Bengali or English digits).
+    - Guaranteed Code-128 barcode generation (`ProductCodeImageUtils.kt`), Excel product imports (`ExcelHelper.kt`), and database backup restoration (`BackupCompatibility.kt`) strictly preserve English barcodes.
+  - **[B3] English Barcode Display Guarantee in Bangla Mode**:
+    - Verified on live Android emulator that when app language is set to **বাংলা (Bangla)**, all barcode tags (`#846656005286`, etc.) and barcode input fields strictly remain in English digits.
+
+## V08-09-2026 Top Header Icons & Title Redesign (3D Squircle Badges & Zero-Cutoff Typography)
+
+- Final artifact: `Techyfi-POS-Final-V08-09-2026.apk` (also indexed as `Techyfi-POS-Final-V25.apk`), versionCode `220911`, versionName `2.6.32-V08-09-2026`.
+- Verified file locations:
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V08-09-2026.apk`
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V25.apk`
+- Deliverables Convention:
+  - All updated APKs and mind maps (`APP_MIND_MAP.md`) must reside strictly in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+- Features & Enhancements implemented:
+  - **[H1] Unified Master Component (`PosSectionHeader.kt`)**:
+    - Created `PosTopAppBarTitle` with responsive layout sizing, photorealistic 3D squircle badges, and zero-cutoff typography.
+    - Phone (<600dp): 40dp squircle badge (`RoundedCornerShape(12.dp)`), 25dp realistic 3D icon, 18sp ExtraBold title (`lineHeight = 24.sp`), 11.5sp Medium subtitle (`lineHeight = 15.5.sp`).
+    - Tablet (>=600dp): 48dp squircle badge (`RoundedCornerShape(16.dp)`), 32dp realistic 3D icon, 22sp ExtraBold title (`lineHeight = 28.sp`), 13sp Medium subtitle, and prominent inline metric pill badge (`RoundedCornerShape(50)`).
+    - `PosSectionColors` with calibrated brand tokens: Products (`#4F46E5`), Customers (`#8B5CF6`), Dues (`#EF4444`), Suppliers (`#0D9488`), Expenses (`#F43F5E`), SalesReport (`#0284C7`), SalesHistory (`#3B82F6`), RegisterClose (`#D97706`), Cart (`#10B981`), Loyalty (`#F59E0B`), Settings (`#64748B`), Users (`#059669`), More Hub (`#6366F1`).
+  - **[H2] Zero-Cutoff & Zero Diacritic Clipping Guarantee**:
+    - Title column constrained with `Modifier.weight(1f, fill = false)`, `maxLines = 1`, `softWrap = false`, `overflow = TextOverflow.Ellipsis`.
+    - Ample vertical line heights (`24.sp` on phone, `28.sp` on tablet) completely eliminate truncation of Bengali ascender and descender glyphs (রেফ, হ্রস্ব-উ কার, ঋ-কার, ও-কার).
+    - Horizontal metric pill badge omitted from title row on phone viewports (<600dp) and neatly integrated into the subtitle row, leaving full width for titles even when up to 4 action buttons are present.
+  - **[H3] Full POS Suite Rollout across 12 Screens**:
+    - Replaced disjointed 22dp/24dp raw icons across `ProductsScreen`, `CustomersScreen`, `SuppliersScreen`, `ExpensesScreen`, `DuesScreen`, `SalesReportScreen`, `SalesHistoryScreen`, `RegisterCloseScreen`, `CartScreen`, `LoyaltyScreen`, `SettingsScreen`, `ManageUsersScreen`, and `Navigation.kt` (`MoreOperationsHubContent`).
+    - Standardized bilingual subtitle strings in `strings.xml` and `values-bn/strings.xml`.
+  - **[H4] Interactive Redesign Preview**:
+    - Created high-fidelity interactive browser preview `interactive_preview/top_headers_redesign_preview.html` allowing real-time switching across all 12 sections in English/Bangla and Phone (360dp, 412dp) vs Tablet (1280dp) modes.
+
 ## Maintenance note
 
-Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace.
+Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
 

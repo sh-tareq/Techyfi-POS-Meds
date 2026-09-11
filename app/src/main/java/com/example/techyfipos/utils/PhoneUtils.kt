@@ -6,7 +6,8 @@ package com.example.techyfipos.utils
  * to one ledger key instead of silently creating separate due/loyalty accounts.
  */
 fun normalizePhone(raw: String): String {
-    val digits = raw.filter { it.isDigit() }
+    val englishRaw = toEnglishDigits(raw)
+    val digits = englishRaw.filter { it in '0'..'9' }
     return when {
         digits.length > 10 && digits.startsWith("880") -> "0" + digits.removePrefix("880")
         digits.length == 10 && digits.startsWith("1") -> "0$digits"

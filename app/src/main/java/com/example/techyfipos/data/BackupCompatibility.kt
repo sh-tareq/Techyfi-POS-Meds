@@ -2,6 +2,7 @@ package com.example.techyfipos.data
 
 import com.example.techyfipos.data.db.Sale
 import com.example.techyfipos.data.db.SaleItem
+import com.example.techyfipos.utils.toEnglishDigits
 
 internal fun buildBackwardCompatibleSale(
     id: Long = 0,
@@ -70,7 +71,7 @@ internal fun buildBackwardCompatibleSaleItem(
     note: String? = null,
     purchasePriceAtSale: Double? = null
 ): SaleItem {
-    val barcode = productBarcode?.trim().orEmpty()
+    val barcode = toEnglishDigits(productBarcode?.trim().orEmpty())
     return SaleItem(
         saleId = saleId,
         productBarcode = barcode,

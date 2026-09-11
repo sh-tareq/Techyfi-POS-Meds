@@ -3685,23 +3685,13 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 2.dp)
-                    ) {
-                        com.example.techyfipos.ui.components.Realistic3DSettingsGearIcon(size = 22.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text(settingsTitle, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                settingsSubtitle,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+                    PosTopAppBarTitle(
+                        title = settingsTitle,
+                        subtitle = settingsSubtitle,
+                        metricBadge = "v2.6 POS",
+                        badgeColor = PosSectionColors.Settings,
+                        icon = { size -> Realistic3DSettingsGearIcon(size = size) }
+                    )
                 },
                 navigationIcon = {
                     IconButton(

@@ -35,7 +35,7 @@ import com.example.techyfipos.data.AppRoles
 import com.example.techyfipos.data.PermissionCategory
 import com.example.techyfipos.data.PermissionItem
 import com.example.techyfipos.data.db.User
-import com.example.techyfipos.ui.components.Realistic3DCustomerHubIcon
+import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,21 +62,13 @@ fun ManageUsersScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 4.dp)
-                    ) {
-                        Realistic3DCustomerHubIcon(size = 22.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text(stringResource(R.string.users_title), fontWeight = FontWeight.Bold)
-                            Text(
-                                stringResource(R.string.users_active_count, activeCount),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    PosTopAppBarTitle(
+                        title = stringResource(R.string.users_title),
+                        subtitle = stringResource(R.string.users_active_count, activeCount),
+                        metricBadge = "RBAC Active",
+                        badgeColor = PosSectionColors.Users,
+                        icon = { size -> Realistic3DCustomerHubIcon(size = size) }
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

@@ -87,7 +87,8 @@ fun generateProductCodeLabelBitmap(
     dateTrackingTextScale: Float = 1f,
     barcodeGraphicScale: Float = 1f
 ): Bitmap? {
-    if (barcode.isBlank()) return null
+    val cleanBarcode = toEnglishDigits(barcode.trim())
+    if (cleanBarcode.isBlank()) return null
 
     return try {
         val (width, height) = productCodeLabelPixelSize(labelSize, customWidthMm, customHeightMm)
@@ -253,7 +254,7 @@ fun generateProductCodeLabelBitmap(
         // 4. BARCODE / QR CODE GRAPHIC
         val format = if (codeType == ProductCodeType.QR_CODE) BarcodeFormat.QR_CODE else BarcodeFormat.CODE_128
         val hints = mapOf(EncodeHintType.MARGIN to if (codeType == ProductCodeType.QR_CODE) 1 else 6)
-        val matrix = MultiFormatWriter().encode(barcode, format, codeWidth, codeHeight, hints)
+        val matrix = MultiFormatWriter().encode(cleanBarcode, format, codeWidth, codeHeight, hints)
         val codeBitmap = Bitmap.createBitmap(codeWidth, codeHeight, Bitmap.Config.ARGB_8888)
         for (y in 0 until codeHeight) {
             for (x in 0 until codeWidth) {
@@ -276,7 +277,7 @@ fun generateProductCodeLabelBitmap(
                 letterSpacing = 0.12f
             }
             val numberY = nextBaseline + numberPaint.textSize
-            val spacedDigits = barcode.toCharArray().joinToString(" ")
+            val spacedDigits = cleanBarcode.toCharArray().joinToString(" ")
             drawFittedCenteredText(
                 canvas = canvas,
                 text = spacedDigits,

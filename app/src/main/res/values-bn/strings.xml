@@ -25,6 +25,9 @@
     <string name="customer_phone">ক্রেতার ফোন নম্বর</string>
     <string name="due_receivable">বাকির পরিমাণ</string>
     <string name="products">পণ্যসমূহ</string>
+    <string name="products_header_subtitle">মজুদ ভান্ডারে মোট %1$dটি পণ্য</string>
+    <string name="cart_header_subtitle">কার্টে %1$dটি পণ্য রয়েছে</string>
+    <string name="sales_history_header_subtitle">সর্বমোট %1$dটি সফল বিক্রয়ের ইতিহাস</string>
     <string name="sales_history">ইতিহাস</string>
     <string name="dues_list">বাকি</string>
     <string name="expenses">খরচ</string>
@@ -32,7 +35,7 @@
     <string name="settings">সেটিংস</string>
     <string name="more_hub">অন্যান্য ⋯</string>
     <string name="store_operations">দোকান পরিচালনা ও টুলস</string>
-    <string name="store_operations_sub">ম্যানেজমেন্ট এবং আর্থিক হিসাবের দ্রুত অ্যাক্সেস</string>
+    <string name="store_operations_sub">ব্যবস্থাপনা ও আর্থিক খাতা</string>
     <string name="language">ভাষা</string>
     <string name="shop_name">দোকানের নাম</string>
     <string name="shop_address">ঠিকানা</string>
@@ -226,8 +229,8 @@
     <string name="supplier_payment_note_hint">যেমন: ব্যাংক ট্রান্সফার / ক্যাশে পরিশোধ করা হয়েছে</string>
 
     <!-- Expenses Screen -->
-    <string name="expense_screen_title">খরচ ও ক্যাশ</string>
-    <string name="expense_screen_subtitle">দৈনিক ক্যাশ ও খুচরা খরচের হিসাব</string>
+    <string name="expense_screen_title">খরচ</string>
+    <string name="expense_screen_subtitle">দৈনিক খুচরা খরচ ও বিল</string>
     <string name="expense_shift_active">শিফট চালু আছে</string>
     <string name="expense_search_hint">কারণ, ক্যাটাগরি, নোট দিয়ে খুঁজুন...</string>
     <string name="expense_filter_all">সব</string>
@@ -358,11 +361,11 @@
     <string name="zreport_surplus">উদ্বৃত্ত: +%1$s</string>
     <string name="zreport_complete_button">লক করে জেড-রিপোর্ট সম্পন্ন করুন</string>
 
-    <!-- Day Start & Close (Cash Drawer, Float & Day-end Reconciliation) -->
-    <string name="register_close_section">দিন শুরু ও সমাপ্তি</string>
-    <string name="register_close_hub_subtitle">শিফট শুরু, ক্যাশ ড্রয়ার ফ্লোট ও হিসাব ক্লোজিং</string>
+    <!-- Cash Register (Cash Drawer, Float & Day-end Reconciliation) -->
+    <string name="register_close_section">ক্যাশ রেজিস্টার</string>
+    <string name="register_close_hub_subtitle">শিফট ফ্লোট ও ক্লোজিং অডিট</string>
     <string name="register_close_screen_title">ক্যাশ রেজিস্টার</string>
-    <string name="register_close_screen_subtitle">দিন শুরু ও সমাপ্তি • শিফট ক্লোজিং</string>
+    <string name="register_close_screen_subtitle">ক্যাশ ড্রয়ার ও শিফট রিকনসিলিয়েশন</string>
     <string name="register_close_today_summary">বর্তমান শিফটের সারাংশ</string>
     <string name="register_close_cash_sales">নগদ বিক্রয়</string>
     <string name="register_close_digital_sales">ডিজিটাল বিক্রয়</string>
@@ -434,7 +437,7 @@
     <!-- Expenses Redesign -->
     <string name="expense_hero_total_label">আজকের মোট খরচ</string>
     <string name="expense_hero_disbursements">আজ %1$dটি নগদ খরচ হয়েছে</string>
-    <string name="expense_cash_moved_banner">ক্যাশ ড্রয়ার ও ফ্লোট ব্যালেন্স এখন নিরাপদে \'দিন শুরু ও সমাপ্তি\' সেকশনে সংরক্ষিত</string>
+    <string name="expense_cash_moved_banner">ক্যাশ ড্রয়ার ও ফ্লোট ব্যালেন্স এখন নিরাপদে \'ক্যাশ রেজিস্টার\' সেকশনে সংরক্ষিত</string>
     <string name="expense_view_drawer_btn">ড্রয়ার দেখুন ➔</string>
     <string name="owner_only_loyalty">শুধুমাত্র মালিক লয়্যালটি পরিচালনা করতে পারবেন</string>
     <string name="loyalty_screen_title">গ্রাহক লয়্যালটি</string>

@@ -110,6 +110,7 @@ import com.example.techyfipos.utils.shareBillPdf
 import com.example.techyfipos.utils.shareBillJpeg
 import com.example.techyfipos.utils.shareBillPdfAndJpeg
 import com.example.techyfipos.utils.HardwareBarcodeScanner
+import com.example.techyfipos.utils.toEnglishDigits
 import com.example.techyfipos.utils.beepAndVibrate
 import com.example.techyfipos.utils.triggerCashDrawerKick
 import androidx.compose.ui.window.Dialog
@@ -359,8 +360,10 @@ fun CartScreen(
     LaunchedEffect(showCheckout) {
         if (showCheckout) return@LaunchedEffect
         HardwareBarcodeScanner.barcodeEvents.collect { barcode ->
+            val englishBarcode = toEnglishDigits(barcode.trim())
+            if (englishBarcode.isBlank()) return@collect
             beepAndVibrate(context)
-            val result = cartViewModel.addBarcodeToCart(barcode)
+            val result = cartViewModel.addBarcodeToCart(englishBarcode)
             if (result.status == CartBarcodeStatus.NOT_FOUND) {
                 notFoundBarcode = result.barcode
             } else {
@@ -393,24 +396,21 @@ fun CartScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (showCheckout) {
-                            com.example.techyfipos.ui.components.Realistic3DSellTerminalIcon(size = 22.dp)
-                        } else {
-                            com.example.techyfipos.ui.components.Realistic3DSupermarketCartIcon(size = 22.dp)
+                    PosTopAppBarTitle(
+                        title = if (showCheckout) stringResource(R.string.complete_sale) else stringResource(R.string.cart),
+                        subtitle = if (cartItems.isNotEmpty() && !showCheckout) {
+                            stringResource(R.string.cart_header_subtitle, cartItems.size)
+                        } else null,
+                        metricBadge = if (cartItems.isNotEmpty() && !showCheckout) "${cartItems.size} Items" else null,
+                        badgeColor = PosSectionColors.Cart,
+                        icon = { size ->
+                            if (showCheckout) {
+                                Realistic3DSellTerminalIcon(size = size)
+                            } else {
+                                Realistic3DSupermarketCartIcon(size = size)
+                            }
                         }
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (showCheckout) stringResource(R.string.complete_sale) else stringResource(R.string.cart),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = {

@@ -73,8 +73,9 @@ class MainActivity : ComponentActivity() {
 
   @SuppressLint("RestrictedApi")
   override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-    val isEditor = currentFocus?.onCheckIsTextEditor() == true
-    if (HardwareBarcodeScanner.dispatchKeyEventWithEditorCheck(event, isEditor)) {
+    val focused = currentFocus
+    val isEditor = focused?.onCheckIsTextEditor() == true
+    if (HardwareBarcodeScanner.dispatchKeyEventWithEditorCheck(event, isEditor, focused)) {
       return true
     }
     return super.dispatchKeyEvent(event)

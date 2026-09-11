@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import com.example.techyfipos.ui.components.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,31 +99,13 @@ fun SuppliersScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 2.dp)
-                    ) {
-                        com.example.techyfipos.ui.components.Realistic3DSupplierTruckIcon(size = 22.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = stringResource(R.string.supplier_screen_title),
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 17.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = stringResource(R.string.supplier_screen_subtitle),
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+                    PosTopAppBarTitle(
+                        title = stringResource(R.string.supplier_screen_title),
+                        subtitle = stringResource(R.string.supplier_screen_subtitle),
+                        metricBadge = "${suppliers.size} Vendors",
+                        badgeColor = PosSectionColors.Suppliers,
+                        icon = { size -> Realistic3DSupplierTruckIcon(size = size) }
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

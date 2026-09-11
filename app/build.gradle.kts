@@ -14,8 +14,8 @@ android {
         applicationId = "com.techyfi.pos"
         minSdk = 24
         targetSdk = 36
-        versionCode = 220910
-        versionName = "2.6.31-V07-09-2026"
+        versionCode = 220911
+        versionName = "2.6.32-V08-09-2026"
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -70,6 +70,10 @@ android {
     }
 
     sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 tasks.register<Copy>("packageDatedReleaseApk") {

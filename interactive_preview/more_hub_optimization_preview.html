@@ -943,7 +943,7 @@
           <div class="sheet-header">
             <div class="sheet-title-col">
               <h2 id="sheetTitleText" data-en="Store Operations & Tools" data-bn="স্টোর অপারেশন ও টুলস">Store Operations & Tools</h2>
-              <p id="sheetSubText" data-en="Quick access to management and financial ledgers" data-bn="ব্যবস্থাপনা ও আর্থিক খাতার দ্রুত অ্যাক্সেস">Quick access to management and financial ledgers</p>
+              <p id="sheetSubText" data-en="Management & financial ledgers" data-bn="ব্যবস্থাপনা ও আর্থিক খাতা">Management & financial ledgers</p>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
               <!-- List / Grid Toggle -->
@@ -981,16 +981,16 @@
             <!-- VARIANT A (Horizontal Streamlined Cards) -->
             <div class="grid-variant-a" id="variantAContainer">
               
-              <!-- 1. Day Start & Close -->
-              <div class="h-card selected" data-cat="ops" onclick="triggerCard('Day Start & Close', 'Shift open & drawer cash float audit')">
+              <!-- 1. Cash Register -->
+              <div class="h-card selected" data-cat="ops" onclick="triggerCard('Cash Register', 'Shift open & drawer cash float audit')">
                 <div class="icon-box-3d" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3);">
                   📑
                 </div>
                 <div class="h-card-text">
                   <div class="h-card-title-row">
-                    <span class="h-card-title" data-en="Day Start & Close" data-bn="দিন শুরু ও ক্লোজ">Day Start & Close</span>
+                    <span class="h-card-title" data-en="Cash Register" data-bn="ক্যাশ রেজিস্টার">Cash Register</span>
                   </div>
-                  <span class="h-card-sub" data-en="Shift open, drawer cash float & day close audit" data-bn="শিফট শুরু, ক্যাশ ড্রয়ার ফ্লট ও ডে ক্লোজ অডিট">Shift open, drawer cash float & day close audit</span>
+                  <span class="h-card-sub" data-en="Shift float & day close audit" data-bn="শিফট ফ্লোট ও ক্লোজিং অডিট">Shift float & day close audit</span>
                 </div>
                 <div class="h-card-end">
                   <span class="pill-badge" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.35);" data-en="AUDIT" data-bn="অডিট">AUDIT</span>
@@ -1105,14 +1105,14 @@
             <!-- VARIANT B (Compact High-Density Grid) -->
             <div class="grid-variant-b" id="variantBContainer" style="display: none;">
               
-              <!-- 1. Day Start & Close -->
-              <div class="b-card" data-cat="ops" onclick="triggerCard('Day Start & Close', 'Shift open & drawer cash float audit')">
+              <!-- 1. Cash Register -->
+              <div class="b-card" data-cat="ops" onclick="triggerCard('Cash Register', 'Shift open & drawer cash float audit')">
                 <div class="b-card-top">
                   <div class="icon-box-3d" style="width: 36px; height: 36px; font-size: 18px; background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3);">📑</div>
                   <span class="pill-badge" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.35);" data-en="AUDIT" data-bn="অডিট">AUDIT</span>
                 </div>
                 <div class="b-card-bottom">
-                  <h4 data-en="Day Start & Close" data-bn="দিন শুরু ও ক্লোজ">Day Start & Close</h4>
+                  <h4 data-en="Cash Register" data-bn="ক্যাশ রেজিস্টার">Cash Register</h4>
                   <p data-en="Shift open, drawer float" data-bn="শিফট শুরু ও ক্যাশ ফ্লট">Shift open, drawer float</p>
                 </div>
               </div>
@@ -1216,7 +1216,7 @@
               <!-- 5 -->
               <div class="legacy-card" style="border-color: #10B981;">
                 <div class="legacy-top"><span class="legacy-icon">📑</span><span class="legacy-badge" style="color: #F59E0B;">Audit</span></div>
-                <div class="legacy-bottom"><h4>Day Start & Close</h4><p>Shift open, drawer cash float & day close audit</p></div>
+                <div class="legacy-bottom"><h4>Cash Register</h4><p>Shift open, drawer cash float & day close audit</p></div>
               </div>
               <!-- 6 -->
               <div class="legacy-card">
@@ -1360,7 +1360,7 @@
       } else {
         document.body.classList.remove('lang-bn');
         document.getElementById('txtSheetTitle').textContent = '⚡ Store Operations & Tools';
-        document.getElementById('txtSheetSub').textContent = 'Quick access to management and financial ledgers';
+        document.getElementById('txtSheetSub').textContent = 'Management & financial ledgers';
         document.getElementById('chipAll').textContent = 'All Tools';
         document.getElementById('chipOps').textContent = 'Daily Shift Ops';
         document.getElementById('chipCrm').textContent = 'Customer & CRM';

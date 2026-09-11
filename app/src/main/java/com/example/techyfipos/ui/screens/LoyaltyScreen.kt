@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.example.techyfipos.ui.components.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -111,51 +112,13 @@ fun LoyaltyScreen(
                         IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            com.example.techyfipos.ui.components.Realistic3DLoyaltyStarIcon(size = 22.dp)
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text(
-                                        text = stringResource(R.string.loyalty_screen_title),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 17.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                // Synced pill
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = Color(0xFFDCFCE7),
-                                    border = BorderStroke(0.5.dp, Color(0xFF86EFAC))
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(5.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0xFF16A34A))
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.loyalty_synced),
-                                            fontSize = 9.5.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF166534)
-                                        )
-                                    }
-                                }
-                            }
-                            Text(
-                                text = stringResource(R.string.loyalty_members_count, members.size),
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                        PosTopAppBarTitle(
+                            title = stringResource(R.string.loyalty_screen_title),
+                            subtitle = stringResource(R.string.loyalty_members_count, members.size),
+                            metricBadge = if (members.isNotEmpty()) "${members.size} Members" else null,
+                            badgeColor = PosSectionColors.Loyalty,
+                            icon = { size -> Realistic3DLoyaltyStarIcon(size = size) }
+                        )
                 }
 
                     Row(

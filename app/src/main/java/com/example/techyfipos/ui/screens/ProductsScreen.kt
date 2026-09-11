@@ -122,6 +122,7 @@ import com.example.techyfipos.data.SettingsDataStore
 import com.example.techyfipos.data.CategoryItem
 import com.example.techyfipos.ui.viewmodel.ProductsViewModel
 import com.example.techyfipos.utils.HardwareBarcodeScanner
+import com.example.techyfipos.utils.toEnglishDigits
 import com.example.techyfipos.utils.beepAndVibrate
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.ProductCodeLabelSize
@@ -525,12 +526,12 @@ fun ProductsScreen(
     // Hardware Barcode Scanner listener (USB HID, Bluetooth barcode gun, physical POS scanner)
     LaunchedEffect(Unit) {
         HardwareBarcodeScanner.barcodeEvents.collect { code ->
-            val trimmedCode = code.trim()
+            val trimmedCode = toEnglishDigits(code.trim())
             if (trimmedCode.isNotBlank()) {
-                if (showAddDialog) {
+                if (showAddDialog || selectedProductForEdit != null) {
                     scannedNewBarcodeForDialog = trimmedCode
                     beepAndVibrate(context)
-                } else if (selectedProductForEdit == null && productToDelete == null) {
+                } else if (productToDelete == null) {
                     val product = productsViewModel.getProductByBarcode(trimmedCode)
                     beepAndVibrate(context)
                     if (stockScannerEnabled) {
@@ -655,37 +656,16 @@ fun ProductsScreen(
             ) {
                 TopAppBar(
                     title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(start = 2.dp)
-                        ) {
-                            Realistic3DProductsBoxIcon(size = if (isTablet) 24.dp else 22.dp)
-                            Spacer(Modifier.width(if (isTablet) 6.dp else 6.dp))
-                            Text(
-                                stringResource(R.string.products),
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = if (isTablet) 18.sp else 16.5.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                softWrap = false,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            if (allProductsList.isNotEmpty()) {
-                                Spacer(Modifier.width(6.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = Color(0xFFEEF2FF),
-                                    contentColor = Color(0xFF4F46E5)
-                                ) {
-                                    Text(
-                                        text = "${allProductsList.size} SKUs",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                        }
+                        PosTopAppBarTitle(
+                            title = stringResource(R.string.products),
+                            subtitle = if (allProductsList.isNotEmpty()) {
+                                stringResource(R.string.products_header_subtitle, allProductsList.size)
+                            } else null,
+                            metricBadge = if (allProductsList.isNotEmpty()) "${allProductsList.size} SKUs" else null,
+                            badgeColor = PosSectionColors.Products,
+                            isTablet = isTablet,
+                            icon = { size -> Realistic3DProductsBoxIcon(size = size) }
+                        )
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
@@ -2423,7 +2403,7 @@ fun ProductsScreen(
     // Add Product Dialog
     if (showAddDialog) {
         AddEditProductDialog(
-            initialBarcode = scannedNewBarcodeForDialog ?: prefilledBarcode ?: "",
+            initialBarcode = toEnglishDigits(scannedNewBarcodeForDialog ?: prefilledBarcode ?: ""),
             onDismiss = {
                 showAddDialog = false
                 scannedNewBarcodeForDialog = null
@@ -2490,7 +2470,7 @@ fun ProductsScreen(
         val prod = selectedProductForEdit!!
         AddEditProductDialog(
             isEdit = true,
-            initialBarcode = prod.barcode,
+            initialBarcode = toEnglishDigits(scannedNewBarcodeForDialog ?: prod.barcode),
             initialName = prod.name,
             initialCategory = prod.category,
             initialPurchasePrice = prod.purchasePrice,
@@ -2505,10 +2485,14 @@ fun ProductsScreen(
             initialMfgOrPkgDate = prod.mfgOrPkgDate ?: "",
             initialExpiryDate = prod.expiryDate ?: "",
             initialUnit = prod.unit,
-            onDismiss = { selectedProductForEdit = null },
+            onDismiss = {
+                selectedProductForEdit = null
+                scannedNewBarcodeForDialog = null
+            },
             onDelete = {
                 productToDelete = prod
                 selectedProductForEdit = null
+                scannedNewBarcodeForDialog = null
             },
             onSave = { name, barcode, cat, pPrice, sPrice, mrp, disc, qty, reorder, imageUri, mfgType, mfgDate, expDate, unit, wPrice, reason, note ->
                 val prevStock = prod.stockQty
@@ -2545,6 +2529,7 @@ fun ProductsScreen(
                     productsViewModel.updateProduct(prod.barcode, p, adjustment)
                         .onSuccess {
                             selectedProductForEdit = null
+                            scannedNewBarcodeForDialog = null
                             Toast.makeText(context, context.getString(R.string.products_updated_successfully, p.name), Toast.LENGTH_SHORT).show()
                             snackbarHostState.showSnackbar(context.getString(R.string.products_updated_successfully, p.name), duration = SnackbarDuration.Short)
                         }
@@ -2625,11 +2610,12 @@ fun ProductsScreen(
     }
 
     stockNotFoundBarcode?.let { barcode ->
+        val englishBarcode = toEnglishDigits(barcode)
         StockCheckNotFoundDialog(
-            barcode = barcode,
+            barcode = englishBarcode,
             onDismiss = { stockNotFoundBarcode = null },
             onAddNow = {
-                scannedNewBarcodeForDialog = barcode
+                scannedNewBarcodeForDialog = englishBarcode
                 showAddDialog = true
                 stockNotFoundBarcode = null
             }
@@ -5211,12 +5197,21 @@ fun AddEditProductDialog(
 ) {
     val context = LocalContext.current
     var name by remember { mutableStateOf(initialName) }
-    var barcode by remember { mutableStateOf(initialBarcode) }
+    var barcode by remember { mutableStateOf(toEnglishDigits(initialBarcode)) }
     var showBarcodeScanModal by remember { mutableStateOf(false) }
 
     LaunchedEffect(initialBarcode) {
         if (initialBarcode.isNotBlank()) {
-            barcode = initialBarcode
+            barcode = toEnglishDigits(initialBarcode)
+        }
+    }
+    LaunchedEffect(Unit) {
+        HardwareBarcodeScanner.barcodeEvents.collect { code ->
+            val englishCode = toEnglishDigits(code.trim())
+            if (englishCode.isNotBlank()) {
+                barcode = englishCode
+                beepAndVibrate(context)
+            }
         }
     }
     val settingsDataStore = remember { SettingsDataStore(context) }
@@ -5297,7 +5292,7 @@ fun AddEditProductDialog(
         val effectiveDisc = if (dPrice > 0.0) dPrice else effectiveSelling
         val qty = stockQty.toDoubleOrNull() ?: 0.0
         val reorder = reorderLevel.toIntOrNull() ?: 0
-        val finalBarcode = barcode.trim().ifBlank {
+        val finalBarcode = toEnglishDigits(barcode).trim().ifBlank {
             (100000000000..999999999999).random().toString()
         }
 
@@ -5469,7 +5464,7 @@ fun AddEditProductDialog(
                                     }
                                     BasicTextField(
                                         value = barcode,
-                                        onValueChange = { barcode = it },
+                                        onValueChange = { barcode = toEnglishDigits(it) },
                                         textStyle = TextStyle(
                                             fontSize = 13.5.sp,
                                             fontWeight = FontWeight.SemiBold,

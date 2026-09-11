@@ -85,6 +85,7 @@ import androidx.compose.foundation.lazy.grid.items
 import com.example.techyfipos.utils.beepAndVibrate
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.HardwareBarcodeScanner
+import com.example.techyfipos.utils.toEnglishDigits
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -157,8 +158,10 @@ fun ScannerScreen(
     LaunchedEffect(Unit) {
         HardwareBarcodeScanner.barcodeEvents.collect { code ->
             if (latestScanningPaused) return@collect
+            val normalizedCode = toEnglishDigits(code.trim())
+            if (normalizedCode.isBlank()) return@collect
             scannerViewModel.onBarcodeScanned(
-                barcode = code,
+                barcode = normalizedCode,
                 cartViewModel = cartViewModel,
                 onSoundVibrate = { beepAndVibrate(context) },
                 onShowSnackbar = { name, price, stock, total, isSuccess ->
@@ -536,8 +539,9 @@ private fun TabletSplitTerminal(
     val filteredProducts = remember(allProducts, searchQuery, selectedCategory) {
         allProducts.filter { product ->
             val matchesQuery = if (searchQuery.isBlank()) true else {
+                val englishQuery = toEnglishDigits(searchQuery.trim())
                 product.name.contains(searchQuery, ignoreCase = true) ||
-                product.barcode.contains(searchQuery, ignoreCase = true)
+                product.barcode.contains(englishQuery, ignoreCase = true)
             }
             val matchesCat = if (selectedCategory == null || selectedCategory == "All") true else {
                 product.category.equals(selectedCategory, ignoreCase = true)
@@ -2476,6 +2480,17 @@ fun ManualBarcodeDialog(
     var barcode by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) {
+        HardwareBarcodeScanner.barcodeEvents.collect { code ->
+            val englishCode = toEnglishDigits(code.trim())
+            if (englishCode.isNotBlank()) {
+                barcode = englishCode
+                isError = false
+                onBarcodeEntered(englishCode)
+            }
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -2498,7 +2513,7 @@ fun ManualBarcodeDialog(
             OutlinedTextField(
                 value = barcode,
                 onValueChange = {
-                    barcode = it
+                    barcode = toEnglishDigits(it)
                     isError = false
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -2516,8 +2531,9 @@ fun ManualBarcodeDialog(
             Spacer(modifier = Modifier.height(12.dp))
             Button(
                 onClick = {
-                    if (barcode.isNotBlank()) {
-                        onBarcodeEntered(barcode.trim())
+                    val cleanBarcode = toEnglishDigits(barcode.trim())
+                    if (cleanBarcode.isNotBlank()) {
+                        onBarcodeEntered(cleanBarcode)
                     } else {
                         isError = true
                     }
