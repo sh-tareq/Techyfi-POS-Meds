@@ -87,6 +87,15 @@ fun PaymentMethodBrandIcon(
                 Text("💳", fontSize = (size * 0.7).sp)
             }
         }
+        "Store Credit" -> Surface(
+            shape = RoundedCornerShape(4.dp),
+            color = Color(0xFFD1FAE5),
+            modifier = modifier.size(size.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text("🪙", fontSize = (size * 0.7).sp)
+            }
+        }
         else -> Surface(
             shape = RoundedCornerShape(4.dp),
             color = Color(0xFFFEF3C7),
@@ -112,6 +121,7 @@ private fun paymentMethodDisplayName(method: String): String = when (method) {
     "Card" -> stringResource(R.string.card)
     "Due" -> stringResource(R.string.due)
     "Bank" -> stringResource(R.string.bank)
+    "Store Credit" -> stringResource(R.string.payment_store_credit)
     else -> method
 }
 
@@ -471,7 +481,7 @@ fun SplitPaymentBuilder(
                             onDismissRequest = { methodExpanded = false },
                             modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                         ) {
-                            listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due").forEach { m ->
+                            listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due", "Store Credit").forEach { m ->
                                 DropdownMenuItem(
                                     leadingIcon = {
                                         PaymentMethodBrandIcon(m, size = 20)

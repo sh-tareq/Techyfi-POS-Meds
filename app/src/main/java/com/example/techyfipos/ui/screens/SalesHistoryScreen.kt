@@ -119,6 +119,8 @@ fun SalesHistoryScreen(
     val salesWithItems by salesViewModel.salesWithItems.collectAsStateWithLifecycle()
     var returnTarget by remember { mutableStateOf<SaleWithItems?>(null) }
     var returnAlreadyReturned by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
+    var issuedVoucherCode by remember { mutableStateOf<String?>(null) }
+    var issuedVoucherAmount by remember { mutableStateOf(0.0) }
 
     var showSupervisorAuthDialog by remember { mutableStateOf(false) }
     var pendingSupervisorAction by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -678,14 +680,123 @@ fun SalesHistoryScreen(
             saleWithItems = sale,
             alreadyReturned = returnAlreadyReturned,
             onDismiss = { returnTarget = null },
-            onConfirm = { lines, refundMethod, note, restock ->
-                salesViewModel.processReturn(sale.sale.id, lines, refundMethod, note, restock) { success, refundTotal ->
+            onConfirm = { lines, refundMethod, note, restock, walkinPhone, walkinName, issueVoucher ->
+                salesViewModel.processReturn(
+                    saleId = sale.sale.id,
+                    lines = lines,
+                    refundMethod = refundMethod,
+                    note = note,
+                    restock = restock,
+                    walkinPhone = walkinPhone,
+                    walkinName = walkinName,
+                    issueVoucher = issueVoucher
+                ) { success, refundTotal, voucherCode ->
                     returnTarget = null
-                    Toast.makeText(
-                        context,
-                        if (success) "Returned · refunded ${formatTaka(refundTotal)}" else "Could not process the return",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    if (success) {
+                        if (!voucherCode.isNullOrBlank()) {
+                            issuedVoucherCode = voucherCode
+                            issuedVoucherAmount = refundTotal
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Returned · refunded ${formatTaka(refundTotal)}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "Could not process the return",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        )
+    }
+
+    issuedVoucherCode?.let { code ->
+        AlertDialog(
+            onDismissRequest = { issuedVoucherCode = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("🎟️", fontSize = 22.sp)
+                    Text(stringResource(R.string.store_credit_voucher_issued_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.store_credit_voucher_notice),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFEEF2FF),
+                        border = BorderStroke(1.5.dp, Color(0xFF818CF8)),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.store_credit_voucher_code_label),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF4F46E5),
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = code,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF1E1B4B),
+                                letterSpacing = 2.sp
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFFD1FAE5),
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Value: ${formatTaka(issuedVoucherAmount)}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF065F46),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                        val clip = android.content.ClipData.newPlainText("Voucher Code", code)
+                        clipboard?.setPrimaryClip(clip)
+                        Toast.makeText(context, context.getString(R.string.store_credit_code_copied), Toast.LENGTH_SHORT).show()
+                        issuedVoucherCode = null
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.store_credit_copy_code), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { issuedVoucherCode = null }) {
+                    Text(stringResource(R.string.dismiss))
                 }
             }
         )

@@ -51,7 +51,8 @@ enum class DossierTab {
     TIMELINE,
     INVOICES,
     NOTES,
-    DUE_LEDGER
+    DUE_LEDGER,
+    CREDIT_LEDGER
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,12 +63,14 @@ fun CustomerDossierSheet(
     onStartSale: (Customer) -> Unit,
     onEditCustomer: (Customer) -> Unit,
     onAddNote: (noteText: String, category: String) -> Unit = { _, _ -> },
+    onAdjustCredit: (delta: Double, note: String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val customer = dossier.customer
     var selectedTab by remember { mutableStateOf(DossierTab.TOP_PRODUCTS) }
     var selectedSaleForReceipt by remember { mutableStateOf<SaleWithItems?>(null) }
+    var showAdjustCreditDialog by remember { mutableStateOf(false) }
 
     var newNoteText by remember { mutableStateOf("") }
     var selectedNoteCategory by remember { mutableStateOf("General") }
@@ -312,7 +315,63 @@ fun CustomerDossierSheet(
                 }
             }
 
-            // 5 Tabs Switcher (Top Products, Timeline, Invoices, Notes, Due Ledger)
+            // Store Credit Wallet Banner Card with Adjust Action
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (customer.storeCredit > 0) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                border = BorderStroke(1.dp, if (customer.storeCredit > 0) Color(0xFFA7F3D0) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("🪙", fontSize = 18.sp)
+                        Column {
+                            Text(
+                                text = stringResource(R.string.store_credit_balance),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (customer.storeCredit > 0) Color(0xFF065F46) else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = formatTaka(customer.storeCredit),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (customer.storeCredit > 0) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { showAdjustCreditDialog = true },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = if (customer.storeCredit > 0) Color(0xFF059669) else MaterialTheme.colorScheme.primary
+                        ),
+                        border = BorderStroke(1.dp, if (customer.storeCredit > 0) Color(0xFF6EE7B7) else MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text(
+                            text = "⚖️ Adjust",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // Tabs Switcher (Top Products, Timeline, Invoices, Notes, Due Ledger, Credit Ledger)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -327,7 +386,8 @@ fun CustomerDossierSheet(
                     DossierTab.TIMELINE to "⏱️ ${stringResource(R.string.customer_tab_timeline)}",
                     DossierTab.INVOICES to "📜 ${stringResource(R.string.customer_tab_invoices)} (${dossier.sales.size})",
                     DossierTab.NOTES to "📝 ${stringResource(R.string.customer_tab_notes)}",
-                    DossierTab.DUE_LEDGER to "📒 ${stringResource(R.string.customer_tab_due_ledger)}"
+                    DossierTab.DUE_LEDGER to "📒 ${stringResource(R.string.customer_tab_due_ledger)}",
+                    DossierTab.CREDIT_LEDGER to "🪙 ${stringResource(R.string.customer_tab_credit_ledger)} (${dossier.storeCreditLedger.size})"
                 ).forEach { (tab, title) ->
                     val isSelected = selectedTab == tab
                     Box(
@@ -612,9 +672,107 @@ fun CustomerDossierSheet(
                             }
                         }
                     }
+
+                    DossierTab.CREDIT_LEDGER -> {
+                        if (dossier.storeCreditLedger.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                                Text("No store credit transactions recorded yet", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        } else {
+                            val dtFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+                            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items(dossier.storeCreditLedger) { entry ->
+                                    val isPositive = entry.deltaAmount > 0
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isPositive) Color(0xFFECFDF5) else Color(0xFFFFF1F2),
+                                        border = BorderStroke(1.dp, if (isPositive) Color(0xFFA7F3D0) else Color(0xFFFECDD3)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    Text(
+                                                        text = when (entry.type) {
+                                                            "RETURN_REFUND" -> "🔄 Return Refund"
+                                                            "SALE_REDEMPTION" -> "🛒 Checkout Redemption"
+                                                            "MANUAL_ADJUSTMENT" -> "⚖️ Supervisor Adjustment"
+                                                            else -> "🪙 ${entry.type}"
+                                                        },
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 11.5.sp,
+                                                        color = if (isPositive) Color(0xFF065F46) else Color(0xFF9F1239)
+                                                    )
+                                                    if (entry.referenceInvoiceId != null) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(4.dp),
+                                                            color = Color.White
+                                                        ) {
+                                                            Text(
+                                                                text = "#${entry.referenceInvoiceId}",
+                                                                fontSize = 9.5.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = Color(0xFF4F46E5),
+                                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                                Text(
+                                                    text = buildString {
+                                                        append(dtFormat.format(Date(entry.timestamp)))
+                                                        if (!entry.note.isNullOrBlank()) {
+                                                            append(" • ")
+                                                            append(entry.note)
+                                                        }
+                                                    },
+                                                    fontSize = 10.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text(
+                                                    text = "${if (isPositive) "+" else ""}${formatTaka(entry.deltaAmount)}",
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 12.5.sp,
+                                                    color = if (isPositive) Color(0xFF059669) else Color(0xFFE11D48)
+                                                )
+                                                Text(
+                                                    text = "Bal: ${formatTaka(entry.balanceAfter)}",
+                                                    fontSize = 9.5.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    // Adjust Store Credit Dialog
+    if (showAdjustCreditDialog) {
+        AdjustStoreCreditDialog(
+            customerName = customer.name,
+            currentCredit = customer.storeCredit,
+            onDismiss = { showAdjustCreditDialog = false },
+            onConfirm = { delta, note ->
+                onAdjustCredit(delta, note)
+                showAdjustCreditDialog = false
+            }
+        )
     }
 
     // Thermal Receipt Dialog for Selected Invoice
@@ -801,4 +959,140 @@ fun CustomerReceiptPreviewDialog(
             }
         }
     }
+}
+
+@Composable
+fun AdjustStoreCreditDialog(
+    customerName: String,
+    currentCredit: Double,
+    onDismiss: () -> Unit,
+    onConfirm: (delta: Double, note: String) -> Unit
+) {
+    var isAdd by remember { mutableStateOf(true) }
+    var amountText by remember { mutableStateOf("") }
+    var reasonNote by remember { mutableStateOf("") }
+
+    val amount = amountText.toDoubleOrNull() ?: 0.0
+    val canConfirm = amount > 0 && (isAdd || amount <= currentCredit)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("🪙", fontSize = 22.sp)
+                Text(stringResource(R.string.store_credit_adjust_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    stringResource(R.string.store_credit_adjust_desc, customerName),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFECFDF5),
+                    border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        stringResource(R.string.store_credit_current_balance, formatTaka(currentCredit)),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF065F46),
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
+
+                // Action Switch: Add (+) vs Deduct (-)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Surface(
+                        onClick = { isAdd = true },
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (isAdd) Color(0xFF10B981) else Color.Transparent,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.store_credit_adjust_add),
+                            fontSize = 11.sp,
+                            fontWeight = if (isAdd) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isAdd) Color.White else MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 6.dp)
+                        )
+                    }
+
+                    Surface(
+                        onClick = { isAdd = false },
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (!isAdd) Color(0xFFEF4444) else Color.Transparent,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.store_credit_adjust_deduct),
+                            fontSize = 11.sp,
+                            fontWeight = if (!isAdd) FontWeight.Bold else FontWeight.Normal,
+                            color = if (!isAdd) Color.White else MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 6.dp)
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = amountText,
+                    onValueChange = { amountText = it.filter { c -> c.isDigit() || c == '.' } },
+                    label = { Text(stringResource(R.string.store_credit_amount_to_adjust)) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = reasonNote,
+                    onValueChange = { reasonNote = it },
+                    label = { Text(stringResource(R.string.store_credit_note_reason)) },
+                    placeholder = { Text("e.g. Returned item compensation, promotion, correction") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (!isAdd && amount > currentCredit) {
+                    Text(
+                        "Deduction cannot exceed current credit (${formatTaka(currentCredit)})",
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val delta = if (isAdd) amount else -amount
+                    onConfirm(delta, reasonNote.trim().ifBlank { "Manual credit adjustment" })
+                },
+                enabled = canConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isAdd) Color(0xFF10B981) else Color(0xFFEF4444)
+                )
+            ) {
+                Text(if (isAdd) "Add Credit" else "Deduct Credit", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }

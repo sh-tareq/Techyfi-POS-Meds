@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS — Store Credit & Walk-In Wallet Architecture Interactive Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=Libre+Barcode+128&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-gradient: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      --primary-light: rgba(79, 70, 229, 0.15);
+
+      --emerald: #10B981;
+      --emerald-dark: #059669;
+      --emerald-gradient: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      --emerald-light: rgba(16, 185, 129, 0.16);
+
+      --amber: #F59E0B;
+      --amber-dark: #D97706;
+      --amber-light: rgba(245, 158, 11, 0.16);
+
+      --rose: #F43F5E;
+      --rose-light: rgba(244, 63, 94, 0.16);
+
+      --sky: #0EA5E9;
+      --sky-light: rgba(14, 165, 233, 0.16);
+
+      --purple: #8B5CF6;
+      --purple-light: rgba(139, 92, 246, 0.16);
+
+      /* Dark Theme (Default) */
+      --bg-canvas: #090D16;
+      --bg-surface: #111827;
+      --bg-card: #182234;
+      --bg-card-hover: #1F2E45;
+      --bg-phone: #0F172A;
+      --border-subtle: rgba(255, 255, 255, 0.09);
+      --border-highlight: rgba(79, 70, 229, 0.45);
+      --border-emerald: rgba(16, 185, 129, 0.45);
+
+      --text-primary: #F9FAFB;
+      --text-secondary: #9CA3AF;
+      --text-tertiary: #6B7280;
+
+      --shadow-phone: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.35);
+
+      --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-bn: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-barcode: 'Libre Barcode 128', cursive;
+    }
+
+    [data-theme="light"] {
+      --bg-canvas: #F8FAFC;
+      --bg-surface: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F1F5F9;
+      --bg-phone: #F8FAFC;
+      --border-subtle: rgba(0, 0, 0, 0.09);
+      --border-highlight: rgba(79, 70, 229, 0.3);
+      --border-emerald: rgba(16, 185, 129, 0.35);
+
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-tertiary: #94A3B8;
+
+      --shadow-phone: 0 20px 45px -10px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.08);
+      --shadow-card: 0 3px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    body.lang-bn {
+      font-family: var(--font-bn);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    .main-wrapper {
+      width: 100%;
+      max-width: 1440px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Top Control Hub */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding: 16px 22px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--emerald-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.5);
+    }
+
+    .brand-text h1 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-text p {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .top-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .control-btn {
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .control-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-highlight);
+    }
+
+    .control-btn.active {
+      background: var(--primary);
+      color: #FFF;
+      border-color: var(--primary);
+    }
+
+    /* Workflow Navigation Tabs */
+    .workflow-tabs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 10px;
+    }
+
+    .wf-tab {
+      padding: 14px 18px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .wf-tab:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-1px);
+    }
+
+    .wf-tab.active {
+      border-color: var(--emerald);
+      background: var(--emerald-light);
+      box-shadow: 0 6px 18px -4px rgba(16, 185, 129, 0.25);
+    }
+
+    .wf-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--emerald);
+    }
+
+    .wf-tab-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-secondary);
+    }
+
+    .wf-tab.active .wf-tab-num {
+      background: var(--emerald);
+      color: #FFF;
+      border-color: var(--emerald);
+    }
+
+    .wf-tab-info h4 {
+      font-size: 13.5px;
+      font-weight: 700;
+    }
+
+    .wf-tab-info p {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Work Area Grid */
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 24px;
+      align-items: flex-start;
+    }
+
+    @media (max-width: 1080px) {
+      .workspace-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Device Mockup Shell */
+    .device-shell {
+      width: 100%;
+      background: var(--bg-phone);
+      border-radius: 36px;
+      box-shadow: var(--shadow-phone);
+      padding: 12px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .device-inner {
+      background: var(--bg-surface);
+      border-radius: 26px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 780px;
+      position: relative;
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* Status Bar */
+    .phone-status-bar {
+      height: 28px;
+      padding: 0 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      background: rgba(0, 0, 0, 0.05);
+      user-select: none;
+    }
+
+    .phone-status-right {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* App Header Bar in Mockup */
+    .mockup-app-bar {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .app-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-bar-icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      color: var(--text-primary);
+    }
+
+    .app-bar-title h3 {
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .app-bar-title span {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Mockup Body Content */
+    .mockup-screen-content {
+      padding: 14px;
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 700px;
+    }
+
+    /* Interactive Side Panel / Explainers */
+    .side-explainer {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .explainer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      width: fit-content;
+    }
+
+    .badge-emerald {
+      background: var(--emerald-light);
+      color: var(--emerald);
+      border: 1px solid var(--border-emerald);
+    }
+
+    .badge-amber {
+      background: var(--amber-light);
+      color: var(--amber);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .badge-primary {
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--border-highlight);
+    }
+
+    .explainer-title h2 {
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    .explainer-title p {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    .feature-points {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      transition: border-color 0.2s ease;
+    }
+
+    .feature-item:hover {
+      border-color: var(--border-highlight);
+    }
+
+    .feature-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .feature-item h5 {
+      font-size: 13.5px;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    .feature-item p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    /* Simulation Control Deck */
+    .sim-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sim-card h4 {
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sim-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .sim-btn {
+      flex: 1;
+      min-width: 120px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+
+    .sim-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-highlight);
+    }
+
+    .sim-btn.active {
+      background: var(--emerald);
+      color: #FFF;
+      border-color: var(--emerald);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+    }
+
+    /* Specific Component Styles inside Mockup */
+
+    /* 1. Return Dialog Settlement Card */
+    .settlement-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .settlement-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .settle-tab-btn {
+      padding: 8px 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .settle-tab-btn span.emoji {
+      font-size: 16px;
+    }
+
+    .settle-tab-btn.active {
+      background: var(--emerald-light);
+      border-color: var(--emerald);
+      color: var(--emerald);
+    }
+
+    /* Store Credit Target Box */
+    .credit-target-box {
+      border-radius: 14px;
+      padding: 12px;
+      border: 1px solid var(--border-emerald);
+      background: rgba(16, 185, 129, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .credit-target-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .credit-badge-tag {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: var(--emerald);
+      color: #FFF;
+    }
+
+    .walkin-alert-box {
+      border: 1px dashed var(--amber);
+      background: rgba(245, 158, 11, 0.08);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .walkin-alert-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--amber);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .walkin-alert-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* Input Field */
+    .mock-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .mock-input-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    .mock-input {
+      width: 100%;
+      height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      padding: 0 10px;
+      font-size: 12.5px;
+      font-family: var(--font-main);
+      outline: none;
+    }
+
+    .mock-input:focus {
+      border-color: var(--emerald);
+    }
+
+    /* 2. Customer Dossier KPI strip */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+    }
+
+    .kpi-card.highlight-emerald {
+      border-color: var(--border-emerald);
+      background: rgba(16, 185, 129, 0.08);
+      grid-column: span 2;
+    }
+
+    .kpi-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-val {
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .kpi-card.highlight-emerald .kpi-val {
+      color: var(--emerald);
+    }
+
+    /* Ledger List Item */
+    .ledger-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ledger-item {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+    }
+
+    .ledger-plus {
+      color: var(--emerald);
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .ledger-minus {
+      color: var(--rose);
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    /* 3. Cart Checkout Panel */
+    .cart-store-credit-banner {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+      border: 1.5px solid var(--emerald);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.15);
+    }
+
+    .credit-apply-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .credit-toggle-btn {
+      background: var(--emerald);
+      color: #FFF;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: transform 0.15s ease;
+    }
+
+    .credit-toggle-btn:hover {
+      transform: scale(1.03);
+    }
+
+    .credit-toggle-btn.applied {
+      background: var(--bg-surface);
+      color: var(--rose);
+      border: 1px solid var(--rose);
+    }
+
+    /* Receipt Mockup */
+    .receipt-paper {
+      background: #FFF;
+      color: #111;
+      border-radius: 4px;
+      padding: 20px 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.45;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 320px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .receipt-paper::before,
+    .receipt-paper::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: radial-gradient(circle, transparent, transparent 50%, #FFF 50%, #FFF 100%);
+      background-size: 10px 10px;
+    }
+
+    .receipt-paper::before {
+      top: -5px;
+    }
+
+    .receipt-paper::after {
+      bottom: -5px;
+    }
+
+    .receipt-center {
+      text-align: center;
+    }
+
+    .receipt-divider {
+      border-top: 1px dashed #444;
+      margin: 4px 0;
+    }
+
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .receipt-barcode {
+      font-family: var(--font-barcode);
+      font-size: 42px;
+      text-align: center;
+      line-height: 1;
+      margin: 6px 0;
+    }
+
+    /* Glass Summary Footer in Mockup */
+    .mockup-footer {
+      padding: 12px 14px;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .checkout-btn {
+      width: 100%;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--emerald-gradient);
+      color: #FFF;
+      font-weight: 800;
+      font-size: 13.5px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px -4px rgba(16, 185, 129, 0.5);
+      transition: all 0.2s ease;
+    }
+
+    .checkout-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px -4px rgba(16, 185, 129, 0.6);
+    }
+  </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+
+  <!-- TOP BAR CONTROL HUB -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <div class="brand-icon">🪙</div>
+      <div class="brand-text">
+        <h1 id="txt-app-title">Techyfi POS — Store Credit & Walk-in Wallet Lab</h1>
+        <p id="txt-app-subtitle">High-fidelity UX prototype & architecture specification</p>
+      </div>
+    </div>
+
+    <div class="top-controls">
+      <button class="control-btn" id="btn-lang" onclick="toggleLanguage()">
+        <span>🌐</span> <span id="lbl-lang">বাংলা (Bangla)</span>
+      </button>
+      <button class="control-btn" id="btn-theme" onclick="toggleTheme()">
+        <span id="ico-theme">☀️</span> <span id="lbl-theme">Light Mode</span>
+      </button>
+      <button class="control-btn" onclick="resetDefaults()">
+        <span>🔄</span> <span id="lbl-reset">Reset Demo</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 4 WORKFLOW TABS -->
+  <nav class="workflow-tabs">
+    <div class="wf-tab active" id="tab-step-1" onclick="switchWorkflow(1)">
+      <div class="wf-tab-num">1</div>
+      <div class="wf-tab-info">
+        <h4 id="wf-t1">Return & Credit Issue</h4>
+        <p id="wf-d1">Walk-in vs Registered customer</p>
+      </div>
+    </div>
+
+    <div class="wf-tab" id="tab-step-2" onclick="switchWorkflow(2)">
+      <div class="wf-tab-num">2</div>
+      <div class="wf-tab-info">
+        <h4 id="wf-t2">Customer Balance & Dossier</h4>
+        <p id="wf-d2">Directory card, KPI & credit ledger</p>
+      </div>
+    </div>
+
+    <div class="wf-tab" id="tab-step-3" onclick="switchWorkflow(3)">
+      <div class="wf-tab-num">3</div>
+      <div class="wf-tab-info">
+        <h4 id="wf-t3">POS Checkout & Redemption</h4>
+        <p id="wf-d3">1-Tap apply, partial tender, voucher</p>
+      </div>
+    </div>
+
+    <div class="wf-tab" id="tab-step-4" onclick="switchWorkflow(4)">
+      <div class="wf-tab-num">4</div>
+      <div class="wf-tab-info">
+        <h4 id="wf-t4">Receipt & Voucher Slip</h4>
+        <p id="wf-d4">80mm thermal barcode & QR voucher</p>
+      </div>
+    </div>
+  </nav>
+
+  <!-- WORKSPACE GRID -->
+  <main class="workspace-grid">
+
+    <!-- LEFT: MOBILE DEVICE PREVIEW -->
+    <div class="device-shell">
+      <div class="device-inner">
+        <!-- Status Bar -->
+        <div class="phone-status-bar">
+          <span id="phone-clock">06:14 PM</span>
+          <div class="phone-status-right">
+            <span>5G</span>
+            <span>📶</span>
+            <span>🔋 98%</span>
+          </div>
+        </div>
+
+        <!-- Dynamic App Bar -->
+        <div class="mockup-app-bar">
+          <div class="app-bar-left">
+            <button class="app-bar-icon-btn" onclick="prevScreen()">←</button>
+            <div class="app-bar-title">
+              <h3 id="screen-title">Return Settlement</h3>
+              <span id="screen-subtitle">Invoice #INV-2026-1049</span>
+            </div>
+          </div>
+          <div class="app-bar-actions">
+            <span class="explainer-badge badge-emerald" id="screen-mode-tag">LIVE DEMO</span>
+          </div>
+        </div>
+
+        <!-- DYNAMIC SCREEN CONTENT -->
+        <div class="mockup-screen-content" id="screen-container">
+          <!-- Populated by JavaScript according to active workflow -->
+        </div>
+
+        <!-- STICKY FOOTER -->
+        <div class="mockup-footer" id="screen-footer">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: INTERACTIVE CONTROL LAB & ARCHITECTURE EXPLAINER -->
+    <div class="side-explainer" id="explainer-panel">
+      <!-- Populated by JavaScript -->
+    </div>
+
+  </main>
+
+</div>
+
+<script>
+  // --- STATE MANAGEMENT ---
+  const state = {
+    lang: 'en', // 'en' or 'bn'
+    theme: 'dark',
+    activeWorkflow: 1,
+
+    // Step 1: Return Dialog
+    customerType: 'walkin', // 'registered' or 'walkin'
+    refundAmount: 1250.0,
+    settlementDest: 'WALLET', // 'CASH', 'DUE', 'MFS', 'WALLET'
+    walkinAction: 'quick_reg', // 'quick_reg' or 'voucher'
+    walkinPhone: '01712984562',
+    walkinName: 'Tanvir Hasan',
+
+    // Step 2: Customer CRM
+    filterTab: 'all', // 'all', 'credit', 'due', 'vip'
+    customerCredit: 1250.0,
+    customerDue: 0.0,
+    dossierTab: 'ledger', // 'kpi', 'ledger', 'invoices'
+
+    // Step 3: Checkout
+    cartTotal: 1650.0,
+    creditApplied: 0.0,
+    checkoutPaymentMethod: 'Cash',
+    voucherCodeInput: 'SC-7492-9182',
+    voucherRedeemed: false,
+
+    // Step 4: Receipt Type
+    receiptMode: 'voucher' // 'voucher' or 'sale'
+  };
+
+  // --- LOCALIZATION DICTIONARY ---
+  const i18n = {
+    en: {
+      appTitle: "Techyfi POS — Store Credit & Walk-in Wallet Lab",
+      appSubtitle: "High-fidelity UX prototype & architecture specification",
+      lblLang: "বাংলা (Bangla)",
+      lblThemeLight: "Light Mode",
+      lblThemeDark: "Dark Mode",
+      lblReset: "Reset Demo",
+
+      wfT1: "1. Return & Credit Issue",
+      wfD1: "Walk-in vs Registered customer",
+      wfT2: "2. Customer Balance & Dossier",
+      wfD2: "Directory card, KPI & credit ledger",
+      wfT3: "3. POS Checkout & Redemption",
+      wfD3: "1-Tap apply, partial tender, voucher",
+      wfT4: "4. Receipt & Voucher Slip",
+      wfD4: "80mm thermal barcode & QR voucher",
+
+      // Screen 1
+      returnTitle: "Return Items Settlement",
+      returnSubtitle: "Invoice #INV-2026-1049",
+      grossRefund: "Gross Refund Value",
+      targetPrompt: "Select Settlement Destination",
+      tabCash: "Cash",
+      tabDue: "Due Debt",
+      tabMfs: "Digital/MFS",
+      tabCredit: "Store Credit",
+      walletNoticeReg: "Amount will be credited directly to customer's store credit wallet for future purchases.",
+      walkinWarningTitle: "Walk-in Customer — Action Required",
+      walkinWarningDesc: "Walk-in sales have no registered phone number. Choose how to issue store credit:",
+      optQuickReg: "A. Quick Customer Registration (Recommended)",
+      optQuickRegDesc: "Register customer phone now. Credit is attached to customer account permanently.",
+      optVoucher: "B. Issue Scannable Credit Voucher",
+      optVoucherDesc: "Generate an 80mm thermal barcode voucher slip. Any walk-in customer can redeem it.",
+      lblCustPhone: "Customer Mobile Number",
+      lblCustName: "Customer Name (Optional)",
+      btnConfirmReturn: "Process Return & Issue Credit",
+
+      // Screen 2
+      crmTitle: "Customer Directory & Dossier",
+      crmSubtitle: "Store Credit & Ledger Hub",
+      filterAll: "All (142)",
+      filterCredit: "🪙 Has Store Credit (12)",
+      filterDue: "⚠️ Has Debt (18)",
+      kpiCredit: "STORE CREDIT BALANCE",
+      kpiSpent: "LIFETIME SPEND",
+      kpiOrders: "TOTAL ORDERS",
+      kpiAov: "AVG ORDER VALUE",
+      kpiLoyalty: "LOYALTY POINTS",
+      btnAdjustCredit: "+ Adjust Credit",
+      tabLedger: "🪙 Credit Ledger",
+      tabTopProducts: "🛍️ Products",
+      tabInvoices: "📜 Invoices",
+
+      // Screen 3
+      cartTitle: "Cart Checkout",
+      cartSubtitle: "2 Items in Cart",
+      bannerCreditTitle: "Customer Store Credit Available",
+      bannerCreditDesc: "Apply store credit towards this sale balance.",
+      btnApplyFull: "Apply Full ৳",
+      btnApplyPartial: "Apply ৳500 Partial",
+      btnRemoveCredit: "Remove Credit",
+      lblNetPayable: "Net Remaining Payable",
+      lblPayMethod: "Select Payment Method for Remaining",
+      haveVoucherPrompt: "🎟️ Have a Walk-in Store Credit Voucher?",
+      btnRedeemVoucher: "Scan / Redeem Voucher",
+      btnCompleteSale: "Complete Sale",
+
+      // Screen 4
+      receiptTitle: "Thermal Receipt Preview",
+      receiptSubtitle: "80mm ESC/POS Layout"
+    },
+    bn: {
+      appTitle: "টেকিফাই পিওএস — স্টোর ক্রেডিট ও ওয়াক-ইন ওয়ালেট ল্যাব",
+      appSubtitle: "হাই-ফিডেলিটি ইউজার ইন্টারফেস প্রোটোটাইপ ও আর্কিটেকচার স্পেসিফিকেশন",
+      lblLang: "English",
+      lblThemeLight: "লাইট মোড",
+      lblThemeDark: "ডার্ক মোড",
+      lblReset: "রিসেট ডেমো",
+
+      wfT1: "১. রিটার্ন ও ক্রেডিট প্রদান",
+      wfD1: "ওয়াক-ইন বনাম নিবন্ধিত কাস্টমার",
+      wfT2: "২. ব্যালেন্স ও কাস্টমার ডসিয়ার",
+      wfD2: "ডিরেক্টরি কার্ড, কেপিআই ও লেজার",
+      wfT3: "৩. পিওএস চেকআউট ও রিডেম্পশন",
+      wfD3: "১-ট্যাপে প্রয়োগ, আংশিক টেন্ডার, ভাউচার",
+      wfT4: "৪. রসিদ ও ভাউচার স্লিপ",
+      wfD4: "৮০মিমি বারকোড ও কিউআর ভাউচার",
+
+      // Screen 1
+      returnTitle: "রিটার্ন পণ্যের অর্থ নিষ্পত্তিকরন",
+      returnSubtitle: "চালান #INV-2026-1049",
+      grossRefund: "মোট ফেরতযোগ্য মূল্য",
+      targetPrompt: "রিফান্ড গন্তব্য নির্বাচন করুন",
+      tabCash: "নগদ (Cash)",
+      tabDue: "বকেয়া ঋণ",
+      tabMfs: "ডিজিটাল / MFS",
+      tabCredit: "স্টোর ক্রেডিট",
+      walletNoticeReg: "ফেরতের টাকা কাস্টমারের অ্যাকাউন্টে স্টোর ক্রেডিট হিসেবে জমা হবে পরবর্তী কেনাকাটার জন্য।",
+      walkinWarningTitle: "ওয়াক-ইন ক্রেতা — কাস্টমার আইডি প্রয়োজন",
+      walkinWarningDesc: "সাধারণ ওয়াক-ইন বিক্রয়ে কোনো ফোন নম্বর যুক্ত থাকে না। কীভাবে স্টোর ক্রেডিট প্রদান করবেন:",
+      optQuickReg: "ক. দ্রুত কাস্টমার নিবন্ধন (সুপারিশকৃত)",
+      optQuickRegDesc: "ক্রেতার মোবাইল নম্বর দিয়ে অ্যাকাউন্ট তৈরি করুন। ক্রেডিট স্থায়ীভাবে অ্যাকাউন্টে থাকবে।",
+      optVoucher: "খ. স্ক্যানযোগ্য ক্রেডিট ভাউচার প্রিন্ট",
+      optVoucherDesc: "বারকোড সম্বলিত থার্মাল রসিদ স্লিপ প্রিন্ট হবে। যেকোনো ওয়াক-ইন ক্রেতা এটি রিডিম করতে পারবেন।",
+      lblCustPhone: "কাস্টমার মোবাইল নম্বর",
+      lblCustName: "কাস্টমারের নাম (ঐচ্ছিক)",
+      btnConfirmReturn: "রিটার্ন সম্পন্ন করুন ও ক্রেডিট প্রদান করুন",
+
+      // Screen 2
+      crmTitle: "কাস্টমার ডিরেক্টরি ও ডসিয়ার",
+      crmSubtitle: "স্টোর ক্রেডিট ও লেজার হাব",
+      filterAll: "সকল (১৪২)",
+      filterCredit: "🪙 স্টোর ক্রেডিট আছে (১২)",
+      filterDue: "⚠️ বকেয়া ঋণ আছে (১৮)",
+      kpiCredit: "স্টোর ক্রেডিট ব্যালেন্স",
+      kpiSpent: "সর্বমোট কেনাকাটা",
+      kpiOrders: "মোট অর্ডার",
+      kpiAov: "গড় অর্ডার মূল্য",
+      kpiLoyalty: "লয়্যালটি পয়েন্ট",
+      btnAdjustCredit: "+ ক্রেডিট সমন্বয়",
+      tabLedger: "🪙 ক্রেডিট লেজার",
+      tabTopProducts: "🛍️ পণ্যসমূহ",
+      tabInvoices: "📜 চালানসমূহ",
+
+      // Screen 3
+      cartTitle: "কার্ট চেকআউট",
+      cartSubtitle: "কার্টে ২টি পণ্য রয়েছে",
+      bannerCreditTitle: "কাস্টমার স্টোর ক্রেডিট উপলব্ধ রয়েছে",
+      bannerCreditDesc: "এই বিক্রয়ে স্টোর ক্রেডিট সরাসরি প্রয়োগ করুন।",
+      btnApplyFull: "সম্পূর্ণ ৳ প্রয়োগ করুন",
+      btnApplyPartial: "আংশিক ৳৫০০ প্রয়োগ করুন",
+      btnRemoveCredit: "ক্রেডিট বাতিল",
+      lblNetPayable: "অবশিষ্ট পরিশোধযোগ্য নেট মূল্য",
+      lblPayMethod: "বাকি টাকার পরিশোধের মাধ্যম",
+      haveVoucherPrompt: "🎟️ ওয়াক-ইন স্টোর ক্রেডিট ভাউচার আছে?",
+      btnRedeemVoucher: "ভাউচার স্ক্যান / রিডিম",
+      btnCompleteSale: "বিক্রি সম্পন্ন করুন",
+
+      // Screen 4
+      receiptTitle: "থার্মাল রসিদ প্রিভিউ",
+      receiptSubtitle: "৮০মিমি ESC/POS প্রিন্টার লেআউট"
+    }
+  };
+
+  function t(key) {
+    return i18n[state.lang][key] || key;
+  }
+
+  function formatTaka(val) {
+    return '৳' + Number(val).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+
+  // --- CORE RENDER FUNCTION ---
+  function renderApp() {
+    // 1. Update text translations
+    document.getElementById('txt-app-title').textContent = t('appTitle');
+    document.getElementById('txt-app-subtitle').textContent = t('appSubtitle');
+    document.getElementById('lbl-lang').textContent = state.lang === 'en' ? 'বাংলা (Bangla)' : 'English';
+    document.getElementById('lbl-theme').textContent = state.theme === 'dark' ? t('lblThemeLight') : t('lblThemeDark');
+    document.getElementById('ico-theme').textContent = state.theme === 'dark' ? '☀️' : '🌙';
+    document.getElementById('lbl-reset').textContent = t('lblReset');
+
+    document.getElementById('wf-t1').textContent = t('wfT1');
+    document.getElementById('wf-d1').textContent = t('wfD1');
+    document.getElementById('wf-t2').textContent = t('wfT2');
+    document.getElementById('wf-d2').textContent = t('wfD2');
+    document.getElementById('wf-t3').textContent = t('wfT3');
+    document.getElementById('wf-d3').textContent = t('wfD3');
+    document.getElementById('wf-t4').textContent = t('wfT4');
+    document.getElementById('wf-d4').textContent = t('wfD4');
+
+    // Update active tab styles
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById(`tab-step-${i}`);
+      if (i === state.activeWorkflow) {
+        el.classList.add('active');
+      } else {
+        el.classList.remove('active');
+      }
+    }
+
+    // Render screen according to active workflow
+    if (state.activeWorkflow === 1) renderScreen1();
+    else if (state.activeWorkflow === 2) renderScreen2();
+    else if (state.activeWorkflow === 3) renderScreen3();
+    else if (state.activeWorkflow === 4) renderScreen4();
+  }
+
+  // --- WORKFLOW 1: RETURN & ISSUE STORE CREDIT ---
+  function renderScreen1() {
+    document.getElementById('screen-title').textContent = t('returnTitle');
+    document.getElementById('screen-subtitle').textContent = t('returnSubtitle');
+    document.getElementById('screen-mode-tag').textContent = 'STEP 1: ISSUE';
+
+    const container = document.getElementById('screen-container');
+    const footer = document.getElementById('screen-footer');
+    const explainer = document.getElementById('explainer-panel');
+
+    const isWalkin = state.customerType === 'walkin';
+    const isWallet = state.settlementDest === 'WALLET';
+
+    container.innerHTML = `
+      <!-- Product Item Info -->
+      <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:14px; padding:12px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center;">
+          <div style="font-size:24px; background:var(--primary-light); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">📦</div>
+          <div>
+            <div style="font-size:13px; font-weight:700;">Wireless RGB Mechanical Keyboard</div>
+            <div style="font-size:11px; color:var(--text-secondary);">SKU: KB-9821 • Qty: 1 pc • Restock: Enabled</div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:14px; font-weight:800; color:var(--emerald);">${formatTaka(state.refundAmount)}</div>
+          <div style="font-size:10px; color:var(--text-secondary);">${t('grossRefund')}</div>
+        </div>
+      </div>
+
+      <!-- Customer Identifier Banner -->
+      <div style="background:${isWalkin ? 'rgba(245,158,11,0.1)' : 'rgba(79,70,229,0.1)'}; border:1px solid ${isWalkin ? 'var(--amber)' : 'var(--primary)'}; border-radius:12px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:18px;">${isWalkin ? '🚶' : '👤'}</span>
+          <div>
+            <div style="font-size:12px; font-weight:800;">${isWalkin ? 'Walk-in Customer (No Phone Recorded)' : 'Anamul Karim Bipu'}</div>
+            <div style="font-size:10.5px; color:var(--text-secondary);">${isWalkin ? 'Original Sale: Cash Walk-in' : '📞 01711223344 • Credit Bal: ৳300'}</div>
+          </div>
+        </div>
+        <button class="control-btn" style="padding:4px 8px; font-size:11px;" onclick="toggleCustomerType()">
+          Switch to ${isWalkin ? 'Registered' : 'Walk-in'}
+        </button>
+      </div>
+
+      <!-- Settlement Method Selector (From User Screenshot) -->
+      <div class="settlement-card">
+        <div style="font-size:11.5px; font-weight:800; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">
+          ${t('targetPrompt')}
+        </div>
+        <div class="settlement-tabs">
+          <button class="settle-tab-btn ${state.settlementDest === 'CASH' ? 'active' : ''}" onclick="setSettlement('CASH')">
+            <span class="emoji">💵</span>
+            <span>${t('tabCash')}</span>
+          </button>
+          <button class="settle-tab-btn ${state.settlementDest === 'DUE' ? 'active' : ''}" onclick="setSettlement('DUE')">
+            <span class="emoji">📉</span>
+            <span>${t('tabDue')}</span>
+          </button>
+          <button class="settle-tab-btn ${state.settlementDest === 'MFS' ? 'active' : ''}" onclick="setSettlement('MFS')">
+            <span class="emoji">📱</span>
+            <span>${t('tabMfs')}</span>
+          </button>
+          <button class="settle-tab-btn ${state.settlementDest === 'WALLET' ? 'active' : ''}" onclick="setSettlement('WALLET')">
+            <span class="emoji">🪙</span>
+            <span>${t('tabCredit')}</span>
+          </button>
+        </div>
+
+        <!-- STORE CREDIT DETAILS BOX -->
+        ${isWallet ? `
+          <div class="credit-target-box">
+            <div class="credit-target-header">
+              <div style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:800;">
+                <span>🪙</span> <span>${t('tabCredit')}</span>
+              </div>
+              <span class="credit-badge-tag">${isWalkin ? 'Walk-in Resolution Required' : 'Customer Account Wallet'}</span>
+            </div>
+
+            ${!isWalkin ? `
+              <!-- Registered Customer Path -->
+              <p style="font-size:11.5px; color:var(--text-secondary); line-height:1.4;">
+                ${t('walletNoticeReg')}
+              </p>
+              <div style="background:var(--bg-surface); padding:8px 10px; border-radius:10px; border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; font-size:11.5px;">
+                <span>Current Credit: <b>৳300.00</b></span>
+                <span style="color:var(--emerald); font-weight:800;">New Balance: ৳1,550.00</span>
+              </div>
+            ` : `
+              <!-- Walk-in Customer Resolution (The Core Fix) -->
+              <div class="walkin-alert-box">
+                <div class="walkin-alert-title">
+                  <span>⚠️</span> <span>${t('walkinWarningTitle')}</span>
+                </div>
+                <div class="walkin-alert-desc">
+                  ${t('walkinWarningDesc')}
+                </div>
+
+                <!-- Choice Radio A: Quick Reg -->
+                <label style="display:flex; gap:8px; align-items:flex-start; margin-top:6px; cursor:pointer;">
+                  <input type="radio" name="walkinOption" value="quick_reg" ${state.walkinAction === 'quick_reg' ? 'checked' : ''} onchange="setWalkinAction('quick_reg')">
+                  <div>
+                    <div style="font-size:11.5px; font-weight:700;">${t('optQuickReg')}</div>
+                    <div style="font-size:10px; color:var(--text-secondary);">${t('optQuickRegDesc')}</div>
+                  </div>
+                </label>
+
+                ${state.walkinAction === 'quick_reg' ? `
+                  <div style="background:var(--bg-surface); padding:10px; border-radius:8px; margin-top:4px; border:1px solid var(--border-subtle);">
+                    <div class="mock-input-group">
+                      <span class="mock-input-label">${t('lblCustPhone')} *</span>
+                      <input type="tel" class="mock-input" value="${state.walkinPhone}" oninput="state.walkinPhone = this.value" placeholder="017XXXXXXXX">
+                    </div>
+                    <div class="mock-input-group">
+                      <span class="mock-input-label">${t('lblCustName')}</span>
+                      <input type="text" class="mock-input" value="${state.walkinName}" oninput="state.walkinName = this.value" placeholder="e.g. Tanvir Hasan">
+                    </div>
+                  </div>
+                ` : ''}
+
+                <!-- Choice Radio B: Physical Barcode Voucher -->
+                <label style="display:flex; gap:8px; align-items:flex-start; margin-top:6px; cursor:pointer;">
+                  <input type="radio" name="walkinOption" value="voucher" ${state.walkinAction === 'voucher' ? 'checked' : ''} onchange="setWalkinAction('voucher')">
+                  <div>
+                    <div style="font-size:11.5px; font-weight:700;">${t('optVoucher')}</div>
+                    <div style="font-size:10px; color:var(--text-secondary);">${t('optVoucherDesc')}</div>
+                  </div>
+                </label>
+
+                ${state.walkinAction === 'voucher' ? `
+                  <div style="background:var(--bg-surface); padding:10px; border-radius:8px; margin-top:4px; border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                      <div style="font-size:10px; color:var(--text-secondary);">Generated Voucher Code:</div>
+                      <div style="font-size:13px; font-weight:800; font-family:var(--font-mono); color:var(--emerald);">SC-7492-9182</div>
+                    </div>
+                    <span style="font-size:10px; background:var(--emerald-light); color:var(--emerald); padding:3px 7px; border-radius:6px; font-weight:700;">Valid 90 Days</span>
+                  </div>
+                ` : ''}
+              </div>
+            `}
+          </div>
+        ` : `
+          <div style="font-size:12px; color:var(--text-secondary); padding:8px;">
+            Settling refund via <b>${state.settlementDest}</b> payout. No store credit wallet is affected.
+          </div>
+        `}
+      </div>
+    `;
+
+    footer.innerHTML = `
+      <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700;">
+        <span>Total Return Value</span>
+        <span style="color:var(--emerald); font-size:14px;">${formatTaka(state.refundAmount)}</span>
+      </div>
+      <button class="checkout-btn" onclick="executeReturnStep1()">
+        <span>✓</span> <span>${t('btnConfirmReturn')} (${formatTaka(state.refundAmount)})</span>
+      </button>
+    `;
+
+    // Right Explainer Panel
+    explainer.innerHTML = `
+      <div class="explainer-badge badge-emerald">STEP 1 ARCHITECTURE & UI/UX</div>
+      <div class="explainer-title">
+        <h2>Walk-in Store Credit Resolution</h2>
+        <p>Why walk-in credit was lost and how this elegant dual-resolution solves it completely without friction.</p>
+      </div>
+
+      <div class="sim-card">
+        <h4><span>⚙️</span> Interactive Test Scenarios</h4>
+        <div class="sim-row">
+          <button class="sim-btn ${!isWalkin ? 'active' : ''}" onclick="setCustomerType('registered')">👤 Registered Customer</button>
+          <button class="sim-btn ${isWalkin ? 'active' : ''}" onclick="setCustomerType('walkin')">🚶 Walk-in Customer</button>
+        </div>
+        ${isWalkin ? `
+          <div class="sim-row" style="margin-top:6px;">
+            <button class="sim-btn ${state.walkinAction === 'quick_reg' ? 'active' : ''}" onclick="setWalkinAction('quick_reg')">Option A: Quick Register</button>
+            <button class="sim-btn ${state.walkinAction === 'voucher' ? 'active' : ''}" onclick="setWalkinAction('voucher')">Option B: Thermal Voucher</button>
+          </div>
+        ` : ''}
+      </div>
+
+      <div class="feature-points">
+        <div class="feature-item">
+          <div class="feature-icon">🔍</div>
+          <div>
+            <h5>The Root Cause Diagnosed</h5>
+            <p>In <code>DataRepository.kt</code> line 2995, credit adjustment was gated by <code>if (!phone.isNullOrBlank())</code>. Because walk-in sales have no phone, the store credit was never saved anywhere!</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">⚡</div>
+          <div>
+            <h5>Solution A: Inline Customer Capture</h5>
+            <p>Cashier types the customer's phone number directly inside the return dialog. In 1 tap, Room creates or links the customer with <code>storeCredit = ৳1,250</code> without leaving the return flow.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">🎟️</div>
+          <div>
+            <h5>Solution B: Store Credit Voucher Entity</h5>
+            <p>If a customer refuses to share their phone, the POS generates an encrypted voucher code (<code>SC-7492-9182</code>) and prints an 80mm thermal receipt with Barcode/QR code that can be scanned at checkout next time!</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- WORKFLOW 2: CUSTOMER CRM & DOSSIER ---
+  function renderScreen2() {
+    document.getElementById('screen-title').textContent = t('crmTitle');
+    document.getElementById('screen-subtitle').textContent = t('crmSubtitle');
+    document.getElementById('screen-mode-tag').textContent = 'STEP 2: CHECK BALANCE';
+
+    const container = document.getElementById('screen-container');
+    const footer = document.getElementById('screen-footer');
+    const explainer = document.getElementById('explainer-panel');
+
+    container.innerHTML = `
+      <!-- Search & Filter Bar -->
+      <div style="display:flex; gap:8px;">
+        <input type="text" class="mock-input" style="height:36px;" value="Tanvir Hasan" placeholder="Search customer by name or phone...">
+      </div>
+
+      <!-- Quick Filter Chips -->
+      <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:4px;">
+        <button class="control-btn ${state.filterTab === 'all' ? 'active' : ''}" style="padding:4px 10px; font-size:11px;" onclick="setFilterTab('all')">${t('filterAll')}</button>
+        <button class="control-btn ${state.filterTab === 'credit' ? 'active' : ''}" style="padding:4px 10px; font-size:11px; border-color:var(--emerald);" onclick="setFilterTab('credit')">${t('filterCredit')}</button>
+        <button class="control-btn ${state.filterTab === 'due' ? 'active' : ''}" style="padding:4px 10px; font-size:11px;" onclick="setFilterTab('due')">${t('filterDue')}</button>
+      </div>
+
+      <!-- Selected Customer Profile Dossier Sheet (Expanded Modal) -->
+      <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:18px; padding:14px; display:flex; flex-direction:column; gap:12px;">
+        <!-- Customer Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div style="width:42px; height:42px; border-radius:12px; background:var(--emerald-gradient); color:#FFF; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;">
+              TH
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:14px; font-weight:800;">${state.walkinName}</span>
+                <span class="explainer-badge badge-emerald" style="padding:1px 6px; font-size:9px;">NEW FROM RETURN</span>
+              </div>
+              <div style="font-size:11px; color:var(--text-secondary);">📞 ${state.walkinPhone} • Retail Customer</div>
+            </div>
+          </div>
+          <button class="control-btn" style="padding:4px 8px; font-size:11px;" onclick="quickStartSaleForCustomer()">
+            🛒 Start Sale
+          </button>
+        </div>
+
+        <!-- 5 KPI Cards Strip (Featuring Store Credit) -->
+        <div class="kpi-grid">
+          <!-- THE NEW STORE CREDIT CARD -->
+          <div class="kpi-card highlight-emerald">
+            <div class="kpi-label">
+              <span>🪙 ${t('kpiCredit')}</span>
+              <button class="control-btn" style="padding:2px 8px; font-size:10px; background:var(--emerald); color:#FFF; border:none;" onclick="adjustCreditModal()">
+                ${t('btnAdjustCredit')}
+              </button>
+            </div>
+            <div class="kpi-val">${formatTaka(state.customerCredit)}</div>
+            <div style="font-size:10px; color:var(--text-secondary);">Available for immediate redemption at POS checkout</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">${t('kpiSpent')}</div>
+            <div class="kpi-val">${formatTaka(14200)}</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">${t('kpiOrders')}</div>
+            <div class="kpi-val">8 Orders</div>
+          </div>
+        </div>
+
+        <!-- Dossier Sub-Tabs (With Credit Ledger) -->
+        <div style="display:flex; gap:6px; border-bottom:1px solid var(--border-subtle); padding-bottom:6px;">
+          <button class="control-btn ${state.dossierTab === 'ledger' ? 'active' : ''}" style="padding:5px 10px; font-size:11px;" onclick="setDossierTab('ledger')">
+            ${t('tabLedger')}
+          </button>
+          <button class="control-btn ${state.dossierTab === 'invoices' ? 'active' : ''}" style="padding:5px 10px; font-size:11px;" onclick="setDossierTab('invoices')">
+            ${t('tabInvoices')} (8)
+          </button>
+          <button class="control-btn ${state.dossierTab === 'kpi' ? 'active' : ''}" style="padding:5px 10px; font-size:11px;" onclick="setDossierTab('kpi')">
+            ${t('tabTopProducts')}
+          </button>
+        </div>
+
+        <!-- Credit Ledger Content -->
+        ${state.dossierTab === 'ledger' ? `
+          <div class="ledger-list">
+            <div class="ledger-item">
+              <div>
+                <div style="font-weight:700;">Return Refund (#INV-1049)</div>
+                <div style="font-size:10px; color:var(--text-secondary);">Today, 06:12 PM • Wireless Keyboard</div>
+              </div>
+              <div class="ledger-plus">+${formatTaka(1250)}</div>
+            </div>
+
+            <div class="ledger-item">
+              <div>
+                <div style="font-weight:700;">Redeemed at Sale (#INV-1012)</div>
+                <div style="font-size:10px; color:var(--text-secondary);">Sep 04, 2026 • Partial bill settlement</div>
+              </div>
+              <div class="ledger-minus">-${formatTaka(400)}</div>
+            </div>
+
+            <div class="ledger-item">
+              <div>
+                <div style="font-weight:700;">Goodwill Compensation Credit</div>
+                <div style="font-size:10px; color:var(--text-secondary);">Aug 28, 2026 • Authorized by Supervisor</div>
+              </div>
+              <div class="ledger-plus">+${formatTaka(400)}</div>
+            </div>
+          </div>
+        ` : `
+          <div style="padding:16px; text-align:center; color:var(--text-secondary); font-size:12px;">
+            Past sale invoices & product history are available here.
+          </div>
+        `}
+      </div>
+    `;
+
+    footer.innerHTML = `
+      <button class="checkout-btn" onclick="switchWorkflow(3)">
+        <span>🛒</span> <span>Proceed to POS Cart & Apply Credit</span>
+      </button>
+    `;
+
+    explainer.innerHTML = `
+      <div class="explainer-badge badge-emerald">STEP 2 ARCHITECTURE & UI/UX</div>
+      <div class="explainer-title">
+        <h2>Customer Balance Visibility & Credit Ledger</h2>
+        <p>Surfacing store credit front and center across the customer directory, cards, and dossier.</p>
+      </div>
+
+      <div class="sim-card">
+        <h4><span>⚙️</span> Interactive Test Actions</h4>
+        <div class="sim-row">
+          <button class="sim-btn" onclick="addCreditManually(500)">+ ৳500 Manual Credit</button>
+          <button class="sim-btn" onclick="resetCredit()">Reset to ৳1,250</button>
+        </div>
+      </div>
+
+      <div class="feature-points">
+        <div class="feature-item">
+          <div class="feature-icon">💳</div>
+          <div>
+            <h5>Dedicated Glowing Store Credit Card</h5>
+            <p>Added as a distinct 5th KPI card in <code>CustomerDossierSheet.kt</code>. Highlights available credit with an authorized <b>Adjust</b> action for goodwill or balance corrections.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">📒</div>
+          <div>
+            <h5>Immutable Store Credit Ledger</h5>
+            <p>Tracks every credit source (Return invoice, manual adjustment, promotional cashback) and every redemption invoice so cashiers and store owners have 100% auditability.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">🏷️</div>
+          <div>
+            <h5>Directory Filter & Card Badges</h5>
+            <p>Customer cards in <code>CustomersScreen.kt</code> now proudly display emerald pills (<code>🪙 Credit: ৳1,250</code>), and merchants can filter by "Has Store Credit" in 1 click.</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- WORKFLOW 3: CHECKOUT & REDEMPTION ---
+  function renderScreen3() {
+    document.getElementById('screen-title').textContent = t('cartTitle');
+    document.getElementById('screen-subtitle').textContent = t('cartSubtitle');
+    document.getElementById('screen-mode-tag').textContent = 'STEP 3: APPLY TO SALE';
+
+    const container = document.getElementById('screen-container');
+    const footer = document.getElementById('screen-footer');
+    const explainer = document.getElementById('explainer-panel');
+
+    const netPayable = Math.max(0, state.cartTotal - state.creditApplied);
+    const remainingCredit = Math.max(0, state.customerCredit - state.creditApplied);
+    const isCreditApplied = state.creditApplied > 0;
+
+    container.innerHTML = `
+      <!-- Active Cart Items -->
+      <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:700;">
+          <span>Cart Items (2)</span>
+          <span style="color:var(--text-secondary);">Gross: ${formatTaka(state.cartTotal)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:11.5px;">
+          <span>1x Ergonomic Gaming Mouse</span>
+          <span>৳1,100</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:11.5px;">
+          <span>1x Extended Desk Mousepad</span>
+          <span>৳550</span>
+        </div>
+      </div>
+
+      <!-- Customer Tag in Cart -->
+      <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:12px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:18px;">👤</span>
+          <div>
+            <div style="font-size:12px; font-weight:800;">${state.walkinName}</div>
+            <div style="font-size:10.5px; color:var(--text-secondary);">📞 ${state.walkinPhone}</div>
+          </div>
+        </div>
+        <span class="explainer-badge badge-emerald" style="font-size:10px;">CREDIT: ${formatTaka(state.customerCredit)}</span>
+      </div>
+
+      <!-- 1-TAP STORE CREDIT APPLICATION BANNER (THE MAIN USER REQUEST) -->
+      <div class="cart-store-credit-banner">
+        <div class="credit-apply-row">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:22px;">🪙</span>
+            <div>
+              <div style="font-size:13px; font-weight:800; color:var(--emerald);">
+                ${t('bannerCreditTitle')}: ${formatTaka(state.customerCredit)}
+              </div>
+              <div style="font-size:11px; color:var(--text-secondary);">
+                ${t('bannerCreditDesc')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center; margin-top:4px;">
+          ${!isCreditApplied ? `
+            <button class="credit-toggle-btn" onclick="applyStoreCredit(${Math.min(state.cartTotal, state.customerCredit)})">
+              <span>✓</span> <span>${t('btnApplyFull')} ${Math.min(state.cartTotal, state.customerCredit)}</span>
+            </button>
+            <button class="control-btn" style="font-size:11px; padding:6px 10px;" onclick="applyStoreCredit(500)">
+              ${t('btnApplyPartial')}
+            </button>
+          ` : `
+            <button class="credit-toggle-btn applied" onclick="removeStoreCredit()">
+              <span>✕</span> <span>${t('btnRemoveCredit')} (${formatTaka(state.creditApplied)})</span>
+            </button>
+            <span style="font-size:11px; color:var(--emerald); font-weight:700;">Remaining Wallet: ${formatTaka(remainingCredit)}</span>
+          `}
+        </div>
+      </div>
+
+      <!-- WALK-IN VOUCHER SCAN MODAL OPTION -->
+      <div style="border:1px dashed var(--border-subtle); border-radius:12px; padding:10px 12px; background:var(--bg-card); display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:11.5px; font-weight:700;">${t('haveVoucherPrompt')}</div>
+          <div style="font-size:10px; color:var(--text-secondary);">For walk-in customers holding thermal paper slips</div>
+        </div>
+        <button class="control-btn" style="font-size:11px; padding:5px 8px; border-color:var(--emerald);" onclick="redeemVoucherPrompt()">
+          ${state.voucherRedeemed ? '✓ Redeemed' : t('btnRedeemVoucher')}
+        </button>
+      </div>
+
+      <!-- Financial Calculation Summary Box -->
+      <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:6px; font-size:12px;">
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:var(--text-secondary);">Gross Bill Total</span>
+          <span style="font-weight:700;">${formatTaka(state.cartTotal)}</span>
+        </div>
+
+        ${isCreditApplied ? `
+          <div style="display:flex; justify-content:space-between; color:var(--emerald); font-weight:800;">
+            <span>🪙 Store Credit Applied</span>
+            <span>-${formatTaka(state.creditApplied)}</span>
+          </div>
+        ` : ''}
+
+        <div style="border-top:1px solid var(--border-subtle); padding-top:6px; display:flex; justify-content:space-between; font-size:14px; font-weight:800;">
+          <span>${t('lblNetPayable')}</span>
+          <span style="color:${netPayable === 0 ? 'var(--emerald)' : 'var(--text-primary)'};">${formatTaka(netPayable)}</span>
+        </div>
+      </div>
+
+      <!-- Payment Method for Remaining Balance -->
+      ${netPayable > 0 ? `
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <span style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">
+            ${t('lblPayMethod')} (${formatTaka(netPayable)})
+          </span>
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">
+            ${['Cash', 'bKash', 'Nagad', 'Card', 'Rocket', 'Due'].map(m => `
+              <button class="control-btn ${state.checkoutPaymentMethod === m ? 'active' : ''}" style="justify-content:center; padding:8px 4px; font-size:11.5px;" onclick="setPaymentMethod('${m}')">
+                ${m}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      ` : `
+        <div style="background:rgba(16,185,129,0.1); border:1px solid var(--emerald); border-radius:12px; padding:10px; text-align:center; color:var(--emerald); font-weight:800; font-size:12.5px;">
+          ✓ Fully Settled with Store Credit! Zero remaining balance.
+        </div>
+      `}
+    `;
+
+    footer.innerHTML = `
+      <button class="checkout-btn" onclick="completeSaleAndShowReceipt()">
+        <span>✓</span> <span>${t('btnCompleteSale')} (${netPayable > 0 ? formatTaka(netPayable) + ' via ' + state.checkoutPaymentMethod : 'Paid in Full by Credit'})</span>
+      </button>
+    `;
+
+    explainer.innerHTML = `
+      <div class="explainer-badge badge-emerald">STEP 3 ARCHITECTURE & UI/UX</div>
+      <div class="explainer-title">
+        <h2>Flawless POS Redemption & Split Tender</h2>
+        <p>No more blocking cashiers when credit is less than the bill. 1-tap partial application handles any combination effortlessly.</p>
+      </div>
+
+      <div class="sim-card">
+        <h4><span>⚙️</span> Interactive Checkout Controls</h4>
+        <div class="sim-row">
+          <button class="sim-btn ${state.creditApplied === 1250 ? 'active' : ''}" onclick="applyStoreCredit(1250)">Apply Max ৳1,250</button>
+          <button class="sim-btn ${state.creditApplied === 500 ? 'active' : ''}" onclick="applyStoreCredit(500)">Apply Partial ৳500</button>
+          <button class="sim-btn ${state.creditApplied === 0 ? 'active' : ''}" onclick="removeStoreCredit()">Clear Credit</button>
+        </div>
+      </div>
+
+      <div class="feature-points">
+        <div class="feature-item">
+          <div class="feature-icon">💡</div>
+          <div>
+            <h5>Why Current Cart Checkout Failed</h5>
+            <p>In <code>CartScreen.kt</code> line 1949, store credit checked: <code>customer.storeCredit >= grandTotal</code>. If a customer had ৳200 and the bill was ৳500, checkout was completely blocked! Cashiers could not apply the ৳200!</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">✨</div>
+          <div>
+            <h5>1-Tap Dedicated Tender Application</h5>
+            <p>Our proposed design treats Store Credit as a dedicated deduction banner. The cashier applies ৳1,250 in 1 tap, reducing the net payable to ৳400, which is paid seamlessly with Cash or bKash.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">🎟️</div>
+          <div>
+            <h5>Voucher Code Redemption for Walk-ins</h5>
+            <p>When a walk-in walks up with their printed slip, the cashier clicks "Redeem Voucher", scans the barcode, and the voucher amount is applied instantly!</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- WORKFLOW 4: THERMAL RECEIPT PREVIEW ---
+  function renderScreen4() {
+    document.getElementById('screen-title').textContent = t('receiptTitle');
+    document.getElementById('screen-subtitle').textContent = t('receiptSubtitle');
+    document.getElementById('screen-mode-tag').textContent = 'STEP 4: PRINTING';
+
+    const container = document.getElementById('screen-container');
+    const footer = document.getElementById('screen-footer');
+    const explainer = document.getElementById('explainer-panel');
+
+    const isVoucherMode = state.receiptMode === 'voucher';
+
+    container.innerHTML = `
+      <!-- Mode Switcher -->
+      <div style="display:flex; gap:8px; justify-content:center;">
+        <button class="control-btn ${isVoucherMode ? 'active' : ''}" onclick="setReceiptMode('voucher')">
+          🎟️ Store Credit Voucher Slip
+        </button>
+        <button class="control-btn ${!isVoucherMode ? 'active' : ''}" onclick="setReceiptMode('sale')">
+          🧾 Sale Receipt (Split Tender)
+        </button>
+      </div>
+
+      <!-- 80mm ESC/POS Thermal Paper Rendering -->
+      <div class="receipt-paper">
+        <div class="receipt-center">
+          <div style="font-weight:800; font-size:14px;">TECHYFI POS SYSTEM</div>
+          <div style="font-size:10px; color:#555;">Dhanmondi 27, Dhaka-1209 • Tel: 01700-000000</div>
+          <div style="font-size:10px; color:#555;">BIN / VAT Reg: 004918231-0101</div>
+        </div>
+
+        <div class="receipt-divider"></div>
+
+        ${isVoucherMode ? `
+          <!-- THERMAL STORE CREDIT VOUCHER SLIP -->
+          <div class="receipt-center" style="margin:4px 0;">
+            <div style="font-weight:800; font-size:12px; background:#111; color:#FFF; padding:2px 6px; display:inline-block; border-radius:2px;">
+              *** STORE CREDIT VOUCHER ***
+            </div>
+            <div style="font-size:9.5px; color:#555; margin-top:2px;">Issued on Return #INV-2026-1049</div>
+          </div>
+
+          <div class="receipt-row">
+            <span>Date: 11-09-2026</span>
+            <span>Time: 18:15</span>
+          </div>
+          <div class="receipt-row">
+            <span>Customer:</span>
+            <span>${state.customerType === 'walkin' ? 'Walk-in Voucher' : state.walkinName}</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-center" style="margin:6px 0;">
+            <div style="font-size:10px; color:#666;">CREDIT VOUCHER VALUE</div>
+            <div style="font-size:22px; font-weight:800; color:#000;">${formatTaka(state.refundAmount)}</div>
+            <div style="font-size:9.5px; color:#555;">Valid until: 10-12-2026 (90 Days)</div>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-barcode">
+            *SC-7492-9182*
+          </div>
+          <div class="receipt-center" style="font-weight:800; letter-spacing:1.5px; font-size:11px;">
+            CODE: SC-7492-9182
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-center" style="font-size:8.5px; color:#555;">
+            Present this slip or state your voucher code at checkout to redeem against any purchase at our stores.
+          </div>
+        ` : `
+          <!-- SALE RECEIPT WITH SPLIT TENDER & REMAINING CREDIT -->
+          <div class="receipt-row">
+            <span>Invoice: #INV-2026-1050</span>
+            <span>Date: 11-09-2026</span>
+          </div>
+          <div class="receipt-row">
+            <span>Customer: ${state.walkinName}</span>
+            <span>01712984562</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-row">
+            <span>1x Gaming Mouse</span>
+            <span>৳1,100.00</span>
+          </div>
+          <div class="receipt-row">
+            <span>1x Desk Mousepad</span>
+            <span>৳550.00</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-row" style="font-weight:700;">
+            <span>Subtotal:</span>
+            <span>৳1,650.00</span>
+          </div>
+          <div class="receipt-row" style="font-weight:800; color:#059669;">
+            <span>🪙 Store Credit Applied:</span>
+            <span>-৳1,250.00</span>
+          </div>
+          <div class="receipt-row" style="font-weight:800; font-size:12px;">
+            <span>NET PAID (Cash):</span>
+            <span>৳400.00</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-row" style="font-size:10px; font-weight:700; background:#F3F4F6; padding:2px 4px;">
+            <span>REMAINING STORE CREDIT:</span>
+            <span>৳0.00</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-center" style="font-size:9px; color:#555;">
+            Thank you for shopping with us!
+          </div>
+        `}
+      </div>
+    `;
+
+    footer.innerHTML = `
+      <button class="checkout-btn" onclick="alert('Thermal printer test passed! Simulated 80mm ESC/POS transmission.')">
+        <span>🖨️</span> <span>Simulate ESC/POS Thermal Print</span>
+      </button>
+    `;
+
+    explainer.innerHTML = `
+      <div class="explainer-badge badge-emerald">STEP 4 ARCHITECTURE & UI/UX</div>
+      <div class="explainer-title">
+        <h2>Thermal Print Template Integration</h2>
+        <p>Complete 80mm ESC/POS hardware receipt support for scannable vouchers and dual-tender receipts.</p>
+      </div>
+
+      <div class="sim-card">
+        <h4><span>⚙️</span> Switch Receipt Format</h4>
+        <div class="sim-row">
+          <button class="sim-btn ${isVoucherMode ? 'active' : ''}" onclick="setReceiptMode('voucher')">🎟️ Voucher Slip</button>
+          <button class="sim-btn ${!isVoucherMode ? 'active' : ''}" onclick="setReceiptMode('sale')">🧾 Sale Receipt</button>
+        </div>
+      </div>
+
+      <div class="feature-points">
+        <div class="feature-item">
+          <div class="feature-icon">🖨️</div>
+          <div>
+            <h5>Code 128 High-Density Barcode</h5>
+            <p>The voucher slip prints an ESC/POS native 1D barcode (Code 128) and human-readable text (<code>SC-7492-9182</code>) readable by any handheld POS laser scanner in &lt; 100ms.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">🧾</div>
+          <div>
+            <h5>Transparent Multi-Tender Receipt</h5>
+            <p>Customers see exactly how much Store Credit was deducted from their bill and their updated remaining store credit balance right at the bottom of their receipt.</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- INTERACTIVE ACTION HANDLERS ---
+  function switchWorkflow(num) {
+    state.activeWorkflow = num;
+    renderApp();
+  }
+
+  function toggleLanguage() {
+    state.lang = state.lang === 'en' ? 'bn' : 'en';
+    if (state.lang === 'bn') document.body.classList.add('lang-bn');
+    else document.body.classList.remove('lang-bn');
+    renderApp();
+  }
+
+  function toggleTheme() {
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', state.theme);
+    renderApp();
+  }
+
+  function toggleCustomerType() {
+    state.customerType = state.customerType === 'walkin' ? 'registered' : 'walkin';
+    renderApp();
+  }
+
+  function setCustomerType(type) {
+    state.customerType = type;
+    renderApp();
+  }
+
+  function setSettlement(dest) {
+    state.settlementDest = dest;
+    renderApp();
+  }
+
+  function setWalkinAction(action) {
+    state.walkinAction = action;
+    renderApp();
+  }
+
+  function executeReturnStep1() {
+    if (state.customerType === 'walkin' && state.walkinAction === 'quick_reg') {
+      state.customerCredit = state.refundAmount;
+      switchWorkflow(2);
+    } else if (state.customerType === 'walkin' && state.walkinAction === 'voucher') {
+      state.receiptMode = 'voucher';
+      switchWorkflow(4);
+    } else {
+      state.customerCredit += state.refundAmount;
+      switchWorkflow(2);
+    }
+  }
+
+  function setFilterTab(tab) {
+    state.filterTab = tab;
+    renderApp();
+  }
+
+  function setDossierTab(tab) {
+    state.dossierTab = tab;
+    renderApp();
+  }
+
+  function addCreditManually(amt) {
+    state.customerCredit += amt;
+    renderApp();
+  }
+
+  function resetCredit() {
+    state.customerCredit = 1250.0;
+    renderApp();
+  }
+
+  function adjustCreditModal() {
+    const amt = prompt("Enter amount to adjust (+ for credit, - for deduction):", "200");
+    if (amt !== null) {
+      const parsed = parseFloat(amt);
+      if (!isNaN(parsed)) {
+        state.customerCredit = Math.max(0, state.customerCredit + parsed);
+        renderApp();
+      }
+    }
+  }
+
+  function quickStartSaleForCustomer() {
+    switchWorkflow(3);
+  }
+
+  function applyStoreCredit(amt) {
+    state.creditApplied = amt;
+    renderApp();
+  }
+
+  function removeStoreCredit() {
+    state.creditApplied = 0.0;
+    renderApp();
+  }
+
+  function setPaymentMethod(m) {
+    state.checkoutPaymentMethod = m;
+    renderApp();
+  }
+
+  function redeemVoucherPrompt() {
+    const code = prompt("Scan or enter Store Credit Voucher Code:", state.voucherCodeInput);
+    if (code) {
+      state.voucherRedeemed = true;
+      state.customerCredit = 1250.0;
+      state.creditApplied = Math.min(state.cartTotal, 1250.0);
+      renderApp();
+    }
+  }
+
+  function completeSaleAndShowReceipt() {
+    state.receiptMode = 'sale';
+    switchWorkflow(4);
+  }
+
+  function setReceiptMode(mode) {
+    state.receiptMode = mode;
+    renderApp();
+  }
+
+  function prevScreen() {
+    if (state.activeWorkflow > 1) {
+      switchWorkflow(state.activeWorkflow - 1);
+    }
+  }
+
+  function resetDefaults() {
+    state.customerType = 'walkin';
+    state.refundAmount = 1250.0;
+    state.settlementDest = 'WALLET';
+    state.walkinAction = 'quick_reg';
+    state.customerCredit = 1250.0;
+    state.creditApplied = 0.0;
+    state.checkoutPaymentMethod = 'Cash';
+    state.receiptMode = 'voucher';
+    state.activeWorkflow = 1;
+    renderApp();
+  }
+
+  // Update clock every minute
+  setInterval(() => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const clockEl = document.getElementById('phone-clock');
+    if (clockEl) clockEl.textContent = timeStr;
+  }, 1000);
+
+  // Initial Boot
+  renderApp();
+</script>
+
+</body>
+</html>

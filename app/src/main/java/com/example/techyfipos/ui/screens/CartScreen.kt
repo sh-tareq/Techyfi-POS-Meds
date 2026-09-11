@@ -238,6 +238,9 @@ fun CartScreen(
     val cardLastFour by cartViewModel.cardLastFour.collectAsStateWithLifecycle()
     val checkoutCashierName by cartViewModel.cashierName.collectAsStateWithLifecycle()
     val amountPaid by cartViewModel.amountPaid.collectAsStateWithLifecycle()
+    val storeCreditApplied by cartViewModel.storeCreditApplied.collectAsStateWithLifecycle()
+    val redeemedVoucher by cartViewModel.redeemedVoucher.collectAsStateWithLifecycle()
+    var showVoucherRedeemDialog by remember { mutableStateOf(false) }
     val defaultCashier = invoiceSettingsData.cashierName.ifBlank { cashierName.ifBlank { "Admin" } }
     val currentDisplayCashier = checkoutCashierName.ifBlank { defaultCashier }
 
@@ -1071,6 +1074,201 @@ fun CartScreen(
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
+
+                        // --- STORE CREDIT & VOUCHER APPLICATION BANNER ---
+                        val availableCustCredit = (resolvedCustomer?.storeCredit ?: 0.0)
+                        val hasAvailableCredit = availableCustCredit > 0.0 || redeemedVoucher != null
+
+                        if (storeCreditApplied > 0.0) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFECFDF5),
+                                border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("🪙", fontSize = 20.sp)
+                                        Column {
+                                            Text(
+                                                text = stringResource(R.string.cart_store_credit_applied_label, formatTaka(storeCreditApplied)),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color(0xFF065F46)
+                                            )
+                                            val remainingToPay = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+                                            Text(
+                                                text = if (remainingToPay > 0.0) stringResource(R.string.cart_remaining_to_pay, formatTaka(remainingToPay))
+                                                else "Bill fully covered by store credit!",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (remainingToPay > 0.0) Color(0xFF047857) else Color(0xFF059669)
+                                            )
+                                        }
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = { cartViewModel.removeStoreCredit() },
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE11D48)),
+                                        border = BorderStroke(1.dp, Color(0xFFFECDD3)),
+                                        modifier = Modifier.height(30.dp)
+                                    ) {
+                                        Text(stringResource(R.string.cart_remove_store_credit), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        } else if (hasAvailableCredit) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFFFFBEB),
+                                border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("🪙", fontSize = 20.sp)
+                                        Column {
+                                            Text(
+                                                text = stringResource(R.string.cart_store_credit_banner_title),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF92400E)
+                                            )
+                                            val credAmt = if (redeemedVoucher != null) redeemedVoucher!!.remainingBalance else availableCustCredit
+                                            Text(
+                                                text = "Available: ${formatTaka(credAmt)}",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color(0xFFB45309)
+                                            )
+                                        }
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            val credAmt = if (redeemedVoucher != null) redeemedVoucher!!.remainingBalance else availableCustCredit
+                                            val applyAmt = kotlin.math.min(credAmt, grandTotal)
+                                            cartViewModel.applyStoreCredit(applyAmt)
+                                        },
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
+                                        modifier = Modifier.height(32.dp)
+                                    ) {
+                                        Text(stringResource(R.string.cart_apply_store_credit), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Have a Store Credit Voucher Button
+                        if (storeCreditApplied <= 0.0 && redeemedVoucher == null) {
+                            TextButton(
+                                onClick = { showVoucherRedeemDialog = true },
+                                modifier = Modifier.align(Alignment.End).padding(bottom = 2.dp)
+                            ) {
+                                Text("🎟️ " + stringResource(R.string.cart_have_voucher), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+
+                        if (showVoucherRedeemDialog) {
+                            var voucherInput by remember { mutableStateOf("") }
+                            var voucherError by remember { mutableStateOf<String?>(null) }
+                            var isCheckingVoucher by remember { mutableStateOf(false) }
+
+                            AlertDialog(
+                                onDismissRequest = { showVoucherRedeemDialog = false },
+                                title = {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("🎟️", fontSize = 22.sp)
+                                        Text(stringResource(R.string.cart_redeem_voucher_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    }
+                                },
+                                text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            "Enter or scan the customer's store credit voucher code (e.g., SC-XXXX-XXXX).",
+                                            fontSize = 11.5.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        OutlinedTextField(
+                                            value = voucherInput,
+                                            onValueChange = {
+                                                voucherInput = it.uppercase()
+                                                voucherError = null
+                                            },
+                                            label = { Text(stringResource(R.string.cart_redeem_voucher_hint)) },
+                                            singleLine = true,
+                                            isError = voucherError != null,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        if (voucherError != null) {
+                                            Text(voucherError!!, color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
+                                        }
+                                    }
+                                },
+                                confirmButton = {
+                                    Button(
+                                        onClick = {
+                                            val code = voucherInput.trim()
+                                            if (code.isBlank()) {
+                                                voucherError = "Please enter a voucher code"
+                                                return@Button
+                                            }
+                                            isCheckingVoucher = true
+                                            cartViewModel.redeemVoucherCode(
+                                                code = code,
+                                                onSuccess = { voucher ->
+                                                    isCheckingVoucher = false
+                                                    val applyAmt = kotlin.math.min(voucher.remainingBalance, grandTotal)
+                                                    cartViewModel.applyStoreCredit(applyAmt)
+                                                    showVoucherRedeemDialog = false
+                                                    Toast.makeText(context, "Voucher applied: ${formatTaka(applyAmt)}", Toast.LENGTH_SHORT).show()
+                                                },
+                                                onError = { err ->
+                                                    isCheckingVoucher = false
+                                                    voucherError = err
+                                                }
+                                            )
+                                        },
+                                        enabled = !isCheckingVoucher && voucherInput.isNotBlank()
+                                    ) {
+                                        Text(stringResource(R.string.cart_redeem_voucher_button))
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showVoucherRedeemDialog = false }) {
+                                        Text(stringResource(R.string.cancel))
+                                    }
+                                }
+                            )
+                        }
 
                         if (isSplitPayment) {
                             SplitPaymentBuilder(
@@ -1942,12 +2140,14 @@ fun CartScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Checkout trigger validation
+                        val remainingToPay = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
                         val isDueValid = (!hasDueInPayment) || (customerName.isNotBlank() && customerPhone.isNotBlank())
                         val isWalletValid = isSplitPayment || paymentMethod !in listOf("bKash", "Nagad", "Rocket") || walletPhone.length == 11
                         val isCardValid = isSplitPayment || paymentMethod != "Card" || cardLastFour.length == 4
-                        val isCashValid = isSplitPayment || paymentMethod != "Cash" || effectiveAmountPaid >= grandTotal
-                        val isStoreCreditValid = isSplitPayment || paymentMethod != "Store Credit" || (customerPhone.isNotBlank() && (resolvedCustomer?.storeCredit ?: 0.0) >= grandTotal)
-                        val isSplitValid = !isSplitPayment || (splitPayments.isNotEmpty() && kotlin.math.abs(splitPayments.sumOf { it.amount } - grandTotal) < 0.01)
+                        val isCashValid = isSplitPayment || paymentMethod != "Cash" || remainingToPay == 0.0 || effectiveAmountPaid >= remainingToPay
+                        val isStoreCreditValid = isSplitPayment || paymentMethod != "Store Credit" || remainingToPay == 0.0 || ((resolvedCustomer?.storeCredit ?: 0.0) >= grandTotal)
+                        val expectedSplitTotal = if (storeCreditApplied > 0.0) remainingToPay else grandTotal
+                        val isSplitValid = !isSplitPayment || (splitPayments.isNotEmpty() && (kotlin.math.abs(splitPayments.sumOf { it.amount } - expectedSplitTotal) < 0.01 || kotlin.math.abs(splitPayments.sumOf { it.amount } - grandTotal) < 0.01))
                         val isSplitDetailsValid = !isSplitPayment || splitPayments.all { sp ->
                             when (sp.method) {
                                 "bKash", "Nagad", "Rocket" -> sp.walletPhone?.length == 11
@@ -1968,8 +2168,8 @@ fun CartScreen(
                                 !isCardValid -> stringResource(R.string.cart_reason_card_digits_required)
                                 !isCashValid -> stringResource(R.string.cart_reason_cash_insufficient)
                                 !isStoreCreditValid -> {
-                                    if (customerPhone.isBlank()) "Customer phone required for Store Credit"
-                                    else "Insufficient store credit (Available: ${formatTaka(resolvedCustomer?.storeCredit ?: 0.0)})"
+                                    if (customerPhone.isBlank() && redeemedVoucher == null) "Customer phone or voucher required for Store Credit"
+                                    else "Insufficient store credit (Available: ${formatTaka(if (redeemedVoucher != null) redeemedVoucher!!.remainingBalance else (resolvedCustomer?.storeCredit ?: 0.0))})"
                                 }
                                 else -> stringResource(R.string.cart_reason_generic_incomplete)
                             }

@@ -1806,4 +1806,40 @@
     <string name="customer_notes_optional_label">মন্তব্য / বিবরণ (ঐচ্ছিক)</string>
     <string name="dues_edit_info_button">তথ্য পরিবর্তন</string>
     <string name="dues_customer_profile_button">কাস্টমার প্রোফাইল</string>
+
+    <!-- Store Credit & Voucher Management Strings (Bangla) -->
+    <string name="store_credit">স্টোর ক্রেডিট</string>
+    <string name="payment_store_credit">স্টোর ক্রেডিট</string>
+    <string name="store_credit_balance">স্টোর ক্রেডিট ব্যালেন্স</string>
+    <string name="customer_filter_store_credit">ক্রেডিট ব্যালেন্সযুক্ত</string>
+    <string name="customer_sort_store_credit">সর্বোচ্চ ক্রেডিট ব্যালেন্স</string>
+    <string name="customer_tab_credit_ledger">স্টোর ক্রেডিট</string>
+    <string name="store_credit_adjust_title">স্টোর ক্রেডিট সমন্বয়</string>
+    <string name="store_credit_adjust_desc">%1$s-এর স্টোর ক্রেডিট ব্যালেন্স যোগ বা বিয়োগ করুন।</string>
+    <string name="store_credit_current_balance">বর্তমান ব্যালেন্স: %1$s</string>
+    <string name="store_credit_amount_to_adjust">সমন্বয়ের পরিমাণ (৳)</string>
+    <string name="store_credit_note_reason">কারণ / রেফারেন্স নোট</string>
+    <string name="store_credit_adjust_add">ক্রেডিট যোগ করুন (+)</string>
+    <string name="store_credit_adjust_deduct">ক্রেডিট কর্তন করুন (-)</string>
+    <string name="store_credit_adjusted_success">স্টোর ক্রেডিট সফলভাবে আপডেট করা হয়েছে</string>
+    <string name="store_credit_walkin_resolution_title">ওয়াক-ইন কাস্টমার ক্রেডিট ব্যবস্থা</string>
+    <string name="store_credit_walkin_resolution_desc">স্টোর ক্রেডিট সংরক্ষণে কাস্টমার অ্যাকাউন্ট অথবা ভাউচার প্রয়োজন।</string>
+    <string name="store_credit_mode_register">দ্রুত কাস্টমার নিবন্ধন</string>
+    <string name="store_credit_mode_voucher">ক্রেডিট ভাউচার প্রদান</string>
+    <string name="store_credit_register_phone_hint">কাস্টমারের মোবাইল নম্বর (১১ ডিজিট)</string>
+    <string name="store_credit_register_name_hint">কাস্টমারের নাম (ঐচ্ছিক)</string>
+    <string name="store_credit_voucher_issued_title">স্টোর ক্রেডিট ভাউচার প্রস্তুত</string>
+    <string name="store_credit_voucher_code_label">ভাউচার কোড</string>
+    <string name="store_credit_voucher_notice">পরবর্তী কেনাকাটায় ব্যবহারের জন্য এই কোড বা ভাউচার স্লিপটি কাস্টমারকে প্রদান করুন।</string>
+    <string name="store_credit_copy_code">কোড কপি করুন</string>
+    <string name="store_credit_code_copied">ভাউচার কোড ক্লিপবোর্ডে কপি করা হয়েছে</string>
+    <string name="cart_store_credit_banner_title">কাস্টমারের স্টোর ক্রেডিট জমা রয়েছে</string>
+    <string name="cart_apply_store_credit">ক্রেডিট ব্যবহার করুন</string>
+    <string name="cart_remove_store_credit">বাতিল</string>
+    <string name="cart_have_voucher">ক্রেডিট ভাউচার আছে?</string>
+    <string name="cart_redeem_voucher_title">স্টোর ক্রেডিট ভাউচার ব্যবহার</string>
+    <string name="cart_redeem_voucher_hint">ভাউচার কোড লিখুন (যেমন: SC-1234-5678)</string>
+    <string name="cart_redeem_voucher_button">ভাউচার যোগ করুন</string>
+    <string name="cart_store_credit_applied_label">ব্যবহৃত স্টোর ক্রেডিট: %1$s</string>
+    <string name="cart_remaining_to_pay">পরিশোধের বাকি অঙ্ক: %1$s</string>
 </resources>

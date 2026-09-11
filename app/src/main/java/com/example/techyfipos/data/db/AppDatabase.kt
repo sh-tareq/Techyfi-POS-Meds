@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.execSQL
 import kotlinx.coroutines.Dispatchers
 
-const val APP_DATABASE_VERSION = 26
+const val APP_DATABASE_VERSION = 27
 
 /**
  * Keeps every migration compatible with both Room database backends. Room calls
@@ -237,6 +237,16 @@ val MIGRATION_25_26 = sqlMigration(
     "CREATE INDEX IF NOT EXISTS `index_expense_audit_logs_expenseId` ON `expense_audit_logs` (`expenseId`)"
 )
 
+val MIGRATION_26_27 = sqlMigration(
+    26, 27,
+    "CREATE TABLE IF NOT EXISTS `store_credit_vouchers` (`code` TEXT PRIMARY KEY NOT NULL, `initialAmount` REAL NOT NULL, `remainingBalance` REAL NOT NULL, `customerPhone` TEXT, `sourceReturnId` INTEGER, `sourceSaleId` INTEGER, `issuedAt` INTEGER NOT NULL, `expiresAt` INTEGER, `status` TEXT NOT NULL, `notes` TEXT)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_store_credit_vouchers_code` ON `store_credit_vouchers` (`code`)",
+    "CREATE INDEX IF NOT EXISTS `index_store_credit_vouchers_customerPhone` ON `store_credit_vouchers` (`customerPhone`)",
+    "CREATE TABLE IF NOT EXISTS `store_credit_ledger` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `customerPhone` TEXT NOT NULL, `deltaAmount` REAL NOT NULL, `balanceAfter` REAL NOT NULL, `type` TEXT NOT NULL, `referenceInvoiceId` INTEGER, `voucherCode` TEXT, `note` TEXT, `timestamp` INTEGER NOT NULL)",
+    "CREATE INDEX IF NOT EXISTS `index_store_credit_ledger_customerPhone` ON `store_credit_ledger` (`customerPhone`)",
+    "CREATE INDEX IF NOT EXISTS `index_store_credit_ledger_timestamp` ON `store_credit_ledger` (`timestamp`)"
+)
+
 @Database(
     entities = [
         Product::class,
@@ -263,7 +273,9 @@ val MIGRATION_25_26 = sqlMigration(
         DueReminderLog::class,
         Customer::class,
         SaleAuditLog::class,
-        ExpenseAuditLog::class
+        ExpenseAuditLog::class,
+        StoreCreditVoucher::class,
+        StoreCreditLedgerEntry::class
     ],
     version = APP_DATABASE_VERSION,
     exportSchema = true
@@ -288,6 +300,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun customerDao(): CustomerDao
     abstract fun saleAuditLogDao(): SaleAuditLogDao
     abstract fun expenseAuditLogDao(): ExpenseAuditLogDao
+    abstract fun storeCreditVoucherDao(): StoreCreditVoucherDao
+    abstract fun storeCreditLedgerDao(): StoreCreditLedgerDao
 
     companion object {
         @Volatile
@@ -323,7 +337,7 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
                         MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
                         MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25,
-                        MIGRATION_25_26
+                        MIGRATION_25_26, MIGRATION_26_27
                     )
                     .fallbackToDestructiveMigrationOnDowngrade()
                     .setDriver(BundledSQLiteDriver())

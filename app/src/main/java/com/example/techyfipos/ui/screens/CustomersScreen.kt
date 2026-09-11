@@ -205,6 +205,13 @@ fun CustomersScreen(
                                         showSortMenu = false
                                     }
                                 )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_store_credit)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.STORE_CREDIT
+                                        showSortMenu = false
+                                    }
+                                )
                             }
                         }
 
@@ -292,6 +299,13 @@ fun CustomersScreen(
                                     text = { Text(stringResource(R.string.customer_sort_name)) },
                                     onClick = {
                                         customerViewModel.selectedSort.value = CustomerSortOption.NAME_ASC
+                                        showSortMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.customer_sort_store_credit)) },
+                                    onClick = {
+                                        customerViewModel.selectedSort.value = CustomerSortOption.STORE_CREDIT
                                         showSortMenu = false
                                     }
                                 )
@@ -568,6 +582,7 @@ fun CustomersScreen(
                 ) {
                     listOf(
                         CustomerFilterSegment.ALL to stringResource(R.string.customer_filter_all),
+                        CustomerFilterSegment.WITH_STORE_CREDIT to stringResource(R.string.customer_filter_store_credit),
                         CustomerFilterSegment.WITH_DUES to stringResource(R.string.customer_filter_dues),
                         CustomerFilterSegment.VIP to stringResource(R.string.customer_filter_vip),
                         CustomerFilterSegment.FREQUENT to stringResource(R.string.customer_filter_frequent),
@@ -722,6 +737,15 @@ fun CustomersScreen(
                     noteText = text,
                     category = category,
                     onSuccess = { Toast.makeText(context, context.getString(R.string.customer_note_saved), Toast.LENGTH_SHORT).show() },
+                    onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
+                )
+            },
+            onAdjustCredit = { delta, note ->
+                customerViewModel.adjustCustomerStoreCredit(
+                    phone = dossierData!!.customer.phone,
+                    delta = delta,
+                    note = note,
+                    onSuccess = { Toast.makeText(context, context.getString(R.string.store_credit_adjusted_success), Toast.LENGTH_SHORT).show() },
                     onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
                 )
             }
@@ -982,6 +1006,14 @@ fun CustomerDataTable(
                             } else {
                                 Text("৳0 due", fontSize = 9.5.sp, color = Color(0xFF00875A))
                             }
+                            if (customer.storeCredit > 0) {
+                                Text(
+                                    text = "🪙 ${formatTaka(customer.storeCredit)}",
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 9.5.sp,
+                                    color = Color(0xFF059669)
+                                )
+                            }
                         }
 
                         // Orders
@@ -1132,6 +1164,20 @@ fun CustomerCard(
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onErrorContainer,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                            if (customer.storeCredit > 0) {
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = Color(0xFFD1FAE5)
+                                ) {
+                                    Text(
+                                        text = "🪙 ${formatTaka(customer.storeCredit)}",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF065F46),
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                     )
                                 }

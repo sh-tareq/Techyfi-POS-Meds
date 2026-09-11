@@ -654,4 +654,35 @@ interface ExpenseAuditLogDao {
     suspend fun getAuditLogsForExpense(expenseId: Long): List<ExpenseAuditLog>
 }
 
+@Dao
+interface StoreCreditVoucherDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertVoucher(voucher: StoreCreditVoucher): Long
 
+    @Query("SELECT * FROM store_credit_vouchers WHERE code = :code LIMIT 1")
+    suspend fun getVoucherByCode(code: String): StoreCreditVoucher?
+
+    @Query("UPDATE store_credit_vouchers SET remainingBalance = :remainingBalance, status = :status WHERE code = :code")
+    suspend fun updateVoucherBalance(code: String, remainingBalance: Double, status: String): Int
+
+    @Query("SELECT * FROM store_credit_vouchers ORDER BY issuedAt DESC")
+    fun getAllVouchers(): Flow<List<StoreCreditVoucher>>
+
+    @Query("SELECT * FROM store_credit_vouchers WHERE customerPhone = :phone ORDER BY issuedAt DESC")
+    suspend fun getVouchersByPhone(phone: String): List<StoreCreditVoucher>
+}
+
+@Dao
+interface StoreCreditLedgerDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEntry(entry: StoreCreditLedgerEntry): Long
+
+    @Query("SELECT * FROM store_credit_ledger WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    fun getLedgerForCustomer(phone: String): Flow<List<StoreCreditLedgerEntry>>
+
+    @Query("SELECT * FROM store_credit_ledger WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    suspend fun getLedgerForCustomerOnce(phone: String): List<StoreCreditLedgerEntry>
+
+    @Query("SELECT * FROM store_credit_ledger ORDER BY timestamp DESC LIMIT :limit")
+    fun getRecentLedgerEntries(limit: Int = 100): Flow<List<StoreCreditLedgerEntry>>
+}

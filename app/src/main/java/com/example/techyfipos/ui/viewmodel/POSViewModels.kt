@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
@@ -280,6 +281,56 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     // Loyalty points state
     val loyaltyDiscount = MutableStateFlow(0.0)
     val loyaltyCustomer = MutableStateFlow<CustomerLoyalty?>(null)
+
+    // Store Credit and Voucher state
+    val storeCreditApplied = MutableStateFlow(0.0)
+    val redeemedVoucher = MutableStateFlow<StoreCreditVoucher?>(null)
+
+    fun applyStoreCredit(amount: Double) {
+        val maxAvailable = (resolvedCustomer.value?.storeCredit ?: 0.0) + (redeemedVoucher.value?.remainingBalance ?: 0.0)
+        storeCreditApplied.value = amount.coerceIn(0.0, maxAvailable)
+    }
+
+    fun removeStoreCredit() {
+        storeCreditApplied.value = 0.0
+    }
+
+    fun redeemVoucherCode(
+        code: String,
+        onSuccess: (StoreCreditVoucher) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val voucher = repository.getStoreCreditVoucher(code)
+                if (voucher == null) {
+                    withContext(Dispatchers.Main) { onError("Voucher not found") }
+                    return@launch
+                }
+                if (voucher.status != "ACTIVE") {
+                    withContext(Dispatchers.Main) { onError("Voucher is ${voucher.status.lowercase()}") }
+                    return@launch
+                }
+                if (voucher.expiresAt != null && voucher.expiresAt < System.currentTimeMillis()) {
+                    withContext(Dispatchers.Main) { onError("Voucher has expired") }
+                    return@launch
+                }
+                if (voucher.remainingBalance <= 0.01) {
+                    withContext(Dispatchers.Main) { onError("Voucher balance is zero") }
+                    return@launch
+                }
+                withContext(Dispatchers.Main) {
+                    redeemedVoucher.value = voucher
+                    applyStoreCredit(voucher.remainingBalance)
+                    onSuccess(voucher)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onError(e.localizedMessage ?: "Failed to verify voucher")
+                }
+            }
+        }
+    }
 
     // Customer Auto-Fill, Resolution and Suggestions
     val resolvedCustomer = MutableStateFlow<CustomerLookupResult?>(null)
@@ -916,6 +967,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         isSplitPayment.value = false
         splitPayments.value = emptyList()
         priceMode.value = PriceMode.DISCOUNTED
+        storeCreditApplied.value = 0.0
+        redeemedVoucher.value = null
         persistCartSnapshot(emptyList())
     }
 
@@ -941,7 +994,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val settings = taxSettings.value
         
         var splitJson: String? = null
-        val methodToSave: String
+        var methodToSave: String
         if (isSplitPayment.value && splitPayments.value.isNotEmpty()) {
             methodToSave = "Split"
             val array = JSONArray()
@@ -956,6 +1009,25 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 })
             }
             splitJson = array.toString()
+        } else if (storeCreditApplied.value > 0.0 && paymentMethod.value != "Store Credit") {
+            val scAmount = storeCreditApplied.value.coerceAtMost(grandTotal.value)
+            val remainingAmt = (grandTotal.value - scAmount).coerceAtLeast(0.0)
+            val array = JSONArray()
+            array.put(JSONObject().apply {
+                put("method", "Store Credit")
+                put("amount", scAmount)
+                redeemedVoucher.value?.code?.let { put("voucherCode", it) }
+            })
+            if (remainingAmt > 0.0) {
+                array.put(JSONObject().apply {
+                    put("method", paymentMethod.value)
+                    put("amount", remainingAmt)
+                    if (!walletPhone.value.isNullOrBlank()) put("walletPhone", walletPhone.value)
+                    if (!cardLastFour.value.isNullOrBlank()) put("cardLastFour", cardLastFour.value)
+                })
+            }
+            splitJson = array.toString()
+            methodToSave = "Split"
         } else {
             methodToSave = paymentMethod.value
         }
@@ -1730,15 +1802,20 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         refundMethod: String,
         note: String? = null,
         restock: Boolean = true,
-        onComplete: (Boolean, Double) -> Unit
+        walkinPhone: String? = null,
+        walkinName: String? = null,
+        issueVoucher: Boolean = false,
+        onComplete: (Boolean, Double, String?) -> Unit
     ) {
         viewModelScope.launch {
             try {
-                val refundTotal = repository.processReturn(saleId, lines, refundMethod, note, restock)
-                onComplete(true, refundTotal)
+                val result = repository.processReturn(
+                    saleId, lines, refundMethod, note, restock, walkinPhone, walkinName, issueVoucher
+                )
+                onComplete(true, result.refundTotal, result.voucherCode)
             } catch (error: Exception) {
                 android.util.Log.e("SalesViewModel", "Unable to process return", error)
-                onComplete(false, 0.0)
+                onComplete(false, 0.0, null)
             }
         }
     }
@@ -3643,6 +3720,7 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
 enum class CustomerFilterSegment {
     ALL,
     WITH_DUES,
+    WITH_STORE_CREDIT,
     VIP,
     FREQUENT,
     WHOLESALE,
@@ -3655,6 +3733,7 @@ enum class CustomerSortOption {
     RECENT_VISIT,
     LIFETIME_SPEND,
     HIGHEST_DUE,
+    STORE_CREDIT,
     ORDERS_COUNT,
     NAME_ASC,
     LOYALTY_POINTS
@@ -3691,7 +3770,8 @@ data class CustomerDossierData(
     val sales: List<SaleWithItems>,
     val duePayments: List<DuePayment>,
     val loyaltyTransactions: List<LoyaltyTransaction>,
-    val timelineEvents: List<CustomerTimelineEvent> = emptyList()
+    val timelineEvents: List<CustomerTimelineEvent> = emptyList(),
+    val storeCreditLedger: List<StoreCreditLedgerEntry> = emptyList()
 )
 
 class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
@@ -3731,6 +3811,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
         val filtered = when (filter) {
             CustomerFilterSegment.ALL -> searched
             CustomerFilterSegment.WITH_DUES -> searched.filter { it.totalDue > 0 }
+            CustomerFilterSegment.WITH_STORE_CREDIT -> searched.filter { it.storeCredit > 0 }
             CustomerFilterSegment.VIP -> searched.filter { it.tag.equals("VIP", ignoreCase = true) || it.loyaltyTier.equals("Gold", ignoreCase = true) || it.loyaltyTier.equals("Platinum", ignoreCase = true) || it.lifetimeSpent >= 20000.0 }
             CustomerFilterSegment.FREQUENT -> searched.filter { it.totalOrders >= 5 }
             CustomerFilterSegment.WHOLESALE -> searched.filter { it.tag.equals("Wholesale", ignoreCase = true) }
@@ -3751,6 +3832,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
             CustomerSortOption.RECENT_VISIT -> filtered.sortedByDescending { it.lastPurchaseDate ?: it.updatedAt }
             CustomerSortOption.LIFETIME_SPEND -> filtered.sortedByDescending { it.lifetimeSpent }
             CustomerSortOption.HIGHEST_DUE -> filtered.sortedByDescending { it.totalDue }
+            CustomerSortOption.STORE_CREDIT -> filtered.sortedByDescending { it.storeCredit }
             CustomerSortOption.ORDERS_COUNT -> filtered.sortedByDescending { it.totalOrders }
             CustomerSortOption.NAME_ASC -> filtered.sortedBy { it.name.lowercase() }
             CustomerSortOption.LOYALTY_POINTS -> filtered.sortedByDescending { it.loyaltyPoints }
@@ -3762,6 +3844,9 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val totalDuesAmount: StateFlow<Double> = allCustomers.map { it.sumOf { c -> c.totalDue } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val totalStoreCreditAmount: StateFlow<Double> = allCustomers.map { it.sumOf { c -> c.storeCredit } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val vipCustomersCount: StateFlow<Int> = allCustomers.map {
@@ -4031,19 +4116,58 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                         )
                     }
 
+                    val storeCreditLedger = repository.getCustomerStoreCreditLedgerOnce(phone)
+
+                    // Credit ledger events
+                    storeCreditLedger.forEach { c ->
+                        events.add(
+                            CustomerTimelineEvent(
+                                id = "credit_${c.id}",
+                                type = CustomerTimelineEventType.NOTE,
+                                title = if (c.deltaAmount >= 0) "Store Credit: +৳${c.deltaAmount}" else "Credit Redeemed: -৳${-c.deltaAmount}",
+                                description = c.note ?: c.type,
+                                amount = c.deltaAmount,
+                                timestamp = c.timestamp,
+                                referenceId = c.referenceInvoiceId?.toString() ?: c.voucherCode
+                            )
+                        )
+                    }
+
                     selectedCustomerDossier.value = CustomerDossierData(
                         customer = customer,
                         topProducts = topProducts,
                         sales = sales,
                         duePayments = duePayments,
                         loyaltyTransactions = loyaltyTransactions,
-                        timelineEvents = events.sortedByDescending { it.timestamp }
+                        timelineEvents = events.sortedByDescending { it.timestamp },
+                        storeCreditLedger = storeCreditLedger
                     )
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
                 isLoadingDossier.value = false
+            }
+        }
+    }
+
+    fun getStoreCreditLedger(phone: String): Flow<List<StoreCreditLedgerEntry>> =
+        repository.getCustomerStoreCreditLedger(phone)
+
+    fun adjustCustomerStoreCredit(
+        phone: String,
+        delta: Double,
+        note: String? = null,
+        onSuccess: (Customer) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                val updated = repository.adjustCustomerCredit(phone, delta, note)
+                loadCustomerDossier(phone)
+                onSuccess(updated)
+            } catch (e: Exception) {
+                onError(e.localizedMessage ?: "Failed to adjust store credit")
             }
         }
     }

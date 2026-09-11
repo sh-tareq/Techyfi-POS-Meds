@@ -1806,5 +1806,41 @@
     <string name="customer_notes_optional_label">Notes / Remarks (Optional)</string>
     <string name="dues_edit_info_button">Edit Info</string>
     <string name="dues_customer_profile_button">Customer Profile</string>
+
+    <!-- Store Credit & Voucher Management Strings -->
+    <string name="store_credit">Store Credit</string>
+    <string name="payment_store_credit">Store Credit</string>
+    <string name="store_credit_balance">Store Credit Balance</string>
+    <string name="customer_filter_store_credit">With Store Credit</string>
+    <string name="customer_sort_store_credit">Store Credit (Highest)</string>
+    <string name="customer_tab_credit_ledger">Store Credit</string>
+    <string name="store_credit_adjust_title">Adjust Store Credit</string>
+    <string name="store_credit_adjust_desc">Add or deduct store credit balance for %1$s.</string>
+    <string name="store_credit_current_balance">Current Balance: %1$s</string>
+    <string name="store_credit_amount_to_adjust">Adjustment Amount (৳)</string>
+    <string name="store_credit_note_reason">Reason / Reference Note</string>
+    <string name="store_credit_adjust_add">Add Credit (+)</string>
+    <string name="store_credit_adjust_deduct">Deduct Credit (-)</string>
+    <string name="store_credit_adjusted_success">Store credit updated successfully</string>
+    <string name="store_credit_walkin_resolution_title">Walk-in Customer Credit Resolution</string>
+    <string name="store_credit_walkin_resolution_desc">Store credit requires a customer account or voucher.</string>
+    <string name="store_credit_mode_register">Quick Registration</string>
+    <string name="store_credit_mode_voucher">Issue Credit Voucher</string>
+    <string name="store_credit_register_phone_hint">Customer Phone (11 digits)</string>
+    <string name="store_credit_register_name_hint">Customer Name (Optional)</string>
+    <string name="store_credit_voucher_issued_title">Store Credit Voucher Issued</string>
+    <string name="store_credit_voucher_code_label">VOUCHER CODE</string>
+    <string name="store_credit_voucher_notice">Provide this code or thermal voucher slip to the customer for their next purchase.</string>
+    <string name="store_credit_copy_code">Copy Code</string>
+    <string name="store_credit_code_copied">Voucher code copied to clipboard</string>
+    <string name="cart_store_credit_banner_title">Customer Store Credit Available</string>
+    <string name="cart_apply_store_credit">Apply Store Credit</string>
+    <string name="cart_remove_store_credit">Remove</string>
+    <string name="cart_have_voucher">Have a Credit Voucher?</string>
+    <string name="cart_redeem_voucher_title">Redeem Store Credit Voucher</string>
+    <string name="cart_redeem_voucher_hint">Enter Voucher Code (e.g. SC-1234-5678)</string>
+    <string name="cart_redeem_voucher_button">Apply Voucher</string>
+    <string name="cart_store_credit_applied_label">Store Credit Applied: %1$s</string>
+    <string name="cart_remaining_to_pay">Remaining to Pay: %1$s</string>
 </resources>
 

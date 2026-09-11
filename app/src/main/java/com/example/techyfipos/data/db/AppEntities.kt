@@ -520,4 +520,35 @@ data class ExpenseAuditLog(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+@Entity(
+    tableName = "store_credit_vouchers",
+    indices = [Index(value = ["code"], unique = true), Index(value = ["customerPhone"])]
+)
+data class StoreCreditVoucher(
+    @PrimaryKey val code: String, // e.g. "SC-7492-9182"
+    val initialAmount: Double,
+    val remainingBalance: Double,
+    val customerPhone: String? = null,
+    val sourceReturnId: Long? = null,
+    val sourceSaleId: Long? = null,
+    val issuedAt: Long = System.currentTimeMillis(),
+    val expiresAt: Long? = null,
+    val status: String = "ACTIVE", // "ACTIVE", "EXHAUSTED", "EXPIRED", "VOID"
+    val notes: String? = null
+)
 
+@Entity(
+    tableName = "store_credit_ledger",
+    indices = [Index(value = ["customerPhone"]), Index(value = ["timestamp"])]
+)
+data class StoreCreditLedgerEntry(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val customerPhone: String,
+    val deltaAmount: Double, // positive for additions (refund/adjustment), negative for redemptions
+    val balanceAfter: Double,
+    val type: String, // "RETURN_REFUND", "SALE_REDEMPTION", "MANUAL_ADJUST", "VOID"
+    val referenceInvoiceId: Long? = null,
+    val voucherCode: String? = null,
+    val note: String? = null,
+    val timestamp: Long = System.currentTimeMillis()
+)

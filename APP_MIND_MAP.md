@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-11 (app version 2.6.33-V11-09-2026, build `Techyfi-POS-Final-V11-09-2026.apk` / `Techyfi-POS-Final-V28.apk`; versionCode 220911; DB schema version 26)
+Last updated: 2026-09-11 (app version 2.6.34-V11-09-2026, build `Techyfi-POS-Final-V11-09-2026.apk` / `Techyfi-POS-Final-V29.apk`; versionCode 220911; DB schema version 27)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -812,8 +812,10 @@ mindmap
         DueReminderLogDao
         CustomerDao
         SaleAuditLogDao
+        StoreCreditVoucherDao
+        StoreCreditLedgerDao
         Database migrations
-          Current schema version 25
+          Current schema version 27
           Migration 11→12: adds sale_items.note, customer_dues.creditLimit; creates inventory_adjustments table
           Migration 12→13: converts products.stockQty, sale_items.quantity, return_items.quantity from INTEGER to REAL (full table rebuild) — the DB-level enabler of fractional quantities
           Migration 13→14: adds products.mrpPrice and products.discountedPrice (default 0.0) — backs the Price Mode selector
@@ -827,6 +829,8 @@ mindmap
           Migration 22→23: creates due_charges (the debit side of the due ledger); backfills charge rows for existing straight-Due sales (Split-Due portions, JSON-encoded on the sale, are not backfilled but are logged going forward)
           Migration 23→24: adds customers.storeCredit REAL NOT NULL DEFAULT 0.0; adds register_closings.bkashSales, nagadSales, rocketSales, cardSales, dueSales REAL NOT NULL DEFAULT 0.0
           Migration 24→25: creates sale_audit_logs table (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, invoiceNo TEXT NOT NULL, cashierName TEXT NOT NULL, deletedAt INTEGER NOT NULL, totalAmount REAL NOT NULL, paymentMethod TEXT NOT NULL, reason TEXT NOT NULL)
+          Migration 25→26: adds cashierId, shiftId to sales and registers, creates composite indices for shift and cashier filtering
+          Migration 26→27: creates store_credit_vouchers table (code TEXT PRIMARY KEY NOT NULL, originalAmount REAL NOT NULL, remainingBalance REAL NOT NULL, issuedToName TEXT, issuedToPhone TEXT, issuedAt INTEGER NOT NULL, expiryDate INTEGER, isActive INTEGER NOT NULL, originalSaleId INTEGER, originalInvoiceNo TEXT, notes TEXT, redeemedAt INTEGER); creates store_credit_ledger table (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, customerId INTEGER NOT NULL, amount REAL NOT NULL, balanceAfter REAL NOT NULL, type TEXT NOT NULL, source TEXT NOT NULL, referenceId TEXT, notes TEXT, createdAt INTEGER NOT NULL); creates indexes index_store_credit_ledger_customerId and index_store_credit_vouchers_isActive
           Explicit migrations preserve existing business data
           BundledSQLiteDriver supplies consistent SQLite capabilities across supported Android versions
       Preferences
@@ -1522,6 +1526,49 @@ mindmap
   - **[A8] Expenses Guidance Copy Cleanup & Bottom Clearance (`ExpensesScreen.kt` & `strings.xml`)**:
     - Corrected empty state subtitle in `strings.xml` and `values-bn/strings.xml` to remove outdated reference to `+ Cash In Float` and accurately point users to `+ Record Expense`.
     - Increased list bottom content clearance padding to `100.dp`.
+
+## V29 - Store Credit & Walk-in Customer Credit Voucher Architecture (V29 / V11-09-2026)
+
+- Final artifacts: `Techyfi-POS-Final-V29.apk` (and `Techyfi-POS-Final-V11-09-2026.apk`), versionCode `220911`, versionName `2.6.34-V11-09-2026`.
+- Verified file locations:
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V29.apk`
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V11-09-2026.apk`
+- Deliverables Convention:
+  - All built APKs and mind maps (`APP_MIND_MAP.md`) strictly stored in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+- Database Schema Version: `27` (`store_credit_vouchers`, `store_credit_ledger` via `MIGRATION_26_27`).
+- Features & Fixes implemented:
+  - **[SC1] Customer Store Credit Balance Checking & CRM Management (`CustomerDossierSheet.kt` & `CustomersScreen.kt`)**:
+    - **Live Store Credit Wallet Card**: Embedded in the customer dossier sheet showing real-time balance `🪙 ৳...` with high-contrast gradient card, clear balance status, and instant check capability.
+    - **Owner/Manager Balance Adjustment**: Integrated `[ ⚖️ Adjust ]` action with `AdjustStoreCreditDialog` enabling credit addition or deduction with mandatory audit notes.
+    - **Store Credit Audit Ledger**: Added `CREDIT_LEDGER` audit history tab in customer dossier rendering immutable history of adjustments, return refunds, and sale redemptions (`StoreCreditLedgerEntry`: `CREDIT` vs `DEBIT`, balance after, source, notes, formatted timestamp).
+    - **CRM List & Table Indicators**: Added `🪙 Credit: ৳...` badges to customer cards and table rows for rapid visual identification.
+    - **Filters & Sorting**: Added `[ With Store Credit ]` filter chip and `STORE_CREDIT` (High to Low / Low to High) sorting options in CRM screen.
+  - **[SC2] 1-Tap Store Credit Tender & Split Payment in POS Checkout (`CartScreen.kt` & `DataRepository.kt`)**:
+    - **Dynamic Store Credit Banner**: In Complete Sale dialog, when a customer with positive store credit is selected, an emerald banner automatically renders `🪙 Store Credit Available: ৳...` with a 1-tap `[ Apply Credit ]` action.
+    - **Flexible Bill Offsets**:
+      - If store credit >= total bill: Bill is 100% covered; payment method automatically switches to `"WALLET"` / Store Credit; 1-tap `[ Complete Sale (Covered by Credit) ]` finishes checkout.
+      - If store credit < total bill: Store credit covers partial amount and remaining balance is assigned to secondary payment method (Cash, bKash, Card, etc.), automatically recording a split payment (`splitDetailsJson`).
+    - **Atomic Deduction & Ledger Audit**: `DataRepository.completeSaleWithNotes` atomically deducts customer store credit and writes a `StoreCreditLedgerEntry` (`type = DEBIT`, `source = SALE_PAYMENT`).
+    - **Real-Time UI Sync**: Customer's updated balance immediately reflects across cart, CRM, and customer state flows.
+  - **[SC3] Walk-In Customer Returns Dual-Resolution Workflow (`ReturnDialog.kt` & `SalesViewModel.kt`)**:
+    - **Walk-in Return Detection**: When processing returns for walk-in/unregistered sales (phone is null or blank) and refund destination `"WALLET"` / Store Credit is selected, an amber dual-resolution card appears offering two options:
+      - **Option 1: Quick Customer Registration**: Input customer phone and name to immediately register customer and deposit refund directly into their account.
+      - **Option 2: Issue Scannable Credit Voucher**: Issues a bearer credit voucher formatted as `SC-XXXX-XXXX` with 90-day default validity.
+    - **Voucher Generation & Persistence**: `DataRepository.processReturn` generates `StoreCreditVoucher` linked to `originalSaleId` and `originalInvoiceNo` stored in SQLite DB.
+    - **Voucher Presentation Dialog**: Renders `StoreCreditVoucherIssuedDialog` displaying large scannable code, voucher value, expiry date, and a 1-tap `[ 📋 Copy Code ]` button for clipboard copy.
+  - **[SC4] Credit Voucher POS Redemption (`CartScreen.kt` & `DataRepository.kt`)**:
+    - **POS Voucher Redemption Entrypoint**: Added `"🎟️ Have a Credit Voucher?"` button in Complete Sale dialog.
+    - **Redemption Dialog & Lookup**: `RedeemStoreCreditVoucherDialog` allows scanning or typing voucher code (`SC-XXXX-XXXX`); validates voucher existence, `isActive`, and non-zero `remainingBalance`.
+    - **Automatic Deduction & Split Tender**:
+      - If voucher balance >= cart total: Cart total is fully paid by voucher; remaining voucher balance is preserved in `store_credit_vouchers.remainingBalance` for future purchases.
+      - If voucher balance < cart total: Voucher balance is applied as partial credit and remaining bill is split with primary payment method.
+  - **[SC5] Bilingual Localization & Accessibility**:
+    - Complete Bengali and English strings in `strings.xml` and `values-bn/strings.xml` following `bangla-language` guidelines (`স্টোর ক্রেডিট`, `ভাউচার কোড প্রয়োগ করুন`, `ক্রেডিট ভাউচার ইস্যু করুন`, `ভাউচার কোড কপি করা হয়েছে`).
+    - Minimum 48dp touch targets across all dialog buttons, chips, and input clear buttons adhering to `android-ui-ux`.
+  - **[SC6] Deliverables & Verification**:
+    - Verified release build: `./gradlew assembleRelease` -> BUILD SUCCESSFUL.
+    - Output artifacts verified at `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V29.apk` and `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V11-09-2026.apk`.
+    - Comprehensive live Android emulator verification on `emulator-5554` testing manual adjustments, CRM filtering, POS checkout credit offsets, walk-in return voucher generation, and voucher checkout redemption.
 
 ## Maintenance note
 

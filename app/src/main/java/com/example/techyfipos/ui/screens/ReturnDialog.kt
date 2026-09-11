@@ -88,7 +88,15 @@ fun ReturnItemsDialog(
     saleWithItems: SaleWithItems,
     alreadyReturned: Map<String, Double>,
     onDismiss: () -> Unit,
-    onConfirm: (lines: List<ReturnLine>, refundMethod: String, note: String?, restock: Boolean) -> Unit
+    onConfirm: (
+        lines: List<ReturnLine>,
+        refundMethod: String,
+        note: String?,
+        restock: Boolean,
+        walkinPhone: String?,
+        walkinName: String?,
+        issueVoucher: Boolean
+    ) -> Unit
 ) {
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
@@ -125,12 +133,18 @@ fun ReturnItemsDialog(
     val hasCustomerDue = remainingDue > 0.0
     val customerName = saleWithItems.sale.customerName?.trim()
     val customerPhone = saleWithItems.sale.customerPhone?.trim()
+    val isWalkinCustomer = customerPhone.isNullOrBlank()
     val customerDisplayText = when {
         !customerName.isNullOrBlank() && !customerPhone.isNullOrBlank() -> "$customerName • $customerPhone"
         !customerName.isNullOrBlank() -> customerName
         !customerPhone.isNullOrBlank() -> customerPhone
         else -> "Walk-in Customer"
     }
+
+    // Walk-in store credit resolution mode: "REGISTER" or "VOUCHER"
+    var walkinMode by remember { mutableStateOf("REGISTER") }
+    var walkinRegPhone by remember { mutableStateOf("") }
+    var walkinRegName by remember { mutableStateOf("") }
 
     // 4 Settlement Destinations: "CASH" (Default), "DUE", "MFS", "WALLET"
     var selectedSettlementDestination by remember {
@@ -1067,32 +1081,152 @@ fun ReturnItemsDialog(
                                     }
                                 }
                                 "WALLET" -> {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text("🪙 Store Credit Balance", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = Color(0xFFFFFBEB),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A))
-                                        ) {
+                                    if (isWalkinCustomer) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text("⚠️ " + stringResource(R.string.store_credit_walkin_resolution_title), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = Color(0xFFFEF3C7),
+                                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A))
+                                                ) {
+                                                    Text(
+                                                        "Walk-in Customer",
+                                                        fontSize = 9.5.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = Color(0xFFB45309),
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+
                                             Text(
-                                                "Customer Wallet",
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = Color(0xFFD97706),
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                stringResource(R.string.store_credit_walkin_resolution_desc),
+                                                fontSize = 10.5.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
+
+                                            // Resolution Selector Tabs
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(MaterialTheme.colorScheme.surface)
+                                                    .padding(2.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                // Register Pill
+                                                val isReg = walkinMode == "REGISTER"
+                                                Surface(
+                                                    onClick = { walkinMode = "REGISTER" },
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = if (isReg) Color(0xFF10B981) else Color.Transparent,
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+                                                    Text(
+                                                        text = "👤 " + stringResource(R.string.store_credit_mode_register),
+                                                        fontSize = 10.5.sp,
+                                                        fontWeight = if (isReg) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (isReg) Color.White else MaterialTheme.colorScheme.onSurface,
+                                                        textAlign = TextAlign.Center,
+                                                        modifier = Modifier.padding(vertical = 6.dp)
+                                                    )
+                                                }
+
+                                                // Voucher Pill
+                                                val isVoucher = walkinMode == "VOUCHER"
+                                                Surface(
+                                                    onClick = { walkinMode = "VOUCHER" },
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = if (isVoucher) Color(0xFF6366F1) else Color.Transparent,
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+                                                    Text(
+                                                        text = "🎟️ " + stringResource(R.string.store_credit_mode_voucher),
+                                                        fontSize = 10.5.sp,
+                                                        fontWeight = if (isVoucher) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (isVoucher) Color.White else MaterialTheme.colorScheme.onSurface,
+                                                        textAlign = TextAlign.Center,
+                                                        modifier = Modifier.padding(vertical = 6.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            if (walkinMode == "REGISTER") {
+                                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    OutlinedTextField(
+                                                        value = walkinRegPhone,
+                                                        onValueChange = { walkinRegPhone = it },
+                                                        label = { Text(stringResource(R.string.store_credit_register_phone_hint), fontSize = 11.sp) },
+                                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                                        singleLine = true,
+                                                        shape = RoundedCornerShape(8.dp),
+                                                        modifier = Modifier.fillMaxWidth().height(52.dp)
+                                                    )
+                                                    OutlinedTextField(
+                                                        value = walkinRegName,
+                                                        onValueChange = { walkinRegName = it },
+                                                        label = { Text(stringResource(R.string.store_credit_register_name_hint), fontSize = 11.sp) },
+                                                        singleLine = true,
+                                                        shape = RoundedCornerShape(8.dp),
+                                                        modifier = Modifier.fillMaxWidth().height(52.dp)
+                                                    )
+                                                }
+                                            } else {
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = Color(0xFFEEF2FF),
+                                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC7D2FE)),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        Text("🎟️", fontSize = 18.sp)
+                                                        Text(
+                                                            stringResource(R.string.store_credit_voucher_notice),
+                                                            fontSize = 10.sp,
+                                                            color = Color(0xFF3730A3),
+                                                            lineHeight = 14.sp
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
+                                    } else {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("🪙 " + stringResource(R.string.store_credit_balance), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = Color(0xFFFFFBEB),
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A))
+                                            ) {
+                                                Text(
+                                                    "Customer Wallet",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = Color(0xFFD97706),
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            "Refund amount will be added to customer's account for their next purchase.",
+                                            fontSize = 10.5.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            lineHeight = 15.sp
+                                        )
                                     }
-                                    Text(
-                                        "Refund amount will be added to customer's account for their next purchase.",
-                                        fontSize = 10.5.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        lineHeight = 15.sp
-                                    )
                                 }
                             }
                         }
@@ -1186,6 +1320,9 @@ fun ReturnItemsDialog(
                         Text(stringResource(R.string.cancel), fontWeight = FontWeight.Bold)
                     }
 
+                    val isWalkinRegIncomplete = selectedSettlementDestination == "WALLET" && isWalkinCustomer && walkinMode == "REGISTER" && walkinRegPhone.trim().length < 6
+                    val isConfirmEnabled = hasSelection && !isWalkinRegIncomplete
+
                     Button(
                         onClick = {
                             val lines = displayItems.mapNotNull { item ->
@@ -1218,9 +1355,19 @@ fun ReturnItemsDialog(
                                 }
                             }
 
-                            onConfirm(lines, refundMethodStr, combinedNote, isRestockEnabled)
+                            val (finalWalkinPhone, finalWalkinName, finalIssueVoucher) = if (selectedSettlementDestination == "WALLET" && isWalkinCustomer) {
+                                if (walkinMode == "REGISTER") {
+                                    Triple(walkinRegPhone.trim(), walkinRegName.trim().ifBlank { null }, false)
+                                } else {
+                                    Triple(null, null, true)
+                                }
+                            } else {
+                                Triple(null, null, false)
+                            }
+
+                            onConfirm(lines, refundMethodStr, combinedNote, isRestockEnabled, finalWalkinPhone, finalWalkinName, finalIssueVoucher)
                         },
-                        enabled = hasSelection,
+                        enabled = isConfirmEnabled,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF10B981)
@@ -1237,7 +1384,16 @@ fun ReturnItemsDialog(
                             } else if (dueAdjustment > 0.0 && externalRefund > 0.0) {
                                 "Clear ${formatTaka(dueAdjustment)} Debt + Refund ${formatTaka(externalRefund)}"
                             } else if (selectedSettlementDestination == "WALLET") {
-                                "Add ${formatTaka(refundTotal)} to Store Credit"
+                                if (isWalkinCustomer) {
+                                    if (walkinMode == "REGISTER") {
+                                        if (walkinRegPhone.trim().length < 6) "Enter Customer Mobile"
+                                        else "Register & Credit ${formatTaka(refundTotal)}"
+                                    } else {
+                                        "Issue ${formatTaka(refundTotal)} Credit Voucher"
+                                    }
+                                } else {
+                                    "Add ${formatTaka(refundTotal)} to Store Credit"
+                                }
                             } else {
                                 "Process ${formatTaka(externalRefund)} Return"
                             },
