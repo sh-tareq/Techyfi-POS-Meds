@@ -1180,7 +1180,7 @@ fun DuesScreen(
                         creditLimit = newLimit,
                         note = notes,
                         onSuccess = { finalPhone ->
-                            Toast.makeText(context, "ফোন নম্বর সফলভাবে পরিবর্তন করা হয়েছে", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.customer_phone_updated_success), Toast.LENGTH_SHORT).show()
                             val updatedDue = editingCustomer.copy(
                                 customerPhone = finalPhone,
                                 customerName = newName,
@@ -1209,7 +1209,7 @@ fun DuesScreen(
                         note = notes
                     ) { success ->
                         if (success) {
-                            Toast.makeText(context, "Customer due info updated", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.customer_due_info_updated), Toast.LENGTH_SHORT).show()
                             val updatedDue = editingCustomer.copy(
                                 customerName = newName,
                                 creditLimit = newLimit,
@@ -1233,18 +1233,18 @@ fun DuesScreen(
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("🔗", fontSize = 20.sp)
-                    Text("অ্যাকাউন্ট মার্জ করুন (Merge Accounts)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(stringResource(R.string.customer_merge_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "নতুন ফোন নম্বরটি (${existingCustomer.phone}) ইতিমধ্যে '${existingCustomer.name}' এর নামে নিবন্ধিত রয়েছে।",
+                        text = stringResource(R.string.customer_phone_collision_msg, existingCustomer.phone, existingCustomer.name),
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "আপনি কি '${dueCustomer.customerName}' (পূর্বের নম্বর: ${dueCustomer.customerPhone}) এর সমস্ত বকেয়া ও লেনদেনের রেকর্ড '${existingCustomer.name}' (${existingCustomer.phone}) এর অ্যাকাউন্টে একত্রিত (Merge) করতে চান?",
+                        text = stringResource(R.string.customer_merge_prompt, dueCustomer.customerName, dueCustomer.customerPhone, existingCustomer.name, existingCustomer.phone),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1257,23 +1257,23 @@ fun DuesScreen(
                             masterPhone = existingCustomer.phone,
                             secondaryPhone = dueCustomer.customerPhone,
                             onSuccess = {
-                                Toast.makeText(context, "অ্যাকাউন্ট দুটি সফলভাবে একত্রিত (Merge) করা হয়েছে", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.customer_merge_success), Toast.LENGTH_SHORT).show()
                                 collisionMergeCustomer = null
                             },
                             onError = { err ->
-                                Toast.makeText(context, "Merge ব্যর্থ হয়েছে: $err", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, context.getString(R.string.customer_merge_failed, err), Toast.LENGTH_LONG).show()
                                 collisionMergeCustomer = null
                             }
                         )
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("হ্যাঁ, মার্জ করুন (Merge)")
+                    Text(stringResource(R.string.customer_merge_confirm_btn))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { collisionMergeCustomer = null }) {
-                    Text("বাতিল (Cancel)")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -4907,7 +4907,7 @@ fun CustomerDueDetailsView(
                             Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "Customer Profile",
+                                text = stringResource(R.string.dues_customer_profile_button),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
@@ -4935,7 +4935,7 @@ fun CustomerDueDetailsView(
                                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    text = "Edit Info",
+                                    text = stringResource(R.string.dues_edit_info_button),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
@@ -6750,7 +6750,7 @@ fun EditDueCustomerDialog(
                 Text("✏️", fontSize = 18.sp)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Edit Customer & Due Info",
+                    text = stringResource(R.string.edit_customer_due_title),
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
@@ -6767,7 +6767,7 @@ fun EditDueCustomerDialog(
                     value = phone,
                     onValueChange = { phone = it },
                     enabled = true,
-                    label = { Text("Phone Number *") },
+                    label = { Text(stringResource(R.string.dues_phone_number_label)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth()
@@ -6775,14 +6775,14 @@ fun EditDueCustomerDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Customer Name *") },
+                    label = { Text(stringResource(R.string.dues_customer_name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = creditLimitStr,
                     onValueChange = { creditLimitStr = it.filter { ch -> ch.isDigit() || ch == '.' } },
-                    label = { Text("Credit Limit (৳)") },
+                    label = { Text(stringResource(R.string.dues_credit_limit_label)) },
                     prefix = { Text("৳ ") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -6791,7 +6791,7 @@ fun EditDueCustomerDialog(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Notes / Remarks (Optional)") },
+                    label = { Text(stringResource(R.string.customer_notes_optional_label)) },
                     maxLines = 3,
                     modifier = Modifier.fillMaxWidth()
                 )

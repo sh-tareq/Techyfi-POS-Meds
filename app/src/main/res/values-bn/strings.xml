@@ -1796,4 +1796,14 @@
     <string name="stock_check_wholesale">পাইকারি</string>
     <string name="stock_check_unit_margin">মার্জিন</string>
     <string name="stock_check_asset_worth">স্টক মূল্য (%1$s ইউনিট)</string>
+
+    <!-- Customer Phone Update, Collision Merge & Due Edit Strings (Bangla) -->
+    <string name="customer_phone_updated_success">ফোন নম্বর সফলভাবে পরিবর্তন করা হয়েছে</string>
+    <string name="customer_due_info_updated">কাস্টমারের তথ্য সফলভাবে আপডেট করা হয়েছে</string>
+    <string name="customer_phone_collision_msg">নতুন ফোন নম্বরটি (%1$s) ইতিমধ্যে \'%2$s\'-এর নামে নিবন্ধিত রয়েছে।</string>
+    <string name="customer_merge_prompt">আপনি কি \'%1$s\' (পূর্বের নম্বর: %2$s)-এর সমস্ত বকেয়া ও লেনদেনের রেকর্ড \'%3$s\' (%4$s)-এর অ্যাকাউন্টে একত্রিত (Merge) করতে চান?</string>
+    <string name="edit_customer_due_title">কাস্টমার ও বকেয়ার তথ্য সম্পাদনা</string>
+    <string name="customer_notes_optional_label">মন্তব্য / বিবরণ (ঐচ্ছিক)</string>
+    <string name="dues_edit_info_button">তথ্য পরিবর্তন</string>
+    <string name="dues_customer_profile_button">কাস্টমার প্রোফাইল</string>
 </resources>

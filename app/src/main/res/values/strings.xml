@@ -1796,5 +1796,15 @@
     <string name="stock_check_wholesale">Wholesale</string>
     <string name="stock_check_unit_margin">Unit Margin</string>
     <string name="stock_check_asset_worth">Asset Worth (%1$s units)</string>
+
+    <!-- Customer Phone Update, Collision Merge & Due Edit Strings -->
+    <string name="customer_phone_updated_success">Phone number updated successfully</string>
+    <string name="customer_due_info_updated">Customer due info updated successfully</string>
+    <string name="customer_phone_collision_msg">The new phone number (%1$s) already belongs to \'%2$s\'.</string>
+    <string name="customer_merge_prompt">Do you want to merge all dues and transaction records of \'%1$s\' (previous: %2$s) into \'%3$s\' (%4$s)?</string>
+    <string name="edit_customer_due_title">Edit Customer &amp; Due Info</string>
+    <string name="customer_notes_optional_label">Notes / Remarks (Optional)</string>
+    <string name="dues_edit_info_button">Edit Info</string>
+    <string name="dues_customer_profile_button">Customer Profile</string>
 </resources>
 
