@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-08 (app version 2.6.32-V08-09-2026, build `Techyfi-POS-Final-V08-09-2026.apk` / `Techyfi-POS-Final-V25.apk`; versionCode 220911; DB schema version 26)
+Last updated: 2026-09-11 (app version 2.6.33-V11-09-2026, build `Techyfi-POS-Final-V11-09-2026.apk` / `Techyfi-POS-Final-V26.apk`; versionCode 220911; DB schema version 26)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -1471,6 +1471,57 @@ mindmap
     - Standardized bilingual subtitle strings in `strings.xml` and `values-bn/strings.xml`.
   - **[H4] Interactive Redesign Preview**:
     - Created high-fidelity interactive browser preview `interactive_preview/top_headers_redesign_preview.html` allowing real-time switching across all 12 sections in English/Bangla and Phone (360dp, 412dp) vs Tablet (1280dp) modes.
+
+## V11-09-2026 Comprehensive App Audit & UX Ergonomics Improvements (V26)
+
+- Final artifacts: `Techyfi-POS-Final-V11-09-2026.apk` (also indexed as `Techyfi-POS-Final-V26.apk`), versionCode `220911`, versionName `2.6.33-V11-09-2026`.
+- Verified file locations:
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V11-09-2026.apk`
+  - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V26.apk`
+- Deliverables Convention:
+  - All built APKs and mind maps (`APP_MIND_MAP.md`) strictly stored in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+- Features & Fixes implemented:
+  - **[A1] System Back Gesture & Bottom Sheet BackHandler (`Navigation.kt`)**:
+    - Integrated root `BackHandler(enabled = showMoreHubSheet || (backStack.size > 1 && currentKey != Splash && currentKey != Lock))` in `Navigation.kt`.
+    - If `showMoreHubSheet` is visible, back gesture smoothly dismisses the sheet without altering the screen backstack.
+    - If user is inside a secondary subscreen (e.g. Customers, Loyalty, Sales Report, Settings), back gesture pops the backstack to the previous screen or Sell terminal instead of abruptly closing or backgrounding the POS app.
+  - **[A2] Dynamic Products FAB Auto-Collapse on Scroll (`ProductsScreen.kt`)**:
+    - Added `rememberLazyListState()` and `rememberLazyGridState()`, with derived `isScrolling` state.
+    - Wrapped `+ Add Product` floating action button in `AnimatedContent(targetState = isScrolling)`:
+      - When scrolling: collapses into a compact 52dp circular emerald jewel (`+` icon) with subtle elevation, keeping catalog items fully visible.
+      - When idle: gracefully expands back into the full pill button (`+ Add Product`).
+    - Extended bottom content clearance padding from `80.dp` to `140.dp` across list and grid modes, preventing bottom SKU row actions from being obscured by the bottom navigation bar or FAB.
+  - **[A3] Direct WhatsApp Customer Khata Dispatch Button (`DuesScreen.kt`)**:
+    - Added dedicated `[ 💬 WhatsApp ]` action button next to `[ 💷 Collect ]` and `[ 🟣 Remind ]` in `CustomerDueRow`.
+    - Automatically builds an encoded WhatsApp intent (`https://api.whatsapp.com/send?phone=+880...&text=...`) with polite Bengali retail khata messaging (`আসসালামু আলাইকুম [Name] ভাই... আপনার বকেয়া ৳[Amount]... পরিশোধের অনুরোধ করা হচ্ছে`).
+    - Uses safe `Intent(Intent.ACTION_VIEW)` with activity check and fallback toast if WhatsApp is not installed.
+    - Increased list bottom content padding to `100.dp`.
+  - **[A4] Empty Cart 2x2 Fast-Add Popular Retail Shortcuts (`CartScreen.kt`)**:
+    - Replaced static blank empty cart state with interactive `Quick Add Popular Items` section.
+    - Features a 2x2 responsive grid of common Bangladeshi retail essentials:
+      - 🛍️ Shopping Bag (৳5)
+      - 🥚 Farm Egg 1 Pc (৳14)
+      - 🥤 Water 500ml (৳20)
+      - ☕ Tea & Biscuit (৳15)
+    - Tapping `[ + Add ]` immediately dispatches `cartViewModel.addCustomItem(...)` into active cart with instant tactile feedback.
+  - **[A5] Customers & CRM 2x2 Balanced KPI Metrics Grid (`CustomersScreen.kt`)**:
+    - Refactored single-row overflowing horizontal carousel on compact phone viewports into a clean, balanced 2x2 grid (`Row` with two `Modifier.weight(1f)` cards per row):
+      - Total Customers & Total Dues
+      - VIP Spenders & Repeat Rate
+    - Updated `KpiMetricCard` to support external `modifier` passing for uniform card widths and vertical heights.
+    - Increased list bottom padding to `100.dp`.
+  - **[A6] Sales Report Empty State Smart Timeframe Switcher (`SalesReportScreen.kt`)**:
+    - Transformed passive "No Sales in This Period" card into an actionable smart period switcher.
+    - Prominently displays `💡 View Historical Period Analytics:` with quick-filter buttons (`[ 🗓️ 30 Days ]`, `[ 📊 This Year ]`).
+    - Tapping buttons instantly switches `selectedDateFilter` and loads executive P&L analytics without needing manual top-bar navigation.
+    - Increased bottom clearance padding to `96.dp`.
+  - **[A7] Cash Register Active Shift >24h Reconcile Warning Banner (`RegisterCloseScreen.kt`)**:
+    - Computed active shift duration (`shiftHours = (System.currentTimeMillis() - activeShift.openedAt) / 3600000L`).
+    - When an active register shift exceeds 24 hours, renders a high-visibility amber warning banner (`⚠️ Shift active for Xh (>24h). Recommend closing register for daily reconciliation.`).
+    - Extended bottom scroll clearance to `110.dp`.
+  - **[A8] Expenses Guidance Copy Cleanup & Bottom Clearance (`ExpensesScreen.kt` & `strings.xml`)**:
+    - Corrected empty state subtitle in `strings.xml` and `values-bn/strings.xml` to remove outdated reference to `+ Cash In Float` and accurately point users to `+ Record Expense`.
+    - Increased list bottom content clearance padding to `100.dp`.
 
 ## Maintenance note
 

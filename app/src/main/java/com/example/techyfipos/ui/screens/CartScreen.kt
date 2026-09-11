@@ -549,6 +549,119 @@ fun CartScreen(
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.cart_add_custom_quick_sale))
                         }
+
+                        Spacer(modifier = Modifier.height(22.dp))
+
+                        // Fast 1-Tap Popular Items Shortcuts
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "⚡ Quick Add Popular Items",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.outline,
+                                letterSpacing = 0.5.sp
+                            )
+
+                            val quickItems = listOf(
+                                Triple("🛍️ Shopping Bag", 5.0, "Shopping Bag"),
+                                Triple("🥚 Farm Egg 1 Pc", 14.0, "Farm Egg 1 Pc"),
+                                Triple("🥤 Water 500ml", 20.0, "Mineral Water 500ml"),
+                                Triple("☕ Tea & Biscuit", 15.0, "Tea & Biscuit")
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                quickItems.take(2).forEach { (displayLabel, price, itemName) ->
+                                    Surface(
+                                        onClick = {
+                                            cartViewModel.addCustomItem(itemName, price, 1.0, "Quick Sale", "Pcs")
+                                            Toast.makeText(context, context.getString(R.string.cart_custom_item_added_toast, itemName), Toast.LENGTH_SHORT).show()
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(displayLabel, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(formatTaka(price), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF059669))
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = Color(0xFF059669).copy(alpha = 0.15f)
+                                                ) {
+                                                    Text(
+                                                        text = "+ Add",
+                                                        fontSize = 9.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFF059669),
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                quickItems.drop(2).forEach { (displayLabel, price, itemName) ->
+                                    Surface(
+                                        onClick = {
+                                            cartViewModel.addCustomItem(itemName, price, 1.0, "Quick Sale", "Pcs")
+                                            Toast.makeText(context, context.getString(R.string.cart_custom_item_added_toast, itemName), Toast.LENGTH_SHORT).show()
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(displayLabel, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(formatTaka(price), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF059669))
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = Color(0xFF059669).copy(alpha = 0.15f)
+                                                ) {
+                                                    Text(
+                                                        text = "+ Add",
+                                                        fontSize = 9.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFF059669),
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -174,6 +174,9 @@ fun DayStartCloseScreen(
     val shiftStart = remember(closings, todayStart, shiftState) {
         shiftState?.startedAt?.takeIf { it > 0L } ?: registerShiftStart(todayStart, closings)
     }
+    val shiftDurationMillis = remember(shiftStart) { (System.currentTimeMillis() - shiftStart).coerceAtLeast(0L) }
+    val isShiftOver24h = remember(shiftDurationMillis) { shiftDurationMillis >= 24 * 60 * 60 * 1000L }
+    val shiftHours = remember(shiftDurationMillis) { (shiftDurationMillis / (1000 * 60 * 60)).toInt() }
     val shiftSales = remember(sales, shiftStart) { sales.filter { it.timestamp >= shiftStart } }
     val cashSales = remember(shiftSales) { shiftSales.sumOf { splitCashAndDigitalAmounts(it).first } }
     val dueDigitalCollected = remember(duePayments, shiftStart) {
@@ -357,7 +360,7 @@ fun DayStartCloseScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(top = 10.dp, bottom = 28.dp)
+            contentPadding = PaddingValues(top = 10.dp, bottom = 110.dp)
         ) {
             // 1. Photorealistic 3D Hero Card: Today's Drawer Cash Vault
             item {
@@ -450,6 +453,37 @@ fun DayStartCloseScreen(
                                             fontWeight = FontWeight.ExtraBold,
                                             color = Color(0xFF34D399)
                                         )
+                                    }
+                                }
+                            }
+
+                            // Shift Over 24h Warning Banner
+                            if (isShiftOver24h) {
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFFFEF3C7).copy(alpha = 0.15f),
+                                    border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.5f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text("⚠️", fontSize = 16.sp)
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "Shift active for ${shiftHours}h (>24h)",
+                                                fontSize = 11.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFF59E0B)
+                                            )
+                                            Text(
+                                                text = "Recommend closing register for daily reconciliation.",
+                                                fontSize = 10.sp,
+                                                color = Color(0xFFCBD5E1)
+                                            )
+                                        }
                                     }
                                 }
                             }

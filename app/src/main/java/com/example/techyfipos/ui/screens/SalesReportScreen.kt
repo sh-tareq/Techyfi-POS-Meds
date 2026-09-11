@@ -281,41 +281,50 @@ fun SalesReportScreen(
             }
 
             // 3D Animated Date Range Picker Bar
+            // Screen Header Card
             Surface(
                 onClick = {
                     customStart = rangeStart
                     customEnd = (rangeEnd - 1).coerceAtLeast(rangeStart)
                     showStartPicker = true
                 },
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                shadowElevation = 1.dp,
+                tonalElevation = 1.dp,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Realistic3DCalendarIcon(size = 24.dp)
+                        Surface(
+                            shape = CircleShape,
+                            color = PosSectionColors.SalesReport.copy(alpha = 0.12f),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Realistic3DAnalyticsIcon(size = 22.dp)
+                            }
+                        }
                         Column {
                             Text(
-                                stringResource(R.string.sales_report_period_label),
-                                fontSize = 9.5.sp,
+                                stringResource(R.string.sales_report_title),
                                 fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 0.6.sp,
-                                color = MaterialTheme.colorScheme.outline
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                rangeLabel,
-                                fontSize = 12.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                stringResource(R.string.sales_report_subtitle),
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.outline
                             )
                         }
                     }
@@ -336,7 +345,7 @@ fun SalesReportScreen(
             } else if (data.transactionCount == 0) {
                 EmptyReportState(
                     selectedPeriod = selectedPeriod,
-                    onViewRecent = { selectedPeriod = ReportPeriod.WEEK }
+                    onSelectPeriod = { selectedPeriod = it }
                 )
             } else {
                 // 💎 Executive Financial Analytics Master Card
@@ -672,7 +681,10 @@ private fun change(current: Double, previous: Double?): Double? {
 }
 
 @Composable
-private fun EmptyReportState(selectedPeriod: ReportPeriod, onViewRecent: () -> Unit) {
+private fun EmptyReportState(
+    selectedPeriod: ReportPeriod,
+    onSelectPeriod: (ReportPeriod) -> Unit
+) {
     Card(
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth(),
@@ -682,21 +694,77 @@ private fun EmptyReportState(selectedPeriod: ReportPeriod, onViewRecent: () -> U
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 36.dp),
+                .padding(horizontal = 20.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Realistic3DEmptyReceiptIcon(size = 68.dp)
-            Text(stringResource(R.string.sales_report_empty_title), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                stringResource(R.string.sales_report_empty_title),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
             Text(
                 stringResource(R.string.sales_report_empty_message),
                 color = MaterialTheme.colorScheme.outline,
                 fontSize = 12.5.sp,
                 textAlign = TextAlign.Center
             )
-            if (selectedPeriod != ReportPeriod.WEEK) {
-                FilledTonalButton(onClick = onViewRecent, shape = RoundedCornerShape(12.dp)) {
-                    Text(stringResource(R.string.sales_report_view_recent))
+
+            // Smart Period Switcher
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "💡 View Historical Period Analytics:",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+                    ) {
+                        if (selectedPeriod != ReportPeriod.WEEK) {
+                            FilledTonalButton(
+                                onClick = { onSelectPeriod(ReportPeriod.WEEK) },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("🔄 ${stringResource(R.string.sales_report_period_week)}", fontSize = 11.sp)
+                            }
+                        }
+
+                        if (selectedPeriod != ReportPeriod.MONTH) {
+                            FilledTonalButton(
+                                onClick = { onSelectPeriod(ReportPeriod.MONTH) },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("🗓️ ${stringResource(R.string.sales_report_period_month)}", fontSize = 11.sp)
+                            }
+                        }
+
+                        if (selectedPeriod != ReportPeriod.YEAR) {
+                            FilledTonalButton(
+                                onClick = { onSelectPeriod(ReportPeriod.YEAR) },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("📊 ${stringResource(R.string.sales_report_period_year)}", fontSize = 11.sp)
+                            }
+                        }
+                    }
                 }
             }
         }

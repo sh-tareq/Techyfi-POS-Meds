@@ -907,7 +907,7 @@ fun DuesScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 80.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 100.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         item(key = "dues_summary_card") {
@@ -968,6 +968,20 @@ fun DuesScreen(
                                     canDelete = isOwner,
                                     onClick = { duesViewModel.selectCustomer(customer) },
                                     onCollect = { paymentCustomer = customer },
+                                    onWhatsApp = {
+                                        val cleanPhone = customer.customerPhone.replace("+", "").replace("-", "").replace(" ", "").trim()
+                                        val formattedPhone = if (cleanPhone.startsWith("0")) "880" + cleanPhone.substring(1) else cleanPhone
+                                        val shop = storeName.ifBlank { "আমাদের দোকান" }
+                                        val waMessage = "আসসালামু আলাইকুম জনাব ${customer.customerName},\n${shop} থেকে আপনার বকেয়া হিসাবের বিবরণী:\n• মোট অপরিশোধিত বকেয়া: ${formatTaka(customer.outstandingAmount)}\nঅনুগ্রহপূর্বক সুবিধাজনক সময়ে বকেয়া পরিশোধ করার জন্য বিনীত অনুরোধ করা যাচ্ছে। ধন্যবাদ।"
+                                        try {
+                                            val encodedMsg = java.net.URLEncoder.encode(waMessage, "UTF-8")
+                                            val url = if (formattedPhone.isNotBlank()) "https://api.whatsapp.com/send?phone=$formattedPhone&text=$encodedMsg" else "https://api.whatsapp.com/send?text=$encodedMsg"
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "WhatsApp open failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
                                     onRemind = {
                                         if (canSendReminders) {
                                             reminderCustomer = customer
@@ -3558,6 +3572,7 @@ fun CustomerDueRow(
     canDelete: Boolean = true,
     onClick: () -> Unit,
     onCollect: () -> Unit,
+    onWhatsApp: () -> Unit = {},
     onRemind: () -> Unit = {},
     onCall: () -> Unit = {},
     onEditDue: () -> Unit = {},
@@ -3647,25 +3662,22 @@ fun CustomerDueRow(
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = if (customer.outstandingAmount > 0) formatTaka(customer.outstandingAmount) else stringResource(R.string.dues_settled_label),
-                        color = if (customer.outstandingAmount > 0) Color(0xFFE11D48) else Color(0xFF059669),
-                        fontSize = 14.5.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.2).sp
+                        text = formatTaka(customer.outstandingAmount),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 15.sp,
+                        color = if (isOverdue) Color(0xFFEF4444) else MaterialTheme.colorScheme.error
                     )
-                    if (customer.creditLimit > 0.0) {
-                        val pct = ((customer.outstandingAmount / customer.creditLimit) * 100).toInt()
+                    if (isOverdue) {
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = if (pct >= 80) Color(0xFFFEE2E2) else Color(0xFFEFF6FF),
-                            border = BorderStroke(0.5.dp, if (pct >= 80) Color(0xFFF87171) else Color(0xFFBFDBFE))
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFEF4444).copy(alpha = 0.12f)
                         ) {
                             Text(
-                                text = stringResource(R.string.dues_limit_percent_row, formatTaka(customer.creditLimit), pct),
-                                fontSize = 8.5.sp,
+                                text = stringResource(R.string.dues_overdue_badge),
+                                fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (pct >= 80) Color(0xFFDC2626) else Color(0xFF1D4ED8),
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                color = Color(0xFFEF4444),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     } else if (repaidAmount > 0) {
@@ -3688,25 +3700,37 @@ fun CustomerDueRow(
                         Button(
                             onClick = onCollect,
                             shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
-                            modifier = Modifier.weight(1.2f).height(32.dp)
+                            modifier = Modifier.weight(1.05f).height(32.dp)
                         ) {
-                            Realistic3DWalletCollectIcon(size = 14.dp)
-                            Spacer(Modifier.width(4.dp))
-                            Text(stringResource(R.string.dues_collect_button), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Realistic3DWalletCollectIcon(size = 13.dp)
+                            Spacer(Modifier.width(3.dp))
+                            Text(stringResource(R.string.dues_collect_button), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
+                    }
+
+                    Button(
+                        onClick = onWhatsApp,
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF065F46)),
+                        modifier = Modifier.weight(1.05f).height(32.dp)
+                    ) {
+                        Text("💬", fontSize = 11.5.sp)
+                        Spacer(Modifier.width(3.dp))
+                        Text("WhatsApp", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA7F3D0), maxLines = 1)
                     }
 
                     OutlinedButton(
                         onClick = onRemind,
                         shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                        modifier = Modifier.weight(1f).height(32.dp)
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                        modifier = Modifier.weight(0.95f).height(32.dp)
                     ) {
-                        Realistic3DMessageReminderIcon(size = 13.dp)
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.dues_remind_button), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        Realistic3DMessageReminderIcon(size = 12.dp)
+                        Spacer(Modifier.width(3.dp))
+                        Text(stringResource(R.string.dues_remind_button), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
 
                     OutlinedButton(

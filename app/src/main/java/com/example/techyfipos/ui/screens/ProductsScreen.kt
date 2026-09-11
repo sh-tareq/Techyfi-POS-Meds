@@ -26,8 +26,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -261,6 +263,15 @@ fun ProductsScreen(
     var showBulkPriceDialog by rememberSaveable { mutableStateOf(false) }
     var showBulkCategoryDialog by rememberSaveable { mutableStateOf(false) }
     var showBulkDeleteDialog by rememberSaveable { mutableStateOf(false) }
+
+    val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
+    val isScrolling by remember {
+        derivedStateOf {
+            listState.isScrollInProgress || gridState.isScrollInProgress ||
+            listState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemIndex > 0
+        }
+    }
 
     val exportSuccessToast = stringResource(R.string.products_export_success)
     val exportExcelLauncher = rememberLauncherForActivityResult(
@@ -1050,33 +1061,55 @@ fun ProductsScreen(
             }
         },
         floatingActionButton = {
-            // 🟢 3D Emerald Jewel Floating Action Button (Add Product)
-            ExtendedFloatingActionButton(
-                onClick = { showAddDialog = true },
-                containerColor = Color(0xFF059669),
-                contentColor = Color.White,
-                shape = RoundedCornerShape(26.dp),
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp, pressedElevation = 10.dp),
-                icon = {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.25f),
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
-                        }
-                    }
+            // 🟢 3D Emerald Jewel Floating Action Button (Collapses to jewel on scroll)
+            AnimatedContent(
+                targetState = isScrolling,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(220)) + scaleIn(initialScale = 0.85f))
+                        .togetherWith(fadeOut(animationSpec = tween(180)) + scaleOut(targetScale = 0.85f))
                 },
-                text = {
-                    Text(
-                        stringResource(R.string.products_add_product_button),
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 13.sp,
-                        letterSpacing = 0.3.sp
+                label = "fab_collapse_anim"
+            ) { scrolling ->
+                if (scrolling) {
+                    FloatingActionButton(
+                        onClick = { showAddDialog = true },
+                        containerColor = Color(0xFF059669),
+                        contentColor = Color.White,
+                        shape = CircleShape,
+                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp, pressedElevation = 10.dp),
+                        modifier = Modifier.size(52.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.products_add_product_button), modifier = Modifier.size(24.dp), tint = Color.White)
+                    }
+                } else {
+                    ExtendedFloatingActionButton(
+                        onClick = { showAddDialog = true },
+                        containerColor = Color(0xFF059669),
+                        contentColor = Color.White,
+                        shape = RoundedCornerShape(26.dp),
+                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp, pressedElevation = 10.dp),
+                        icon = {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.White.copy(alpha = 0.25f),
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                                }
+                            }
+                        },
+                        text = {
+                            Text(
+                                stringResource(R.string.products_add_product_button),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 13.sp,
+                                letterSpacing = 0.3.sp
+                            )
+                        }
                     )
                 }
-            )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
@@ -1732,8 +1765,9 @@ fun ProductsScreen(
             } else {
                 if (viewMode == ProductViewMode.LIST) {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 100.dp),
+                        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 140.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(visibleProducts, key = { it.barcode }) { product ->
@@ -1769,9 +1803,10 @@ fun ProductsScreen(
                     }
                 } else {
                     LazyVerticalGrid(
+                        state = gridState,
                         columns = GridCells.Adaptive(minSize = 160.dp),
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 100.dp),
+                        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 140.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {

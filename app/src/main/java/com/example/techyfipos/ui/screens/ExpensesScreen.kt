@@ -205,7 +205,7 @@ fun ExpensesScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp)
+            contentPadding = PaddingValues(top = 10.dp, bottom = 100.dp)
         ) {
             // 1. Pure Expense Analytics Hero Card
             item {

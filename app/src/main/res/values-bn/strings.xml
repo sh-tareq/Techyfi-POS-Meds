@@ -250,7 +250,7 @@
     <plurals name="expense_records_count"><item quantity="one">%1$d টি রেকর্ড</item><item quantity="other">%1$d টি রেকর্ড</item></plurals>
     <string name="expense_empty_search_title">কোনো মিলে যাওয়া হিসাব পাওয়া যায়নি</string>
     <string name="expense_empty_title">এখনো কোনো খরচ যোগ করা হয়নি</string>
-    <string name="expense_empty_subtitle">উপরের কার্ডে \'+ খরচ যোগ করুন\' অথবা \'+ ক্যাশ ইন ফ্লোট\' ব্যবহার করুন।</string>
+    <string name="expense_empty_subtitle">দোকানের খরচ, নাস্তা বা বিল এন্ট্রি করতে উপরের কার্ডে \'+ খরচ যোগ করুন\' চাপুন।</string>
 
     <!-- Held Carts (AdvancedPosFeatures) -->
     <plurals name="held_carts_banner_title"><item quantity="one">⏸️ %1$dটি কার্ট হোল্ডে আছে</item><item quantity="other">⏸️ %1$dটি কার্ট হোল্ডে আছে</item></plurals>

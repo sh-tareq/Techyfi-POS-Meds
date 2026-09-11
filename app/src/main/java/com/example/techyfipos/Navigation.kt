@@ -2,6 +2,7 @@
 
 package com.example.techyfipos
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -309,6 +310,14 @@ fun MainNavigation() {
         var showMoreHubSheet by remember { mutableStateOf(false) }
         var showUserDropdown by remember { mutableStateOf(false) }
         var showLogoutConfirmDialog by remember { mutableStateOf(false) }
+
+        BackHandler(enabled = showMoreHubSheet || (backStack.size > 1 && currentKey != Splash && currentKey != Lock)) {
+            if (showMoreHubSheet) {
+                showMoreHubSheet = false
+            } else {
+                backStack.removeLastOrNull()
+            }
+        }
 
         Scaffold(
             bottomBar = {

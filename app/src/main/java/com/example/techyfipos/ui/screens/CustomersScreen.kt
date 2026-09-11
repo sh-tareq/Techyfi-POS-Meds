@@ -404,44 +404,101 @@ fun CustomersScreen(
                         .padding(vertical = 4.dp)
                 )
 
-                // KPI Overview Metrics Carousel
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    KpiMetricCard(
-                        title = stringResource(R.string.customers_kpi_total),
-                        value = "$totalCount",
-                        color = MaterialTheme.colorScheme.primary,
-                        icon = Icons.Default.People
-                    )
-                    KpiMetricCard(
-                        title = stringResource(R.string.customers_kpi_due),
-                        value = formatTaka(totalDues),
-                        color = if (totalDues > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
-                        icon = Icons.Default.Warning
-                    )
-                    KpiMetricCard(
-                        title = stringResource(R.string.customers_kpi_vip),
-                        value = "$vipCount",
-                        color = Color(0xFF8B5CF6),
-                        icon = Icons.Default.Stars
-                    )
-                    KpiMetricCard(
-                        title = stringResource(R.string.customers_kpi_repeat),
-                        value = "$repeatPercent%",
-                        color = Color(0xFF00875A),
-                        icon = Icons.Default.Repeat
-                    )
-                    KpiMetricCard(
-                        title = stringResource(R.string.customer_kpi_aov),
-                        value = formatTaka(avgSpend),
-                        color = Color(0xFF0284C7),
-                        icon = Icons.Default.AttachMoney
-                    )
+                // KPI Overview Metrics
+                if (isTablet) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        KpiMetricCard(
+                            title = stringResource(R.string.customers_kpi_total),
+                            value = "$totalCount",
+                            color = MaterialTheme.colorScheme.primary,
+                            icon = Icons.Default.People
+                        )
+                        KpiMetricCard(
+                            title = stringResource(R.string.customers_kpi_due),
+                            value = formatTaka(totalDues),
+                            color = if (totalDues > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
+                            icon = Icons.Default.Warning
+                        )
+                        KpiMetricCard(
+                            title = stringResource(R.string.customers_kpi_vip),
+                            value = "$vipCount",
+                            color = Color(0xFF8B5CF6),
+                            icon = Icons.Default.Stars
+                        )
+                        KpiMetricCard(
+                            title = stringResource(R.string.customers_kpi_repeat),
+                            value = "$repeatPercent%",
+                            color = Color(0xFF00875A),
+                            icon = Icons.Default.Repeat
+                        )
+                        KpiMetricCard(
+                            title = stringResource(R.string.customer_kpi_aov),
+                            value = formatTaka(avgSpend),
+                            color = Color(0xFF0284C7),
+                            icon = Icons.Default.AttachMoney
+                        )
+                    }
+                } else {
+                    // Mobile 2x2 Grid Layout
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                KpiMetricCard(
+                                    title = stringResource(R.string.customers_kpi_total),
+                                    value = "$totalCount",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    icon = Icons.Default.People,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                KpiMetricCard(
+                                    title = stringResource(R.string.customers_kpi_due),
+                                    value = formatTaka(totalDues),
+                                    color = if (totalDues > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
+                                    icon = Icons.Default.Warning,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                KpiMetricCard(
+                                    title = stringResource(R.string.customers_kpi_vip),
+                                    value = "$vipCount",
+                                    color = Color(0xFF8B5CF6),
+                                    icon = Icons.Default.Stars,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                KpiMetricCard(
+                                    title = stringResource(R.string.customers_kpi_repeat),
+                                    value = "$repeatPercent%",
+                                    color = Color(0xFF00875A),
+                                    icon = Icons.Default.Repeat,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // Duplicate Customer Detection Smart Alert Banner
@@ -558,7 +615,7 @@ fun CustomersScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth().weight(1f),
-                        contentPadding = PaddingValues(vertical = 6.dp),
+                        contentPadding = PaddingValues(top = 6.dp, bottom = 100.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(customers, key = { it.phone }) { customer ->
@@ -915,13 +972,14 @@ fun KpiMetricCard(
     title: String,
     value: String,
     color: Color,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier
 ) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = color.copy(alpha = 0.12f),
         border = BorderStroke(1.dp, color.copy(alpha = 0.35f)),
-        modifier = Modifier.widthIn(min = 96.dp)
+        modifier = modifier.widthIn(min = 96.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),

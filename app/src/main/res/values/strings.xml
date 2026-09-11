@@ -250,7 +250,7 @@
     <plurals name="expense_records_count"><item quantity="one">%1$d Record</item><item quantity="other">%1$d Records</item></plurals>
     <string name="expense_empty_search_title">No matching ledger records</string>
     <string name="expense_empty_title">No expenses recorded yet</string>
-    <string name="expense_empty_subtitle">Use \'+ Record Expense\' or \'+ Cash In Float\' in the card above.</string>
+    <string name="expense_empty_subtitle">Use \'+ Record Expense\' in the card above to log petty cash, staff meals, or utility bills.</string>
 
     <!-- Held Carts (AdvancedPosFeatures) -->
     <plurals name="held_carts_banner_title"><item quantity="one">⏸️ %1$d Cart on Hold</item><item quantity="other">⏸️ %1$d Carts on Hold</item></plurals>
