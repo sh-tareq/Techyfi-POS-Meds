@@ -969,18 +969,9 @@ fun DuesScreen(
                                     onClick = { duesViewModel.selectCustomer(customer) },
                                     onCollect = { paymentCustomer = customer },
                                     onWhatsApp = {
-                                        val cleanPhone = customer.customerPhone.replace("+", "").replace("-", "").replace(" ", "").trim()
-                                        val formattedPhone = if (cleanPhone.startsWith("0")) "880" + cleanPhone.substring(1) else cleanPhone
                                         val shop = storeName.ifBlank { "আমাদের দোকান" }
                                         val waMessage = "আসসালামু আলাইকুম জনাব ${customer.customerName},\n${shop} থেকে আপনার বকেয়া হিসাবের বিবরণী:\n• মোট অপরিশোধিত বকেয়া: ${formatTaka(customer.outstandingAmount)}\nঅনুগ্রহপূর্বক সুবিধাজনক সময়ে বকেয়া পরিশোধ করার জন্য বিনীত অনুরোধ করা যাচ্ছে। ধন্যবাদ।"
-                                        try {
-                                            val encodedMsg = java.net.URLEncoder.encode(waMessage, "UTF-8")
-                                            val url = if (formattedPhone.isNotBlank()) "https://api.whatsapp.com/send?phone=$formattedPhone&text=$encodedMsg" else "https://api.whatsapp.com/send?text=$encodedMsg"
-                                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "WhatsApp open failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                                        }
+                                        openWhatsAppReminder(context, customer.customerPhone, waMessage)
                                     },
                                     onRemind = {
                                         if (canSendReminders) {
