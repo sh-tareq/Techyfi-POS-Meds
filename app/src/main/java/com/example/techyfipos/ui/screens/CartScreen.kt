@@ -2207,6 +2207,16 @@ fun CartScreen(
                                 val snapshotHasDueInPayment = hasDueInPayment
                                 scope.launch {
                                     try {
+                                        val snapshotStoreCreditApplied = cartViewModel.storeCreditApplied.value
+                                        val snapshotRedeemedVoucher = cartViewModel.redeemedVoucher.value
+                                        val snapshotVoucherCode = snapshotRedeemedVoucher?.code
+                                        val snapshotVoucherAmount = if (snapshotRedeemedVoucher != null) {
+                                            snapshotStoreCreditApplied.coerceAtMost(snapshotRedeemedVoucher.remainingBalance)
+                                        } else null
+                                        val postSaleRemainingVoucherBalance = if (snapshotRedeemedVoucher != null && snapshotVoucherAmount != null) {
+                                            (snapshotRedeemedVoucher.remainingBalance - snapshotVoucherAmount).coerceAtLeast(0.0)
+                                        } else null
+
                                         // Update ViewModel's amountPaid and cashierName before completeSale
                                         cartViewModel.amountPaid.value = effectiveAmountPaid
                                         cartViewModel.setCashierName(currentDisplayCashier)
@@ -2218,6 +2228,10 @@ fun CartScreen(
                                         val updatedTotalDue = if (snapshotHasDueInPayment && snapshotCustomerPhone.isNotBlank()) {
                                             cartViewModel.getCustomerDue(snapshotCustomerPhone)?.outstandingAmount ?: 0.0
                                         } else 0.0
+                                        val postSaleRemainingStoreCredit = if (snapshotCustomerPhone.isNotBlank()) {
+                                            cartViewModel.getCustomerByPhone(snapshotCustomerPhone)?.storeCredit
+                                        } else null
+
                                         cartViewModel.openReceiptDialog(BillData(
                                             saleId = saleId,
                                             timestampMillis = System.currentTimeMillis(),
@@ -2248,7 +2262,12 @@ fun CartScreen(
                                             mrpSubtotal = snapshotMrpSubtotal,
                                             mrpSavings = snapshotMrpSavings,
                                             isSaleMode = snapshotIsSaleMode,
-                                            showItemWiseMrpDiscount = invoiceSettingsData.showItemWiseMrpDiscount
+                                            showItemWiseMrpDiscount = invoiceSettingsData.showItemWiseMrpDiscount,
+                                            storeCreditApplied = snapshotStoreCreditApplied.takeIf { it > 0.0 },
+                                            voucherCode = snapshotVoucherCode,
+                                            voucherAmount = snapshotVoucherAmount,
+                                            customerRemainingStoreCredit = postSaleRemainingStoreCredit,
+                                            voucherRemainingBalance = postSaleRemainingVoucherBalance
                                         ))
                                     } catch (e: Exception) {
                                         android.util.Log.e("CartScreen", "Error completing sale", e)
@@ -2451,6 +2470,16 @@ fun CartScreen(
                 val snapshotSplitJson = if (isSplitPayment) cartViewModel.getSplitPaymentsJson() else null
                 scope.launch {
                     try {
+                        val snapshotStoreCreditApplied = cartViewModel.storeCreditApplied.value
+                        val snapshotRedeemedVoucher = cartViewModel.redeemedVoucher.value
+                        val snapshotVoucherCode = snapshotRedeemedVoucher?.code
+                        val snapshotVoucherAmount = if (snapshotRedeemedVoucher != null) {
+                            snapshotStoreCreditApplied.coerceAtMost(snapshotRedeemedVoucher.remainingBalance)
+                        } else null
+                        val postSaleRemainingVoucherBalance = if (snapshotRedeemedVoucher != null && snapshotVoucherAmount != null) {
+                            (snapshotRedeemedVoucher.remainingBalance - snapshotVoucherAmount).coerceAtLeast(0.0)
+                        } else null
+
                         cartViewModel.amountPaid.value = snapshotAmountPaid
                         cartViewModel.setCashierName(currentDisplayCashier)
                         val saleId = cartViewModel.completeSale()
@@ -2460,6 +2489,10 @@ fun CartScreen(
                         val updatedTotalDue = if (snapshotCustomerPhone.isNotBlank()) {
                             cartViewModel.getCustomerDue(snapshotCustomerPhone)?.outstandingAmount ?: 0.0
                         } else 0.0
+                        val postSaleRemainingStoreCredit = if (snapshotCustomerPhone.isNotBlank()) {
+                            cartViewModel.getCustomerByPhone(snapshotCustomerPhone)?.storeCredit
+                        } else null
+
                         cartViewModel.openReceiptDialog(BillData(
                             saleId = saleId,
                             timestampMillis = System.currentTimeMillis(),
@@ -2490,7 +2523,12 @@ fun CartScreen(
                             mrpSubtotal = snapshotMrpSubtotal,
                             mrpSavings = snapshotMrpSavings,
                             isSaleMode = snapshotIsSaleMode,
-                            showItemWiseMrpDiscount = invoiceSettingsData.showItemWiseMrpDiscount
+                            showItemWiseMrpDiscount = invoiceSettingsData.showItemWiseMrpDiscount,
+                            storeCreditApplied = snapshotStoreCreditApplied.takeIf { it > 0.0 },
+                            voucherCode = snapshotVoucherCode,
+                            voucherAmount = snapshotVoucherAmount,
+                            customerRemainingStoreCredit = postSaleRemainingStoreCredit,
+                            voucherRemainingBalance = postSaleRemainingVoucherBalance
                         ))
                     } catch (e: Exception) {
                         android.util.Log.e("CartScreen", "Error completing sale", e)
@@ -3304,7 +3342,8 @@ fun ReceiptSummaryDialog(
     onReturn: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
     onEdit: (() -> Unit)? = null,
-    onAddToCartAgain: (() -> Unit)? = null
+    onAddToCartAgain: (() -> Unit)? = null,
+    onViewVoucherSlip: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val activity = androidx.activity.compose.LocalActivity.current
@@ -3557,8 +3596,31 @@ fun ReceiptSummaryDialog(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        if (onViewVoucherSlip != null) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFF6366F1).copy(alpha = 0.15f),
+                                border = BorderStroke(1.dp, Color(0xFF818CF8)),
+                                modifier = Modifier.clickable { onViewVoucherSlip() }
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                                ) {
+                                    Text("🎟️", fontSize = 12.sp)
+                                    Text(
+                                        text = stringResource(R.string.store_credit_view_voucher_slip),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF4F46E5)
+                                    )
+                                }
+                            }
+                        }
+
                         // Zoom inspect toggle
                         IconButton(
                             onClick = { isZoomed = !isZoomed },

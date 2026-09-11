@@ -790,3 +790,96 @@ suspend fun printReceiptWithBluetoothFallback(
     return printBillPdf(activity ?: context, pdfFile, "Invoice #${bill.saleId}")
 }
 
+/**
+ * Smart print function for Store Credit Voucher slip.
+ * Attempts direct ESC/POS Bluetooth printing if configured, otherwise falls back to system print.
+ */
+suspend fun printStoreCreditVoucherSlip(
+    context: Context,
+    voucherFile: File,
+    voucherCode: String,
+    settings: InvoiceSettingsData
+): Boolean {
+    val printerAddress = settings.directBluetoothPrinterAddress.trim()
+    if (printerAddress.isNotBlank()) {
+        try {
+            val bitmap = BitmapFactory.decodeFile(voucherFile.absolutePath)
+            if (bitmap != null) {
+                val printed = printReceiptDirectBluetooth(
+                    context = context,
+                    bitmap = bitmap,
+                    printerAddress = printerAddress,
+                    paperRollWidthMm = settings.paperRollWidthMm,
+                    autoKickDrawer = false // Do not kick drawer for voucher slip
+                )
+                if (printed) return true
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("BillActions", "Direct Bluetooth print of voucher slip failed, falling back to OS print", e)
+        }
+    }
+    // Fallback to system print dialog
+    printBillJpeg(context, voucherFile, "Voucher-$voucherCode", paperRollWidthMm = settings.paperRollWidthMm)
+    return true
+}
+
+/**
+ * Shares the Store Credit Voucher slip image via Android system share sheet.
+ */
+fun shareStoreCreditVoucherSlip(
+    context: Context,
+    voucherFile: File,
+    voucherCode: String,
+    voucherAmount: Double
+): Boolean {
+    val uri = getBillImageUri(context, voucherFile)
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "image/jpeg"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra(Intent.EXTRA_SUBJECT, "Store Credit Voucher $voucherCode")
+        putExtra(Intent.EXTRA_TEXT, "Store Credit Voucher: $voucherCode\nAmount: ${formatTaka(voucherAmount)}")
+        clipData = ClipData.newUri(context.contentResolver, "Voucher Slip", uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    val target = context.findActivity() ?: context
+    return try {
+        val chooser = Intent.createChooser(intent, "Share Store Credit Voucher Via").apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        target.startActivity(chooser)
+        true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Toast.makeText(context, "Could not open share menu", Toast.LENGTH_SHORT).show()
+        false
+    }
+}
+
+/**
+ * Shares Store Credit Voucher details via WhatsApp.
+ */
+fun shareStoreCreditVoucherWhatsApp(
+    context: Context,
+    phone: String,
+    message: String
+): Boolean {
+    return openWhatsAppReminder(context, phone, message)
+}
+
+/**
+ * Shares Store Credit Voucher details via SMS or system text share sheet.
+ */
+fun shareStoreCreditVoucherText(
+    context: Context,
+    phone: String?,
+    message: String
+): Boolean {
+    return if (!phone.isNullOrBlank()) {
+        openPaymentReminder(context, phone, message)
+    } else {
+        shareReceiptAsText(context, message)
+    }
+}
+

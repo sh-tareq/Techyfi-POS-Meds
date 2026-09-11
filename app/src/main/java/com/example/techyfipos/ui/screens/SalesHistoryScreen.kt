@@ -121,6 +121,11 @@ fun SalesHistoryScreen(
     var returnAlreadyReturned by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
     var issuedVoucherCode by remember { mutableStateOf<String?>(null) }
     var issuedVoucherAmount by remember { mutableStateOf(0.0) }
+    var issuedVoucherEntity by remember { mutableStateOf<com.example.techyfipos.data.db.StoreCreditVoucher?>(null) }
+    val historyShopName = settingsViewModel?.shopName?.collectAsStateWithLifecycle(initialValue = "Techyfi POS")?.value ?: "Techyfi POS"
+    val historyShopPhone = settingsViewModel?.shopPhone?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
+    val historyShopAddress = settingsViewModel?.shopAddress?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
+    val historyInvoiceSettingsData = settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle(initialValue = com.example.techyfipos.data.InvoiceSettingsData())?.value ?: com.example.techyfipos.data.InvoiceSettingsData()
 
     var showSupervisorAuthDialog by remember { mutableStateOf(false) }
     var pendingSupervisorAction by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -690,12 +695,23 @@ fun SalesHistoryScreen(
                     walkinPhone = walkinPhone,
                     walkinName = walkinName,
                     issueVoucher = issueVoucher
-                ) { success, refundTotal, voucherCode ->
+                ) { success, refundTotal, voucherCode, voucherEntity ->
                     returnTarget = null
                     if (success) {
-                        if (!voucherCode.isNullOrBlank()) {
-                            issuedVoucherCode = voucherCode
-                            issuedVoucherAmount = refundTotal
+                        if (voucherEntity != null) {
+                            issuedVoucherEntity = voucherEntity
+                        } else if (!voucherCode.isNullOrBlank()) {
+                            scope.launch {
+                                val fetched = salesViewModel.getVoucherByCode(voucherCode)
+                                issuedVoucherEntity = fetched ?: com.example.techyfipos.data.db.StoreCreditVoucher(
+                                    code = voucherCode,
+                                    initialAmount = refundTotal,
+                                    remainingBalance = refundTotal,
+                                    customerPhone = sale.sale.customerPhone ?: walkinPhone,
+                                    sourceSaleId = sale.sale.id,
+                                    status = "ACTIVE"
+                                )
+                            }
                         } else {
                             Toast.makeText(
                                 context,
@@ -715,90 +731,14 @@ fun SalesHistoryScreen(
         )
     }
 
-    issuedVoucherCode?.let { code ->
-        AlertDialog(
-            onDismissRequest = { issuedVoucherCode = null },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("🎟️", fontSize = 22.sp)
-                    Text(stringResource(R.string.store_credit_voucher_issued_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        stringResource(R.string.store_credit_voucher_notice),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFEEF2FF),
-                        border = BorderStroke(1.5.dp, Color(0xFF818CF8)),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.store_credit_voucher_code_label),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF4F46E5),
-                                letterSpacing = 1.sp
-                            )
-                            Text(
-                                text = code,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF1E1B4B),
-                                letterSpacing = 2.sp
-                            )
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = Color(0xFFD1FAE5),
-                                modifier = Modifier.padding(top = 4.dp)
-                            ) {
-                                Text(
-                                    text = "Value: ${formatTaka(issuedVoucherAmount)}",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF065F46),
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-                        val clip = android.content.ClipData.newPlainText("Voucher Code", code)
-                        clipboard?.setPrimaryClip(clip)
-                        Toast.makeText(context, context.getString(R.string.store_credit_code_copied), Toast.LENGTH_SHORT).show()
-                        issuedVoucherCode = null
-                    },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.store_credit_copy_code), fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { issuedVoucherCode = null }) {
-                    Text(stringResource(R.string.dismiss))
-                }
-            }
+    issuedVoucherEntity?.let { voucher ->
+        StoreCreditVoucherSlipDialog(
+            voucher = voucher,
+            shopName = historyShopName,
+            shopPhone = historyShopPhone,
+            shopAddress = historyShopAddress,
+            invoiceSettingsData = historyInvoiceSettingsData,
+            onDismiss = { issuedVoucherEntity = null }
         )
     }
 
@@ -1518,7 +1458,54 @@ private fun SaleDetailDialog(
     val cashierName = settingsViewModel?.cashierName?.collectAsStateWithLifecycle(initialValue = "Admin")?.value ?: "Admin"
     val invoiceSettingsData = settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle(initialValue = com.example.techyfipos.data.InvoiceSettingsData())?.value ?: com.example.techyfipos.data.InvoiceSettingsData()
 
-    val billData = remember(saleWithItems, shopName, shopAddress, shopPhone, shopLogoUri, facebookUrl, qrCodeInfo, cashierName, invoiceSettingsData, liveOutstandingDue) {
+    var voucherForSale by remember { mutableStateOf<com.example.techyfipos.data.db.StoreCreditVoucher?>(null) }
+    var showVoucherSlipDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(saleWithItems.sale.id) {
+        if (salesViewModel != null) {
+            val v = salesViewModel.getVoucherBySaleId(saleWithItems.sale.id)
+            if (v != null) {
+                voucherForSale = v
+            } else if (!saleWithItems.sale.splitPaymentJson.isNullOrBlank()) {
+                try {
+                    val arr = org.json.JSONArray(saleWithItems.sale.splitPaymentJson)
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        val code = obj.optString("voucherCode", "")
+                        if (code.isNotBlank()) {
+                            voucherForSale = salesViewModel.getVoucherByCode(code)
+                            if (voucherForSale != null) break
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    val billData = remember(saleWithItems, shopName, shopAddress, shopPhone, shopLogoUri, facebookUrl, qrCodeInfo, cashierName, invoiceSettingsData, liveOutstandingDue, voucherForSale) {
+        var appliedSc: Double? = null
+        var vCode: String? = voucherForSale?.code
+        var vAmt: Double? = null
+        var vRemaining: Double? = voucherForSale?.remainingBalance
+        if (!saleWithItems.sale.splitPaymentJson.isNullOrBlank()) {
+            try {
+                val arr = org.json.JSONArray(saleWithItems.sale.splitPaymentJson)
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    val method = obj.optString("method", "")
+                    if (method.equals("Store Credit", ignoreCase = true) || method.equals("WALLET", ignoreCase = true)) {
+                        val amt = obj.optDouble("amount", 0.0)
+                        appliedSc = (appliedSc ?: 0.0) + amt
+                        val c = obj.optString("voucherCode", "")
+                        if (c.isNotBlank()) {
+                            vCode = c
+                            vAmt = amt
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
         BillData(
             saleId = saleWithItems.sale.id,
             timestampMillis = saleWithItems.sale.timestamp,
@@ -1557,7 +1544,11 @@ private fun SaleDetailDialog(
             settingsData = invoiceSettingsData,
             taxLabel = invoiceSettingsData.taxLabel,
             taxValue = saleWithItems.sale.taxAmount,
-            totalOutstandingDue = liveOutstandingDue
+            totalOutstandingDue = liveOutstandingDue,
+            storeCreditApplied = appliedSc,
+            voucherCode = vCode,
+            voucherAmount = vAmt,
+            voucherRemainingBalance = vRemaining
         )
     }
 
@@ -1609,8 +1600,22 @@ private fun SaleDetailDialog(
                     }
                 }
             }
+        } else null,
+        onViewVoucherSlip = if (voucherForSale != null) {
+            { showVoucherSlipDialog = true }
         } else null
     )
+
+    if (showVoucherSlipDialog && voucherForSale != null) {
+        StoreCreditVoucherSlipDialog(
+            voucher = voucherForSale!!,
+            shopName = shopName,
+            shopPhone = shopPhone,
+            shopAddress = shopAddress,
+            invoiceSettingsData = invoiceSettingsData,
+            onDismiss = { showVoucherSlipDialog = false }
+        )
+    }
 
     if (showEditConfirm) {
         AlertDialog(

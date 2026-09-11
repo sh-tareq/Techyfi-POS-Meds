@@ -447,6 +447,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     suspend fun getCustomerDue(phone: String): CustomerDue? = repository.getCustomerDueByPhone(phone)
+    suspend fun getCustomerByPhone(phone: String): Customer? = repository.getCustomerByPhone(phone)
 
     suspend fun getCustomerCreditAccount(phone: String): CustomerDue? =
         repository.getCustomerCreditAccount(phone)
@@ -1796,6 +1797,10 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         return repository.getReturnedQuantities(saleId)
     }
 
+    suspend fun getVoucherByCode(code: String): StoreCreditVoucher? = repository.getStoreCreditVoucher(code)
+    suspend fun getVoucherBySaleId(saleId: Long): StoreCreditVoucher? = repository.getStoreCreditVoucherBySaleId(saleId)
+    suspend fun getVoucherByReturnId(returnId: Long): StoreCreditVoucher? = repository.getStoreCreditVoucherByReturnId(returnId)
+
     fun processReturn(
         saleId: Long,
         lines: List<ReturnLine>,
@@ -1805,17 +1810,17 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         walkinPhone: String? = null,
         walkinName: String? = null,
         issueVoucher: Boolean = false,
-        onComplete: (Boolean, Double, String?) -> Unit
+        onComplete: (Boolean, Double, String?, StoreCreditVoucher?) -> Unit
     ) {
         viewModelScope.launch {
             try {
                 val result = repository.processReturn(
                     saleId, lines, refundMethod, note, restock, walkinPhone, walkinName, issueVoucher
                 )
-                onComplete(true, result.refundTotal, result.voucherCode)
+                onComplete(true, result.refundTotal, result.voucherCode, result.voucher)
             } catch (error: Exception) {
                 android.util.Log.e("SalesViewModel", "Unable to process return", error)
-                onComplete(false, 0.0, null)
+                onComplete(false, 0.0, null, null)
             }
         }
     }

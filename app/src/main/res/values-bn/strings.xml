@@ -1842,4 +1842,17 @@
     <string name="cart_redeem_voucher_button">ভাউচার যোগ করুন</string>
     <string name="cart_store_credit_applied_label">ব্যবহৃত স্টোর ক্রেডিট: %1$s</string>
     <string name="cart_remaining_to_pay">পরিশোধের বাকি অঙ্ক: %1$s</string>
+    <string name="store_credit_voucher_slip_title">স্টোর ক্রেডিট ভাউচার স্লিপ</string>
+    <string name="store_credit_voucher_print">স্লিপ প্রিন্ট করুন</string>
+    <string name="store_credit_voucher_share">স্লিপ শেয়ার করুন</string>
+    <string name="store_credit_share_image">স্লিপের ছবি শেয়ার</string>
+    <string name="store_credit_share_whatsapp">হোয়াটসঅ্যাপে শেয়ার করুন</string>
+    <string name="store_credit_share_sms">এসএমএস টেক্সট শেয়ার</string>
+    <string name="store_credit_view_voucher_slip">ভাউচার স্লিপ দেখুন</string>
+    <string name="store_credit_voucher_reprint">ভাউচার স্লিপ পুনরায় প্রিন্ট করুন</string>
+    <string name="store_credit_used_label">ব্যবহৃত স্টোর ক্রেডিট</string>
+    <string name="store_credit_remaining_label">অবশিষ্ট স্টোর ক্রেডিট</string>
+    <string name="voucher_applied_label">প্রযুক্ত ভাউচার</string>
+    <string name="voucher_rem_bal_label">ভাউচারের অবশিষ্ট ব্যালেন্স</string>
 </resources>
+

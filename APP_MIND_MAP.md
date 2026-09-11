@@ -1570,6 +1570,60 @@ mindmap
     - Output artifacts verified at `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V29.apk` and `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V11-09-2026.apk`.
     - Comprehensive live Android emulator verification on `emulator-5554` testing manual adjustments, CRM filtering, POS checkout credit offsets, walk-in return voucher generation, and voucher checkout redemption.
 
+## V30 - Store Credit Voucher Thermal Slip Preview, ESC/POS Printing, Multi-Channel Sharing & Thermal Receipt Balance Integration (V30 / V11-09-2026)
+
+- **Architecture & Workflow Overview**:
+  - **[V30-1] Thermal Voucher Slip Engine & Code-128 Barcode Generation (`BillPdfGenerator.kt`)**:
+    - **Dual Roll Width Formatting**: Supports standard 58mm (384px canvas width, 24 char width) and 80mm (576px canvas width, 32 char width) ESC/POS thermal printing.
+    - **Header & Branding**: Dynamic rendering of store logo (`BitmapFactory`), registered business title, branch address, and telephone lines with centered alignment.
+    - **Prominent Highlight Value Box**: High-contrast bordered card displaying voucher value (`ভাউচারের মোট মূল্য ৳...` / `VOUCHER VALUE ৳...`) in bold 28-34sp typography.
+    - **Scannable Code-128 Barcode**: Generated on-device using ZXing `MultiFormatWriter().encode(voucher.code, BarcodeFormat.CODE_128, ...)` and rendered with high-contrast sharp black/white rasterization. Includes bracketed human-readable code fallback `[ SC-XXXX-XXXX ]`.
+    - **Bilingual Content**: Full English and authentic Bangladeshi Bengali localization (`bangla-language` compliance) for date formats, currency symbols (`৳`), digits translation, customer status, and actionable terms & guidelines (`শর্তাবলী ও নির্দেশিকা`).
+    - **Multi-Format Export**: Implemented `generateStoreCreditVoucherJpeg(...)`, `generateStoreCreditVoucherPdf(...)`, and `buildStoreCreditVoucherText(...)`.
+
+  - **[V30-2] Interactive Store Credit Voucher Slip Dialog (`StoreCreditVoucherSlipDialog.kt`)**:
+    - **Top App Header**: Shows voucher icon, voucher title, code, balance chip, 1-tap clipboard copy button, and modal close button.
+    - **Interactive Toolbar Controls**:
+      - 58mm / 80mm roll width segmented switch.
+      - English (EN) / Bangla (বাংলা) live language toggle.
+      - Zoom preview toggle (1.0x / 1.25x).
+    - **Reactive Render Flow**: Uses asynchronous background rendering (`Dispatchers.Default`) with loading indicators and auto-scrolling preview container.
+    - **Bottom Action Controls**: Ergonomic action bar with large >= 48dp touch targets (`android-ui-ux` compliance):
+      - **Print Voucher Slip** (Primary filled button): Direct Bluetooth ESC/POS SPP printing with automatic PrintHelper raster fallback.
+      - **Share Voucher Slip** (Outlined action button): Opens sleek modal options sheet.
+
+  - **[V30-3] Versatile Multi-Channel Voucher Sharing (`BillActions.kt`)**:
+    - **Modal Sharing Sheet (`AlertDialog`)**: Clean, accessible options sheet with >= 54dp interactive option cards:
+      - 🖼️ **Share Slip as Image**: Shares high-resolution JPEG voucher slip via Android Intent Chooser (`FileProvider.getUriForFile`) to Bluetooth, Quick Share, AirDrop, Google Drive, Photos, etc.
+      - 💬 **Share on WhatsApp**: Direct WhatsApp intent (`com.whatsapp`) pre-populated with customer phone and formatted voucher details (store name, code, amount, validity, redemption instructions).
+      - ✉️ **Share as SMS Text**: Direct messaging intent (`vnd.android-dir/mms-sms`) or system text chooser for instant customer notification.
+      - 📋 **Copy Code**: One-tap clipboard copy with confirmation toast.
+
+  - **[V30-4] Sales Thermal Receipt Store Credit & Voucher Balance Integration (`BillPdfGenerator.kt`, `CartScreen.kt`, `SalesHistoryScreen.kt`)**:
+    - Extended `BillData` with store credit fields: `storeCreditApplied`, `voucherCode`, `voucherAmount`, `customerRemainingStoreCredit`, and `voucherRemainingBalance`.
+    - Updated thermal receipt rendering in both English and Bengali:
+      - Renders `Store Credit : ৳...` under payment method breakdown.
+      - Renders `Store Credit Used : ৳...` and `Remaining Store Credit : ৳...` for registered customer redemptions.
+      - Renders `Voucher Applied : ৳... (SC-XXXX-XXXX)` and `Voucher Remaining : ৳...` for walk-in credit voucher redemptions.
+
+  - **[V30-5] Sales History & Reprint Integration (`SalesHistoryScreen.kt`, `AppDaos.kt`, `DataRepository.kt`)**:
+    - Added database queries `getVoucherBySaleId(saleId)` and `getVoucherByReturnId(returnId)`.
+    - Added header action button `[ 🎟️ View Voucher Slip ]` in `SaleDetailDialog` whenever an order has an associated issued voucher or refund voucher.
+    - Allows instant viewing, thermal reprinting (58mm/80mm), and digital sharing directly from order history.
+
+  - **[V30-6] Deliverables & Verification**:
+    - Release APK build: `./gradlew assembleRelease` -> BUILD SUCCESSFUL.
+    - Output deliverables strictly saved in project root:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V30.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V11-09-2026.apk`
+    - Live emulator verification on `emulator-5554`:
+      - Unlocked with PIN `0000`.
+      - Verified receipt preview with Store Credit tender breakdown.
+      - Verified `[ 🎟️ View Voucher Slip ]` on order `#651`.
+      - Verified 80mm and 58mm voucher slip rendering with Code-128 barcode bitmap.
+      - Verified English and natural Bangla bilingual slip translations.
+      - Verified modal share options sheet and Android system image share chooser.
+
 ## Maintenance note
 
 Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS/`.

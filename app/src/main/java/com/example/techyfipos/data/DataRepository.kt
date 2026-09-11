@@ -56,7 +56,8 @@ sealed class CustomerPhoneUpdateResult {
 
 data class ReturnProcessResult(
     val refundTotal: Double,
-    val voucherCode: String? = null
+    val voucherCode: String? = null,
+    val voucher: StoreCreditVoucher? = null
 )
 
 class DataRepository(
@@ -133,6 +134,14 @@ class DataRepository(
 
     suspend fun getStoreCreditVoucher(code: String): StoreCreditVoucher? = withContext(Dispatchers.IO) {
         storeCreditVoucherDao.getVoucherByCode(code.trim().uppercase())
+    }
+
+    suspend fun getStoreCreditVoucherBySaleId(saleId: Long): StoreCreditVoucher? = withContext(Dispatchers.IO) {
+        storeCreditVoucherDao.getVoucherBySaleId(saleId)
+    }
+
+    suspend fun getStoreCreditVoucherByReturnId(returnId: Long): StoreCreditVoucher? = withContext(Dispatchers.IO) {
+        storeCreditVoucherDao.getVoucherByReturnId(returnId)
     }
 
     suspend fun redeemStoreCreditVoucher(code: String, amountToRedeem: Double): Double = withContext(Dispatchers.IO) {
@@ -3177,24 +3186,25 @@ class DataRepository(
             )
 
             var generatedVoucherCode: String? = null
+            var generatedVoucher: StoreCreditVoucher? = null
             if (refundMethod.equals("Store Credit", ignoreCase = true)) {
                 if (issueVoucher) {
                     val code = "SC-" + (1000..9999).random() + "-" + (1000..9999).random()
                     generatedVoucherCode = code
-                    storeCreditVoucherDao.insertVoucher(
-                        StoreCreditVoucher(
-                            code = code,
-                            initialAmount = refundTotal,
-                            remainingBalance = refundTotal,
-                            customerPhone = phone ?: walkinPhone?.trim()?.takeIf { it.isNotBlank() },
-                            sourceReturnId = returnId,
-                            sourceSaleId = saleId,
-                            issuedAt = System.currentTimeMillis(),
-                            expiresAt = System.currentTimeMillis() + (90L * 24 * 3600 * 1000),
-                            status = "ACTIVE",
-                            notes = "Return voucher on invoice #$saleId"
-                        )
+                    val voucherToInsert = StoreCreditVoucher(
+                        code = code,
+                        initialAmount = refundTotal,
+                        remainingBalance = refundTotal,
+                        customerPhone = phone ?: walkinPhone?.trim()?.takeIf { it.isNotBlank() },
+                        sourceReturnId = returnId,
+                        sourceSaleId = saleId,
+                        issuedAt = System.currentTimeMillis(),
+                        expiresAt = System.currentTimeMillis() + (90L * 24 * 3600 * 1000),
+                        status = "ACTIVE",
+                        notes = "Return voucher on invoice #$saleId"
                     )
+                    storeCreditVoucherDao.insertVoucher(voucherToInsert)
+                    generatedVoucher = voucherToInsert
                 } else if (phone.isNullOrBlank() && !walkinPhone.isNullOrBlank()) {
                     // Walk-in customer registered with phone
                     val normWalkin = normalizePhone(walkinPhone)
@@ -3227,7 +3237,7 @@ class DataRepository(
             }
 
             if (!sale.customerPhone.isNullOrBlank()) syncCustomerProfileFromLedgers(sale.customerPhone)
-            ReturnProcessResult(refundTotal = refundTotal, voucherCode = generatedVoucherCode)
+            ReturnProcessResult(refundTotal = refundTotal, voucherCode = generatedVoucherCode, voucher = generatedVoucher)
         }
     }
 

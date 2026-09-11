@@ -13,9 +13,11 @@ import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import androidx.core.content.FileProvider
 import com.example.techyfipos.data.InvoiceSettingsData
+import com.example.techyfipos.data.db.StoreCreditVoucher
 import com.example.techyfipos.ui.viewmodel.SalesReportData
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
+import com.google.zxing.MultiFormatWriter
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import java.io.File
@@ -67,7 +69,12 @@ data class BillData(
     val mrpSavings: Double = 0.0,
     val isSaleMode: Boolean = false,
     val showItemWiseMrpDiscount: Boolean = true,
-    val wholesaleSavings: Double = 0.0
+    val wholesaleSavings: Double = 0.0,
+    val storeCreditApplied: Double? = null,
+    val voucherCode: String? = null,
+    val voucherAmount: Double? = null,
+    val customerRemainingStoreCredit: Double? = null,
+    val voucherRemainingBalance: Double? = null
 ) {
     /** True when this sale (fully or partially, via Split) put money on the customer's due account. */
     fun hasDuePortion(): Boolean {
@@ -102,12 +109,27 @@ data class BillData(
                     val m = obj.getString("method")
                     val a = obj.getDouble("amount")
                     val formattedAmt = if (a % 1.0 == 0.0) a.toLong().toString() else a.toString()
-                    parts.add("$m: ৳$formattedAmt")
+                    val dispMethod = when {
+                        m.equals("WALLET", ignoreCase = true) || m.equals("Store Credit", ignoreCase = true) -> "Store Credit"
+                        m.equals("Voucher", ignoreCase = true) -> {
+                            val code = obj.optString("code")
+                            if (code.isNotBlank()) "Voucher ($code)" else "Voucher"
+                        }
+                        else -> m
+                    }
+                    parts.add("$dispMethod: ৳$formattedAmt")
                 }
                 "Split (${parts.joinToString(", ")})"
             } catch (e: Exception) {
                 "Split Payment"
             }
+        }
+
+        if (method.equals("WALLET", ignoreCase = true) || method.equals("Store Credit", ignoreCase = true)) {
+            return "Store Credit / Wallet"
+        }
+        if (method.equals("Voucher", ignoreCase = true)) {
+            return if (!voucherCode.isNullOrBlank()) "Voucher ($voucherCode)" else "Store Credit Voucher"
         }
 
         return when {
@@ -218,6 +240,9 @@ fun wrapItemNameByPixelWidth(name: String, maxWidthPx: Float, paint: Paint): Lis
 
 fun formatPaymentMethodBangla(method: String): String {
     return when {
+        method.contains("WALLET", ignoreCase = true) || method.contains("Store Credit", ignoreCase = true) ->
+            method.replace("WALLET", "স্টোর ক্রেডিট", ignoreCase = true).replace("Store Credit", "স্টোর ক্রেডিট", ignoreCase = true)
+        method.contains("Voucher", ignoreCase = true) -> method.replace("Voucher", "ভাউচার", ignoreCase = true)
         method.contains("Cash", ignoreCase = true) -> method.replace("Cash", "নগদ", ignoreCase = true)
         method.contains("bKash", ignoreCase = true) -> method.replace("bKash", "বিকাশ", ignoreCase = true)
         method.contains("Nagad", ignoreCase = true) -> method.replace("Nagad", "নগদ", ignoreCase = true)
@@ -318,6 +343,22 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
         }
         if (bill.hasDuePortion()) {
             sb.appendLine(if (isBn) "মোট বাকি       : ${formatTaka(bill.totalOutstandingDue)}" else "Total Due      : ${formatTaka(bill.totalOutstandingDue)}")
+        }
+        val scApplied = bill.storeCreditApplied ?: 0.0
+        if (scApplied > 0.0) {
+            sb.appendLine(if (isBn) "ব্যবহৃত ক্রেডিট : ${formatTaka(scApplied)}" else "Store Credit   : ${formatTaka(scApplied)}")
+        }
+        if (bill.customerRemainingStoreCredit != null && bill.customerRemainingStoreCredit > 0.0) {
+            sb.appendLine(if (isBn) "অবশিষ্ট ক্রেডিট : ${formatTaka(bill.customerRemainingStoreCredit)}" else "Remaining Cred : ${formatTaka(bill.customerRemainingStoreCredit)}")
+        }
+        val vAmt = bill.voucherAmount ?: 0.0
+        val vCode = bill.voucherCode ?: ""
+        if (vAmt > 0.0 || vCode.isNotBlank()) {
+            val codeSuffix = if (vCode.isNotBlank()) " ($vCode)" else ""
+            sb.appendLine(if (isBn) "ভাউচার প্রয়োগ : ${formatTaka(vAmt)}$codeSuffix" else "Voucher Applied: ${formatTaka(vAmt)}$codeSuffix")
+        }
+        if (bill.voucherRemainingBalance != null && bill.voucherRemainingBalance > 0.0) {
+            sb.appendLine(if (isBn) "ভাউচার ব্যালেন্স: ${formatTaka(bill.voucherRemainingBalance)}" else "Voucher Balance: ${formatTaka(bill.voucherRemainingBalance)}")
         }
         sb.appendLine("------------------------------------------")
     }
@@ -476,6 +517,13 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
             totalHeight += 30f
         }
         if (bill.hasDuePortion()) totalHeight += 30f
+        val scApplied = bill.storeCreditApplied ?: 0.0
+        if (scApplied > 0.0) totalHeight += 30f
+        if (bill.customerRemainingStoreCredit != null && bill.customerRemainingStoreCredit > 0.0) totalHeight += 30f
+        val vAmt = bill.voucherAmount ?: 0.0
+        val vCode = bill.voucherCode ?: ""
+        if (vAmt > 0.0 || vCode.isNotBlank()) totalHeight += 30f
+        if (bill.voucherRemainingBalance != null && bill.voucherRemainingBalance > 0.0) totalHeight += 30f
         totalHeight += 40f
     }
 
@@ -839,6 +887,30 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
                 String.format(Locale.US, if (isBn) "মোট বাকি       : %s" else "Total Due      : %s", dueVal),
                 sidePad, currentY + 20f, paintText
             )
+            currentY += 30f
+        }
+        val scApplied = bill.storeCreditApplied ?: 0.0
+        if (scApplied > 0.0) {
+            val scVal = if (isBn) formatTakaBn(scApplied) else formatTaka(scApplied)
+            canvas.drawText(String.format(Locale.US, if (isBn) "ব্যবহৃত ক্রেডিট : %s" else "Store Credit   : %s", scVal), sidePad, currentY + 20f, paintText)
+            currentY += 30f
+        }
+        if (bill.customerRemainingStoreCredit != null && bill.customerRemainingStoreCredit > 0.0) {
+            val remVal = if (isBn) formatTakaBn(bill.customerRemainingStoreCredit) else formatTaka(bill.customerRemainingStoreCredit)
+            canvas.drawText(String.format(Locale.US, if (isBn) "অবশিষ্ট ক্রেডিট : %s" else "Remaining Cred : %s", remVal), sidePad, currentY + 20f, paintText)
+            currentY += 30f
+        }
+        val vAmt = bill.voucherAmount ?: 0.0
+        val vCode = bill.voucherCode ?: ""
+        if (vAmt > 0.0 || vCode.isNotBlank()) {
+            val vcVal = if (isBn) formatTakaBn(vAmt) else formatTaka(vAmt)
+            val codeSuffix = if (vCode.isNotBlank()) " ($vCode)" else ""
+            canvas.drawText(String.format(Locale.US, if (isBn) "ভাউচার প্রয়োগ : %s%s" else "Voucher Applied: %s%s", vcVal, codeSuffix), sidePad, currentY + 20f, paintText)
+            currentY += 30f
+        }
+        if (bill.voucherRemainingBalance != null && bill.voucherRemainingBalance > 0.0) {
+            val remVouchVal = if (isBn) formatTakaBn(bill.voucherRemainingBalance) else formatTaka(bill.voucherRemainingBalance)
+            canvas.drawText(String.format(Locale.US, if (isBn) "ভাউচার ব্যালেন্স: %s" else "Voucher Balance: %s", remVouchVal), sidePad, currentY + 20f, paintText)
             currentY += 30f
         }
         canvas.drawText(singleDivider, divX, currentY + 20f, paintText)
@@ -1852,4 +1924,403 @@ fun generateDueRepaymentPdf(
 
     return outputFile
 }
+
+/**
+ * Renders a Store Credit Voucher as a thermal slip image (58mm or 80mm ESC/POS printable width),
+ * complete with store branding, title, highlight value box, scannable Code-128 barcode, metadata,
+ * instructions, and terms & conditions.
+ */
+fun generateStoreCreditVoucherJpeg(
+    context: Context,
+    voucher: StoreCreditVoucher,
+    storeName: String,
+    storeAddress: String,
+    storePhone: String,
+    receiptLanguage: String = "EN",
+    settings: InvoiceSettingsData = InvoiceSettingsData(),
+    customerName: String? = null
+): File {
+    val isBn = receiptLanguage.equals("BN", ignoreCase = true)
+    val is58 = settings.paperRollWidthMm == 58
+    val width = if (is58) 384 else 576
+    val sidePad = if (is58) 14f else 24f
+    val doubleDivider = if (is58) "================================" else "=========================================="
+    val singleDivider = if (is58) "--------------------------------" else "------------------------------------------"
+    val textSizeBody = if (is58) 16f else 20f
+    val textSizeBold = if (is58) 18f else 22f
+
+    // 1. Process Logo
+    var logoBitmap: Bitmap? = null
+    val shouldShowLogo = settings.showLogo && settings.logoUri.isNotBlank()
+    if (shouldShowLogo) {
+        try {
+            val uri = Uri.parse(settings.logoUri)
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                val decoded = BitmapFactory.decodeStream(stream)
+                if (decoded != null) {
+                    val targetLogoWidth = if (is58) 240 else 360
+                    logoBitmap = convertToMonochromeThresholdBitmap(decoded, targetLogoWidth)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    // 2. Compute dynamic height
+    var totalHeight = 30f
+    if (logoBitmap != null) {
+        totalHeight += logoBitmap!!.height + 20f
+    }
+    // Store header
+    totalHeight += if (is58) 30f else 38f // Store name
+    if (settings.showAddress && storeAddress.isNotBlank()) totalHeight += (if (is58) 24f else 30f)
+    if (settings.showPhone && storePhone.isNotBlank()) totalHeight += (if (is58) 24f else 30f)
+    totalHeight += 35f // Double divider
+
+    // Voucher Title
+    totalHeight += if (is58) 30f else 38f // Title
+    totalHeight += if (is58) 22f else 26f // Subtitle
+    totalHeight += 30f // Single divider
+
+    // Value box
+    totalHeight += 12f + (if (is58) 60f else 75f) + 16f // Value Box
+    totalHeight += 30f // Single divider
+
+    // Barcode & Code text
+    val barcodeHeight = if (is58) 64 else 84
+    totalHeight += barcodeHeight + 10f
+    totalHeight += if (is58) 22f else 26f // Code text
+    totalHeight += 30f // Single divider
+
+    // Metadata rows (Code, Issue Date, Expiry, Source Inv, Customer, Status)
+    val metaRowH = if (is58) 24f else 30f
+    totalHeight += metaRowH * 5
+    if (voucher.sourceSaleId != null) totalHeight += metaRowH
+    if (!voucher.customerPhone.isNullOrBlank() || !customerName.isNullOrBlank()) totalHeight += metaRowH
+    totalHeight += 30f // Single divider
+
+    // Terms & Instructions (4 lines)
+    totalHeight += if (is58) 24f else 30f // Title
+    totalHeight += 4 * (if (is58) 22f else 28f)
+    totalHeight += 35f // Double divider
+
+    // Footer
+    totalHeight += if (is58) 26f else 32f
+    totalHeight += if (is58) 22f else 26f
+    totalHeight += 24f // Bottom margin
+
+    val bitmap = Bitmap.createBitmap(width, totalHeight.toInt(), Bitmap.Config.RGB_565)
+    val canvas = Canvas(bitmap)
+    canvas.drawColor(Color.WHITE)
+
+    val paintText = Paint().apply {
+        color = Color.BLACK
+        textSize = textSizeBody
+        typeface = if (isBn) Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL) else Typeface.MONOSPACE
+        isAntiAlias = true
+    }
+    val paintBold = Paint(paintText).apply {
+        isFakeBoldText = true
+        textSize = textSizeBold
+        typeface = if (isBn) Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD) else Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+    }
+
+    var currentY = 20f
+    val divX = sidePad
+
+    // Draw Logo
+    if (logoBitmap != null) {
+        val logoX = (width - logoBitmap!!.width) / 2f
+        canvas.drawBitmap(logoBitmap!!, logoX, currentY, null)
+        currentY += logoBitmap!!.height + 20f
+        logoBitmap!!.recycle()
+    }
+
+    // Draw Store Name (Centered)
+    val paintStoreName = Paint(paintBold).apply {
+        textSize = if (is58) 24f else 32f
+        textAlign = Paint.Align.CENTER
+    }
+    val effectiveStoreName = storeName.ifBlank { "Techyfi POS" }
+    canvas.drawText(effectiveStoreName, width / 2f, currentY + paintStoreName.textSize, paintStoreName)
+    currentY += (if (is58) 30f else 38f)
+
+    if (settings.showAddress && storeAddress.isNotBlank()) {
+        val paintAddr = Paint(paintText).apply { textAlign = Paint.Align.CENTER }
+        canvas.drawText(storeAddress, width / 2f, currentY + paintAddr.textSize, paintAddr)
+        currentY += (if (is58) 24f else 30f)
+    }
+
+    if (settings.showPhone && storePhone.isNotBlank()) {
+        val paintPhone = Paint(paintText).apply { textAlign = Paint.Align.CENTER }
+        val phoneDisp = if (isBn) toBanglaDigits(storePhone) else storePhone
+        canvas.drawText(phoneDisp, width / 2f, currentY + paintPhone.textSize, paintPhone)
+        currentY += (if (is58) 24f else 30f)
+    }
+
+    canvas.drawText(doubleDivider, divX, currentY + 16f, paintText)
+    currentY += 30f
+
+    // Title
+    val paintTitle = Paint(paintBold).apply {
+        textSize = if (is58) 20f else 26f
+        textAlign = Paint.Align.CENTER
+    }
+    val titleStr = if (isBn) "*** স্টোর ক্রেডিট ভাউচার ***" else "*** STORE CREDIT VOUCHER ***"
+    canvas.drawText(titleStr, width / 2f, currentY + paintTitle.textSize, paintTitle)
+    currentY += (if (is58) 26f else 34f)
+
+    val paintSub = Paint(paintText).apply {
+        textSize = if (is58) 13f else 17f
+        textAlign = Paint.Align.CENTER
+        color = Color.DKGRAY
+    }
+    val subStr = if (isBn) "(গ্রাহক ক্রেডিট স্লিপ)" else "(Customer Bearer Slip)"
+    canvas.drawText(subStr, width / 2f, currentY + paintSub.textSize, paintSub)
+    currentY += (if (is58) 20f else 24f)
+
+    canvas.drawText(singleDivider, divX, currentY + 16f, paintText)
+    currentY += 28f
+
+    // Value Box
+    val boxH = if (is58) 60f else 75f
+    val boxRect = RectF(sidePad + 8f, currentY, width - sidePad - 8f, currentY + boxH)
+    val paintBoxBg = Paint().apply {
+        color = Color.parseColor("#F1F5F9")
+        style = Paint.Style.FILL
+    }
+    val paintBoxStroke = Paint().apply {
+        color = Color.BLACK
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+    }
+    canvas.drawRoundRect(boxRect, 8f, 8f, paintBoxBg)
+    canvas.drawRoundRect(boxRect, 8f, 8f, paintBoxStroke)
+
+    val paintBoxLabel = Paint(paintText).apply {
+        textSize = if (is58) 12f else 15f
+        textAlign = Paint.Align.CENTER
+        color = Color.DKGRAY
+    }
+    val valLabel = if (isBn) "ভাউচারের মোট মূল্য" else "VOUCHER VALUE"
+    canvas.drawText(valLabel, width / 2f, currentY + (if (is58) 18f else 22f), paintBoxLabel)
+
+    val paintBoxAmt = Paint(paintBold).apply {
+        textSize = if (is58) 24f else 32f
+        textAlign = Paint.Align.CENTER
+        color = Color.BLACK
+    }
+    val amtStr = if (isBn) formatTakaBn(voucher.remainingBalance) else formatTaka(voucher.remainingBalance)
+    canvas.drawText(amtStr, width / 2f, currentY + (if (is58) 46f else 58f), paintBoxAmt)
+    currentY += boxH + 16f
+
+    canvas.drawText(singleDivider, divX, currentY + 16f, paintText)
+    currentY += 28f
+
+    // Scannable Code-128 Barcode
+    val barcodeW = (width - sidePad * 2 - 20f).toInt().coerceAtLeast(260)
+    try {
+        val hints = mapOf(EncodeHintType.MARGIN to 1)
+        val matrix = MultiFormatWriter().encode(voucher.code, BarcodeFormat.CODE_128, barcodeW, barcodeHeight, hints)
+        val codeBitmap = Bitmap.createBitmap(barcodeW, barcodeHeight, Bitmap.Config.ARGB_8888)
+        for (by in 0 until barcodeHeight) {
+            for (bx in 0 until barcodeW) {
+                codeBitmap.setPixel(bx, by, if (matrix[bx, by]) Color.BLACK else Color.WHITE)
+            }
+        }
+        val barcodeLeft = (width - barcodeW) / 2f
+        canvas.drawBitmap(codeBitmap, barcodeLeft, currentY, null)
+        codeBitmap.recycle()
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    currentY += barcodeHeight + 8f
+
+    // Spaced Code Text
+    val paintBarcodeText = Paint().apply {
+        color = Color.BLACK
+        textSize = if (is58) 15f else 19f
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+        letterSpacing = 0.08f
+    }
+    canvas.drawText("[ ${voucher.code} ]", width / 2f, currentY + paintBarcodeText.textSize, paintBarcodeText)
+    currentY += (if (is58) 22f else 26f)
+
+    canvas.drawText(singleDivider, divX, currentY + 16f, paintText)
+    currentY += 28f
+
+    // Metadata Rows
+    val metaLeft = sidePad
+    val dateFormat = SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.US)
+    val issueDateStr = dateFormat.format(Date(voucher.issuedAt))
+    val expiryDateStr = voucher.expiresAt?.let { dateFormat.format(Date(it)) } ?: (if (isBn) "মেয়াদহীন" else "No Expiry")
+
+    fun drawMetaRow(labelEn: String, labelBn: String, value: String) {
+        val lbl = if (isBn) labelBn else labelEn
+        canvas.drawText(String.format(Locale.US, "%-14s : %s", lbl, value), metaLeft, currentY + metaRowH - 6f, paintText)
+        currentY += metaRowH
+    }
+
+    drawMetaRow("Voucher Code", "ভাউচার কোড", voucher.code)
+    drawMetaRow("Issue Date", "ইস্যুর তারিখ", if (isBn) toBanglaDigits(issueDateStr) else issueDateStr)
+    drawMetaRow("Valid Until", "মেয়াদ উত্তীর্ণ", if (isBn) toBanglaDigits(expiryDateStr) else expiryDateStr)
+
+    if (voucher.sourceSaleId != null) {
+        drawMetaRow("Source Inv", "মূল চালান", "#${voucher.sourceSaleId}")
+    }
+
+    val custDisp = customerName ?: voucher.customerPhone ?: (if (isBn) "সাধারণ ক্রেতা" else "Walk-in Customer")
+    drawMetaRow("Customer", "গ্রাহক", if (isBn && custDisp == voucher.customerPhone) toBanglaDigits(custDisp) else custDisp)
+
+    val statusDisp = if (voucher.status == "ACTIVE") (if (isBn) "সক্রিয়" else "ACTIVE") else voucher.status
+    drawMetaRow("Status", "অবস্থা", statusDisp)
+
+    canvas.drawText(singleDivider, divX, currentY + 16f, paintText)
+    currentY += 28f
+
+    // Terms & Conditions
+    val paintTermsTitle = Paint(paintBold).apply {
+        textSize = if (is58) 14f else 18f
+    }
+    canvas.drawText(if (isBn) "শর্তাবলী ও নির্দেশিকা:" else "TERMS & CONDITIONS:", metaLeft, currentY + paintTermsTitle.textSize, paintTermsTitle)
+    currentY += (if (is58) 20f else 26f)
+
+    val terms = if (isBn) listOf(
+        "• কেনাকাটার সময় এই ভাউচার বা বারকোডটি ক্যাশিয়ারে দেখান।",
+        "• যেকোনো পণ্য ক্রয়ে সম্পূর্ণ বা আংশিক পরিশোধযোগ্য।",
+        "• অবশিষ্ট ব্যালেন্স এই ভাউচার কোডেই জমা থাকবে।",
+        "• এই ভাউচার অফেরতযোগ্য ও নগদ ক্যাশে রূপান্তরযোগ্য নয়।"
+    ) else listOf(
+        "• Present this voucher slip or barcode at checkout.",
+        "• Valid for partial or full payment on any purchase.",
+        "• Remaining balance stays saved on this voucher code.",
+        "• Non-refundable and cannot be exchanged for cash."
+    )
+
+    val paintTerms = Paint(paintText).apply {
+        textSize = if (is58) 12f else 15f
+    }
+    val termLineH = if (is58) 20f else 25f
+    terms.forEach { term ->
+        canvas.drawText(term, metaLeft, currentY + paintTerms.textSize, paintTerms)
+        currentY += termLineH
+    }
+
+    canvas.drawText(doubleDivider, divX, currentY + 16f, paintText)
+    currentY += 30f
+
+    // Footer
+    val paintFoot1 = Paint(paintBold).apply {
+        textSize = if (is58) 14f else 18f
+        textAlign = Paint.Align.CENTER
+    }
+    val thankMsg = if (isBn) "আমাদের সাথে কেনাকাটা করার জন্য ধন্যবাদ!" else "Thank You for Shopping With Us!"
+    canvas.drawText(thankMsg, width / 2f, currentY + paintFoot1.textSize, paintFoot1)
+    currentY += (if (is58) 24f else 30f)
+
+    val paintFoot2 = Paint(paintText).apply {
+        textSize = if (is58) 11f else 14f
+        textAlign = Paint.Align.CENTER
+        color = Color.DKGRAY
+    }
+    canvas.drawText("Techyfi POS • Smart Store System", width / 2f, currentY + paintFoot2.textSize, paintFoot2)
+    currentY += 20f
+
+    val dir = File(context.cacheDir, "receipts").apply { mkdirs() }
+    val file = File(dir, "voucher-${voucher.code}-${System.currentTimeMillis()}.jpg")
+    FileOutputStream(file).use { out ->
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+    }
+    bitmap.recycle()
+    return file
+}
+
+fun generateStoreCreditVoucherPdf(
+    context: Context,
+    voucher: StoreCreditVoucher,
+    storeName: String,
+    storeAddress: String,
+    storePhone: String,
+    paperRollWidthMm: Int = 80,
+    receiptLanguage: String = "EN",
+    settings: InvoiceSettingsData = InvoiceSettingsData(),
+    customerName: String? = null
+): File {
+    val imageFile = generateStoreCreditVoucherJpeg(
+        context = context,
+        voucher = voucher,
+        storeName = storeName,
+        storeAddress = storeAddress,
+        storePhone = storePhone,
+        receiptLanguage = receiptLanguage,
+        settings = settings.copy(paperRollWidthMm = paperRollWidthMm),
+        customerName = customerName
+    )
+    val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
+        ?: throw IllegalStateException("Unable to render voucher image for PDF")
+    val pageWidthPoints = (paperRollWidthMm.toFloat() / 25.4f * 72f).toInt().coerceAtLeast(1)
+    val pageHeightPoints = (pageWidthPoints.toFloat() * bitmap.height.toFloat() / bitmap.width.toFloat()).toInt().coerceAtLeast(1)
+    val outputFile = File(imageFile.parentFile, "voucher_${voucher.code}_${System.currentTimeMillis()}.pdf")
+    val document = PdfDocument()
+
+    try {
+        val pageInfo = PdfDocument.PageInfo.Builder(pageWidthPoints, pageHeightPoints, 1).create()
+        val page = document.startPage(pageInfo)
+        page.canvas.drawBitmap(
+            bitmap,
+            null,
+            RectF(0f, 0f, pageWidthPoints.toFloat(), pageHeightPoints.toFloat()),
+            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        )
+        document.finishPage(page)
+        FileOutputStream(outputFile).use(document::writeTo)
+    } finally {
+        document.close()
+        bitmap.recycle()
+    }
+
+    return outputFile
+}
+
+fun buildStoreCreditVoucherText(
+    voucher: StoreCreditVoucher,
+    storeName: String,
+    storePhone: String,
+    isBangla: Boolean = false
+): String {
+    val issueDateStr = SimpleDateFormat("dd-MMM-yyyy", Locale.US).format(Date(voucher.issuedAt))
+    val expiryStr = voucher.expiresAt?.let { SimpleDateFormat("dd-MMM-yyyy", Locale.US).format(Date(it)) } ?: (if (isBangla) "মেয়াদহীন" else "No Expiry")
+    val amtStr = if (isBangla) formatTakaBn(voucher.remainingBalance) else formatTaka(voucher.remainingBalance)
+
+    return if (isBangla) {
+        """
+        🧾 $storeName - স্টোর ক্রেডিট ভাউচার
+        ----------------------------------
+        🎟️ ভাউচার কোড: ${voucher.code}
+        💰 মূল্য: $amtStr
+        📅 ইস্যুর তারিখ: ${toBanglaDigits(issueDateStr)}
+        ⏳ মেয়াদ উত্তীর্ণ: ${toBanglaDigits(expiryStr)}
+        ${if (!voucher.customerPhone.isNullOrBlank()) "👤 গ্রাহক: ${toBanglaDigits(voucher.customerPhone)}" else ""}
+        ----------------------------------
+        আমাদের দোকানে কেনাকাটার সময় এই ভাউচার কোডটি ক্যাশিয়ারে দেখিয়ে মূল্য ছাড় নিন।
+        ${if (storePhone.isNotBlank()) "যোগাযোগ: $storePhone" else ""}
+        """.trimIndent()
+    } else {
+        """
+        🧾 $storeName - Store Credit Voucher
+        ----------------------------------
+        🎟️ Voucher Code: ${voucher.code}
+        💰 Value: $amtStr
+        📅 Issued Date: $issueDateStr
+        ⏳ Valid Until: $expiryStr
+        ${if (!voucher.customerPhone.isNullOrBlank()) "👤 Customer: ${voucher.customerPhone}" else ""}
+        ----------------------------------
+        Present this voucher code at checkout to redeem towards your purchases.
+        ${if (storePhone.isNotBlank()) "Contact: $storePhone" else ""}
+        """.trimIndent()
+    }
+}
+
 

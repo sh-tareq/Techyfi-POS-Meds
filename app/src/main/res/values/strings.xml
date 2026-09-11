@@ -1842,5 +1842,18 @@
     <string name="cart_redeem_voucher_button">Apply Voucher</string>
     <string name="cart_store_credit_applied_label">Store Credit Applied: %1$s</string>
     <string name="cart_remaining_to_pay">Remaining to Pay: %1$s</string>
+    <string name="store_credit_voucher_slip_title">Store Credit Voucher Slip</string>
+    <string name="store_credit_voucher_print">Print Voucher Slip</string>
+    <string name="store_credit_voucher_share">Share Voucher Slip</string>
+    <string name="store_credit_share_image">Share Slip as Image</string>
+    <string name="store_credit_share_whatsapp">Share on WhatsApp</string>
+    <string name="store_credit_share_sms">Share as SMS Text</string>
+    <string name="store_credit_view_voucher_slip">View Voucher Slip</string>
+    <string name="store_credit_voucher_reprint">Reprint Voucher Slip</string>
+    <string name="store_credit_used_label">Store Credit Used</string>
+    <string name="store_credit_remaining_label">Remaining Store Credit</string>
+    <string name="voucher_applied_label">Voucher Applied</string>
+    <string name="voucher_rem_bal_label">Voucher Remaining Balance</string>
 </resources>
+
 
