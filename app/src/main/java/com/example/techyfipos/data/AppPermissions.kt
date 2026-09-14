@@ -58,13 +58,16 @@ object AppPermissions {
     const val REPORTS_VIEW_Z_REPORT = "reports.view_z_report"
     const val REPORTS_EXPORT_EXCEL = "reports.export_excel"
 
-    // 6. Suppliers & Inward Stock
+    // 6. Customer Loyalty & Rewards
+    const val LOYALTY_MANAGE = "loyalty.manage"
+
+    // 7. Suppliers & Inward Stock
     const val SUPPLIERS_MANAGE = "suppliers.manage"
 
-    // 7. Expenses & Petty Cash
+    // 8. Expenses & Petty Cash
     const val EXPENSES_MANAGE = "expenses.manage"
 
-    // 8. System Administration
+    // 9. System Administration
     const val SYSTEM_MANAGE_STAFF = "system.manage_staff"
     const val SYSTEM_PERMISSIONS = "system.permissions"
     const val SYSTEM_BACKUP_RESTORE = "system.backup_restore"
@@ -77,6 +80,7 @@ object AppPermissions {
         INVENTORY_VIEW, INVENTORY_ADD_EDIT, INVENTORY_ADJUST_STOCK, INVENTORY_VIEW_COSTS, INVENTORY_PRINT_LABELS, INVENTORY_DELETE,
         DUES_VIEW, DUES_ADD_DUE, DUES_COLLECT_PAYMENT, DUES_OVERRIDE_LIMIT, DUES_SEND_REMINDERS,
         REPORTS_VIEW_DAILY, REPORTS_VIEW_PNL, REPORTS_CLOSE_REGISTER, REPORTS_VIEW_Z_REPORT, REPORTS_EXPORT_EXCEL,
+        LOYALTY_MANAGE,
         SUPPLIERS_MANAGE,
         EXPENSES_MANAGE,
         SYSTEM_MANAGE_STAFF, SYSTEM_PERMISSIONS, SYSTEM_BACKUP_RESTORE, SYSTEM_SHOP_SETTINGS, SYSTEM_FACTORY_RESET
@@ -90,6 +94,7 @@ object AppPermissions {
         INVENTORY_VIEW, INVENTORY_ADD_EDIT, INVENTORY_ADJUST_STOCK, INVENTORY_VIEW_COSTS, INVENTORY_PRINT_LABELS,
         DUES_VIEW, DUES_ADD_DUE, DUES_COLLECT_PAYMENT, DUES_OVERRIDE_LIMIT, DUES_SEND_REMINDERS,
         REPORTS_VIEW_DAILY, REPORTS_VIEW_PNL, REPORTS_CLOSE_REGISTER, REPORTS_VIEW_Z_REPORT, REPORTS_EXPORT_EXCEL,
+        LOYALTY_MANAGE,
         SUPPLIERS_MANAGE,
         EXPENSES_MANAGE
     )
@@ -155,6 +160,13 @@ object AppPermissions {
                 PermissionItem(REPORTS_CLOSE_REGISTER, R.string.perm_reports_close_register_title, R.string.perm_reports_close_register_desc),
                 PermissionItem(REPORTS_VIEW_Z_REPORT, R.string.perm_reports_view_z_report_title, R.string.perm_reports_view_z_report_desc),
                 PermissionItem(REPORTS_EXPORT_EXCEL, R.string.perm_reports_export_excel_title, R.string.perm_reports_export_excel_desc)
+            )
+        ),
+        PermissionCategory(
+            id = "loyalty",
+            titleRes = R.string.perm_cat_loyalty,
+            permissions = listOf(
+                PermissionItem(LOYALTY_MANAGE, R.string.perm_loyalty_manage_title, R.string.perm_loyalty_manage_desc)
             )
         ),
         PermissionCategory(

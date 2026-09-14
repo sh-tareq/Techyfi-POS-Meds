@@ -1956,5 +1956,24 @@
     <string name="invoice_return_note_label">নোট/কারণ</string>
     <string name="invoice_original_total_label">পূর্বের মোট</string>
     <string name="invoice_refunded_total_label">মোট রিফান্ড</string>
+
+    <!-- Dedicated Loyalty Permission -->
+    <string name="perm_cat_loyalty">লয়্যালটি ও রিওয়ার্ডস</string>
+    <string name="perm_loyalty_manage_title">লয়্যালটি ও পয়েন্ট পরিচালনা</string>
+    <string name="perm_loyalty_manage_desc">লয়্যালটি প্রোগ্রাম দেখা, পয়েন্ট ও টিয়ার সমন্বয় এবং সদস্য ব্যবস্থাপনা</string>
+
+    <!-- Supervisor Authorization Descriptions & Permission Toasts -->
+    <string name="supervisor_auth_desc_void_cart">চলতি কার্ট বাতিল করার অনুমোদন দিন</string>
+    <string name="supervisor_auth_desc_remove_item">পণ্য সরানোর অনুমোদন দিন: %1$s</string>
+    <string name="supervisor_auth_desc_discount">%1$s ছাড়ের অনুমোদন দিন (সর্বোচ্চ সীমা: %2$d%%)</string>
+    <string name="supervisor_auth_desc_negative_stock">অপর্যাপ্ত স্টক / নেগেটিভ ইনভেন্টরিতে বিক্রয়ের অনুমোদন দিন</string>
+    <string name="supervisor_auth_desc_hold_cart">চলতি কার্ট হোল্ড করার অনুমোদন দিন</string>
+    <string name="supervisor_auth_desc_price_tier">মূল্য টিয়ার %1$s-এ পরিবর্তনের অনুমোদন দিন</string>
+    <string name="permission_required_void_cart">কার্ট বাতিল করতে অনুমতির প্রয়োজন</string>
+    <string name="permission_required_remove_item">পণ্য সরাতে অনুমতির প্রয়োজন</string>
+    <string name="permission_required_hold_cart">কার্ট হোল্ড করতে অনুমতির প্রয়োজন</string>
+    <string name="permission_required_price_tier">মূল্য টিয়ার পরিবর্তন করতে অনুমতির প্রয়োজন</string>
+    <string name="permission_required_discount_limit">সর্বোচ্চ ছাড়ের সীমা %1$d%%</string>
+    <string name="permission_required_negative_stock">নেগেটিভ ইনভেন্টরি বন্ধ রয়েছে। সুপারভাইজারের অনুমোদন প্রয়োজন।</string>
 </resources>
 

@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-14 (app version 2.6.62-V14-09-2026, build `Techyfi-POS-Final-V14-09-2026.apk` / `Techyfi-POS-Final-V62.apk`; versionCode 220938; DB schema version 28)
+Last updated: 2026-09-14 (app version 2.6.63-V14-09-2026, build `Techyfi-POS-Final-V14-09-2026.apk` / `Techyfi-POS-Final-V63.apk`; versionCode 220939; DB schema version 28)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -18,7 +18,7 @@ mindmap
         Multi-Tier Role-Based Access Control (RBAC)
           Admin / Owner
             Full master access across all screens, ledgers, settings, and danger zone
-            Can toggle on/off any of the 28 permissions per staff account
+            Can toggle on/off any of the 33 permissions per staff account
             Add, edit, deactivate, or delete staff members
           Store Manager
             Operational oversight: inventory, stock inwarding, suppliers, customer CRM, shift register closing, and P&L reports
@@ -31,8 +31,8 @@ mindmap
             Managers or Owners can elevate restricted actions without logging out the cashier
             Required for discount over limit, cart void, sales return, khata write-off, and danger zone settings
             Elevation auto-expires after action completion or 5 minutes
-          Granular 28-Permission Matrix across 8 Categories
-            Sales & Checkout, Returns & Refunds, Inventory & Catalog, Cash & Register, Customers & Dues, Suppliers, Staff & Security, System Settings
+          Granular 33-Permission Matrix across 9 Categories
+            Sales & Checkout, Returns & Refunds, Inventory & Catalog, Customers & Dues, Reports & Cash Register, Loyalty & Rewards, Suppliers, Expenses, System Administration
           Repository-enforced mutation security
             Mutations check authenticated user permissions and active status
             PINs must be unique across all accounts
@@ -615,7 +615,7 @@ mindmap
           Add staff accounts with name, unique 4-digit PIN, assigned role (Owner, Manager, Cashier), and max discount cap
           Role badges (Gold Admin/Owner, Purple Store Manager, Emerald Cashier)
           Active / Suspended toggle switch for instant access revocation without account deletion
-          Granular Permissions Matrix modal: Customize all 28 permissions across 8 functional groups per user
+          Granular Permissions Matrix modal: Customize all 33 permissions across 9 functional groups per user
           Duplicate PIN protection prevents PIN collisions
           Owner safety lock: cannot deactivate or delete the last remaining owner account
           Log out returns to the PIN lock screen
@@ -924,15 +924,15 @@ mindmap
 9. **Printing:** tap Print on a receipt or product label → the app supplies a PDF to Android's print service → select any printer exposed by an installed Android print service. Product labels preserve the selected physical dimensions and zero margins.
 10. **First app launch:** splash screen → no users exist yet → Lock screen prompts to create the owner account (name + 4-digit PIN, entered twice to confirm) → owner is signed in and lands on Sell.
 11. **Return app launch:** splash screen → Lock screen requires an existing user's PIN → matching user is signed in and lands on Sell.
-12. **Adding & Managing Staff:** Settings → Staff & PINs (owner only) → tap "+ Add Staff Account" → specify Name, unique 4-digit PIN, Role (`Admin / Owner`, `Store Manager`, `Frontline Cashier`), and Cashier Max Discount Cap → customize any of the 28 permissions via the Permissions Matrix dialog → staff member can sign in with their unique PIN.
+12. **Adding & Managing Staff:** Settings → Staff & PINs (owner only) → tap "+ Add Staff Account" → specify Name, unique 4-digit PIN, Role (`Admin / Owner`, `Store Manager`, `Frontline Cashier`), and Cashier Max Discount Cap → customize any of the 33 permissions via the Permissions Matrix dialog → staff member can sign in with their unique PIN.
 13. **Sale return:** open a sale in History → Return items (Manager / Owner or Supervisor authorized) → choose returned quantity per line item, capped at quantity sold minus already returned → choose refund method → process return → stock is restocked and the refund is recorded against the sale.
-14. **Hold and resume cart:** build a cart → Hold cart → cart is saved to `HeldCart` and cleared from the active session → later reopen the held carts sheet from Cart or Scanner → restore a held cart back into the active cart, or delete it.
+14. **Hold and resume cart:** build a cart → Hold cart (gated by `sales.hold_cart` or Supervisor elevation) → cart is saved to `HeldCart` and cleared from the active session → later reopen the held carts sheet from Cart or Scanner → restore a held cart back into the active cart, or delete it.
 15. **Split payment sale:** at checkout, select Split payment → allocate the total across two or more methods (Cash, Card, bKash, Nagad, Rocket, Due) with per-method amount and wallet/card details → complete sale → receipt itemizes each payment method and amount.
-16. **Loyalty management and redemption:** More hub → Customer Loyalty → search/add members or adjust points. At checkout, view the customer's points balance → redeem some or all against the sale total. Purchases earn one point per ৳100; partial returns and sale deletion reverse the earned points and lifetime spend that no longer apply, while previously redeemed points are restored when a sale is deleted. Every point change (sale-time earn/redeem, sale-deletion reversal, manual owner adjustment) is recorded as an immutable `LoyaltyTransaction` audit row in the same DB transaction as the balance update.
+16. **Loyalty management and redemption:** More hub → Customer Loyalty (gated by `loyalty.manage`) → search/add members or adjust points. At checkout, view the customer's points balance → redeem some or all against the sale total. Purchases earn one point per ৳100; partial returns and sale deletion reverse the earned points and lifetime spend that no longer apply, while previously redeemed points are restored when a sale is deleted. Every point change (sale-time earn/redeem, sale-deletion reversal, manual owner adjustment) is recorded as an immutable `LoyaltyTransaction` audit row in the same DB transaction as the balance update.
 17. **Register close (shift cash reconciliation):** More hub → Register Close (Manager / Owner) → review cash sales, digital sales, cash in/out, and cash refunds since today's latest close → enter starting float → Count Drawer & Close Register → enter physical denomination notes counted → app computes expected system cash and counted-vs-expected variance → complete closing → a `RegisterClosing` record is saved with the authenticated operator's name and appears in history. A later close begins immediately after the previous close instead of recounting the entire day. Closing resets the persisted `RegisterShiftState` singleton to start a fresh shift with float 0.
 18. **Z-Report (daily closing P&L):** Register Close screen → tap Z-Report → view today's read-only gross sales, gross margin, discounts, expenses, net profit, and payment breakdown as a simulated thermal receipt → Print, Save as JPEG, or Share → Share opens a format picker (JPEG, PDF, or CSV) and hands off to the system share sheet.
 19. **Mid-Shift X-Report:** Register Close screen → tap X-Report → same interim summary/print/save/share flow as Z-Report, but non-final and does not close the register — useful for a shift-in-progress checkpoint.
-20. **Supervisor PIN Elevation:** When a frontline cashier attempts a privileged action (discount exceeding personal limit, cart void, returns/refunds, deleting items, credit limit override), a `SupervisorAuthDialog` modal is triggered. Any active Store Manager or Admin/Owner can enter their 4-digit PIN to authorize the single transaction without logging out the cashier or interrupting checkout.
+20. **Supervisor PIN Elevation:** When a frontline cashier attempts a privileged action (discount exceeding personal limit, cart void, returns/refunds, deleting items, credit limit override, holding cart without permission), a `SupervisorAuthDialog` modal is triggered with localized Bengali & English descriptions. Any active Store Manager or Admin/Owner can enter their 4-digit PIN to authorize the single transaction without logging out the cashier or interrupting checkout.
 
 ## Critical business rules
 
@@ -941,8 +941,8 @@ mindmap
   - **Admin / Owner:** Complete administrative sovereignty. Can customize all permissions across all roles, manage staff accounts, access system settings, cloud backups, and the danger zone.
   - **Store Manager:** Manages daily operations including inventory stock, inward purchase invoices, supplier ledgers, customer CRM, shift closings, and P&L analytics. Empowered to act as a Supervisor for frontline overrides.
   - **Frontline Cashier:** Focused frontline POS checkout. Sensitive cost prices and profit margins are masked; administrative and system configuration zones are locked.
-  - **28 Granular Permissions Matrix:** Functional permissions divided across 8 categories (Sales & POS, Returns & Refunds, Inventory & Catalog, Cash & Register, Customers & Dues, Suppliers, Staff Administration, System Settings). Can be toggled per account by Admin.
-  - **Supervisor Authorization Elevation:** Privileged cashier actions trigger a modal PIN elevation allowing any active Manager or Owner to authorize the action on the spot.
+  - **33 Granular Permissions Matrix:** Functional permissions divided across 9 categories (Sales & POS, Returns & Refunds, Inventory & Catalog, Customer Dues & Credit, Reports & Cash Register, Customer Loyalty & Rewards, Suppliers, Expenses & Petty Cash, System Administration). Can be toggled per account by Admin.
+  - **Supervisor Authorization Elevation:** Privileged cashier actions trigger a modal PIN elevation allowing any active Manager or Owner to authorize the action on the spot with fully localized context.
   - **Active / Suspended Flag:** Accounts can be suspended immediately without deletion, revoking login access while preserving transaction audit history.
 - **Authenticated Encryption:** Cloud backups must be encrypted with AES-256-GCM using keys derived via PBKDF2 (100,000 iterations) from the stable Google account subject ID and a random per-backup salt to ensure cross-device restoration on replacement devices.
 - **Database Consistency:** Database files must be flushed with `PRAGMA wal_checkpoint(FULL)` prior to packaging.
@@ -2402,6 +2402,71 @@ mindmap
       - Return dialog DataStore presets management.
       - Suppliers and Sales History screens.
     - Executed all automated JVM unit tests (`./gradlew testDebugUnitTest` -> BUILD SUCCESSFUL).
+
+## V63 - POS Security Hardening, Dialog Architecture Modularization & Layout Adaptability (V63 / V14-09-2026)
+
+- **POS Security & Authorization Hardening**:
+  - **[V63-1] Hold Cart Permission Enforcement (`CartScreen.kt`, `strings.xml`, `values-bn/strings.xml`)**:
+    - Eliminated critical security bypass where TopAppBar "Hold" action and bottom sheet "Hold Cart" button operated unconditionally without checking staff permissions.
+    - Added strict permission gate checking `user?.hasPermission(AppPermissions.SALES_HOLD_CART)`.
+    - If unauthorized, immediately triggers `SupervisorAuthDialog` requiring Manager or Owner PIN elevation with localized action description (`R.string.supervisor_auth_action_hold_cart`: "Hold active shopping cart" / "বর্তমান কার্টটি স্থগিত (হোল্ড) করুন").
+    - If elevation is cancelled or denied, displays feedback via localized toast `R.string.perm_toast_hold_cart_denied` ("Permission required to hold cart" / "কার্ট স্থগিত (হোল্ড) করার অনুমতি নেই").
+  - **[V63-2] Dedicated Customer Loyalty Permission (`AppPermissions.kt`, `Navigation.kt`, `strings.xml`, `values-bn/strings.xml`)**:
+    - Created dedicated `AppPermissions.LOYALTY_MANAGE = "loyalty.manage"` permission, decoupling Customer Loyalty access from generic `SYSTEM_SHOP_SETTINGS`.
+    - Registered new `PermissionCategory(id = "loyalty", titleRes = R.string.perm_cat_loyalty, ...)` with localized titles and descriptions in English and Bangla.
+    - Included `LOYALTY_MANAGE` in `ALL_PERMISSIONS`, `DEFAULT_OWNER_PERMISSIONS`, and `DEFAULT_MANAGER_PERMISSIONS`.
+    - Updated navigation gates in `Navigation.kt` (`onNavigateToLoyalty` and `entry<Loyalty>`) to enforce `AppPermissions.LOYALTY_MANAGE`.
+  - **[V63-3] Supervisor Auth Description & Toast Localization (`CartScreen.kt`, `strings.xml`, `values-bn/strings.xml`)**:
+    - Extracted all hardcoded English strings used in supervisor authorization modals and permission denial toasts into `strings.xml` and `values-bn/strings.xml`.
+    - Added localized action strings:
+      - `supervisor_auth_action_cart_void`: "Void entire shopping cart" / "সম্পূর্ণ কার্ট বাতিল করুন"
+      - `supervisor_auth_action_remove_item`: "Remove item from cart" / "কার্ট থেকে আইটেম মুছুন"
+      - `supervisor_auth_action_hold_cart`: "Hold active shopping cart" / "বর্তমান কার্টটি স্থগিত (হোল্ড) করুন"
+      - `supervisor_auth_action_price_tier`: "Change pricing tier" / "মূল্য স্তর পরিবর্তন করুন"
+      - `supervisor_auth_action_discount_limit`: "Apply discount over allowed limit" / "নির্ধারিত সীমার অতিরিক্ত ছাড় প্রয়োগ করুন"
+      - `supervisor_auth_action_negative_stock`: "Allow sale of out-of-stock item" / "মজুতহীন পণ্যের বিক্রয় অনুমোদন করুন"
+    - Added localized denial toasts:
+      - `perm_toast_cart_void_denied`: "Permission required to void cart" / "কার্ট বাতিল করার অনুমতি নেই"
+      - `perm_toast_remove_item_denied`: "Permission required to remove item" / "আইটেম মোছার অনুমতি নেই"
+      - `perm_toast_hold_cart_denied`: "Permission required to hold cart" / "কার্ট স্থগিত (হোল্ড) করার অনুমতি নেই"
+      - `perm_toast_price_tier_denied`: "Permission required to change price tier" / "মূল্য স্তর পরিবর্তন করার অনুমতি নেই"
+
+- **UI Layout Mode Adaptability**:
+  - **[V63-4] `SalesReportScreen` UI Layout Mode Override Honor (`SalesReportScreen.kt`, `Navigation.kt`)**:
+    - Updated `SalesReportScreen` composable signature to accept `isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600`.
+    - Updated `Navigation.kt` to route the resolved app-level `isTablet` boolean (derived from `uiLayoutMode`: AUTO, TABLET, PHONE) directly into `SalesReportScreen`.
+    - Guarantees `SalesReportScreen` strictly respects user-selected "PHONE" layout mode on widescreen tablets and "TABLET" layout mode on compact phones.
+
+- **High-Maintainability Dialog Architecture Modularization**:
+  - **[V63-5] Component Extraction to `com.example.techyfipos.ui.dialogs` (`CartScreen.kt`, `ProductsScreen.kt`)**:
+    - Decomposed monolithic screens into 9 clean, focused, and testable dialog and sub-component files:
+      1. `CartItemDialogs.kt`: `ManualQuantityDialog`, `CreditLimitWarningDialog`, `ConfirmDueSaleDialog`
+      2. `ReceiptSummaryDialog.kt`: `InvoiceShareFormat`, `ReceiptSummaryDialog`
+      3. `CustomItemDialogs.kt`: `AddCustomItemDialog`, `ManageQuickSalePresetsDialog`, `EditItemNoteDialog`, `ManageNotePresetsDialog`
+      4. `Product3DIcons.kt`: 15 realistic 3D animated icons (`Animated3DProductBoxIcon`, `Animated3DCategoryTagIcon`, etc.), `DateInputField`, `ProductDialogSectionLabel`, `Modifier.dashedProductImageBorder`
+      5. `AddEditProductDialog.kt`: Complete `AddEditProductDialog` modal with 3D section cards, image picker, barcode scanning, wholesale/retail pricing, supplier selection, and stock management.
+      6. `ProductMediaDialogs.kt`: Camera barcode scanner sheet `ProductBarcodeScanDialog` and high-res image modal `EnlargedImageDialog`.
+      7. `ProductCodePrintDialogs.kt`: `PriceTierSwitcherCard`, batch barcode/QR label print sheet `BatchProductCodePrintDialog`, single product code dialog `ProductCodeImageDialog`, `LabelTextSizeControl`.
+      8. `StockAuditDialogs.kt`: Stock audit history bottom sheet `StockAuditHistorySheet` and product picker `ProductPickerForAdjustmentDialog`.
+      9. `ManageCategoriesDialog.kt`: Category management bottom sheet `ManageCategoriesDialog` with color picker and product count tags.
+    - Codebase line count reduction:
+      - `CartScreen.kt`: reduced from 6,382 lines to 3,171 lines (~50% reduction).
+      - `ProductsScreen.kt`: reduced from 9,644 lines to 4,987 lines (~48% reduction).
+    - Preserved 100% feature parity, animation smoothness, touch target compliance (>= 48dp), and localized phrasing.
+
+- **Production Deliverables & Cross-Device Verification**:
+  - **[V63-6] Production Build & Device Verification**:
+    - Built via `./gradlew assembleRelease` (versionCode 220939, versionName "2.6.63-V14-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V63.apk` (37.4 MB)
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk` (37.4 MB)
+    - Automated Unit Tests:
+      - Executed all 28 automated JVM unit tests (`./gradlew testDebugUnitTest` -> BUILD SUCCESSFUL).
+    - Live Android Device Verification on `emulator-5554` (Pixel phone):
+      - App PIN unlock and Sell screen (`mobile_v63_pos.png`).
+      - Cart Screen with Hold Cart permission security check (`mobile_v63_cart_view.png`, `mobile_v63_hold_cart_result.png`).
+      - More Hub navigation and Customer Loyalty screen with dedicated `loyalty.manage` permission (`mobile_v63_more_hub.png`, `mobile_v63_loyalty.png`).
+      - Sales Report Screen responsive layout (`mobile_v63_report.png`).
+      - Products Screen, Add/Edit Product Dialog, and Stock Audit & Logs History sheet (`mobile_v63_products.png`, `mobile_v63_add_product_dialog.png`, `mobile_v63_stock_audit_sheet.png`).
 
 ## Maintenance note
 

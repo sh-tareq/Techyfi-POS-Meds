@@ -1956,6 +1956,25 @@
     <string name="invoice_return_note_label">Note</string>
     <string name="invoice_original_total_label">Original</string>
     <string name="invoice_refunded_total_label">Refunded</string>
+
+    <!-- Dedicated Loyalty Permission -->
+    <string name="perm_cat_loyalty">Loyalty &amp; Rewards</string>
+    <string name="perm_loyalty_manage_title">Manage Loyalty &amp; Points</string>
+    <string name="perm_loyalty_manage_desc">View loyalty program, adjust points, tiers, and manage members</string>
+
+    <!-- Supervisor Authorization Descriptions & Permission Toasts -->
+    <string name="supervisor_auth_desc_void_cart">Authorize voiding active cart</string>
+    <string name="supervisor_auth_desc_remove_item">Authorize removing item: %1$s</string>
+    <string name="supervisor_auth_desc_discount">Authorize discount of %1$s (Max limit: %2$d%%)</string>
+    <string name="supervisor_auth_desc_negative_stock">Authorize sale with negative inventory / insufficient stock</string>
+    <string name="supervisor_auth_desc_hold_cart">Authorize holding active cart</string>
+    <string name="supervisor_auth_desc_price_tier">Authorize changing price tier to %1$s</string>
+    <string name="permission_required_void_cart">Permission required to void cart</string>
+    <string name="permission_required_remove_item">Permission required to remove items</string>
+    <string name="permission_required_hold_cart">Permission required to hold carts</string>
+    <string name="permission_required_price_tier">Permission required to change price tier</string>
+    <string name="permission_required_discount_limit">Discount limit is %1$d%%</string>
+    <string name="permission_required_negative_stock">Negative inventory is disabled. Supervisor authorization required.</string>
 </resources>
 
 

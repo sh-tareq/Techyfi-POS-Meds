@@ -138,6 +138,7 @@ fun SalesReportScreen(
     salesViewModel: SalesViewModel,
     expenseViewModel: ExpenseViewModel? = null,
     supplierViewModel: SupplierViewModel? = null,
+    isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
     onNavigateToExpenses: (() -> Unit)? = null,
     onNavigateToSuppliers: (() -> Unit)? = null,
     onBack: () -> Unit,
@@ -146,7 +147,6 @@ fun SalesReportScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val configuration = LocalConfiguration.current
-    val isTablet = configuration.screenWidthDp >= 600
     val emptyReportMessage = stringResource(R.string.sales_report_empty_title)
     val salesSnapshot by salesViewModel.salesWithItems.collectAsStateWithLifecycle()
     var selectedPeriod by remember { mutableStateOf(ReportPeriod.WEEK) }

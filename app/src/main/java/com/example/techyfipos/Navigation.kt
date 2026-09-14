@@ -520,7 +520,7 @@ fun MainNavigation() {
                     },
                     onNavigateToLoyalty = {
                         showMoreHubSheet = false
-                        val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+                        val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
                         if (canLoyalty) {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != Loyalty) { backStack.add(Loyalty) }
@@ -1127,6 +1127,7 @@ fun MainNavigation() {
                                     salesViewModel = salesViewModel,
                                     expenseViewModel = expenseViewModel,
                                     supplierViewModel = supplierViewModel,
+                                    isTablet = isTablet,
                                     onNavigateToExpenses = {
                                         if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
                                     },
@@ -1212,7 +1213,7 @@ fun MainNavigation() {
                                 )
                             }
                             entry<Loyalty> {
-                                val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+                                val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
                                 if (!canLoyalty) {
                                     LaunchedEffect(Unit) {
                                         android.widget.Toast.makeText(context, ownerOnlyLoyaltyText, android.widget.Toast.LENGTH_SHORT).show()
