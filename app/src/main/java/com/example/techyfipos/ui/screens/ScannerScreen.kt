@@ -29,7 +29,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -46,7 +52,9 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -57,6 +65,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.PlatformTextStyle
@@ -88,6 +97,8 @@ import com.example.techyfipos.utils.beepAndVibrate
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.HardwareBarcodeScanner
 import com.example.techyfipos.utils.toEnglishDigits
+import android.content.res.Configuration
+import androidx.compose.ui.platform.LocalConfiguration
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -512,6 +523,253 @@ fun ScannerScreen(
         }
     }
 
+private object TabletTerminalColors {
+    val isDark: Boolean
+        @Composable get() = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+    val WorkspaceBg: Color
+        @Composable get() = if (isDark) Color(0xFF080B11) else Color(0xFFF1F5F9)
+    val CatalogSurfaceBg: Color
+        @Composable get() = if (isDark) Color(0xFF161D2D) else Color(0xFFF8FAFC)
+    val CartSurfaceBg: Color
+        @Composable get() = if (isDark) Color(0xFF0F1523) else Color(0xFFFFFFFF)
+    val CardBg: Color
+        @Composable get() = if (isDark) Color(0xFF1E273D) else Color(0xFFFFFFFF)
+    val CardHoverBorder: Color
+        @Composable get() = if (isDark) Color(0xFF26334D) else Color(0xFFCBD5E1)
+    val CardBorder: Color
+        @Composable get() = if (isDark) Color(0x1FFFFFFF) else Color(0xFFE2E8F0)
+    val InputBg: Color
+        @Composable get() = if (isDark) Color(0xFF121824) else Color(0xFFF1F5F9)
+    val FooterBg: Color
+        @Composable get() = if (isDark) Color(0xFF0A0E18) else Color(0xFFF8FAFC)
+
+    // Vibrant Brand Accents
+    val Emerald = Color(0xFF10B981)
+    val EmeraldDark = Color(0xFF047857)
+    val EmeraldGlow = Color(0x5910B981)
+    val EmeraldLight: Color
+        @Composable get() = if (isDark) Color(0x2410B981) else Color(0x1810B981)
+    val EmeraldTranslucent: Color
+        @Composable get() = if (isDark) Color(0x1410B981) else Color(0x0F10B981)
+
+    val Amber = Color(0xFFF59E0B)
+    val AmberLight: Color
+        @Composable get() = if (isDark) Color(0x26F59E0B) else Color(0x1AF59E0B)
+    val AmberBorder: Color
+        @Composable get() = if (isDark) Color(0x59F59E0B) else Color(0x40F59E0B)
+
+    val Rose = Color(0xFFEF4444)
+    val RoseLight: Color
+        @Composable get() = if (isDark) Color(0x26EF4444) else Color(0x1AEF4444)
+    val RoseBorder: Color
+        @Composable get() = if (isDark) Color(0x59EF4444) else Color(0x40EF4444)
+
+    val Indigo = Color(0xFF6366F1)
+    val Purple = Color(0xFF8B5CF6)
+
+    // Crisp Typography
+    val TextMain: Color
+        @Composable get() = if (isDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+    val TextSecondary: Color
+        @Composable get() = if (isDark) Color(0xFF94A3B8) else Color(0xFF475569)
+    val TextTertiary: Color
+        @Composable get() = if (isDark) Color(0xFF64748B) else Color(0xFF64748B)
+    val TextDisabled: Color
+        @Composable get() = if (isDark) Color(0xFF475569) else Color(0xFF94A3B8)
+
+    val Divider: Color
+        @Composable get() = if (isDark) Color(0x1FFFFFFF) else Color(0xFFE2E8F0)
+}
+
+private data class TabletStockBadgeInfo(
+    val bg: Color,
+    val border: Color,
+    val textColor: Color,
+    val label: String
+)
+
+// 3D Indigo Cart Capsule matching Products Screen top bar
+@Composable
+private fun TabletCartCapsuleButton(
+    cartUnitCount: Double,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val cartCapsuleBounceScale = remember { Animatable(1f) }
+    val cartIconAnimScale = remember { Animatable(1f) }
+    val cartIconAnimRotation = remember { Animatable(0f) }
+    val cartIconAnimOffsetY = remember { Animatable(0f) }
+    val cartBadgeAnimScale = remember { Animatable(1f) }
+    val cartBadgeAnimRotation = remember { Animatable(0f) }
+    var cartAnimKey by remember { mutableLongStateOf(0L) }
+    val cartInteractionSource = remember { MutableInteractionSource() }
+    val isCartPressed by cartInteractionSource.collectIsPressedAsState()
+    val cartPressScale by animateFloatAsState(
+        targetValue = if (isCartPressed) 0.93f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "cartPressScale"
+    )
+
+    LaunchedEffect(cartUnitCount, cartAnimKey) {
+        if (cartUnitCount > 0 || cartAnimKey > 0L) {
+            launch {
+                cartCapsuleBounceScale.snapTo(1.12f)
+                cartCapsuleBounceScale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                )
+            }
+            launch {
+                cartIconAnimOffsetY.snapTo(-8f)
+                cartIconAnimScale.snapTo(1.38f)
+                cartIconAnimRotation.snapTo(-16f)
+
+                launch {
+                    cartIconAnimOffsetY.animateTo(
+                        targetValue = 0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    )
+                }
+                launch {
+                    cartIconAnimScale.animateTo(
+                        targetValue = 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    )
+                }
+                launch {
+                    cartIconAnimRotation.animateTo(
+                        targetValue = 14f,
+                        animationSpec = tween(120, easing = FastOutSlowInEasing)
+                    )
+                    cartIconAnimRotation.animateTo(
+                        targetValue = -7f,
+                        animationSpec = tween(110, easing = FastOutSlowInEasing)
+                    )
+                    cartIconAnimRotation.animateTo(
+                        targetValue = 0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioHighBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    )
+                }
+            }
+            launch {
+                cartBadgeAnimScale.snapTo(1.75f)
+                cartBadgeAnimRotation.snapTo(22f)
+
+                launch {
+                    cartBadgeAnimScale.animateTo(
+                        targetValue = 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioHighBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    )
+                }
+                launch {
+                    cartBadgeAnimRotation.animateTo(
+                        targetValue = -12f,
+                        animationSpec = tween(130, easing = FastOutSlowInEasing)
+                    )
+                    cartBadgeAnimRotation.animateTo(
+                        targetValue = 0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    Surface(
+        onClick = {
+            cartAnimKey = System.currentTimeMillis()
+            onClick()
+        },
+        interactionSource = cartInteractionSource,
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF4F46E5),
+        contentColor = Color.White,
+        shadowElevation = 2.dp,
+        modifier = modifier
+            .defaultMinSize(minHeight = 36.dp)
+            .graphicsLayer {
+                scaleX = cartPressScale * cartCapsuleBounceScale.value
+                scaleY = cartPressScale * cartCapsuleBounceScale.value
+            }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        ) {
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    scaleX = cartIconAnimScale.value
+                    scaleY = cartIconAnimScale.value
+                    rotationZ = cartIconAnimRotation.value
+                    translationY = cartIconAnimOffsetY.value
+                }
+            ) {
+                Realistic3DSupermarketCartIcon(size = 17.dp)
+            }
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = stringResource(R.string.cart),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+            if (cartUnitCount > 0) {
+                Spacer(Modifier.width(6.dp))
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
+                        .graphicsLayer {
+                            scaleX = cartBadgeAnimScale.value
+                            scaleY = cartBadgeAnimScale.value
+                            rotationZ = cartBadgeAnimRotation.value
+                        }
+                        .background(Color(0xFFEF4444), RoundedCornerShape(9.dp))
+                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                ) {
+                    val cStr = if (cartUnitCount % 1.0 == 0.0) cartUnitCount.toLong().toString() else String.format(Locale.US, "%.1f", cartUnitCount)
+                    AnimatedContent(
+                        targetState = cStr,
+                        transitionSpec = {
+                            (slideInVertically { -it } + fadeIn() + scaleIn(initialScale = 1.35f))
+                                .togetherWith(slideOutVertically { it } + fadeOut() + scaleOut(targetScale = 0.65f))
+                        },
+                        label = "cartCountTextAnim"
+                    ) { targetCount ->
+                        Text(
+                            text = targetCount,
+                            color = Color.White,
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Black,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TabletSplitTerminal(
@@ -539,10 +797,16 @@ private fun TabletSplitTerminal(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val isPortrait = maxWidth < maxHeight || configuration.orientation == Configuration.ORIENTATION_PORTRAIT || configuration.screenWidthDp < configuration.screenHeightDp
+
     val allProducts by (productsViewModel?.allProducts?.collectAsStateWithLifecycle()) ?: remember { mutableStateOf(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     var showCameraPIP by remember { mutableStateOf(false) }
+
 
     val categories = remember(allProducts) {
         listOf("All") + allProducts.map { it.category }.filter { it.isNotBlank() }.distinct()
@@ -562,418 +826,1057 @@ private fun TabletSplitTerminal(
         }
     }
 
-    Row(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        // LEFT PANE: Catalog, Search, Categories, Grid & Camera PIP (58% width)
+    val subtotal = remember(cartItems) {
+        cartItems.sumOf { it.product.sellingPrice * it.quantity }
+    }
+    val itemCount = remember(cartItems) {
+        cartItems.sumOf { it.quantity }.toInt()
+    }
+    val cartUnitCount = remember(cartItems) {
+        cartItems.sumOf { it.quantity }
+    }
+
+
+    if (isPortrait) {
+        // =========================================================================
+        // VERTICAL (PORTRAIT) VIEWPORT LAYOUT: 54% Catalog Top, 46% Cart Review Bottom
+        // =========================================================================
         Column(
             modifier = Modifier
-                .weight(0.58f)
-                .fillMaxHeight()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .fillMaxSize()
+                .background(TabletTerminalColors.WorkspaceBg)
         ) {
-            // Top Bar: Search + Manual Barcode + PIP Toggle + Held Carts
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // TOP PANE: Catalog, Search, Quick Actions & Product Grid (54% height)
+            Column(
+                modifier = Modifier
+                    .weight(0.54f)
+                    .fillMaxWidth()
+                    .background(TabletTerminalColors.CatalogSurfaceBg)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text(stringResource(R.string.tablet_search_placeholder), fontSize = 13.sp) },
-                    leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary)
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f)
+                TabletTopToolbar(
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
+                    showCameraPIP = showCameraPIP,
+                    onToggleCameraPIP = { showCameraPIP = !showCameraPIP },
+                    onManualEntry = onManualEntry,
+                    canCheckStock = canCheckStock,
+                    isSellMode = isSellMode,
+                    onToggleStockMode = { onModeChanged(!isSellMode) },
+                    heldCartCount = heldCartCount,
+                    onShowHeldCarts = onShowHeldCarts,
+                    isPortrait = true
                 )
 
-                // Manual Barcode Entry button
-                FilledTonalIconButton(onClick = onManualEntry) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Manual Barcode")
-                }
-
-                // Camera PIP Toggle button
-                FilledTonalIconButton(
-                    onClick = { showCameraPIP = !showCameraPIP },
-                    colors = IconButtonDefaults.filledTonalIconButtonColors(
-                        containerColor = if (showCameraPIP) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-                    )
+                // Collapsible Camera PIP
+                AnimatedVisibility(
+                    visible = showCameraPIP,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
                 ) {
-                    Icon(
-                        imageVector = if (showCameraPIP) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = "Camera PIP",
-                        tint = if (showCameraPIP) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    TabletCameraPipView(
+                        hasCameraPermission = hasCameraPermission,
+                        onRequestCameraPermission = onRequestCameraPermission,
+                        scannerViewModel = scannerViewModel,
+                        cartViewModel = cartViewModel,
+                        scanningPaused = scanningPaused,
+                        torchEnabled = torchEnabled,
+                        onTorchToggle = onTorchToggle,
+                        onScanningPausedToggle = onScanningPausedToggle,
+                        onCameraControlReady = onCameraControlReady
                     )
                 }
 
-                // Held Carts badge button if any
-                if (heldCartCount > 0) {
-                    BadgedBox(
-                        badge = {
-                            Badge { Text("$heldCartCount") }
-                        }
+                // Mode banner when in Stock Check mode
+                if (!isSellMode) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = TabletTerminalColors.AmberLight,
+                        border = BorderStroke(1.dp, TabletTerminalColors.AmberBorder),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        FilledTonalIconButton(onClick = onShowHeldCarts) {
-                            Icon(Icons.Default.Restore, contentDescription = "Held Carts", tint = Color(0xFFE65100))
-                        }
-                    }
-                }
-            }
-
-            // Collapsible Camera PIP
-            AnimatedVisibility(
-                visible = showCameraPIP,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Black),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(170.dp)
-                ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        if (hasCameraPermission) {
-                            CameraPreviewView(
-                                scannerViewModel = scannerViewModel,
-                                cartViewModel = cartViewModel,
-                                scanningEnabled = !scanningPaused,
-                                torchEnabled = torchEnabled,
-                                onCameraControlReady = onCameraControlReady,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                            ScanFrameOverlay()
-                        } else {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text("Camera permission required", color = Color.White, fontSize = 12.sp)
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Button(onClick = onRequestCameraPermission) {
-                                    Text("Grant Permission", fontSize = 12.sp)
-                                }
-                            }
-                        }
-
-                        // Mini PIP controls
                         Row(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(8.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            FilledIconButton(
-                                onClick = onTorchToggle,
-                                modifier = Modifier.size(36.dp),
-                                colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = if (torchEnabled) Color(0xFFFFD54F) else Color.DarkGray
-                                )
-                            ) {
-                                Realistic3DTacticalFlashlightIcon(torchEnabled = torchEnabled, size = 18.dp)
-                            }
-
-                            FilledIconButton(
-                                onClick = onScanningPausedToggle,
-                                modifier = Modifier.size(36.dp),
-                                colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = if (scanningPaused) Color(0xFFEF5350) else Color.DarkGray
-                                )
-                            ) {
-                                Realistic3DPauseDiscIcon(isPaused = scanningPaused, size = 18.dp)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Mode indicator if supervisor / stock check enabled
-            if (canCheckStock) {
-                SellControlBar(
-                    isSellMode = isSellMode,
-                    onModeChanged = onModeChanged
-                )
-            }
-
-            // Category Chips Row
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(categories) { cat ->
-                    val isSelected = (selectedCategory == null && cat == "All") || (selectedCategory == cat)
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = {
-                            selectedCategory = if (cat == "All") null else cat
-                        },
-                        label = {
+                            Icon(Icons.Default.Inventory, contentDescription = null, tint = TabletTerminalColors.Amber, modifier = Modifier.size(16.dp))
                             Text(
-                                text = if (cat == "All") stringResource(R.string.tablet_category_all) else cat,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 12.sp
+                                text = stringResource(R.string.tablet_stock_check_banner),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TabletTerminalColors.Amber
                             )
                         }
-                    )
+                    }
+                }
+
+                // Category Chips Row
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(categories) { cat ->
+                        val isSelected = (selectedCategory == null && cat == "All") || (selectedCategory == cat)
+                        Surface(
+                            onClick = {
+                                selectedCategory = if (cat == "All") null else cat
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) TabletTerminalColors.EmeraldLight else TabletTerminalColors.CardBg,
+                            border = BorderStroke(1.dp, if (isSelected) TabletTerminalColors.Emerald else TabletTerminalColors.CardBorder)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(TabletTerminalColors.Emerald)
+                                    )
+                                }
+                                Text(
+                                    text = if (cat == "All") stringResource(R.string.tablet_category_all) else cat,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                    fontSize = 11.5.sp,
+                                    color = if (isSelected) TabletTerminalColors.Emerald else TabletTerminalColors.TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Product Grid in Portrait (130dp columns)
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    if (filteredProducts.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = stringResource(R.string.tablet_no_products_found),
+                                color = TabletTerminalColors.TextTertiary,
+                                fontSize = 13.sp
+                            )
+                        }
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 130.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(filteredProducts, key = { it.barcode }) { product ->
+                                TabletProductGridCard(
+                                    product = product,
+                                    inCartQuantity = cartItems.firstOrNull { it.product.barcode == product.barcode }?.quantity ?: 0.0,
+                                    isStockCheckMode = !isSellMode,
+                                    allowNegativeInventory = allowNegativeInventory,
+                                    onClick = {
+                                        if (isSellMode) {
+                                             val added = cartViewModel.addToCart(product)
+                                             if (added) {
+                                                 beepAndVibrate(context)
+                                             } else {
+                                                 Toast.makeText(context, context.getString(R.string.tablet_out_of_stock_toast), Toast.LENGTH_SHORT).show()
+                                             }
+                                        } else {
+                                             beepAndVibrate(context)
+                                             scannerViewModel.selectProductForStockCheck(product)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
-            // Product Grid
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                if (filteredProducts.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+            // Divider between Catalog and Cart Review
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.5.dp)
+                    .background(TabletTerminalColors.Divider)
+            )
+
+            // BOTTOM PANE: Cart Review (46% height)
+            Column(
+                modifier = Modifier
+                    .weight(0.46f)
+                    .fillMaxWidth()
+                    .background(TabletTerminalColors.CartSurfaceBg)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Header & Quick Actions
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = stringResource(R.string.tablet_no_products_found),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 14.sp
-                        )
-                    }
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 135.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(filteredProducts, key = { it.barcode }) { product ->
-                            TabletProductGridCard(
-                                product = product,
-                                inCartQuantity = cartItems.firstOrNull { it.product.barcode == product.barcode }?.quantity ?: 0.0,
-                                onClick = {
-                                    val added = cartViewModel.addToCart(product)
-                                    if (added) {
-                                        beepAndVibrate(context)
-                                    } else {
-                                        Toast.makeText(context, context.getString(R.string.tablet_out_of_stock_toast), Toast.LENGTH_SHORT).show()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(TabletTerminalColors.Emerald, TabletTerminalColors.EmeraldDark)
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Realistic3DSupermarketCartIcon(size = 18.dp)
+                            }
+                            Text(
+                                text = stringResource(R.string.tablet_cart_review_title),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.5.sp,
+                                color = TabletTerminalColors.TextMain
+                            )
+                            TabletCartCapsuleButton(
+                                cartUnitCount = cartUnitCount,
+                                onClick = onNavigateToCart,
+                                modifier = Modifier.height(30.dp)
+                            )
+                        }
+
+                        // Right: Hold + Clear
+                        if (cartItems.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Surface(
+                                    onClick = {
+                                        cartViewModel.holdCurrentCart()
+                                        Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = TabletTerminalColors.CardBg,
+                                    border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.Restore, contentDescription = "Hold", tint = TabletTerminalColors.Amber, modifier = Modifier.size(16.dp))
                                     }
                                 }
+
+                                Surface(
+                                    onClick = { cartViewModel.clearCart() },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = TabletTerminalColors.CardBg,
+                                    border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", tint = TabletTerminalColors.Rose, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Cart Items Scrollable List
+                Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 4.dp)) {
+                    if (cartItems.isEmpty()) {
+                        TabletEmptyCartView()
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            items(cartItems, key = { it.product.barcode }) { item ->
+                                TabletCartItemRow(
+                                    item = item,
+                                    allowNegativeInventory = allowNegativeInventory,
+                                    onQuantityChange = { newQty ->
+                                        cartViewModel.updateQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
+                                    },
+                                    onRemove = {
+                                        cartViewModel.removeFromCart(item.product)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Cart Footer & Checkout Panel (Matching Landscape 100%)
+                TabletCartFooter(
+                    subtotal = subtotal,
+                    grandTotal = grandTotal,
+                    cartItemsNotEmpty = cartItems.isNotEmpty(),
+                    onNavigateToCart = onNavigateToCart
+                )
+            }
+        }
+    } else {
+        // =========================================================================
+        // HORIZONTAL (LANDSCAPE) VIEWPORT LAYOUT: 58% Catalog Left, 42% Cart Review Right
+        // =========================================================================
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(TabletTerminalColors.WorkspaceBg)
+        ) {
+            // LEFT PANE: Catalog, Search, Categories, Grid & Camera PIP (58% width)
+            Column(
+                modifier = Modifier
+                    .weight(0.58f)
+                    .fillMaxHeight()
+                    .background(TabletTerminalColors.CatalogSurfaceBg)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                TabletTopToolbar(
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
+                    showCameraPIP = showCameraPIP,
+                    onToggleCameraPIP = { showCameraPIP = !showCameraPIP },
+                    onManualEntry = onManualEntry,
+                    canCheckStock = canCheckStock,
+                    isSellMode = isSellMode,
+                    onToggleStockMode = { onModeChanged(!isSellMode) },
+                    heldCartCount = heldCartCount,
+                    onShowHeldCarts = onShowHeldCarts,
+                    isPortrait = false
+                )
+
+                // Collapsible Camera PIP
+                AnimatedVisibility(
+                    visible = showCameraPIP,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    TabletCameraPipView(
+                        hasCameraPermission = hasCameraPermission,
+                        onRequestCameraPermission = onRequestCameraPermission,
+                        scannerViewModel = scannerViewModel,
+                        cartViewModel = cartViewModel,
+                        scanningPaused = scanningPaused,
+                        torchEnabled = torchEnabled,
+                        onTorchToggle = onTorchToggle,
+                        onScanningPausedToggle = onScanningPausedToggle,
+                        onCameraControlReady = onCameraControlReady
+                    )
+                }
+
+                // Stock check banner when active
+                if (!isSellMode) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = TabletTerminalColors.AmberLight,
+                        border = BorderStroke(1.dp, TabletTerminalColors.AmberBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Inventory, contentDescription = null, tint = TabletTerminalColors.Amber, modifier = Modifier.size(18.dp))
+                            Text(
+                                text = stringResource(R.string.tablet_stock_check_banner),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TabletTerminalColors.Amber
                             )
                         }
+                    }
+                }
+
+                // Category Chips Row
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(categories) { cat ->
+                        val isSelected = (selectedCategory == null && cat == "All") || (selectedCategory == cat)
+                        Surface(
+                            onClick = {
+                                selectedCategory = if (cat == "All") null else cat
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) TabletTerminalColors.EmeraldLight else TabletTerminalColors.CardBg,
+                            border = BorderStroke(1.dp, if (isSelected) TabletTerminalColors.Emerald else TabletTerminalColors.CardBorder)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(TabletTerminalColors.Emerald)
+                                    )
+                                }
+                                Text(
+                                    text = if (cat == "All") stringResource(R.string.tablet_category_all) else cat,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                    fontSize = 12.sp,
+                                    color = if (isSelected) TabletTerminalColors.Emerald else TabletTerminalColors.TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Product Grid (135dp columns)
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    if (filteredProducts.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.tablet_no_products_found),
+                                color = TabletTerminalColors.TextTertiary,
+                                fontSize = 14.sp
+                            )
+                        }
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 135.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(filteredProducts, key = { it.barcode }) { product ->
+                                TabletProductGridCard(
+                                    product = product,
+                                    inCartQuantity = cartItems.firstOrNull { it.product.barcode == product.barcode }?.quantity ?: 0.0,
+                                    isStockCheckMode = !isSellMode,
+                                    allowNegativeInventory = allowNegativeInventory,
+                                    onClick = {
+                                        if (isSellMode) {
+                                            val added = cartViewModel.addToCart(product)
+                                            if (added) {
+                                                beepAndVibrate(context)
+                                            } else {
+                                                Toast.makeText(context, context.getString(R.string.tablet_out_of_stock_toast), Toast.LENGTH_SHORT).show()
+                                            }
+                                        } else {
+                                            beepAndVibrate(context)
+                                            scannerViewModel.selectProductForStockCheck(product)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Vertical Divider
+            Box(
+                modifier = Modifier
+                    .width(1.5.dp)
+                    .fillMaxHeight()
+                    .background(TabletTerminalColors.Divider)
+            )
+
+            // RIGHT PANE: Pinned Live Cart Review (42% width)
+            Column(
+                modifier = Modifier
+                    .weight(0.42f)
+                    .fillMaxHeight()
+                    .background(TabletTerminalColors.CartSurfaceBg)
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Cart Review Header
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(TabletTerminalColors.Emerald, TabletTerminalColors.EmeraldDark)
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Realistic3DSupermarketCartIcon(size = 20.dp)
+                            }
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.tablet_cart_review_title),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = TabletTerminalColors.TextMain
+                                )
+                                Text(
+                                    text = stringResource(R.string.tablet_cart_review_subtitle),
+                                    fontSize = 11.sp,
+                                    color = TabletTerminalColors.TextSecondary
+                                )
+                            }
+                        }
+
+                        // 3D Indigo Cart Capsule matching Products Screen top bar
+                        TabletCartCapsuleButton(
+                            cartUnitCount = cartUnitCount,
+                            onClick = onNavigateToCart
+                        )
+                    }
+
+
+                    // Quick actions: Hold & Clear
+                    if (cartItems.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                onClick = {
+                                    cartViewModel.holdCurrentCart()
+                                    Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                color = TabletTerminalColors.CardBg,
+                                border = BorderStroke(1.dp, TabletTerminalColors.CardBorder)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(Icons.Default.Restore, contentDescription = "Hold", modifier = Modifier.size(16.dp), tint = TabletTerminalColors.Amber)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(stringResource(R.string.tablet_cart_hold), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TabletTerminalColors.Amber)
+                                }
+                            }
+
+                            Surface(
+                                onClick = { cartViewModel.clearCart() },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                color = TabletTerminalColors.CardBg,
+                                border = BorderStroke(1.dp, TabletTerminalColors.CardBorder)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", modifier = Modifier.size(16.dp), tint = TabletTerminalColors.Rose)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(stringResource(R.string.tablet_cart_clear), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TabletTerminalColors.Rose)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Cart Items Scrollable List
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    if (cartItems.isEmpty()) {
+                        TabletEmptyCartView()
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(cartItems, key = { it.product.barcode }) { item ->
+                                TabletCartItemRow(
+                                    item = item,
+                                    allowNegativeInventory = allowNegativeInventory,
+                                    onQuantityChange = { newQty ->
+                                        cartViewModel.updateQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
+                                    },
+                                    onRemove = {
+                                        cartViewModel.removeFromCart(item.product)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Cart Review Footer & Full-width Checkout CTA
+                TabletCartFooter(
+                    subtotal = subtotal,
+                    grandTotal = grandTotal,
+                    cartItemsNotEmpty = cartItems.isNotEmpty(),
+                    onNavigateToCart = onNavigateToCart
+                )
+            }
+        }
+    }
+    }
+}
+
+@Composable
+private fun TabletTopToolbar(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    showCameraPIP: Boolean,
+    onToggleCameraPIP: () -> Unit,
+    onManualEntry: () -> Unit,
+    canCheckStock: Boolean,
+    isSellMode: Boolean,
+    onToggleStockMode: () -> Unit,
+    heldCartCount: Int,
+    onShowHeldCarts: () -> Unit,
+    isPortrait: Boolean,
+    modifier: Modifier = Modifier
+) {
+    var isSearchFocused by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // Search text field (Sleek Input with radiant emerald focus & 44dp height matching buttons)
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = TabletTerminalColors.InputBg,
+            border = BorderStroke(
+                width = if (isSearchFocused) 1.5.dp else 1.dp,
+                color = if (isSearchFocused) TabletTerminalColors.Emerald else TabletTerminalColors.CardBorder
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .height(44.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 12.dp, end = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = stringResource(R.string.products_search_cd),
+                    tint = if (isSearchFocused) TabletTerminalColors.Emerald else TabletTerminalColors.Emerald.copy(alpha = 0.85f),
+                    modifier = Modifier.size(19.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (searchQuery.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.tablet_search_placeholder),
+                            fontSize = if (isPortrait) 12.sp else 12.5.sp,
+                            color = TabletTerminalColors.TextTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            color = TabletTerminalColors.TextMain,
+                            fontSize = if (isPortrait) 12.5.sp else 13.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        cursorBrush = SolidColor(TabletTerminalColors.Emerald),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { isSearchFocused = it.isFocused }
+                    )
+                }
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(
+                        onClick = { onSearchQueryChange("") },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.clear_search),
+                            tint = TabletTerminalColors.TextTertiary,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
             }
         }
 
-        // Vertical Divider
-        Box(
-            modifier = Modifier
-                .width(1.dp)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        )
-
-        // RIGHT PANE: Pinned Live Cart & Checkout (42% width)
-        Column(
-            modifier = Modifier
-                .weight(0.42f)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+        // 1. Scanner Button
+        Surface(
+            onClick = onToggleCameraPIP,
+            shape = RoundedCornerShape(10.dp),
+            color = if (showCameraPIP) TabletTerminalColors.EmeraldLight else TabletTerminalColors.CardBg,
+            border = BorderStroke(1.dp, if (showCameraPIP) TabletTerminalColors.Emerald else TabletTerminalColors.CardBorder),
+            modifier = Modifier.height(44.dp)
         ) {
-            // Cart Header
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.padding(horizontal = if (isPortrait) 8.dp else 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    Icons.Default.PhotoCamera,
+                    contentDescription = null,
+                    tint = if (showCameraPIP) TabletTerminalColors.Emerald else TabletTerminalColors.TextMain,
+                    modifier = Modifier.size(17.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = stringResource(R.string.tablet_action_scan),
+                    fontSize = if (isPortrait) 11.sp else 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (showCameraPIP) TabletTerminalColors.Emerald else TabletTerminalColors.TextMain
+                )
+            }
+        }
+
+        // 2. Keypad Button
+        Surface(
+            onClick = onManualEntry,
+            shape = RoundedCornerShape(10.dp),
+            color = TabletTerminalColors.CardBg,
+            border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
+            modifier = Modifier.height(44.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = if (isPortrait) 8.dp else 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    Icons.Default.Keyboard,
+                    contentDescription = null,
+                    tint = TabletTerminalColors.TextMain,
+                    modifier = Modifier.size(17.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = stringResource(R.string.tablet_action_numpad),
+                    fontSize = if (isPortrait) 11.sp else 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TabletTerminalColors.TextMain
+                )
+            }
+        }
+
+        // 3. Stock Check Mode Button
+        if (canCheckStock) {
+            val isStockCheckActive = !isSellMode
+            Surface(
+                onClick = onToggleStockMode,
+                shape = RoundedCornerShape(10.dp),
+                color = if (isStockCheckActive) TabletTerminalColors.AmberLight else TabletTerminalColors.CardBg,
+                border = BorderStroke(1.dp, if (isStockCheckActive) TabletTerminalColors.Amber else TabletTerminalColors.CardBorder),
+                modifier = Modifier.height(44.dp)
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.padding(horizontal = if (isPortrait) 8.dp else 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.Inventory,
+                        contentDescription = null,
+                        tint = if (isStockCheckActive) TabletTerminalColors.Amber else TabletTerminalColors.TextMain,
+                        modifier = Modifier.size(17.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.tablet_action_stock),
+                        fontSize = if (isPortrait) 11.sp else 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isStockCheckActive) TabletTerminalColors.Amber else TabletTerminalColors.TextMain
+                    )
+                }
+            }
+        }
+
+        // 4. Held Carts Button
+        if (heldCartCount > 0) {
+            Surface(
+                onClick = onShowHeldCarts,
+                shape = RoundedCornerShape(10.dp),
+                color = TabletTerminalColors.AmberLight,
+                border = BorderStroke(1.dp, TabletTerminalColors.AmberBorder),
+                modifier = Modifier.height(44.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = if (isPortrait) 8.dp else 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.PauseCircle,
+                        contentDescription = null,
+                        tint = TabletTerminalColors.Amber,
+                        modifier = Modifier.size(17.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "${stringResource(R.string.tablet_action_held)} ($heldCartCount)",
+                        fontSize = if (isPortrait) 11.sp else 11.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TabletTerminalColors.Amber
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun TabletCartFooter(
+    subtotal: Double,
+    grandTotal: Double,
+    cartItemsNotEmpty: Boolean,
+    onNavigateToCart: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = TabletTerminalColors.FooterBg,
+        border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Subtotal Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.tablet_subtotal),
+                    fontSize = 12.5.sp,
+                    color = TabletTerminalColors.TextSecondary,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = formatTaka(subtotal),
+                    fontSize = 13.sp,
+                    color = TabletTerminalColors.TextMain,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // Estimated Grand Total Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.tablet_estimated_total),
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 15.sp,
+                    color = TabletTerminalColors.TextMain
+                )
+                Text(
+                    text = formatTaka(grandTotal),
+                    fontWeight = FontWeight.Black,
+                    fontSize = 22.sp,
+                    color = TabletTerminalColors.Emerald
+                )
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // Primary Full-width CTA Button: Radiant Emerald Gradient
+            Button(
+                onClick = onNavigateToCart,
+                enabled = cartItemsNotEmpty,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = Color.White,
+                    disabledContainerColor = Color.Transparent,
+                    disabledContentColor = TabletTerminalColors.TextDisabled
+                ),
+                contentPadding = PaddingValues(0.dp),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            if (cartItemsNotEmpty) {
+                                Brush.horizontalGradient(
+                                    listOf(TabletTerminalColors.Emerald, TabletTerminalColors.EmeraldDark)
+                                )
+                            } else {
+                                Brush.linearGradient(
+                                    if (TabletTerminalColors.isDark) listOf(Color(0xFF26334D), Color(0xFF1E273D))
+                                    else listOf(Color(0xFFE2E8F0), Color(0xFFCBD5E1))
+                                )
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Realistic3DSupermarketCartIcon(size = 24.dp)
+                        Realistic3DSupermarketCartIcon(size = 22.dp)
+                        Spacer(Modifier.width(8.dp))
                         Text(
-                            text = stringResource(R.string.tablet_live_cart),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 17.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = stringResource(R.string.tablet_proceed_to_cart, formatTaka(grandTotal)),
+                            fontWeight = FontWeight.Black,
+                            fontSize = 15.5.sp,
+                            color = if (cartItemsNotEmpty) Color.White else TabletTerminalColors.TextDisabled
                         )
-                    }
-
-                    // Item count pill
-                    val itemCount = cartItems.sumOf { it.quantity }.toInt()
-                    val itemCountText = if (itemCount == 1) {
-                        stringResource(R.string.tablet_cart_item_single, itemCount)
-                    } else {
-                        stringResource(R.string.tablet_cart_items, itemCount)
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer
-                    ) {
-                        Text(
-                            text = itemCountText,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-
-                // Quick actions: Hold & Clear
-                if (cartItems.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                cartViewModel.holdCurrentCart()
-                                Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
-                        ) {
-                            Icon(Icons.Default.Restore, contentDescription = "Hold", modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.tablet_cart_hold), fontSize = 11.sp)
-                        }
-
-                        OutlinedButton(
-                            onClick = { cartViewModel.clearCart() },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
-                        ) {
-                            Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.tablet_cart_clear), fontSize = 11.sp)
-                        }
                     }
                 }
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Cart Items Scrollable List
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                if (cartItems.isEmpty()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            Icons.Default.ShoppingCart,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                            modifier = Modifier.size(56.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = stringResource(R.string.tablet_cart_empty_title),
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.tablet_cart_empty_subtitle),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(cartItems, key = { it.product.barcode }) { item ->
-                            TabletCartItemRow(
-                                item = item,
-                                allowNegativeInventory = allowNegativeInventory,
-                                onQuantityChange = { newQty ->
-                                    cartViewModel.updateQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
-                                },
-                                onRemove = {
-                                    cartViewModel.removeFromCart(item.product)
-                                }
-                            )
-                        }
-                    }
-                }
+@Composable
+private fun TabletEmptyCartView(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = TabletTerminalColors.CardBg,
+            border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
+            shadowElevation = 6.dp,
+            modifier = Modifier.size(68.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Realistic3DSupermarketCartIcon(size = 34.dp)
             }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = stringResource(R.string.tablet_cart_empty_title),
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.5.sp,
+            color = TabletTerminalColors.TextSecondary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.tablet_cart_empty_subtitle),
+            fontSize = 12.sp,
+            color = TabletTerminalColors.TextTertiary,
+            textAlign = TextAlign.Center
+        )
+    }
+}
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Cart Summary & Big Checkout Button
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+@Composable
+private fun TabletCameraPipView(
+    hasCameraPermission: Boolean,
+    onRequestCameraPermission: () -> Unit,
+    scannerViewModel: ScannerViewModel,
+    cartViewModel: CartViewModel,
+    scanningPaused: Boolean,
+    torchEnabled: Boolean,
+    onTorchToggle: () -> Unit,
+    onScanningPausedToggle: () -> Unit,
+    onCameraControlReady: (androidx.camera.core.CameraControl) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Black),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(170.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (hasCameraPermission) {
+                CameraPreviewView(
+                    scannerViewModel = scannerViewModel,
+                    cartViewModel = cartViewModel,
+                    scanningEnabled = !scanningPaused,
+                    torchEnabled = torchEnabled,
+                    onCameraControlReady = onCameraControlReady,
+                    modifier = Modifier.fillMaxSize()
+                )
+                ScanFrameOverlay()
+            } else {
                 Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(stringResource(R.string.tablet_grand_total), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text(
-                            text = formatTaka(grandTotal),
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 22.sp,
-                            color = Color(0xFF2E7D32)
-                        )
+                    Text("Camera permission required", color = Color.White, fontSize = 12.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Button(onClick = onRequestCameraPermission) {
+                        Text("Grant Permission", fontSize = 12.sp)
                     }
+                }
+            }
 
-                    Button(
-                        onClick = onNavigateToCart,
-                        enabled = cartItems.isNotEmpty(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF1B5E20),
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Realistic3DSellTerminalIcon(size = 22.dp)
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(R.string.tablet_checkout),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                        }
-                    }
+            // Mini PIP controls
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                FilledIconButton(
+                    onClick = onTorchToggle,
+                    modifier = Modifier.size(36.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = if (torchEnabled) Color(0xFFFFD54F) else Color.DarkGray
+                    )
+                ) {
+                    Realistic3DTacticalFlashlightIcon(torchEnabled = torchEnabled, size = 18.dp)
+                }
+
+                FilledIconButton(
+                    onClick = onScanningPausedToggle,
+                    modifier = Modifier.size(36.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = if (scanningPaused) Color(0xFFEF5350) else Color.DarkGray
+                    )
+                ) {
+                    Realistic3DPauseDiscIcon(isPaused = scanningPaused, size = 18.dp)
                 }
             }
         }
@@ -984,87 +1887,154 @@ private fun TabletSplitTerminal(
 private fun TabletProductGridCard(
     product: Product,
     inCartQuantity: Double,
+    isStockCheckMode: Boolean = false,
+    allowNegativeInventory: Boolean = false,
     onClick: () -> Unit
 ) {
     val isOutOfStock = product.stockQty <= 0.0
+    val isLowStock = !isOutOfStock && product.stockQty <= 5.0
+    val isInCart = inCartQuantity > 0.0
+
     Card(
         onClick = onClick,
-        enabled = !isOutOfStock,
-        shape = RoundedCornerShape(12.dp),
+        enabled = if (isStockCheckMode) true else (!isOutOfStock || allowNegativeInventory),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (inCartQuantity > 0.0) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-            else MaterialTheme.colorScheme.surface
+            containerColor = TabletTerminalColors.CardBg,
+            disabledContainerColor = if (isStockCheckMode) TabletTerminalColors.CardBg else TabletTerminalColors.CardBg.copy(alpha = 0.55f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp),
+        border = BorderStroke(
+            1.dp,
+            when {
+                isInCart -> TabletTerminalColors.Emerald
+                isStockCheckMode -> TabletTerminalColors.AmberBorder
+                else -> TabletTerminalColors.CardBorder
+            }
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(115.dp)
+            .height(135.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize().padding(10.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp)
+        ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                // Top Row: 3D Visual Box + Stock Status Pill
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    if (TabletTerminalColors.isDark) listOf(Color(0x24FFFFFF), Color(0x0AFFFFFF))
+                                    else listOf(Color(0xFFF1F5F9), Color(0xFFE2E8F0))
+                                )
+                            )
+                            .border(
+                                1.dp,
+                                if (TabletTerminalColors.isDark) Color(0x26FFFFFF) else Color(0xFFCBD5E1),
+                                RoundedCornerShape(10.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Realistic3DProductsBoxIcon(size = 22.dp)
+                    }
+
+                    val badgeInfo = when {
+                        isOutOfStock -> TabletStockBadgeInfo(
+                            TabletTerminalColors.RoseLight,
+                            TabletTerminalColors.RoseBorder,
+                            TabletTerminalColors.Rose,
+                            stringResource(R.string.tablet_stock_out)
+                        )
+                        isLowStock -> TabletStockBadgeInfo(
+                            TabletTerminalColors.AmberLight,
+                            TabletTerminalColors.AmberBorder,
+                            TabletTerminalColors.Amber,
+                            "${product.stockQty.toInt()} ${product.unit}"
+                        )
+                        else -> TabletStockBadgeInfo(
+                            TabletTerminalColors.EmeraldLight,
+                            Color(0x4010B981),
+                            TabletTerminalColors.Emerald,
+                            "${product.stockQty.toInt()} ${product.unit}"
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(9999.dp),
+                        color = badgeInfo.bg,
+                        border = BorderStroke(1.dp, badgeInfo.border)
+                    ) {
+                        Text(
+                            text = badgeInfo.label,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = badgeInfo.textColor,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                // Middle: Product Name & Barcode
+                Column(modifier = Modifier.padding(vertical = 2.dp)) {
                     Text(
                         text = product.name,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.5.sp,
                         lineHeight = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = TabletTerminalColors.TextMain
                     )
-                    if (product.category.isNotBlank()) {
+                    if (product.barcode.isNotBlank()) {
                         Text(
-                            text = product.category,
-                            fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = product.barcode,
+                            fontSize = 9.5.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = TabletTerminalColors.TextTertiary
                         )
                     }
                 }
 
+                // Bottom Row: Vibrant Emerald Price + In-Cart Badge
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = formatTaka(product.sellingPrice),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.primary
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 14.5.sp,
+                        color = TabletTerminalColors.Emerald
                     )
 
-                    val stockText = if (isOutOfStock) {
-                        stringResource(R.string.tablet_stock_out)
-                    } else {
-                        stringResource(R.string.tablet_stock_available, product.stockQty.toInt())
-                    }
-                    Text(
-                        text = stockText,
-                        fontSize = 10.sp,
-                        color = if (isOutOfStock) MaterialTheme.colorScheme.error else Color(0xFF388E3C),
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            if (inCartQuantity > 0.0) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(20.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "${inCartQuantity.toInt()}",
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    if (isInCart) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = TabletTerminalColors.Emerald,
+                            shadowElevation = 2.dp
+                        ) {
+                            Text(
+                                text = "${inCartQuantity.toInt()}",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -1102,81 +2072,117 @@ private fun TabletCartItemRow(
     }
 
     Card(
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = TabletTerminalColors.CardBg),
+        border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
+                .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            // Left Column: Item Name (up to 3 lines, NO cut-off!) + Price breakdown
+            Column(
+                modifier = Modifier
+                    .weight(1f, fill = true)
+                    .padding(end = 8.dp)
+            ) {
                 Text(
                     text = item.product.name,
-                    maxLines = 1,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface
+                    lineHeight = 17.sp,
+                    color = TabletTerminalColors.TextMain
                 )
+                Spacer(modifier = Modifier.height(3.dp))
                 val itemQtyDisplay = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
-                Text(
-                    text = "${formatTaka(item.product.sellingPrice)} × $itemQtyDisplay = ${formatTaka(item.product.sellingPrice * item.quantity)}",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                IconButton(
-                    onClick = { onQuantityChange((item.quantity - 1.0).coerceAtLeast(0.0)) },
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(Icons.Default.Remove, contentDescription = "Decrease", modifier = Modifier.size(16.dp))
-                }
-
-                Surface(
-                    onClick = { showQuantityDialog = true },
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(horizontal = 2.dp)
-                ) {
-                    val displayQty = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = displayQty,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        text = "${formatTaka(item.product.sellingPrice)} × $itemQtyDisplay = ",
+                        fontSize = 11.5.sp,
+                        color = TabletTerminalColors.TextSecondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = formatTaka(item.product.sellingPrice * item.quantity),
+                        fontSize = 12.sp,
+                        color = TabletTerminalColors.Emerald,
+                        fontWeight = FontWeight.Bold
                     )
                 }
+            }
 
-                IconButton(
-                    onClick = {
-                        if (allowNegativeInventory || item.product.stockQty <= 0.0 || item.quantity + 1.0 <= item.product.stockQty) {
-                            onQuantityChange(item.quantity + 1.0)
-                        }
-                    },
-                    modifier = Modifier.size(28.dp)
+            // Right Row: Stepper Controls + Delete Icon
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = TabletTerminalColors.InputBg,
+                    border = BorderStroke(1.dp, TabletTerminalColors.CardBorder)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Increase", modifier = Modifier.size(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { onQuantityChange((item.quantity - 1.0).coerceAtLeast(0.0)) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Remove,
+                                contentDescription = "Decrease",
+                                tint = TabletTerminalColors.TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        Surface(
+                            onClick = { showQuantityDialog = true },
+                            color = Color.Transparent,
+                            modifier = Modifier.padding(horizontal = 2.dp)
+                        ) {
+                            val displayQty = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
+                            Text(
+                                text = displayQty,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.5.sp,
+                                color = TabletTerminalColors.TextMain,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.widthIn(min = 28.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                if (allowNegativeInventory || item.product.stockQty <= 0.0 || item.quantity + 1.0 <= item.product.stockQty) {
+                                    onQuantityChange(item.quantity + 1.0)
+                                }
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Increase",
+                                tint = TabletTerminalColors.Emerald,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
 
                 IconButton(
                     onClick = onRemove,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        Icons.Default.Delete,
+                        Icons.Default.DeleteOutline,
                         contentDescription = "Remove",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(16.dp)
+                        tint = TabletTerminalColors.Rose,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

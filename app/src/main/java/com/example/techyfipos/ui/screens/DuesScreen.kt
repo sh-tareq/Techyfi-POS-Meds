@@ -15,6 +15,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -216,6 +221,9 @@ fun DuesScreen(
         }
     }
 
+    val configuration = LocalConfiguration.current
+    val isTablet = configuration.screenWidthDp >= 600
+
     var selectedTab by rememberSaveable { mutableStateOf(DuesTab.OUTSTANDING) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var sort by remember { mutableStateOf(DuesSort.HIGHEST) }
@@ -341,12 +349,14 @@ fun DuesScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            if (selectedCustomer != null) duesViewModel.selectCustomer(null) else onBack()
+                    if (selectedCustomer != null || !isTablet) {
+                        IconButton(
+                            onClick = {
+                                if (selectedCustomer != null) duesViewModel.selectCustomer(null) else onBack()
+                            }
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -899,97 +909,196 @@ fun DuesScreen(
                         }
                     }
 
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 100.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item(key = "dues_summary_card") {
-                            DuesExecutiveSummaryCard(
-                                outstanding = totalOutstanding,
-                                outstandingCustomers = outstandingDues.size,
-                                collectedThisMonth = collectedThisMonth,
-                                totalEverCollected = totalEverCollected,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                    if (isTablet) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 440.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 100.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            item(key = "dues_summary_card", span = { GridItemSpan(maxLineSpan) }) {
+                                DuesExecutiveSummaryCard(
+                                    outstanding = totalOutstanding,
+                                    outstandingCustomers = outstandingDues.size,
+                                    collectedThisMonth = collectedThisMonth,
+                                    totalEverCollected = totalEverCollected,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
 
-                        if (customerRows.isEmpty()) {
-                            item(key = "empty_dues") {
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth().padding(24.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            if (customerRows.isEmpty()) {
+                                item(key = "empty_dues", span = { GridItemSpan(maxLineSpan) }) {
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
                                     ) {
-                                        Realistic3DDigitalKhataIcon(size = 36.dp)
-                                        Text(
-                                            text = if (searchQuery.isNotBlank()) stringResource(R.string.dues_no_customers_match, searchQuery) else stringResource(R.string.dues_no_customer_accounts_found),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.5.sp,
-                                            textAlign = TextAlign.Center
-                                        )
-                                        if (isOwner && searchQuery.isBlank() && selectedTab == DuesTab.OUTSTANDING) {
-                                            Button(
-                                                onClick = { showAddDueDialog = true },
-                                                shape = RoundedCornerShape(10.dp),
-                                                modifier = Modifier.padding(top = 6.dp)
-                                            ) {
-                                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                                Spacer(Modifier.width(6.dp))
-                                                Text(stringResource(R.string.dues_add_customer_due_button))
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Realistic3DDigitalKhataIcon(size = 36.dp)
+                                            Text(
+                                                text = if (searchQuery.isNotBlank()) stringResource(R.string.dues_no_customers_match, searchQuery) else stringResource(R.string.dues_no_customer_accounts_found),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.5.sp,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            if (isOwner && searchQuery.isBlank() && selectedTab == DuesTab.OUTSTANDING) {
+                                                Button(
+                                                    onClick = { showAddDueDialog = true },
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    modifier = Modifier.padding(top = 6.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                    Spacer(Modifier.width(6.dp))
+                                                    Text(stringResource(R.string.dues_add_customer_due_button))
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
-                        } else {
-                            items(customerRows, key = { it.customerPhone }) { customer ->
-                                val repaid = remember(paymentsByPhone, customer.customerPhone) {
-                                    paymentsByPhone[customer.customerPhone]?.sumOf { it.amountPaid } ?: 0.0
-                                }
-                                val isOverdue = customer.updatedAt < overdueThresholdMillis && customer.outstandingAmount > 0
-                                CustomerDueRow(
-                                    customer = customer,
-                                    repaidAmount = repaid,
-                                    isOverdue = isOverdue,
-                                    canCollect = isOwner,
-                                    canDelete = isOwner,
-                                    onClick = { duesViewModel.selectCustomer(customer) },
-                                    onCollect = { paymentCustomer = customer },
-                                    onWhatsApp = {
-                                        val shop = storeName.ifBlank { "আমাদের দোকান" }
-                                        val waMessage = "আসসালামু আলাইকুম জনাব ${customer.customerName},\n${shop} থেকে আপনার বকেয়া হিসাবের বিবরণী:\n• মোট অপরিশোধিত বকেয়া: ${formatTaka(customer.outstandingAmount)}\nঅনুগ্রহপূর্বক সুবিধাজনক সময়ে বকেয়া পরিশোধ করার জন্য বিনীত অনুরোধ করা যাচ্ছে। ধন্যবাদ।"
-                                        openWhatsAppReminder(context, customer.customerPhone, waMessage)
-                                    },
-                                    onRemind = {
-                                        if (canSendReminders) {
-                                            reminderCustomer = customer
-                                        } else {
-                                            Toast.makeText(context, reminderPermissionRequiredToast, Toast.LENGTH_SHORT).show()
+                            } else {
+                                gridItems(customerRows, key = { it.customerPhone }) { customer ->
+                                    val repaid = remember(paymentsByPhone, customer.customerPhone) {
+                                        paymentsByPhone[customer.customerPhone]?.sumOf { it.amountPaid } ?: 0.0
+                                    }
+                                    val isOverdue = customer.updatedAt < overdueThresholdMillis && customer.outstandingAmount > 0
+                                    CustomerDueRow(
+                                        customer = customer,
+                                        repaidAmount = repaid,
+                                        isOverdue = isOverdue,
+                                        canCollect = isOwner,
+                                        canDelete = isOwner,
+                                        onClick = { duesViewModel.selectCustomer(customer) },
+                                        onCollect = { paymentCustomer = customer },
+                                        onWhatsApp = {
+                                            val shop = storeName.ifBlank { "আমাদের দোকান" }
+                                            val waMessage = "আসসালামু আলাইকুম জনাব ${customer.customerName},\n${shop} থেকে আপনার বকেয়া হিসাবের বিবরণী:\n• মোট অপরিশোধিত বকেয়া: ${formatTaka(customer.outstandingAmount)}\nঅনুগ্রহপূর্বক সুবিধাজনক সময়ে বকেয়া পরিশোধ করার জন্য বিনীত অনুরোধ করা যাচ্ছে। ধন্যবাদ।"
+                                            openWhatsAppReminder(context, customer.customerPhone, waMessage)
+                                        },
+                                        onRemind = {
+                                            if (canSendReminders) {
+                                                reminderCustomer = customer
+                                            } else {
+                                                Toast.makeText(context, reminderPermissionRequiredToast, Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        onCall = {
+                                            openPhoneDialer(context, customer.customerPhone)
+                                        },
+                                        onEditDue = {
+                                            customerToEditDue = customer
+                                        },
+                                        onDeleteDue = {
+                                            if (isOwner) {
+                                                customerToDelete = customer
+                                            } else {
+                                                Toast.makeText(context, deleteOwnerOnlyToast, Toast.LENGTH_SHORT).show()
+                                            }
                                         }
-                                    },
-                                    onCall = {
-                                        openPhoneDialer(context, customer.customerPhone)
-                                    },
-                                    onEditDue = {
-                                        customerToEditDue = customer
-                                    },
-                                    onDeleteDue = {
-                                        if (isOwner) {
-                                            customerToDelete = customer
-                                        } else {
-                                            Toast.makeText(context, deleteOwnerOnlyToast, Toast.LENGTH_SHORT).show()
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 100.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            item(key = "dues_summary_card") {
+                                DuesExecutiveSummaryCard(
+                                    outstanding = totalOutstanding,
+                                    outstandingCustomers = outstandingDues.size,
+                                    collectedThisMonth = collectedThisMonth,
+                                    totalEverCollected = totalEverCollected,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+
+                            if (customerRows.isEmpty()) {
+                                item(key = "empty_dues") {
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Realistic3DDigitalKhataIcon(size = 36.dp)
+                                            Text(
+                                                text = if (searchQuery.isNotBlank()) stringResource(R.string.dues_no_customers_match, searchQuery) else stringResource(R.string.dues_no_customer_accounts_found),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.5.sp,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            if (isOwner && searchQuery.isBlank() && selectedTab == DuesTab.OUTSTANDING) {
+                                                Button(
+                                                    onClick = { showAddDueDialog = true },
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    modifier = Modifier.padding(top = 6.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                    Spacer(Modifier.width(6.dp))
+                                                    Text(stringResource(R.string.dues_add_customer_due_button))
+                                                }
+                                            }
                                         }
                                     }
-                                )
+                                }
+                            } else {
+                                items(customerRows, key = { it.customerPhone }) { customer ->
+                                    val repaid = remember(paymentsByPhone, customer.customerPhone) {
+                                        paymentsByPhone[customer.customerPhone]?.sumOf { it.amountPaid } ?: 0.0
+                                    }
+                                    val isOverdue = customer.updatedAt < overdueThresholdMillis && customer.outstandingAmount > 0
+                                    CustomerDueRow(
+                                        customer = customer,
+                                        repaidAmount = repaid,
+                                        isOverdue = isOverdue,
+                                        canCollect = isOwner,
+                                        canDelete = isOwner,
+                                        onClick = { duesViewModel.selectCustomer(customer) },
+                                        onCollect = { paymentCustomer = customer },
+                                        onWhatsApp = {
+                                            val shop = storeName.ifBlank { "আমাদের দোকান" }
+                                            val waMessage = "আসসালামু আলাইকুম জনাব ${customer.customerName},\n${shop} থেকে আপনার বকেয়া হিসাবের বিবরণী:\n• মোট অপরিশোধিত বকেয়া: ${formatTaka(customer.outstandingAmount)}\nঅনুগ্রহপূর্বক সুবিধাজনক সময়ে বকেয়া পরিশোধ করার জন্য বিনীত অনুরোধ করা যাচ্ছে। ধন্যবাদ।"
+                                            openWhatsAppReminder(context, customer.customerPhone, waMessage)
+                                        },
+                                        onRemind = {
+                                            if (canSendReminders) {
+                                                reminderCustomer = customer
+                                            } else {
+                                                Toast.makeText(context, reminderPermissionRequiredToast, Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        onCall = {
+                                            openPhoneDialer(context, customer.customerPhone)
+                                        },
+                                        onEditDue = {
+                                            customerToEditDue = customer
+                                        },
+                                        onDeleteDue = {
+                                            if (isOwner) {
+                                                customerToDelete = customer
+                                            } else {
+                                                Toast.makeText(context, deleteOwnerOnlyToast, Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }

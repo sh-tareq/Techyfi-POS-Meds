@@ -27,6 +27,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
@@ -166,10 +167,17 @@ fun LocaleWrapper(language: String, content: @Composable () -> Unit) {
     val locale = java.util.Locale.forLanguageTag(language)
     java.util.Locale.setDefault(locale)
     
-    val config = android.content.res.Configuration(context.resources.configuration)
-    config.setLocale(locale)
+    val currentSysConfig = androidx.compose.ui.platform.LocalConfiguration.current
+    val config = remember(currentSysConfig.orientation, currentSysConfig.screenWidthDp, currentSysConfig.screenHeightDp, language) {
+        android.content.res.Configuration(context.resources.configuration).apply {
+            setTo(currentSysConfig)
+            setLocale(locale)
+        }
+    }
     
-    val localizedContext = context.createConfigurationContext(config)
+    val localizedContext = remember(config) {
+        context.createConfigurationContext(config)
+    }
     
     val registryOwner = remember(context) {
         var ctx = context
@@ -514,7 +522,7 @@ fun MainNavigation() {
                 )
             }
 
-            val isCoreScreen = currentKey in listOf(Scanner, Products, SalesHistory, SalesReport, Dues, Settings, Expenses, Suppliers, RegisterClose, Loyalty, Customers)
+            val isCoreScreen = currentKey in listOf(Scanner, Products, SalesHistory, SalesReport, Dues, Settings, Expenses, Suppliers, RegisterClose, Loyalty, Customers, Cart)
             val layoutDirection = LocalLayoutDirection.current
             val topInset = innerPadding.calculateTopPadding()
             val bottomInset = innerPadding.calculateBottomPadding()
@@ -536,8 +544,11 @@ fun MainNavigation() {
                 modifier = Modifier.fillMaxSize()
             ) {
                 if (isTablet && isCoreScreen) {
-                    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
-                    val brandBlue = Color(0xFF0082FF)
+                    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                    val dividerColor = if (isDark) Color(0x1FFFFFFF) else Color(0xFFE2E8F0)
+                    val brandEmerald = Color(0xFF10B981)
+                    val railBg = if (isDark) Color(0xFF0E131F) else Color(0xFFFFFFFF)
+                    val unselectedColor = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
                     NavigationRail(
                         modifier = Modifier
@@ -552,7 +563,7 @@ fun MainNavigation() {
                                     strokeWidth = strokeWidth
                                 )
                             },
-                        containerColor = MaterialTheme.colorScheme.surface,
+                        containerColor = railBg,
                         header = {
                             Box(
                                 modifier = Modifier
@@ -570,7 +581,7 @@ fun MainNavigation() {
                                     .border(
                                         width = 1.5.dp,
                                         brush = Brush.linearGradient(
-                                            listOf(brandBlue, Color(0xFF38BDF8), Color(0xFF1E293B))
+                                            listOf(brandEmerald, Color(0xFF34D399), Color(0xFF1E293B))
                                         ),
                                         shape = RoundedCornerShape(11.dp)
                                     )
@@ -612,7 +623,7 @@ fun MainNavigation() {
                                 verticalArrangement = Arrangement.spacedBy(3.dp)
                             ) {
                                 val navItems = listOf(
-                                    Triple(Nav3DType.SELL, currentKey == Scanner, stringResource(R.string.sell_mode)) to {
+                                    Triple(Nav3DType.SELL, currentKey == Scanner || currentKey == Cart, stringResource(R.string.sell_mode)) to {
                                         while (backStack.size > 1) { backStack.removeLastOrNull() }
                                     },
                                     Triple(Nav3DType.PRODUCTS, currentKey == Products, stringResource(R.string.products)) to {
@@ -637,6 +648,15 @@ fun MainNavigation() {
                                             android.widget.Toast.makeText(context, context.getString(R.string.dues_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
+                                    Triple(Nav3DType.EXPENSES, currentKey == Expenses, stringResource(R.string.expenses)) to {
+                                        val canExpense = isOwner || isSupervisor || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
+                                        if (canExpense) {
+                                            while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                            if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
+                                        } else {
+                                            android.widget.Toast.makeText(context, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
                                     Triple(Nav3DType.REPORT, currentKey == SalesReport, stringResource(R.string.sales_report_section)) to {
                                         val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
                                         if (canReport) {
@@ -655,7 +675,7 @@ fun MainNavigation() {
                                             android.widget.Toast.makeText(context, ownerOnlySettingsText, android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
-                                    Triple(Nav3DType.MORE, currentKey in listOf(RegisterClose, Suppliers, Loyalty, Customers, Expenses), stringResource(R.string.more_hub)) to {
+                                    Triple(Nav3DType.MORE, currentKey in listOf(Suppliers, Loyalty, Customers, RegisterClose), stringResource(R.string.more_hub)) to {
                                         showMoreHubSheet = true
                                     }
                                 )
@@ -673,7 +693,7 @@ fun MainNavigation() {
                                         HorizontalDivider(
                                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 3.dp),
                                             thickness = 0.8.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                                            color = dividerColor
                                         )
                                     }
 
@@ -703,11 +723,11 @@ fun MainNavigation() {
                                             )
                                         },
                                         colors = NavigationRailItemDefaults.colors(
-                                            selectedIconColor = brandBlue,
-                                            selectedTextColor = brandBlue,
-                                            indicatorColor = brandBlue.copy(alpha = 0.16f),
-                                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                            selectedIconColor = Color(0xFF10B981),
+                                            selectedTextColor = Color(0xFF10B981),
+                                            indicatorColor = if (isDark) Color(0x2410B981) else Color(0x1810B981),
+                                            unselectedIconColor = unselectedColor,
+                                            unselectedTextColor = unselectedColor
                                         ),
                                         modifier = Modifier.padding(vertical = 0.dp)
                                     )
@@ -725,7 +745,7 @@ fun MainNavigation() {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 3.dp),
                                     thickness = 0.8.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                                    color = dividerColor
                                 )
 
                                 val user = currentUser
@@ -749,8 +769,8 @@ fun MainNavigation() {
                                         modifier = Modifier
                                             .size(36.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0xFF10B981).copy(alpha = 0.18f))
-                                            .border(1.2.dp, Color(0xFF10B981).copy(alpha = 0.5f), CircleShape)
+                                            .background(Color(0xFF10B981).copy(alpha = if (isDark) 0.18f else 0.12f))
+                                            .border(1.2.dp, Color(0xFF10B981).copy(alpha = if (isDark) 0.5f else 0.4f), CircleShape)
                                             .clickable { showUserDropdown = true },
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -898,7 +918,7 @@ fun MainNavigation() {
                                     Icon(
                                         imageVector = Icons.Default.Lock,
                                         contentDescription = "Lock Terminal",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = unselectedColor,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -921,6 +941,7 @@ fun MainNavigation() {
                         entryProvider = entryProvider {
                             entry<Splash> {
                                 SplashScreen(
+                                    isTablet = isTablet,
                                     onSplashFinished = {
                                         while (backStack.size > 0) {
                                             backStack.removeLastOrNull()
@@ -1292,80 +1313,100 @@ private fun MoreOperationsHubContent(
     var selectedCategory by remember { mutableStateOf(OperationCategory.ALL) }
     var isGridView by rememberSaveable { mutableStateOf(isTablet) }
 
-    val operationsList = listOf(
-        OperationHubItem(
-            title = stringResource(R.string.register_close_section),
-            subtitle = stringResource(R.string.register_close_hub_subtitle),
-            navType = Nav3DType.REGISTER,
-            badge = if (isOwner) stringResource(R.string.more_audit_badge) else stringResource(R.string.more_locked_badge),
-            badgeColor = if (isOwner) Color(0xFFF59E0B) else Color(0xFF64748B),
-            isSelected = currentKey == RegisterClose,
-            category = OperationCategory.SHIFT,
-            isLocked = !isOwner,
-            onClick = onNavigateToRegisterClose
-        ),
-        OperationHubItem(
-            title = stringResource(R.string.expenses),
-            subtitle = stringResource(R.string.more_expenses_subtitle),
-            navType = Nav3DType.EXPENSES,
-            badge = stringResource(R.string.more_expenses_badge),
-            badgeColor = Color(0xFFEF4444),
-            isSelected = currentKey == Expenses,
-            category = OperationCategory.SHIFT,
-            onClick = onNavigateToExpenses
-        ),
-        OperationHubItem(
-            title = stringResource(R.string.sales_report_section),
-            subtitle = stringResource(R.string.more_report_subtitle),
-            navType = Nav3DType.REPORT,
-            badge = stringResource(R.string.more_report_badge),
-            badgeColor = Color(0xFF3B82F6),
-            isSelected = currentKey == SalesReport,
-            category = OperationCategory.MANAGEMENT,
-            onClick = onNavigateToReport
-        ),
-        OperationHubItem(
-            title = stringResource(R.string.suppliers),
-            subtitle = stringResource(R.string.more_suppliers_subtitle),
-            navType = Nav3DType.SUPPLIERS,
-            badge = stringResource(R.string.more_suppliers_badge),
-            badgeColor = Color(0xFF10B981),
-            isSelected = currentKey == Suppliers,
-            category = OperationCategory.MANAGEMENT,
-            onClick = onNavigateToSuppliers
-        ),
-        OperationHubItem(
-            title = stringResource(R.string.loyalty_screen_title),
-            subtitle = stringResource(R.string.loyalty_hub_subtitle),
-            navType = Nav3DType.LOYALTY,
-            badge = stringResource(R.string.loyalty_badge),
-            badgeColor = Color(0xFFEC4899),
-            isSelected = currentKey == Loyalty,
-            category = OperationCategory.CRM,
-            onClick = onNavigateToLoyalty
-        ),
-        OperationHubItem(
-            title = stringResource(R.string.customers_hub_title),
-            subtitle = stringResource(R.string.customers_hub_subtitle),
-            navType = Nav3DType.CUSTOMERS,
-            badge = stringResource(R.string.customers_badge),
-            badgeColor = Color(0xFF0D9488),
-            isSelected = currentKey == Customers,
-            category = OperationCategory.CRM,
-            onClick = onNavigateToCustomers
-        ),
-        OperationHubItem(
-            title = stringResource(R.string.settings),
-            subtitle = stringResource(R.string.more_settings_subtitle),
-            navType = Nav3DType.SETTINGS,
-            badge = if (isOwner) stringResource(R.string.more_admin_badge) else stringResource(R.string.more_locked_badge),
-            badgeColor = if (isOwner) Color(0xFF8B5CF6) else Color(0xFF64748B),
-            isSelected = currentKey == Settings,
-            category = OperationCategory.MANAGEMENT,
-            isLocked = !isOwner,
-            onClick = onNavigateToSettings
+    val operationsList = buildList {
+        add(
+            OperationHubItem(
+                title = stringResource(R.string.register_close_section),
+                subtitle = stringResource(R.string.register_close_hub_subtitle),
+                navType = Nav3DType.REGISTER,
+                badge = if (isOwner) stringResource(R.string.more_audit_badge) else stringResource(R.string.more_locked_badge),
+                badgeColor = if (isOwner) Color(0xFFF59E0B) else Color(0xFF64748B),
+                isSelected = currentKey == RegisterClose,
+                category = OperationCategory.SHIFT,
+                isLocked = !isOwner,
+                onClick = onNavigateToRegisterClose
+            )
         )
-    )
+        if (!isTablet) {
+            add(
+                OperationHubItem(
+                    title = stringResource(R.string.expenses),
+                    subtitle = stringResource(R.string.more_expenses_subtitle),
+                    navType = Nav3DType.EXPENSES,
+                    badge = stringResource(R.string.more_expenses_badge),
+                    badgeColor = Color(0xFFEF4444),
+                    isSelected = currentKey == Expenses,
+                    category = OperationCategory.SHIFT,
+                    onClick = onNavigateToExpenses
+                )
+            )
+        }
+        if (!isTablet) {
+            add(
+                OperationHubItem(
+                    title = stringResource(R.string.sales_report_section),
+                    subtitle = stringResource(R.string.more_report_subtitle),
+                    navType = Nav3DType.REPORT,
+                    badge = stringResource(R.string.more_report_badge),
+                    badgeColor = Color(0xFF3B82F6),
+                    isSelected = currentKey == SalesReport,
+                    category = OperationCategory.MANAGEMENT,
+                    onClick = onNavigateToReport
+                )
+            )
+        }
+        add(
+            OperationHubItem(
+                title = stringResource(R.string.suppliers),
+                subtitle = stringResource(R.string.more_suppliers_subtitle),
+                navType = Nav3DType.SUPPLIERS,
+                badge = stringResource(R.string.more_suppliers_badge),
+                badgeColor = Color(0xFF10B981),
+                isSelected = currentKey == Suppliers,
+                category = OperationCategory.MANAGEMENT,
+                onClick = onNavigateToSuppliers
+            )
+        )
+        add(
+            OperationHubItem(
+                title = stringResource(R.string.loyalty_screen_title),
+                subtitle = stringResource(R.string.loyalty_hub_subtitle),
+                navType = Nav3DType.LOYALTY,
+                badge = stringResource(R.string.loyalty_badge),
+                badgeColor = Color(0xFFEC4899),
+                isSelected = currentKey == Loyalty,
+                category = OperationCategory.CRM,
+                onClick = onNavigateToLoyalty
+            )
+        )
+        add(
+            OperationHubItem(
+                title = stringResource(R.string.customers_hub_title),
+                subtitle = stringResource(R.string.customers_hub_subtitle),
+                navType = Nav3DType.CUSTOMERS,
+                badge = stringResource(R.string.customers_badge),
+                badgeColor = Color(0xFF0D9488),
+                isSelected = currentKey == Customers,
+                category = OperationCategory.CRM,
+                onClick = onNavigateToCustomers
+            )
+        )
+        if (!isTablet) {
+            add(
+                OperationHubItem(
+                    title = stringResource(R.string.settings),
+                    subtitle = stringResource(R.string.more_settings_subtitle),
+                    navType = Nav3DType.SETTINGS,
+                    badge = if (isOwner) stringResource(R.string.more_admin_badge) else stringResource(R.string.more_locked_badge),
+                    badgeColor = if (isOwner) Color(0xFF8B5CF6) else Color(0xFF64748B),
+                    isSelected = currentKey == Settings,
+                    category = OperationCategory.MANAGEMENT,
+                    isLocked = !isOwner,
+                    onClick = onNavigateToSettings
+                )
+            )
+        }
+    }
 
     val filteredList = if (selectedCategory == OperationCategory.ALL) {
         operationsList

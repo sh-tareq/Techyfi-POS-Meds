@@ -1,0 +1,4026 @@
+<!DOCTYPE html>
+<html lang="bn" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS — Tablet Sell Screen Redesign (Vertical & Horizontal Views)</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans for UI, Hind Siliguri for Natural Bangla, JetBrains Mono for Digits & Barcodes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Three.js for Interactive 3D Canvas Showcase -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    /* ==========================================================================
+       1. CSS CUSTOM PROPERTIES (DESIGN TOKENS & COLOR PALETTES)
+       ========================================================================== */
+    :root {
+      /* Brand Core */
+      --primary: #10B981;
+      --primary-hover: #059669;
+      --primary-dark: #047857;
+      --primary-light: rgba(16, 185, 129, 0.14);
+      --primary-glow: rgba(16, 185, 129, 0.35);
+
+      --secondary: #6366F1;
+      --secondary-glow: rgba(99, 102, 241, 0.3);
+
+      /* Accent Status Tones */
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-rose: #EF4444;
+      --accent-sky: #0EA5E9;
+      --accent-purple: #8B5CF6;
+      --accent-gold: #FBBF24;
+
+      /* Dark Terminal Theme (Default POS) */
+      --bg-workspace: #080B11;
+      --bg-tablet-frame: #111622;
+      --bg-surface: #161D2D;
+      --bg-card: #1E273D;
+      --bg-card-hover: #26334D;
+      --bg-input: #121824;
+      --bg-highlight: rgba(255, 255, 255, 0.05);
+
+      --bg-nav-rail: #0E131F;
+      --bg-cart-pane: #0F1523;
+      --bg-cart-header: rgba(22, 29, 45, 0.6);
+      --bg-cart-footer: #0A0E18;
+      --bg-empty-cart-visual: radial-gradient(circle at 35% 30%, #1E273D, #0F1523);
+      --rail-hover: rgba(255, 255, 255, 0.06);
+
+      /* Typography Tones */
+      --text-main: #F8FAFC;
+      --text-secondary: #94A3B8;
+      --text-tertiary: #64748B;
+      --text-disabled: #475569;
+
+      /* Borders & Glass Dividers */
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.14);
+      --border-focus: #10B981;
+
+      /* Elevation & Shadows */
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+      --shadow-lg: 0 20px 48px -8px rgba(0, 0, 0, 0.65);
+      --shadow-3d: 0 16px 32px -6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+
+      /* Font Families */
+      --font-ui: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-bn: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Transitions */
+      --transition-smooth: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-bounce: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-workspace: #F1F5F9;
+      --bg-tablet-frame: #E2E8F0;
+      --bg-surface: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F1F5F9;
+      --bg-input: #F1F5F9;
+      --bg-highlight: rgba(0, 0, 0, 0.03);
+
+      --bg-nav-rail: #FFFFFF;
+      --bg-cart-pane: #FFFFFF;
+      --bg-cart-header: #F8FAFC;
+      --bg-cart-footer: #F8FAFC;
+      --bg-empty-cart-visual: radial-gradient(circle at 35% 30%, #F1F5F9, #E2E8F0);
+      --rail-hover: rgba(0, 0, 0, 0.05);
+
+      --text-main: #0F172A;
+      --text-secondary: #475569;
+      --text-tertiary: #64748B;
+      --text-disabled: #94A3B8;
+
+      --border-subtle: #E2E8F0;
+      --border-medium: #CBD5E1;
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 12px 32px -6px rgba(0, 0, 0, 0.08);
+      --shadow-3d: 0 8px 20px -4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    /* ==========================================================================
+       2. RESET & GLOBAL LAYOUT
+       ========================================================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: var(--font-bn), var(--font-ui);
+      background-color: var(--bg-workspace);
+      color: var(--text-main);
+      line-height: 1.45;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Enforce English font on digits, barcodes, prices */
+    .num-val, .barcode-val, .currency-sym {
+      font-family: var(--font-mono), var(--font-ui);
+    }
+
+    /* ==========================================================================
+       3. TOP WORKSPACE CONTROL TOOLBAR (ORIENTATION / LANGUAGE / DENSITY)
+       ========================================================================== */
+    .top-toolbar {
+      background: rgba(22, 29, 45, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge-3d {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #10B981 0%, #047857 100%);
+      box-shadow: var(--shadow-3d), 0 0 16px var(--primary-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 20px;
+      color: #FFF;
+      transform-style: preserve-3d;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .brand-badge-3d:hover {
+      transform: scale(1.08) rotateY(15deg) rotateX(-10deg);
+    }
+
+    .brand-titles h1 {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-sub {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+    }
+
+    .pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--primary-glow);
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .segmented-control {
+      display: flex;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .seg-btn {
+      padding: 6px 14px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      border-radius: 9px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .seg-btn:hover {
+      color: var(--text-main);
+    }
+
+    .seg-btn.active {
+      background: var(--primary);
+      color: #FFF;
+      box-shadow: 0 2px 10px var(--primary-glow);
+    }
+
+    .tool-btn {
+      padding: 6px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition-smooth);
+    }
+    .tool-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-medium);
+      transform: translateY(-1px);
+    }
+
+    /* ==========================================================================
+       4. TABLET SIMULATOR VIEWPORT CONTAINER
+       ========================================================================== */
+    .viewport-container {
+      flex: 1;
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      overflow-y: auto;
+      perspective: 1200px;
+    }
+
+    /* Tablet Chassis Frame */
+    .tablet-chassis {
+      background: var(--bg-tablet-frame);
+      border-radius: 28px;
+      padding: 12px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 2px rgba(255, 255, 255, 0.1), inset 0 2px 4px rgba(255, 255, 255, 0.15);
+      position: relative;
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), height 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Landscape Mode (Horizontal Counter Terminal) */
+    .tablet-chassis.mode-landscape {
+      width: 1260px;
+      height: 780px;
+    }
+
+    /* Portrait Mode (Vertical Counter Terminal) */
+    .tablet-chassis.mode-portrait {
+      width: 820px;
+      height: 1020px;
+    }
+
+    /* Tablet Screen Glass */
+    .tablet-screen {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-surface);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      position: relative;
+      box-shadow: inset 0 0 0 1px var(--border-subtle);
+    }
+
+    /* Tablet Front Camera Notch / Mic dot */
+    .tablet-camera-dot {
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 8px;
+      background: #000;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 100;
+    }
+
+    /* ==========================================================================
+       5. COMPACT NAVIGATION RAIL (LEFT OF TABLET SCREEN)
+       ========================================================================== */
+    .pos-nav-rail {
+      width: 72px;
+      background: var(--bg-nav-rail);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 6px;
+      flex-shrink: 0;
+      z-index: 40;
+    }
+
+    .rail-brand {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: #FFF;
+      font-weight: 800;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px var(--primary-glow);
+      margin-bottom: 12px;
+    }
+
+    .rail-nav-items {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+      align-items: center;
+    }
+
+    .rail-btn {
+      width: 58px;
+      height: 52px;
+      border-radius: 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 600;
+      transition: var(--transition-smooth);
+      position: relative;
+    }
+
+    .rail-btn:hover {
+      background: var(--rail-hover);
+      color: var(--text-main);
+    }
+
+    .rail-btn.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--primary-glow);
+    }
+
+    .rail-btn-icon-3d {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .rail-badge-count {
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      background: var(--accent-rose);
+      color: #FFF;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 9999px;
+    }
+
+    .rail-bottom {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rail-staff-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366F1, #8B5CF6);
+      color: #FFF;
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* ==========================================================================
+       6. POS MAIN DISPLAY AREA (LANDSCAPE VS PORTRAIT ENGINE)
+       ========================================================================== */
+    .pos-main-content {
+      flex: 1;
+      display: flex;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Landscape Mode: Two-Column Split (Catalog 60% / Cart 40%) */
+    .pos-landscape-layout {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Portrait Mode: Smart Adaptive Container */
+    .pos-portrait-layout {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    /* ==========================================================================
+       7. CATALOG SECTION (SEARCH, CATEGORIES & PRODUCT TILES)
+       ========================================================================== */
+    .catalog-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-surface);
+      height: 100%;
+      overflow: hidden;
+      padding: 14px 16px;
+      gap: 12px;
+    }
+
+    /* Top Action Bar in Catalog */
+    .catalog-top-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .search-field-box {
+      flex: 1;
+      min-width: 140px;
+      height: 44px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border-medium);
+      border-radius: 10px;
+      padding: 0 12px;
+      gap: 8px;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+      transition: var(--transition-smooth);
+    }
+
+    .search-field-box:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .search-icon-3d {
+      font-size: 18px;
+      color: var(--primary);
+    }
+
+    .search-field-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 13.5px;
+      min-width: 60px;
+    }
+
+    .search-field-input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .clear-search-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: 16px;
+      display: none;
+    }
+
+    /* Quick Scanner & Keypad Trigger Buttons */
+    .catalog-action-btn {
+      width: auto;
+      min-width: 44px;
+      padding: 0 11px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: var(--transition-bounce);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .catalog-action-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .catalog-action-btn.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Held Carts Notification Button */
+    .held-cart-btn {
+      width: auto;
+      padding: 0 12px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: var(--accent-amber);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      flex-shrink: 0;
+    }
+    .held-cart-btn:hover {
+      background: rgba(245, 158, 11, 0.22);
+      transform: translateY(-1px);
+    }
+
+    /* Category Filter Strip with Realistic 3D Icons */
+    .category-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      flex-shrink: 0;
+      scrollbar-width: none;
+    }
+    .category-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .category-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: var(--transition-smooth);
+      flex-shrink: 0;
+    }
+
+    .category-pill:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+      border-color: var(--border-medium);
+    }
+
+    .category-pill.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+      box-shadow: 0 2px 10px var(--primary-glow);
+    }
+
+    .category-icon-wrapper {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    /* Product Grid Layout */
+    .products-scroll-grid {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 2px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+      gap: 12px;
+      align-content: start;
+    }
+
+    /* Realistic 3D POS Product Card */
+    .product-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 165px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition-bounce);
+      transform-style: preserve-3d;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .product-card:hover {
+      transform: translateY(-4px) scale(1.02);
+      border-color: var(--primary);
+      box-shadow: 0 10px 24px -4px var(--primary-glow);
+    }
+
+    .product-card:active {
+      transform: scale(0.97);
+    }
+
+    .product-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .product-3d-visual {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: var(--shadow-3d);
+      transition: transform 0.3s ease;
+    }
+
+    .product-card:hover .product-3d-visual {
+      transform: rotateY(15deg) rotateX(-10deg) scale(1.08);
+    }
+
+    .stock-pill {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.14);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .stock-pill.low {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent-amber);
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+
+    .stock-pill.out {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-rose);
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+
+    .product-meta {
+      margin-top: 6px;
+    }
+
+    .product-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 34px;
+    }
+
+    .product-barcode-sku {
+      font-size: 10.5px;
+      color: var(--text-tertiary);
+      margin-top: 2px;
+      font-family: var(--font-mono);
+    }
+
+    .product-footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .product-price-val {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--accent-emerald);
+      font-family: var(--font-mono);
+    }
+
+    .product-cart-badge {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 12px;
+      box-shadow: 0 2px 8px var(--primary-glow);
+      display: none;
+    }
+
+    .stock-mode-btn.active {
+      background: rgba(245, 158, 11, 0.25) !important;
+      border-color: #F59E0B !important;
+      color: #F59E0B !important;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.4) !important;
+    }
+
+    .tablet-stock-check-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      margin: 10px 0 6px 0;
+      border-radius: 12px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #F59E0B;
+      font-size: 12.5px;
+      font-weight: 700;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+    }
+
+    .product-card.stock-check-active {
+      border-color: #F59E0B !important;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.25) !important;
+      cursor: pointer;
+    }
+
+    /* ==========================================================================
+       8. LIVE CART SECTION (LANDSCAPE PINNED PANE: 40% WIDTH)
+       ========================================================================== */
+    .cart-pane {
+      width: 440px;
+      background: var(--bg-cart-pane);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      flex-shrink: 0;
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Cart Header */
+    .cart-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-cart-header);
+    }
+
+    .cart-title-combo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cart-3d-icon-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #10B981, #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 14px var(--primary-glow);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .cart-3d-icon-badge.bounce {
+      transform: scale(1.25) rotate(-10deg);
+    }
+
+    .cart-title-text {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cart-count-chip {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--primary-glow);
+    }
+
+    /* 3D Indigo Cart Capsule matching Products Screen top bar */
+    .cart-capsule {
+      height: 32px;
+      background: #4f46e5;
+      color: #ffffff;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(79, 70, 229, 0.3);
+      transition: transform 0.15s ease, background 0.15s ease;
+      border: none;
+      flex-shrink: 0;
+    }
+
+    .cart-capsule:hover {
+      background: #4338ca;
+    }
+
+    .cart-capsule:active {
+      transform: scale(0.94);
+    }
+
+    .cart-count-badge {
+      background: #ef4444;
+      color: #ffffff;
+      font-size: 9.5px;
+      font-weight: 900;
+      height: 18px;
+      min-width: 18px;
+      padding: 0 4px;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+
+    .cart-quick-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .cart-tool-icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: var(--transition-smooth);
+    }
+
+    .cart-tool-icon-btn:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+    }
+
+    .cart-tool-icon-btn.danger:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-rose);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    /* Customer Selector Strip */
+    .customer-bar {
+      padding: 8px 16px;
+      background: rgba(16, 185, 129, 0.05);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+    .customer-bar:hover {
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .cust-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .cust-avatar-3d {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366F1, #8B5CF6);
+      color: #FFF;
+      font-size: 11px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .cust-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.3;
+      word-break: break-word;
+    }
+
+    .cust-due-badge {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--accent-amber);
+      background: rgba(245, 158, 11, 0.12);
+      padding: 1px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    /* Scrollable Cart Items List */
+    .cart-items-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Individual Cart Item Row */
+    .cart-item-row {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition-smooth);
+    }
+
+    .cart-item-row:hover {
+      border-color: var(--border-medium);
+      background: var(--bg-card-hover);
+    }
+
+    .cart-item-left {
+      flex: 1;
+      min-width: 0;
+      padding-right: 4px;
+    }
+
+    .cart-item-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.35;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .cart-item-price-unit {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      margin-top: 3px;
+    }
+
+    .cart-item-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Stepper (- Qty +) with >=44px touch targets */
+    .qty-stepper {
+      display: flex;
+      align-items: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .qty-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: var(--text-main);
+      font-weight: 800;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-smooth);
+    }
+    .qty-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .qty-display {
+      width: 28px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--text-main);
+    }
+
+    .cart-item-total {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--accent-emerald);
+      font-family: var(--font-mono);
+      min-width: 60px;
+      text-align: right;
+    }
+
+    .cart-item-delete-btn {
+      color: var(--text-tertiary);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px;
+      transition: var(--transition-smooth);
+    }
+    .cart-item-delete-btn:hover {
+      color: var(--accent-rose);
+    }
+
+    /* Empty Cart State */
+    .empty-cart-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      text-align: center;
+      gap: 12px;
+    }
+
+    .empty-cart-3d-visual {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: var(--bg-empty-cart-visual);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      box-shadow: var(--shadow-3d);
+      animation: floatSlow 3.5s ease-in-out infinite;
+    }
+
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    /* Cart Footer & Checkout Panel */
+    .cart-footer {
+      background: var(--bg-cart-footer);
+      border-top: 1px solid var(--border-subtle);
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Fast Discount Chips */
+    .fast-discount-strip {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .disc-tag-label {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-weight: 600;
+    }
+
+    .disc-chip {
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+    .disc-chip:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+    }
+    .disc-chip.active {
+      background: var(--accent-amber);
+      color: #000;
+      border-color: var(--accent-amber);
+    }
+
+    /* Pricing Tally */
+    .tally-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+
+    .tally-row.grand {
+      padding-top: 4px;
+      border-top: 1px dashed var(--border-subtle);
+      color: var(--text-main);
+    }
+
+    .grand-total-val {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--accent-emerald);
+      font-family: var(--font-mono);
+    }
+
+    /* Quick Cash Buttons Strip */
+    .quick-cash-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .cash-preset-btn {
+      padding: 6px;
+      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      font-size: 11.5px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition-smooth);
+    }
+    .cash-preset-btn:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Big Checkout CTA Button */
+    .btn-checkout-cta {
+      width: 100%;
+      height: 52px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #10B981 0%, #047857 100%);
+      color: #FFF;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px var(--primary-glow);
+      transition: var(--transition-bounce);
+      transform-style: preserve-3d;
+    }
+
+    .btn-checkout-cta:hover {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 12px 30px rgba(16, 185, 129, 0.5);
+    }
+
+    .btn-checkout-cta:active {
+      transform: scale(0.98);
+    }
+
+    .btn-checkout-cta:disabled {
+      background: var(--bg-card);
+      color: var(--text-tertiary);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* ==========================================================================
+       9. PORTRAIT ADAPTIVE LAYOUT (VERTICAL VIEWPORT STYLES)
+       ========================================================================== */
+    .tablet-chassis.mode-portrait .pos-landscape-layout {
+      display: none;
+    }
+
+    .tablet-chassis.mode-portrait .pos-portrait-layout {
+      display: flex;
+    }
+
+    /* Portrait Mode 1: Split View (Top 55% Catalog, Bottom 45% Live Cart) */
+    .portrait-split-mode {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .portrait-split-catalog {
+      flex: 1.1;
+      overflow: hidden;
+      border-bottom: 2px solid var(--border-medium);
+    }
+
+    .portrait-split-cart {
+      flex: 0.9;
+      background: var(--bg-cart-pane);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Portrait Mode 2: Docked Smart Drawer (Square POS style) */
+    .portrait-docked-mode {
+      display: none;
+      height: 100%;
+      position: relative;
+    }
+
+    .portrait-docked-catalog {
+      flex: 1;
+      height: calc(100% - 74px);
+      overflow-y: auto;
+    }
+
+    /* Sticky Bottom Floating Smart Bar */
+    .portrait-docked-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 74px;
+      background: rgba(14, 19, 31, 0.96);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid var(--border-medium);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 50;
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .docked-cart-summary {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .docked-cart-cta-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-docked-checkout {
+      height: 48px;
+      padding: 0 20px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #10B981, #047857);
+      color: #FFF;
+      font-weight: 800;
+      font-size: 15px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
+
+    /* ==========================================================================
+       10. REALISTIC 3D ANIMATED ICONS (CSS 3D & PROCEDURAL SHADERS)
+       ========================================================================== */
+    .icon-3d-box {
+      width: 44px;
+      height: 44px;
+      position: relative;
+      transform-style: preserve-3d;
+      perspective: 600px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 3D Supermarket Cart Icon */
+    .icon-3d-cart {
+      width: 32px;
+      height: 28px;
+      position: relative;
+      transform-style: preserve-3d;
+      animation: cartWiggle 4s ease-in-out infinite;
+    }
+
+    @keyframes cartWiggle {
+      0%, 100% { transform: rotateY(0deg) rotateX(0deg); }
+      25% { transform: rotateY(15deg) rotateX(-5deg); }
+      75% { transform: rotateY(-15deg) rotateX(5deg); }
+    }
+
+    /* 3D Cash Register / Sell Terminal Icon */
+    .icon-3d-register {
+      width: 32px;
+      height: 32px;
+      position: relative;
+      transform-style: preserve-3d;
+      animation: registerTilt 5s ease-in-out infinite;
+    }
+
+    @keyframes registerTilt {
+      0%, 100% { transform: rotateX(10deg) rotateY(-10deg); }
+      50% { transform: rotateX(15deg) rotateY(15deg); }
+    }
+
+    /* 3D Barcode Laser Scanner Icon */
+    .icon-3d-scanner {
+      width: 32px;
+      height: 32px;
+      position: relative;
+      transform-style: preserve-3d;
+      animation: scannerPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes scannerPulse {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.08) rotate(-6deg); }
+    }
+
+    /* 3D Laser Beam Glow Line */
+    .scanner-laser-line {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      background: #EF4444;
+      box-shadow: 0 0 10px #EF4444, 0 0 20px #EF4444;
+      animation: laserSweep 1.8s ease-in-out infinite;
+    }
+
+    @keyframes laserSweep {
+      0% { top: 10%; opacity: 0.2; }
+      50% { top: 85%; opacity: 1; }
+      100% { top: 10%; opacity: 0.2; }
+    }
+
+    /* 3D Gold Taka Coin */
+    .coin-3d {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #FDE047 0%, #EAB308 50%, #CA8A04 80%, #854D0E 100%);
+      border: 1.5px solid #FEF08A;
+      box-shadow: 0 4px 10px rgba(202, 138, 4, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
+      color: #713F12;
+      animation: spinCoin 6s linear infinite;
+    }
+
+    @keyframes spinCoin {
+      0% { transform: rotateY(0deg); }
+      100% { transform: rotateY(360deg); }
+    }
+
+    /* ==========================================================================
+       11. MODAL DIALOGS (RECEIPT & SCANNER PIP SIMULATOR)
+       ========================================================================== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 300;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-dialog {
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: 20px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modalEnter 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes modalEnter {
+      from { transform: scale(0.9) translateY(20px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .modal-body {
+      padding: 20px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    /* 80mm Thermal Receipt Simulation Inside Modal */
+    .thermal-slip-paper {
+      background: #FFFFFF;
+      color: #111827;
+      padding: 20px 16px;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      line-height: 1.4;
+    }
+
+    .thermal-shop-header {
+      text-align: center;
+      margin-bottom: 12px;
+      border-bottom: 1px dashed #9CA3AF;
+      padding-bottom: 10px;
+    }
+
+    .thermal-shop-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: #000;
+      font-family: var(--font-bn), var(--font-ui);
+    }
+
+    .thermal-table {
+      width: 100%;
+      margin: 10px 0;
+      border-collapse: collapse;
+    }
+
+    .thermal-table th {
+      border-bottom: 1px solid #111;
+      padding: 4px 0;
+      text-align: left;
+    }
+
+    .thermal-table td {
+      padding: 4px 0;
+    }
+
+    .thermal-footer-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+
+    .thermal-grand-total {
+      font-size: 15px;
+      font-weight: 800;
+      border-top: 1px solid #000;
+      border-bottom: 1px solid #000;
+      padding: 6px 0;
+      margin: 8px 0;
+    }
+
+    /* Camera PIP Viewfinder */
+    .camera-pip-frame {
+      width: 100%;
+      height: 240px;
+      background: #000;
+      border-radius: 14px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .camera-target-crosshair {
+      width: 160px;
+      height: 110px;
+      border: 2px dashed #10B981;
+      border-radius: 12px;
+      position: relative;
+    }
+
+
+
+    /* ==========================================================================
+       12. AUDIT & IMPROVEMENT COMPARISON DRAWER
+       ========================================================================== */
+    .insights-panel {
+      max-width: 1260px;
+      margin: 20px auto 40px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .insights-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .insights-title {
+      font-size: 19px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .insights-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .insight-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .insight-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .insight-card-text {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ==========================================================================
+       TOP CONTROL BAR: ORIENTATION, BILINGUAL TOGGLE & DENSITY
+       ========================================================================== -->
+  <header class="top-toolbar">
+    <div class="brand-group">
+      <div class="brand-badge-3d" title="Techyfi POS">T</div>
+      <div class="brand-titles">
+        <h1>
+          <span data-i18n="header_title">ট্যাবলেট সেল টার্মিনাল রিডিজাইন (Tablet Sell Screen Redesign)</span>
+          <span class="pill-badge" data-i18n="badge_interactive">লাইভ ইন্টারেক্টিভ প্রিভিউ</span>
+        </h1>
+        <div class="brand-sub" data-i18n="header_subtitle">
+          ভার্টিকাল ও হরাইজন্টাল ট্যাবলেট মোড, ৩D অ্যানিমেটেড আইকন ও কমপ্যাক্ট POS এক্সপেরিয়েন্স
+        </div>
+      </div>
+    </div>
+
+    <div class="controls-group">
+      <!-- Orientation Toggle (Horizontal Landscape vs Vertical Portrait) -->
+      <div class="segmented-control" title="Orientation Toggle">
+        <button class="seg-btn active" id="btnLandscape" onclick="setOrientation('landscape')">
+          <span>🖥️</span>
+          <span data-i18n="mode_landscape">হরাইজন্টাল (Landscape)</span>
+        </button>
+        <button class="seg-btn" id="btnPortrait" onclick="setOrientation('portrait')">
+          <span>📱</span>
+          <span data-i18n="mode_portrait">ভার্টিকাল (Portrait)</span>
+        </button>
+      </div>
+
+      <!-- Portrait Layout Sub-mode (Split vs Docked Sheet) -->
+      <div class="segmented-control" id="portraitSubmodeControl" style="display:none;" title="Portrait Layout Style">
+        <button class="seg-btn active" id="btnPortraitSplit" onclick="setPortraitSubmode('split')">
+          <span data-i18n="mode_split">⬍ স্প্লিট ভিউ (Split)</span>
+        </button>
+        <button class="seg-btn" id="btnPortraitDocked" onclick="setPortraitSubmode('docked')">
+          <span data-i18n="mode_docked">📑 ডকড শিট (Docked)</span>
+        </button>
+      </div>
+
+      <!-- Language Switcher (Bangla / English) -->
+      <div class="segmented-control" title="Language Toggle">
+        <button class="seg-btn active" id="btnLangBn" onclick="setLanguage('bn')">বাংলা</button>
+        <button class="seg-btn" id="btnLangEn" onclick="setLanguage('en')">English</button>
+      </div>
+
+      <!-- Theme Switcher -->
+      <button class="tool-btn" onclick="toggleTheme()" title="Toggle Dark/Light Theme">
+        <span id="themeIcon">☀️</span>
+        <span id="themeLabel">Light</span>
+      </button>
+
+      <!-- Reset Cart -->
+      <button class="tool-btn" onclick="resetDemoData()" title="Reset Cart Demo Data">
+        <span>🔄</span>
+        <span data-i18n="btn_reset">রিসেট ডেটা</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       TABLET SIMULATOR VIEWPORT
+       ========================================================================== -->
+  <main class="viewport-container">
+    <div class="tablet-chassis mode-landscape" id="tabletChassis">
+      <div class="tablet-camera-dot"></div>
+
+      <div class="tablet-screen">
+
+        <!-- 1. LEFT NAVIGATION RAIL (PERSISTENT POS HUB) -->
+        <aside class="pos-nav-rail">
+          <div>
+            <div class="rail-brand">T</div>
+            <nav class="rail-nav-items">
+              <!-- Sell Mode (Active) -->
+              <button class="rail-btn active" title="Sell Mode">
+                <div class="rail-btn-icon-3d">⚡</div>
+                <span data-i18n="rail_sell">বিক্রয়</span>
+              </button>
+
+              <!-- Products Catalog -->
+              <button class="rail-btn" onclick="showNotification('Products Catalog')" title="Products">
+                <div class="rail-btn-icon-3d">📦</div>
+                <span data-i18n="rail_products">পণ্য</span>
+              </button>
+
+              <!-- Sales History -->
+              <button class="rail-btn" onclick="showNotification('Sales History')" title="Sales History">
+                <div class="rail-btn-icon-3d">📜</div>
+                <span data-i18n="rail_history">হিস্ট্রি</span>
+              </button>
+
+              <!-- Dues Khata -->
+              <button class="rail-btn" onclick="showNotification('Dues Khata')" title="Dues Khata">
+                <div class="rail-btn-icon-3d">📕</div>
+                <span data-i18n="rail_dues">বকেয়া</span>
+              </button>
+
+              <!-- Reports & Analytics -->
+              <button class="rail-btn" onclick="showNotification('Reports Screen')" title="Reports">
+                <div class="rail-btn-icon-3d">📊</div>
+                <span data-i18n="rail_reports">রিপোর্ট</span>
+              </button>
+            </nav>
+          </div>
+
+          <!-- Rail Bottom: Staff & Settings -->
+          <div class="rail-bottom">
+            <button class="rail-btn" onclick="openScannerModal()" title="Quick Camera Barcode Scanner">
+              <div class="rail-btn-icon-3d">📷</div>
+              <span data-i18n="rail_scan">স্ক্যানার</span>
+            </button>
+
+            <div class="rail-staff-avatar" title="Cashier: Admin (Supervisor)">
+              <span>AD</span>
+            </div>
+          </div>
+        </aside>
+
+        <!-- 2. MAIN POS WORKSPACE -->
+        <div class="pos-main-content">
+
+          <!-- ================================================================
+               A. HORIZONTAL (LANDSCAPE) VIEWPORT LAYOUT
+               ================================================================ -->
+          <div class="pos-landscape-layout" id="landscapeLayout">
+
+            <!-- CATALOG PANE (LEFT: 60%) -->
+            <section class="catalog-pane">
+              <!-- Top Search & Quick Action Strip -->
+              <div class="catalog-top-bar">
+                <div class="search-field-box">
+                  <span class="search-icon-3d">🔍</span>
+                  <input type="text" class="search-field-input" id="searchBarInput" data-i18n-placeholder="search_placeholder" placeholder="বারকোড বা পণ্যের নাম দিয়ে খুঁজুন..." oninput="handleSearch(this.value)">
+                  <button class="clear-search-btn" id="clearSearchBtn" onclick="clearSearch()">×</button>
+                </div>
+
+                <!-- Camera Barcode Scanner Trigger -->
+                <button class="catalog-action-btn" onclick="openScannerModal()" title="Camera Barcode Scanner">
+                  <span style="font-size: 16px;">📷</span>
+                  <span data-i18n="action_scan">স্ক্যানার</span>
+                </button>
+
+                <!-- Manual Barcode Entry Keypad -->
+                <button class="catalog-action-btn" onclick="openManualNumpad()" title="Manual Barcode Keypad">
+                  <span style="font-size: 16px;">⌨️</span>
+                  <span data-i18n="action_numpad">কীপ্যাড</span>
+                </button>
+
+                <!-- Stock Check Supervisor Mode -->
+                <button class="catalog-action-btn stock-mode-btn" id="stockModeBtn" onclick="toggleStockCheckMode()" title="Stock Check Mode">
+                  <span style="font-size: 15px;">🔍📦</span>
+                  <span data-i18n="action_stock">স্টক চেক</span>
+                </button>
+
+                <!-- Held Carts Notification Chip -->
+                <button class="held-cart-btn" id="heldCartsBtn" onclick="openHeldCartsModal()" title="Held Carts">
+                  <span style="font-size: 14px;">⏸️</span>
+                  <span><span data-i18n="btn_held_carts">হোল্ড</span> (<span class="held-carts-count" id="heldCartsCount">১</span>)</span>
+                </button>
+              </div>
+
+              <!-- Stock Check Mode Amber Banner -->
+              <div class="tablet-stock-check-banner" style="display: none;">
+                <span style="font-size: 16px;">📦</span>
+                <span data-i18n="stock_check_banner">স্টক অনুসন্ধান মোড সক্রিয় — স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ বা স্ক্যান করুন</span>
+              </div>
+
+              <!-- 3D Category Filter Pills Strip -->
+              <div class="category-strip" id="categoryStrip">
+                <div class="category-pill active" onclick="selectCategory('all', this)">
+                  <div class="category-icon-wrapper">⭐</div>
+                  <span data-i18n="cat_all">সব পণ্য</span>
+                </div>
+                <div class="category-pill" onclick="selectCategory('grocery', this)">
+                  <div class="category-icon-wrapper">🌾</div>
+                  <span data-i18n="cat_grocery">মুদি ও খাদ্য</span>
+                </div>
+                <div class="category-pill" onclick="selectCategory('beverage', this)">
+                  <div class="category-icon-wrapper">🥤</div>
+                  <span data-i18n="cat_beverage">পানীয় ও ড্রিংকস</span>
+                </div>
+                <div class="category-pill" onclick="selectCategory('electronics', this)">
+                  <div class="category-icon-wrapper">⚡</div>
+                  <span data-i18n="cat_electronics">ইলেকট্রনিক্স</span>
+                </div>
+                <div class="category-pill" onclick="selectCategory('personal', this)">
+                  <div class="category-icon-wrapper">🧴</div>
+                  <span data-i18n="cat_personal">প্রসাধন ও কেয়ার</span>
+                </div>
+                <div class="category-pill" onclick="selectCategory('pharmacy', this)">
+                  <div class="category-icon-wrapper">💊</div>
+                  <span data-i18n="cat_pharmacy">ওষুধ ও হেলথ</span>
+                </div>
+                <div class="category-pill" onclick="selectCategory('bakery', this)">
+                  <div class="category-icon-wrapper">🍞</div>
+                  <span data-i18n="cat_bakery">স্ন্যাক্স ও বেকারি</span>
+                </div>
+              </div>
+
+              <!-- Product Grid Cards Container -->
+              <div class="products-scroll-grid" id="productGridContainer">
+                <!-- Dynamically Rendered via JS -->
+              </div>
+            </section>
+
+            <!-- CART REVIEW PANE (RIGHT: 40%) -->
+            <aside class="cart-pane" id="landscapeCartPane">
+              <!-- Cart Review Header -->
+              <div class="cart-header">
+                <div class="cart-title-combo">
+                  <div class="cart-3d-icon-badge" id="cartBadge3d">🛒</div>
+                  <div>
+                    <div class="cart-title-text">
+                      <span data-i18n="cart_review_title">কার্ট পর্যালোচনা (Cart Review)</span>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-tertiary);" data-i18n="cart_review_sub">
+                      আইটেম যাচাই ও প্রিভিউ স্টেজ
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <!-- 3D Indigo Cart Capsule matching Products Screen top bar -->
+                  <button class="cart-capsule" onclick="navigateToCart()" title="Cart">
+                    <span style="font-size:14px;">🛒</span>
+                    <span data-i18n="cart_btn">Cart</span>
+                    <span class="cart-count-badge" id="cartItemCountBadge">4</span>
+                  </button>
+                  <div class="cart-quick-actions">
+                    <button class="cart-tool-icon-btn" onclick="holdCurrentCart()" title="Hold Cart (কার্ট স্থগিত)">⏸️</button>
+                    <button class="cart-tool-icon-btn danger" onclick="clearCartConfirm()" title="Clear Cart (কার্ট খালি করুন)">🗑️</button>
+                  </div>
+                </div>
+              </div>
+
+
+              <!-- Scrollable Cart Item List -->
+              <div class="cart-items-list" id="cartItemsContainer">
+                <!-- Dynamically Rendered via JS -->
+              </div>
+
+              <!-- Cart Review Footer & Proceed to Cart CTA -->
+              <div class="cart-footer">
+                <!-- Tally Breakdown -->
+                <div class="tally-row">
+                  <span data-i18n="tally_subtotal">উপমোট (Subtotal)</span>
+                  <span class="num-val" id="tallySubtotal">৳১,৫২০.০০</span>
+                </div>
+                <div class="tally-row grand">
+                  <span style="font-weight:800; font-size:14px;" data-i18n="tally_estimated">আনুমানিক মোট (Estimated Total)</span>
+                  <span class="grand-total-val" id="tallyGrandTotal">৳১,৫২০.০০</span>
+                </div>
+
+                <!-- Primary Cart Review CTA: Takes user to Cart Screen -->
+                <button class="btn-checkout-cta" id="btnProceedFinalCart" onclick="proceedToCart()">
+                  <div class="icon-3d-box" style="width:24px; height:24px;">
+                    <div class="icon-3d-cart">🛒</div>
+                  </div>
+                  <span id="btnProceedLabel" data-i18n="btn_proceed_final">কার্টে এগিয়ে যান (৳১,৫২০.০০) ➔</span>
+                </button>
+              </div>
+            </aside>
+
+          </div>
+
+
+          <!-- ================================================================
+               B. VERTICAL (PORTRAIT) VIEWPORT LAYOUT
+               ================================================================ -->
+          <div class="pos-portrait-layout" id="portraitLayout">
+
+            <!-- B1. PORTRAIT SPLIT-VIEW MODE (Top 54% Catalog, Bottom 46% Cart Review) -->
+            <div class="portrait-split-mode" id="portraitSplitMode">
+              
+              <!-- Top Catalog in Portrait Split -->
+              <div class="portrait-split-catalog">
+                <section class="catalog-pane" style="height:100%; padding:10px 14px;">
+                  <!-- Compact Search Bar -->
+                  <div class="catalog-top-bar">
+                    <div class="search-field-box">
+                      <span class="search-icon-3d">🔍</span>
+                      <input type="text" class="search-field-input" id="portraitSplitSearchInput" data-i18n-placeholder="search_placeholder_short" placeholder="খুঁজুন বা স্ক্যান করুন..." oninput="handleSearch(this.value)">
+                    </div>
+                    <button class="catalog-action-btn" onclick="openScannerModal()" title="Scanner">
+                      <span style="font-size: 14px;">📷</span>
+                      <span data-i18n="action_scan">স্ক্যানার</span>
+                    </button>
+                    <button class="catalog-action-btn" onclick="openManualNumpad()" title="Numpad">
+                      <span style="font-size: 14px;">⌨️</span>
+                      <span data-i18n="action_numpad">কীপ্যাড</span>
+                    </button>
+                    <button class="catalog-action-btn stock-mode-btn" onclick="toggleStockCheckMode()" title="Stock Check Mode">
+                      <span style="font-size: 14px;">🔍📦</span>
+                      <span data-i18n="action_stock">স্টক চেক</span>
+                    </button>
+                    <button class="held-cart-btn" onclick="openHeldCartsModal()" title="Held Carts">
+                      <span style="font-size: 14px;">⏸️</span>
+                      <span><span data-i18n="btn_held_carts">হোল্ড</span> (<span class="held-carts-count">১</span>)</span>
+                    </button>
+                  </div>
+
+                  <!-- Stock Check Mode Amber Banner -->
+                  <div class="tablet-stock-check-banner" style="display: none;">
+                    <span style="font-size: 14px;">📦</span>
+                    <span data-i18n="stock_check_banner">স্টক অনুসন্ধান মোড সক্রিয় — স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ বা স্ক্যান করুন</span>
+                  </div>
+
+                  <!-- Category Pills -->
+                  <div class="category-strip" style="margin-top:2px;">
+                    <div class="category-pill active" onclick="selectCategory('all', this)">⭐ <span data-i18n="cat_all">সব পণ্য</span></div>
+                    <div class="category-pill" onclick="selectCategory('grocery', this)">🌾 <span data-i18n="cat_grocery">মুদি ও খাদ্য</span></div>
+                    <div class="category-pill" onclick="selectCategory('beverage', this)">🥤 <span data-i18n="cat_beverage">পানীয় ও ড্রিংকস</span></div>
+                    <div class="category-pill" onclick="selectCategory('electronics', this)">⚡ <span data-i18n="cat_electronics">ইলেকট্রনিক্স</span></div>
+                    <div class="category-pill" onclick="selectCategory('pharmacy', this)">💊 <span data-i18n="cat_pharmacy">ওষুধ ও হেলথ</span></div>
+                  </div>
+
+                  <!-- Product Grid (2 to 3 Columns in Vertical) -->
+                  <div class="products-scroll-grid" id="portraitProductGrid" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
+                    <!-- Dynamically Populated -->
+                  </div>
+                </section>
+              </div>
+
+              <!-- Bottom Cart Review in Portrait Split -->
+              <div class="portrait-split-cart" id="portraitSplitCart">
+                <!-- Cart Header & Customer Bar Combined -->
+                <div style="padding:8px 14px; background:rgba(22,29,45,0.8); border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="cart-3d-icon-badge" style="width:30px; height:30px; font-size:15px;">🛒</div>
+                    <span style="font-weight:800; font-size:13.5px;" data-i18n="cart_review_title">কার্ট পর্যালোচনা</span>
+                    <!-- 3D Indigo Cart Capsule matching Products Screen top bar -->
+                    <button class="cart-capsule" onclick="navigateToCart()" style="height:26px; padding:0 8px; font-size:11px;" title="Cart">
+                      <span style="font-size:12px;">🛒</span>
+                      <span data-i18n="cart_btn">Cart</span>
+                      <span class="cart-count-badge" id="portraitCartCountBadge" style="height:16px; min-width:16px; font-size:9px;">4</span>
+                    </button>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <button class="cart-tool-icon-btn" onclick="holdCurrentCart()" style="width:28px; height:28px; font-size:12px;">⏸️</button>
+                    <button class="cart-tool-icon-btn danger" onclick="clearCartConfirm()" style="width:28px; height:28px; font-size:12px;">🗑️</button>
+                  </div>
+                </div>
+
+                <!-- Scrollable Item Rows -->
+                <div class="cart-items-list" id="portraitCartItemsContainer" style="padding:6px 12px; gap:6px;">
+                  <!-- Populated dynamically -->
+                </div>
+
+                <!-- Cart Review Footer & Proceed to Cart CTA (Matching Landscape Mode) -->
+                <div class="cart-footer">
+                  <!-- Tally Breakdown -->
+                  <div class="tally-row">
+                    <span data-i18n="tally_subtotal">উপমোট (Subtotal)</span>
+                    <span class="num-val" id="portraitTallySubtotal">৳১,৫২০.০০</span>
+                  </div>
+                  <div class="tally-row grand">
+                    <span style="font-weight:800; font-size:14px;" data-i18n="tally_estimated">আনুমানিক মোট (Estimated Total)</span>
+                    <span class="grand-total-val" id="portraitTallyGrand">৳১,৫২০.০০</span>
+                  </div>
+
+                  <!-- Primary Cart Review CTA: Takes user to Cart Screen -->
+                  <button class="btn-checkout-cta" id="portraitBtnProceedFinalCart" onclick="proceedToCart()">
+                    <div class="icon-3d-box" style="width:24px; height:24px;">
+                      <div class="icon-3d-cart">🛒</div>
+                    </div>
+                    <span id="portraitBtnProceedLabel" data-i18n="btn_proceed_final">কার্টে এগিয়ে যান (৳১,৫২০.০০) ➔</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+
+            <!-- B2. PORTRAIT DOCKED SMART DRAWER MODE (Full Catalog + Bottom Bar) -->
+            <div class="portrait-docked-mode" id="portraitDockedMode">
+              <div class="portrait-docked-catalog">
+                <section class="catalog-pane" style="height:100%;">
+                  <!-- Top Search Bar -->
+                  <div class="catalog-top-bar">
+                    <div class="search-field-box">
+                      <span class="search-icon-3d">🔍</span>
+                      <input type="text" class="search-field-input" id="portraitDockedSearchInput" data-i18n-placeholder="search_placeholder_short" placeholder="খুঁজুন বা স্ক্যান করুন..." oninput="handleSearch(this.value)">
+                    </div>
+                    <button class="catalog-action-btn" onclick="openScannerModal()" title="Scanner">
+                      <span style="font-size: 14px;">📷</span>
+                      <span data-i18n="action_scan">স্ক্যানার</span>
+                    </button>
+                    <button class="catalog-action-btn" onclick="openManualNumpad()" title="Numpad">
+                      <span style="font-size: 14px;">⌨️</span>
+                      <span data-i18n="action_numpad">কীপ্যাড</span>
+                    </button>
+                    <button class="catalog-action-btn stock-mode-btn" onclick="toggleStockCheckMode()" title="Stock Check Mode">
+                      <span style="font-size: 14px;">🔍📦</span>
+                      <span data-i18n="action_stock">স্টক চেক</span>
+                    </button>
+                    <button class="held-cart-btn" onclick="openHeldCartsModal()" title="Held Carts">
+                      <span style="font-size: 14px;">⏸️</span>
+                      <span><span data-i18n="btn_held_carts">হোল্ড</span> (<span class="held-carts-count">১</span>)</span>
+                    </button>
+                  </div>
+
+                  <!-- Stock Check Mode Amber Banner -->
+                  <div class="tablet-stock-check-banner" style="display: none;">
+                    <span style="font-size: 14px;">📦</span>
+                    <span data-i18n="stock_check_banner">স্টক অনুসন্ধান মোড সক্রিয় — স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ বা স্ক্যান করুন</span>
+                  </div>
+
+                  <!-- Category Pills -->
+                  <div class="category-strip">
+                    <div class="category-pill active" onclick="selectCategory('all', this)">⭐ <span data-i18n="cat_all">সব পণ্য</span></div>
+                    <div class="category-pill" onclick="selectCategory('grocery', this)">🌾 <span data-i18n="cat_grocery">মুদি ও খাদ্য</span></div>
+                    <div class="category-pill" onclick="selectCategory('beverage', this)">🥤 <span data-i18n="cat_beverage">পানীয় ও ড্রিংকস</span></div>
+                    <div class="category-pill" onclick="selectCategory('electronics', this)">⚡ <span data-i18n="cat_electronics">ইলেকট্রনিক্স</span></div>
+                  </div>
+
+                  <!-- Full 3-Column Product Grid -->
+                  <div class="products-scroll-grid" id="dockedProductGrid">
+                    <!-- Populated dynamically -->
+                  </div>
+                </section>
+              </div>
+
+              <!-- Sticky Floating Smart Cart Bar -->
+              <div class="portrait-docked-bar">
+                <div class="docked-cart-summary" onclick="proceedToCart()">
+                  <div class="cart-3d-icon-badge">🛒</div>
+                  <div>
+                    <div style="font-size:12px; color:var(--text-secondary);">
+                      <span id="dockedCartCountBadge">৪টি পণ্য</span> • <span style="color:var(--primary); font-weight:700;" data-i18n="cart_review_title">কার্ট পর্যালোচনা</span>
+                    </div>
+                    <div class="grand-total-val" id="dockedTallyGrand" style="font-size:18px;">৳১,৫২০.০০</div>
+                  </div>
+                </div>
+
+                <div class="docked-cart-cta-group">
+                  <button class="btn-docked-checkout" onclick="proceedToCart()">
+                    <span>🛒</span>
+                    <span data-i18n="btn_proceed_short">কার্ট ➔</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ==========================================================================
+       UX AUDIT & VALUE-ADDED DESIGN IMPROVEMENT ANALYSIS
+       ========================================================================== -->
+  <section class="insights-panel">
+    <div class="insights-header">
+      <div class="insights-title">
+        <span>💡</span>
+        <span data-i18n="audit_title">ট্যাবলেট রিডিজাইন ডিজাইন আর্কিটেকচার ও উন্নত বৈচিত্র্য (UI/UX Highlights)</span>
+      </div>
+      <span class="pill-badge" data-i18n="badge_approved">প্রস্তাবিত ডিজাইন সিস্টেম</span>
+    </div>
+
+    <div class="insights-grid">
+      <!-- Highlight 1: Dual Orientation Optimization -->
+      <div class="insight-card">
+        <div class="insight-card-title">
+          <span>🔄</span>
+          <span data-i18n="feat1_title">ডুয়াল ওরিয়েন্টেশন (Landscape & Portrait Parity)</span>
+        </div>
+        <p class="insight-card-text" data-i18n="feat1_desc">
+          পূর্বে ট্যাবলেটের সেল স্ক্রিনে শুধুমাত্র ফিক্সড হরাইজন্টাল রো (৫৮/৪২%) ছিল, যা পোর্ট্রেট মোডে স্ক্রিন সংকুচিত করত। নতুন ডিজাইনে ল্যান্ডস্কেপে ফুল স্প্লিট টার্মিনাল এবং পোর্ট্রেটে কমপ্যাক্ট স্প্লিট বা ডকড ড্রয়ার মোড যুক্ত হয়েছে।
+        </p>
+      </div>
+
+      <!-- Highlight 2: Realistic 3D Animated Icons -->
+      <div class="insight-card">
+        <div class="insight-card-title">
+          <span>🎨</span>
+          <span data-i18n="feat2_title">বাস্তবসম্মত ৩D অ্যানিমেটেড আইকন (Realistic 3D Icons)</span>
+        </div>
+        <p class="insight-card-text" data-i18n="feat2_desc">
+          ক্যাশ রেজিস্টার, সুপারমার্কেট কার্ট, বারকোড অপটিক্যাল স্ক্যানার ও ক্যাটাগরি ব্যাজে পিউর CSS 3D এবং WebGL লাইটিং যুক্ত। কার্টে পণ্য যোগ করলে কার্ট আইকন বাউন্স করে এবং স্পর্শে জীবন্ত প্রতিক্রিয়া দেয়।
+        </p>
+      </div>
+
+      <!-- Highlight 3: High Density Frontline Ergonomics -->
+      <div class="insight-card">
+        <div class="insight-card-title">
+          <span>⚡</span>
+          <span data-i18n="feat3_title">দ্রুত ক্যাশ গ্রহণ ও এক-ট্যাপ ডিসকাউন্ট</span>
+        </div>
+        <p class="insight-card-text" data-i18n="feat3_desc">
+          ক্যাশিয়ারের সময় বাঁচাতে `Exact`, `৳৫০০`, `৳১০০০`, `৳২০০০` প্রিসেট বাটন এবং `5%`, `10%`, `৳৫০` ছাড়ের কুইক চিপস সংযুক্ত। আলাদা কোনো ডায়ালগ ছাড়াই সরাসরি এক স্পর্শে হিসাব সম্পন্ন করা যায়।
+        </p>
+      </div>
+
+      <!-- Highlight 4: Natural Commercial Bangla -->
+      <div class="insight-card">
+        <div class="insight-card-title">
+          <span>🇧🇩</span>
+          <span data-i18n="feat4_title">খাঁটি বাংলাদেশি রিটেল ও কমার্শিয়াল বাংলা</span>
+        </div>
+        <p class="insight-card-text" data-i18n="feat4_desc">
+          কোনো আক্ষরিক রোবোটিক অনুবাদ নয়; ঢাকার খুচরা দোকানদারদের দৈনন্দিন ভাষা (যেমন: `চলতি কার্ট`, `সর্বমোট টাকা`, `ফেরত টাকা`, `বকেয়া খাতা`, `হোল্ড করা কার্ট`) প্রয়োগ করা হয়েছে।
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       3D ANIMATED ICONS INTERACTIVE STUDIO (THREE.JS & WEBGL ENGINE)
+       ========================================================================== -->
+  <section class="insights-panel" style="margin-top:0;">
+    <div class="insights-header">
+      <div class="insights-title">
+        <span>🎮</span>
+        <span data-i18n="title_3d_studio">বাস্তবসম্মত ৩D অ্যানিমেটেড আইকন স্টুডিও (Interactive 3D Icons Studio)</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="tool-btn" onclick="toggle3DAutoRotate()" id="btnAutoRotate">
+          <span>🔄</span>
+          <span data-i18n="btn_auto_rotate">অটো-রোটেশন</span>
+        </button>
+        <button class="tool-btn" onclick="toggle3DWireframe()" id="btnWireframe">
+          <span>🕸️</span>
+          <span data-i18n="btn_wireframe">ওয়্যারফ্রেম মোড</span>
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px; font-size:12.5px; color:var(--text-secondary);" data-i18n="desc_3d_studio">
+      ট্যাবলেট সেল টার্মিনালের জন্য কাস্টম তৈরি বাস্তবসম্মত ৩D মডেল। মাউস দিয়ে ড্র্যাগ করে ৩৬০° কোণে ঘুরিয়ে দেখুন এবং ইন্টারেক্টিভ বাটনে ট্যাপ করে অ্যানিমেশন পরীক্ষা করুন:
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px;">
+      
+      <!-- 3D Model 1: Cash Register Terminal -->
+      <div class="insight-card" style="align-items:center; text-align:center; padding:18px;">
+        <div style="font-size:14px; font-weight:800; color:var(--primary); margin-bottom:8px;" data-i18n="title_register_3d">
+          💰 ক্যাশ রেজিস্টার টার্মিনাল (POS Terminal)
+        </div>
+        <div style="width:220px; height:180px; position:relative; border-radius:14px; overflow:hidden; background:radial-gradient(circle, #1E273D, #0B0E17); border:1px solid var(--border-medium); box-shadow:var(--shadow-3d);" id="canvasContainerRegister"></div>
+        <div style="display:flex; gap:8px; margin-top:12px; width:100%;">
+          <button class="tool-btn" style="flex:1; justify-content:center;" onclick="triggerCashDrawerOpen()">
+            <span>🚪</span> <span data-i18n="btn_open_drawer">ক্যাশ ড্রয়ার খুলুন</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3D Model 2: Supermarket Smart Cart -->
+      <div class="insight-card" style="align-items:center; text-align:center; padding:18px;">
+        <div style="font-size:14px; font-weight:800; color:var(--accent-emerald); margin-bottom:8px;" data-i18n="title_cart_3d">
+          🛒 সুপারমার্কেট স্মার্ট কার্ট (Live Cart)
+        </div>
+        <div style="width:220px; height:180px; position:relative; border-radius:14px; overflow:hidden; background:radial-gradient(circle, #1E273D, #0B0E17); border:1px solid var(--border-medium); box-shadow:var(--shadow-3d);" id="canvasContainerCart"></div>
+        <div style="display:flex; gap:8px; margin-top:12px; width:100%;">
+          <button class="tool-btn" style="flex:1; justify-content:center;" onclick="triggerCartBounce3D()">
+            <span>📦</span> <span data-i18n="btn_bounce_cart">আইটেম ড্রপ বাউন্স</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3D Model 3: Optical Laser Barcode Scanner -->
+      <div class="insight-card" style="align-items:center; text-align:center; padding:18px;">
+        <div style="font-size:14px; font-weight:800; color:var(--accent-sky); margin-bottom:8px;" data-i18n="title_scanner_3d">
+          ⚡ অপটিক্যাল লেজার স্ক্যানার (Barcode Scanner)
+        </div>
+        <div style="width:220px; height:180px; position:relative; border-radius:14px; overflow:hidden; background:radial-gradient(circle, #1E273D, #0B0E17); border:1px solid var(--border-medium); box-shadow:var(--shadow-3d);" id="canvasContainerScanner"></div>
+        <div style="display:flex; gap:8px; margin-top:12px; width:100%;">
+          <button class="tool-btn" style="flex:1; justify-content:center;" onclick="triggerLaserScan3D()">
+            <span>🔴</span> <span data-i18n="btn_fire_laser">লেজার বিম ফায়ার</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3D Model 4: Gold Taka Coin -->
+      <div class="insight-card" style="align-items:center; text-align:center; padding:18px;">
+        <div style="font-size:14px; font-weight:800; color:var(--accent-gold); margin-bottom:8px;" data-i18n="title_coin_3d">
+          🪙 সোনার টাকা কয়েন (Taka Currency Coin)
+        </div>
+        <div style="width:220px; height:180px; position:relative; border-radius:14px; overflow:hidden; background:radial-gradient(circle, #1E273D, #0B0E17); border:1px solid var(--border-medium); box-shadow:var(--shadow-3d);" id="canvasContainerCoin"></div>
+        <div style="display:flex; gap:8px; margin-top:12px; width:100%;">
+          <button class="tool-btn" style="flex:1; justify-content:center;" onclick="triggerCoinFlip3D()">
+            <span>✨</span> <span data-i18n="btn_flip_coin">হাই স্পিড ফ্লিপ</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       MODAL 1: CHECKOUT 80MM THERMAL RECEIPT MODAL
+       ========================================================================== -->
+  <div class="modal-overlay" id="checkoutReceiptModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🧾</span>
+          <span data-i18n="modal_receipt_title">বিক্রয় চালান ও রসিদ (Invoice Receipt)</span>
+        </div>
+        <button class="modal-close-btn" onclick="closeCheckoutReceiptModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- 80mm Paper Preview -->
+        <div class="thermal-slip-paper" id="thermalSlipPaper">
+          <div class="thermal-shop-header">
+            <div class="thermal-shop-name">টেকিফাই জেনারেল স্টোর</div>
+            <div style="font-size:10.5px;">দোকান নং ১২, ধানমন্ডি সুপার মার্কেট, ঢাকা</div>
+            <div style="font-size:10.5px;">ফোন: ০১৭১২-৩৪৫৬৭৮ • ভ্যাট রেজি: BD-987654</div>
+            <div style="margin-top:6px; font-weight:700;">বিক্রয় চালান নং: #INV-652</div>
+            <div style="font-size:10px; color:#555;">তারিখ: ১৩ সেপ্টেম্বর ২০২৬, ০৪:৫০ PM</div>
+          </div>
+
+          <div style="margin-bottom:8px; font-size:11px;">
+            <div><strong>ক্রেতা:</strong> <span id="receiptCustName">রাকিব হাসান</span></div>
+            <div><strong>ক্যাশিয়ার:</strong> এডমিন (কাউন্টার ০১)</div>
+          </div>
+
+          <table class="thermal-table">
+            <thead>
+              <tr>
+                <th style="width:50%;">আইটেম</th>
+                <th style="text-align:center; width:20%;">পরিমাণ</th>
+                <th style="text-align:right; width:30%;">মূল্য</th>
+              </tr>
+            </thead>
+            <tbody id="receiptTableBody">
+              <!-- Dynamically Populated -->
+            </tbody>
+          </table>
+
+          <div style="border-top:1px dashed #9CA3AF; padding-top:6px;">
+            <div class="thermal-footer-row">
+              <span>উপমোট (Subtotal):</span>
+              <span id="receiptSubtotal">৳১,৫২০.০০</span>
+            </div>
+            <div class="thermal-footer-row" id="receiptDiscountRow" style="display:none; color:#B91C1C;">
+              <span>ছাড় (Discount):</span>
+              <span id="receiptDiscount">-৳৭৬.০০</span>
+            </div>
+            <div class="thermal-footer-row">
+              <span>ভ্যাট (VAT 0%):</span>
+              <span>৳০.০০</span>
+            </div>
+            <div class="thermal-footer-row thermal-grand-total">
+              <span>সর্বমোট (GRAND TOTAL):</span>
+              <span id="receiptGrandTotal">৳১,৫২০.০০</span>
+            </div>
+            <div class="thermal-footer-row">
+              <span>নগদ গ্রহণ (Paid):</span>
+              <span id="receiptPaid">৳২,০০০.০০</span>
+            </div>
+            <div class="thermal-footer-row" style="font-weight:700;">
+              <span>গ্রাহককে ফেরত (Change):</span>
+              <span id="receiptChange">৳৪৮০.০০</span>
+            </div>
+          </div>
+
+          <div style="text-align:center; margin-top:14px; font-size:10px; border-top:1px dashed #9CA3AF; padding-top:8px;">
+            <div>ধন্যবাদ, আবার আসবেন!</div>
+            <div>Powered by Techyfi POS Terminal</div>
+          </div>
+        </div>
+
+        <!-- Receipt Print / Share CTAs -->
+        <div style="display:flex; gap:10px; margin-top:16px;">
+          <button class="btn-checkout-cta" style="flex:1; height:44px; font-size:13.5px;" onclick="printReceiptDone()">
+            <span>🖨️</span>
+            <span data-i18n="btn_print_thermal">৮০মিমি প্রিন্ট</span>
+          </button>
+          <button class="btn-checkout-cta" style="flex:1; height:44px; font-size:13.5px; background:#25D366;" onclick="shareWhatsApp()">
+            <span>💬</span>
+            <span>WhatsApp</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 2: CAMERA BARCODE SCANNER PIP SIMULATOR
+       ========================================================================== -->
+  <div class="modal-overlay" id="scannerModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>📷</span>
+          <span data-i18n="modal_scanner_title">অপটিক্যাল বারকোড স্ক্যানার ভিউফাইন্ডার</span>
+        </div>
+        <button class="modal-close-btn" onclick="closeScannerModal()">✕</button>
+      </div>
+
+      <div class="modal-body" style="text-align:center;">
+        <div class="camera-pip-frame">
+          <div class="scanner-laser-line"></div>
+          <div class="camera-target-crosshair"></div>
+          <div style="position:absolute; bottom:12px; left:0; right:0; font-size:11px; color:#A7F3D0; font-weight:700;" data-i18n="scanner_hint">
+            প্যাকেজের বারকোড ফ্রেমে লক্ষ্য করুন...
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:12px; margin-top:14px;">
+          <button class="tool-btn" onclick="toggleTorchFlashlight()" id="btnTorchToggle">
+            <span>🔦</span>
+            <span id="torchLabel" data-i18n="btn_torch">টর্চ অন</span>
+          </button>
+          <button class="tool-btn" onclick="simulateBarcodeScan('8941100501234')">
+            <span>⚡</span>
+            <span data-i18n="btn_test_scan">টেস্ট বারকোড স্ক্যান (প্রাণ ম্যাঙ্গো)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 3: CUSTOMER SELECTOR / ADD KHATA MODAL
+       ========================================================================== -->
+  <div class="modal-overlay" id="customerModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>👤</span>
+          <span data-i18n="modal_cust_title">ক্রেতা নির্বাচন ও খাতা ব্যালেন্স</span>
+        </div>
+        <button class="modal-close-btn" onclick="closeCustomerModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="search-field-box" style="margin-bottom:12px;">
+          <span>🔍</span>
+          <input type="text" class="search-field-input" data-i18n-placeholder="search_customer_placeholder" placeholder="কাস্টমারের নাম বা ফোন নম্বর খুঁজুন...">
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="cart-item-row" style="cursor:pointer;" onclick="selectCustomer('রাকিব হাসান', '+8801712-345678', '৳৫৫০')">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="cust-avatar-3d">RH</div>
+              <div>
+                <div style="font-weight:700; font-size:13px;" data-i18n="cust_sample1_name">রাকিব হাসান</div>
+                <div style="font-size:11px; color:var(--text-tertiary);">+8801712-345678</div>
+              </div>
+            </div>
+            <span class="cust-due-badge" data-i18n="cust_sample1_due">বকেয়া: ৳৫৫০</span>
+          </div>
+
+          <div class="cart-item-row" style="cursor:pointer;" onclick="selectCustomer('মেসার্স সুমন ব্রাদার্স', '+8801819-998877', '৳১,২০০')">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="cust-avatar-3d" style="background:linear-gradient(135deg, #10B981, #047857);">SB</div>
+              <div>
+                <div style="font-weight:700; font-size:13px;" data-i18n="cust_sample2_name">মেসার্স সুমন ব্রাদার্স</div>
+                <div style="font-size:11px; color:var(--text-tertiary);">+8801819-998877</div>
+              </div>
+            </div>
+            <span class="cust-due-badge" data-i18n="cust_sample2_due">বকেয়া: ৳১,২০০</span>
+          </div>
+
+          <div class="cart-item-row" style="cursor:pointer;" onclick="selectCustomer('নগদ ক্রেতা (Walk-in)', 'কাউন্টার ক্যাশ', '৳০')">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="cust-avatar-3d" style="background:#475569;">WK</div>
+              <div>
+                <div style="font-weight:700; font-size:13px;" data-i18n="cust_sample3_name">নগদ ক্রেতা (সাধারণ ক্যাশ)</div>
+                <div style="font-size:11px; color:var(--text-tertiary);" data-i18n="cust_sample3_sub">কোনো খাতা নেই</div>
+              </div>
+            </div>
+            <span class="stock-pill" data-i18n="cust_sample3_pill">নগদ</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 4: STOCK CHECK BOTTOM SHEET & INSPECTION MODAL
+       ========================================================================== -->
+  <div class="modal-overlay" id="stockCheckModal" style="display: none;">
+    <div class="modal-dialog" style="max-width: 500px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size: 24px;" id="scmIcon">📦</span>
+          <div>
+            <div id="scmName" style="font-weight:800; font-size:15px; color:var(--text-main);">Product Name</div>
+            <div style="font-size:11px; color:var(--text-tertiary);"><span id="scmBarcode"></span> • <span id="scmCat"></span></div>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeStockCheckModal()">✕</button>
+      </div>
+
+      <div class="modal-body" style="gap:12px; display:flex; flex-direction:column; padding:16px;">
+        <!-- Inventory Card -->
+        <div style="background:var(--bg-card-hover, #1E293B); border:1px solid var(--border-medium, #334155); border-radius:14px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div>
+              <div style="font-size:10.5px; font-weight:700; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.5px;">INVENTORY LEVEL</div>
+              <div style="font-size:22px; font-weight:900; color:var(--text-main); margin-top:2px;" id="scmStockUnits">1.0 units</div>
+            </div>
+            <div id="scmStatusBadge" class="stock-pill" style="font-size:11.5px; padding:4px 10px;">In Stock</div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px; text-align:center;">
+            <div>
+              <div style="font-size:10px; color:var(--text-tertiary);">Purchase</div>
+              <div style="font-size:13px; font-weight:700; color:var(--text-main);" id="scmPurchasePrice">৳0</div>
+            </div>
+            <div>
+              <div style="font-size:10px; color:var(--text-tertiary);">Selling</div>
+              <div style="font-size:13px; font-weight:700; color:var(--accent-emerald);" id="scmSellingPrice">৳0</div>
+            </div>
+            <div>
+              <div style="font-size:10px; color:var(--text-tertiary);">MRP</div>
+              <div style="font-size:13px; font-weight:700; color:#818CF8;" id="scmMrpPrice">৳0</div>
+            </div>
+            <div>
+              <div style="font-size:10px; color:var(--text-tertiary);">Wholesale</div>
+              <div style="font-size:13px; font-weight:700; color:var(--text-secondary);" id="scmWholesalePrice">—</div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); font-size:11.5px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="color:var(--text-tertiary);">Unit Margin:</span>
+              <span id="scmMarginBadge" style="color:var(--accent-emerald); font-weight:700; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:6px;">+৳0 (0%)</span>
+            </div>
+            <div style="color:var(--text-tertiary);">Asset Worth: <span id="scmAssetWorth" style="color:#818CF8; font-weight:700;">৳0</span></div>
+          </div>
+        </div>
+
+        <!-- Adjust Quantity -->
+        <div style="background:var(--bg-card-hover, #1E293B); border:1px solid var(--border-medium, #334155); border-radius:14px; padding:14px;">
+          <div style="font-size:10.5px; font-weight:700; color:var(--text-tertiary); text-transform:uppercase; margin-bottom:10px;">ADJUST QUANTITY</div>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <button class="cart-qty-btn" style="width:38px; height:38px; font-size:18px;" onclick="adjustScmQty(-1)">−</button>
+            <input type="number" id="scmQtyInput" style="flex:1; height:38px; text-align:center; font-size:18px; font-weight:800; background:rgba(0,0,0,0.3); border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-main);" value="0">
+            <button class="cart-qty-btn" style="width:38px; height:38px; font-size:18px;" onclick="adjustScmQty(1)">+</button>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="disc-chip" onclick="adjustScmQty(1)">+1</button>
+            <button class="disc-chip" onclick="adjustScmQty(5)">+5</button>
+            <button class="disc-chip" onclick="adjustScmQty(10)">+10</button>
+            <button class="disc-chip" style="background:rgba(239,68,68,0.15); color:var(--accent-rose); border-color:rgba(239,68,68,0.3);" onclick="setScmQty(0)">0</button>
+            <button class="disc-chip" onclick="resetScmQty()">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display:flex; gap:10px; justify-content:flex-end; padding:14px 20px; border-top:1px solid var(--border-subtle);">
+        <button class="disc-chip" style="padding:8px 16px; border-radius:10px;" onclick="closeStockCheckModal()">✕ Cancel</button>
+        <button style="padding:8px 18px; border-radius:10px; background:#475569; color:#FFF; font-weight:700; border:none; cursor:pointer;" onclick="editScmProduct()">✏️ Edit</button>
+        <button style="padding:8px 22px; border-radius:10px; background:var(--accent-emerald); color:#000; font-weight:800; border:none; cursor:pointer;" onclick="saveScmStock()">✓ Save</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ==========================================================================
+       JAVASCRIPT: INTERACTIVE POS TERMINAL ENGINE
+       ========================================================================== -->
+  <script>
+    // --------------------------------------------------------------------------
+    // 1. DATA REPOSITORY: CATALOG & INITIAL CART
+    // --------------------------------------------------------------------------
+    const PRODUCTS_DB = [
+      {
+        id: "p1",
+        barcode: "8941100501234",
+        name_bn: "প্রাণ ম্যাঙ্গো ফ্রুট ড্রিংক ৫০০মি.লি.",
+        name_en: "Pran Mango Fruit Drink 500ml",
+        category: "beverage",
+        price: 45.0,
+        stock: 36,
+        icon: "🥤"
+      },
+      {
+        id: "p2",
+        barcode: "8941100100987",
+        name_bn: "তীর ফর্টিফাইড সয়াবিন তেল ১ লিটার",
+        name_en: "Teer Fortified Soybean Oil 1L",
+        category: "grocery",
+        price: 175.0,
+        stock: 24,
+        icon: "🌾"
+      },
+      {
+        id: "p3",
+        barcode: "8941100800345",
+        name_bn: "মিনিকেট সুগন্ধি চাল ৫ কেজি বস্তা",
+        name_en: "Miniket Premium Rice 5kg Bag",
+        category: "grocery",
+        price: 410.0,
+        stock: 15,
+        icon: "🌾"
+      },
+      {
+        id: "p4",
+        barcode: "8941100200555",
+        name_bn: "নেসক্যাফে ক্লাসিক কফি ৫০ গ্রাম জার",
+        name_en: "Nescafe Classic Coffee 50g Jar",
+        category: "beverage",
+        price: 320.0,
+        stock: 8,
+        icon: "☕"
+      },
+      {
+        id: "p5",
+        barcode: "8941100300111",
+        name_bn: "লাক্স সুগন্ধি রূপচর্চা সাবান ১৫০ গ্রাম",
+        name_en: "Lux Beauty Soap 150g Bar",
+        category: "personal",
+        price: 75.0,
+        stock: 42,
+        icon: "🧴"
+      },
+      {
+        id: "p6",
+        barcode: "8941100400777",
+        name_bn: "ক্লোজআপ রেড হট টুথপেস্ট ১২০ গ্রাম",
+        name_en: "Closeup Red Hot Toothpaste 120g",
+        category: "personal",
+        price: 135.0,
+        stock: 19,
+        icon: "🪥"
+      },
+      {
+        id: "p7",
+        barcode: "8941100600888",
+        name_bn: "নাপা এক্সট্রা ৫০০+৬৫মি.গ্রা. স্ট্রিপ",
+        name_en: "Napa Extra 500+65mg Blister Strip",
+        category: "pharmacy",
+        price: 30.0,
+        stock: 90,
+        icon: "💊"
+      },
+      {
+        id: "p8",
+        barcode: "8941100700222",
+        name_bn: "অলিম্পিক এনার্জি প্লাস বিস্কুট ২০০ গ্রাম",
+        name_en: "Olympic Energy Plus Biscuit 200g",
+        category: "bakery",
+        price: 40.0,
+        stock: 55,
+        icon: "🍪"
+      },
+      {
+        id: "p9",
+        barcode: "8941100900333",
+        name_bn: "ফাস্ট চার্জিং টাইপ-সি ইউএসবি ক্যাবল",
+        name_en: "Fast Charging Type-C USB Cable",
+        category: "electronics",
+        price: 250.0,
+        stock: 12,
+        icon: "⚡"
+      },
+      {
+        id: "p10",
+        barcode: "8941100999000",
+        name_bn: "উইয়ারলেস ব্লুটুথ এয়ারবাডস প্রো",
+        name_en: "Wireless Bluetooth Earbuds Pro",
+        category: "electronics",
+        price: 850.0,
+        stock: 4,
+        icon: "🎧"
+      }
+    ];
+
+    // Initial Cart State
+    let cartItems = [
+      { product: PRODUCTS_DB[1], quantity: 2 }, // Teer Oil (175 * 2 = 350)
+      { product: PRODUCTS_DB[2], quantity: 1 }, // Rice (410 * 1 = 410)
+      { product: PRODUCTS_DB[3], quantity: 1 }, // Coffee (320 * 1 = 320)
+      { product: PRODUCTS_DB[0], quantity: 4 }  // Pran Mango (45 * 4 = 180)
+      // Subtotal = 350 + 410 + 320 + 180 = 1260
+    ];
+
+    let currentCustomer = {
+      name: "রাকিব হাসান (Walk-in)",
+      phone: "+8801712-345678",
+      due: "৳৫৫০"
+    };
+
+    let activeCategory = "all";
+    let activeDiscountPercent = 0;
+    let activeDiscountFlat = 0;
+    let currentLanguage = "bn";
+    let currentOrientation = "landscape";
+    let portraitSubmode = "split";
+    let stockCheckMode = false;
+    let torchEnabled = false;
+    let heldCartsCount = 1;
+
+    function formatDigits(num, lang) {
+      if (lang === 'bn') {
+        const banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        return String(num).replace(/\d/g, d => banglaDigits[d]);
+      }
+      return String(num);
+    }
+
+    function updateHeldCartsBadge() {
+      const formatted = formatDigits(heldCartsCount, currentLanguage);
+      document.querySelectorAll('.held-carts-count').forEach(el => {
+        el.innerText = formatted;
+      });
+      const el = document.getElementById('heldCartsCount');
+      if (el) {
+        el.innerText = formatted;
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // 2. I18N DICTIONARY (NATURAL BANGLADESH RETAIL PHRASING)
+    // --------------------------------------------------------------------------
+    const I18N_STRINGS = {
+      bn: {
+        header_title: "ট্যাবলেট সেল টার্মিনাল রিডিজাইন (Tablet Sell Screen Redesign)",
+        badge_interactive: "লাইভ ইন্টারেক্টিভ প্রিভিউ",
+        header_subtitle: "ভার্টিকাল ও হরাইজন্টাল ট্যাবলেট মোড, ৩D অ্যানিমেটেড আইকন ও কমপ্যাক্ট POS এক্সপেরিয়েন্স",
+        mode_landscape: "হরাইজন্টাল (Landscape)",
+        mode_portrait: "ভার্টিকাল (Portrait)",
+        mode_split: "⬍ স্প্লিট ভিউ (Split)",
+        mode_docked: "📑 ডকড শিট (Docked)",
+        btn_reset: "রিসেট ডেটা",
+        rail_sell: "বিক্রয়",
+        rail_products: "পণ্য",
+        rail_history: "হিস্ট্রি",
+        rail_dues: "বকেয়া",
+        rail_reports: "রিপোর্ট",
+        rail_scan: "স্ক্যানার",
+        btn_held_carts: "হোল্ড",
+        action_scan: "স্ক্যানার",
+        action_numpad: "কীপ্যাড",
+        action_stock: "স্টক",
+        cat_all: "সব পণ্য",
+        cat_grocery: "মুদি ও খাদ্য",
+        cat_beverage: "পানীয় ও ড্রিংকস",
+        cat_electronics: "ইলেকট্রনিক্স",
+        cat_personal: "প্রসাধন ও কেয়ার",
+        cat_pharmacy: "ওষুধ ও হেলথ",
+        cat_bakery: "স্ন্যাক্স ও বেকারি",
+        cart_title: "চলতি কার্ট",
+        cart_review_title: "কার্ট পর্যালোচনা (Cart Review)",
+        cart_review_sub: "আইটেম যাচাই ও প্রিভিউ স্টেজ",
+        tally_estimated: "আনুমানিক মোট (Estimated Total)",
+        btn_proceed_final: "কার্টে এগিয়ে যান ➔",
+        btn_proceed_short: "কার্ট ➔",
+        btn_back_catalog: "পণ্য যোগ করুন (Back to Products)",
+        final_cart_header: "ফাইনাল কার্ট ও বিল পরিশোধ (Final Cart & Checkout)",
+        btn_hold: "অর্ডার স্থগিত",
+        btn_clear: "কার্ট বাতিল",
+        final_items_title: "আইটেম তালিকা (Itemized Bill)",
+        final_discount_title: "অর্ডার ডিসকাউন্ট (Order Discount)",
+        pay_method_title: "পেমেন্ট মেথড নির্বাচন করুন (Payment Method)",
+        pay_cash: "নগদ (Cash)",
+        pay_due: "বাকি খাতা (Due)",
+        pay_split: "স্প্লিট পেমেন্ট",
+        cash_received_label: "গ্রাহক প্রদত্ত নগদ টাকা (Cash Received)",
+        change_due_label: "গ্রাহককে ফেরত টাকা (Change Due)",
+        btn_complete_sale: "বিক্রয় সম্পন্ন ও রসিদ প্রিন্ট",
+        label_discount: "ছাড়:",
+        tally_subtotal: "উপমোট (Subtotal)",
+        tally_discount: "ডিসকাউন্ট ছাড়",
+        tally_grand: "সর্বমোট টাকা (Grand Total)",
+        btn_checkout: "হিসাব সম্পন্ন ও রসিদ প্রিন্ট",
+        btn_checkout_short: "হিসাব সম্পন্ন",
+        audit_title: "ট্যাবলেট রিডিজাইন ডিজাইন আর্কিটেকচার ও উন্নত বৈচিত্র্য (UI/UX Highlights)",
+        badge_approved: "প্রস্তাবিত ডিজাইন সিস্টেম",
+        feat1_title: "ডুয়াল ওরিয়েন্টেশন (Landscape & Portrait Parity)",
+        feat1_desc: "পূর্বে ট্যাবলেটের সেল স্ক্রিনে শুধুমাত্র ফিক্সড হরাইজন্টাল রো (৫৮/৪২%) ছিল, যা পোর্ট্রেট মোডে স্ক্রিন সংকুচিত করত। নতুন ডিজাইনে ল্যান্ডস্কেপে ফুল স্প্লিট টার্মিনাল এবং পোর্ট্রেটে কমপ্যাক্ট স্প্লিট বা ডকড ড্রয়ার মোড যুক্ত হয়েছে।",
+        feat2_title: "বাস্তবসম্মত ৩D অ্যানিমেটেড আইকন (Realistic 3D Icons)",
+        feat2_desc: "ক্যাশ রেজিস্টার, সুপারমার্কেট কার্ট, বারকোড অপটিক্যাল স্ক্যানার ও ক্যাটাগরি ব্যাজে পিউর CSS 3D এবং WebGL লাইটিং যুক্ত। কার্টে পণ্য যোগ করলে কার্ট আইকন বাউন্স করে এবং স্পর্শে জীবন্ত প্রতিক্রিয়া দেয়।",
+        feat3_title: "দ্রুত ক্যাশ গ্রহণ ও এক-ট্যাপ ডিসকাউন্ট",
+        feat3_desc: "ক্যাশিয়ারের সময় বাঁচাতে Exact, ৳৫০০, ৳১০০০, ৳২০০০ প্রিসেট বাটন এবং 5%, 10%, ৳৫০ ছাড়ের কুইক চিপস সংযুক্ত। আলাদা কোনো ডায়ালগ ছাড়াই সরাসরি এক স্পর্শে হিসাব সম্পন্ন করা যায়।",
+        feat4_title: "খাঁটি বাংলাদেশি রিটেল ও কমার্শিয়াল বাংলা",
+        feat4_desc: "কোনো আক্ষরিক রোবোটিক অনুবাদ নয়; ঢাকার খুচরা দোকানদারদের দৈনন্দিন ভাষা (যেমন: চলতি কার্ট, সর্বমোট টাকা, ফেরত টাকা, বকেয়া খাতা, হোল্ড করা কার্ট) প্রয়োগ করা হয়েছে।",
+        modal_receipt_title: "বিক্রয় চালান ও রসিদ (Invoice Receipt)",
+        modal_scanner_title: "অপটিক্যাল বারকোড স্ক্যানার ভিউফাইন্ডার",
+        modal_cust_title: "ক্রেতা নির্বাচন ও খাতা ব্যালেন্স",
+        btn_print_thermal: "৮০মিমি প্রিন্ট",
+        search_placeholder: "বারকোড বা পণ্যের নাম দিয়ে খুঁজুন...",
+        search_placeholder_short: "খুঁজুন বা স্ক্যান করুন...",
+        search_customer_placeholder: "কাস্টমারের নাম বা ফোন নম্বর খুঁজুন...",
+        scanner_hint: "প্যাকেজের বারকোড ফ্রেমে লক্ষ্য করুন...",
+        btn_torch: "টর্চ অন",
+        btn_test_scan: "টেস্ট বারকোড স্ক্যান (প্রাণ ম্যাঙ্গো)",
+        cust_sample1_name: "রাকিব হাসান",
+        cust_sample1_due: "বকেয়া: ৳৫৫০",
+        cust_sample2_name: "মেসার্স সুমন ব্রাদার্স",
+        cust_sample2_due: "বকেয়া: ৳১,২০০",
+        cust_sample3_name: "নগদ ক্রেতা (সাধারণ ক্যাশ)",
+        cust_sample3_sub: "কোনো খাতা নেই",
+        cust_sample3_pill: "নগদ",
+        cust_name_default: "রাকিব হাসান (Walk-in Regular)",
+        cust_name_short: "রাকিব হাসান",
+        cust_due_default: "বকেয়া: ৳৫৫০",
+        title_3d_studio: "বাস্তবসম্মত ৩D অ্যানিমেটেড আইকন স্টুডিও (Interactive 3D Icons Studio)",
+        desc_3d_studio: "ট্যাবলেট সেল টার্মিনালের জন্য কাস্টম তৈরি বাস্তবসম্মত ৩D মডেল। মাউস দিয়ে ড্র্যাগ করে ৩৬০° কোণে ঘুরিয়ে দেখুন এবং ইন্টারেক্টিভ বাটনে ট্যাপ করে অ্যানিমেশন পরীক্ষা করুন:",
+        btn_auto_rotate: "অটো-রোটেশন",
+        btn_wireframe: "ওয়্যারফ্রেম মোড",
+        title_register_3d: "💰 ক্যাশ রেজিস্টার টার্মিনাল (POS Terminal)",
+        btn_open_drawer: "ক্যাশ ড্রয়ার খুলুন",
+        title_cart_3d: "🛒 সুপারমার্কেট স্মার্ট কার্ট (Live Cart)",
+        btn_bounce_cart: "আইটেম ড্রপ বাউন্স",
+        title_scanner_3d: "⚡ অপটিক্যাল লেজার স্ক্যানার (Barcode Scanner)",
+        btn_fire_laser: "লেজার বিম ফায়ার",
+        title_coin_3d: "🪙 সোনার টাকা কয়েন (Taka Currency Coin)",
+        btn_flip_coin: "হাই স্পিড ফ্লিপ",
+        stock_check_banner: "স্টক অনুসন্ধান মোড সক্রিয় — স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ বা স্ক্যান করুন"
+      },
+      en: {
+        header_title: "Tablet Sell Screen Redesign (Vertical & Horizontal Views)",
+        badge_interactive: "Live Interactive Preview",
+        header_subtitle: "Vertical & Horizontal Tablet Modes, Realistic 3D Animated Icons & Compact POS UX",
+        mode_landscape: "Horizontal (Landscape)",
+        mode_portrait: "Vertical (Portrait)",
+        mode_split: "⬍ Split View",
+        mode_docked: "📑 Docked Sheet",
+        btn_reset: "Reset Data",
+        rail_sell: "Sell",
+        rail_products: "Products",
+        rail_history: "History",
+        rail_dues: "Dues",
+        rail_reports: "Reports",
+        rail_scan: "Scanner",
+        btn_held_carts: "Held",
+        action_scan: "Scanner",
+        action_numpad: "Keypad",
+        action_stock: "Stock",
+        cat_all: "All Items",
+        cat_grocery: "Groceries",
+        cat_beverage: "Beverages",
+        cat_electronics: "Electronics",
+        cat_personal: "Personal Care",
+        cat_pharmacy: "Pharmacy",
+        cat_bakery: "Bakery & Snacks",
+        cart_title: "Live Cart",
+        cart_review_title: "Cart Review",
+        cart_review_sub: "Item verification & preview stage",
+        tally_estimated: "Estimated Total",
+        btn_proceed_final: "Proceed to Cart ➔",
+        btn_proceed_short: "Cart ➔",
+        btn_back_catalog: "Back to Products",
+        final_cart_header: "Final Cart & Checkout",
+        btn_hold: "Hold Order",
+        btn_clear: "Clear Cart",
+        final_items_title: "Itemized Bill Details",
+        final_discount_title: "Order Discount",
+        pay_method_title: "Select Payment Method",
+        pay_cash: "Cash",
+        pay_due: "Due Khata",
+        pay_split: "Split Pay",
+        cash_received_label: "Cash Received",
+        change_due_label: "Change Due",
+        btn_complete_sale: "Complete Sale & Print Slip",
+        label_discount: "Discount:",
+        tally_subtotal: "Subtotal",
+        tally_discount: "Discount Savings",
+        tally_grand: "Grand Total",
+        btn_checkout: "Complete Checkout & Print Receipt",
+        btn_checkout_short: "Complete Sale",
+        audit_title: "Tablet Redesign Architecture & Ergonomics (UI/UX Highlights)",
+        badge_approved: "Recommended Design System",
+        feat1_title: "Dual Orientation (Landscape & Portrait Parity)",
+        feat1_desc: "Previously, the tablet Sell screen was locked into a 58/42% horizontal row which severely squished portrait viewports. The redesign provides dedicated widescreen dual-column and responsive portrait split/docked drawer modes.",
+        feat2_title: "Realistic 3D Animated Icons",
+        feat2_desc: "Cash register, shopping cart, optical laser scanner, and category badges feature layered CSS 3D and WebGL specular lighting with lively bounce animations upon item additions.",
+        feat3_title: "Rapid Tender Presets & Instant Discounts",
+        feat3_desc: "Instant cash shortcuts (Exact, ৳500, ৳1000, ৳2000) and discount chips (5%, 10%, ৳50) allow lightning-fast counter checkouts without modal interruptions.",
+        feat4_title: "Authentic Bangladeshi Retail Phrasing",
+        feat4_desc: "Natural commercial vocabulary used by retail shopkeepers across Dhaka, Chittagong, and Bangladesh without awkward automated translations.",
+        modal_receipt_title: "Sales Invoice & Receipt",
+        modal_scanner_title: "Optical Barcode Viewfinder",
+        modal_cust_title: "Customer Khata Selection",
+        btn_print_thermal: "Print 80mm Slip",
+        search_placeholder: "Search by name or barcode...",
+        search_placeholder_short: "Search or scan barcode...",
+        search_customer_placeholder: "Search customer name or phone...",
+        scanner_hint: "Aim barcode scanner inside frame...",
+        btn_torch: "Torch On",
+        btn_test_scan: "Test Scan (Pran Mango Juice)",
+        cust_sample1_name: "Rakib Hasan",
+        cust_sample1_due: "Due: ৳550",
+        cust_sample2_name: "Sumon Brothers Trading",
+        cust_sample2_due: "Due: ৳1,200",
+        cust_sample3_name: "Walk-in Customer (Cash)",
+        cust_sample3_sub: "No ledger account",
+        cust_sample3_pill: "Cash",
+        cust_name_default: "Rakib Hasan (Walk-in Regular)",
+        cust_name_short: "Rakib Hasan",
+        cust_due_default: "Due: ৳550",
+        title_3d_studio: "Realistic 3D Animated Icons Studio",
+        desc_3d_studio: "Custom realistic 3D models engineered for the tablet sell terminal. Drag with mouse/touch to inspect at 360° and click action buttons to test animations:",
+        btn_auto_rotate: "Auto-Rotate",
+        btn_wireframe: "Wireframe Mode",
+        title_register_3d: "💰 POS Cash Register Terminal",
+        btn_open_drawer: "Open Cash Drawer",
+        title_cart_3d: "🛒 Supermarket Smart Cart",
+        btn_bounce_cart: "Simulate Item Bounce",
+        title_scanner_3d: "⚡ Optical Laser Barcode Scanner",
+        btn_fire_laser: "Fire Laser Beam",
+        title_coin_3d: "🪙 Gold Taka Currency Coin",
+        btn_flip_coin: "High-Speed Flip",
+        stock_check_banner: "Stock Check Mode Active — Tap or Scan any product to view & adjust stock"
+      }
+    };
+
+    // --------------------------------------------------------------------------
+    // 3. UI RENDER FUNCTIONS (CATALOG, CART, TALLY)
+    // --------------------------------------------------------------------------
+    function renderProductGrid() {
+      const containerLandscape = document.getElementById('productGridContainer');
+      const containerPortrait = document.getElementById('portraitProductGrid');
+      const containerDocked = document.getElementById('dockedProductGrid');
+
+      const searchQuery = (document.getElementById('searchBarInput')?.value || "").toLowerCase().trim();
+
+      const filtered = PRODUCTS_DB.filter(p => {
+        const matchesCat = (activeCategory === "all") || (p.category === activeCategory);
+        const matchesSearch = !searchQuery ||
+          p.name_bn.toLowerCase().includes(searchQuery) ||
+          p.name_en.toLowerCase().includes(searchQuery) ||
+          p.barcode.includes(searchQuery);
+        return matchesCat && matchesSearch;
+      });
+
+      const cardsHtml = filtered.map(p => {
+        const inCartItem = cartItems.find(item => item.product.id === p.id);
+        const qtyInCart = inCartItem ? inCartItem.quantity : 0;
+        const name = currentLanguage === 'bn' ? p.name_bn : p.name_en;
+        const stockText = currentLanguage === 'bn' ? `স্টক: ${formatDigits(p.stock, 'bn')}` : `Stock: ${p.stock}`;
+        const stockClass = p.stock <= 5 ? (p.stock === 0 ? 'out' : 'low') : '';
+        const priceStr = currentLanguage === 'bn' ? `৳${formatDigits(p.price.toFixed(2), 'bn')}` : `৳${p.price.toFixed(2)}`;
+        const qtyStr = formatDigits(qtyInCart, currentLanguage);
+
+        return `
+          <div class="product-card ${stockCheckMode ? 'stock-check-active' : ''}" onclick="handleProductClick('${p.id}')">
+            <div class="product-top-row">
+              <div class="product-3d-visual">${p.icon}</div>
+              <span class="stock-pill ${stockClass}">${stockText}</span>
+            </div>
+            <div class="product-meta">
+              <div class="product-title" title="${name}">${name}</div>
+              <div class="product-barcode-sku">${p.barcode}</div>
+            </div>
+            <div class="product-footer-row">
+              <div class="product-price-val">${priceStr}</div>
+              ${qtyInCart > 0 ? `<div class="product-cart-badge" style="display:flex;">${qtyStr}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (containerLandscape) containerLandscape.innerHTML = cardsHtml;
+      if (containerPortrait) containerPortrait.innerHTML = cardsHtml;
+      if (containerDocked) containerDocked.innerHTML = cardsHtml;
+    }
+
+    function renderCartItems() {
+      const landscapeContainer = document.getElementById('cartItemsContainer');
+      const portraitContainer = document.getElementById('portraitCartItemsContainer');
+
+      if (cartItems.length === 0) {
+        const emptyHtml = `
+          <div class="empty-cart-box">
+            <div class="empty-cart-3d-visual">🛒</div>
+            <div style="font-weight:700; font-size:14px; color:var(--text-secondary);">
+              ${currentLanguage === 'bn' ? 'কার্ট সম্পূর্ণ খালি' : 'Cart is Empty'}
+            </div>
+            <div style="font-size:12px; color:var(--text-tertiary);">
+              ${currentLanguage === 'bn' ? 'বাম পাশের তালিকা থেকে পণ্য ট্যাপ করুন বা বারকোড স্ক্যান করুন।' : 'Tap products from the catalog or scan barcodes to begin.'}
+            </div>
+          </div>
+        `;
+        if (landscapeContainer) landscapeContainer.innerHTML = emptyHtml;
+        if (portraitContainer) portraitContainer.innerHTML = emptyHtml;
+        updateTotals();
+        return;
+      }
+
+      const itemsHtml = cartItems.map(item => {
+        const p = item.product;
+        const name = currentLanguage === 'bn' ? p.name_bn : p.name_en;
+        const itemTotal = (p.price * item.quantity).toFixed(2);
+        const unitPriceStr = currentLanguage === 'bn' ? `৳${formatDigits(p.price.toFixed(2), 'bn')} / একক` : `৳${p.price.toFixed(2)} / unit`;
+        const itemTotalStr = currentLanguage === 'bn' ? `৳${formatDigits(itemTotal, 'bn')}` : `৳${itemTotal}`;
+        const qtyDisplay = formatDigits(item.quantity, currentLanguage);
+
+        return `
+          <div class="cart-item-row">
+            <div class="cart-item-left">
+              <div class="cart-item-name" title="${name}">${name}</div>
+              <div class="cart-item-price-unit">${unitPriceStr}</div>
+            </div>
+            <div class="cart-item-controls">
+              <div class="qty-stepper">
+                <button class="qty-btn" onclick="updateItemQty('${p.id}', -1); event.stopPropagation();">−</button>
+                <div class="qty-display">${qtyDisplay}</div>
+                <button class="qty-btn" onclick="updateItemQty('${p.id}', 1); event.stopPropagation();">+</button>
+              </div>
+              <div class="cart-item-total">${itemTotalStr}</div>
+              <button class="cart-item-delete-btn" onclick="removeItem('${p.id}'); event.stopPropagation();" title="Remove">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (landscapeContainer) landscapeContainer.innerHTML = itemsHtml;
+      if (portraitContainer) portraitContainer.innerHTML = itemsHtml;
+
+      updateTotals();
+    }
+
+    function updateTotals() {
+      const subtotal = cartItems.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+      const totalUnits = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+
+      let discountAmount = 0;
+      if (activeDiscountPercent > 0) {
+        discountAmount = subtotal * (activeDiscountPercent / 100);
+      } else if (activeDiscountFlat > 0) {
+        discountAmount = Math.min(activeDiscountFlat, subtotal);
+      }
+
+      const grandTotal = Math.max(0, subtotal - discountAmount);
+
+      // Format texts
+      const subtotalFormatted = subtotal.toFixed(2);
+      const discountFormatted = discountAmount.toFixed(2);
+      const grandTotalFormatted = grandTotal.toFixed(2);
+
+      const subtotalStr = currentLanguage === 'bn' ? `৳${formatDigits(subtotalFormatted, 'bn')}` : `৳${subtotalFormatted}`;
+      const discountStr = currentLanguage === 'bn' ? `-৳${formatDigits(discountFormatted, 'bn')}` : `-৳${discountFormatted}`;
+      const grandTotalStr = currentLanguage === 'bn' ? `৳${formatDigits(grandTotalFormatted, 'bn')}` : `৳${grandTotalFormatted}`;
+      const itemsCountStr = currentLanguage === 'bn' ? `${formatDigits(totalUnits, 'bn')}টি পণ্য` : `${totalUnits} items`;
+      const shortCountStr = currentLanguage === 'bn' ? `${formatDigits(totalUnits, 'bn')}টি` : `${totalUnits} items`;
+
+      // Update Landscape Elements
+      const tallySub = document.getElementById('tallySubtotal');
+      const tallyDisc = document.getElementById('tallyDiscount');
+      const discRow = document.getElementById('discountTallyRow');
+      const tallyGrand = document.getElementById('tallyGrandTotal');
+      const btnProceed = document.getElementById('btnProceedFinalCart');
+      const btnProceedLabel = document.getElementById('btnProceedLabel');
+      const cartItemCountBadge = document.getElementById('cartItemCountBadge');
+
+      if (tallySub) tallySub.innerText = subtotalStr;
+      if (tallyGrand) tallyGrand.innerText = grandTotalStr;
+      if (cartItemCountBadge) {
+        cartItemCountBadge.innerText = formatDigits(totalUnits, currentLanguage);
+        cartItemCountBadge.style.display = totalUnits > 0 ? 'inline-flex' : 'none';
+      }
+
+      if (discRow && tallyDisc) {
+        if (discountAmount > 0) {
+          discRow.style.display = 'flex';
+          tallyDisc.innerText = discountStr;
+        } else {
+          discRow.style.display = 'none';
+        }
+      }
+
+      const proceedText = currentLanguage === 'bn' ?
+        `কার্টে এগিয়ে যান (${grandTotalStr}) ➔` :
+        `Proceed to Cart (${grandTotalStr}) ➔`;
+
+      if (btnProceedLabel) {
+        btnProceedLabel.innerText = proceedText;
+      }
+
+      if (btnProceed) {
+        btnProceed.disabled = cartItems.length === 0;
+      }
+
+      // Update Portrait Elements
+      const portraitSub = document.getElementById('portraitTallySubtotal');
+      const portraitTally = document.getElementById('portraitTallyGrand');
+      const portraitCount = document.getElementById('portraitCartCountBadge');
+      const portraitBtnProceed = document.getElementById('portraitBtnProceedFinalCart');
+      const portraitBtnProceedLabel = document.getElementById('portraitBtnProceedLabel');
+      const dockedTally = document.getElementById('dockedTallyGrand');
+      const dockedCount = document.getElementById('dockedCartCountBadge');
+
+      if (portraitSub) portraitSub.innerText = subtotalStr;
+      if (portraitTally) portraitTally.innerText = grandTotalStr;
+      if (portraitCount) {
+        portraitCount.innerText = formatDigits(totalUnits, currentLanguage);
+        portraitCount.style.display = totalUnits > 0 ? 'inline-flex' : 'none';
+      }
+      if (portraitBtnProceedLabel) portraitBtnProceedLabel.innerText = proceedText;
+      if (portraitBtnProceed) portraitBtnProceed.disabled = cartItems.length === 0;
+      if (dockedTally) dockedTally.innerText = grandTotalStr;
+      if (dockedCount) dockedCount.innerText = itemsCountStr;
+    }
+
+    // --------------------------------------------------------------------------
+    // 4. CART MUTATION LOGIC & 3D MICRO-ANIMATIONS
+    // --------------------------------------------------------------------------
+    function addToCart(productId) {
+      const product = PRODUCTS_DB.find(p => p.id === productId);
+      if (!product) return;
+
+      const existing = cartItems.find(item => item.product.id === productId);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        cartItems.push({ product: product, quantity: 1 });
+      }
+
+      // Trigger 3D Cart Icon Bounce Animation
+      const badge = document.getElementById('cartBadge3d');
+      if (badge) {
+        badge.classList.remove('bounce');
+        void badge.offsetWidth; // force reflow
+        badge.classList.add('bounce');
+      }
+
+      renderCartItems();
+      renderProductGrid();
+    }
+
+    function updateItemQty(productId, delta) {
+      const item = cartItems.find(i => i.product.id === productId);
+      if (!item) return;
+
+      item.quantity += delta;
+      if (item.quantity <= 0) {
+        cartItems = cartItems.filter(i => i.product.id !== productId);
+      }
+
+      renderCartItems();
+      renderProductGrid();
+    }
+
+    function removeItem(productId) {
+      cartItems = cartItems.filter(i => i.product.id !== productId);
+      renderCartItems();
+      renderProductGrid();
+    }
+
+    function clearCartConfirm() {
+      if (cartItems.length === 0) return;
+      if (confirm(currentLanguage === 'bn' ? 'আপনি কি পুরো কার্ট খালি করতে চান?' : 'Clear all items in cart?')) {
+        cartItems = [];
+        renderCartItems();
+        renderProductGrid();
+      }
+    }
+
+    function holdCurrentCart() {
+      if (cartItems.length === 0) {
+        showNotification(currentLanguage === 'bn' ? 'স্থগিত করার জন্য কার্টে কোনো পণ্য নেই।' : 'No items in cart to hold.');
+        return;
+      }
+      showNotification(currentLanguage === 'bn' ? 'চলতি কার্ট সফলভাবে স্থগিত (Held) করা হয়েছে!' : 'Current cart successfully held!');
+      cartItems = [];
+      heldCartsCount += 1;
+      updateHeldCartsBadge();
+      renderCartItems();
+      renderProductGrid();
+    }
+
+    function openHeldCartsModal() {
+      if (heldCartsCount > 0) {
+        showNotification(currentLanguage === 'bn' ?
+          `মোট ${formatDigits(heldCartsCount, 'bn')}টি স্থগিত করা কার্ট সংরক্ষিত রয়েছে।` :
+          `${heldCartsCount} held cart(s) currently saved.`);
+      } else {
+        showNotification(currentLanguage === 'bn' ? 'কোনো হোল্ড করা কার্ট নেই।' : 'No held carts.');
+      }
+    }
+
+    function applyDiscount(percent, el) {
+      activeDiscountPercent = percent;
+      activeDiscountFlat = 0;
+
+      document.querySelectorAll('.disc-chip').forEach(c => c.classList.remove('active'));
+      if (el) el.classList.add('active');
+
+      updateTotals();
+    }
+
+    function applyDiscountFlat(amount, el) {
+      activeDiscountPercent = 0;
+      activeDiscountFlat = amount;
+
+      document.querySelectorAll('.disc-chip').forEach(c => c.classList.remove('active'));
+      if (el) el.classList.add('active');
+
+      updateTotals();
+    }
+
+    function quickTender(preset) {
+      const subtotal = cartItems.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+      let disc = 0;
+      if (activeDiscountPercent > 0) disc = subtotal * (activeDiscountPercent / 100);
+      else if (activeDiscountFlat > 0) disc = Math.min(activeDiscountFlat, subtotal);
+      const grandTotal = Math.max(0, subtotal - disc);
+
+      let paid = grandTotal;
+      if (preset !== 'exact') {
+        paid = Number(preset);
+      }
+
+      const change = Math.max(0, paid - grandTotal);
+      openCheckoutReceiptModalWithTender(paid, change);
+    }
+
+    // --------------------------------------------------------------------------
+    // 5. SEARCH & CATEGORY FILTERING
+    // --------------------------------------------------------------------------
+    function selectCategory(catKey, el) {
+      activeCategory = catKey;
+      document.querySelectorAll('.category-pill').forEach(pill => pill.classList.remove('active'));
+      if (el) el.classList.add('active');
+      renderProductGrid();
+    }
+
+    function handleSearch(val) {
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (clearBtn) {
+        clearBtn.style.display = val.length > 0 ? 'block' : 'none';
+      }
+      renderProductGrid();
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('searchBarInput');
+      if (input) input.value = '';
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (clearBtn) clearBtn.style.display = 'none';
+      renderProductGrid();
+    }
+
+    // --------------------------------------------------------------------------
+    // 6. ORIENTATION SWITCHER (LANDSCAPE VS PORTRAIT)
+    // --------------------------------------------------------------------------
+    function setOrientation(mode) {
+      currentOrientation = mode;
+      const chassis = document.getElementById('tabletChassis');
+      const btnLand = document.getElementById('btnLandscape');
+      const btnPort = document.getElementById('btnPortrait');
+      const submodeCtrl = document.getElementById('portraitSubmodeControl');
+
+      if (mode === 'landscape') {
+        chassis.className = 'tablet-chassis mode-landscape';
+        btnLand.classList.add('active');
+        btnPort.classList.remove('active');
+        if (submodeCtrl) submodeCtrl.style.display = 'none';
+      } else {
+        chassis.className = 'tablet-chassis mode-portrait';
+        btnPort.classList.add('active');
+        btnLand.classList.remove('active');
+        if (submodeCtrl) submodeCtrl.style.display = 'flex';
+      }
+
+      renderCartItems();
+      renderProductGrid();
+    }
+
+    function setPortraitSubmode(submode) {
+      portraitSubmode = submode;
+      const btnSplit = document.getElementById('btnPortraitSplit');
+      const btnDock = document.getElementById('btnPortraitDocked');
+      const splitModeEl = document.getElementById('portraitSplitMode');
+      const dockedModeEl = document.getElementById('portraitDockedMode');
+
+      if (submode === 'split') {
+        btnSplit.classList.add('active');
+        btnDock.classList.remove('active');
+        if (splitModeEl) splitModeEl.style.display = 'flex';
+        if (dockedModeEl) dockedModeEl.style.display = 'none';
+      } else {
+        btnDock.classList.add('active');
+        btnSplit.classList.remove('active');
+        if (dockedModeEl) dockedModeEl.style.display = 'block';
+        if (splitModeEl) splitModeEl.style.display = 'none';
+      }
+
+      renderCartItems();
+      renderProductGrid();
+    }
+
+    function togglePortraitCartDrawer() {
+      setPortraitSubmode('split');
+    }
+
+    // --------------------------------------------------------------------------
+    // 7. LANGUAGE SWITCHER (BANGLA VS ENGLISH)
+    // --------------------------------------------------------------------------
+    function setLanguage(lang) {
+      currentLanguage = lang;
+      const btnBn = document.getElementById('btnLangBn');
+      const btnEn = document.getElementById('btnLangEn');
+
+      if (lang === 'bn') {
+        btnBn.classList.add('active');
+        btnEn.classList.remove('active');
+        document.documentElement.lang = 'bn';
+      } else {
+        btnEn.classList.add('active');
+        btnBn.classList.remove('active');
+        document.documentElement.lang = 'en';
+      }
+
+      // Apply i18n translations to elements
+      const dict = I18N_STRINGS[lang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          el.innerText = dict[key];
+        }
+      });
+
+      // Apply i18n input placeholders
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (dict[key]) {
+          el.placeholder = dict[key];
+        }
+      });
+
+      // Synchronize customer details
+      const nameEl = document.getElementById('cartCustName');
+      const dueEl = document.getElementById('cartCustDueBadge');
+      const portraitCust = document.getElementById('portraitCustName');
+      if (nameEl && dict.cust_name_default) nameEl.innerText = dict.cust_name_default;
+      if (dueEl && dict.cust_due_default) dueEl.innerText = dict.cust_due_default;
+      if (portraitCust && dict.cust_name_short) portraitCust.innerHTML = `👤 <span data-i18n="cust_name_short">${dict.cust_name_short}</span>`;
+
+      updateHeldCartsBadge();
+      renderCartItems();
+      renderProductGrid();
+      updateTotals();
+    }
+
+    // --------------------------------------------------------------------------
+    // 8. THEME TOGGLE
+    // --------------------------------------------------------------------------
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const target = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', target);
+
+      const icon = document.getElementById('themeIcon');
+      const label = document.getElementById('themeLabel');
+      if (icon) icon.innerText = target === 'dark' ? '☀️' : '🌙';
+      if (label) label.innerText = target === 'dark' ? 'Light' : 'Dark';
+    }
+
+    function resetDemoData() {
+      cartItems = [
+        { product: PRODUCTS_DB[1], quantity: 2 },
+        { product: PRODUCTS_DB[2], quantity: 1 },
+        { product: PRODUCTS_DB[3], quantity: 1 },
+        { product: PRODUCTS_DB[0], quantity: 4 }
+      ];
+      activeDiscountPercent = 0;
+      activeDiscountFlat = 0;
+      finalDiscountPercent = 0;
+      finalDiscountFlat = 0;
+      selectedPaymentMethod = "Cash";
+      heldCartsCount = 1;
+      updateHeldCartsBadge();
+      backToSellScreen();
+      document.querySelectorAll('.disc-chip').forEach((c, idx) => {
+        if (idx === 0) c.classList.add('active');
+        else c.classList.remove('active');
+      });
+      renderCartItems();
+      renderProductGrid();
+      showNotification(currentLanguage === 'bn' ? 'ডেমো ডেটা রিসেট সম্পন্ন হয়েছে।' : 'Demo data reset.');
+    }
+
+    // --------------------------------------------------------------------------
+    // 9. MODAL CONTROLS (RECEIPT, SCANNER PIP, CUSTOMER)
+    // --------------------------------------------------------------------------
+    function openCheckoutReceiptModal() {
+      const subtotal = cartItems.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+      let disc = 0;
+      if (activeDiscountPercent > 0) disc = subtotal * (activeDiscountPercent / 100);
+      else if (activeDiscountFlat > 0) disc = Math.min(activeDiscountFlat, subtotal);
+      const grandTotal = Math.max(0, subtotal - disc);
+
+      openCheckoutReceiptModalWithTender(grandTotal, 0);
+    }
+
+    function openCheckoutReceiptModalWithTender(paid, change) {
+      const modal = document.getElementById('checkoutReceiptModal');
+      const tableBody = document.getElementById('receiptTableBody');
+      const rSub = document.getElementById('receiptSubtotal');
+      const rGrand = document.getElementById('receiptGrandTotal');
+      const rPaid = document.getElementById('receiptPaid');
+      const rChange = document.getElementById('receiptChange');
+      const rCust = document.getElementById('receiptCustName');
+      const rDiscRow = document.getElementById('receiptDiscountRow');
+      const rDisc = document.getElementById('receiptDiscount');
+
+      const subtotal = cartItems.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+      let disc = 0;
+      if (activeDiscountPercent > 0) disc = subtotal * (activeDiscountPercent / 100);
+      else if (activeDiscountFlat > 0) disc = Math.min(activeDiscountFlat, subtotal);
+      const grandTotal = Math.max(0, subtotal - disc);
+
+      if (rCust) rCust.innerText = currentCustomer.name;
+      if (rSub) rSub.innerText = `৳${subtotal.toFixed(2)}`;
+      if (rGrand) rGrand.innerText = `৳${grandTotal.toFixed(2)}`;
+      if (rPaid) rPaid.innerText = `৳${paid.toFixed(2)}`;
+      if (rChange) rChange.innerText = `৳${change.toFixed(2)}`;
+
+      if (rDiscRow && rDisc) {
+        if (disc > 0) {
+          rDiscRow.style.display = 'flex';
+          rDisc.innerText = `-৳${disc.toFixed(2)}`;
+        } else {
+          rDiscRow.style.display = 'none';
+        }
+      }
+
+      if (tableBody) {
+        tableBody.innerHTML = cartItems.map(item => `
+          <tr>
+            <td style="font-weight:600;">${currentLanguage === 'bn' ? item.product.name_bn : item.product.name_en}</td>
+            <td style="text-align:center;">${item.quantity}</td>
+            <td style="text-align:right;">৳${(item.product.price * item.quantity).toFixed(2)}</td>
+          </tr>
+        `).join('');
+      }
+
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeCheckoutReceiptModal() {
+      const modal = document.getElementById('checkoutReceiptModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function printReceiptDone() {
+      alert(currentLanguage === 'bn' ? '৮০ মিমি থার্মাল রসিদ প্রিন্টারে পাঠানো হয়েছে!' : 'Sent to 80mm thermal receipt printer!');
+      closeCheckoutReceiptModal();
+      cartItems = [];
+      backToSellScreen();
+      renderCartItems();
+      renderProductGrid();
+    }
+
+    function shareWhatsApp() {
+      alert(currentLanguage === 'bn' ? 'হোয়াটসঅ্যাপে গ্রাহকের ইনভয়েস লিংক তৈরি সম্পন্ন।' : 'Invoice share link created for WhatsApp.');
+    }
+
+    function openScannerModal() {
+      const modal = document.getElementById('scannerModal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeScannerModal() {
+      const modal = document.getElementById('scannerModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function toggleTorchFlashlight() {
+      torchEnabled = !torchEnabled;
+      const lbl = document.getElementById('torchLabel');
+      if (lbl) lbl.innerText = torchEnabled ? (currentLanguage === 'bn' ? 'টর্চ অফ' : 'Torch Off') : (currentLanguage === 'bn' ? 'টর্চ অন' : 'Torch On');
+    }
+
+    function simulateBarcodeScan(barcode) {
+      closeScannerModal();
+      const product = PRODUCTS_DB.find(p => p.barcode === barcode);
+      if (product) {
+        addToCart(product.id);
+        showNotification(currentLanguage === 'bn' ? `বারকোড স্ক্যান সফল: ${product.name_bn}` : `Scanned: ${product.name_en}`);
+      }
+    }
+
+    function openManualNumpad() {
+      const code = prompt(currentLanguage === 'bn' ? 'বারকোড বা প্রোডাক্ট কোড লিখুন:' : 'Enter product barcode:');
+      if (code) {
+        const found = PRODUCTS_DB.find(p => p.barcode === code.trim());
+        if (found) {
+          addToCart(found.id);
+          showNotification(currentLanguage === 'bn' ? `পণ্য যোগ হয়েছে: ${found.name_bn}` : `Added: ${found.name_en}`);
+        } else {
+          alert(currentLanguage === 'bn' ? 'এই বারকোডের কোনো পণ্য পাওয়া যায়নি।' : 'Product not found.');
+        }
+      }
+    }
+
+    function toggleStockCheckMode() {
+      stockCheckMode = !stockCheckMode;
+      document.querySelectorAll('.stock-mode-btn').forEach(btn => {
+        btn.classList.toggle('active', stockCheckMode);
+      });
+      const btn = document.getElementById('stockModeBtn');
+      if (btn) btn.classList.toggle('active', stockCheckMode);
+
+      document.querySelectorAll('.tablet-stock-check-banner').forEach(b => {
+        b.style.display = stockCheckMode ? 'flex' : 'none';
+      });
+
+      renderProductGrid();
+
+      const dict = I18N_STRINGS[currentLanguage] || I18N_STRINGS['bn'];
+      showNotification(stockCheckMode ?
+        dict.stock_check_banner :
+        (currentLanguage === 'bn' ? 'সেল টার্মিনাল মোড সক্রিয়' : 'Sell Terminal Mode Activated')
+      );
+    }
+
+    function handleProductClick(productId) {
+      if (stockCheckMode) {
+        openStockCheckModal(productId);
+      } else {
+        addToCart(productId);
+      }
+    }
+
+    let activeScmProduct = null;
+    let currentScmQty = 0;
+
+    function openStockCheckModal(productId) {
+      const product = PRODUCTS_DB.find(p => p.id === productId);
+      if (!product) return;
+      activeScmProduct = product;
+      currentScmQty = product.stock;
+
+      const name = currentLanguage === 'bn' ? product.name_bn : product.name_en;
+      const purchasePrice = Math.round(product.price * 0.8);
+      const sellingPrice = product.price;
+      const mrpPrice = product.price;
+      const wholesalePrice = Math.round(product.price * 0.92);
+      const unitMargin = sellingPrice - purchasePrice;
+      const marginPercent = Math.round((unitMargin / sellingPrice) * 100);
+      const assetWorth = purchasePrice * product.stock;
+
+      const iconEl = document.getElementById('scmIcon');
+      const nameEl = document.getElementById('scmName');
+      const barcodeEl = document.getElementById('scmBarcode');
+      const catEl = document.getElementById('scmCat');
+      const unitsEl = document.getElementById('scmStockUnits');
+      const badgeEl = document.getElementById('scmStatusBadge');
+      const purchaseEl = document.getElementById('scmPurchasePrice');
+      const sellingEl = document.getElementById('scmSellingPrice');
+      const mrpEl = document.getElementById('scmMrpPrice');
+      const wholesaleEl = document.getElementById('scmWholesalePrice');
+      const marginEl = document.getElementById('scmMarginBadge');
+      const assetEl = document.getElementById('scmAssetWorth');
+      const inputEl = document.getElementById('scmQtyInput');
+
+      if (iconEl) iconEl.innerText = product.icon || '📦';
+      if (nameEl) nameEl.innerText = name;
+      if (barcodeEl) barcodeEl.innerText = product.barcode;
+      if (catEl) catEl.innerText = product.category;
+      if (unitsEl) unitsEl.innerText = `${formatDigits(product.stock, currentLanguage)} units`;
+      
+      if (badgeEl) {
+        if (product.stock <= 0) {
+          badgeEl.className = 'stock-pill out';
+          badgeEl.innerText = currentLanguage === 'bn' ? 'স্টক শেষ' : 'Out of Stock';
+        } else if (product.stock <= 5) {
+          badgeEl.className = 'stock-pill low';
+          badgeEl.innerText = currentLanguage === 'bn' ? 'স্বল্প স্টক' : 'Low Stock';
+        } else {
+          badgeEl.className = 'stock-pill';
+          badgeEl.innerText = currentLanguage === 'bn' ? 'মজুত আছে' : 'In Stock';
+        }
+      }
+
+      if (purchaseEl) purchaseEl.innerText = `৳${formatDigits(purchasePrice, currentLanguage)}`;
+      if (sellingEl) sellingEl.innerText = `৳${formatDigits(sellingPrice, currentLanguage)}`;
+      if (mrpEl) mrpEl.innerText = `৳${formatDigits(mrpPrice, currentLanguage)}`;
+      if (wholesaleEl) wholesaleEl.innerText = `৳${formatDigits(wholesalePrice, currentLanguage)}`;
+      if (marginEl) marginEl.innerText = `+৳${formatDigits(unitMargin, currentLanguage)} (${formatDigits(marginPercent, currentLanguage)}%)`;
+      if (assetEl) assetEl.innerText = `৳${formatDigits(assetWorth, currentLanguage)}`;
+      if (inputEl) inputEl.value = currentScmQty;
+
+      const modal = document.getElementById('stockCheckModal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeStockCheckModal() {
+      const modal = document.getElementById('stockCheckModal');
+      if (modal) modal.style.display = 'none';
+      activeScmProduct = null;
+    }
+
+    function adjustScmQty(delta) {
+      currentScmQty = Math.max(0, currentScmQty + delta);
+      const inputEl = document.getElementById('scmQtyInput');
+      if (inputEl) inputEl.value = currentScmQty;
+    }
+
+    function setScmQty(qty) {
+      currentScmQty = Math.max(0, qty);
+      const inputEl = document.getElementById('scmQtyInput');
+      if (inputEl) inputEl.value = currentScmQty;
+    }
+
+    function resetScmQty() {
+      if (!activeScmProduct) return;
+      currentScmQty = activeScmProduct.stock;
+      const inputEl = document.getElementById('scmQtyInput');
+      if (inputEl) inputEl.value = currentScmQty;
+    }
+
+    function saveScmStock() {
+      if (!activeScmProduct) return;
+      const inputEl = document.getElementById('scmQtyInput');
+      if (inputEl) currentScmQty = Math.max(0, parseInt(inputEl.value) || 0);
+      activeScmProduct.stock = currentScmQty;
+      const name = currentLanguage === 'bn' ? activeScmProduct.name_bn : activeScmProduct.name_en;
+      showNotification(currentLanguage === 'bn' ?
+        `✅ ${name} এর স্টক সংরক্ষিত: ${formatDigits(currentScmQty, 'bn')} টি` :
+        `✅ ${name} stock saved: ${currentScmQty} units`
+      );
+      closeStockCheckModal();
+      renderProductGrid();
+    }
+
+    function editScmProduct() {
+      if (!activeScmProduct) return;
+      alert(currentLanguage === 'bn' ? `পণ্য সম্পাদনা স্ক্রিন: ${activeScmProduct.name_bn}` : `Navigating to edit product: ${activeScmProduct.name_en}`);
+      closeStockCheckModal();
+    }
+
+    function openCustomerModal() {
+      const modal = document.getElementById('customerModal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeCustomerModal() {
+      const modal = document.getElementById('customerModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function selectCustomer(name, phone, due) {
+      currentCustomer = { name, phone, due };
+      const nameEl = document.getElementById('cartCustName');
+      const phoneEl = document.getElementById('cartCustPhone');
+      const dueEl = document.getElementById('cartCustDueBadge');
+      const portraitCust = document.getElementById('portraitCustName');
+      const finalName = document.getElementById('finalCustName');
+      const finalPhone = document.getElementById('finalCustPhone');
+      const finalDue = document.getElementById('finalCustDueBadge');
+
+      if (nameEl) nameEl.innerText = name;
+      if (phoneEl) phoneEl.innerText = phone;
+      if (dueEl) dueEl.innerText = `বকেয়া: ${due}`;
+      if (portraitCust) portraitCust.innerText = `👤 ${name}`;
+      if (finalName) finalName.innerText = name;
+      if (finalPhone) finalPhone.innerText = `${phone} • সদস্যপদ: রেগুলার`;
+      if (finalDue) finalDue.innerText = `বর্তমান বকেয়া: ${due}`;
+
+      closeCustomerModal();
+    }
+
+    function showNotification(msg) {
+      const toast = document.createElement('div');
+      toast.style.position = 'fixed';
+      toast.style.bottom = '24px';
+      toast.style.right = '24px';
+      toast.style.background = '#10B981';
+      toast.style.color = '#FFFFFF';
+      toast.style.padding = '12px 20px';
+      toast.style.borderRadius = '12px';
+      toast.style.boxShadow = '0 10px 30px rgba(16, 185, 129, 0.4)';
+      toast.style.fontWeight = '700';
+      toast.style.fontSize = '13.5px';
+      toast.style.zIndex = '999';
+      toast.innerText = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.4s ease';
+        setTimeout(() => toast.remove(), 400);
+      }, 2600);
+    }
+
+    // --------------------------------------------------------------------------
+    // 10. CART NAVIGATION (ON NAVIGATE TO CART SCREEN)
+    // --------------------------------------------------------------------------
+    function proceedToCart() {
+      if (cartItems.length === 0) {
+        showNotification(currentLanguage === 'bn' ? 'অনুগ্রহ করে কার্টে পণ্য যোগ করুন।' : 'Please add items to cart first.');
+        return;
+      }
+      showNotification(currentLanguage === 'bn' ? 'কার্ট স্ক্রিনে পাঠানো হচ্ছে... (onNavigateToCart)' : 'Proceeding to Cart screen (onNavigateToCart)...');
+    }
+
+    function backToSellScreen() {
+      renderCartItems();
+      renderProductGrid();
+    }
+
+    // --------------------------------------------------------------------------
+    // 11. THREE.JS 3D ICONS INTERACTIVE STUDIO ENGINE
+    // --------------------------------------------------------------------------
+    let autoRotate3D = true;
+    let wireframe3D = false;
+    const threeScenes = [];
+
+    function init3DStudio() {
+      if (typeof THREE === 'undefined') {
+        console.warn('Three.js not loaded');
+        return;
+      }
+
+      // Helper to build a standard mini Three scene
+      function setupScene(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return null;
+
+        const width = container.clientWidth || 220;
+        const height = container.clientHeight || 180;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
+        camera.position.set(0, 1.8, 4.5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        container.appendChild(renderer.domElement);
+
+        // Studio 3-Point Lighting
+        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambient);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
+        keyLight.position.set(3, 4, 3);
+        scene.add(keyLight);
+
+        const rimLight = new THREE.DirectionalLight(0x10B981, 0.9);
+        rimLight.position.set(-3, -2, -3);
+        scene.add(rimLight);
+
+        const group = new THREE.Group();
+        scene.add(group);
+
+        // Mouse Drag Orbit Interaction
+        let isDragging = false;
+        let prevMousePos = { x: 0, y: 0 };
+
+        container.addEventListener('mousedown', (e) => {
+          isDragging = true;
+          prevMousePos = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          const deltaX = e.clientX - prevMousePos.x;
+          const deltaY = e.clientY - prevMousePos.y;
+          group.rotation.y += deltaX * 0.012;
+          group.rotation.x += deltaY * 0.012;
+          prevMousePos = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        return { scene, camera, renderer, group, container };
+      }
+
+      // ----------------------------------------------------
+      // Model 1: 3D POS Cash Register
+      // ----------------------------------------------------
+      const reg = setupScene('canvasContainerRegister');
+      if (reg) {
+        // Base Chassis
+        const baseGeo = new THREE.BoxGeometry(2.0, 0.4, 1.6);
+        const baseMat = new THREE.MeshStandardMaterial({ color: 0x1E293B, roughness: 0.4, metalness: 0.6 });
+        const base = new THREE.Mesh(baseGeo, baseMat);
+        base.position.y = -0.4;
+        reg.group.add(base);
+
+        // Cash Drawer (Slideable)
+        const drawerGeo = new THREE.BoxGeometry(1.8, 0.28, 1.4);
+        const drawerMat = new THREE.MeshStandardMaterial({ color: 0x0F172A, roughness: 0.3, metalness: 0.7 });
+        const drawer = new THREE.Mesh(drawerGeo, drawerMat);
+        drawer.position.set(0, -0.4, 0.05);
+        reg.group.add(drawer);
+        reg.drawerMesh = drawer;
+
+        // Drawer Silver Handle
+        const handleGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.6, 12);
+        const handleMat = new THREE.MeshStandardMaterial({ color: 0xE2E8F0, metalness: 0.9, roughness: 0.1 });
+        const handle = new THREE.Mesh(handleGeo, handleMat);
+        handle.rotation.z = Math.PI / 2;
+        handle.position.set(0, 0, 0.72);
+        drawer.add(handle);
+
+        // Angled Touchscreen Monitor
+        const screenPillar = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.1, 0.1, 0.5, 12),
+          new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 })
+        );
+        screenPillar.position.set(0, 0, -0.2);
+        reg.group.add(screenPillar);
+
+        const screenCase = new THREE.Mesh(
+          new THREE.BoxGeometry(1.6, 1.0, 0.12),
+          new THREE.MeshStandardMaterial({ color: 0x0F172A, roughness: 0.4 })
+        );
+        screenCase.position.set(0, 0.45, -0.15);
+        screenCase.rotation.x = -0.25;
+        reg.group.add(screenCase);
+
+        // Glass Display Glow
+        const glassGeo = new THREE.PlaneGeometry(1.4, 0.82);
+        const glassMat = new THREE.MeshBasicMaterial({ color: 0x10B981 });
+        const glass = new THREE.Mesh(glassGeo, glassMat);
+        glass.position.set(0, 0, 0.07);
+        screenCase.add(glass);
+
+        // Status Green LED
+        const led = new THREE.Mesh(
+          new THREE.SphereGeometry(0.06, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0x34D399 })
+        );
+        led.position.set(0.7, -0.35, 0.07);
+        screenCase.add(led);
+
+        threeScenes.push(reg);
+      }
+
+      // ----------------------------------------------------
+      // Model 2: 3D Supermarket Smart Cart
+      // ----------------------------------------------------
+      const cart = setupScene('canvasContainerCart');
+      if (cart) {
+        // Wireframe Basket
+        const basketGeo = new THREE.BoxGeometry(1.6, 1.0, 1.2);
+        const basketMat = new THREE.MeshStandardMaterial({
+          color: 0xE2E8F0,
+          metalness: 0.85,
+          roughness: 0.15,
+          wireframe: true
+        });
+        const basket = new THREE.Mesh(basketGeo, basketMat);
+        basket.position.y = 0.2;
+        cart.group.add(basket);
+
+        // Emerald Grip Handle
+        const handleBar = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.06, 0.06, 1.3, 12),
+          new THREE.MeshStandardMaterial({ color: 0x10B981, roughness: 0.3 })
+        );
+        handleBar.rotation.z = Math.PI / 2;
+        handleBar.position.set(0, 0.8, -0.65);
+        cart.group.add(handleBar);
+
+        // Base Chassis Frame
+        const chassis = new THREE.Mesh(
+          new THREE.BoxGeometry(1.4, 0.1, 1.1),
+          new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8 })
+        );
+        chassis.position.y = -0.45;
+        cart.group.add(chassis);
+
+        // 4 Caster Wheels
+        const wheelGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.08, 12);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1E293B, roughness: 0.8 });
+        const wheelOffsets = [
+          [-0.6, -0.6, 0.45],
+          [0.6, -0.6, 0.45],
+          [-0.6, -0.6, -0.45],
+          [0.6, -0.6, -0.45]
+        ];
+        wheelOffsets.forEach(([x, y, z]) => {
+          const w = new THREE.Mesh(wheelGeo, wheelMat);
+          w.rotation.z = Math.PI / 2;
+          w.position.set(x, y, z);
+          cart.group.add(w);
+        });
+
+        threeScenes.push(cart);
+      }
+
+      // ----------------------------------------------------
+      // Model 3: 3D Barcode Laser Scanner
+      // ----------------------------------------------------
+      const scn = setupScene('canvasContainerScanner');
+      if (scn) {
+        // Gun Handle
+        const handle = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.2, 0.25, 1.4, 16),
+          new THREE.MeshStandardMaterial({ color: 0x1E293B, roughness: 0.5, metalness: 0.4 })
+        );
+        handle.position.set(0, -0.3, 0);
+        handle.rotation.x = 0.25;
+        scn.group.add(handle);
+
+        // Scanner Head
+        const head = new THREE.Mesh(
+          new THREE.BoxGeometry(0.9, 0.7, 1.2),
+          new THREE.MeshStandardMaterial({ color: 0x0F172A, roughness: 0.3, metalness: 0.7 })
+        );
+        head.position.set(0, 0.5, 0.2);
+        scn.group.add(head);
+
+        // Cyan Grip Accents
+        const accent = new THREE.Mesh(
+          new THREE.BoxGeometry(0.92, 0.15, 0.8),
+          new THREE.MeshStandardMaterial({ color: 0x0EA5E9, metalness: 0.6 })
+        );
+        accent.position.set(0, 0.6, 0.2);
+        scn.group.add(accent);
+
+        // Front Red Glass Lens
+        const lens = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.7, 0.5),
+          new THREE.MeshStandardMaterial({ color: 0xEF4444, roughness: 0.1, metalness: 0.8 })
+        );
+        lens.position.set(0, 0.5, 0.81);
+        scn.group.add(lens);
+
+        // Laser Cone Line
+        const laserGeo = new THREE.ConeGeometry(0.8, 2.5, 16, 1, true);
+        const laserMat = new THREE.MeshBasicMaterial({ color: 0xEF4444, transparent: true, opacity: 0, wireframe: true });
+        const laser = new THREE.Mesh(laserGeo, laserMat);
+        laser.rotation.x = Math.PI / 2;
+        laser.position.set(0, 0.5, 2.1);
+        scn.group.add(laser);
+        scn.laserMesh = laser;
+
+        threeScenes.push(scn);
+      }
+
+      // ----------------------------------------------------
+      // Model 4: 3D Gold Taka Coin
+      // ----------------------------------------------------
+      const coin = setupScene('canvasContainerCoin');
+      if (coin) {
+        const coinGeo = new THREE.CylinderGeometry(1.2, 1.2, 0.18, 36);
+        const coinMat = new THREE.MeshStandardMaterial({
+          color: 0xFBBF24,
+          metalness: 0.9,
+          roughness: 0.15
+        });
+        const coinMesh = new THREE.Mesh(coinGeo, coinMat);
+        coinMesh.rotation.x = Math.PI / 2;
+        coin.group.add(coinMesh);
+
+        // Embossed Inner Ring
+        const ringGeo = new THREE.TorusGeometry(0.9, 0.05, 12, 36);
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0xFDE047, metalness: 0.95, roughness: 0.1 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.z = 0.1;
+        coinMesh.add(ring);
+
+        threeScenes.push(coin);
+      }
+
+      // ----------------------------------------------------
+      // Studio Render & Animation Loop
+      // ----------------------------------------------------
+      function animate3D() {
+        requestAnimationFrame(animate3D);
+
+        threeScenes.forEach((s, idx) => {
+          if (autoRotate3D) {
+            s.group.rotation.y += 0.012;
+          }
+          s.renderer.render(s.scene, s.camera);
+        });
+      }
+
+      animate3D();
+    }
+
+    // Interactive Trigger Handlers for 3D Studio
+    function toggle3DAutoRotate() {
+      autoRotate3D = !autoRotate3D;
+      const btn = document.getElementById('btnAutoRotate');
+      if (btn) btn.classList.toggle('active', autoRotate3D);
+    }
+
+    function toggle3DWireframe() {
+      wireframe3D = !wireframe3D;
+      const btn = document.getElementById('btnWireframe');
+      if (btn) btn.classList.toggle('active', wireframe3D);
+
+      threeScenes.forEach(s => {
+        s.scene.traverse(child => {
+          if (child.isMesh && child.material) {
+            child.material.wireframe = wireframe3D;
+          }
+        });
+      });
+    }
+
+    function triggerCashDrawerOpen() {
+      const reg = threeScenes[0];
+      if (!reg || !reg.drawerMesh) return;
+      reg.drawerMesh.position.z = reg.drawerMesh.position.z > 0.3 ? 0.05 : 0.65;
+      showNotification(currentLanguage === 'bn' ? 'ক্যাশ ড্রয়ার পপ-আউট অ্যানিমেশন সম্পন্ন!' : 'Cash drawer popped open!');
+    }
+
+    function triggerCartBounce3D() {
+      const cart = threeScenes[1];
+      if (!cart) return;
+      cart.group.position.y = 0.4;
+      setTimeout(() => { cart.group.position.y = 0; }, 280);
+      showNotification(currentLanguage === 'bn' ? 'কার্ট আইটেম ড্রপ ও বাউন্স অ্যানিমেশন!' : 'Cart item drop physics simulated!');
+    }
+
+    function triggerLaserScan3D() {
+      const scn = threeScenes[2];
+      if (!scn || !scn.laserMesh) return;
+      scn.laserMesh.material.opacity = 0.8;
+      setTimeout(() => { scn.laserMesh.material.opacity = 0; }, 450);
+      showNotification(currentLanguage === 'bn' ? 'অপটিক্যাল লেজার স্ক্যান বিম ফায়ার সম্পন্ন!' : 'Optical barcode laser fired!');
+    }
+
+    function triggerCoinFlip3D() {
+      const coin = threeScenes[3];
+      if (!coin) return;
+      coin.group.rotation.y += Math.PI * 3;
+      showNotification(currentLanguage === 'bn' ? 'সোনার টাকা কয়েন ৩৬০° স্পিন সম্পন্ন!' : 'Taka coin flipped 360°!');
+    }
+
+    // --------------------------------------------------------------------------
+    // 11. INITIALIZATION
+    // --------------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      setLanguage('bn');
+      setTimeout(init3DStudio, 300);
+    });
+  </script>
+</body>
+</html>

@@ -1122,6 +1122,10 @@ class ScannerViewModel(private val repository: DataRepository) : ViewModel() {
         clearScanned()
     }
 
+    fun selectProductForStockCheck(product: Product) {
+        _scannedProduct.value = product
+    }
+
     // Called every camera frame in which no barcode was detected at all.
     fun onNoBarcodeInFrame() {
         if (lockedBarcode == null) return

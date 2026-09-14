@@ -1796,10 +1796,22 @@
     <string name="tablet_cart_empty_subtitle">বাম পাশ থেকে পণ্য চাপুন অথবা বারকোড স্ক্যান করুন</string>
     <string name="tablet_grand_total">সর্বমোট:</string>
     <string name="tablet_checkout">বিল ও পরিশোধ ➔</string>
+    <string name="tablet_cart_review_title">কার্ট পর্যালোচনা</string>
+    <string name="tablet_cart_review_subtitle">আইটেম যাচাই ও প্রিভিউ স্টেজ</string>
+    <string name="tablet_action_scan">স্ক্যানার</string>
+    <string name="tablet_action_numpad">কীপ্যাড</string>
+    <string name="tablet_action_stock">স্টক চেক</string>
+    <string name="tablet_action_held">হোল্ড</string>
+    <string name="tablet_subtotal">উপমোট</string>
+    <string name="tablet_estimated_total">আনুমানিক মোট</string>
+    <string name="tablet_proceed_to_cart">কার্টে এগিয়ে যান (%1$s) ➔</string>
+    <string name="tablet_customer_walkin">খুচরা নিয়মিত ক্রেতা</string>
+    <string name="tablet_due_label">বকেয়া: %1$s</string>
     <string name="tablet_stock_out">স্টক নেই</string>
     <string name="tablet_stock_available">স্টক: %1$d</string>
     <string name="tablet_mode_sell">বিক্রয়</string>
     <string name="tablet_mode_stock">স্টক</string>
+    <string name="tablet_stock_check_banner">স্টক অনুসন্ধান মোড সক্রিয় — স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ বা স্ক্যান করুন</string>
 
     <!-- Stock Check Financial Intelligence Strings (Bangla) -->
     <string name="stock_check_purchase">ক্রয়</string>

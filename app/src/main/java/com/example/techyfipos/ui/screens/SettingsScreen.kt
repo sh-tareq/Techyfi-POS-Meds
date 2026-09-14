@@ -32,11 +32,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -3680,6 +3682,9 @@ fun SettingsScreen(
         }
     }
 
+    val configuration = LocalConfiguration.current
+    val isTablet = configuration.screenWidthDp >= 600
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -3693,23 +3698,25 @@ fun SettingsScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            settingsPage = when (settingsPage) {
-                                SettingsPage.HOME -> {
-                                    onBack()
-                                    SettingsPage.HOME
+                    if (settingsPage != SettingsPage.HOME || !isTablet) {
+                        IconButton(
+                            onClick = {
+                                settingsPage = when (settingsPage) {
+                                    SettingsPage.HOME -> {
+                                        onBack()
+                                        SettingsPage.HOME
+                                    }
+                                    SettingsPage.SHOP_IDENTITY,
+                                    SettingsPage.SHOP_LOGO,
+                                    SettingsPage.QR_CODE_LINKS,
+                                    SettingsPage.RECEIPT_LAYOUT,
+                                    SettingsPage.DUE_RECEIPT -> SettingsPage.RECEIPT
+                                    else -> SettingsPage.HOME
                                 }
-                                SettingsPage.SHOP_IDENTITY,
-                                SettingsPage.SHOP_LOGO,
-                                SettingsPage.QR_CODE_LINKS,
-                                SettingsPage.RECEIPT_LAYOUT,
-                                SettingsPage.DUE_RECEIPT -> SettingsPage.RECEIPT
-                                else -> SettingsPage.HOME
                             }
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -3725,14 +3732,21 @@ fun SettingsScreen(
             }
         }
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 14.dp, vertical = 12.dp)
-                .verticalScroll(currentScrollState),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = if (isTablet) 760.dp else Dp.Unspecified)
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .verticalScroll(currentScrollState),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
             when (settingsPage) {
                 SettingsPage.HOME -> OptimizedSettingsHome(
                     storeName = currentSettings.storeName,
@@ -4040,6 +4054,7 @@ fun SettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
         }
     }
 

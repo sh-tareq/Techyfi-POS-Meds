@@ -39,6 +39,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -177,6 +178,95 @@ private fun editableAmount(value: Double): String = when {
     value == 0.0 -> "0"
     value % 1.0 == 0.0 -> value.toLong().toString()
     else -> value.toString()
+}
+
+@Composable
+private fun CartTotalSummaryCard(
+    subtotal: Double,
+    discountAmount: Double,
+    grandTotal: Double,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val cardBg = if (isDark) Color(0xFF0A0E18) else Color(0xFFF8FAFC)
+    val cardBorder = if (isDark) Color(0x1FFFFFFF) else Color(0xFFE2E8F0)
+    val textSec = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textMain = if (isDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+    val emeraldColor = Color(0xFF00C48C)
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Subtotal Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.tablet_subtotal),
+                    fontSize = 13.sp,
+                    color = textSec,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = formatTaka(subtotal),
+                    fontSize = 13.5.sp,
+                    color = textMain,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // Optional Discount Row
+            if (discountAmount > 0.0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.discount),
+                        fontSize = 13.sp,
+                        color = Color(0xFFEF4444),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "-${formatTaka(discountAmount)}",
+                        fontSize = 13.5.sp,
+                        color = Color(0xFFEF4444),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            // Estimated Total Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.tablet_estimated_total),
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 15.sp,
+                    color = textMain
+                )
+                Text(
+                    text = formatTaka(grandTotal),
+                    fontWeight = FontWeight.Black,
+                    fontSize = 22.sp,
+                    color = emeraldColor
+                )
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -747,59 +837,72 @@ fun CartScreen(
                     tonalElevation = 8.dp,
                     shadowElevation = 16.dp
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Hold Cart Button
-                        Button(
-                            onClick = {
-                                if (canHoldCart) {
-                                    showHoldCartDialog = true
-                                } else {
-                                    Toast.makeText(context, "Permission required to hold carts", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            modifier = Modifier
-                                .weight(0.34f)
-                                .height(52.dp),
-                            contentPadding = PaddingValues(horizontal = 6.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFD97706),
-                                contentColor = Color.White
-                            )
-                        ) {
-                            Text("⏸️", fontSize = 15.sp)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.held_cart_hold_button), fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
-                        }
+                        // Total Cart Value Summary Card (Subtotal & Estimated Total)
+                        CartTotalSummaryCard(
+                            subtotal = subtotal,
+                            discountAmount = discountAmount,
+                            grandTotal = grandTotal
+                        )
 
-                        // Continue to Checkout Button
-                        Button(
-                            onClick = { showCheckout = true },
-                            modifier = Modifier
-                                .weight(0.66f)
-                                .height(52.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF10B981),
-                                contentColor = Color.White
-                            )
+                        // Action Buttons: Hold & Checkout
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("🛍️", fontSize = 15.sp)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                stringResource(R.string.cart_checkout_button, formatTaka(subtotal)),
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                softWrap = false
-                            )
+                            // Hold Cart Button
+                            Button(
+                                onClick = {
+                                    if (canHoldCart) {
+                                        showHoldCartDialog = true
+                                    } else {
+                                        Toast.makeText(context, "Permission required to hold carts", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(0.34f)
+                                    .height(52.dp),
+                                contentPadding = PaddingValues(horizontal = 6.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFD97706),
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Text("⏸️", fontSize = 15.sp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(stringResource(R.string.held_cart_hold_button), fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+                            }
+
+                            // Continue to Checkout Button
+                            Button(
+                                onClick = { showCheckout = true },
+                                modifier = Modifier
+                                    .weight(0.66f)
+                                    .height(52.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF10B981),
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Text("🛍️", fontSize = 15.sp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    stringResource(R.string.cart_checkout_button, formatTaka(grandTotal)),
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
                         }
                     }
                 }

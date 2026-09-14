@@ -1796,10 +1796,22 @@
     <string name="tablet_cart_empty_subtitle">Tap products on the left or scan barcode</string>
     <string name="tablet_grand_total">Grand Total:</string>
     <string name="tablet_checkout">Checkout ➔</string>
+    <string name="tablet_cart_review_title">Cart Review</string>
+    <string name="tablet_cart_review_subtitle">Review items before checkout</string>
+    <string name="tablet_action_scan">Scanner</string>
+    <string name="tablet_action_numpad">Keypad</string>
+    <string name="tablet_action_stock">Stock Check</string>
+    <string name="tablet_action_held">Held</string>
+    <string name="tablet_subtotal">Subtotal</string>
+    <string name="tablet_estimated_total">Estimated Total</string>
+    <string name="tablet_proceed_to_cart">Proceed to Cart (%1$s) ➔</string>
+    <string name="tablet_customer_walkin">Walk-in Regular</string>
+    <string name="tablet_due_label">Due: %1$s</string>
     <string name="tablet_stock_out">Out of Stock</string>
     <string name="tablet_stock_available">Stock: %1$d</string>
     <string name="tablet_mode_sell">Sell</string>
     <string name="tablet_mode_stock">Stock</string>
+    <string name="tablet_stock_check_banner">Stock Check Mode Active — Tap or Scan any product to view &amp; adjust stock</string>
 
     <!-- Stock Check Financial Intelligence Strings -->
     <string name="stock_check_purchase">Purchase</string>

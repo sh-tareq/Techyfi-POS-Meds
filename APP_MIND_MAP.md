@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-12 (app version 2.6.40-V12-09-2026, build `Techyfi-POS-Final-V12-09-2026.apk` / `Techyfi-POS-Final-V38.apk`; versionCode 220915; DB schema version 27)
+Last updated: 2026-09-14 (app version 2.6.59-V14-09-2026, build `Techyfi-POS-Final-V14-09-2026.apk` / `Techyfi-POS-Final-V59.apk`; versionCode 220935; DB schema version 27)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -62,21 +62,22 @@ mindmap
             Full-Width Row Cards with 42dp Icon Container, Title, 2-Line Subtitle, Status Pill, and Chevron
             Scroll-safe layout with preserved view mode preference via rememberSaveable
         Tablet Shell (>= 600dp or Tablet Mode)
-          Ergonomic Left-Docked NavigationRail (84dp Width, 8 Core Domains)
+          Ergonomic Left-Docked NavigationRail (84dp Width, Expanded Core Domains)
             Official App Logo Header & Outlet Home Shortcut (Electric T Mark)
-            1. Sell Mode (Dual-Pane Split Cashier Terminal)
-            2. Products Catalog & Inventory Valuation
-            3. Sales History & Invoices Ledger
-            4. Dues & Customer Khata
-            5. Expenses & Petty Cash Disbursements
-            6. Analytics & P&L Reports
+            1. Sell Mode (Dual-Pane Split Cashier Terminal: 62% Catalog Grid + 38% Live Cart Ticket)
+            2. Products Catalog (Adaptive 2-Column Grid, Full-Width Valuation Card, Hidden Redundant Back Arrow)
+            3. Sales History (42/58 Master-Detail Layout: Left Date-wise Invoices + Right Live 80mm Thermal Slip & Owner Profit Audit)
+            4. Dues & Customer Khata (Adaptive 2-Column Debtor Grid, Full-Width Recovery Card, Hidden Root Back Arrow)
+            5. Expenses & Petty Cash Disbursements (Direct Rail Promotion)
+            6. Analytics & P&L Reports (Centered 960dp Max-Width Container, Hidden Redundant Back Arrow)
             7. System Settings & Hardware Peripherals (3D Animated Category Icons & Isolated Subpage Scroll)
-            8. More Operations Hub Dialog (House for Cash Register, Suppliers, Customer Loyalty, Customers & CRM)
+            8. More Operations Hub Dialog (House for Cash Register & Shift Close, Suppliers, Customer Loyalty, Customers & CRM; Redundant Report/Settings Duplicates Removed)
               Interactive Material 3 Segmented Toggle: List View [ ☰ ] vs Grid View [ ⊞ ]
               Expanded 760dp Max-Width Dialog Constraint eliminating all title truncation
               2-Column Horizontal Cards in Grid Mode (354dp per card) with Zero-Cutoff 2-Line Subheadings
               Executive Full-Width Ledger Rows in List Mode with generous touch padding
               Persistent rememberSaveable view state & bilingual accessibility labels
+            9. Staff Profile / Quick Switch & Lock Terminal Action (Bottom Docked)
       Bangla Localization & Multilingual Typography
         Natural Bangladeshi retail terminology (বাকি, জমা, হালখাতা, ক্যাশ রেজিস্ট্রার, ভাউচার)
         Font padding disabled and line heights tuned across all typography tokens
@@ -116,18 +117,24 @@ mindmap
           Category chips
           Sell vs Stock check mode
         Tablet POS Split Terminal (TabletSplitTerminal)
-          Left Catalog & Scanner Pane (58% Width)
-            Fast search bar & barcode toggle
+          Dual Orientation Parity (Landscape & Portrait Auto-Adaptation)
+            Horizontal Landscape: 58% Catalog Left / 42% Cart Review Right
+            Vertical Portrait: 54% Catalog Top / 46% Cart Review Bottom
+          Synchronized Top Toolbar (Search + 4 Quick Actions)
+            Search input with instant clear
+            📷 Scanner (Collapsible camera PIP preview with torch & pause)
+            ⌨️ Keypad (Manual barcode dialog entry)
+            🔍📦 Stock Check (Supervisor mode toggle with active amber banner: "Tap or Scan")
+            ⏸️ Held Carts badge chip with real-time counter & restore
+          Catalog Pane
             Category filter chips
-            Adaptive 3-5 column product grid (135dp minSize)
-            Live stock badges & tap-to-add haptic feedback
-            Collapsible PIP Camera Preview (Torch & Pause controls)
-          Right Live Cart Pane (42% Width)
-            Pinned live cart with Realistic3DSupermarketCartIcon (24dp) header & items count badge
-            Interactive line steppers ([-] qty [+]) & delete
-            Hold Cart & Clear Cart actions
-            Grand Total BDT (৳) summary banner
-            Emerald Green Checkout CTA Button with Realistic3DSellTerminalIcon (22dp)
+            Adaptive 3-5 column product grid (130dp/135dp minSize)
+            Live stock status, price badges, and tap-to-add haptic feedback
+          Cart Review Staging Pane
+            Header with Realistic3DSupermarketCartIcon, review title, 3D Indigo Cart Capsule Button with dynamic quantity badge, Hold & Clear actions
+            Multi-line Product Name Wrapping: maxLines = 3, lineHeight = 17sp, zero cutoff for long English/Bengali names
+            Ergonomic Touch Steppers: >= 44dp [-] qty [+] and delete icon buttons
+            Unified Cart Review Footer: Subtotal row, Estimated Grand Total row, and full-width "Proceed to Cart (৳...) ➔" CTA button invoking onNavigateToCart
       Scanner Engine & Hardware Interception
         Camera barcode scan
         Simultaneous hardware scanner input without a source switch
@@ -150,6 +157,10 @@ mindmap
           Keep Scanning dismisses and resumes
       Cart review
         Cart badge shows total units
+        Dedicated Cart Screen (CartScreen.kt)
+          Full itemized cart list with +/-/delete steppers and note editing
+          Pinned Total Cart Value Summary Card (Subtotal, conditional Discount, and Estimated Total in radiant #00C48C emerald)
+          Hold Cart and Checkout (grand total formatted) action buttons
         Review Cart modal bottom sheet (`CartPreviewBottomSheet`)
           Line items with full-width names, unit price, total amount pill, and steppers
           Interactive quantity badge opens `ManualQuantityDialog` (identical to Cart screen) for instant manual decimal/whole number entry
@@ -1788,7 +1799,481 @@ mindmap
       - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V35.apk`
       - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V12-09-2026.apk`
 
+## V39 - Complete Tablet Architecture Overhaul & Master-Detail UI/UX (V39 / V13-09-2026)
+
+- **Architecture & Tablet Mode Overhaul**:
+  - **[V39-1] Navigation Rail Refinement & More Hub Organization (`Navigation.kt`)**:
+    - **Promoted Core Domains**: Promoted direct `Expenses` destination to the left `NavigationRail`. Cash Register (`RegisterClose`) is housed cleanly in the `More Operations Hub` dialog, maintaining sleek vertical spacing and eliminating text truncation on the rail.
+    - **Backstack Integrity**: Marked `Cart`, `Expenses`, and `RegisterClose` as core tablet destinations (`isCoreScreen`) to prevent unexpected backstack popping when toggling between primary views.
+    - **Deduplicated More Hub**: Removed redundant `Report` and `Settings` entries from the `MoreHubBottomSheetContent` on tablet screens since both are already directly accessible from the primary Navigation Rail and top controls.
+  - **[V39-2] Products Screen Tablet Grid & Valuation Card (`ProductsScreen.kt`)**:
+    - **Clean Header**: Suppressed the redundant top-bar back arrow on tablet form factors (`isTablet`), aligning with top-level navigation rail standards.
+    - **Full-Width Valuation**: Expanded the Inventory Valuation summary card to utilize the full available width of the screen.
+    - **Adaptive 2-Column Product List**: Converted the stretched single-column list view on tablet into an adaptive responsive grid (`GridCells.Adaptive(minSize = 420.dp)`), ensuring balanced information density and touch target ergonomics.
+  - **[V39-3] Dues & Customer Khata Tablet Overhaul (`DuesScreen.kt`)**:
+    - **Contextual Back Navigation**: Suppressed root back navigation on tablet while preserving the back arrow when drilling into an individual customer ledger (`selectedCustomer != null`).
+    - **Full-Width Recovery Banner**: Extended the Credit Recovery Summary card to span the entire screen width.
+    - **Adaptive 2-Column Debtor Cards**: Refactored the debtors list to use an adaptive 2-column grid (`GridCells.Adaptive(minSize = 440.dp)`), displaying customer contact info, due balance, and quick action chips (Collect, WhatsApp, Remind, Call) in balanced dual columns.
+  - **[V39-4] Sales Report Centered Max-Width Container (`SalesReportScreen.kt`)**:
+    - **No Redundant Back Button**: Hidden the root top-bar back button on tablet mode.
+    - **Centered 960dp Container**: Wrapped the report content within `Box(contentAlignment = Alignment.TopCenter)` and `widthIn(max = 960.dp)`, preventing awkward horizontal stretching of KPI cards, trend charts, and payment mix breakdowns on wide 2560x1600 tablet screens.
+  - **[V39-5] Settings Screen Centered Container (`SettingsScreen.kt`)**:
+    - **Clean Root Screen**: Suppressed the top-bar back arrow on tablet when on `SettingsPage.HOME`.
+    - **Centered 760dp Container**: Applied `widthIn(max = 760.dp)` to prevent settings tiles from spreading excessively wide across landscape displays.
+  - **[V39-6] Sales History 42/58 Master-Detail Split Screen (`SalesHistoryScreen.kt`)**:
+    - **Split-Pane Architecture**:
+      - **Master Column (42% width)**: Date-grouped transactions list with search and filter controls. The actively selected invoice is highlighted with subtle border tint and elevated card styling (`isSelected`).
+      - **Detail Column (58% width)**: Embedded `TabletSaleDetailPane` featuring:
+        - **Live 80mm Thermal Receipt Canvas**: Rendered directly inline with store header, itemized receipt rows, taxes, discount, payment method, and QR code verification.
+        - **Executive Owner Profit Audit Card**: If logged in as Owner/Manager, renders live Net Revenue, COGS (`netCogs`), Net Margin %, and markup analytics.
+        - **Direct Action Toolbar**: Print Receipt, Share Receipt (WhatsApp/System), and Sale Return buttons directly in the detail header.
+      - **Graceful Fallback**: Preserves the standard mobile dialog overlay when running on compact phone form factors (< 600dp).
+  - **[V39-7] Deliverables**:
+    - Production APK built and verified:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V39.apk` (69MB, versionCode 220916, versionName 2.6.41)
+    - Installed and tested live on Android landscape tablet emulator `emulator-5554` (2560x1600 physical resolution).
+
+## V40 - 3-Column Product Grid Default & Streamlined Single-Row List View (V40 / V13-09-2026)
+
+- **Products Screen Architecture & UI/UX Redesign (`ProductsScreen.kt`)**:
+  - **[V40-1] Grid View Default on Tablet Mode**:
+    - Set default `viewModeName` on tablet (`isTablet == true`) strictly to `ProductViewMode.GRID.name` (`if (isTablet) ProductViewMode.GRID.name else ProductViewMode.LIST.name`).
+    - Tablet operators now land directly on visual product cards upon entering the Products screen.
+  - **[V40-2] 3-Column Product Grid (`GridCells.Fixed(3)`)**:
+    - Replaced the dense 7-column / adaptive layout on tablet with an ergonomic, balanced 3-column card grid (`columns = if (isTablet) GridCells.Fixed(3) else GridCells.Adaptive(minSize = 160.dp)`).
+    - Ample card breathing room, large touch targets (>= 48dp), clear stock status pills (`Low: N` in amber, `N Pcs` in emerald), barcode chips (`#8466...`), bold retail selling price (`৳550 /Pcs`), and full title legibility.
+  - **[V40-3] Streamlined Single-Row List View with Exact 100% Data Parity**:
+    - Completely replaced the cluttered ERP spreadsheet columns with a clean, modern single-row horizontal stream.
+    - **Exact Data Parity**: Displays identical data points as Grid View cards (Product Title, Barcode badge, Category label, Stock status badge, Selling Price) and identical 4-button action cluster:
+      - `[🛒 Cart]`: Quick add to active cart.
+      - `[📦 ± Stock]`: Quick inventory adjust modal.
+      - `[🏷️ Code]`: Realistic 3D Hologram Laser Code dialog.
+      - `[⋮ More]`: Edit, Delete, and extended options menu.
+    - Eliminated all micro spreadsheet cells, dense margins, and cramped ERP data tables.
+  - **[V40-4] Collapsible Inventory Valuation Banner on Tablet**:
+    - Removed hardcoded forced expansion (`isTablet || showInventoryValuation`) on tablet mode, allowing the 200dp valuation card to collapse into a slim, space-saving banner via the `Details ▾ / Collapse ▴` button.
+    - Instant reclaim of screen height for inventory browsing on both tablet and phone screens.
+  - **[V40-5] 4-Button Feature Parity on Grid Cards**:
+    - Added the `Realistic3DHologramLaserCodeIcon` (Laser code button) to `ProductGridCard` on tablet, providing identical 4-button quick action capability across both Grid View and List View.
+  - **[V40-6] Deliverables & Production Verification**:
+    - Production APK built via `./gradlew assembleRelease`:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V40.apk` (36MB, R8 minified, versionCode 220917, versionName "2.6.42-V13-09-2026")
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk`
+    - Live verified and tested on tablet emulator `emulator-5554` (2560x1600 resolution) in both Light and Dark themes.
+
+## V41 - Quick Category & Status Filter Strip and Redesigned 3-Row Product Grid Cards (V41 / V13-09-2026)
+
+- **Products Screen Architecture & Visual Parity with Interactive HTML Preview (`ProductsScreen.kt`)**:
+  - **[V41-1] Quick Category & Status Filter Chips Strip below Search Bar**:
+    - Rendered interactive horizontal scroll strip directly beneath the search input:
+      - Status Chips: `All SKUs (621)`, `⚠️ Low Stock (177)`, `🚫 Out of Stock (67)`, `💎 High Margin (>30%)`.
+      - Visual Divider: `|` separator.
+      - Category Chips: `All Categories`, followed by dynamic category chips with curated retail emojis (`🥫 সস (Sauces)`, `🧼 বিউটি সোপ (Soaps)`, `🌸 Air Freshener`, `🧴 Face Wash`, `🍞 Bakery`, `🌻 Edible Oil`, `☕ Coffee`, etc.).
+      - Instant filtering with animated counter tags and selection states.
+  - **[V41-2] Exact 3-Row ProductGridCard Layout Parity**:
+    - Completely redesigned `ProductGridCard` to match `tablet_mode_audit_redesign_preview.html` (.card-grid-item):
+      - **Row 1 (Header)**: Bold 14sp Product Name (max 2 lines with Bengali text support) on Left + Stock Badge Pill (`Low: 1` amber, `7 Pcs` green, `Out of Stock` red; clickable to adjust stock) on Right.
+      - **Row 2 (Meta)**: Monospace Barcode Capsule `[❙❙❙] #barcode` + Bold Blue Category Text (`Color(0xFF2563EB)` / `Color(0xFF60A5FA)`).
+      - **Row 3 (Footer)**: Bold Emerald Price Display (`৳550 /Pcs`) on Left + Action Cluster on Right:
+        - `[🛒 Cart]`: Emerald button with shopping cart icon and text.
+        - `[📦 ±]`: Stock inward/adjustment shortcut.
+        - `[❙❙❙]`: Barcode print/label action.
+        - `[⋮]`: Product overflow menu (Edit, Delete, Details).
+  - **[V41-3] Tablet Density & Grid Adaptation**:
+    - Added density toggle: `Compact` (tight padding, 12.5sp font) vs `Comfortable` (14sp font, relaxed touch targets).
+    - Converted tablet grid columns to `GridCells.Adaptive(minSize = 300.dp)` to prevent button cramming on diverse tablet DPIs.
+    - Added top toolbar `+ Add Product` button next to view mode switchers.
+  - **[V41-4] Zero-Duplication Navigation Architecture (`Navigation.kt`)**:
+    - Filtered out `Expenses`, `SalesReport`, and `Settings` from `MoreOperationsHubSheet` when `isTablet` is true, ensuring secondary dialog does not duplicate destinations already pinned to the tablet Navigation Rail.
+
+## V42 - Tablet Unobstructed Product Grid & Clean Widescreen Ergonomics (V42 / V13-09-2026)
+
+- **Ergonomics & Tablet Polish**:
+  - **[V42-1] Suppressed Redundant Floating Action Button on Tablet (`ProductsScreen.kt`)**:
+    - Wrapped `floatingActionButton` in `if (!isTablet)` to remove the bottom-right green FAB on tablet form factors.
+    - Eliminates card obstruction on the bottom-right column, keeping all product cards, prices, and action clusters 100% visible and interactive.
+    - Primary creation entry point cleanly anchored in the top toolbar as `+ Add Product`.
+  - **[V42-2] Multi-Section Tablet Parity Verification**:
+    - **Sales History**: Master-Detail 42/58 split view with live 80mm thermal receipt, itemized breakdown, and confidential Net Profit Audit card verified on emulator (`v41_history_actual.png`).
+    - **Dues & Khata**: 2-Column responsive debtor cards with WhatsApp, Collect, Call, Ledger buttons, aging breakdown, and Credit Recovery Summary banner verified on emulator (`v41_history_live.png`).
+    - **Products Screen**: Quick filter strip and 3-row grid cards verified on emulator (`v42_products_actual.png`).
+  - **[V42-3] Deliverables**:
+    - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V42.apk` (36MB, versionCode 220919, versionName "2.6.44-V13-09-2026")
+    - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk`
+
+## V43 - Product Grid View 100% Icon, Animation, and Text Parity with List View (V43 / V13-09-2026)
+
+- **Products Screen UI/UX & Visual Parity (`ProductsScreen.kt`)**:
+  - **[V43-1] Exact 3D Animated Stock Badge Alignment**:
+    - Replaced the static dot (`●`) with identical 3D animated canvas orbs and hazard icons from `ProductItemRow`:
+      - **Low Stock**: `Realistic3DAmberHazardDiamond` with radiant amber diamond geometry and warm hazard pulse.
+      - **Out of Stock**: `Realistic3DRubyPulsingAlertOrb` with animated ruby pulse ring.
+      - **In Stock**: `Realistic3DGlowingEmeraldSphere` with glossy sphere highlight and subtle breathing glow.
+    - Standardized badge surfaces with identical soft container colors (`0xFFFEF3C7` for low stock, `0xFFFEE2E2` for out of stock, `0xFFDCFCE7` for normal) and localized text strings (`Low: %s`, `Out of Stock`, etc.).
+  - **[V43-2] Hologram Laser Barcode Capsule & Indigo Category Tag**:
+    - Replaced font glyph `"❙❙❙"` with `Realistic3DHologramLaserCodeIcon(size = 11.dp)` featuring real-time red laser beam sweep animation.
+    - Formatted barcode text in monospace font with `#` prefix (`#846656005286`).
+    - Aligned category label color to soft indigo (`Color(0xFF4F46E5)` in Light Mode, `Color(0xFF818CF8)` in Dark Mode), matching List View exactly.
+  - **[V43-3] 4-Button Action Dock 100% Icon, Animation & Typography Parity**:
+    - **Cart Button**: Replaced flat emoji `🛒` with animated `Realistic3DSupermarketCartIcon(size = 14.dp)` on emerald `Button` (`MaterialTheme.colorScheme.primary`) + `Text(stringResource(R.string.cart))` with 11.sp semi-bold typography.
+    - **Stock Adjust Button**: Replaced flat emoji `📦 ±` with soft purple/indigo container (`Color(0xFFEEF2FF)`, border `Color(0xFFC7D2FE)`) holding `Realistic3DKraftStockBoxIcon(size = 14.dp)` + `± Stock` / `± স্টক` text (`stringResource(R.string.products_adjust_stock_pm)`) in `Color(0xFF4F46E5)`.
+    - **Barcode Print Button**: Replaced flat blue square `■` with rounded square holding animated `Realistic3DHologramLaserCodeIcon(size = 15.dp)`.
+    - **Overflow Menu**: Matched touch target to uniform 32.dp (`ProductOverflowMenu`).
+  - **[V43-4] Price & Metric Formatting**:
+    - Aligned bold emerald price (`৳550` in `Color(0xFF047857)`) paired with muted unit indicator (`/Pcs`) in 11sp typography.
+  - **[V43-5] Deliverables & Production Verification**:
+    - Compiled release APK via `./gradlew assembleRelease`:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V43.apk` (37.3MB, versionCode 220920, versionName "2.6.45-V13-09-2026")
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk`
+    - Installed on Android tablet emulator `emulator-5554` and verified in real-time (`tablet_products_screen_now.png`).
+
+## V44 - Removed Compact/Comfortable Density Toggle & Cleaned Products Toolbar (V44 / V13-09-2026)
+
+- **Products Screen Clean Architecture (`ProductsScreen.kt`)**:
+  - **[V44-1] Removed Compact/Comfortable Toggle & State**:
+    - Removed `productDensity` variable and state persistence.
+    - Completely removed the `[ Compact | Comfortable ]` segmented Surface component from the Products screen top action toolbar.
+    - Simplified the toolbar to: Search Input + Barcode Scanner Trigger, Filter Options Button, View Mode Switcher (`[ ⊞ Grid | ☰ List ]`), and `+ Add Product` CTA button.
+  - **[V44-2] Standardized Ergonomic Dimensions & Padding**:
+    - Removed `isCompact` parameter and all conditional branches from `ProductItemRow` and `ProductGridCard`.
+    - Standardized `ProductItemRow` padding to comfortable retail standard: `horizontal = 14.dp, vertical = 9.dp`.
+    - Standardized `ProductGridCard` padding and typography:
+      - `horizontal = 14.dp, vertical = 12.dp`
+      - `verticalArrangement = Arrangement.spacedBy(8.dp)`
+      - Product thumbnail height fixed to `80.dp`.
+      - Product title typography fixed to `14.sp`, line height `19.sp`.
+  - **[V44-3] Interactive HTML Preview Alignment (`tablet_mode_audit_redesign_preview.html`)**:
+    - Removed `.density-toggle-group` and compact/comfortable buttons from the interactive preview toolbar.
+    - Removed `setProductDensity()` JavaScript controller and `currentDensity` state variable.
+  - **[V44-4] Deliverables & Production Verification**:
+    - Compiled release APK via `./gradlew assembleRelease`:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V44.apk` (36MB, versionCode 220921, versionName "2.6.46-V13-09-2026")
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk`
+    - Installed on Android tablet emulator `emulator-5554` and verified live in both Grid Mode (`tablet_products_grid_final.png`) and List Mode (`tablet_products_list_no_compact.png`).
+
+## V45 - Product Card Long-Press Batch Operations Activation (V45 / V13-09-2026)
+
+- **Products Screen Gesture Architecture (`ProductsScreen.kt`)**:
+  - **[V45-1] Card Long-Press Activation of Batch Mode**:
+    - Enhanced `ProductGridCard` and `ProductItemRow` with Compose Foundation `Modifier.combinedClickable(onClick = ..., onLongClick = ...)`.
+    - Long-pressing on any product card in Grid View or row in List View triggers:
+      1. Immediate haptic tactile vibration via `haptic.performHapticFeedback(HapticFeedbackType.LongPress)`.
+      2. Activation of batch operations selection mode (`batchSelectMode = true`).
+      3. Immediate selection of the long-pressed product (`selectedBarcodes.add(product.barcode)`), instantly displaying the checked checkbox and purple card border/tint.
+      4. Automatic slide-in of the floating batch action bar (`AnimatedVisibility(visible = batchSelectMode)`), presenting bulk actions (Select All, Price %, Category, Delete, Exit).
+    - If batch selection mode is already active, long-pressing (or clicking) toggles that product's selection state.
+  - **[V45-2] Isolated Interactive Touch Targets**:
+    - Card action cluster buttons (`[🛒 Cart]`, `[📦 ± Stock]`, barcode label generator, overflow menu, and thumbnail image) continue to handle their own tap interactions cleanly without triggering card click or long-press.
+  - **[V45-3] Interactive HTML Preview Parity (`tablet_mode_audit_redesign_preview.html`)**:
+    - Added desktop context menu (`contextmenu`) and touch/mouse timer (450ms) long-press listeners on `.card-grid-item`.
+    - Added `.card-grid-item.selected-card` state with primary outline, subtle violet tint, and prominent top-right checkmark badge (`✓`).
+    - Connected long-press directly to `#floatingBatchBar` active state and batch count counter.
+  - **[V45-4] Deliverables & Production Verification**:
+    - Compiled release APK via `./gradlew assembleRelease`:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V45.apk` (versionCode 220922, versionName "2.6.47-V13-09-2026")
+## V46 - Tablet Mode Products Screen Header Alignment with Mobile Mode (V46 / V13-09-2026)
+
+- **Products Screen Header & Ribbon Architecture (`ProductsScreen.kt`)**:
+  - **[V46-1] Aligned TopAppBar Header**:
+    - Eliminated raw, cramped, unlabeled icon action buttons (`Icons.Default.Description`, `Icons.Default.Checklist`, `Realistic3DClipboardDuesIcon`, `Icons.Default.Print`) that were previously forced into the tablet `TopAppBar` `actions` cluster via an `if (isTablet)` branch.
+    - Standardized `TopAppBar` across tablet and mobile modes: now cleanly presents only `PosTopAppBarTitle` with product count badge on the left, and `[🔔]` Alerts + `[🛒 Cart]` button on the right.
+  - **[V46-2] Cross-Platform Horizontal Quick-Tool Ribbon**:
+    - Removed `if (!isTablet)` conditional gate that previously hid the Quick-Tool Ribbon on tablets.
+    - Placed dedicated Quick-Tool Ribbon immediately below the TopAppBar on both tablet and mobile viewports with responsive padding (`horizontal = if (isTablet) 14.dp else 12.dp`).
+    - Labeled, tactile chips provide explicit visual clarity and ergonomic >=48dp tap targets:
+      - `[ 📄 Excel Tools ▾ ]` with dropdown menu (Export Inventory, Import Stock, Export Barcodes)
+      - `[ ⚏ Batch Select ]` / `[ ✕ Exit Batch ]` for bulk operations
+      - `[ 📋 Stock Audit ]` for physical stock count reconciliation
+      - `[ 🖨 Print Labels ]` for barcode label sheet printing
+  - **[V46-3] Interactive Preview Parity (`interactive_preview/tablet_mode_audit_redesign_preview.html`)**:
+    - Added matching `.quick-tools-ribbon` with high-touch tactile pill chips above the inventory valuation banner.
+    - Added interactive `toggleBatchMode()` handler synchronizing the ribbon chip state with the floating batch operations dock.
+  - **[V46-4] Deliverables & Production Verification**:
+    - Built via `./gradlew assembleRelease`:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V46.apk` (36MB, versionCode 220923, versionName "2.6.48-V13-09-2026")
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk`
+    - Deployed and verified on Android tablet emulator `emulator-5554` (2560x1600 widescreen counter POS display), verifying 100% visual and functional parity.
+
+## V47 - Reverted Tablet Split Changes to Sales History Screen (V47 / V13-09-2026)
+
+- **Sales History Screen Architecture (`SalesHistoryScreen.kt`)**:
+  - **[V47-1] Restored Unified Full-Width Sales History Layout**:
+    - Completely reverted the 42/58 master-detail split screen architecture introduced in V39, restoring `SalesHistoryScreen.kt` to its unified, proven full-width layout.
+    - Standardized across tablet and phone:
+      - Sticky search bar and period filters (`All Time`, `Today`, `This Week`, `This Month`, `Custom`).
+      - Summary KPI metric cards (`Total Sales`, `Cash`, `Digital`, `Due`).
+      - Chronological date-grouped transactions list with full-width `SaleCard` components.
+      - Tapping any invoice opens the standard `SaleDetailDialog` modal popup rather than updating a split pane.
+  - **[V47-2] Interactive Preview Parity (`interactive_preview/tablet_mode_audit_redesign_preview.html`)**:
+    - Removed `.master-detail-container` in `#viewHistory`.
+    - Added unified full-width sales history view with sticky search, period filter chips, 4 KPI cards, and date-grouped transaction cards.
+    - Added dedicated `#saleDetailModal` dialog triggered by `openSaleDetailModal(id)`, matching the mobile dialog experience.
+  - **[V47-3] Deliverables & Verification**:
+    - Built release APK:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V47.apk` (36MB, versionCode 220924, versionName "2.6.49-V13-09-2026")
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk`
+    - Verified on Android tablet emulator `emulator-5554` (2560×1600 counter POS display).
+
+## V48 - Tablet Sell Screen Dual-Orientation Parity & Multi-Line Cart Redesign (V48 / V13-09-2026)
+
+- **Tablet Sell Screen Architecture (`ScannerScreen.kt` & `Navigation.kt`)**:
+  - **[V48-1] Dual-Orientation Parity (`TabletSplitTerminal`)**:
+    - Full landscape (58% Catalog Left, 42% Cart Review Right) and portrait (54% Catalog Top, 46% Cart Review Bottom) split terminal using `BoxWithConstraints` for guaranteed dp-based aspect-ratio responsiveness (`maxWidth < maxHeight`).
+    - Reactive `LocaleWrapper` with dynamic `LocalConfiguration` propagation ensuring zero configuration lock-in or stale geometry when the tablet is rotated.
+    - Multi-line Product Name Wrapping: `maxLines = 3`, `lineHeight = 17.sp`, zero cutoff or ellipsis truncation for long English and Bengali compound conjunct names.
+    - Dedicated Customer Header Bar (`TabletCustomerBar`) with customer avatar, name, phone, quick search dialog, and hold/clear buttons.
+    - Complete Quick Action Toolbar in both views: `Scanner` (Camera PIP toggle), `Keypad` (manual barcode/item dialog), `Stock Check` (inventory enquiry toggle with high-visibility banner), and `Held Carts` counter chip.
+    - Persistent sticky footer (`TabletCartFooter`) with live subtotal, grand total, and full-width checkout CTA navigating directly to checkout.
+  - **[V48-2] Android Tablet Emulator Live Verification (`emulator-5554`)**:
+    - Verified on `emulator-5554` (2560x1600 widescreen tablet, 320dpi):
+      - Cold-start login via PIN `1234`.
+      - Landscape mode verified: 58/42 side-by-side terminal, 4-column product grid, stock check mode toggle banner, item stepper counter, and instant total recomputation.
+      - Portrait mode verified: 54/46 top/bottom vertical split terminal, 5-column product grid, customer pill bar, and full-width checkout CTA.
+      - Live product addition tested on "Angelic Air Freshener 300 ml" — cart badge incremented from 7 to 8 items, total updated from ৳975 to ৳1,305.
+      - Checkout navigation verified: tapping "Proceed to Cart (৳1,305) ->" seamlessly loads `CartScreen`, and tapping Sell on the `NavigationRail` smoothly returns to `TabletSplitTerminal`.
+  - **[V48-3] Deliverables & Production Verification**:
+    - Built via `./gradlew assembleRelease`:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V48.apk` (37MB, versionCode 220925, versionName "2.6.50-V13-09-2026")
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk`
+
+## V49 - Radiant Dark POS Terminal Aesthetics Refresh (V49 / V13-09-2026)
+
+- **Aesthetic Parity with HTML Interactive Preview (`ScannerScreen.kt` & `Navigation.kt`)**:
+  - **[V49-1] Root Cause Elimination**:
+    - Previously, `TabletSplitTerminal` dynamically inherited `MaterialTheme.colorScheme.background` and `surface`, which caused Android devices set to system Light theme to render as washed-out off-white / light grey with low-contrast buttons, appearing dull compared to the HTML preview (`data-theme="dark"`).
+    - Decoupled `TabletSplitTerminal` and tablet `NavigationRail` from ambient system theme by introducing explicit `TabletTerminalColors` tokens:
+      - Deep obsidian background: `#080B11`
+      - Catalog pane surface: `#161D2D`
+      - Cart review pane surface: `#0F1523`
+      - Card surfaces: `#1E273D` with subtle glass borders (`Color(0x1AFFFFFF)`)
+      - Search input container: `#121824`
+      - Sticky footer container: `#0A0E18`
+      - Navigation Rail container: `#0E131F` with divider `Color(0x1FFFFFFF)`
+  - **[V49-2] Radiant Emerald Accents & 3D Icons**:
+    - Neon Emerald `#10B981` applied across search icon, category pill active state & dot, stock badges, in-cart quantity badges, cart header squircle icon, price equation subtotals, and grand total typography (`22.sp`, `FontWeight.Black`).
+    - Checkout CTA button upgraded to a radiant horizontal gradient (`Brush.horizontalGradient(listOf(Color(0xFF10B981), Color(0xFF047857)))`) with `Realistic3DSupermarketCartIcon` and bold high-contrast text.
+    - Product cards upgraded with a 36dp 3D squircle containing `Realistic3DProductsBoxIcon`, glowing stock badges (`In Stock` emerald pill, `Low Stock` amber pill, `Out of Stock` rose pill), and crisp `#F8FAFC` titles with zero cutoff.
+    - Tablet `NavigationRail` upgraded with deep dark container (`#0E131F`), subtle divider (`0x1FFFFFFF`), and neon emerald `#10B981` active selection indicator.
+  - **[V49-3] Dual-Orientation Emulator Live Verification (`emulator-5554`)**:
+    - Tested live on `emulator-5554` (2560×1600 widescreen tablet):
+      - Landscape mode (58/42 split): radiant dark terminal styling, high-contrast typography, glowing stock badges, emerald prices, and gradient checkout CTA.
+      - Portrait mode (54/46 split): 5-column product grid, customer quick pill with purple gradient avatar, and sticky bottom checkout CTA.
+  - **[V49-4] Deliverables & Production Verification**:
+    - Built via `./gradlew assembleRelease`:
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V49.apk` (37MB)
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk` (37MB)
+  - **[V50-1] Stock Check Localization & Language Parity**:
+    - Fixed hardcoded Bengali banner text leak (`"স্টক অনুসন্ধান মোড সক্রিয় — যেকোনো পণ্যের স্টক ও মূল্য দেখতে ট্যাপ করুন"`) across tablet Portrait and Landscape top toolbars.
+    - Introduced localized string resource `R.string.tablet_stock_check_banner`:
+      - English: `"Stock Check Mode Active — Tap any product to view & adjust stock"`
+      - Bangla: `"স্টক অনুসন্ধান মোড সক্রিয় — স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ করুন"`
+  - **[V50-2] Full Stock Check Phone-Mode Behavioral Parity on Tablet**:
+    - Enabled opening `StockCheckBottomSheet` on tablet product card click whenever Stock Check mode is active (`!isSellMode`).
+    - Added `selectProductForStockCheck(product: Product)` to `ScannerViewModel` in `POSViewModels.kt`.
+    - Updated `TabletProductGridCard` in `ScannerScreen.kt`:
+      - Product cards remain interactive even if out-of-stock when in Stock Check mode (`enabled = if (isStockCheckMode) true else (!isOutOfStock || allowNegativeInventory)`).
+      - Card borders render in high-visibility amber (`TabletTerminalColors.AmberBorder`) when Stock Check mode is active.
+      - Card `onClick` triggers haptic feedback and selects product for stock inspection sheet.
+    - Sheet displays full financial intelligence:
+      - Inventory level & status badge (`In Stock`, `Low Stock`, `Out of Stock`)
+      - Purchase price, Selling price, MRP, Wholesale price
+      - Unit Margin % & Taka gain, and Total Asset Worth
+      - Stepper adjustments (-5, -1, +1, +5, 0, Reset) and direct numeric keypad entry
+      - DB persistent `Save` button (with inventory permission check & snackbar) and `Edit` navigation button
+  - **[V50-3] HTML Interactive Preview Parity**:
+    - Updated `interactive_preview/tablet_sell_screen_redesign_preview.html`:
+      - Added Stock Check amber banners across Landscape, Portrait Split, and Portrait Docked modes with dynamic `data-i18n="stock_check_banner"`.
+      - Added CSS for active Stock Check button (`.stock-mode-btn.active`) with amber glow and card amber borders (`.product-card.stock-check-active`).
+      - Added `stockCheckModal` dialog reproducing the exact phone & tablet `StockCheckBottomSheet` UX (financials, margins, asset worth, steppers, Save/Edit).
+      - Verified with browser subagent across both English and Bangla locales.
+  - **[V50-4] Production Deliverables & Live Verification**:
+    - Built via `./gradlew assembleRelease` (versionCode 220926, versionName "2.6.50-V13-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V50.apk` (37MB)
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk` (37MB)
+    - Tested and verified live on `emulator-5554` (2560×1600 widescreen tablet):
+      - English banner displayed correctly without Bengali leakage.
+      - Product cards highlighted with amber borders.
+      - Tapping product card opened the comprehensive `StockCheckBottomSheet` with financial intelligence, steppers, and Save button.
+
+## V51 - Tablet POS Dynamic Light/Dark Theme Adaptation & Live Verification (V51 / V13-09-2026)
+
+- **Dynamic Theme Adaptation for Tablet POS (`ScannerScreen.kt`, `Navigation.kt`, & HTML Preview)**:
+  - **[V51-1] Root Cause Elimination**:
+    - Previously in V49/V50, `NavigationRail` and `TabletTerminalColors` hardcoded dark color tokens (`#0E131F`, `#161D2D`, `#0F1523`, etc.), which prevented the sell screen, catalog grid, cart review pane, and side navigation rail from responding when the user selected Light theme in Settings.
+    - Upgraded `NavigationRail` (`Navigation.kt`) to dynamically evaluate `isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f`:
+      - Container: `#FFFFFF` in light mode / `#0E131F` in dark mode.
+      - Vertical Divider: `Color(0x1F000000)` in light mode / `Color(0x1FFFFFFF)` in dark mode.
+      - Header Logo: light border & gradient in light mode / dark glass in dark mode.
+      - Navigation Items: unselected icon and label use high-contrast dark slate (`#475569`) in light mode / `#94A3B8` in dark mode.
+      - Cashier Shift Avatar & 1-tap Lock button: light borders, clean shadows, and crisp text contrast.
+  - **[V51-2] Tablet Terminal Colors Architecture (`TabletTerminalColors`)**:
+    - Converted all color tokens in `TabletTerminalColors` (`ScannerScreen.kt`) to `@Composable get()` accessors dynamically evaluating `surface.luminance() < 0.5f`:
+      - `WorkspaceBg`: `#F1F5F9` (light) / `#080B11` (dark)
+      - `CatalogSurfaceBg`: `#F8FAFC` (light) / `#161D2D` (dark)
+      - `CartSurfaceBg`: `#FFFFFF` (light) / `#0F1523` (dark)
+      - `CardBg`: `#FFFFFF` (light) / `#1E273D` (dark)
+      - `CardBorder`: `#E2E8F0` (light) / `Color(0x1AFFFFFF)` (dark)
+      - `InputBg`: `#F1F5F9` (light) / `#121824` (dark)
+      - `FooterBg`: `#FFFFFF` (light) / `#0A0E18` (dark)
+      - `TextMain`: `#0F172A` (light) / `#F8FAFC` (dark)
+      - `TextSecondary`: `#475569` (light) / `#94A3B8` (dark)
+      - `Divider`: `#E2E8F0` (light) / `Color(0x1AFFFFFF)` (dark)
+      - `EmeraldLight`: `#ECFDF5` (light) / `Color(0x1A10B981)` (dark)
+      - `AmberLight`: `#FFFBEB` (light) / `Color(0x1AF59E0B)` (dark)
+      - `RoseLight`: `#FFF1F2` (light) / `Color(0x1AEF4444)` (dark)
+    - Updated `TabletTopToolbar`, `TabletProductGridCard`, `TabletCartItemRow`, and `TabletCartFooter` to dynamically consume these light/dark tokens.
+  - **[V51-3] HTML Interactive Preview Parity (`interactive_preview/tablet_sell_screen_redesign_preview.html`)**:
+    - Replaced hardcoded dark values with dynamic CSS variables: `--bg-nav-rail`, `--bg-cart-pane`, `--bg-cart-header`, `--bg-cart-footer`, `--bg-empty-cart-visual`, `--rail-hover`.
+    - Defined variables for both `:root` (dark) and `[data-theme="light"]` (light).
+    - Verified both Landscape and Portrait split views in light mode via screenshots.
+  - **[V51-4] Production Deliverables & Tablet Live Verification (`emulator-5554`)**:
+    - Built via `./gradlew assembleRelease` (versionCode 220927, versionName "2.6.51-V13-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V51.apk` (36MB)
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk` (36MB)
+    - Tested live on `emulator-5554` (2560×1600 widescreen tablet):
+      - Logged in via PIN `1234`.
+      - Verified Sell screen and NavigationRail in Light Mode: crisp white cards, light slate backgrounds, dark high-contrast typography, radiant emerald accents.
+      - Tested cart item addition and quantity steppers in Light Mode.
+      - Verified bidirectional switching between Light and Dark modes in Settings with instant live re-theming.
+
+## V52 - POS Brand Logo Invariance & Visual Integrity Hardening (V52 / V13-09-2026)
+
+- **POS Brand Logo Theme Invariance (`Navigation.kt`)**:
+  - **[V52-1] Theme-Invariant Brand Identity Rule**:
+    - Addressed regression where light theme converted the POS brand logo container at the top of the NavigationRail into a light grey/white box, causing the white letter `'T'` in `ic_launcher_foreground` (`#F5F5F5`) to wash out against the light background.
+    - Decoupled the POS logo container from theme changes: permanently locked the logo container background to the iconic dark obsidian linear gradient (`listOf(Color(0xFF1E293B), Color(0xFF0F172A))`) and specular emerald-cyan border (`listOf(brandEmerald, Color(0xFF34D399), Color(0xFF1E293B))`).
+    - Enforced architectural standard: any active theme (Light Mode, Dark Mode, or System Mode) preserves the exact brand logo presentation without any wash-out, color shift, or contrast degradation.
+  - **[V52-2] Tablet Emulator Live Verification (`emulator-5554`)**:
+    - Tested live on 2560×1600 tablet display in Light Mode.
+    - Confirmed the white `'T'` and electric blue lightning bolt stand out with maximum clarity, vibrancy, and specular depth against the dark badge while residing atop the crisp white NavigationRail.
+  - **[V52-3] Production Deliverables**:
+    - Built via `./gradlew assembleRelease` (versionCode 220928, versionName "2.6.52-V13-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V52.apk` (36MB)
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk` (36MB)
+
+## V53 - Removal of Quick Customer Strip from Cart Review Staging Pane (V53 / V14-09-2026)
+
+- **Cart Review Staging Pane Simplification (`ScannerScreen.kt`)**:
+  - **[V53-1] Removal of Quick Customer Strip (`TabletCustomerBar`)**:
+    - Removed `TabletCustomerBar` (the quick customer strip displaying avatar, customer name e.g. "Walk-in Regular", phone, and due badge) from the tablet Cart Review staging pane.
+    - Removed `showCustomerQuickDialog` AlertDialog and associated transient customer assignment states (`customerName`, `customerPhone`, `resolvedCustomer`) from `ScannerScreen.kt`.
+    - Removed the customer quick pill (`portraitCustName`) from the portrait split Cart Review header.
+    - Preserved full customer selection, ledger linking, Khata account assignment, and due collection in the dedicated checkout screen (`CartScreen.kt`).
+    - The Cart Review pane now transitions directly from the header (Cart icon, title, item count chip, Hold & Clear icon buttons) into the scrollable cart item list, maximizing vertical staging space for items and quantity adjustments.
+  - **[V53-2] Interactive Preview Parity (`interactive_preview/tablet_sell_screen_redesign_preview.html`)**:
+    - Removed `.customer-bar` and `#portraitCustName` elements to match the Jetpack Compose tablet layout.
+  - **[V53-3] Production Deliverables & Tablet Live Verification (`emulator-5554`)**:
+    - Built via `./gradlew assembleRelease` (versionCode 220929, versionName "2.6.53-V14-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V53.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk`
+    - Verified on `emulator-5554` (2560×1600 widescreen tablet).
+
+## V54 - Adaptive Tablet Loading Screen Layout & Typography Hardening (V54 / V14-09-2026)
+
+- **Adaptive Loading & Splash Screen Architecture (`SplashScreen.kt` & `Navigation.kt`)**:
+  - **[V54-1] Bounded Adaptive Logo Scaling & Layout Centering**:
+    - Resolved critical regression where the splash screen logo scaled using unbound percentage width (`fillMaxWidth(0.68f)` and `aspectRatio(1f)`), which on wide landscape tablets (2560×1600) caused the 'T' icon to balloon to ~680dp tall, pushing the title, tagline, spinner, loading messages, and progress indicator off-screen and under the system navigation bar.
+    - Implemented explicit adaptive logo sizing (`160dp` in tablet landscape, `190dp` in tablet portrait, `145dp` in phone portrait, `120dp` in phone landscape) via `size(logoSize)`.
+    - Wrapped content in a unified, vertically centered column inside `safeDrawingPadding()`, ensuring zero collision with system navigation bars or camera cutouts.
+  - **[V54-2] Specular Ambient Radial Glow & Typography Polish**:
+    - Introduced a pulsing sapphire/cyan ambient radial glow behind the logo (`Color(0xFF0082FF)`) synchronized with the breathing animation.
+    - Enhanced subtitle typography from an illegible `6.sp` to a crisp, bold `10.5.sp` (tablet) / `8.5.sp` (phone) with `1.5.sp` letter tracking and high-contrast slate coloring (`Color(0xFF94A3B8)`).
+    - Rounded the progress indicator with smooth pill corners (`clip(RoundedCornerShape(2.dp))`).
+    - Added an anchored enterprise footer ("Enterprise POS • Secure Offline Engine") safely above system insets.
+  - **[V54-3] Production Deliverables & Live Verification**:
+    - Built via `./gradlew assembleRelease` (versionCode 220930, versionName "2.6.54-V14-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V54.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk`
+    - Verified on `emulator-5554` (2560×1600 widescreen tablet).
+
+## V55 - Tablet POS Top Search Bar Formatting & Height Alignment (V55 / V14-09-2026)
+
+- **Tablet Search Bar & Toolbar Formatting (`ScannerScreen.kt`)**:
+  - **[V55-1] Exact 44dp Height Alignment & M3 Default Squeeze Fix**:
+    - Replaced Material 3 `OutlinedTextField` (which enforced a rigid 56dp minimum height, asymmetric internal label padding, and a 48dp leading icon slot) with a dedicated 44dp `Surface` + `BasicTextField` architecture.
+    - Symmetrically aligned the search bar height (`44.dp`) and rounded corner radius (`10.dp`) to match all adjacent action buttons (`Scanner`, `Keypad`, `Stock Check`, `Held`).
+    - Added an emerald radiant border highlight on focus (`1.5.dp TabletTerminalColors.Emerald`), smoothly reverting to subtle card border (`1.dp TabletTerminalColors.CardBorder`) when unfocused.
+    - Integrated clean, instant clear button (`Icons.Default.Close`) when `searchQuery` is populated.
+  - **[V55-2] Placeholder Truncation Elimination & Button Ergonomics**:
+    - Eliminated internal padding bloat (reduced non-text width from 80dp+ down to 45dp), granting the text input area substantial additional horizontal breathing space.
+    - Compacted button horizontal padding (`8.dp` in portrait, `10.dp` in landscape) and inter-item spacing to `6.dp`, preventing the quick action buttons from squeezing the search bar.
+    - Fixed truncation of `tablet_search_placeholder` ("Search item or barcode…") so that the placeholder and entered search queries fit completely without clipping into "Search item or barco...".
+  - **[V55-3] Interactive Preview Parity (`interactive_preview/tablet_sell_screen_redesign_preview.html`)**:
+    - Updated `.search-field-box` with `height: 44px; border-radius: 10px; padding: 0 12px; gap: 8px; box-sizing: border-box;` for complete parity with Compose.
+  - **[V55-4] Production Deliverables & Tablet Live Verification**:
+    - Built via `./gradlew assembleRelease` (versionCode 220931, versionName "2.6.55-V14-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V55.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk`
+    - Verified on `emulator-5554` (2560×1600 widescreen tablet).
+
+## V56 - Dual Display (MRP + Offer) Price Tier Option Cleanup (V56 / V14-09-2026)
+
+- **Product Label / Price Tier Selector UI (`ProductsScreen.kt`)**:
+  - **[V56-1] Removal of Sparkle Icon & Subtext**:
+    - Removed the decorative sparkle icon (`✨`) and the verbose subtitle subtext (`Supermarket style bargain label` / `products_price_tier_dual_hint`) from the `Dual Display (MRP + Offer)` price tier option button.
+    - Cleaned up the left column to showcase only the crisp, bold title (`Dual Display (MRP + Offer)` / `ডুয়েল ডিসপ্লে (MRP + অফার)`), keeping it clean and aligned with the MRP & Offer price badge on the right.
+  - **[V56-2] Interactive Preview Parity (`interactive_preview/code_image_price_switch_preview.html`)**:
+    - Removed `.dual-icon` and `.dual-hint` elements from `#tierBtnDual` to match the Jetpack Compose component.
+  - **[V56-3] Production Deliverables & Live Verification**:
+    - Built via `./gradlew assembleRelease` (versionCode 220932, versionName "2.6.56-V14-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V56.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk`
+    - Verified on Samsung Galaxy Tab A7 (`emulator-5554`, 2000×1200, 224dpi).
+
+## V57 - Tablet POS Cart Review Header Cart Capsule Button (V57 / V14-09-2026)
+
+- **Cart Review Header Redesign (`ScannerScreen.kt`)**:
+  - **[V57-1] Replacement of Static Count Badge with 3D Indigo Cart Capsule Button**:
+    - Replaced the passive green/teal "X items" pill badge (`Surface` with `TabletTerminalColors.EmeraldLight`) on the right side of the Cart Review header with the active 3D Indigo Cart Capsule Button (`TabletCartCapsuleButton`), matching the top bar of the Products screen (`ProductsScreen.kt`).
+    - Styled with `Color(0xFF4F46E5)` indigo capsule surface, 12dp rounded corners, `Realistic3DSupermarketCartIcon(17.dp)`, bold localized `Cart` text (`R.string.cart`), and when `cartUnitCount > 0`, an animated red pill badge (`Color(0xFFEF4444)`) displaying the total cart unit quantity.
+    - Integrated rich micro-animations: spring press scale (`0.93f`), cart capsule bounce (`1.12f -> 1.0f`), cart icon tilt & hop (`-16°`, `-8f` offset), and red badge pop & swing (`1.75f` scale, `22°` rotation).
+    - Tapping the Cart Capsule button directly triggers `onNavigateToCart` (`backStack.add(Cart)`), allowing instant navigation to the Cart / Checkout view.
+  - **[V57-2] Responsive Split-Mode Layout Support (Landscape & Portrait)**:
+    - Landscape: Positioned cleanly on the far right of the Cart Review header opposite the title and subtitle.
+    - Portrait: Placed compactly (`height = 30.dp`) in the top bar of the bottom half split-pane opposite the hold and clear quick-action buttons.
+  - **[V57-3] Interactive Preview Parity (`interactive_preview/tablet_sell_screen_redesign_preview.html`)**:
+    - Added `.cart-capsule` and `.cart-count-badge` CSS rules with hover/active animations.
+    - Updated both landscape (`#landscapeCartPane`) and portrait (`#portraitSplitCart`) cart review headers in the interactive prototype to feature the interactive cart capsule button.
+  - **[V57-4] Production Deliverables & Tablet Live Verification**:
+    - Built via `./gradlew assembleRelease` (versionCode 220933, versionName "2.6.57-V14-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V57.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk`
+    - Verified on Samsung Galaxy Tab A7 (`emulator-5554`, 2000×1200, 224dpi).
+
+## V58 - Cart Screen Total Cart Value Summary Card (V58 / V14-09-2026)
+
+- **Cart Screen Value Breakdown Architecture (`CartScreen.kt`)**:
+  - **[V58-1] Pinned Total Cart Value Summary Card (`CartTotalSummaryCard`)**:
+    - Resolved critical omission where the dedicated Cart review screen (`CartScreen`) displayed cart items and bottom action buttons (`Hold Cart` & `Checkout`), but lacked the total cart value summary box (`Subtotal` and `Estimated Total`), leaving empty vertical space.
+    - Implemented `CartTotalSummaryCard` pinned inside the bottom docked `Surface` container immediately above the action buttons:
+      - Styled in a responsive `Surface` card (`RoundedCornerShape(16.dp)`) with `color = if (isDark) #0A0E18 else #F8FAFC` and subtle border `if (isDark) #1FFFFFFF else #E2E8F0`.
+      - **Subtotal Row**: Displays localized `tablet_subtotal` ("Subtotal" / "উপমোট") with `formatTaka(subtotal)`.
+      - **Discount Row (Conditional)**: If `discountAmount > 0`, cleanly shows localized `discount` in red (`#EF4444`) with `-${formatTaka(discountAmount)}`.
+      - **Estimated Total Row**: Prominently highlights localized `tablet_estimated_total` ("Estimated Total" / "আনুমানিক মোট") in extra-bold dark text alongside the grand total formatted in 22sp Black emerald green (`#00C48C`).
+  - **[V58-2] Grand Total Checkout Button Accuracy**:
+    - Fixed checkout action button label to compute with `formatTaka(grandTotal)` rather than `formatTaka(subtotal)`, guaranteeing exact price parity with applied discounts.
+  - **[V58-3] Production Deliverables & Tablet Live Verification**:
+    - Built via `./gradlew assembleRelease` (versionCode 220934, versionName "2.6.58-V14-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V58.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk`
+## V59 - Stock Check Mode Banner "Tap or Scan" Phrasing (V59 / V14-09-2026)
+
+- **Stock Check Mode Banner Phrasing (`strings.xml`, `values-bn/strings.xml`, `ScannerScreen.kt`)**:
+  - **[V59-1] Dual Interaction Phrasing ("Tap or Scan")**:
+    - Updated `R.string.tablet_stock_check_banner` to explicitly reflect both tap interaction on tablet touch screens and barcode scanning (via camera viewfinder or hardware USB/Bluetooth barcode gun):
+      - **English**: `"Stock Check Mode Active — Tap or Scan any product to view & adjust stock"`
+      - **Bangla (`values-bn`)**: `"স্টক অনুসন্ধান মোড সক্রিয় — স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ বা স্ক্যান করুন"`
+    - Synchronized HTML interactive preview dictionary and markup (`interactive_preview/tablet_sell_screen_redesign_preview.html`).
+  - **[V59-2] Production Deliverables & Tablet Live Verification**:
+    - Built via `./gradlew assembleRelease` (versionCode 220935, versionName "2.6.59-V14-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V59.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk`
+    - Verified on Samsung Galaxy Tab A7 (`emulator-5554`, 2000×1200, 224dpi).
+
 ## Maintenance note
 
 Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+
+
+
 
