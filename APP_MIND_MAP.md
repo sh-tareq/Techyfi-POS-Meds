@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-14 (app version 2.6.64-V14-09-2026, build `Techyfi-POS-Final-V14-09-2026.apk` / `Techyfi-POS-Final-V64.apk`; versionCode 220940; DB schema version 28)
+Last updated: 2026-09-15 (app version 2.6.64-V14-09-2026, build `Techyfi-POS-Final-V14-09-2026.apk` / `Techyfi-POS-Final-V64.apk`; versionCode 220940; DB schema version 28)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -60,6 +60,8 @@ mindmap
             Zero-Cutoff 2-Line Subheadings (11sp / 14sp line height, no ellipsis truncation)
             2-Column Compact Grid Tiles with Status Badges + 1-Column Full-Width Featured Settings Banner
             Full-Width Row Cards with 42dp Icon Container, Title, 2-Line Subtitle, Status Pill, and Chevron
+            Pre-Navigation Permission Interception: Tap on locked cards triggers immediate localized Toast without navigating or flashing screens
+            Locked state visual dimming (alpha = 0.72) and dynamic Lock badge
             Scroll-safe layout with preserved view mode preference via rememberSaveable
         Tablet Shell (>= 600dp or Tablet Mode)
           Ergonomic Left-Docked NavigationRail (84dp Width, Expanded Core Domains)
@@ -76,6 +78,7 @@ mindmap
               Expanded 760dp Max-Width Dialog Constraint eliminating all title truncation
               2-Column Horizontal Cards in Grid Mode (354dp per card) with Zero-Cutoff 2-Line Subheadings
               Executive Full-Width Ledger Rows in List Mode with generous touch padding
+              Pre-Navigation Permission Interception with immediate toast feedback and visual lock dimming (alpha = 0.72)
               Persistent rememberSaveable view state & bilingual accessibility labels
             9. Staff Profile / Quick Switch & Lock Terminal Action (Bottom Docked)
       Bangla Localization & Multilingual Typography
@@ -220,11 +223,12 @@ mindmap
           Editable per cart line, printed on thermal receipts and PDF invoices
           Manageable Note Presets chip picker (add/edit/delete), also embedded in the Quick Sale dialog's note field
         Hold cart
-          Hold current cart for later
+          Hold current cart for later (gated by sales.hold_cart with SupervisorAuthDialog elevation)
           Held carts bottom sheet
           Restore held cart
-            Restored quantity capped to current stock; lines that can't be restored (out of stock) are skipped from the active cart but remain saved in the held-cart record (unavailableLines count shown in a toast), not deleted
-            Preserves Quick Sale items, line notes, price mode, prepared payment/split rows, loyalty state, applied store credits, voucher codes (v2.6.61), and synchronizes customer identity (customerName & customerPhone) across payload JSON and DB entity (v2.6.62)
+            Stock availability validation: tracks cumulative barcode demand across all lines (stockAllocationMap) against live catalog inventory; unavailable quantities remain safely saved in the held-cart record and a localized alert notifies the cashier
+            Preserves Quick Sale items, line notes, price mode, prepared payment/split rows, loyalty state, applied store credits, voucher codes, voucher balances (initialAmount & remainingBalance), and synchronizes customer identity (customerName & customerPhone)
+            Fallback active StoreCreditVoucher synthesized if external voucher record is missing, guaranteeing redeemedVoucher is never null when storeCreditApplied > 0
             Legacy array-only held-cart records remain compatible
           Delete held cart
         Continue to checkout
@@ -592,6 +596,9 @@ mindmap
         Validates against outstanding balance
         Saves payment method and optional reference note in a durable payment ledger
         Balance reduction and payment record commit atomically
+      In-Screen Permission Enforcement & Supervisor Override
+        Add Supplier, Receive Inward Stock, Pay Due, Edit Supplier, and Delete Supplier are strictly gated by suppliers.manage
+        Staff without permission trigger SupervisorAuthDialog for temporary PIN elevation without requiring logout
     Settings
       Owner only
         Sell tab shows a snackbar and blocks navigation for cashiers
