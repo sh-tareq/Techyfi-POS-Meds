@@ -4340,21 +4340,24 @@ fun ProductItemRow(
                 // Center-Right: Price & Unit
                 Row(
                     verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.widthIn(min = 100.dp)
                 ) {
                     Text(
                         text = formatTaka(product.sellingPrice),
-                        fontSize = 15.sp,
+                        fontSize = 15.5.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF047857)
+                        color = Color(0xFF047857),
+                        maxLines = 1,
+                        softWrap = false
                     )
                     Text(
-                        text = "/${product.unit}",
-                        fontSize = 10.5.sp,
+                        text = "/ ${product.unit.ifBlank { "Pcs" }}",
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        modifier = Modifier.padding(bottom = 1.dp)
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
 
@@ -4573,20 +4576,23 @@ fun ProductItemRow(
             ) {
                 Row(
                     verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
                         text = formatTaka(product.sellingPrice),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF047857)
+                        color = Color(0xFF047857),
+                        maxLines = 1,
+                        softWrap = false
                     )
                     Text(
-                        text = "/${product.unit}",
-                        fontSize = 11.sp,
+                        text = "/ ${product.unit.ifBlank { "Pcs" }}",
+                        fontSize = 11.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        modifier = Modifier.padding(bottom = 1.5.dp)
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
 
@@ -4883,102 +4889,109 @@ private fun ProductGridCard(
             )
 
             // ==========================================
-            // 3. BOTTOM ROW: Price on Left + Action Cluster on Right
+            // 3. PRICE ROW: Prominent, clear, horizontal & zero-wrapping
             // ==========================================
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = formatTaka(product.sellingPrice),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF047857),
+                    maxLines = 1,
+                    softWrap = false
+                )
+                Text(
+                    text = "/ ${product.unit.ifBlank { "Pcs" }}",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+
+            // ==========================================
+            // 4. ACTION ROW: [🛒 Cart] + [📦 ± Stock] + [🏷️ Code] + [⋮ Menu]
+            // ==========================================
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Price Display (৳550 /Pcs)
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    modifier = Modifier.weight(1f, fill = false)
+                // 1. 3D Cart Button
+                Button(
+                    onClick = onAddToCart,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(32.dp)
                 ) {
+                    Realistic3DSupermarketCartIcon(size = 14.dp)
+                    Spacer(Modifier.width(4.dp))
                     Text(
-                        text = formatTaka(product.sellingPrice),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF047857)
-                    )
-                    Text(
-                        text = "/${product.unit}",
-                        fontSize = 10.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        modifier = Modifier.padding(bottom = 1.dp)
+                        text = stringResource(R.string.cart),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
                     )
                 }
 
-                // Actions Cluster: [🛒 Cart] + [📦 ± Stock] + [🏷️ Code] + [⋮ Menu]
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // 2. 3D ± Stock Button
+                Surface(
+                    onClick = onAdjustStock,
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFEEF2FF),
+                    border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
+                    modifier = Modifier.height(32.dp)
                 ) {
-                    // 1. 3D Cart Button
-                    Button(
-                        onClick = onAddToCart,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = Color.White
-                        ),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                        modifier = Modifier.height(32.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
                     ) {
-                        Realistic3DSupermarketCartIcon(size = 14.dp)
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.cart), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Realistic3DKraftStockBoxIcon(size = 14.dp)
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            text = stringResource(R.string.products_adjust_stock_pm),
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4F46E5),
+                            maxLines = 1
+                        )
                     }
-
-                    // 2. 3D ± Stock Button
-                    Surface(
-                        onClick = onAdjustStock,
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFEEF2FF),
-                        border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
-                        modifier = Modifier.height(32.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        ) {
-                            Realistic3DKraftStockBoxIcon(size = 14.dp)
-                            Spacer(Modifier.width(3.dp))
-                            Text(
-                                text = stringResource(R.string.products_adjust_stock_pm),
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF4F46E5)
-                            )
-                        }
-                    }
-
-                    // 3. 3D Barcode Label Button
-                    Surface(
-                        onClick = onGenerateCode,
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Realistic3DHologramLaserCodeIcon(size = 15.dp)
-                        }
-                    }
-
-                    // 4. Overflow Menu [⋮]
-                    ProductOverflowMenu(
-                        productName = product.name,
-                        onEdit = onEdit,
-                        onAdjustStock = onAdjustStock,
-                        onGenerateCode = onGenerateCode,
-                        onDelete = onDelete,
-                        modifier = Modifier.size(32.dp)
-                    )
                 }
+
+                // 3. 3D Barcode Label Button
+                Surface(
+                    onClick = onGenerateCode,
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Realistic3DHologramLaserCodeIcon(size = 15.dp)
+                    }
+                }
+
+                // 4. Overflow Menu [⋮]
+                ProductOverflowMenu(
+                    productName = product.name,
+                    onEdit = onEdit,
+                    onAdjustStock = onAdjustStock,
+                    onGenerateCode = onGenerateCode,
+                    onDelete = onDelete,
+                    modifier = Modifier.size(32.dp)
+                )
             }
         }
     }

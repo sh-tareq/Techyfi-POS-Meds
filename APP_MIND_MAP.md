@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-15 (app version 2.6.67-V15-09-2026, build `Techyfi-POS-Final-V15-09-2026.apk` / `Techyfi-POS-Final-V67.apk`; versionCode 220943; DB schema version 28)
+Last updated: 2026-09-15 (app version 2.6.68-V15-09-2026, build `Techyfi-POS-Final-V15-09-2026.apk` / `Techyfi-POS-Final-V68.apk`; versionCode 220944; DB schema version 28)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -2561,10 +2561,16 @@ mindmap
     - Modernized `TabRow` to `PrimaryTabRow` in `DuesScreen.kt` and `LoyaltyScreen.kt`.
     - Migrated `Icons.Default.ExitToApp` to `Icons.AutoMirrored.Filled.ExitToApp` in `Navigation.kt`.
     - Added `@get:StringRes` property-getter annotations across all enums and filter data classes to eliminate Android Lint and Kotlin compiler property target warnings.
-  - **Production Build Deliverables (V67)**:
+  - **Production Build Deliverables (V67 & V68)**:
+    - `Techyfi-POS-Final-V68.apk` (versionCode 220944, versionName "2.6.68-V15-09-2026")
     - `Techyfi-POS-Final-V67.apk` (versionCode 220943, versionName "2.6.67-V15-09-2026")
     - `Techyfi-POS-Final-V15-09-2026.apk`
-    - Comprehensive UI/UX Touch Target Ergonomics:
+    - Product Catalog Layout Polish & Zero-Wrapping Price Formatting (V68):
+      - Restructured price & unit presentation across `ProductItemRow` (both tablet and phone layout modes) and `ProductGridCard`.
+      - Enforced `maxLines = 1` and `softWrap = false` with `Alignment.Bottom` baseline alignment on product selling price and unit labels (`formatTaka(product.sellingPrice) / unit`).
+      - Enforced explicit minimum column width and spacing (`min = 100.dp`, `Arrangement.spacedBy(4.dp)`) so large currency values never wrap or truncate awkwardly on small phone screens or dense tablet columns.
+      - Fallback default unit string to `"Pcs"` when product unit is blank or empty.
+    - Comprehensive UI/UX Touch Target Ergonomics (V67):
       - Customer CRM table action buttons enlarged to 38dp touch targets within widened 120dp action column.
       - Mobile customer card action buttons upgraded to 40dp touch targets.
       - Loyalty bottom sheet call and dismiss actions upgraded to 42dp touch targets.
