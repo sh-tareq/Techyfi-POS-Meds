@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-15 (app version 2.6.65-V15-09-2026, build `Techyfi-POS-Final-V15-09-2026.apk` / `Techyfi-POS-Final-V65.apk`; versionCode 220941; DB schema version 28)
+Last updated: 2026-09-15 (app version 2.6.66-V15-09-2026, build `Techyfi-POS-Final-V15-09-2026.apk` / `Techyfi-POS-Final-V66.apk`; versionCode 220942; DB schema version 28)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -2526,6 +2526,24 @@ mindmap
   - `Techyfi-POS-Final-V64.apk` (37.4 MB, versionCode 220940, versionName "2.6.64-V14-09-2026")
   - `Techyfi-POS-Final-V14-09-2026.apk` (37.4 MB)
   - Unit tests: 48/48 tests passing (`./gradlew testDebugUnitTest`).
+
+- **Version 2.6.66-V15-09-2026 (Build V66 — User-Configurable Default Cost Percentage & Profit Margin Estimation)**:
+  - **Dynamic Default Cost Margin Estimation Engine**:
+    - Replaced the hardcoded break-even 100% assumption for items without recorded purchase prices with a user-configurable default cost percentage stored in `SettingsDataStore` (`keyDefaultCostPercentage`).
+    - Added reactive state management in `POSViewModels.kt` (`SettingsViewModel.defaultCostPercentage` and `saveDefaultCostPercentage(Double)`).
+    - Updated `DataRepository.calculatePnlSummary(...)` and `SalesReportScreen.kt` to dynamically respect `defaultCostPercentage`:
+      - Items with recorded `buyPrice > 0.0` continue to calculate exact real cost: `qty * buyPrice`.
+      - Items missing a recorded cost gracefully apply the configured default cost ratio: `lineTotal * (defaultCostPercentage / 100.0)`.
+  - **Settings UI Integration**:
+    - Added an interactive "Default Cost Margin Estimation" card in `SettingsScreen.kt` under General Preferences.
+    - Features quick-preset segmented buttons (50%, 70%, 85%, 100% Break-even) and an explanatory caption displaying the corresponding implied profit margin.
+    - Fully localized in both English and Bengali (`strings.xml` and `values-bn/strings.xml`).
+  - **Top Bar Adaptive Synchronization**:
+    - Connected `SalesReportScreen`'s top app bar title to the centralized `isTablet` setting (`PosTopAppBarTitle(isTablet = isTablet)`).
+  - **Production Build Deliverables (V66)**:
+    - `Techyfi-POS-Final-V66.apk` (36.0 MB, versionCode 220942, versionName "2.6.66-V15-09-2026")
+    - `Techyfi-POS-Final-V15-09-2026.apk` (36.0 MB)
+    - Unit tests: 48/48 tests passing (`./gradlew testDebugUnitTest`).
 
 - **Version 2.6.65-V15-09-2026 (Build V65 — Comprehensive App Polish & Modernization)**:
   - **Layout Mode Unification & Responsive Top App Bars**:

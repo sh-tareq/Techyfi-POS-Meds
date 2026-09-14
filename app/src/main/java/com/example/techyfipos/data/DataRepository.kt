@@ -1716,6 +1716,7 @@ class DataRepository(
     val languageFlow: Flow<String> = settingsDataStore.languageFlow
     val themeModeFlow: Flow<String> = settingsDataStore.themeModeFlow
     val uiLayoutModeFlow: Flow<String> = settingsDataStore.uiLayoutModeFlow
+    val defaultCostPercentageFlow: Flow<Double> = settingsDataStore.defaultCostPercentageFlow
     val invoiceSettingsDataFlow: Flow<InvoiceSettingsData> = settingsDataStore.invoiceSettingsDataFlow
     val shopNameFlow: Flow<String> = settingsDataStore.shopNameFlow
     val shopAddressFlow: Flow<String> = settingsDataStore.shopAddressFlow
@@ -1732,6 +1733,10 @@ class DataRepository(
     val cartSnapshotFlow: Flow<String> = settingsDataStore.cartSnapshotFlow
     val quickSalePresetsFlow: Flow<List<QuickSalePreset>> = settingsDataStore.quickSalePresetsFlow
     val dueReminderTemplatesFlow: Flow<List<DueTemplate>> = settingsDataStore.dueReminderTemplatesFlow
+
+    suspend fun saveDefaultCostPercentage(percentage: Double) = withContext(Dispatchers.IO) {
+        settingsDataStore.saveDefaultCostPercentage(percentage)
+    }
 
     suspend fun saveQuickSalePresets(presets: List<QuickSalePreset>) = withContext(Dispatchers.IO) {
         settingsDataStore.saveQuickSalePresets(presets)

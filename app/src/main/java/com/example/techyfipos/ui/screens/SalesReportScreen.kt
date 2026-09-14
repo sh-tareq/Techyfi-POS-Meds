@@ -138,7 +138,7 @@ fun SalesReportScreen(
     salesViewModel: SalesViewModel,
     expenseViewModel: ExpenseViewModel? = null,
     supplierViewModel: SupplierViewModel? = null,
-    isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
+    isTablet: Boolean,
     onNavigateToExpenses: (() -> Unit)? = null,
     onNavigateToSuppliers: (() -> Unit)? = null,
     onBack: () -> Unit,

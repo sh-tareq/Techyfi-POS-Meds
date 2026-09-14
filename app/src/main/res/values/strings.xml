@@ -2073,6 +2073,12 @@
     <string name="cart_sale_error_toast">Error completing sale: %1$s</string>
     <string name="sales_history_sales_count">%1$d Sales</string>
     <string name="cart_items_badge_count">%1$d Items</string>
+
+    <!-- Default Cost Margin Estimation Settings -->
+    <string name="settings_default_cost_title">Default Cost Margin Estimation</string>
+    <string name="settings_default_cost_subtitle">Assumed cost for items with no recorded purchase price</string>
+    <string name="settings_default_cost_preset_breakeven">100% (Break-even)</string>
+    <string name="settings_default_cost_description">Unrecorded items assume %1$s%% cost (%2$s%% estimated profit margin) in reports.</string>
 </resources>
 
 

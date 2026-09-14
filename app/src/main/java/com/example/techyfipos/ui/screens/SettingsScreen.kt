@@ -238,6 +238,8 @@ private fun OptimizedSettingsHome(
     onLanguageSelected: (String) -> Unit,
     onThemeModeSelected: (String) -> Unit = {},
     onLayoutModeSelected: (String) -> Unit = {},
+    defaultCostPercentage: Double = 100.0,
+    onDefaultCostPercentageChanged: (Double) -> Unit = {},
     onExpensesClick: () -> Unit = {},
     onSuppliersClick: () -> Unit = {},
     onReceiptClick: () -> Unit,
@@ -403,6 +405,74 @@ private fun OptimizedSettingsHome(
                     ) 
                 }
             }
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Analytics,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        stringResource(R.string.settings_default_cost_title),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        stringResource(R.string.settings_default_cost_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                val presets = listOf(50.0, 70.0, 85.0, 100.0)
+                presets.forEachIndexed { index, pct ->
+                    SegmentedButton(
+                        selected = kotlin.math.abs(defaultCostPercentage - pct) < 0.5,
+                        onClick = { onDefaultCostPercentageChanged(pct) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = presets.size),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = if (pct == 100.0) stringResource(R.string.settings_default_cost_preset_breakeven) else "${pct.toInt()}%",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = stringResource(
+                    R.string.settings_default_cost_description,
+                    defaultCostPercentage.toInt().toString(),
+                    (100 - defaultCostPercentage.toInt()).coerceAtLeast(0).toString()
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
         }
     }
 
@@ -3335,6 +3405,7 @@ fun SettingsScreen(
     val currentLang by settingsViewModel.language.collectAsStateWithLifecycle()
     val currentThemeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
     val currentLayoutMode by settingsViewModel.uiLayoutMode.collectAsStateWithLifecycle()
+    val currentDefaultCostPercentage by settingsViewModel.defaultCostPercentage.collectAsStateWithLifecycle()
     val invoiceSettingsData by settingsViewModel.invoiceSettingsData.collectAsStateWithLifecycle()
     var currentSettings by remember { mutableStateOf(InvoiceSettingsData()) }
 
@@ -3780,6 +3851,8 @@ fun SettingsScreen(
                     onThemeModeSelected = settingsViewModel::saveThemeMode,
                     currentLayoutMode = currentLayoutMode,
                     onLayoutModeSelected = settingsViewModel::saveUiLayoutMode,
+                    defaultCostPercentage = currentDefaultCostPercentage,
+                    onDefaultCostPercentageChanged = settingsViewModel::saveDefaultCostPercentage,
                     onExpensesClick = onExpensesClick,
                     onSuppliersClick = onSuppliersClick,
                     onReceiptClick = { settingsPage = SettingsPage.RECEIPT },

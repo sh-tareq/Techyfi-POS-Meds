@@ -2073,5 +2073,11 @@
     <string name="cart_sale_error_toast">বিক্রয় সম্পন্ন করতে সমস্যা হয়েছে: %1$s</string>
     <string name="sales_history_sales_count">%1$dটি বিক্রয়</string>
     <string name="cart_items_badge_count">%1$dটি আইটেম</string>
+
+    <!-- Default Cost Margin Estimation Settings -->
+    <string name="settings_default_cost_title">অনিবন্ধিত পণ্যের ক্রয়মূল্য প্রাক্কলন</string>
+    <string name="settings_default_cost_subtitle">ক্রয়মূল্য ছাড়া বিক্রিত পণ্যের অনুমিত ক্রয়মূল্য শতকরা হার</string>
+    <string name="settings_default_cost_preset_breakeven">১০০% (ব্রেক-ইভেন)</string>
+    <string name="settings_default_cost_description">ক্রয়মূল্যবিহীন পণ্যের জন্য রিপোর্টে %1$s%% ক্রয়মূল্য (%2$s%% সম্ভাব্য লাভ) ধরা হবে।</string>
 </resources>
 

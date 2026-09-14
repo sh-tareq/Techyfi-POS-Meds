@@ -44,6 +44,7 @@ class SettingsDataStore(private val context: Context) {
         val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         val UI_LAYOUT_MODE_KEY = stringPreferencesKey("ui_layout_mode")
         val RETURN_AUDIT_PRESETS_KEY = stringPreferencesKey("custom_audit_presets_json")
+        val DEFAULT_COST_PERCENTAGE_KEY = androidx.datastore.preferences.core.doublePreferencesKey("default_cost_percentage")
         val DEFAULT_NOTE_PRESETS = listOf(
             "No Warranty",
             "7 Days Replacement",
@@ -61,6 +62,10 @@ class SettingsDataStore(private val context: Context) {
 
     val uiLayoutModeFlow: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[UI_LAYOUT_MODE_KEY] ?: "AUTO"
+    }
+
+    val defaultCostPercentageFlow: Flow<Double> = context.dataStore.data.map { preferences ->
+        preferences[DEFAULT_COST_PERCENTAGE_KEY] ?: 100.0
     }
 
     val driveRetentionCountFlow: Flow<Int> = context.dataStore.data.map { preferences ->
@@ -374,6 +379,12 @@ class SettingsDataStore(private val context: Context) {
                 legacyPrefs.edit().clear().apply()
             }
         } catch (_: Exception) {}
+    }
+
+    suspend fun saveDefaultCostPercentage(percentage: Double) {
+        context.dataStore.edit { preferences ->
+            preferences[DEFAULT_COST_PERCENTAGE_KEY] = percentage.coerceIn(0.0, 100.0)
+        }
     }
 
     suspend fun clearAll() {

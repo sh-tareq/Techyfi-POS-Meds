@@ -1756,6 +1756,8 @@ fun OperationHubCard(
         label = "tile_scale"
     )
 
+    val effectiveBadgeColor = if (item.isLocked) Color(0xFF64748B) else item.badgeColor
+
     Card(
         onClick = {
             if (item.isLocked) {
@@ -1768,23 +1770,26 @@ fun OperationHubCard(
         interactionSource = interactionSource,
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (item.isSelected) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            containerColor = when {
+                item.isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                item.isLocked -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
             }
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = if (item.isSelected) 1.5.dp else 1.dp,
-            color = if (item.isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            color = when {
+                item.isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                item.isLocked -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            }
         ),
         modifier = modifier
             .fillMaxWidth()
             .graphicsLayer {
                 scaleX = animatedScale
                 scaleY = animatedScale
-                alpha = if (item.isLocked) 0.72f else 1f
+                alpha = if (item.isLocked) 0.50f else 1f
             }
     ) {
         if (isGrid && !isTablet) {
@@ -1804,35 +1809,63 @@ fun OperationHubCard(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(RoundedCornerShape(11.dp))
-                            .background(item.badgeColor.copy(alpha = 0.12f))
+                            .background(effectiveBadgeColor.copy(alpha = 0.12f))
                             .border(
                                 1.dp,
-                                item.badgeColor.copy(alpha = 0.25f),
+                                effectiveBadgeColor.copy(alpha = 0.25f),
                                 RoundedCornerShape(11.dp)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Animated3DNavItemIcon(
                             type = item.navType,
-                            selected = true,
+                            selected = !item.isLocked,
                             fontSize = 18.sp,
                             sellIconSize = 18.dp,
                             modifier = Modifier.size(24.dp)
                         )
+                        if (item.isLocked) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.38f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
 
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = item.badgeColor.copy(alpha = 0.12f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, item.badgeColor.copy(alpha = 0.32f))
+                        color = if (item.isLocked) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f) else effectiveBadgeColor.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (item.isLocked) MaterialTheme.colorScheme.error.copy(alpha = 0.4f) else effectiveBadgeColor.copy(alpha = 0.32f))
                     ) {
-                        Text(
-                            text = item.badge,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = item.badgeColor,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
                             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                        )
+                        ) {
+                            if (item.isLocked) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(10.dp)
+                                )
+                            }
+                            Text(
+                                text = item.badge,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (item.isLocked) MaterialTheme.colorScheme.error else effectiveBadgeColor
+                            )
+                        }
                     }
                 }
 
@@ -1847,7 +1880,7 @@ fun OperationHubCard(
                         text = item.title,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = if (item.isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) else MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1855,7 +1888,7 @@ fun OperationHubCard(
                         Icon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(11.dp)
                         )
                     }
@@ -1867,7 +1900,7 @@ fun OperationHubCard(
                 Text(
                     text = item.subtitle,
                     fontSize = 10.5.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (item.isLocked) 0.6f else 1f),
                     lineHeight = 13.5.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -1887,21 +1920,36 @@ fun OperationHubCard(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(item.badgeColor.copy(alpha = 0.12f))
+                        .background(effectiveBadgeColor.copy(alpha = 0.12f))
                         .border(
                             1.dp,
-                            item.badgeColor.copy(alpha = 0.25f),
+                            effectiveBadgeColor.copy(alpha = 0.25f),
                             RoundedCornerShape(12.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Animated3DNavItemIcon(
                         type = item.navType,
-                        selected = true,
+                        selected = !item.isLocked,
                         fontSize = 20.sp,
                         sellIconSize = 20.dp,
                         modifier = Modifier.size(26.dp)
                     )
+                    if (item.isLocked) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.38f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
 
                 // Title & Subtitle Column
@@ -1917,7 +1965,7 @@ fun OperationHubCard(
                             text = item.title,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = if (item.isLocked) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) else MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1925,7 +1973,7 @@ fun OperationHubCard(
                             Icon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(12.dp)
                             )
                         }
@@ -1934,38 +1982,53 @@ fun OperationHubCard(
                     Text(
                         text = item.subtitle,
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (item.isLocked) 0.6f else 1f),
                         lineHeight = 14.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Trailing Section: Badge & Chevron
+                // Trailing Section: Badge & Lock indicator
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Surface(
                         shape = RoundedCornerShape(7.dp),
-                        color = item.badgeColor.copy(alpha = 0.12f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, item.badgeColor.copy(alpha = 0.32f))
+                        color = if (item.isLocked) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f) else effectiveBadgeColor.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (item.isLocked) MaterialTheme.colorScheme.error.copy(alpha = 0.4f) else effectiveBadgeColor.copy(alpha = 0.32f))
                     ) {
-                        Text(
-                            text = item.badge,
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = item.badgeColor,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp)
-                        )
+                        ) {
+                            if (item.isLocked) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(10.dp)
+                                )
+                            }
+                            Text(
+                                text = item.badge,
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (item.isLocked) MaterialTheme.colorScheme.error else effectiveBadgeColor
+                            )
+                        }
                     }
 
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
-                        modifier = Modifier.size(16.dp)
-                    )
+                    if (!item.isLocked) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }

@@ -81,8 +81,8 @@ internal fun isSyntheticSaleBarcode(barcode: String): Boolean =
  * without a recorded purchasePriceAtSale default conservatively to break-even (cost = sale price)
  * rather than fabricating an arbitrary 30% profit that distorts low-margin grocery reports.
  */
-internal fun fallbackPurchasePrice(barcode: String, price: Double): Double =
-    if (isSyntheticSaleBarcode(barcode)) 0.0 else price
+internal fun fallbackPurchasePrice(barcode: String, price: Double, defaultCostPercentage: Double = 100.0): Double =
+    if (isSyntheticSaleBarcode(barcode)) 0.0 else price * (defaultCostPercentage.coerceIn(0.0, 100.0) / 100.0)
 
 internal data class HeldCartPayload(
     val items: List<CartItem>,
@@ -1608,6 +1608,12 @@ data class InvoiceProfitSummary(
 )
 
 class SalesViewModel(private val repository: DataRepository) : ViewModel() {
+    val defaultCostPercentage: StateFlow<Double> = repository.defaultCostPercentageFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 100.0)
+
+    fun getFallbackCost(barcode: String, price: Double): Double =
+        fallbackPurchasePrice(barcode, price, defaultCostPercentage.value)
+
     val salesWithItems: StateFlow<List<SaleWithItems>> = repository.allSalesWithItems
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -1668,7 +1674,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         var totalGrossCogs = 0.0
         val itemsProfitList = saleWithItems.items.map { item ->
             val liveCost = productMap[item.productBarcode]?.purchasePrice
-            val cost = item.purchasePriceAtSale ?: liveCost ?: fallbackPurchasePrice(item.productBarcode, item.price)
+            val cost = item.purchasePriceAtSale ?: liveCost ?: getFallbackCost(item.productBarcode, item.price)
             val lineRev = item.price * item.quantity
             val lineC = cost * item.quantity
             val lineP = lineRev - lineC
@@ -1698,7 +1704,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         for (retItem in returnedItems) {
             val originalSaleItem = saleWithItems.items.find { it.productBarcode == retItem.productBarcode }
             val liveCost = productMap[retItem.productBarcode]?.purchasePrice
-            val unitCost = originalSaleItem?.purchasePriceAtSale ?: liveCost ?: fallbackPurchasePrice(retItem.productBarcode, retItem.price)
+            val unitCost = originalSaleItem?.purchasePriceAtSale ?: liveCost ?: getFallbackCost(retItem.productBarcode, retItem.price)
             returnCogsReversal += unitCost * retItem.quantity
         }
 
@@ -1774,7 +1780,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             for (item in swi.items) {
                 val purchase = item.purchasePriceAtSale
                     ?: fallbackProducts[item.productBarcode]
-                    ?: fallbackPurchasePrice(item.productBarcode, item.price)
+                    ?: getFallbackCost(item.productBarcode, item.price)
                 profitSum += (item.price - purchase) * item.quantity
             }
         }
@@ -1824,7 +1830,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
                 val matchingSaleItem = originalSaleItems.firstOrNull { it.productBarcode == item.productBarcode }
                 val purchase = matchingSaleItem?.purchasePriceAtSale
                     ?: repository.getProductByBarcode(item.productBarcode)?.purchasePrice
-                    ?: fallbackPurchasePrice(item.productBarcode, item.price)
+                    ?: getFallbackCost(item.productBarcode, item.price)
                 returnedCost += purchase * item.quantity
             }
             // Profit reversed is the net revenue actually reversed minus the returned inventory's
@@ -1935,7 +1941,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
                 // lookup / estimate, same as before.
                 val purchase = item.purchasePriceAtSale ?: productCosts.getOrPut(item.productBarcode) {
                     repository.getProductByBarcode(item.productBarcode)?.purchasePrice
-                        ?: fallbackPurchasePrice(item.productBarcode, item.price)
+                        ?: getFallbackCost(item.productBarcode, item.price)
                 }
                 val effectivePrice = if (isTaxInclusive) item.price / (1.0 + swi.sale.taxRate / 100.0) else item.price
                 val itemProfit = (effectivePrice - purchase) * item.quantity
@@ -2631,6 +2637,9 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     val uiLayoutMode: StateFlow<String> = repository.uiLayoutModeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "AUTO")
 
+    val defaultCostPercentage: StateFlow<Double> = repository.defaultCostPercentageFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 100.0)
+
     val shopName: StateFlow<String> = repository.shopNameFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "My Shop")
 
@@ -2709,6 +2718,12 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     fun saveUiLayoutMode(mode: String) {
         viewModelScope.launch {
             repository.saveUiLayoutMode(mode)
+        }
+    }
+
+    fun saveDefaultCostPercentage(percentage: Double) {
+        viewModelScope.launch {
+            repository.saveDefaultCostPercentage(percentage)
         }
     }
 
