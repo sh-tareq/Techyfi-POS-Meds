@@ -281,6 +281,7 @@ fun CartScreen(
     activePermissions: Set<String> = emptySet(),
     onBack: () -> Unit,
     onNavigateToProducts: (String) -> Unit = {},
+    isTablet: Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -490,8 +491,9 @@ fun CartScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = if (showCheckout) stringResource(R.string.complete_sale) else stringResource(R.string.cart),
-                        metricBadge = if (cartItems.isNotEmpty() && !showCheckout) "${cartItems.size} Items" else null,
+                        metricBadge = if (cartItems.isNotEmpty() && !showCheckout) stringResource(R.string.cart_items_badge_count, cartItems.size) else null,
                         badgeColor = PosSectionColors.Cart,
+                        isTablet = isTablet,
                         icon = { size ->
                             if (showCheckout) {
                                 Realistic3DSellTerminalIcon(size = size)
@@ -2357,7 +2359,7 @@ fun CartScreen(
                                         ))
                                     } catch (e: Exception) {
                                         android.util.Log.e("CartScreen", "Error completing sale", e)
-                                        Toast.makeText(context, "Error completing sale: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, context.getString(R.string.cart_sale_error_toast, e.localizedMessage ?: ""), Toast.LENGTH_LONG).show()
                                     } finally {
                                         isCompletingSale = false
                                     }
@@ -2620,7 +2622,7 @@ fun CartScreen(
                         ))
                     } catch (e: Exception) {
                         android.util.Log.e("CartScreen", "Error completing sale", e)
-                        Toast.makeText(context, "Error completing sale: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.cart_sale_error_toast, e.localizedMessage ?: ""), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -2711,7 +2713,7 @@ fun CartScreen(
             onResume = { cart ->
                 cartViewModel.restoreHeldCart(cart) { result ->
                     Toast.makeText(context,
-                        if (result.unavailableLines > 0) "Restored available items; ${result.unavailableLines} unavailable line(s) remain saved"
+                        if (result.unavailableLines > 0) context.getString(R.string.held_cart_restored_partial_toast, result.unavailableLines)
                         else heldCartRestoredToastTemplate.format(cart.title),
                         if (result.unavailableLines > 0) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
                     ).show()

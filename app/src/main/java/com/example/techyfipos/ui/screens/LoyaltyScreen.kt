@@ -56,6 +56,7 @@ fun LoyaltyScreen(
     customerViewModel: CustomerViewModel? = null,
     onBack: () -> Unit,
     onStartSaleForCustomer: ((Customer) -> Unit)? = null,
+    isTablet: Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -115,6 +116,7 @@ fun LoyaltyScreen(
                             title = stringResource(R.string.loyalty_screen_title),
                             metricBadge = if (members.isNotEmpty()) stringResource(R.string.loyalty_metric_badge_members, members.size) else null,
                             badgeColor = PosSectionColors.Loyalty,
+                            isTablet = isTablet,
                             icon = { size -> Realistic3DLoyaltyStarIcon(size = size) }
                         )
                 }
@@ -249,7 +251,7 @@ fun LoyaltyScreen(
             onConfirmRedeem = { points, reason ->
                 loyaltyViewModel.redeemPoints(member.phone, points, reason)
                 memberToQuickRedeem = null
-                Toast.makeText(context, "Redeemed $points points for ${member.name}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.loyalty_redeemed_points_toast, points, member.name), Toast.LENGTH_SHORT).show()
             }
         )
     }
@@ -312,7 +314,7 @@ fun LoyaltyScreen(
             onSave = { phone, name, tier ->
                 loyaltyViewModel.upsertMember(phone, name, tier)
                 showAddMemberDialog = false
-                Toast.makeText(context, "Loyalty member registered", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.loyalty_member_registered_toast), Toast.LENGTH_SHORT).show()
             },
             onViewExistingMember = { existing ->
                 showAddMemberDialog = false
@@ -330,7 +332,7 @@ fun LoyaltyScreen(
                 LoyaltySettingsHelper.saveSettings(context, updated)
                 programSettings = updated
                 showSettingsDialog = false
-                Toast.makeText(context, "Loyalty program settings saved", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.loyalty_settings_saved_toast), Toast.LENGTH_SHORT).show()
             }
         )
     }
@@ -411,7 +413,7 @@ fun LoyaltyScreen(
                     tag = tag,
                     creditLimit = creditLimit,
                     onSuccess = {
-                        Toast.makeText(context, "Customer saved successfully", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.loyalty_customer_saved_toast), Toast.LENGTH_SHORT).show()
                         customerToEditInLoyalty = null
                         customerViewModel.loadCustomerDossier(phone)
                     },
@@ -1523,7 +1525,7 @@ private fun LoyaltyAuditLedgerSheet(
             }
 
             // Tabs: Summary vs Ledger
-            TabRow(selectedTabIndex = selectedTab) {
+            PrimaryTabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },

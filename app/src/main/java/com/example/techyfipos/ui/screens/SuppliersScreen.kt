@@ -66,6 +66,7 @@ fun SuppliersScreen(
     isSupervisor: Boolean = false,
     activePermissions: Set<String> = emptySet(),
     authViewModel: AuthViewModel? = null,
+    isTablet: Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -132,6 +133,7 @@ fun SuppliersScreen(
                         title = stringResource(R.string.supplier_screen_title),
                         metricBadge = "${suppliers.size} Vendors",
                         badgeColor = PosSectionColors.Suppliers,
+                        isTablet = isTablet,
                         icon = { size -> Realistic3DSupplierTruckIcon(size = size) }
                     )
                 },
@@ -404,6 +406,7 @@ fun SuppliersScreen(
                             shadowElevation = if (isAll) 2.dp else 0.dp,
                             modifier = Modifier
                                 .weight(1.1f)
+                                .defaultMinSize(minHeight = 44.dp)
                                 .clickable { dueFilter = SupplierDueFilter.ALL }
                         ) {
                             Row(
@@ -442,6 +445,7 @@ fun SuppliersScreen(
                             shadowElevation = if (isDue) 2.dp else 0.dp,
                             modifier = Modifier
                                 .weight(1.3f)
+                                .defaultMinSize(minHeight = 44.dp)
                                 .clickable { dueFilter = SupplierDueFilter.HAS_DUE }
                         ) {
                             Row(
@@ -480,6 +484,7 @@ fun SuppliersScreen(
                             shadowElevation = if (isSettled) 2.dp else 0.dp,
                             modifier = Modifier
                                 .weight(1.2f)
+                                .defaultMinSize(minHeight = 44.dp)
                                 .clickable { dueFilter = SupplierDueFilter.SETTLED }
                         ) {
                             Row(

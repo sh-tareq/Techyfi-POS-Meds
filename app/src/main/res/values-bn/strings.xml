@@ -2032,5 +2032,46 @@
     <string name="voucher_err_zero_balance">ভাউচারের ব্যালেন্স শূন্য</string>
     <string name="voucher_err_failed">ভাউচার যাচাই করতে ব্যর্থ হয়েছে</string>
     <string name="voucher_toast_applied">ভাউচার যোগ করা হয়েছে: %1$s</string>
+
+    <!-- V65 Comprehensive Audit & Localization Strings -->
+    <string name="held_cart_restored_partial_toast">উপলব্ধ পণ্যসমূহ রিস্টোর করা হয়েছে; %1$d টি অনুপলব্ধ আইটেম সেভ রাখা হয়েছে</string>
+    <string name="customer_dossier_no_purchase_items">এখনও কোনো ক্রয়ের বিবরণ নেই</string>
+    <string name="customer_dossier_bought_times">%1$d বার কেনা হয়েছে</string>
+    <string name="customer_dossier_no_invoices">কোনো বিক্রয় ইনভয়েস পাওয়া যায়নি</string>
+    <string name="customer_dossier_tap_to_view_receipt">• রসিদ দেখতে ট্যাপ করুন</string>
+    <string name="customer_dossier_note_placeholder">গ্রাহকের সাথে আলোচনা, বকেয়া পরিশোধের প্রতিশ্রুতি বা পাইকারি রেট লিখুন...</string>
+    <string name="customer_dossier_no_due_payments">বকেয়া পরিশোধের কোনো ইতিহাস নেই</string>
+    <string name="customer_dossier_no_credit_transactions">স্টোর ক্রেডিটের কোনো লেনদেন নেই</string>
+    <string name="note_cat_general">সাধারণ</string>
+    <string name="note_cat_payment_promise">পরিশোধের প্রতিশ্রুতি</string>
+    <string name="note_cat_wholesale_quote">পাইকারি দর</string>
+    <string name="note_cat_complaint">অভিযোগ</string>
+    <string name="products_bulk_price_updated">%1$d টি পণ্যের মূল্য আপডেট করা হয়েছে</string>
+    <string name="products_bulk_price_failed">মূল্য আপডেট ব্যর্থ হয়েছে: %1$s</string>
+    <string name="products_bulk_category_updated">%1$d টি পণ্যের ক্যাটাগরি আপডেট করা হয়েছে</string>
+    <string name="products_bulk_category_failed">ক্যাটাগরি আপডেট ব্যর্থ হয়েছে: %1$s</string>
+    <string name="products_bulk_deleted">%1$d টি পণ্য মুছে ফেলা হয়েছে</string>
+    <string name="products_bulk_delete_failed">পণ্য মুছতে ব্যর্থ হয়েছে: %1$s</string>
+    <string name="settings_reset_owner_only_toast">শুধুমাত্র দোকানের মালিক ফ্যাক্টরি রিসেট করতে পারবেন</string>
+    <string name="settings_restore_owner_only_toast">শুধুমাত্র দোকানের মালিক ব্যাকআপ রিস্টোর করতে পারবেন</string>
+    <string name="settings_encrypted_backup_restored_toast">এনক্রিপ্ট করা ব্যাকআপ সফলভাবে রিস্টোর হয়েছে!</string>
+    <string name="settings_encrypted_backup_decrypt_failed">ডিক্রিপশন ব্যর্থ হয়েছে: ভুল পাসওয়ার্ড অথবা ফাইলটি ক্ষতিগ্রস্ত।</string>
+    <string name="z_report_x_saved_toast">✅ এক্স-রিপোর্ট গ্যালারি/ডাউনলোড ফোল্ডারে জেপিজি হিসেবে সেভ হয়েছে</string>
+    <string name="z_report_z_saved_toast">✅ জেড-রিপোর্ট গ্যালারি/ডাউনলোড ফোল্ডারে জেপিজি হিসেবে সেভ হয়েছে</string>
+    <string name="z_report_save_failed_toast">⚠️ ছবি সেভ করতে ব্যর্থ হয়েছে</string>
+    <string name="z_report_save_error_toast">সেভ করতে সমস্যা: %1$s</string>
+    <string name="z_report_print_error_toast">প্রিন্ট করতে সমস্যা: %1$s</string>
+    <string name="loyalty_redeemed_points_toast">%2$s এর জন্য %1$d পয়েন্ট রিডিম করা হয়েছে</string>
+    <string name="loyalty_member_registered_toast">লয়াল্টি মেম্বার সফলভাবে নিবন্ধিত হয়েছে</string>
+    <string name="loyalty_settings_saved_toast">লয়াল্টি প্রোগ্রামের সেটিংস সংরক্ষিত হয়েছে</string>
+    <string name="loyalty_customer_saved_toast">গ্রাহকের তথ্য সফলভাবে সংরক্ষণ করা হয়েছে</string>
+    <string name="scanner_stock_saved_toast">✅ %1$s এর স্টক সংরক্ষিত: %2$s টি</string>
+    <string name="users_staff_added_toast">স্টাফ অ্যাকাউন্ট সফলভাবে যোগ করা হয়েছে</string>
+    <string name="sales_report_export_permission_error">এক্সপোর্ট ব্যর্থ হয়েছে। অনুগ্রহ করে স্টোরেজ পারমিশন চেক করুন।</string>
+    <string name="sales_report_export_access_error">টার্গেট ফাইল অ্যাক্সেস করা যায়নি।</string>
+    <string name="sales_report_export_general_error">এক্সপোর্ট সমস্যা: %1$s</string>
+    <string name="cart_sale_error_toast">বিক্রয় সম্পন্ন করতে সমস্যা হয়েছে: %1$s</string>
+    <string name="sales_history_sales_count">%1$dটি বিক্রয়</string>
+    <string name="cart_items_badge_count">%1$dটি আইটেম</string>
 </resources>
 

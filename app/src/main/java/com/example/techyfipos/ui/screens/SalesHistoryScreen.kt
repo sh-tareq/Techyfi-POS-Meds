@@ -55,7 +55,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-private enum class HistoryReportPeriod(@StringRes val labelRes: Int) {
+private enum class HistoryReportPeriod(@get:StringRes val labelRes: Int) {
     TODAY(R.string.history_period_today),
     WEEK(R.string.history_period_week),
     MONTH(R.string.history_period_month),
@@ -64,13 +64,13 @@ private enum class HistoryReportPeriod(@StringRes val labelRes: Int) {
     CUSTOM(R.string.dues_period_custom_range)
 }
 
-private enum class HistoryCustomerFilter(@StringRes val labelRes: Int) {
+private enum class HistoryCustomerFilter(@get:StringRes val labelRes: Int) {
     ALL(R.string.history_customer_all),
     SAVED_CUSTOMER(R.string.history_customer_saved),
     WALK_IN(R.string.history_customer_walkin)
 }
 
-private enum class HistorySortOption(@StringRes val labelRes: Int) {
+private enum class HistorySortOption(@get:StringRes val labelRes: Int) {
     NEWEST_FIRST(R.string.history_sort_newest),
     HIGHEST_TOTAL(R.string.history_sort_highest_total),
     LOWEST_TOTAL(R.string.history_sort_lowest_total),
@@ -115,6 +115,7 @@ fun SalesHistoryScreen(
     onBack: () -> Unit,
     onNavigateToReport: () -> Unit,
     onNavigateToCart: (() -> Unit)? = null,
+    isTablet: Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -255,14 +256,15 @@ fun SalesHistoryScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.sales_history),
-                        metricBadge = if (filteredSales.isNotEmpty()) "${filteredSales.size} Sales" else null,
+                        metricBadge = if (filteredSales.isNotEmpty()) stringResource(R.string.sales_history_sales_count, filteredSales.size) else null,
                         badgeColor = PosSectionColors.SalesHistory,
+                        isTablet = isTablet,
                         icon = { size -> Realistic3DHistoryClockIcon(size = size) }
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 actions = {

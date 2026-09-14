@@ -2032,6 +2032,47 @@
     <string name="voucher_err_zero_balance">Voucher balance is zero</string>
     <string name="voucher_err_failed">Failed to verify voucher</string>
     <string name="voucher_toast_applied">Voucher applied: %1$s</string>
+
+    <!-- V65 Comprehensive Audit & Localization Strings -->
+    <string name="held_cart_restored_partial_toast">Restored available items; %1$d unavailable line(s) remain saved</string>
+    <string name="customer_dossier_no_purchase_items">No purchase items recorded yet</string>
+    <string name="customer_dossier_bought_times">Bought %1$d times</string>
+    <string name="customer_dossier_no_invoices">No sales invoices found</string>
+    <string name="customer_dossier_tap_to_view_receipt">• Tap to view receipt</string>
+    <string name="customer_dossier_note_placeholder">Log customer interaction, payment promise, wholesale rate...</string>
+    <string name="customer_dossier_no_due_payments">No due payment history recorded</string>
+    <string name="customer_dossier_no_credit_transactions">No store credit transactions recorded yet</string>
+    <string name="note_cat_general">General</string>
+    <string name="note_cat_payment_promise">Payment Promise</string>
+    <string name="note_cat_wholesale_quote">Wholesale Quote</string>
+    <string name="note_cat_complaint">Complaint</string>
+    <string name="products_bulk_price_updated">Prices updated for %1$d products</string>
+    <string name="products_bulk_price_failed">Price update failed: %1$s</string>
+    <string name="products_bulk_category_updated">Category updated for %1$d products</string>
+    <string name="products_bulk_category_failed">Category update failed: %1$s</string>
+    <string name="products_bulk_deleted">Deleted %1$d products</string>
+    <string name="products_bulk_delete_failed">Bulk delete failed: %1$s</string>
+    <string name="settings_reset_owner_only_toast">Only the shop owner can perform a factory reset</string>
+    <string name="settings_restore_owner_only_toast">Only the shop owner can restore database backups</string>
+    <string name="settings_encrypted_backup_restored_toast">Encrypted backup restored successfully!</string>
+    <string name="settings_encrypted_backup_decrypt_failed">Decryption failed: Incorrect password or corrupted file.</string>
+    <string name="z_report_x_saved_toast">✅ X-Report saved to gallery/downloads as JPEG</string>
+    <string name="z_report_z_saved_toast">✅ Z-Report saved to gallery/downloads as JPEG</string>
+    <string name="z_report_save_failed_toast">⚠️ Failed to save image</string>
+    <string name="z_report_save_error_toast">Save error: %1$s</string>
+    <string name="z_report_print_error_toast">Print error: %1$s</string>
+    <string name="loyalty_redeemed_points_toast">Redeemed %1$d points for %2$s</string>
+    <string name="loyalty_member_registered_toast">Loyalty member registered</string>
+    <string name="loyalty_settings_saved_toast">Loyalty program settings saved</string>
+    <string name="loyalty_customer_saved_toast">Customer saved successfully</string>
+    <string name="scanner_stock_saved_toast">✅ %1$s stock saved: %2$s units</string>
+    <string name="users_staff_added_toast">Staff account added</string>
+    <string name="sales_report_export_permission_error">Export failed. Please check storage permissions.</string>
+    <string name="sales_report_export_access_error">Unable to access target file.</string>
+    <string name="sales_report_export_general_error">Export error: %1$s</string>
+    <string name="cart_sale_error_toast">Error completing sale: %1$s</string>
+    <string name="sales_history_sales_count">%1$d Sales</string>
+    <string name="cart_items_badge_count">%1$d Items</string>
 </resources>
 
 

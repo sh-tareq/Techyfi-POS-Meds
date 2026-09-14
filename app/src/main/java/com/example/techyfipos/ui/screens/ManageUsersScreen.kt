@@ -43,6 +43,7 @@ import com.example.techyfipos.ui.viewmodel.AuthViewModel
 fun ManageUsersScreen(
     authViewModel: AuthViewModel,
     onBack: () -> Unit,
+    isTablet: Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -66,6 +67,7 @@ fun ManageUsersScreen(
                         title = stringResource(R.string.users_title),
                         metricBadge = stringResource(R.string.users_metric_badge_rbac_active),
                         badgeColor = PosSectionColors.Users,
+                        isTablet = isTablet,
                         icon = { size -> Realistic3DCustomerHubIcon(size = size) }
                     )
                 },
@@ -126,7 +128,7 @@ fun ManageUsersScreen(
             onDismiss = { showAddDialog = false },
             onSuccess = {
                 showAddDialog = false
-                Toast.makeText(context, "Staff account added", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.users_staff_added_toast), Toast.LENGTH_SHORT).show()
             }
         )
     }
@@ -322,7 +324,7 @@ private fun StaffUserCard(
                     onClick = onPermissions,
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    modifier = Modifier.height(36.dp)
+                    modifier = Modifier.defaultMinSize(minHeight = 40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Tune,

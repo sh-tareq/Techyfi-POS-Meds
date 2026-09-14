@@ -74,6 +74,7 @@ fun StoreCreditVoucherSlipDialog(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
 
     var selectedRollWidth by rememberSaveable {

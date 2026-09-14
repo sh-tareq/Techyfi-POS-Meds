@@ -95,7 +95,7 @@ private fun ReportTab.localizedTitle(): String = when (this) {
     ReportTab.PAYMENTS -> stringResource(R.string.sales_report_tab_payments)
 }
 
-private enum class TrendMetric(@androidx.annotation.StringRes val labelRes: Int) {
+private enum class TrendMetric(@get:androidx.annotation.StringRes val labelRes: Int) {
     SALES(R.string.sales_report_sales_volume),
     PROFIT(R.string.sales_report_net_profit_metric)
 }
@@ -198,14 +198,14 @@ fun SalesReportScreen(
                         if (success) {
                             Toast.makeText(context, exportSuccessToast, Toast.LENGTH_LONG).show()
                         } else {
-                            Toast.makeText(context, "Export failed. Please check storage permissions.", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, context.getString(R.string.sales_report_export_permission_error), Toast.LENGTH_LONG).show()
                         }
                     } else {
-                        Toast.makeText(context, "Unable to access target file.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.sales_report_export_access_error), Toast.LENGTH_LONG).show()
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("SalesReportScreen", "Excel export failed", e)
-                    Toast.makeText(context, "Export error: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.sales_report_export_general_error, e.localizedMessage ?: "Unknown error"), Toast.LENGTH_LONG).show()
                 }
             }
         }

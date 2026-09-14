@@ -423,14 +423,15 @@ fun ScannerScreen(
                         val p = scannedProduct
                         if (p != null) {
                             scannerViewModel.saveStockQty(p, newQty)
+                            val stockSavedMsg = context.getString(R.string.scanner_stock_saved_toast, p.name, newQty.toString())
                             Toast.makeText(
                                 context,
-                                "✅ ${p.name} stock saved: $newQty units",
+                                stockSavedMsg,
                                 Toast.LENGTH_SHORT
                             ).show()
                             scope.launch {
                                 snackbarHostState.showSnackbar(
-                                    message = "✅ ${p.name} stock saved (${newQty} units)",
+                                    message = stockSavedMsg,
                                     duration = SnackbarDuration.Short
                                 )
                             }
@@ -509,8 +510,8 @@ fun ScannerScreen(
                     onResume = { cart ->
                         cartViewModel.restoreHeldCart(cart) { result ->
                             Toast.makeText(context,
-                                if (result.unavailableLines > 0) "Restored available items; ${result.unavailableLines} unavailable line(s) remain saved"
-                                else "Restored cart for ${cart.title}",
+                                if (result.unavailableLines > 0) context.getString(R.string.held_cart_restored_partial_toast, result.unavailableLines)
+                                else context.getString(R.string.held_cart_restored_toast, cart.title),
                                 if (result.unavailableLines > 0) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
                             ).show()
                         }

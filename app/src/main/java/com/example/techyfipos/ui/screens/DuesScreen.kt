@@ -106,14 +106,14 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-private enum class DuesTab(@StringRes val labelRes: Int) {
+private enum class DuesTab(@get:StringRes val labelRes: Int) {
     OUTSTANDING(R.string.dues_tab_outstanding),
     OVERDUE(R.string.dues_tab_overdue),
     SETTLED(R.string.dues_tab_settled),
     PAYMENTS(R.string.dues_tab_payments)
 }
 
-private enum class DuePeriodFilter(@StringRes val labelRes: Int) {
+private enum class DuePeriodFilter(@get:StringRes val labelRes: Int) {
     ALL_TIME(R.string.dues_period_all_dates),
     TODAY(R.string.dues_period_today),
     THIS_WEEK(R.string.dues_period_this_week),
@@ -121,7 +121,7 @@ private enum class DuePeriodFilter(@StringRes val labelRes: Int) {
     CUSTOM(R.string.dues_period_custom_range)
 }
 
-private enum class DuesSort(@StringRes val labelRes: Int) {
+private enum class DuesSort(@get:StringRes val labelRes: Int) {
     HIGHEST(R.string.dues_sort_highest),
     RECENT(R.string.dues_sort_recent),
     OLDEST(R.string.dues_sort_oldest)
@@ -136,6 +136,7 @@ fun DuesScreen(
     isOwner: Boolean = true,
     isSupervisor: Boolean = false,
     activePermissions: Set<String> = emptySet(),
+    isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
     onBack: () -> Unit,
     onStartSaleForCustomer: ((Customer) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -209,7 +210,6 @@ fun DuesScreen(
     }
 
     val configuration = LocalConfiguration.current
-    val isTablet = configuration.screenWidthDp >= 600
 
     var selectedTab by rememberSaveable { mutableStateOf(DuesTab.OUTSTANDING) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -332,6 +332,7 @@ fun DuesScreen(
                         title = if (selectedCustomer != null) selectedCustomer!!.customerName else stringResource(R.string.dues_title),
                         metricBadge = if (selectedCustomer == null && outstandingDues.isNotEmpty()) formatTaka(totalOutstanding) else null,
                         badgeColor = PosSectionColors.Dues,
+                        isTablet = isTablet,
                         icon = { size -> Realistic3DClipboardDuesIcon(size = size) }
                     )
                 },
@@ -3126,7 +3127,7 @@ fun DuesReminderHubSheet(
             }
 
             // Segmented Tab Bar
-            TabRow(
+            PrimaryTabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 contentColor = MaterialTheme.colorScheme.primary,
@@ -6036,6 +6037,7 @@ fun DueRepaymentReceiptDialog(
         }
     }
 
+    @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
     val isSettled = data.remainingDue <= 0.001
     var isCopied by remember { mutableStateOf(false) }

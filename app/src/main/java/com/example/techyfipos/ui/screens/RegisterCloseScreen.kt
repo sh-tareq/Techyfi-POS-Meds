@@ -88,8 +88,8 @@ import java.util.Date
 import java.util.Locale
 
 enum class ZReportFormat(
-    @androidx.annotation.StringRes val labelRes: Int,
-    @androidx.annotation.StringRes val descRes: Int,
+    @get:androidx.annotation.StringRes val labelRes: Int,
+    @get:androidx.annotation.StringRes val descRes: Int,
     val icon: String
 ) {
     JPEG(R.string.z_report_format_jpeg_label, R.string.z_report_format_jpeg_desc, "🖼️"),
@@ -144,11 +144,11 @@ fun RegisterCloseScreen(
     salesViewModel: SalesViewModel,
     onBack: () -> Unit,
     onNavigateToExpenses: () -> Unit = {},
+    isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    val isTablet = configuration.screenWidthDp >= 600
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -1147,12 +1147,12 @@ fun RegisterCloseScreen(
                     val jpegFile = generateXReportJpeg(context, r, rangeLabel)
                     val ok = saveBillJpegToDownloads(context, jpegFile)
                     if (ok) {
-                        Toast.makeText(context, "✅ X-Report saved to gallery/downloads as JPEG", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.z_report_x_saved_toast), Toast.LENGTH_LONG).show()
                     } else {
-                        Toast.makeText(context, "⚠️ Failed to save image", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Save error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
                 }
             },
             onShare = {
@@ -1185,7 +1185,7 @@ fun RegisterCloseScreen(
                     val jpegFile = generateZReportJpeg(context, r, rangeLabel)
                     printBillJpeg(context, jpegFile, "Z-Report - $rangeLabel")
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Print error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.z_report_print_error_toast, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
                 }
             },
             onSave = {
@@ -1193,12 +1193,12 @@ fun RegisterCloseScreen(
                     val jpegFile = generateZReportJpeg(context, r, rangeLabel)
                     val ok = saveBillJpegToDownloads(context, jpegFile)
                     if (ok) {
-                        Toast.makeText(context, "✅ Z-Report saved to gallery/downloads as JPEG", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.z_report_z_saved_toast), Toast.LENGTH_LONG).show()
                     } else {
-                        Toast.makeText(context, "⚠️ Failed to save image", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Save error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
                 }
             },
             onShare = {
@@ -1233,6 +1233,7 @@ fun DayStartCloseScreen(
     salesViewModel: SalesViewModel,
     onBack: () -> Unit,
     onNavigateToExpenses: () -> Unit = {},
+    isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
     modifier: Modifier = Modifier
 ) {
     RegisterCloseScreen(
@@ -1241,6 +1242,7 @@ fun DayStartCloseScreen(
         salesViewModel = salesViewModel,
         onBack = onBack,
         onNavigateToExpenses = onNavigateToExpenses,
+        isTablet = isTablet,
         modifier = modifier
     )
 }

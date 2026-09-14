@@ -61,6 +61,7 @@ fun ExpensesScreen(
     expenseViewModel: ExpenseViewModel,
     onBack: () -> Unit,
     onNavigateToDayStartClose: () -> Unit = {},
+    isTablet: Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -161,6 +162,7 @@ fun ExpensesScreen(
                         title = stringResource(R.string.expense_screen_title),
                         metricBadge = stringResource(R.string.today),
                         badgeColor = PosSectionColors.Expenses,
+                        isTablet = isTablet,
                         icon = { size -> Realistic3DExpensesCashIcon(size = size) }
                     )
                 },
@@ -287,7 +289,9 @@ fun ExpensesScreen(
                                 shape = RoundedCornerShape(9.dp),
                                 color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
                                 shadowElevation = if (isSelected) 2.dp else 0.dp,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .defaultMinSize(minHeight = 44.dp)
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -340,7 +344,8 @@ fun ExpensesScreen(
                                 1.dp,
                                 if (isSelected) Color(0xFF0072FF) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                             ),
-                            shadowElevation = if (isSelected) 2.dp else 0.dp
+                            shadowElevation = if (isSelected) 2.dp else 0.dp,
+                            modifier = Modifier.defaultMinSize(minHeight = 40.dp)
                         ) {
                             Text(
                                 text = if (filterItem.key == "Other") stringResource(filterItem.labelRes, stringResource(R.string.category_other))
@@ -703,7 +708,7 @@ fun ExpenseRelocationNoticeBanner(
 
 data class ExpenseCategoryFilter(
     val key: String,
-    @androidx.annotation.StringRes val labelRes: Int,
+    @get:androidx.annotation.StringRes val labelRes: Int,
     val aliases: List<String> = emptyList()
 ) {
     fun matches(category: String): Boolean {

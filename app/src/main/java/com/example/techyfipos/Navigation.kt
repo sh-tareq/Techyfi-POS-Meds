@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -549,7 +550,7 @@ fun MainNavigation() {
                     onDismissRequest = { showLogoutConfirmDialog = false },
                     icon = {
                         Icon(
-                            imageVector = Icons.Default.ExitToApp,
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(28.dp)
@@ -966,7 +967,7 @@ fun MainNavigation() {
                                             },
                                             leadingIcon = {
                                                 Icon(
-                                                    imageVector = Icons.Default.ExitToApp,
+                                                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                                                     contentDescription = null,
                                                     tint = MaterialTheme.colorScheme.error,
                                                     modifier = Modifier.size(20.dp)
@@ -1043,6 +1044,7 @@ fun MainNavigation() {
                                 ManageUsersScreen(
                                     authViewModel = authViewModel,
                                     onBack = { backStack.removeLastOrNull() },
+                                    isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
@@ -1079,6 +1081,7 @@ fun MainNavigation() {
                                         prefilledBarcodeForProductScreen = barcode
                                         backStack.add(Products)
                                     },
+                                    isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
@@ -1099,6 +1102,7 @@ fun MainNavigation() {
                                     canPrintLabels = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_PRINT_LABELS),
                                     onBack = { backStack.removeLastOrNull() },
                                     onNavigateToCart = { backStack.add(Cart) },
+                                    isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
@@ -1126,6 +1130,7 @@ fun MainNavigation() {
                                         }
                                     },
                                     onNavigateToCart = { backStack.add(Cart) },
+                                    isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
@@ -1156,6 +1161,7 @@ fun MainNavigation() {
                                             android.widget.Toast.makeText(context, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
+                                    isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
@@ -1167,6 +1173,7 @@ fun MainNavigation() {
                                     isSupervisor = isSupervisor,
                                     activePermissions = activePermissions,
                                     authViewModel = authViewModel,
+                                    isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
@@ -1186,6 +1193,7 @@ fun MainNavigation() {
                                         backStack.add(Scanner)
                                         android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
                                     },
+                                    isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
@@ -1209,6 +1217,7 @@ fun MainNavigation() {
                                         while (backStack.size > 0) { backStack.removeLastOrNull() }
                                         backStack.add(Lock)
                                     },
+                                    isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
@@ -1221,6 +1230,7 @@ fun MainNavigation() {
                                     onNavigateToExpenses = {
                                         if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
                                     },
+                                    isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
@@ -1243,6 +1253,7 @@ fun MainNavigation() {
                                             backStack.add(Scanner)
                                             android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
                                         },
+                                        isTablet = isTablet,
                                         modifier = Modifier.padding(contentPadding)
                                     )
                                 }
@@ -1258,6 +1269,7 @@ fun MainNavigation() {
                                         backStack.add(Scanner)
                                         android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
                                     },
+                                    isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }

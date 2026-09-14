@@ -414,7 +414,7 @@ fun CustomerDossierSheet(
                     DossierTab.TOP_PRODUCTS -> {
                         if (dossier.topProducts.isEmpty()) {
                             Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                                Text("No purchase items recorded yet", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.customer_dossier_no_purchase_items), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         } else {
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -433,7 +433,7 @@ fun CustomerDossierSheet(
                                         ) {
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(item.name, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                                Text("Bought ${item.purchaseCount} times", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text(stringResource(R.string.customer_dossier_bought_times, item.purchaseCount), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
                                             Column(horizontalAlignment = Alignment.End) {
                                                 Text("${item.totalQty} qty", fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
@@ -505,7 +505,7 @@ fun CustomerDossierSheet(
                     DossierTab.INVOICES -> {
                         if (dossier.sales.isEmpty()) {
                             Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                                Text("No sales invoices found", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.customer_dossier_no_invoices), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         } else {
                             val dtFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
@@ -529,7 +529,7 @@ fun CustomerDossierSheet(
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                                     Text("Invoice #${sale.id}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                                    Text("• Tap to view receipt", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.primary)
+                                                    Text(stringResource(R.string.customer_dossier_tap_to_view_receipt), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.primary)
                                                 }
                                                 Text(
                                                     "${dtFormat.format(Date(sale.timestamp))} • ${sale.paymentMethod} • ${saleWithItems.items.size} items",
@@ -573,7 +573,7 @@ fun CustomerDossierSheet(
                                     OutlinedTextField(
                                         value = newNoteText,
                                         onValueChange = { newNoteText = it },
-                                        placeholder = { Text("Log customer interaction, payment promise, wholesale rate...", fontSize = 11.sp) },
+                                        placeholder = { Text(stringResource(R.string.customer_dossier_note_placeholder), fontSize = 11.sp) },
                                         maxLines = 2,
                                         modifier = Modifier.fillMaxWidth()
                                     )
@@ -582,12 +582,20 @@ fun CustomerDossierSheet(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        val noteCategories = remember {
+                                            listOf(
+                                                "General" to R.string.note_cat_general,
+                                                "Payment Promise" to R.string.note_cat_payment_promise,
+                                                "Wholesale Quote" to R.string.note_cat_wholesale_quote,
+                                                "Complaint" to R.string.note_cat_complaint
+                                            )
+                                        }
                                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            listOf("General", "Payment Promise", "Wholesale Quote", "Complaint").forEach { cat ->
+                                            noteCategories.forEach { (catKey, catLabelRes) ->
                                                 FilterChip(
-                                                    selected = selectedNoteCategory == cat,
-                                                    onClick = { selectedNoteCategory = cat },
-                                                    label = { Text(cat, fontSize = 9.5.sp) }
+                                                    selected = selectedNoteCategory == catKey,
+                                                    onClick = { selectedNoteCategory = catKey },
+                                                    label = { Text(stringResource(catLabelRes), fontSize = 9.5.sp) }
                                                 )
                                             }
                                         }
@@ -598,10 +606,10 @@ fun CustomerDossierSheet(
                                                     newNoteText = ""
                                                 }
                                             },
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                            modifier = Modifier.height(28.dp)
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                            modifier = Modifier.defaultMinSize(minHeight = 44.dp)
                                         ) {
-                                            Text(stringResource(R.string.customer_note_save_btn), fontSize = 10.5.sp)
+                                            Text(stringResource(R.string.customer_note_save_btn), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
@@ -634,7 +642,7 @@ fun CustomerDossierSheet(
                     DossierTab.DUE_LEDGER -> {
                         if (dossier.duePayments.isEmpty()) {
                             Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                                Text("No due payment history recorded", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.customer_dossier_no_due_payments), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         } else {
                             val dtFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
@@ -676,7 +684,7 @@ fun CustomerDossierSheet(
                     DossierTab.CREDIT_LEDGER -> {
                         if (dossier.storeCreditLedger.isEmpty()) {
                             Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                                Text("No store credit transactions recorded yet", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.customer_dossier_no_credit_transactions), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         } else {
                             val dtFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())

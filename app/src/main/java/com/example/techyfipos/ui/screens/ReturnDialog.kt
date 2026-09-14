@@ -86,8 +86,8 @@ fun getLocalizedPresetText(preset: AuditPreset): String {
 data class ReasonChipItem(
     val icon: String,
     val reasonKey: String,
-    @androidx.annotation.StringRes val titleRes: Int,
-    @androidx.annotation.StringRes val shortTitleRes: Int,
+    @get:androidx.annotation.StringRes val titleRes: Int,
+    @get:androidx.annotation.StringRes val shortTitleRes: Int,
     val isDamaged: Boolean
 )
 

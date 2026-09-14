@@ -58,11 +58,11 @@ fun CustomersScreen(
     customerViewModel: CustomerViewModel,
     onBack: () -> Unit,
     onStartSaleForCustomer: (Customer) -> Unit,
+    isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    val isTablet = configuration.screenWidthDp >= 600
     val customers by customerViewModel.filteredCustomers.collectAsStateWithLifecycle()
     val totalCount by customerViewModel.totalCustomersCount.collectAsStateWithLifecycle()
     val totalDues by customerViewModel.totalDuesAmount.collectAsStateWithLifecycle()
@@ -558,7 +558,7 @@ fun CustomersScreen(
                                 onClick = { showMergeDialog = true },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.height(30.dp)
+                                modifier = Modifier.defaultMinSize(minHeight = 40.dp)
                             ) {
                                 Text(
                                     text = stringResource(R.string.customer_btn_review_merge),
@@ -694,7 +694,7 @@ fun CustomersScreen(
                                     }
                                 },
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                modifier = Modifier.height(34.dp)
+                                modifier = Modifier.defaultMinSize(minHeight = 40.dp)
                             ) {
                                 Text("💬 ${stringResource(R.string.customer_action_whatsapp)}", fontSize = 11.sp)
                             }
@@ -702,14 +702,14 @@ fun CustomersScreen(
                             FilledTonalButton(
                                 onClick = { showBulkTagDialog = true },
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                modifier = Modifier.height(34.dp)
+                                modifier = Modifier.defaultMinSize(minHeight = 40.dp)
                             ) {
                                 Text("🏷️ ${stringResource(R.string.customer_bulk_tag)}", fontSize = 11.sp)
                             }
 
                             IconButton(
                                 onClick = { customerViewModel.clearCustomerSelection() },
-                                modifier = Modifier.size(34.dp)
+                                modifier = Modifier.size(40.dp)
                             ) {
                                 Icon(Icons.Default.Close, contentDescription = stringResource(R.string.customer_bulk_deselect), modifier = Modifier.size(18.dp))
                             }

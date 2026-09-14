@@ -191,6 +191,7 @@ fun ProductsScreen(
     canDelete: Boolean = isOwner,
     canAdjustStock: Boolean = isOwner,
     canPrintLabels: Boolean = isOwner,
+    isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
     onBack: () -> Unit,
     onNavigateToCart: () -> Unit,
     modifier: Modifier = Modifier
@@ -198,7 +199,6 @@ fun ProductsScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val configuration = LocalConfiguration.current
-    val isTablet = configuration.screenWidthDp >= 600
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -1945,7 +1945,7 @@ fun ProductsScreen(
                                     if (canPrintLabels) {
                                         productForCodeDialog = product
                                     } else {
-                                        android.widget.Toast.makeText(context, "Permission required to print labels", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, context.getString(R.string.perm_inventory_print_labels_desc), android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 },
                                 onImageClick = { productForEnlargedImage = Pair(product.imageUri, product.name) },
@@ -1996,7 +1996,7 @@ fun ProductsScreen(
                                     if (canPrintLabels) {
                                         productForCodeDialog = product
                                     } else {
-                                        android.widget.Toast.makeText(context, "Permission required to print labels", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, context.getString(R.string.perm_inventory_print_labels_desc), android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 },
                                 onImageClick = { productForEnlargedImage = Pair(product.imageUri, product.name) },
@@ -2874,12 +2874,12 @@ fun ProductsScreen(
                             percentDelta = percent,
                             fixedDelta = fixed
                         )
-                        Toast.makeText(context, "Prices updated for $count products", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.products_bulk_price_updated, count), Toast.LENGTH_SHORT).show()
                         selectedBarcodes.clear()
                         batchSelectMode = false
                         showBulkPriceDialog = false
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Price update failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.products_bulk_price_failed, e.localizedMessage ?: ""), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -2899,12 +2899,12 @@ fun ProductsScreen(
                             barcodes = selectedBarcodes.toList(),
                             newCategory = newCat
                         )
-                        Toast.makeText(context, "Category updated for $count products", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.products_bulk_category_updated, count), Toast.LENGTH_SHORT).show()
                         selectedBarcodes.clear()
                         batchSelectMode = false
                         showBulkCategoryDialog = false
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Category update failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.products_bulk_category_failed, e.localizedMessage ?: ""), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -2920,12 +2920,12 @@ fun ProductsScreen(
                     try {
                         val count = selectedBarcodes.size
                         productsViewModel.bulkDeleteProducts(selectedBarcodes.toList())
-                        Toast.makeText(context, "Deleted $count products", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.products_bulk_deleted, count), Toast.LENGTH_SHORT).show()
                         selectedBarcodes.clear()
                         batchSelectMode = false
                         showBulkDeleteDialog = false
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Bulk delete failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.products_bulk_delete_failed, e.localizedMessage ?: ""), Toast.LENGTH_LONG).show()
                     }
                 }
             }

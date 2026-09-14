@@ -3319,6 +3319,7 @@ private fun buildSettingsPreviewBill(settings: InvoiceSettingsData): BillData = 
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
     isOwner: Boolean = true,
+    isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
     onBack: () -> Unit,
     onExpensesClick: () -> Unit = {},
     onSuppliersClick: () -> Unit = {},
@@ -3683,7 +3684,6 @@ fun SettingsScreen(
     }
 
     val configuration = LocalConfiguration.current
-    val isTablet = configuration.screenWidthDp >= 600
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -3694,6 +3694,7 @@ fun SettingsScreen(
                         title = settingsTitle,
                         metricBadge = "v2.6 POS",
                         badgeColor = PosSectionColors.Settings,
+                        isTablet = isTablet,
                         icon = { size -> Realistic3DSettingsGearIcon(size = size) }
                     )
                 },
@@ -3793,7 +3794,7 @@ fun SettingsScreen(
                             resetAcknowledged = false
                             showResetConfirmDialog = true
                         } else {
-                            Toast.makeText(context, "Only the shop owner can perform a factory reset", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, context.getString(R.string.settings_reset_owner_only_toast), Toast.LENGTH_LONG).show()
                         }
                     },
                     onRepairDuesClick = {
@@ -3956,7 +3957,7 @@ fun SettingsScreen(
                         if (isOwner) {
                             restoreLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain", "*/*"))
                         } else {
-                            Toast.makeText(context, "Only the shop owner can restore database backups", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, context.getString(R.string.settings_restore_owner_only_toast), Toast.LENGTH_LONG).show()
                         }
                     },
                     onExportEncryptedBackup = {
@@ -4883,10 +4884,10 @@ fun SettingsScreen(
                                 if (ok) {
                                     showEncryptedImportPasswordDialog = false
                                     pendingEncryptedImportUri = null
-                                    Toast.makeText(context, "Encrypted backup restored successfully!", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, context.getString(R.string.settings_encrypted_backup_restored_toast), Toast.LENGTH_LONG).show()
                                     restartApp(context)
                                 } else {
-                                    errorMessage = "Decryption failed: Incorrect password or corrupted file."
+                                    errorMessage = context.getString(R.string.settings_encrypted_backup_decrypt_failed)
                                 }
                             }
                         }

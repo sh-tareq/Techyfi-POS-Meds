@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-15 (app version 2.6.64-V14-09-2026, build `Techyfi-POS-Final-V14-09-2026.apk` / `Techyfi-POS-Final-V64.apk`; versionCode 220940; DB schema version 28)
+Last updated: 2026-09-15 (app version 2.6.65-V15-09-2026, build `Techyfi-POS-Final-V15-09-2026.apk` / `Techyfi-POS-Final-V65.apk`; versionCode 220941; DB schema version 28)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -2522,10 +2522,31 @@ mindmap
   - **[V64-13] Security Hardening of Dues Screen Supervisor Default (`DuesScreen.kt`)**:
     - Fixed security footgun by changing parameter default from `isSupervisor: Boolean = isOwner` to `isSupervisor: Boolean = false`.
 
-- **Production Build Deliverables**:
+- **Production Build Deliverables (V64)**:
   - `Techyfi-POS-Final-V64.apk` (37.4 MB, versionCode 220940, versionName "2.6.64-V14-09-2026")
   - `Techyfi-POS-Final-V14-09-2026.apk` (37.4 MB)
   - Unit tests: 48/48 tests passing (`./gradlew testDebugUnitTest`).
+
+- **Version 2.6.65-V15-09-2026 (Build V65 — Comprehensive App Polish & Modernization)**:
+  - **Layout Mode Unification & Responsive Top App Bars**:
+    - Propagated user-selected layout mode (`isTablet: Boolean` computed from `uiLayoutMode`: AUTO, TABLET, PHONE) across all 11 screen destinations in `Navigation.kt` (`ManageUsersScreen`, `CartScreen`, `ProductsScreen`, `SalesHistoryScreen`, `ExpensesScreen`, `SuppliersScreen`, `DuesScreen`, `SettingsScreen`, `RegisterCloseScreen`, `LoyaltyScreen`, `CustomersScreen`).
+    - Stripped hardcoded screen-level width calculations (`LocalConfiguration.current.screenWidthDp >= 600`), establishing centralized layout control.
+    - Wired `PosTopAppBarTitle(isTablet = isTablet)` everywhere for responsive 3D icon rendering and ergonomic font sizing.
+  - **Bangla Localization & String Externalization**:
+    - Added 34 localized string pairs across `values/strings.xml` and `values-bn/strings.xml` using natural Bangladeshi commercial terminology (বাকি, জমা, রসিদ, ইনভয়েস, ইত্যাদি).
+    - Localized toast alerts and descriptions for held cart operations, customer dossier notes and ledger records, bulk product updates and label printing, settings database reset/restore/encryption, Z/X-Report generation, loyalty membership updates, scanner stock confirmations, Excel export errors, and cart/history badge counters.
+  - **Ergonomics & Touch Target Sizing (>= 44/48dp)**:
+    - Customer dossier note action button upgraded from `28.dp` height to `Modifier.defaultMinSize(minHeight = 44.dp)`.
+    - Supplier due filter chips upgraded to `Modifier.defaultMinSize(minHeight = 44.dp)`.
+    - Customer screen action buttons (merge, WhatsApp, tag, deselect) enlarged to >= 40–44dp touch targets.
+  - **Material 3 Modernization & Deprecation Fixes**:
+    - Modernized `TabRow` to `PrimaryTabRow` in `DuesScreen.kt` and `LoyaltyScreen.kt`.
+    - Migrated `Icons.Default.ExitToApp` to `Icons.AutoMirrored.Filled.ExitToApp` in `Navigation.kt`.
+    - Added `@get:StringRes` property-getter annotations across all enums and filter data classes to eliminate Android Lint and Kotlin compiler property target warnings.
+  - **Production Build Deliverables (V65)**:
+    - `Techyfi-POS-Final-V65.apk` (36.0 MB, versionCode 220941, versionName "2.6.65-V15-09-2026")
+    - `Techyfi-POS-Final-V15-09-2026.apk` (36.0 MB)
+    - Unit tests: 48/48 tests passing (`./gradlew testDebugUnitTest`).
 
 ## Maintenance note
 
