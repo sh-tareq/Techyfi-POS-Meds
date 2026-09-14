@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-14 (app version 2.6.59-V14-09-2026, build `Techyfi-POS-Final-V14-09-2026.apk` / `Techyfi-POS-Final-V59.apk`; versionCode 220935; DB schema version 27)
+Last updated: 2026-09-14 (app version 2.6.62-V14-09-2026, build `Techyfi-POS-Final-V14-09-2026.apk` / `Techyfi-POS-Final-V62.apk`; versionCode 220938; DB schema version 28)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -224,7 +224,7 @@ mindmap
           Held carts bottom sheet
           Restore held cart
             Restored quantity capped to current stock; lines that can't be restored (out of stock) are skipped from the active cart but remain saved in the held-cart record (unavailableLines count shown in a toast), not deleted
-            Preserves Quick Sale items, line notes, price mode, prepared payment/split rows, and loyalty state
+            Preserves Quick Sale items, line notes, price mode, prepared payment/split rows, loyalty state, applied store credits, voucher codes (v2.6.61), and synchronizes customer identity (customerName & customerPhone) across payload JSON and DB entity (v2.6.62)
             Legacy array-only held-cart records remain compatible
           Delete held cart
         Continue to checkout
@@ -247,6 +247,7 @@ mindmap
             Real-time Change Due vs Shortage Due Calculator
               💵 Change ৳... (emerald green container when cash received >= grand total)
               ⚠️ Short ৳... (rose red container when cash received < grand total)
+            Strict Zero/Empty Tender Insufficiency Validation (Cash received <= 0 or empty is flagged with red error warning, disabling checkout; v2.6.62)
             Change printed on thermal receipts and PDF invoices
             Received amount manual input with Taka (৳) prefix
           Card
@@ -814,6 +815,7 @@ mindmap
           Wired into the Register Close screen (More hub)
           cashRefunds — cash refunded during the shift
           shiftStartedAt — start time of the shift this closing settles, from RegisterShiftState
+          discrepancyReason — dedicated audit trail reason for counted-vs-expected physical drawer cash variance (distinct from closing notes; DB schema v28)
           Closing the register resets RegisterShiftState to start a fresh shift with float 0
         CustomerLoyalty
           isActive — soft-deactivation flag filtering the active-members list
@@ -2269,6 +2271,137 @@ mindmap
       - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V59.apk`
       - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk`
     - Verified on Samsung Galaxy Tab A7 (`emulator-5554`, 2000×1200, 224dpi).
+
+## V60 - Navigation Icon Performance Optimization & Sales Report/History Date Reconciliation (V60 / V14-09-2026)
+
+- **Navigation Icon Animation Performance (`Navigation.kt`)**:
+  - **[V60-1] Unselected Animation Teardown & Single-Coroutine Active State**:
+    - Resolved critical performance bottleneck where every `Animated3DNavItemIcon` (selected or unselected) instantiated `rememberInfiniteTransition` and ran 4 infinite animation loops continuously across 5–8 tabs, spawning 20–32 perpetual background animation coroutines that wasted CPU and drained battery on lower-end devices.
+    - Refactored `Animated3DNavItemIcon`:
+      - Unselected state renders static `Nav3DIconContent(...)` wrapped in a standard `Box` with zero animation coroutines or transitions instantiated.
+      - Selected state delegates to `ActiveAnimated3DNavItemIcon`, which runs only the specific single-axis micro-animation required for that active tab (e.g. `translationY` for Sell/Expenses, `rotationZ` for Products/History, `spin` for Settings, `scale` for More/Report).
+      - Drops continuous navigation idle coroutines from 20–32 down to 0 when idle and exactly 1 for the currently active tab.
+
+- **Sales Period Date Range Reconciliation (`SalesReportScreen.kt`, `SalesHistoryScreen.kt`, `strings.xml`, `values-bn/strings.xml`)**:
+  - **[V60-2] Calendar Week & Month Synchronization**:
+    - Resolved business logic discrepancy where Sales Report used rolling windows (last 7 days, last 30 days) while Sales History used true calendar periods (Mon–Sun / 1st of month to today), causing cashiers and store managers to see conflicting totals between the two screens for the same period.
+    - Standardized `ReportPeriod.WEEK` in `SalesReportScreen.kt` to rewind to `firstDayOfWeek` (same as `SalesHistoryScreen.kt`) and end at `endOfDay(now) + 1`.
+    - Standardized `ReportPeriod.MONTH` in `SalesReportScreen.kt` to start at the 1st of the current month (`Calendar.DAY_OF_MONTH = 1`) and end at `endOfDay(now) + 1`.
+    - Standardized `SalesHistoryScreen.kt`'s `WEEK`, `MONTH`, and `YEAR` periods to end at `endOfDay(now) + 1` (was `now + 1`) to ensure identical millisecond boundary alignment across both screens.
+    - Updated period chip string resources to clear, unambiguous labels:
+      - **English**: `sales_report_period_week` -> `"📅 This Week"`, `sales_report_period_month` -> `"🗓️ This Month"`
+      - **Bangla (`values-bn`)**: `sales_report_period_week` -> `"📅 এই সপ্তাহ"`, `sales_report_period_month` -> `"🗓️ এই মাস"`
+
+- **Production Deliverables & Cross-Device Verification**:
+  - **[V60-3] Production Build & Dual-Emulator Verification**:
+    - Built via `./gradlew assembleRelease` (versionCode 220936, versionName "2.6.60-V14-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V60.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk`
+    - Verified on Phone (`emulator-5554`, Pixel phone) and Tablet (`emulator-5556`, widescreen tablet).
+    - Verified 100% order count and profit margin reconciliation between Sales History and Sales Report for "This Week" (0 sales) and "This Month" (51 orders, ৳6,100.59 gross profit).
+
+## V61 - Held Cart Voucher/Credit Preservation, Loyalty Permission Gate, Inventory Role Fix, Full Localization of History/Dues/Suppliers, Centralized Date Boundaries & Sales Report Business Health Cross-Reference (V61 / V14-09-2026)
+
+- **Cart State Integrity & Tender Recovery (`POSViewModels.kt`, `HeldCartSerializationTest.kt`)**:
+  - **[V61-1] Store Credit & Voucher Re-hydration on Held Carts**:
+    - Resolved critical state loss bug where `holdCurrentCart()` serialized items and customer details but dropped `storeCreditApplied` and `redeemedVoucher`. Customers whose orders were put on hold previously had their vouchers and store credits silently discarded upon cart restoration.
+    - Updated `HeldCartPayload` data structure to include `val storeCreditApplied: Double = 0.0` and `val voucherCode: String? = null`.
+    - Updated `encodeHeldCartPayload()` and `decodeHeldCartPayload()` to serialize and deserialize both fields safely with full backward compatibility.
+    - Updated `holdCurrentCart()` to capture active credit/voucher values and reset ViewModel state to clean defaults.
+    - Updated `restoreHeldCart()` to restore `storeCreditApplied` and query `repository.getStoreCreditVoucher(code)` to re-attach the voucher object.
+    - Added comprehensive JVM unit test suite `HeldCartSerializationTest.kt`.
+
+- **Security & Permission Gate Enforcement (`Navigation.kt`, `DataRepository.kt`)**:
+  - **[V61-2] Loyalty Screen Security Gate**:
+    - Enforced role check on `onNavigateToLoyalty` and route destination `entry<Loyalty>`: requires `isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)`.
+    - Unauthorized cashier attempts trigger a warning toast (`ownerOnlyLoyaltyText`) and immediate back-navigation, protecting VIP tier settings and points ledgers.
+  - **[V61-3] Inventory Adjustment Permission Normalization**:
+    - Fixed `DataRepository.kt:recordInventoryAdjustment()` which improperly required `requireOwnerSession()`.
+    - Aligned with `adjustProductStock()` by enforcing granular permission `requirePermission(AppPermissions.INVENTORY_ADJUST_STOCK)`, allowing authorized inventory managers to document damaged stock and reconciliation counts.
+
+- **Localization & Type Safety Architecture (`SalesHistoryScreen.kt`, `DuesScreen.kt`, `SuppliersScreen.kt`, `strings.xml`, `values-bn/strings.xml`)**:
+  - **[V61-4] Sales History Localization & Enum State Migration**:
+    - Refactored `HistoryReportPeriod` to use `@StringRes val labelRes: Int`.
+    - Replaced raw English strings for filter state (`customerFilter = "All"`) and sort order (`sortOrder = "Newest"`) with type-safe enums `HistoryCustomerFilter { ALL, SAVED, WALK_IN }` and `HistorySortOption { NEWEST, HIGHEST_TOTAL, LOWEST_TOTAL, HIGHEST_PROFIT, LOWEST_PROFIT }`.
+    - Period chips, sort dropdown, and customer filter bottom sheet now fully adapt to natural Bengali phrasing in `values-bn`.
+  - **[V61-5] Dues Screen Localization & Enum Architecture**:
+    - Refactored `DuesTab`, `DuePeriodFilter`, and `DuesSort` to type-safe enums with `@StringRes val labelRes: Int`.
+    - Localized tabs: "Outstanding" (`বকেয়া তালিকা`), "Overdue" (`বিলম্বিত`), "Settled" (`পরিশোধিত`), "Payments" (`পেমেন্ট রেকর্ড`).
+    - Localized period filter chips and sorting dropdown.
+  - **[V61-6] Suppliers Screen Filter State Enum Migration**:
+    - Added `SupplierDueFilter { ALL, HAS_DUE, SETTLED }` with `@StringRes val labelRes: Int` in `SuppliersScreen.kt`.
+    - Replaced raw English string comparisons (`dueFilter == "All"`) with exhaustive enum matching.
+
+- **Architectural Cleanup & Cross-Module Synchronization (`AppUtils.kt`, `RegisterCloseScreen.kt`, `SalesReportScreen.kt`, `AppUtilsDateTest.kt`)**:
+  - **[V61-7] Centralized Timezone-Safe Date Utilities**:
+    - Centralized `startOfDay(millis: Long)` and `endOfDay(millis: Long)` into `com.example.techyfipos.util.AppUtils.kt`.
+    - Removed duplicate, ad-hoc implementations across `SalesHistoryScreen.kt`, `SalesReportScreen.kt`, `DuesScreen.kt`, and `RegisterCloseScreen.kt`.
+    - Validated millisecond boundary precision via `AppUtilsDateTest.kt`.
+  - **[V61-8] Sales Report Business Health & Operational Cross-Reference**:
+    - Injected `expenseViewModel` and `supplierViewModel` with navigation callbacks into `entry<SalesReport>` in `Navigation.kt`.
+    - Added interactive "Business Health & Cross-Reference" card in `OverviewPanel` inside `SalesReportScreen.kt`:
+      - Displays synchronized Period Expenses (`sales_report_expenses_label`).
+      - Displays Net Operating Profit (`sales_report_operating_profit = grossProfit - discounts - periodExpenses`).
+      - Displays Outstanding Vendor Payables (`sales_report_vendor_payables`).
+      - Direct one-tap navigation links to "View All Expenses" and "View Suppliers".
+
+- **Production Deliverables & Cross-Device Verification**:
+  - **[V61-9] Production Build & Dual-Emulator Verification**:
+    - Built via `./gradlew assembleRelease` (versionCode 220937, versionName "2.6.61-V14-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V61.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk`
+    - Successfully verified on both Phone (`emulator-5554`, Pixel phone) and Tablet (`emulator-5556`, widescreen tablet).
+    - Executed all 28 automated JVM unit tests (`./gradlew testDebugUnitTest` -> BUILD SUCCESSFUL).
+
+## V62 - Clean Architecture, Audit-Trail Hardening & POS Bug Fixes (V62 / V14-09-2026)
+
+- **UI Thread Safety & Architecture Hygiene**:
+  - **[V62-1] UI-Thread Locale Isolation (`Navigation.kt`)**:
+    - Removed `java.util.Locale.setDefault(locale)` from `LocaleWrapper`, preventing global JVM mutation from the UI composition pipeline and avoiding race conditions with background coroutines doing date/number formatting.
+  - **[V62-2] Clean Imports & Namespace Hygiene (`ProductsScreen.kt`, `DuesScreen.kt`, `LoyaltyScreen.kt`)**:
+    - Removed duplicate wildcard imports `import com.example.techyfipos.ui.components.*`.
+  - **[V62-3] Return Audit Presets DataStore Migration (`SettingsDataStore.kt`, `ReturnDialog.kt`)**:
+    - Migrated custom return audit presets from unencrypted `SharedPreferences` to `SettingsDataStore` (`return_audit_presets_json`).
+    - Added one-time automatic legacy migration and dynamic Flow updates.
+  - **[V62-7] Supplier Non-Nullable Safe Call Hygiene (`SuppliersScreen.kt`)**:
+    - Removed redundant `?.` operators on non-nullable `Supplier.name` and `Supplier.phone`.
+
+- **Audit-Trail Hardening & Database Migration**:
+  - **[V62-4] Register Closing Discrepancy Reason Audit Trail (`AppEntities.kt`, `AppDatabase.kt`, `POSViewModels.kt`, `RegisterCloseScreen.kt`, `DataRepository.kt`)**:
+    - Added dedicated `discrepancyReason: String? = null` field to `RegisterClosing` entity to prevent conflating cash discrepancies with general closing notes.
+    - Bumped Room DB schema version to 28 with `MIGRATION_27_28` (`ALTER TABLE register_closings ADD COLUMN discrepancyReason TEXT`).
+    - Added dedicated "Discrepancy Reason (Audit Trail)" text field with quick reason chips (`Cash Drop Delay`, `Change Rounding`, `Count Error`, `Petty Cash Float`, `System Miscalculation`) when physical counted cash diverges from system expected cash.
+    - Preserved separate general shift closing notes and updated backup export/import and detail dialogs.
+
+- **Checkout & Cart Bug Fixes**:
+  - **[V62-5] Cash Zero-Tender Insufficiency Validation Bug Fix (`CartScreen.kt`, `DueSaleAmountTest.kt`)**:
+    - Fixed `calculateEffectiveAmountPaid`: when `paymentMethod == "Cash"`, returns exact `enteredAmountPaid` instead of silently falling back to `grandTotal` when cash received is 0 or empty.
+    - Updated `isCashValid` to enforce `effectiveAmountPaid >= remainingToPay && effectiveAmountPaid > 0.0`.
+    - Complete Sale button remains disabled with red error warning until valid cash tender is entered.
+    - Added unit test coverage verifying 0 cash tender returns 0.0 and explicit tender is preserved.
+  - **[V62-8] Held Cart Customer Identity Synchronization (`POSViewModels.kt`)**:
+    - Added `customerName` and `customerPhone` to `HeldCartPayload` to prevent drift between HeldCart DB entity and payload JSON upon restoration.
+
+- **UI Localization & Layout Adaptability**:
+  - **[V62-6] More Hub Operations Badge Localization (`Navigation.kt`, `strings.xml`, `values-bn/strings.xml`)**:
+    - Replaced hardcoded English string `"Operations"` with `stringResource(R.string.more_hub_badge_operations)` ("Operations" / "অপারেশনস").
+  - **[V62-9] More Hub Dynamic Height & Compact Screen Affordance (`Navigation.kt`)**:
+    - Replaced hardcoded `heightIn(max = 490.dp / 520.dp)` with dynamic screen-ratio calculation (`(screenHeight * if (isTablet) 0.55f else 0.65f).coerceIn(280.dp, 520.dp)`).
+  - **[V62-10] Dynamic Sales History Current Timestamp (`SalesHistoryScreen.kt`)**:
+    - Removed `remember { System.currentTimeMillis() }` which froze `now` across midnight, calculating current time dynamically.
+
+- **Production Deliverables & Cross-Device Verification**:
+  - **[V62-11] Production Build & Device Verification**:
+    - Built via `./gradlew assembleRelease` (versionCode 220938, versionName "2.6.62-V14-09-2026"):
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V62.apk`
+      - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V14-09-2026.apk`
+    - Successfully verified on mobile device (`emulator-5554`, Pixel phone):
+      - Cart cash tender insufficiency check and exact amount tender flow.
+      - More Hub dynamic height and localized badge.
+      - Register Close reconciliation discrepancy audit field with chips.
+      - Return dialog DataStore presets management.
+      - Suppliers and Sales History screens.
+    - Executed all automated JVM unit tests (`./gradlew testDebugUnitTest` -> BUILD SUCCESSFUL).
 
 ## Maintenance note
 

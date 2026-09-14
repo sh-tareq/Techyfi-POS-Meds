@@ -19,6 +19,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.techyfipos.utils.isZeroMoney
+import com.example.techyfipos.utils.startOfDay
+import com.example.techyfipos.utils.endOfDay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -115,21 +118,7 @@ val BANGLADESHI_DENOMINATIONS = listOf(
     DenominationItem(1, "৳1", true, Color(0xFFB45309))        // Bronze Coin
 )
 
-private fun todayRange(): Pair<Long, Long> {
-    val start = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
-    val end = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 23)
-        set(Calendar.MINUTE, 59)
-        set(Calendar.SECOND, 59)
-        set(Calendar.MILLISECOND, 999)
-    }.timeInMillis
-    return start to (end + 1)
-}
+private fun todayRange(): Pair<Long, Long> = startOfDay() to (endOfDay() + 1)
 
 internal fun registerShiftStart(todayStart: Long, closings: List<RegisterClosing>): Long {
     val latestClose = closings.firstOrNull()
@@ -1099,7 +1088,7 @@ fun DayStartCloseScreen(
                 showCloseReconcileDialog = false
                 showDenomDialog = true
             },
-            onConfirmClose = { actualCash, notes ->
+            onConfirmClose = { actualCash, notes, discrepancyReason ->
                 registerClosingViewModel.closeRegister(
                     startingFloat = startingFloat,
                     cashSales = cashSales,
@@ -1111,6 +1100,7 @@ fun DayStartCloseScreen(
                     expectedCash = expectedCash,
                     actualCountedCash = actualCash,
                     notes = notes,
+                    discrepancyReason = discrepancyReason,
                     bkashSales = providerSales.bkash,
                     nagadSales = providerSales.nagad,
                     rocketSales = providerSales.rocket,
@@ -2242,10 +2232,11 @@ fun CloseRegisterReconciliationDialog(
     initialNotes: String = "",
     onDismiss: () -> Unit,
     onOpenDenominationCounter: () -> Unit,
-    onConfirmClose: (actualCash: Double, notes: String?) -> Unit
+    onConfirmClose: (actualCash: Double, notes: String?, discrepancyReason: String?) -> Unit
 ) {
     var actualCashText by remember { mutableStateOf(initialCountedCash.toInt().toString()) }
     var notesText by remember { mutableStateOf(initialNotes) }
+    var discrepancyReasonText by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
 
     val actualCash = actualCashText.toDoubleOrNull() ?: 0.0
@@ -2339,6 +2330,40 @@ fun CloseRegisterReconciliationDialog(
                     )
                 }
 
+                // Discrepancy Reason Field (shown when variance is non-zero)
+                AnimatedVisibility(visible = !variance.isZeroMoney()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(
+                            value = discrepancyReasonText,
+                            onValueChange = { discrepancyReasonText = it },
+                            label = { Text(stringResource(R.string.register_close_discrepancy_reason_label)) },
+                            placeholder = { Text(stringResource(R.string.register_close_discrepancy_reason_placeholder)) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(
+                                stringResource(R.string.register_close_discrepancy_chip_drop),
+                                stringResource(R.string.register_close_discrepancy_chip_rounding),
+                                stringResource(R.string.register_close_discrepancy_chip_counting),
+                                stringResource(R.string.register_close_discrepancy_chip_other)
+                            ).forEach { chipText ->
+                                SuggestionChip(
+                                    onClick = { discrepancyReasonText = chipText },
+                                    label = { Text(chipText, fontSize = 11.sp) },
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = notesText,
                     onValueChange = { notesText = it },
@@ -2365,7 +2390,11 @@ fun CloseRegisterReconciliationDialog(
                         onClick = {
                             if (!isSubmitting) {
                                 isSubmitting = true
-                                onConfirmClose(actualCash, notesText.ifBlank { null })
+                                onConfirmClose(
+                                    actualCash,
+                                    notesText.ifBlank { null },
+                                    discrepancyReasonText.ifBlank { null }
+                                )
                             }
                         },
                         enabled = !isSubmitting,
@@ -2441,6 +2470,17 @@ private fun RegisterClosingRow(closing: RegisterClosing, onClick: () -> Unit = {
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (!closing.discrepancyReason.isNullOrBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Reason: ${closing.discrepancyReason}",
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFDC2626),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -2518,6 +2558,14 @@ private fun HistoricalClosingDetailDialog(
                 }
                 if (!closing.notes.isNullOrBlank()) {
                     Text("Note: ${closing.notes}", fontSize = 12.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                }
+                if (!closing.discrepancyReason.isNullOrBlank()) {
+                    Text(
+                        "Discrepancy Reason: ${closing.discrepancyReason}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFDC2626)
+                    )
                 }
                 Spacer(Modifier.height(4.dp))
                 Button(

@@ -48,6 +48,12 @@ import com.example.techyfipos.ui.components.Realistic3DInwardInvoiceIcon
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.ui.viewmodel.SupplierViewModel
 
+private enum class SupplierDueFilter {
+    ALL,
+    HAS_DUE,
+    SETTLED
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SuppliersScreen(
@@ -72,7 +78,7 @@ fun SuppliersScreen(
     var selectedSupplierForPayDue by remember { mutableStateOf<Supplier?>(null) }
 
     var searchQuery by remember { mutableStateOf("") }
-    var dueFilter by remember { mutableStateOf("All") } // All, Has Due, Settled
+    var dueFilter by remember { mutableStateOf(SupplierDueFilter.ALL) }
 
     val totalPurchased = remember(suppliers) { suppliers.sumOf { it.totalPurchased } }
     val totalDue = remember(suppliers) { suppliers.sumOf { it.totalDue } }
@@ -81,14 +87,14 @@ fun SuppliersScreen(
         suppliers.filter { sup ->
             val matchesSearch = searchQuery.isBlank() ||
                     sup.companyName.contains(searchQuery, ignoreCase = true) ||
-                    (sup.name?.contains(searchQuery, ignoreCase = true) == true) ||
-                    (sup.phone?.contains(searchQuery, ignoreCase = true) == true) ||
+                    sup.name.contains(searchQuery, ignoreCase = true) ||
+                    sup.phone.contains(searchQuery, ignoreCase = true) ||
                     (sup.address?.contains(searchQuery, ignoreCase = true) == true)
 
             val matchesDue = when (dueFilter) {
-                "Has Due" -> sup.totalDue > 0
-                "Settled" -> sup.totalDue <= 0
-                else -> true
+                SupplierDueFilter.HAS_DUE -> sup.totalDue > 0
+                SupplierDueFilter.SETTLED -> sup.totalDue <= 0
+                SupplierDueFilter.ALL -> true
             }
 
             matchesSearch && matchesDue
@@ -366,14 +372,14 @@ fun SuppliersScreen(
                         horizontalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         // 1. All Vendors Tab
-                        val isAll = dueFilter == "All"
+                        val isAll = dueFilter == SupplierDueFilter.ALL
                         Surface(
                             shape = RoundedCornerShape(9.dp),
                             color = if (isAll) MaterialTheme.colorScheme.surface else Color.Transparent,
                             shadowElevation = if (isAll) 2.dp else 0.dp,
                             modifier = Modifier
                                 .weight(1.1f)
-                                .clickable { dueFilter = "All" }
+                                .clickable { dueFilter = SupplierDueFilter.ALL }
                         ) {
                             Row(
                                 modifier = Modifier.padding(vertical = 7.dp, horizontal = 4.dp),
@@ -403,7 +409,7 @@ fun SuppliersScreen(
                         }
 
                         // 2. Pending Due Tab
-                        val isDue = dueFilter == "Has Due"
+                        val isDue = dueFilter == SupplierDueFilter.HAS_DUE
                         val dueCount = suppliers.count { it.totalDue > 0 }
                         Surface(
                             shape = RoundedCornerShape(9.dp),
@@ -411,7 +417,7 @@ fun SuppliersScreen(
                             shadowElevation = if (isDue) 2.dp else 0.dp,
                             modifier = Modifier
                                 .weight(1.3f)
-                                .clickable { dueFilter = "Has Due" }
+                                .clickable { dueFilter = SupplierDueFilter.HAS_DUE }
                         ) {
                             Row(
                                 modifier = Modifier.padding(vertical = 7.dp, horizontal = 4.dp),
@@ -441,7 +447,7 @@ fun SuppliersScreen(
                         }
 
                         // 3. Settled Tab
-                        val isSettled = dueFilter == "Settled"
+                        val isSettled = dueFilter == SupplierDueFilter.SETTLED
                         val settledCount = suppliers.count { it.totalDue <= 0 }
                         Surface(
                             shape = RoundedCornerShape(9.dp),
@@ -449,7 +455,7 @@ fun SuppliersScreen(
                             shadowElevation = if (isSettled) 2.dp else 0.dp,
                             modifier = Modifier
                                 .weight(1.2f)
-                                .clickable { dueFilter = "Settled" }
+                                .clickable { dueFilter = SupplierDueFilter.SETTLED }
                         ) {
                             Row(
                                 modifier = Modifier.padding(vertical = 7.dp, horizontal = 4.dp),
@@ -528,7 +534,7 @@ fun SuppliersScreen(
                             Realistic3DCargoInflowTruckIcon(size = 54.dp)
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                text = if (searchQuery.isNotEmpty() || dueFilter != "All") stringResource(R.string.supplier_empty_search_title) else stringResource(R.string.supplier_empty_title),
+                                text = if (searchQuery.isNotEmpty() || dueFilter != SupplierDueFilter.ALL) stringResource(R.string.supplier_empty_search_title) else stringResource(R.string.supplier_empty_title),
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 15.sp,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -540,7 +546,7 @@ fun SuppliersScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
                             )
-                            if (searchQuery.isBlank() && dueFilter == "All") {
+                            if (searchQuery.isBlank() && dueFilter == SupplierDueFilter.ALL) {
                                 Spacer(Modifier.height(16.dp))
                                 Button(
                                     onClick = { showAddSupplierDialog = true },

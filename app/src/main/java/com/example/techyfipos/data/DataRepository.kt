@@ -187,7 +187,7 @@ class DataRepository(
         inventoryAdjustmentDao.getAdjustmentsForProduct(toEnglishDigits(barcode.trim()))
 
     suspend fun recordInventoryAdjustment(adjustment: InventoryAdjustment): Long = withContext(Dispatchers.IO) {
-        requireOwnerSession()
+        requirePermission(AppPermissions.INVENTORY_ADJUST_STOCK)
         inventoryAdjustmentDao.insertAdjustment(adjustment)
     }
 
@@ -2028,7 +2028,8 @@ class DataRepository(
                     put("cashOut", closing.cashOut); put("expectedCash", closing.expectedCash)
                     put("cashRefunds", closing.cashRefunds); put("shiftStartedAt", closing.shiftStartedAt)
                     put("actualCountedCash", closing.actualCountedCash); put("variance", closing.variance)
-                    put("notes", closing.notes ?: ""); put("timestamp", closing.timestamp); put("cashierName", closing.cashierName)
+                    put("notes", closing.notes ?: ""); put("discrepancyReason", closing.discrepancyReason ?: "")
+                    put("timestamp", closing.timestamp); put("cashierName", closing.cashierName)
                     put("bkashSales", closing.bkashSales); put("nagadSales", closing.nagadSales)
                     put("rocketSales", closing.rocketSales); put("cardSales", closing.cardSales); put("dueSales", closing.dueSales)
                 }) }
@@ -2468,6 +2469,7 @@ class DataRepository(
                         shiftStartedAt = value.optLong("shiftStartedAt", 0L),
                         actualCountedCash = value.optDouble("actualCountedCash", 0.0), variance = value.optDouble("variance", 0.0),
                         notes = value.optString("notes").takeIf { it.isNotBlank() },
+                        discrepancyReason = value.optString("discrepancyReason").takeIf { it.isNotBlank() },
                         timestamp = value.optLong("timestamp", System.currentTimeMillis()),
                         cashierName = value.optString("cashierName", "Admin")
                     ))

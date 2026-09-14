@@ -39,7 +39,6 @@ import com.example.techyfipos.R
 import com.example.techyfipos.data.db.Customer
 import com.example.techyfipos.data.db.CustomerLoyalty
 import com.example.techyfipos.data.db.LoyaltyTransaction
-import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.viewmodel.CustomerViewModel
 import com.example.techyfipos.ui.viewmodel.LoyaltyFilterOption
 import com.example.techyfipos.ui.viewmodel.LoyaltySortOption

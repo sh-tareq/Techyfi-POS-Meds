@@ -98,7 +98,9 @@ internal data class HeldCartPayload(
     val isSplitPayment: Boolean = false,
     val splitPayments: List<SplitPaymentEntry> = emptyList(),
     val loyaltyPhone: String? = null,
-    val loyaltyDiscount: Double = 0.0
+    val loyaltyDiscount: Double = 0.0,
+    val storeCreditApplied: Double = 0.0,
+    val voucherCode: String? = null
 )
 
 /** Versioned payload stored inside HeldCart.itemsJson. Legacy array-only carts remain readable. */
@@ -117,6 +119,10 @@ internal fun encodeHeldCartPayload(payload: HeldCartPayload): String = JSONObjec
     put("isSplitPayment", payload.isSplitPayment)
     put("loyaltyPhone", payload.loyaltyPhone ?: "")
     put("loyaltyDiscount", payload.loyaltyDiscount)
+    put("storeCreditApplied", payload.storeCreditApplied)
+    if (!payload.voucherCode.isNullOrBlank()) {
+        put("voucherCode", payload.voucherCode)
+    }
     put("items", JSONArray().apply {
         payload.items.forEach { item ->
             put(JSONObject().apply {
@@ -221,7 +227,9 @@ internal fun decodeHeldCartPayload(json: String): HeldCartPayload {
         isSplitPayment = objectJson?.optBoolean("isSplitPayment", false) ?: false,
         splitPayments = split,
         loyaltyPhone = objectJson?.optString("loyaltyPhone")?.takeIf(String::isNotBlank),
-        loyaltyDiscount = objectJson?.optDouble("loyaltyDiscount", 0.0) ?: 0.0
+        loyaltyDiscount = objectJson?.optDouble("loyaltyDiscount", 0.0) ?: 0.0,
+        storeCreditApplied = objectJson?.optDouble("storeCreditApplied", 0.0) ?: 0.0,
+        voucherCode = objectJson?.optString("voucherCode")?.takeIf(String::isNotBlank)
     )
 }
 
@@ -547,9 +555,14 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val items = _cartItems.value
         if (items.isEmpty()) return
 
+        val curCustomerName = customerName.value.trim()
+        val curCustomerPhone = customerPhone.value.trim()
+
         val payloadJson = encodeHeldCartPayload(
             HeldCartPayload(
                 items = items,
+                customerName = curCustomerName,
+                customerPhone = curCustomerPhone,
                 priceMode = priceMode.value,
                 paymentMethod = paymentMethod.value,
                 walletPhone = walletPhone.value,
@@ -558,23 +571,25 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 amountPaid = amountPaid.value,
                 isSplitPayment = isSplitPayment.value,
                 splitPayments = splitPayments.value,
-                loyaltyPhone = loyaltyCustomer.value?.phone,
-                loyaltyDiscount = loyaltyDiscount.value
+                loyaltyPhone = loyaltyCustomer.value?.phone ?: curCustomerPhone.takeIf { it.isNotBlank() },
+                loyaltyDiscount = loyaltyDiscount.value,
+                storeCreditApplied = storeCreditApplied.value,
+                voucherCode = redeemedVoucher.value?.code
             )
         )
 
         val effectiveTitle = if (!title.isNullOrBlank()) {
             title.trim()
-        } else if (customerName.value.isNotBlank()) {
-            customerName.value.trim()
+        } else if (curCustomerName.isNotBlank()) {
+            curCustomerName
         } else {
             "Cart #${System.currentTimeMillis() % 10000}"
         }
 
         val heldCart = HeldCart(
             title = effectiveTitle,
-            customerName = customerName.value.takeIf { it.isNotBlank() },
-            customerPhone = customerPhone.value.takeIf { it.isNotBlank() },
+            customerName = curCustomerName.takeIf { it.isNotBlank() },
+            customerPhone = curCustomerPhone.takeIf { it.isNotBlank() },
             itemsJson = payloadJson,
             discountAmount = discountAmount.value,
             isPercentageDiscount = isPercentageDiscount.value,
@@ -597,6 +612,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             priceMode.value = PriceMode.DISCOUNTED
             loyaltyDiscount.value = 0.0
             loyaltyCustomer.value = null
+            storeCreditApplied.value = 0.0
+            redeemedVoucher.value = null
             persistCartSnapshot(emptyList())
         }
     }
@@ -630,8 +647,12 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 _cartItems.value = restored
                 discountAmount.value = heldCart.discountAmount
                 isPercentageDiscount.value = heldCart.isPercentageDiscount
-                customerName.value = heldCart.customerName ?: ""
-                customerPhone.value = heldCart.customerPhone ?: ""
+                val unifiedCustName = heldCart.customerName?.takeIf { it.isNotBlank() }
+                    ?: payload.customerName.takeIf { it.isNotBlank() } ?: ""
+                val unifiedCustPhone = heldCart.customerPhone?.takeIf { it.isNotBlank() }
+                    ?: payload.customerPhone.takeIf { it.isNotBlank() } ?: ""
+                customerName.value = unifiedCustName
+                customerPhone.value = unifiedCustPhone
                 priceMode.value = payload.priceMode
                 paymentMethod.value = payload.paymentMethod
                 walletPhone.value = payload.walletPhone
@@ -640,10 +661,15 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 amountPaid.value = payload.amountPaid
                 isSplitPayment.value = payload.isSplitPayment
                 splitPayments.value = payload.splitPayments
-                loyaltyCustomer.value = payload.loyaltyPhone?.let { repository.getLoyaltyByPhone(it) }
+                val effectiveLoyaltyPhone = payload.loyaltyPhone?.takeIf { it.isNotBlank() }
+                    ?: unifiedCustPhone.takeIf { it.isNotBlank() }
+                loyaltyCustomer.value = effectiveLoyaltyPhone?.let { repository.getLoyaltyByPhone(it) }
                 loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(
                     loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0
                 )
+                val restoredVoucher = payload.voucherCode?.let { repository.getStoreCreditVoucher(it) }
+                redeemedVoucher.value = restoredVoucher
+                storeCreditApplied.value = payload.storeCreditApplied
                 persistCartSnapshot(restored)
                 if (unavailable == 0) repository.deleteHeldCart(heldCart.id) else {
                     repository.insertHeldCart(heldCart.copy(
@@ -795,6 +821,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             splitPayments.value = payload.splitPayments
             loyaltyCustomer.value = payload.loyaltyPhone?.let { repository.getLoyaltyByPhone(it) }
             loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0)
+            val restoredVoucher = payload.voucherCode?.let { repository.getStoreCreditVoucher(it) }
+            redeemedVoucher.value = restoredVoucher
+            storeCreditApplied.value = payload.storeCreditApplied
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -809,7 +838,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                     priceMode = priceMode.value, paymentMethod = paymentMethod.value, walletPhone = walletPhone.value,
                     cardType = cardType.value, cardLastFour = cardLastFour.value, amountPaid = amountPaid.value,
                     isSplitPayment = isSplitPayment.value, splitPayments = splitPayments.value,
-                    loyaltyPhone = loyaltyCustomer.value?.phone, loyaltyDiscount = loyaltyDiscount.value
+                    loyaltyPhone = loyaltyCustomer.value?.phone, loyaltyDiscount = loyaltyDiscount.value,
+                    storeCreditApplied = storeCreditApplied.value, voucherCode = redeemedVoucher.value?.code
                 )))
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -3692,6 +3722,7 @@ class RegisterClosingViewModel(private val repository: DataRepository) : ViewMod
         expectedCash: Double,
         actualCountedCash: Double,
         notes: String? = null,
+        discrepancyReason: String? = null,
         bkashSales: Double = 0.0,
         nagadSales: Double = 0.0,
         rocketSales: Double = 0.0,
@@ -3717,6 +3748,7 @@ class RegisterClosingViewModel(private val repository: DataRepository) : ViewMod
                     actualCountedCash = actualCountedCash,
                     variance = variance,
                     notes = notes,
+                    discrepancyReason = discrepancyReason,
                     timestamp = System.currentTimeMillis(),
                     bkashSales = bkashSales,
                     nagadSales = nagadSales,

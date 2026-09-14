@@ -141,7 +141,7 @@ internal fun calculateEffectiveAmountPaid(
 ): Double = when {
     isSplitPayment -> splitPayments.filterNot { it.method == "Due" }.sumOf { it.amount }
     paymentMethod == "Due" -> 0.0
-    paymentMethod == "Cash" -> if (enteredAmountPaid > 0.0) enteredAmountPaid else grandTotal
+    paymentMethod == "Cash" -> enteredAmountPaid
     else -> grandTotal
 }
 
@@ -2251,7 +2251,7 @@ fun CartScreen(
                         val isDueValid = (!hasDueInPayment) || (customerName.isNotBlank() && customerPhone.isNotBlank())
                         val isWalletValid = isSplitPayment || paymentMethod !in listOf("bKash", "Nagad", "Rocket") || walletPhone.length == 11
                         val isCardValid = isSplitPayment || paymentMethod != "Card" || cardLastFour.length == 4
-                        val isCashValid = isSplitPayment || paymentMethod != "Cash" || remainingToPay == 0.0 || effectiveAmountPaid >= remainingToPay
+                        val isCashValid = isSplitPayment || paymentMethod != "Cash" || remainingToPay == 0.0 || (effectiveAmountPaid >= remainingToPay && effectiveAmountPaid > 0.0)
                         val isStoreCreditValid = isSplitPayment || paymentMethod != "Store Credit" || remainingToPay == 0.0 || ((resolvedCustomer?.storeCredit ?: 0.0) >= grandTotal)
                         val expectedSplitTotal = if (storeCreditApplied > 0.0) remainingToPay else grandTotal
                         val isSplitValid = !isSplitPayment || (splitPayments.isNotEmpty() && (kotlin.math.abs(splitPayments.sumOf { it.amount } - expectedSplitTotal) < 0.01 || kotlin.math.abs(splitPayments.sumOf { it.amount } - grandTotal) < 0.01))

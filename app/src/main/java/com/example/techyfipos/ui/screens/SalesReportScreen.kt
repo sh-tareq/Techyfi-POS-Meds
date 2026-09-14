@@ -42,6 +42,8 @@ import com.example.techyfipos.ui.viewmodel.ExpenseViewModel
 import com.example.techyfipos.ui.viewmodel.SupplierViewModel
 import com.example.techyfipos.data.db.Supplier
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.startOfDay
+import com.example.techyfipos.utils.endOfDay
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -102,28 +104,22 @@ private enum class TrendViewMode {
     DAILY, HOURLY
 }
 
-private fun startOfDay(millis: Long): Long = Calendar.getInstance().apply {
-    timeInMillis = millis
-    set(Calendar.HOUR_OF_DAY, 0)
-    set(Calendar.MINUTE, 0)
-    set(Calendar.SECOND, 0)
-    set(Calendar.MILLISECOND, 0)
-}.timeInMillis
-
-private fun endOfDay(millis: Long): Long = Calendar.getInstance().apply {
-    timeInMillis = millis
-    set(Calendar.HOUR_OF_DAY, 23)
-    set(Calendar.MINUTE, 59)
-    set(Calendar.SECOND, 59)
-    set(Calendar.MILLISECOND, 999)
-}.timeInMillis
 
 private fun rangeFor(period: ReportPeriod, customStart: Long, customEnd: Long): Pair<Long, Long> {
     val now = System.currentTimeMillis()
     return when (period) {
         ReportPeriod.TODAY -> startOfDay(now) to endOfDay(now) + 1
-        ReportPeriod.WEEK -> startOfDay(now - 6L * 24 * 60 * 60 * 1000) to endOfDay(now) + 1
-        ReportPeriod.MONTH -> startOfDay(now - 29L * 24 * 60 * 60 * 1000) to endOfDay(now) + 1
+        ReportPeriod.WEEK -> {
+            val cal = Calendar.getInstance().apply { timeInMillis = now }
+            while (cal.get(Calendar.DAY_OF_WEEK) != cal.firstDayOfWeek) {
+                cal.add(Calendar.DAY_OF_MONTH, -1)
+            }
+            startOfDay(cal.timeInMillis) to endOfDay(now) + 1
+        }
+        ReportPeriod.MONTH -> {
+            val cal = Calendar.getInstance().apply { timeInMillis = now; set(Calendar.DAY_OF_MONTH, 1) }
+            startOfDay(cal.timeInMillis) to endOfDay(now) + 1
+        }
         ReportPeriod.YEAR -> {
             val cal = Calendar.getInstance().apply {
                 timeInMillis = now
@@ -167,6 +163,15 @@ fun SalesReportScreen(
     val (rangeStart, rangeEnd) = remember(selectedPeriod, customStart, customEnd) {
         rangeFor(selectedPeriod, customStart, customEnd)
     }
+
+    val allExpenses by (expenseViewModel?.allExpenses?.collectAsStateWithLifecycle(emptyList()) ?: remember { mutableStateOf(emptyList()) })
+    val periodExpenses = remember(allExpenses, rangeStart, rangeEnd) {
+        allExpenses.filter { it.timestamp in rangeStart until rangeEnd && it.type != "CASH_IN" }
+    }
+    val periodExpenseTotal = remember(periodExpenses) { periodExpenses.sumOf { it.amount } }
+
+    val allSuppliers by (supplierViewModel?.allSuppliers?.collectAsStateWithLifecycle(emptyList()) ?: remember { mutableStateOf(emptyList()) })
+    val totalSupplierDue = remember(allSuppliers) { allSuppliers.sumOf { it.totalDue } }
     LaunchedEffect(rangeStart, rangeEnd, salesSnapshot) {
         report = salesViewModel.buildReport(rangeStart, rangeEnd, salesSnapshot)
         val duration = (rangeEnd - rangeStart).coerceAtLeast(1L)
@@ -419,7 +424,17 @@ fun SalesReportScreen(
                 }
 
                 when (selectedTab) {
-                    ReportTab.OVERVIEW -> OverviewPanel(data, trendMetric) { trendMetric = it }
+                    ReportTab.OVERVIEW -> OverviewPanel(
+                        data = data,
+                        metric = trendMetric,
+                        periodExpenseTotal = periodExpenseTotal,
+                        totalSupplierDue = totalSupplierDue,
+                        hasExpenseFeature = expenseViewModel != null,
+                        hasSupplierFeature = supplierViewModel != null,
+                        onNavigateToExpenses = onNavigateToExpenses,
+                        onNavigateToSuppliers = onNavigateToSuppliers,
+                        onMetricChange = { trendMetric = it }
+                    )
                     ReportTab.HOURLY -> HourlyPanel(data)
                     ReportTab.PRODUCTS -> ProductsPanel(data)
                     ReportTab.PAYMENTS -> PaymentsPanel(data)
@@ -785,15 +800,151 @@ private fun EmptyReportState(
 }
 
 @Composable
-private fun OverviewPanel(data: SalesReportData, metric: TrendMetric, onMetricChange: (TrendMetric) -> Unit) {
+private fun OverviewPanel(
+    data: SalesReportData,
+    metric: TrendMetric,
+    periodExpenseTotal: Double = 0.0,
+    totalSupplierDue: Double = 0.0,
+    hasExpenseFeature: Boolean = false,
+    hasSupplierFeature: Boolean = false,
+    onNavigateToExpenses: (() -> Unit)? = null,
+    onNavigateToSuppliers: (() -> Unit)? = null,
+    onMetricChange: (TrendMetric) -> Unit
+) {
     var viewMode by remember { mutableStateOf(if (data.dailyBreakdown.size <= 1) TrendViewMode.HOURLY else TrendViewMode.DAILY) }
 
-    Card(
-        shape = RoundedCornerShape(18.dp),
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (hasExpenseFeature || hasSupplierFeature) {
+            val netOperatingProfit = data.totalProfit - periodExpenseTotal
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Realistic3DSupplierWarehouseIcon(size = 20.dp)
+                        Text(
+                            text = stringResource(R.string.sales_report_cross_ref_title),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 1. Period Expenses
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFFEF2F2),
+                            border = BorderStroke(1.dp, Color(0xFFFECACA)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable(enabled = onNavigateToExpenses != null) { onNavigateToExpenses?.invoke() }
+                        ) {
+                            Column(Modifier.padding(10.dp)) {
+                                Text(
+                                    text = stringResource(R.string.sales_report_period_expenses),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF991B1B)
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = formatTaka(periodExpenseTotal),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFFDC2626)
+                                )
+                                if (onNavigateToExpenses != null) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = stringResource(R.string.sales_report_view_expenses),
+                                        fontSize = 9.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFB91C1C)
+                                    )
+                                }
+                            }
+                        }
+
+                        // 2. Net Operating Profit
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (netOperatingProfit >= 0) Color(0xFFF0FDF4) else Color(0xFFFEF2F2),
+                            border = BorderStroke(1.dp, if (netOperatingProfit >= 0) Color(0xFFBBF7D0) else Color(0xFFFECACA)),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(Modifier.padding(10.dp)) {
+                                Text(
+                                    text = stringResource(R.string.sales_report_operating_profit),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (netOperatingProfit >= 0) Color(0xFF166534) else Color(0xFF991B1B)
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = formatTaka(netOperatingProfit),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (netOperatingProfit >= 0) Color(0xFF16A34A) else Color(0xFFDC2626)
+                                )
+                            }
+                        }
+
+                        // 3. Vendor Payables (Due)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFFFFBEB),
+                            border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable(enabled = onNavigateToSuppliers != null) { onNavigateToSuppliers?.invoke() }
+                        ) {
+                            Column(Modifier.padding(10.dp)) {
+                                Text(
+                                    text = stringResource(R.string.sales_report_supplier_due),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF92400E)
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = formatTaka(totalSupplierDue),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFFD97706)
+                                )
+                                if (onNavigateToSuppliers != null) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = stringResource(R.string.sales_report_view_suppliers),
+                                        fontSize = 9.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFB45309)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             // Header Row: Title & Subtitle
             Row(
@@ -979,6 +1130,7 @@ private fun OverviewPanel(data: SalesReportData, metric: TrendMetric, onMetricCh
             }
         }
     }
+}
 }
 
 @Composable

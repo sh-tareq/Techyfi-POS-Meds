@@ -73,7 +73,6 @@ import com.example.techyfipos.data.db.CustomerDue
 import com.example.techyfipos.data.db.DuePayment
 import com.example.techyfipos.data.db.DueReminderLog
 import com.example.techyfipos.data.db.ScheduledDueReminder
-import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.viewmodel.CustomerViewModel
 import com.example.techyfipos.ui.viewmodel.DuesAuditEntry
 import com.example.techyfipos.ui.viewmodel.DuesAuditType
@@ -100,47 +99,33 @@ import com.example.techyfipos.utils.findActivity
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.annotation.StringRes
+import com.example.techyfipos.utils.*
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-private enum class DuesTab(val label: String) {
-    OUTSTANDING("⚠️ Outstanding"),
-    OVERDUE("🚨 Overdue / Limit"),
-    SETTLED("✅ Settled"),
-    PAYMENTS("💵 Payments")
+private enum class DuesTab(@StringRes val labelRes: Int) {
+    OUTSTANDING(R.string.dues_tab_outstanding),
+    OVERDUE(R.string.dues_tab_overdue),
+    SETTLED(R.string.dues_tab_settled),
+    PAYMENTS(R.string.dues_tab_payments)
 }
 
-private enum class DuePeriodFilter(val label: String) {
-    ALL_TIME("All Dates"),
-    TODAY("Today"),
-    THIS_WEEK("This Week"),
-    THIS_MONTH("This Month"),
-    CUSTOM("Custom Date Range 📅")
+private enum class DuePeriodFilter(@StringRes val labelRes: Int) {
+    ALL_TIME(R.string.dues_period_all_dates),
+    TODAY(R.string.dues_period_today),
+    THIS_WEEK(R.string.dues_period_this_week),
+    THIS_MONTH(R.string.dues_period_this_month),
+    CUSTOM(R.string.dues_period_custom_range)
 }
 
-private enum class DuesSort(val label: String) {
-    HIGHEST("Highest due balance"),
-    RECENT("Newest date / activity"),
-    OLDEST("Oldest date / activity")
+private enum class DuesSort(@StringRes val labelRes: Int) {
+    HIGHEST(R.string.dues_sort_highest),
+    RECENT(R.string.dues_sort_recent),
+    OLDEST(R.string.dues_sort_oldest)
 }
-
-private fun dueStartOfDay(millis: Long): Long = Calendar.getInstance().apply {
-    timeInMillis = millis
-    set(Calendar.HOUR_OF_DAY, 0)
-    set(Calendar.MINUTE, 0)
-    set(Calendar.SECOND, 0)
-    set(Calendar.MILLISECOND, 0)
-}.timeInMillis
-
-private fun dueEndOfDay(millis: Long): Long = Calendar.getInstance().apply {
-    timeInMillis = millis
-    set(Calendar.HOUR_OF_DAY, 23)
-    set(Calendar.MINUTE, 59)
-    set(Calendar.SECOND, 59)
-    set(Calendar.MILLISECOND, 999)
-}.timeInMillis
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -259,7 +244,7 @@ fun DuesScreen(
         Calendar.getInstance().apply {
             timeInMillis = now
             set(Calendar.DAY_OF_MONTH, 1)
-        }.timeInMillis.let(::dueStartOfDay)
+        }.timeInMillis.let(::startOfDay)
     }
     var paymentStart by remember { mutableStateOf(monthStart) }
     var paymentEnd by remember { mutableStateOf(now) }
@@ -279,19 +264,19 @@ fun DuesScreen(
     val (dueStartRange, dueEndRange) = remember(duePeriod, customDueStart, customDueEnd, now, monthStart) {
         when (duePeriod) {
             DuePeriodFilter.ALL_TIME -> Pair(null, null)
-            DuePeriodFilter.TODAY -> Pair(dueStartOfDay(now), dueEndOfDay(now))
+            DuePeriodFilter.TODAY -> Pair(startOfDay(now), endOfDay(now))
             DuePeriodFilter.THIS_WEEK -> {
                 val cal = Calendar.getInstance().apply {
                     timeInMillis = now
                     set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
                 }
-                Pair(dueStartOfDay(cal.timeInMillis), dueEndOfDay(now))
+                Pair(startOfDay(cal.timeInMillis), endOfDay(now))
             }
-            DuePeriodFilter.THIS_MONTH -> Pair(monthStart, dueEndOfDay(now))
+            DuePeriodFilter.THIS_MONTH -> Pair(monthStart, endOfDay(now))
             DuePeriodFilter.CUSTOM -> {
                 val start = customDueStart ?: now
                 val end = customDueEnd ?: now
-                Pair(dueStartOfDay(start), dueEndOfDay(end))
+                Pair(startOfDay(start), endOfDay(end))
             }
         }
     }
@@ -325,7 +310,7 @@ fun DuesScreen(
     }
 
     val filteredPayments = remember(allPayments, paymentStart, paymentEnd) {
-        allPayments.filter { it.timestamp in dueStartOfDay(paymentStart)..dueEndOfDay(paymentEnd) }
+        allPayments.filter { it.timestamp in startOfDay(paymentStart)..endOfDay(paymentEnd) }
             .sortedByDescending { it.timestamp }
     }
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
@@ -2766,21 +2751,21 @@ fun DuesAuditHistorySheet(
         Calendar.getInstance().apply {
             timeInMillis = now
             set(Calendar.DAY_OF_MONTH, 1)
-        }.timeInMillis.let(::dueStartOfDay)
+        }.timeInMillis.let(::startOfDay)
     }
 
     val (startTime, endTime) = remember(selectedDatePeriod, now, monthStart) {
         when (selectedDatePeriod) {
             DuePeriodFilter.ALL_TIME -> Pair(null, null)
-            DuePeriodFilter.TODAY -> Pair(dueStartOfDay(now), dueEndOfDay(now))
+            DuePeriodFilter.TODAY -> Pair(startOfDay(now), endOfDay(now))
             DuePeriodFilter.THIS_WEEK -> {
                 val cal = Calendar.getInstance().apply {
                     timeInMillis = now
-                    set(Calendar.DAY_OF_WEEK, Calendar.SATURDAY)
+                    set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
                 }
-                Pair(dueStartOfDay(cal.timeInMillis), dueEndOfDay(now))
+                Pair(startOfDay(cal.timeInMillis), endOfDay(now))
             }
-            DuePeriodFilter.THIS_MONTH -> Pair(monthStart, dueEndOfDay(now))
+            DuePeriodFilter.THIS_MONTH -> Pair(monthStart, endOfDay(now))
             else -> Pair(null, null)
         }
     }

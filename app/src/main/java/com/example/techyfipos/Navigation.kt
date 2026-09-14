@@ -73,91 +73,156 @@ fun Animated3DNavItemIcon(
     sellIconSize: androidx.compose.ui.unit.Dp = if (selected) 24.dp else 21.dp,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "nav3d_${type.name}")
-
-    val floatAnim by infiniteTransition.animateFloat(
-        initialValue = -3.5f,
-        targetValue = 3.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1400, easing = LinearOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "float"
-    )
-
-    val wobbleAnim by infiniteTransition.animateFloat(
-        initialValue = -6f,
-        targetValue = 6f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = LinearOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "wobble"
-    )
-
-    val spinAnim by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(3600, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "spin"
-    )
-
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.10f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1300, easing = LinearOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse"
-    )
-
     val targetSize = sellIconSize
+    if (selected) {
+        ActiveAnimated3DNavItemIcon(
+            type = type,
+            targetSize = targetSize,
+            modifier = modifier
+        )
+    } else {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = modifier
+        ) {
+            Nav3DIconContent(type = type, targetSize = targetSize)
+        }
+    }
+}
+
+@Composable
+private fun ActiveAnimated3DNavItemIcon(
+    type: Nav3DType,
+    targetSize: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "nav3d_active_${type.name}")
+
+    val layerModifier: Modifier = when (type) {
+        Nav3DType.SELL, Nav3DType.EXPENSES -> {
+            val floatAnim by infiniteTransition.animateFloat(
+                initialValue = -3.5f,
+                targetValue = 3.5f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1400, easing = LinearOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "float"
+            )
+            Modifier.graphicsLayer { translationY = floatAnim }
+        }
+        Nav3DType.DUES -> {
+            val floatAnim by infiniteTransition.animateFloat(
+                initialValue = -2.1f,
+                targetValue = 2.1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1400, easing = LinearOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "float_dues"
+            )
+            Modifier.graphicsLayer { translationY = floatAnim }
+        }
+        Nav3DType.REGISTER, Nav3DType.LOYALTY, Nav3DType.CUSTOMERS -> {
+            val floatAnim by infiniteTransition.animateFloat(
+                initialValue = -1.75f,
+                targetValue = 1.75f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1400, easing = LinearOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "float_sub"
+            )
+            Modifier.graphicsLayer { translationY = floatAnim }
+        }
+        Nav3DType.PRODUCTS -> {
+            val wobbleAnim by infiniteTransition.animateFloat(
+                initialValue = -6f,
+                targetValue = 6f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1500, easing = LinearOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "wobble"
+            )
+            Modifier.graphicsLayer { rotationZ = wobbleAnim }
+        }
+        Nav3DType.HISTORY -> {
+            val wobbleAnim by infiniteTransition.animateFloat(
+                initialValue = -4.2f,
+                targetValue = 4.2f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1500, easing = LinearOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "wobble_hist"
+            )
+            Modifier.graphicsLayer { rotationZ = wobbleAnim }
+        }
+        Nav3DType.SUPPLIERS -> {
+            val wobbleAnim by infiniteTransition.animateFloat(
+                initialValue = -3f,
+                targetValue = 3f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1500, easing = LinearOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "wobble_sup"
+            )
+            Modifier.graphicsLayer { translationX = wobbleAnim }
+        }
+        Nav3DType.SETTINGS -> {
+            val spinAnim by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(3600, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "spin"
+            )
+            Modifier.graphicsLayer { rotationZ = spinAnim }
+        }
+        Nav3DType.MORE, Nav3DType.REPORT -> {
+            val pulseScale by infiniteTransition.animateFloat(
+                initialValue = 0.92f,
+                targetValue = 1.10f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1300, easing = LinearOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "pulse"
+            )
+            Modifier.graphicsLayer {
+                scaleX = pulseScale
+                scaleY = pulseScale
+            }
+        }
+    }
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier = modifier.graphicsLayer {
-            if (selected) {
-                when (type) {
-                    Nav3DType.SELL -> translationY = floatAnim
-                    Nav3DType.PRODUCTS -> rotationZ = wobbleAnim
-                    Nav3DType.HISTORY -> rotationZ = wobbleAnim * 0.7f
-                    Nav3DType.DUES -> translationY = floatAnim * 0.6f
-                    Nav3DType.MORE -> {
-                        scaleY = pulseScale
-                        scaleX = pulseScale
-                    }
-                    Nav3DType.REPORT -> {
-                        scaleY = pulseScale
-                        scaleX = pulseScale
-                    }
-                    Nav3DType.EXPENSES -> translationY = floatAnim
-                    Nav3DType.SUPPLIERS -> translationX = wobbleAnim * 0.5f
-                    Nav3DType.SETTINGS -> rotationZ = spinAnim
-                    Nav3DType.REGISTER -> translationY = floatAnim * 0.5f
-                    Nav3DType.LOYALTY -> translationY = floatAnim * 0.5f
-                    Nav3DType.CUSTOMERS -> translationY = floatAnim * 0.5f
-                }
-            }
-        }
+        modifier = modifier.then(layerModifier)
     ) {
-        when (type) {
-            Nav3DType.SELL -> Realistic3DSellTerminalIcon(size = targetSize)
-            Nav3DType.PRODUCTS -> Realistic3DProductsBoxIcon(size = targetSize)
-            Nav3DType.HISTORY -> Realistic3DHistoryClockIcon(size = targetSize)
-            Nav3DType.DUES -> Realistic3DClipboardDuesIcon(size = targetSize)
-            Nav3DType.MORE -> Realistic3DMoreZapIcon(size = targetSize)
-            Nav3DType.REPORT -> Realistic3DReportChartIcon(size = targetSize)
-            Nav3DType.EXPENSES -> Realistic3DExpensesCashIcon(size = targetSize)
-            Nav3DType.SUPPLIERS -> Realistic3DSupplierTruckIcon(size = targetSize)
-            Nav3DType.SETTINGS -> Realistic3DSettingsGearIcon(size = targetSize)
-            Nav3DType.REGISTER -> Realistic3DRegisterReceiptIcon(size = targetSize)
-            Nav3DType.LOYALTY -> Realistic3DLoyaltyStarIcon(size = targetSize)
-            Nav3DType.CUSTOMERS -> Realistic3DCustomerHubIcon(size = targetSize)
-        }
+        Nav3DIconContent(type = type, targetSize = targetSize)
+    }
+}
+
+@Composable
+private fun Nav3DIconContent(type: Nav3DType, targetSize: androidx.compose.ui.unit.Dp) {
+    when (type) {
+        Nav3DType.SELL -> Realistic3DSellTerminalIcon(size = targetSize)
+        Nav3DType.PRODUCTS -> Realistic3DProductsBoxIcon(size = targetSize)
+        Nav3DType.HISTORY -> Realistic3DHistoryClockIcon(size = targetSize)
+        Nav3DType.DUES -> Realistic3DClipboardDuesIcon(size = targetSize)
+        Nav3DType.MORE -> Realistic3DMoreZapIcon(size = targetSize)
+        Nav3DType.REPORT -> Realistic3DReportChartIcon(size = targetSize)
+        Nav3DType.EXPENSES -> Realistic3DExpensesCashIcon(size = targetSize)
+        Nav3DType.SUPPLIERS -> Realistic3DSupplierTruckIcon(size = targetSize)
+        Nav3DType.SETTINGS -> Realistic3DSettingsGearIcon(size = targetSize)
+        Nav3DType.REGISTER -> Realistic3DRegisterReceiptIcon(size = targetSize)
+        Nav3DType.LOYALTY -> Realistic3DLoyaltyStarIcon(size = targetSize)
+        Nav3DType.CUSTOMERS -> Realistic3DCustomerHubIcon(size = targetSize)
     }
 }
 
@@ -165,7 +230,6 @@ fun Animated3DNavItemIcon(
 fun LocaleWrapper(language: String, content: @Composable () -> Unit) {
     val context = LocalContext.current
     val locale = java.util.Locale.forLanguageTag(language)
-    java.util.Locale.setDefault(locale)
     
     val currentSysConfig = androidx.compose.ui.platform.LocalConfiguration.current
     val config = remember(currentSysConfig.orientation, currentSysConfig.screenWidthDp, currentSysConfig.screenHeightDp, language) {
@@ -456,8 +520,13 @@ fun MainNavigation() {
                     },
                     onNavigateToLoyalty = {
                         showMoreHubSheet = false
-                        while (backStack.size > 1) { backStack.removeLastOrNull() }
-                        if (backStack.lastOrNull() != Loyalty) { backStack.add(Loyalty) }
+                        val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+                        if (canLoyalty) {
+                            while (backStack.size > 1) { backStack.removeLastOrNull() }
+                            if (backStack.lastOrNull() != Loyalty) { backStack.add(Loyalty) }
+                        } else {
+                            android.widget.Toast.makeText(context, ownerOnlyLoyaltyText, android.widget.Toast.LENGTH_SHORT).show()
+                        }
                     },
                     onNavigateToCustomers = {
                         showMoreHubSheet = false
@@ -1056,6 +1125,14 @@ fun MainNavigation() {
                             entry<SalesReport> {
                                 SalesReportScreen(
                                     salesViewModel = salesViewModel,
+                                    expenseViewModel = expenseViewModel,
+                                    supplierViewModel = supplierViewModel,
+                                    onNavigateToExpenses = {
+                                        if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
+                                    },
+                                    onNavigateToSuppliers = {
+                                        if (backStack.lastOrNull() != Suppliers) { backStack.add(Suppliers) }
+                                    },
                                     onBack = { backStack.removeLastOrNull() },
                                     modifier = Modifier.padding(contentPadding)
                                 )
@@ -1135,19 +1212,27 @@ fun MainNavigation() {
                                 )
                             }
                             entry<Loyalty> {
-                                LoyaltyScreen(
-                                    loyaltyViewModel = loyaltyViewModel,
-                                    customerViewModel = customerViewModel,
-                                    onBack = { backStack.removeLastOrNull() },
-                                    onStartSaleForCustomer = { customer ->
-                                        cartViewModel.onCustomerPhoneChanged(customer.phone)
-                                        cartViewModel.customerName.value = customer.name
-                                        while (backStack.size > 1) { backStack.removeLastOrNull() }
-                                        backStack.add(Scanner)
-                                        android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
-                                    },
-                                    modifier = Modifier.padding(contentPadding)
-                                )
+                                val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+                                if (!canLoyalty) {
+                                    LaunchedEffect(Unit) {
+                                        android.widget.Toast.makeText(context, ownerOnlyLoyaltyText, android.widget.Toast.LENGTH_SHORT).show()
+                                        backStack.removeLastOrNull()
+                                    }
+                                } else {
+                                    LoyaltyScreen(
+                                        loyaltyViewModel = loyaltyViewModel,
+                                        customerViewModel = customerViewModel,
+                                        onBack = { backStack.removeLastOrNull() },
+                                        onStartSaleForCustomer = { customer ->
+                                            cartViewModel.onCustomerPhoneChanged(customer.phone)
+                                            cartViewModel.customerName.value = customer.name
+                                            while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                            backStack.add(Scanner)
+                                            android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier.padding(contentPadding)
+                                    )
+                                }
                             }
                             entry<Customers> {
                                 CustomersScreen(
@@ -1426,7 +1511,7 @@ private fun MoreOperationsHubContent(
             PosTopAppBarTitle(
                 title = stringResource(R.string.store_operations),
                 subtitle = stringResource(R.string.store_operations_sub),
-                metricBadge = "Operations",
+                metricBadge = stringResource(R.string.more_hub_badge_operations),
                 badgeColor = PosSectionColors.More,
                 isTablet = isTablet,
                 modifier = Modifier.weight(1f),
@@ -1551,6 +1636,10 @@ private fun MoreOperationsHubContent(
 
         Spacer(Modifier.height(12.dp))
 
+        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+        val screenHeight = configuration.screenHeightDp.dp
+        val maxContentHeight = (screenHeight * if (isTablet) 0.55f else 0.65f).coerceIn(280.dp, 520.dp)
+
         // Operations List / Grid
         if (isGridView) {
             LazyVerticalGrid(
@@ -1559,7 +1648,7 @@ private fun MoreOperationsHubContent(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = if (isTablet) 460.dp else 490.dp)
+                    .heightIn(max = maxContentHeight)
             ) {
                 items(
                     items = filteredList,
@@ -1582,7 +1671,7 @@ private fun MoreOperationsHubContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = if (isTablet) 460.dp else 520.dp)
+                    .heightIn(max = maxContentHeight)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {

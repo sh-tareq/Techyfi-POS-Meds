@@ -14,8 +14,8 @@ android {
         applicationId = "com.techyfi.pos"
         minSdk = 24
         targetSdk = 36
-        versionCode = 220935
-        versionName = "2.6.59-V14-09-2026"
+        versionCode = 220938
+        versionName = "2.6.62-V14-09-2026"
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -111,6 +111,7 @@ dependencies {
   // Local tests: jUnit, coroutines, Android runner
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
+  testImplementation("org.json:json:20240303")
 
   // Instrumented tests: jUnit rules and runners
   androidTestImplementation(libs.androidx.test.core)

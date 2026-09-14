@@ -140,6 +140,7 @@ data class RegisterClosing(
     val actualCountedCash: Double,
     val variance: Double,
     val notes: String? = null,
+    val discrepancyReason: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
     val cashierName: String = "Admin",
     val bkashSales: Double = 0.0,

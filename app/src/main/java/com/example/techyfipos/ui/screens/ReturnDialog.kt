@@ -6,6 +6,9 @@ import android.content.Intent
 import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.techyfipos.data.SettingsDataStore
+import kotlinx.coroutines.launch
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -54,9 +57,6 @@ import com.example.techyfipos.utils.formatTaka
 import org.json.JSONArray
 import org.json.JSONObject
 
-private const val PREFS_NAME = "techyfi_return_dialog_prefs"
-private const val KEY_CUSTOM_PRESETS = "custom_audit_presets_json"
-
 data class AuditPreset(
     val id: String,
     val icon: String,
@@ -99,12 +99,14 @@ fun ReturnItemsDialog(
     ) -> Unit
 ) {
     val context = LocalContext.current
-    val prefs = remember(context) { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
-
-    // Custom Presets State
-    var customPresets by remember {
-        mutableStateOf(loadAuditPresets(prefs))
+    val settingsDataStore = remember(context) { SettingsDataStore(context) }
+    val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        settingsDataStore.migrateLegacyReturnAuditPresetsIfNeeded()
     }
+
+    val customPresetsJson by settingsDataStore.returnAuditPresetsFlow.collectAsStateWithLifecycle(initialValue = null)
+    val customPresets = remember(customPresetsJson) { parseAuditPresets(customPresetsJson) }
     var showManagePresetsDialog by remember { mutableStateOf(false) }
 
     // Direct manual quantity input state
@@ -1413,8 +1415,9 @@ fun ReturnItemsDialog(
             currentPresets = customPresets,
             onDismiss = { showManagePresetsDialog = false },
             onSavePresets = { updated ->
-                customPresets = updated
-                saveAuditPresets(prefs, updated)
+                coroutineScope.launch {
+                    settingsDataStore.saveReturnAuditPresets(encodeAuditPresets(updated))
+                }
                 showManagePresetsDialog = false
             }
         )
@@ -1808,8 +1811,8 @@ fun ManageAuditPresetsDialog(
     )
 }
 
-private fun loadAuditPresets(prefs: android.content.SharedPreferences): List<AuditPreset> {
-    val jsonStr = prefs.getString(KEY_CUSTOM_PRESETS, null) ?: return DEFAULT_AUDIT_PRESETS
+internal fun parseAuditPresets(jsonStr: String?): List<AuditPreset> {
+    if (jsonStr.isNullOrBlank()) return DEFAULT_AUDIT_PRESETS
     return try {
         val array = JSONArray(jsonStr)
         val list = mutableListOf<AuditPreset>()
@@ -1829,17 +1832,15 @@ private fun loadAuditPresets(prefs: android.content.SharedPreferences): List<Aud
     }
 }
 
-private fun saveAuditPresets(prefs: android.content.SharedPreferences, presets: List<AuditPreset>) {
-    try {
-        val array = JSONArray()
-        presets.forEach { preset ->
-            val obj = JSONObject().apply {
-                put("id", preset.id)
-                put("icon", preset.icon)
-                put("text", preset.text)
-            }
-            array.put(obj)
+internal fun encodeAuditPresets(presets: List<AuditPreset>): String {
+    val array = JSONArray()
+    presets.forEach { preset ->
+        val obj = JSONObject().apply {
+            put("id", preset.id)
+            put("icon", preset.icon)
+            put("text", preset.text)
         }
-        prefs.edit().putString(KEY_CUSTOM_PRESETS, array.toString()).apply()
-    } catch (_: Exception) {}
+        array.put(obj)
+    }
+    return array.toString()
 }

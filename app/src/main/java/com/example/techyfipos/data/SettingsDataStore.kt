@@ -43,6 +43,7 @@ class SettingsDataStore(private val context: Context) {
         val PRODUCT_CATEGORIES_KEY = stringPreferencesKey("product_categories_list_json")
         val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         val UI_LAYOUT_MODE_KEY = stringPreferencesKey("ui_layout_mode")
+        val RETURN_AUDIT_PRESETS_KEY = stringPreferencesKey("custom_audit_presets_json")
         val DEFAULT_NOTE_PRESETS = listOf(
             "No Warranty",
             "7 Days Replacement",
@@ -348,6 +349,31 @@ class SettingsDataStore(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[PRODUCT_CATEGORIES_KEY] = CategoryItem.listToJson(CategoryItem.defaultCategories())
         }
+    }
+
+    val returnAuditPresetsFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[RETURN_AUDIT_PRESETS_KEY]
+    }
+
+    suspend fun saveReturnAuditPresets(json: String) {
+        context.dataStore.edit { preferences ->
+            preferences[RETURN_AUDIT_PRESETS_KEY] = json
+        }
+    }
+
+    suspend fun migrateLegacyReturnAuditPresetsIfNeeded() {
+        try {
+            val legacyPrefs = context.getSharedPreferences("techyfi_return_dialog_prefs", Context.MODE_PRIVATE)
+            val legacyJson = legacyPrefs.getString("custom_audit_presets_json", null)
+            if (!legacyJson.isNullOrBlank()) {
+                context.dataStore.edit { prefs ->
+                    if (prefs[RETURN_AUDIT_PRESETS_KEY].isNullOrBlank()) {
+                        prefs[RETURN_AUDIT_PRESETS_KEY] = legacyJson
+                    }
+                }
+                legacyPrefs.edit().clear().apply()
+            }
+        } catch (_: Exception) {}
     }
 
     suspend fun clearAll() {

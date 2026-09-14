@@ -9,7 +9,30 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.util.Calendar
 import java.util.Locale
+
+/**
+ * Returns epoch timestamp in milliseconds for the very beginning of the day (00:00:00.000).
+ */
+fun startOfDay(millis: Long = System.currentTimeMillis()): Long = Calendar.getInstance().apply {
+    timeInMillis = millis
+    set(Calendar.HOUR_OF_DAY, 0)
+    set(Calendar.MINUTE, 0)
+    set(Calendar.SECOND, 0)
+    set(Calendar.MILLISECOND, 0)
+}.timeInMillis
+
+/**
+ * Returns epoch timestamp in milliseconds for the very end of the day (23:59:59.999).
+ */
+fun endOfDay(millis: Long = System.currentTimeMillis()): Long = Calendar.getInstance().apply {
+    timeInMillis = millis
+    set(Calendar.HOUR_OF_DAY, 23)
+    set(Calendar.MINUTE, 59)
+    set(Calendar.SECOND, 59)
+    set(Calendar.MILLISECOND, 999)
+}.timeInMillis
 
 fun formatTaka(amount: Double): String {
     val isNegative = amount < 0.0

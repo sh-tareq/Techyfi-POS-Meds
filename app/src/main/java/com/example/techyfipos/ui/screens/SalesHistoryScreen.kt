@@ -47,36 +47,35 @@ import com.example.techyfipos.ui.viewmodel.CartViewModel
 import com.example.techyfipos.ui.viewmodel.SaleReturnSummary
 import com.example.techyfipos.ui.viewmodel.InvoiceProfitSummary
 import com.example.techyfipos.ui.viewmodel.SalesViewModel
+import androidx.annotation.StringRes
 import com.example.techyfipos.ui.viewmodel.SettingsViewModel
 import com.example.techyfipos.utils.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-private enum class HistoryReportPeriod(val label: String) {
-    TODAY("Today"),
-    WEEK("This Week"),
-    MONTH("This Month"),
-    YEAR("This Year"),
-    ALL_TIME("All Time"),
-    CUSTOM("Custom")
+private enum class HistoryReportPeriod(@StringRes val labelRes: Int) {
+    TODAY(R.string.history_period_today),
+    WEEK(R.string.history_period_week),
+    MONTH(R.string.history_period_month),
+    YEAR(R.string.history_period_year),
+    ALL_TIME(R.string.history_period_all_time),
+    CUSTOM(R.string.dues_period_custom_range)
 }
 
-private fun startOfDay(millis: Long): Long = Calendar.getInstance().apply {
-    timeInMillis = millis
-    set(Calendar.HOUR_OF_DAY, 0)
-    set(Calendar.MINUTE, 0)
-    set(Calendar.SECOND, 0)
-    set(Calendar.MILLISECOND, 0)
-}.timeInMillis
+private enum class HistoryCustomerFilter(@StringRes val labelRes: Int) {
+    ALL(R.string.history_customer_all),
+    SAVED_CUSTOMER(R.string.history_customer_saved),
+    WALK_IN(R.string.history_customer_walkin)
+}
 
-private fun endOfDay(millis: Long): Long = Calendar.getInstance().apply {
-    timeInMillis = millis
-    set(Calendar.HOUR_OF_DAY, 23)
-    set(Calendar.MINUTE, 59)
-    set(Calendar.SECOND, 59)
-    set(Calendar.MILLISECOND, 999)
-}.timeInMillis
+private enum class HistorySortOption(@StringRes val labelRes: Int) {
+    NEWEST_FIRST(R.string.history_sort_newest),
+    HIGHEST_TOTAL(R.string.history_sort_highest_total),
+    LOWEST_TOTAL(R.string.history_sort_lowest_total),
+    HIGHEST_PROFIT(R.string.invoice_sort_profit_high),
+    LOWEST_PROFIT(R.string.invoice_sort_profit_low)
+}
 
 private fun rangeForPeriod(period: HistoryReportPeriod, customStart: Long, customEnd: Long): Pair<Long, Long> {
     val now = System.currentTimeMillis()
@@ -87,15 +86,15 @@ private fun rangeForPeriod(period: HistoryReportPeriod, customStart: Long, custo
             while (cal.get(Calendar.DAY_OF_WEEK) != cal.firstDayOfWeek) {
                 cal.add(Calendar.DAY_OF_MONTH, -1)
             }
-            startOfDay(cal.timeInMillis) to now + 1
+            startOfDay(cal.timeInMillis) to endOfDay(now) + 1
         }
         HistoryReportPeriod.MONTH -> {
             val cal = Calendar.getInstance().apply { timeInMillis = now; set(Calendar.DAY_OF_MONTH, 1) }
-            startOfDay(cal.timeInMillis) to now + 1
+            startOfDay(cal.timeInMillis) to endOfDay(now) + 1
         }
         HistoryReportPeriod.YEAR -> {
             val cal = Calendar.getInstance().apply { timeInMillis = now; set(Calendar.DAY_OF_YEAR, 1) }
-            startOfDay(cal.timeInMillis) to now + 1
+            startOfDay(cal.timeInMillis) to endOfDay(now) + 1
         }
         HistoryReportPeriod.ALL_TIME -> 0L to Long.MAX_VALUE
         HistoryReportPeriod.CUSTOM -> startOfDay(customStart) to endOfDay(customEnd) + 1
@@ -141,9 +140,8 @@ fun SalesHistoryScreen(
     val canDelete = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
 
     var selectedPeriod by remember { mutableStateOf(HistoryReportPeriod.ALL_TIME) }
-    val now = remember { System.currentTimeMillis() }
-    var customStart by remember { mutableStateOf(now) }
-    var customEnd by remember { mutableStateOf(now) }
+    var customStart by remember { mutableStateOf(System.currentTimeMillis()) }
+    var customEnd by remember { mutableStateOf(System.currentTimeMillis()) }
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
     var selectedSaleDetail by remember { mutableStateOf<SaleWithItems?>(null) }
@@ -153,14 +151,14 @@ fun SalesHistoryScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showFilters by remember { mutableStateOf(false) }
     var selectedPayments by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var customerFilter by remember { mutableStateOf("All") }
+    var customerFilter by remember { mutableStateOf(HistoryCustomerFilter.ALL) }
     var minimumTotal by remember { mutableStateOf("") }
     var maximumTotal by remember { mutableStateOf("") }
-    var sortOrder by remember { mutableStateOf("Newest first") }
+    var sortOrder by remember { mutableStateOf(HistorySortOption.NEWEST_FIRST) }
     var showSortMenu by remember { mutableStateOf(false) }
 
     var draftPayments by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var draftCustomerFilter by remember { mutableStateOf("All") }
+    var draftCustomerFilter by remember { mutableStateOf(HistoryCustomerFilter.ALL) }
     var draftMinimumTotal by remember { mutableStateOf("") }
     var draftMaximumTotal by remember { mutableStateOf("") }
 
@@ -192,9 +190,9 @@ fun SalesHistoryScreen(
             val matchesPayment = selectedPayments.isEmpty() || sale.paymentMethod in selectedPayments
             val isWalkIn = sale.customerName.isNullOrBlank() && sale.customerPhone.isNullOrBlank()
             val matchesCustomer = when (customerFilter) {
-                "Saved customer" -> !isWalkIn
-                "Walk-in" -> isWalkIn
-                else -> true
+                HistoryCustomerFilter.SAVED_CUSTOMER -> !isWalkIn
+                HistoryCustomerFilter.WALK_IN -> isWalkIn
+                HistoryCustomerFilter.ALL -> true
             }
             val matchesReturns = !onlyReturnsFilter || (returnsBySaleId[sale.id]?.hasReturns == true)
             matchesSearch && matchesPayment && matchesCustomer && matchesReturns &&
@@ -202,15 +200,15 @@ fun SalesHistoryScreen(
                 (maximum == null || sale.grandTotal <= maximum)
         }.let { matches ->
             when (sortOrder) {
-                "Highest total" -> matches.sortedByDescending { it.sale.grandTotal }
-                "Lowest total" -> matches.sortedBy { it.sale.grandTotal }
-                "Highest profit" -> matches.sortedByDescending {
+                HistorySortOption.HIGHEST_TOTAL -> matches.sortedByDescending { it.sale.grandTotal }
+                HistorySortOption.LOWEST_TOTAL -> matches.sortedBy { it.sale.grandTotal }
+                HistorySortOption.HIGHEST_PROFIT -> matches.sortedByDescending {
                     salesViewModel.calculateInvoiceProfit(it, returnsBySaleId[it.sale.id]).netProfit
                 }
-                "Lowest profit" -> matches.sortedBy {
+                HistorySortOption.LOWEST_PROFIT -> matches.sortedBy {
                     salesViewModel.calculateInvoiceProfit(it, returnsBySaleId[it.sale.id]).netProfit
                 }
-                else -> matches.sortedByDescending { it.sale.timestamp }
+                HistorySortOption.NEWEST_FIRST -> matches.sortedByDescending { it.sale.timestamp }
             }
         }
     }
@@ -225,10 +223,10 @@ fun SalesHistoryScreen(
     val cashCount = filteredSales.count { it.sale.paymentMethod.equals("Cash", ignoreCase = true) }
     val cashSplitPercent = if (filteredSales.isNotEmpty()) ((cashCount.toDouble() / filteredSales.size) * 100).toInt() else 0
     val filterCount = selectedPayments.size +
-        (if (customerFilter != "All") 1 else 0) +
+        (if (customerFilter != HistoryCustomerFilter.ALL) 1 else 0) +
         (if (minimumTotal.isNotBlank() || maximumTotal.isNotBlank()) 1 else 0)
     val dateRangeLabel = when (selectedPeriod) {
-        HistoryReportPeriod.ALL_TIME -> "All recorded sales"
+        HistoryReportPeriod.ALL_TIME -> stringResource(R.string.history_period_all_sales)
         else -> {
             val startText = dateFormat.format(Date(rangeStart))
             val endText = dateFormat.format(Date((rangeEnd - 1).coerceAtMost(System.currentTimeMillis())))
@@ -370,8 +368,9 @@ fun SalesHistoryScreen(
                     // Quick Date Pill Button (opens Date Range Picker)
                     Surface(
                         onClick = {
-                            customStart = if (selectedPeriod == HistoryReportPeriod.ALL_TIME) now else rangeStart
-                            customEnd = if (selectedPeriod == HistoryReportPeriod.ALL_TIME) now else (rangeEnd - 1)
+                            val currentMillis = System.currentTimeMillis()
+                            customStart = if (selectedPeriod == HistoryReportPeriod.ALL_TIME) currentMillis else rangeStart
+                            customEnd = if (selectedPeriod == HistoryReportPeriod.ALL_TIME) currentMillis else (rangeEnd - 1)
                             showStartPicker = true
                         },
                         shape = RoundedCornerShape(10.dp),
@@ -387,11 +386,11 @@ fun SalesHistoryScreen(
                             Realistic3DCalendarIcon(size = 16.dp)
                             Text(
                                 text = when (selectedPeriod) {
-                                    HistoryReportPeriod.ALL_TIME -> "All Time"
-                                    HistoryReportPeriod.TODAY -> "Today"
-                                    HistoryReportPeriod.WEEK -> "This Week"
-                                    HistoryReportPeriod.MONTH -> "This Month"
-                                    HistoryReportPeriod.YEAR -> "This Year"
+                                    HistoryReportPeriod.ALL_TIME -> stringResource(R.string.history_period_all_time)
+                                    HistoryReportPeriod.TODAY -> stringResource(R.string.history_period_today)
+                                    HistoryReportPeriod.WEEK -> stringResource(R.string.history_period_week)
+                                    HistoryReportPeriod.MONTH -> stringResource(R.string.history_period_month)
+                                    HistoryReportPeriod.YEAR -> stringResource(R.string.history_period_year)
                                     HistoryReportPeriod.CUSTOM -> dateRangeLabel
                                 },
                                 fontSize = 11.sp,
@@ -443,11 +442,11 @@ fun SalesHistoryScreen(
                             .horizontalScroll(rememberScrollState())
                     ) {
                         listOf(
-                            HistoryReportPeriod.ALL_TIME to "All",
-                            HistoryReportPeriod.TODAY to "Today",
-                            HistoryReportPeriod.WEEK to "Week",
-                            HistoryReportPeriod.MONTH to "Month",
-                            HistoryReportPeriod.YEAR to "Year"
+                            HistoryReportPeriod.ALL_TIME to stringResource(R.string.history_period_all),
+                            HistoryReportPeriod.TODAY to stringResource(R.string.history_period_today),
+                            HistoryReportPeriod.WEEK to stringResource(R.string.history_period_week),
+                            HistoryReportPeriod.MONTH to stringResource(R.string.history_period_month),
+                            HistoryReportPeriod.YEAR to stringResource(R.string.history_period_year)
                         ).forEach { (period, label) ->
                             val isSelected = selectedPeriod == period
                             Surface(
@@ -516,7 +515,7 @@ fun SalesHistoryScreen(
                                 modifier = Modifier.height(26.dp)
                             ) {
                                 Text(
-                                    text = "Sort ▾",
+                                    text = stringResource(R.string.history_sort_button),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -524,19 +523,19 @@ fun SalesHistoryScreen(
                             }
                             DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
                                 val sortOptions = remember(isOwner) {
-                                    val list = mutableListOf("Newest first", "Highest total", "Lowest total")
+                                    val list = mutableListOf(
+                                        HistorySortOption.NEWEST_FIRST,
+                                        HistorySortOption.HIGHEST_TOTAL,
+                                        HistorySortOption.LOWEST_TOTAL
+                                    )
                                     if (isOwner) {
-                                        list.add("Highest profit")
-                                        list.add("Lowest profit")
+                                        list.add(HistorySortOption.HIGHEST_PROFIT)
+                                        list.add(HistorySortOption.LOWEST_PROFIT)
                                     }
                                     list
                                 }
                                 sortOptions.forEach { option ->
-                                    val displayLabel = when (option) {
-                                        "Highest profit" -> stringResource(R.string.invoice_sort_profit_high)
-                                        "Lowest profit" -> stringResource(R.string.invoice_sort_profit_low)
-                                        else -> option
-                                    }
+                                    val displayLabel = stringResource(option.labelRes)
                                     DropdownMenuItem(
                                         text = { Text(displayLabel) },
                                         onClick = { sortOrder = option; showSortMenu = false },
@@ -586,7 +585,7 @@ fun SalesHistoryScreen(
                         TextButton(onClick = {
                             searchQuery = ""
                             selectedPayments = emptySet()
-                            customerFilter = "All"
+                            customerFilter = HistoryCustomerFilter.ALL
                             minimumTotal = ""
                             maximumTotal = ""
                         }) { Text("Clear search and filters") }
@@ -606,7 +605,7 @@ fun SalesHistoryScreen(
                     // 💎 In-Feed Executive Revenue Summary Card (Scrolls away with list)
                     item(key = "revenue_summary") {
                         HistoryRevenueSummaryCard(
-                            periodLabel = if (selectedPeriod == HistoryReportPeriod.CUSTOM) "Selected Dates" else selectedPeriod.label,
+                            periodLabel = if (selectedPeriod == HistoryReportPeriod.CUSTOM) stringResource(R.string.history_period_selected_dates) else stringResource(selectedPeriod.labelRes),
                             totalRevenue = resultTotal,
                             transactionCount = filteredSales.size,
                             itemCount = resultItems,
@@ -868,9 +867,9 @@ fun SalesHistoryScreen(
     if (showFilters) {
         ModalBottomSheet(onDismissRequest = { showFilters = false }) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
-                Text("Filter Transactions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.history_filter_transactions), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(16.dp))
-                Text("Payment Method", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.history_filter_payment_method), fontWeight = FontWeight.SemiBold)
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -886,31 +885,31 @@ fun SalesHistoryScreen(
                     }
                 }
                 Spacer(Modifier.height(10.dp))
-                Text("Customer", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.history_filter_customer), fontWeight = FontWeight.SemiBold)
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    listOf("All", "Saved customer", "Walk-in").forEachIndexed { index, option ->
+                    HistoryCustomerFilter.entries.forEachIndexed { index, option ->
                         SegmentedButton(
                             selected = draftCustomerFilter == option,
                             onClick = { draftCustomerFilter = option },
-                            shape = SegmentedButtonDefaults.itemShape(index, 3),
-                            label = { Text(option, fontSize = 11.sp) }
+                            shape = SegmentedButtonDefaults.itemShape(index, HistoryCustomerFilter.entries.size),
+                            label = { Text(stringResource(option.labelRes), fontSize = 11.sp) }
                         )
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Sale Total", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.history_filter_sale_total), fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = draftMinimumTotal,
                         onValueChange = { draftMinimumTotal = it.filter { ch -> ch.isDigit() || ch == '.' } },
-                        label = { Text("Minimum ৳") },
+                        label = { Text(stringResource(R.string.history_filter_min_taka)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = draftMaximumTotal,
                         onValueChange = { draftMaximumTotal = it.filter { ch -> ch.isDigit() || ch == '.' } },
-                        label = { Text("Maximum ৳") },
+                        label = { Text(stringResource(R.string.history_filter_max_taka)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
@@ -920,12 +919,12 @@ fun SalesHistoryScreen(
                     OutlinedButton(
                         onClick = {
                             draftPayments = emptySet()
-                            draftCustomerFilter = "All"
+                            draftCustomerFilter = HistoryCustomerFilter.ALL
                             draftMinimumTotal = ""
                             draftMaximumTotal = ""
                         },
                         modifier = Modifier.weight(1f)
-                    ) { Text("Reset") }
+                    ) { Text(stringResource(R.string.history_filter_reset)) }
                     Button(
                         onClick = {
                             selectedPayments = draftPayments
@@ -935,7 +934,7 @@ fun SalesHistoryScreen(
                             showFilters = false
                         },
                         modifier = Modifier.weight(2f)
-                    ) { Text("Apply Filters") }
+                    ) { Text(stringResource(R.string.history_filter_apply)) }
                 }
             }
         }
