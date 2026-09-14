@@ -113,7 +113,7 @@ fun LoyaltyScreen(
                         }
                         PosTopAppBarTitle(
                             title = stringResource(R.string.loyalty_screen_title),
-                            metricBadge = if (members.isNotEmpty()) "${members.size} Members" else null,
+                            metricBadge = if (members.isNotEmpty()) stringResource(R.string.loyalty_metric_badge_members, members.size) else null,
                             badgeColor = PosSectionColors.Loyalty,
                             icon = { size -> Realistic3DLoyaltyStarIcon(size = size) }
                         )

@@ -71,13 +71,33 @@ private val DEFAULT_AUDIT_PRESETS = listOf(
     AuditPreset("5", "🎨", "Color mismatch")
 )
 
+@Composable
+fun getLocalizedPresetText(preset: AuditPreset): String {
+    return when (preset.id) {
+        "1" -> stringResource(R.string.return_audit_damaged_box)
+        "2" -> stringResource(R.string.return_audit_wrong_size)
+        "3" -> stringResource(R.string.return_audit_defective_unit)
+        "4" -> stringResource(R.string.return_audit_changed_mind)
+        "5" -> stringResource(R.string.return_audit_color_mismatch)
+        else -> preset.text
+    }
+}
+
+data class ReasonChipItem(
+    val icon: String,
+    val reasonKey: String,
+    @androidx.annotation.StringRes val titleRes: Int,
+    @androidx.annotation.StringRes val shortTitleRes: Int,
+    val isDamaged: Boolean
+)
+
 private val REASON_CHIPS = listOf(
-    Triple("💥", "Defective / Damaged", true),
-    Triple("🔀", "Wrong Item", false),
-    Triple("🔄", "Exchange", false),
-    Triple("🙋", "Customer Request", false),
-    Triple("🏷️", "Price Adjust", false),
-    Triple("📝", "Other Note", false)
+    ReasonChipItem("💥", "Defective / Damaged", R.string.return_reason_defective_damaged, R.string.return_reason_short_defective, true),
+    ReasonChipItem("🔀", "Wrong Item", R.string.return_reason_wrong_item, R.string.return_reason_short_wrong, false),
+    ReasonChipItem("🔄", "Exchange", R.string.return_reason_exchange, R.string.return_reason_short_exchange, false),
+    ReasonChipItem("🙋", "Customer Request", R.string.return_reason_customer_request, R.string.return_reason_short_request, false),
+    ReasonChipItem("🏷️", "Price Adjust", R.string.return_reason_price_adjust, R.string.return_reason_short_price, false),
+    ReasonChipItem("📝", "Other Note", R.string.return_reason_other_note, R.string.return_reason_short_other, false)
 )
 
 private val MFS_CHANNELS = listOf("Nagad", "bKash", "Rocket", "Card", "Bank")
@@ -584,8 +604,8 @@ fun ReturnItemsDialog(
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                         maxItemsInEachRow = 3
                     ) {
-                        REASON_CHIPS.forEach { (icon, reasonTitle, isDamaged) ->
-                            val isSelected = selectedReason == reasonTitle
+                        REASON_CHIPS.forEach { chip ->
+                            val isSelected = selectedReason == chip.reasonKey
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 color = if (isSelected) Color(0xFFEEF2FF) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
@@ -597,8 +617,8 @@ fun ReturnItemsDialog(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clickable {
-                                        selectedReason = reasonTitle
-                                        if (isDamaged) {
+                                        selectedReason = chip.reasonKey
+                                        if (chip.isDamaged) {
                                             isRestockEnabled = false
                                         } else {
                                             isRestockEnabled = true
@@ -610,10 +630,10 @@ fun ReturnItemsDialog(
                                     verticalArrangement = Arrangement.Center,
                                     modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
                                 ) {
-                                    Text(icon, fontSize = 14.sp)
+                                    Text(chip.icon, fontSize = 14.sp)
                                     Spacer(Modifier.height(2.dp))
                                     Text(
-                                        text = reasonTitle.substringBefore(" /"),
+                                        text = stringResource(chip.shortTitleRes),
                                         fontSize = 10.sp,
                                         fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
                                         color = if (isSelected) Color(0xFF4338CA) else MaterialTheme.colorScheme.onSurface,
@@ -720,7 +740,8 @@ fun ReturnItemsDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         customPresets.forEach { preset ->
-                            val isTagActive = returnNote.contains(preset.text)
+                            val localizedText = getLocalizedPresetText(preset)
+                            val isTagActive = returnNote.contains(localizedText) || returnNote.contains(preset.text)
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isTagActive) Color(0xFFEEF2FF) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -730,11 +751,11 @@ fun ReturnItemsDialog(
                                 ),
                                 modifier = Modifier.clickable {
                                     val currentTags = returnNote.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
-                                    val existingIdx = currentTags.indexOfFirst { it.contains(preset.text) }
+                                    val existingIdx = currentTags.indexOfFirst { it.contains(localizedText) || it.contains(preset.text) }
                                     if (existingIdx >= 0) {
                                         currentTags.removeAt(existingIdx)
                                     } else {
-                                        currentTags.add("${preset.icon} ${preset.text}")
+                                        currentTags.add("${preset.icon} $localizedText")
                                     }
                                     returnNote = currentTags.joinToString(", ")
                                 }
@@ -746,7 +767,7 @@ fun ReturnItemsDialog(
                                 ) {
                                     Text(preset.icon, fontSize = 11.sp)
                                     Text(
-                                        text = preset.text,
+                                        text = localizedText,
                                         fontSize = 11.sp,
                                         fontWeight = if (isTagActive) FontWeight.Bold else FontWeight.SemiBold,
                                         color = if (isTagActive) Color(0xFF4338CA) else MaterialTheme.colorScheme.onSurface
@@ -762,7 +783,7 @@ fun ReturnItemsDialog(
                             modifier = Modifier.clickable { showManagePresetsDialog = true }
                         ) {
                             Text(
-                                text = "+ Add",
+                                text = stringResource(R.string.common_add_chip),
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF4F46E5),
@@ -1759,7 +1780,7 @@ fun ManageAuditPresetsDialog(
                     OutlinedTextField(
                         value = newPresetText,
                         onValueChange = { newPresetText = it },
-                        placeholder = { Text("e.g. 🏷️ Wrong Barcode", fontSize = 11.sp) },
+                        placeholder = { Text(stringResource(R.string.return_audit_placeholder), fontSize = 11.sp) },
                         singleLine = true,
                         textStyle = TextStyle(fontSize = 11.5.sp),
                         modifier = Modifier.weight(1f)
@@ -1787,7 +1808,7 @@ fun ManageAuditPresetsDialog(
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
                     ) {
-                        Text("+ Add", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.common_add_chip), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1798,14 +1819,14 @@ fun ManageAuditPresetsDialog(
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
             ) {
-                Text("Save & Close", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.common_save_and_close), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(
                 onClick = { presetsList = DEFAULT_AUDIT_PRESETS }
             ) {
-                Text("Reset Defaults", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.common_reset_defaults), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )

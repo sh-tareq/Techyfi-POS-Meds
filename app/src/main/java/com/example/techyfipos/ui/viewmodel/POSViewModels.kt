@@ -3,6 +3,7 @@ package com.example.techyfipos.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.techyfipos.R
 import com.example.techyfipos.data.DataRepository
 import com.example.techyfipos.data.BackupImportMode
 import com.example.techyfipos.data.AppPermissions
@@ -76,12 +77,12 @@ internal fun isSyntheticSaleBarcode(barcode: String): Boolean =
 /**
  * Estimated cost basis for a sold line item whose product record can no longer be found (deleted
  * product, or a synthetic Quick Sale item that was never persisted). Quick Sale items are pure
- * margin (delivery fees, service charges, etc.) with a real cost of 0 — guessing 70% of the sale
- * price for them would silently understate reported profit, so only genuinely-deleted products
- * fall back to the heuristic guess.
+ * margin (delivery fees, service charges, etc.) with a real cost of 0. Genuinely deleted products
+ * without a recorded purchasePriceAtSale default conservatively to break-even (cost = sale price)
+ * rather than fabricating an arbitrary 30% profit that distorts low-margin grocery reports.
  */
 internal fun fallbackPurchasePrice(barcode: String, price: Double): Double =
-    if (isSyntheticSaleBarcode(barcode)) 0.0 else price * 0.7
+    if (isSyntheticSaleBarcode(barcode)) 0.0 else price
 
 internal data class HeldCartPayload(
     val items: List<CartItem>,
@@ -100,7 +101,10 @@ internal data class HeldCartPayload(
     val loyaltyPhone: String? = null,
     val loyaltyDiscount: Double = 0.0,
     val storeCreditApplied: Double = 0.0,
-    val voucherCode: String? = null
+    val voucherCode: String? = null,
+    val voucherOriginalBalance: Double? = null,
+    val voucherRemainingBalance: Double? = null,
+    val voucherCustomerPhone: String? = null
 )
 
 /** Versioned payload stored inside HeldCart.itemsJson. Legacy array-only carts remain readable. */
@@ -122,6 +126,9 @@ internal fun encodeHeldCartPayload(payload: HeldCartPayload): String = JSONObjec
     put("storeCreditApplied", payload.storeCreditApplied)
     if (!payload.voucherCode.isNullOrBlank()) {
         put("voucherCode", payload.voucherCode)
+        payload.voucherOriginalBalance?.let { put("voucherOriginalBalance", it) }
+        payload.voucherRemainingBalance?.let { put("voucherRemainingBalance", it) }
+        payload.voucherCustomerPhone?.let { put("voucherCustomerPhone", it) }
     }
     put("items", JSONArray().apply {
         payload.items.forEach { item ->
@@ -229,7 +236,10 @@ internal fun decodeHeldCartPayload(json: String): HeldCartPayload {
         loyaltyPhone = objectJson?.optString("loyaltyPhone")?.takeIf(String::isNotBlank),
         loyaltyDiscount = objectJson?.optDouble("loyaltyDiscount", 0.0) ?: 0.0,
         storeCreditApplied = objectJson?.optDouble("storeCreditApplied", 0.0) ?: 0.0,
-        voucherCode = objectJson?.optString("voucherCode")?.takeIf(String::isNotBlank)
+        voucherCode = objectJson?.optString("voucherCode")?.takeIf(String::isNotBlank),
+        voucherOriginalBalance = if (objectJson?.has("voucherOriginalBalance") == true) objectJson.optDouble("voucherOriginalBalance") else null,
+        voucherRemainingBalance = if (objectJson?.has("voucherRemainingBalance") == true) objectJson.optDouble("voucherRemainingBalance") else null,
+        voucherCustomerPhone = objectJson?.optString("voucherCustomerPhone")?.takeIf(String::isNotBlank)
     )
 }
 
@@ -306,25 +316,25 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     fun redeemVoucherCode(
         code: String,
         onSuccess: (StoreCreditVoucher) -> Unit,
-        onError: (String) -> Unit
+        onError: (Int) -> Unit
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val voucher = repository.getStoreCreditVoucher(code)
                 if (voucher == null) {
-                    withContext(Dispatchers.Main) { onError("Voucher not found") }
+                    withContext(Dispatchers.Main) { onError(R.string.voucher_err_not_found) }
                     return@launch
                 }
                 if (voucher.status != "ACTIVE") {
-                    withContext(Dispatchers.Main) { onError("Voucher is ${voucher.status.lowercase()}") }
+                    withContext(Dispatchers.Main) { onError(R.string.voucher_err_inactive) }
                     return@launch
                 }
                 if (voucher.expiresAt != null && voucher.expiresAt < System.currentTimeMillis()) {
-                    withContext(Dispatchers.Main) { onError("Voucher has expired") }
+                    withContext(Dispatchers.Main) { onError(R.string.voucher_err_expired) }
                     return@launch
                 }
                 if (voucher.remainingBalance <= 0.01) {
-                    withContext(Dispatchers.Main) { onError("Voucher balance is zero") }
+                    withContext(Dispatchers.Main) { onError(R.string.voucher_err_zero_balance) }
                     return@launch
                 }
                 withContext(Dispatchers.Main) {
@@ -334,7 +344,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    onError(e.localizedMessage ?: "Failed to verify voucher")
+                    onError(R.string.voucher_err_failed)
                 }
             }
         }
@@ -574,7 +584,10 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 loyaltyPhone = loyaltyCustomer.value?.phone ?: curCustomerPhone.takeIf { it.isNotBlank() },
                 loyaltyDiscount = loyaltyDiscount.value,
                 storeCreditApplied = storeCreditApplied.value,
-                voucherCode = redeemedVoucher.value?.code
+                voucherCode = redeemedVoucher.value?.code,
+                voucherOriginalBalance = redeemedVoucher.value?.initialAmount,
+                voucherRemainingBalance = redeemedVoucher.value?.remainingBalance,
+                voucherCustomerPhone = redeemedVoucher.value?.customerPhone
             )
         )
 
@@ -627,21 +640,43 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 val restored = mutableListOf<CartItem>()
                 val remaining = mutableListOf<CartItem>()
                 var unavailable = 0
+
+                val stockAllocationMap = mutableMapOf<String, Double>()
+                val productsByBarcode = mutableMapOf<String, Product>()
+
                 payload.items.forEach { heldItem ->
                     val barcode = heldItem.product.barcode
-                    val product = if (isSyntheticSaleBarcode(barcode) && heldItem.product.name.isNotBlank()) {
-                        heldItem.product
-                    } else {
-                        repository.getProductByBarcode(barcode) ?: run {
-                            unavailable++; remaining += heldItem; return@forEach
+                    if (isSyntheticSaleBarcode(barcode) && heldItem.product.name.isNotBlank()) {
+                        productsByBarcode[barcode] = heldItem.product
+                        stockAllocationMap.putIfAbsent(barcode, Double.MAX_VALUE)
+                    } else if (!productsByBarcode.containsKey(barcode)) {
+                        val liveProd = repository.getProductByBarcode(barcode)
+                        if (liveProd != null) {
+                            productsByBarcode[barcode] = liveProd
+                            stockAllocationMap[barcode] = liveProd.stockQty
                         }
                     }
-                    val cappedQuantity = heldItem.quantity.coerceAtMost(product.stockQty)
-                    if (cappedQuantity <= 0.0) { unavailable++; remaining += heldItem; return@forEach }
+                }
+
+                payload.items.forEach { heldItem ->
+                    val barcode = heldItem.product.barcode
+                    val product = productsByBarcode[barcode] ?: run {
+                        unavailable++
+                        remaining += heldItem
+                        return@forEach
+                    }
+                    val currentAvailable = stockAllocationMap[barcode] ?: 0.0
+                    val cappedQuantity = heldItem.quantity.coerceAtMost(currentAvailable)
+                    if (cappedQuantity <= 0.0) {
+                        unavailable++
+                        remaining += heldItem
+                        return@forEach
+                    }
                     if (cappedQuantity < heldItem.quantity) {
                         unavailable++
                         remaining += heldItem.copy(quantity = heldItem.quantity - cappedQuantity)
                     }
+                    stockAllocationMap[barcode] = (currentAvailable - cappedQuantity).coerceAtLeast(0.0)
                     restored.add(CartItem(product, cappedQuantity, heldItem.note))
                 }
                 _cartItems.value = restored
@@ -668,7 +703,16 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                     loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0
                 )
                 val restoredVoucher = payload.voucherCode?.let { repository.getStoreCreditVoucher(it) }
-                redeemedVoucher.value = restoredVoucher
+                val fallbackVoucher = if (restoredVoucher == null && !payload.voucherCode.isNullOrBlank() && payload.storeCreditApplied > 0.0) {
+                    StoreCreditVoucher(
+                        code = payload.voucherCode,
+                        initialAmount = payload.voucherOriginalBalance ?: payload.storeCreditApplied,
+                        remainingBalance = payload.voucherRemainingBalance ?: payload.storeCreditApplied,
+                        customerPhone = payload.voucherCustomerPhone ?: unifiedCustPhone.takeIf { it.isNotBlank() } ?: "01700000000",
+                        status = "ACTIVE"
+                    )
+                } else null
+                redeemedVoucher.value = restoredVoucher ?: fallbackVoucher
                 storeCreditApplied.value = payload.storeCreditApplied
                 persistCartSnapshot(restored)
                 if (unavailable == 0) repository.deleteHeldCart(heldCart.id) else {
@@ -796,15 +840,31 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         try {
             val payload = decodeHeldCartPayload(json)
             val restored = mutableListOf<CartItem>()
+            val stockAllocationMap = mutableMapOf<String, Double>()
+            val productsByBarcode = mutableMapOf<String, Product>()
+
             payload.items.forEach { saved ->
                 val barcode = saved.product.barcode
-                if (isSyntheticSaleBarcode(barcode)) restored.add(saved)
-                else {
-                    val product = repository.getProductByBarcode(barcode) ?: return@forEach
-                    val cappedQuantity = saved.quantity.coerceAtMost(product.stockQty)
-                    if (cappedQuantity <= 0.0) return@forEach
-                    restored.add(CartItem(product, cappedQuantity, saved.note))
+                if (isSyntheticSaleBarcode(barcode) && saved.product.name.isNotBlank()) {
+                    productsByBarcode[barcode] = saved.product
+                    stockAllocationMap.putIfAbsent(barcode, Double.MAX_VALUE)
+                } else if (!productsByBarcode.containsKey(barcode)) {
+                    val liveProd = repository.getProductByBarcode(barcode)
+                    if (liveProd != null) {
+                        productsByBarcode[barcode] = liveProd
+                        stockAllocationMap[barcode] = liveProd.stockQty
+                    }
                 }
+            }
+
+            payload.items.forEach { saved ->
+                val barcode = saved.product.barcode
+                val product = productsByBarcode[barcode] ?: return@forEach
+                val currentAvailable = stockAllocationMap[barcode] ?: 0.0
+                val cappedQuantity = saved.quantity.coerceAtMost(currentAvailable)
+                if (cappedQuantity <= 0.0) return@forEach
+                stockAllocationMap[barcode] = (currentAvailable - cappedQuantity).coerceAtLeast(0.0)
+                restored.add(CartItem(product, cappedQuantity, saved.note))
             }
             _cartItems.value = restored
             customerName.value = payload.customerName
@@ -822,7 +882,16 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             loyaltyCustomer.value = payload.loyaltyPhone?.let { repository.getLoyaltyByPhone(it) }
             loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0)
             val restoredVoucher = payload.voucherCode?.let { repository.getStoreCreditVoucher(it) }
-            redeemedVoucher.value = restoredVoucher
+            val fallbackVoucher = if (restoredVoucher == null && !payload.voucherCode.isNullOrBlank() && payload.storeCreditApplied > 0.0) {
+                StoreCreditVoucher(
+                    code = payload.voucherCode,
+                    initialAmount = payload.voucherOriginalBalance ?: payload.storeCreditApplied,
+                    remainingBalance = payload.voucherRemainingBalance ?: payload.storeCreditApplied,
+                    customerPhone = payload.voucherCustomerPhone ?: payload.customerPhone.takeIf { it.isNotBlank() } ?: "01700000000",
+                    status = "ACTIVE"
+                )
+            } else null
+            redeemedVoucher.value = restoredVoucher ?: fallbackVoucher
             storeCreditApplied.value = payload.storeCreditApplied
         } catch (e: Exception) {
             e.printStackTrace()
@@ -839,7 +908,10 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                     cardType = cardType.value, cardLastFour = cardLastFour.value, amountPaid = amountPaid.value,
                     isSplitPayment = isSplitPayment.value, splitPayments = splitPayments.value,
                     loyaltyPhone = loyaltyCustomer.value?.phone, loyaltyDiscount = loyaltyDiscount.value,
-                    storeCreditApplied = storeCreditApplied.value, voucherCode = redeemedVoucher.value?.code
+                    storeCreditApplied = storeCreditApplied.value, voucherCode = redeemedVoucher.value?.code,
+                    voucherOriginalBalance = redeemedVoucher.value?.initialAmount,
+                    voucherRemainingBalance = redeemedVoucher.value?.remainingBalance,
+                    voucherCustomerPhone = redeemedVoucher.value?.customerPhone
                 )))
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -1539,6 +1611,24 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
     val salesWithItems: StateFlow<List<SaleWithItems>> = repository.allSalesWithItems
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _historyDateRange = MutableStateFlow<Pair<Long, Long>?>(null)
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val historySalesWithItems: StateFlow<List<SaleWithItems>> = _historyDateRange.flatMapLatest { range ->
+        if (range != null && range.first > 0L) {
+            repository.getSalesWithItemsBetween(range.first, range.second)
+        } else {
+            repository.allSalesWithItems
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun setHistoryDateRange(start: Long, end: Long) {
+        _historyDateRange.value = Pair(start, end)
+    }
+
+    fun clearHistoryDateRange() {
+        _historyDateRange.value = null
+    }
+
     private val allReturns: StateFlow<List<com.example.techyfipos.data.db.Return>> = repository.allReturns
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     private val allReturnItems: StateFlow<List<com.example.techyfipos.data.db.ReturnItem>> = repository.allReturnItems
@@ -1574,9 +1664,11 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         val discount = calculateDiscountValue(sale.subtotal, sale.discountAmount, sale.isPercentageDiscount)
         val netRevBeforeRefund = (grossRevenue - discount).coerceAtLeast(0.0)
 
+        val productMap = repository.allProducts.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList()).value.associateBy { it.barcode }
         var totalGrossCogs = 0.0
         val itemsProfitList = saleWithItems.items.map { item ->
-            val cost = item.purchasePriceAtSale ?: fallbackPurchasePrice(item.productBarcode, item.price)
+            val liveCost = productMap[item.productBarcode]?.purchasePrice
+            val cost = item.purchasePriceAtSale ?: liveCost ?: fallbackPurchasePrice(item.productBarcode, item.price)
             val lineRev = item.price * item.quantity
             val lineC = cost * item.quantity
             val lineP = lineRev - lineC
@@ -1605,7 +1697,8 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         var returnCogsReversal = 0.0
         for (retItem in returnedItems) {
             val originalSaleItem = saleWithItems.items.find { it.productBarcode == retItem.productBarcode }
-            val unitCost = originalSaleItem?.purchasePriceAtSale ?: fallbackPurchasePrice(retItem.productBarcode, retItem.price)
+            val liveCost = productMap[retItem.productBarcode]?.purchasePrice
+            val unitCost = originalSaleItem?.purchasePriceAtSale ?: liveCost ?: fallbackPurchasePrice(retItem.productBarcode, retItem.price)
             returnCogsReversal += unitCost * retItem.quantity
         }
 
@@ -2562,6 +2655,12 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     val invoiceSettingsData: StateFlow<com.example.techyfipos.data.InvoiceSettingsData> = repository.invoiceSettingsDataFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.techyfipos.data.InvoiceSettingsData())
 
+    val quickSalePresets: StateFlow<List<com.example.techyfipos.data.QuickSalePreset>> = repository.quickSalePresetsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.techyfipos.data.QuickSalePreset.defaultPresets())
+
+    val dueReminderTemplates: StateFlow<List<com.example.techyfipos.data.DueTemplate>> = repository.dueReminderTemplatesFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.techyfipos.data.DueTemplate.defaultTemplates())
+
     val autoBackup: StateFlow<Boolean> = repository.autoBackupFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -2628,6 +2727,18 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     fun saveInvoiceSettingsData(settings: com.example.techyfipos.data.InvoiceSettingsData) {
         viewModelScope.launch {
             repository.saveInvoiceSettingsData(settings)
+        }
+    }
+
+    fun saveQuickSalePresets(presets: List<com.example.techyfipos.data.QuickSalePreset>) {
+        viewModelScope.launch {
+            repository.saveQuickSalePresets(presets)
+        }
+    }
+
+    fun saveDueReminderTemplates(templates: List<com.example.techyfipos.data.DueTemplate>) {
+        viewModelScope.launch {
+            repository.saveDueReminderTemplates(templates)
         }
     }
 
@@ -3947,14 +4058,46 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
     val allCustomers: StateFlow<List<Customer>> = repository.allCustomers
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val searchQuery = MutableStateFlow("")
-    val selectedFilter = MutableStateFlow(CustomerFilterSegment.ALL)
-    val selectedSort = MutableStateFlow(CustomerSortOption.RECENT_VISIT)
-    val isTableView = MutableStateFlow(false)
-    val selectedCustomerPhones = MutableStateFlow<Set<String>>(emptySet())
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val selectedCustomerDossier = MutableStateFlow<CustomerDossierData?>(null)
-    val isLoadingDossier = MutableStateFlow(false)
+    private val _selectedFilter = MutableStateFlow(CustomerFilterSegment.ALL)
+    val selectedFilter: StateFlow<CustomerFilterSegment> = _selectedFilter.asStateFlow()
+
+    private val _selectedSort = MutableStateFlow(CustomerSortOption.RECENT_VISIT)
+    val selectedSort: StateFlow<CustomerSortOption> = _selectedSort.asStateFlow()
+
+    private val _isTableView = MutableStateFlow(false)
+    val isTableView: StateFlow<Boolean> = _isTableView.asStateFlow()
+
+    private val _selectedCustomerPhones = MutableStateFlow<Set<String>>(emptySet())
+    val selectedCustomerPhones: StateFlow<Set<String>> = _selectedCustomerPhones.asStateFlow()
+
+    private val _selectedCustomerDossier = MutableStateFlow<CustomerDossierData?>(null)
+    val selectedCustomerDossier: StateFlow<CustomerDossierData?> = _selectedCustomerDossier.asStateFlow()
+
+    private val _isLoadingDossier = MutableStateFlow(false)
+    val isLoadingDossier: StateFlow<Boolean> = _isLoadingDossier.asStateFlow()
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun setSelectedFilter(filter: CustomerFilterSegment) {
+        _selectedFilter.value = filter
+    }
+
+    fun setSelectedSort(sort: CustomerSortOption) {
+        _selectedSort.value = sort
+    }
+
+    fun toggleTableView() {
+        _isTableView.value = !_isTableView.value
+    }
+
+    fun setTableView(table: Boolean) {
+        _isTableView.value = table
+    }
 
     val duplicatePairs: StateFlow<List<DuplicateCustomerPair>> = allCustomers.map { list ->
         findDuplicatePairs(list)
@@ -3962,9 +4105,9 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
 
     val filteredCustomers: StateFlow<List<Customer>> = combine(
         allCustomers,
-        searchQuery,
-        selectedFilter,
-        selectedSort
+        _searchQuery,
+        _selectedFilter,
+        _selectedSort
     ) { customers, query, filter, sort ->
         val q = query.trim().lowercase()
         val searched = if (q.isBlank()) customers else {
@@ -4034,22 +4177,22 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     fun toggleCustomerSelection(phone: String) {
-        val current = selectedCustomerPhones.value
-        selectedCustomerPhones.value = if (current.contains(phone)) current - phone else current + phone
+        val current = _selectedCustomerPhones.value
+        _selectedCustomerPhones.value = if (current.contains(phone)) current - phone else current + phone
     }
 
     fun selectAll(phones: Collection<String>) {
-        selectedCustomerPhones.value = phones.toSet()
+        _selectedCustomerPhones.value = phones.toSet()
     }
 
     fun clearCustomerSelection() {
-        selectedCustomerPhones.value = emptySet()
+        _selectedCustomerPhones.value = emptySet()
     }
 
     fun bulkAssignTag(tag: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val targets = selectedCustomerPhones.value
+                val targets = _selectedCustomerPhones.value
                 targets.forEach { phone ->
                     val c = repository.getCustomerByPhone(phone)
                     if (c != null) {
@@ -4191,7 +4334,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun loadCustomerDossier(phone: String) {
-        isLoadingDossier.value = true
+        _isLoadingDossier.value = true
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val customer = repository.getCustomerByPhone(phone)
@@ -4302,7 +4445,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                         )
                     }
 
-                    selectedCustomerDossier.value = CustomerDossierData(
+                    _selectedCustomerDossier.value = CustomerDossierData(
                         customer = customer,
                         topProducts = topProducts,
                         sales = sales,
@@ -4315,7 +4458,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
-                isLoadingDossier.value = false
+                _isLoadingDossier.value = false
             }
         }
     }
@@ -4342,7 +4485,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun clearDossier() {
-        selectedCustomerDossier.value = null
+        _selectedCustomerDossier.value = null
     }
 
     fun upsertCustomer(
@@ -4380,7 +4523,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                     updatedAt = System.currentTimeMillis()
                 )
                 repository.upsertCustomer(customer)
-                if (selectedCustomerDossier.value?.customer?.phone == cleanPhone) {
+                if (_selectedCustomerDossier.value?.customer?.phone == cleanPhone) {
                     loadCustomerDossier(cleanPhone)
                 }
                 onSuccess()

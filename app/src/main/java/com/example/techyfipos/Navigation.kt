@@ -534,6 +534,8 @@ fun MainNavigation() {
                         if (backStack.lastOrNull() != Customers) { backStack.add(Customers) }
                     },
                     isOwner = isOwner,
+                    isSupervisor = isSupervisor,
+                    activePermissions = activePermissions,
                     currentKey = currentKey,
                     isTablet = isTablet,
                     language = currentLang
@@ -1113,7 +1115,12 @@ fun MainNavigation() {
                                     onNavigateToReport = {
                                         val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
                                         if (canReport) {
-                                            backStack.add(SalesReport)
+                                            if (backStack.lastOrNull() == SalesHistory) {
+                                                backStack.removeLastOrNull()
+                                            }
+                                            if (backStack.lastOrNull() != SalesReport) {
+                                                backStack.add(SalesReport)
+                                            }
                                         } else {
                                             android.widget.Toast.makeText(context, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
                                         }
@@ -1156,6 +1163,10 @@ fun MainNavigation() {
                                 SuppliersScreen(
                                     supplierViewModel = supplierViewModel,
                                     onBack = { backStack.removeLastOrNull() },
+                                    isOwner = isOwner,
+                                    isSupervisor = isSupervisor,
+                                    activePermissions = activePermissions,
+                                    authViewModel = authViewModel,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
@@ -1163,6 +1174,7 @@ fun MainNavigation() {
                                 DuesScreen(
                                     duesViewModel = duesViewModel,
                                     customerViewModel = customerViewModel,
+                                    settingsViewModel = settingsViewModel,
                                     isOwner = isOwner,
                                     isSupervisor = isSupervisor,
                                     activePermissions = activePermissions,
@@ -1270,6 +1282,7 @@ data class OperationHubItem(
     val isSelected: Boolean,
     val category: OperationCategory = OperationCategory.ALL,
     val isLocked: Boolean = false,
+    val lockedMessage: String? = null,
     val onClick: () -> Unit
 )
 
@@ -1285,6 +1298,8 @@ fun MoreOperationsHubSheet(
     onNavigateToLoyalty: () -> Unit,
     onNavigateToCustomers: () -> Unit,
     isOwner: Boolean,
+    isSupervisor: Boolean = false,
+    activePermissions: Set<String> = emptySet(),
     currentKey: Any?,
     isTablet: Boolean = false,
     language: String = "en"
@@ -1332,6 +1347,8 @@ fun MoreOperationsHubSheet(
                             onNavigateToLoyalty = onNavigateToLoyalty,
                             onNavigateToCustomers = onNavigateToCustomers,
                             isOwner = isOwner,
+                            isSupervisor = isSupervisor,
+                            activePermissions = activePermissions,
                             currentKey = currentKey,
                             isTablet = true,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
@@ -1368,6 +1385,8 @@ fun MoreOperationsHubSheet(
                     onNavigateToLoyalty = onNavigateToLoyalty,
                     onNavigateToCustomers = onNavigateToCustomers,
                     isOwner = isOwner,
+                    isSupervisor = isSupervisor,
+                    activePermissions = activePermissions,
                     currentKey = currentKey,
                     isTablet = false,
                     modifier = Modifier
@@ -1392,6 +1411,8 @@ private fun MoreOperationsHubContent(
     onNavigateToLoyalty: () -> Unit,
     onNavigateToCustomers: () -> Unit,
     isOwner: Boolean,
+    isSupervisor: Boolean = false,
+    activePermissions: Set<String> = emptySet(),
     currentKey: Any?,
     isTablet: Boolean,
     modifier: Modifier = Modifier
@@ -1399,17 +1420,25 @@ private fun MoreOperationsHubContent(
     var selectedCategory by remember { mutableStateOf(OperationCategory.ALL) }
     var isGridView by rememberSaveable { mutableStateOf(isTablet) }
 
+    val canCloseRegister = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
+    val canExpense = isOwner || isSupervisor || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
+    val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
+    val canSuppliers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
+    val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
+    val canSettings = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+
     val operationsList = buildList {
         add(
             OperationHubItem(
                 title = stringResource(R.string.register_close_section),
                 subtitle = stringResource(R.string.register_close_hub_subtitle),
                 navType = Nav3DType.REGISTER,
-                badge = if (isOwner) stringResource(R.string.more_audit_badge) else stringResource(R.string.more_locked_badge),
-                badgeColor = if (isOwner) Color(0xFFF59E0B) else Color(0xFF64748B),
+                badge = if (canCloseRegister) stringResource(R.string.more_audit_badge) else stringResource(R.string.more_locked_badge),
+                badgeColor = if (canCloseRegister) Color(0xFFF59E0B) else Color(0xFF64748B),
                 isSelected = currentKey == RegisterClose,
                 category = OperationCategory.SHIFT,
-                isLocked = !isOwner,
+                isLocked = !canCloseRegister,
+                lockedMessage = stringResource(R.string.owner_only_register_close),
                 onClick = onNavigateToRegisterClose
             )
         )
@@ -1419,10 +1448,12 @@ private fun MoreOperationsHubContent(
                     title = stringResource(R.string.expenses),
                     subtitle = stringResource(R.string.more_expenses_subtitle),
                     navType = Nav3DType.EXPENSES,
-                    badge = stringResource(R.string.more_expenses_badge),
-                    badgeColor = Color(0xFFEF4444),
+                    badge = if (canExpense) stringResource(R.string.more_expenses_badge) else stringResource(R.string.more_locked_badge),
+                    badgeColor = if (canExpense) Color(0xFFEF4444) else Color(0xFF64748B),
                     isSelected = currentKey == Expenses,
                     category = OperationCategory.SHIFT,
+                    isLocked = !canExpense,
+                    lockedMessage = stringResource(R.string.owner_only_expenses),
                     onClick = onNavigateToExpenses
                 )
             )
@@ -1433,10 +1464,12 @@ private fun MoreOperationsHubContent(
                     title = stringResource(R.string.sales_report_section),
                     subtitle = stringResource(R.string.more_report_subtitle),
                     navType = Nav3DType.REPORT,
-                    badge = stringResource(R.string.more_report_badge),
-                    badgeColor = Color(0xFF3B82F6),
+                    badge = if (canReport) stringResource(R.string.more_report_badge) else stringResource(R.string.more_locked_badge),
+                    badgeColor = if (canReport) Color(0xFF3B82F6) else Color(0xFF64748B),
                     isSelected = currentKey == SalesReport,
                     category = OperationCategory.MANAGEMENT,
+                    isLocked = !canReport,
+                    lockedMessage = stringResource(R.string.owner_only_reports),
                     onClick = onNavigateToReport
                 )
             )
@@ -1446,10 +1479,12 @@ private fun MoreOperationsHubContent(
                 title = stringResource(R.string.suppliers),
                 subtitle = stringResource(R.string.more_suppliers_subtitle),
                 navType = Nav3DType.SUPPLIERS,
-                badge = stringResource(R.string.more_suppliers_badge),
-                badgeColor = Color(0xFF10B981),
+                badge = if (canSuppliers) stringResource(R.string.more_suppliers_badge) else stringResource(R.string.more_locked_badge),
+                badgeColor = if (canSuppliers) Color(0xFF10B981) else Color(0xFF64748B),
                 isSelected = currentKey == Suppliers,
                 category = OperationCategory.MANAGEMENT,
+                isLocked = !canSuppliers,
+                lockedMessage = stringResource(R.string.owner_only_suppliers),
                 onClick = onNavigateToSuppliers
             )
         )
@@ -1458,10 +1493,12 @@ private fun MoreOperationsHubContent(
                 title = stringResource(R.string.loyalty_screen_title),
                 subtitle = stringResource(R.string.loyalty_hub_subtitle),
                 navType = Nav3DType.LOYALTY,
-                badge = stringResource(R.string.loyalty_badge),
-                badgeColor = Color(0xFFEC4899),
+                badge = if (canLoyalty) stringResource(R.string.loyalty_badge) else stringResource(R.string.more_locked_badge),
+                badgeColor = if (canLoyalty) Color(0xFFEC4899) else Color(0xFF64748B),
                 isSelected = currentKey == Loyalty,
                 category = OperationCategory.CRM,
+                isLocked = !canLoyalty,
+                lockedMessage = stringResource(R.string.owner_only_loyalty),
                 onClick = onNavigateToLoyalty
             )
         )
@@ -1474,6 +1511,7 @@ private fun MoreOperationsHubContent(
                 badgeColor = Color(0xFF0D9488),
                 isSelected = currentKey == Customers,
                 category = OperationCategory.CRM,
+                isLocked = false,
                 onClick = onNavigateToCustomers
             )
         )
@@ -1483,11 +1521,12 @@ private fun MoreOperationsHubContent(
                     title = stringResource(R.string.settings),
                     subtitle = stringResource(R.string.more_settings_subtitle),
                     navType = Nav3DType.SETTINGS,
-                    badge = if (isOwner) stringResource(R.string.more_admin_badge) else stringResource(R.string.more_locked_badge),
-                    badgeColor = if (isOwner) Color(0xFF8B5CF6) else Color(0xFF64748B),
+                    badge = if (canSettings) stringResource(R.string.more_admin_badge) else stringResource(R.string.more_locked_badge),
+                    badgeColor = if (canSettings) Color(0xFF8B5CF6) else Color(0xFF64748B),
                     isSelected = currentKey == Settings,
                     category = OperationCategory.MANAGEMENT,
-                    isLocked = !isOwner,
+                    isLocked = !canSettings,
+                    lockedMessage = stringResource(R.string.owner_only_settings),
                     onClick = onNavigateToSettings
                 )
             )
@@ -1696,6 +1735,7 @@ fun OperationHubCard(
     isTablet: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val animatedScale by animateFloatAsState(
@@ -1705,7 +1745,14 @@ fun OperationHubCard(
     )
 
     Card(
-        onClick = item.onClick,
+        onClick = {
+            if (item.isLocked) {
+                val msg = item.lockedMessage ?: item.badge
+                android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                item.onClick()
+            }
+        },
         interactionSource = interactionSource,
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
@@ -1725,6 +1772,7 @@ fun OperationHubCard(
             .graphicsLayer {
                 scaleX = animatedScale
                 scaleY = animatedScale
+                alpha = if (item.isLocked) 0.72f else 1f
             }
     ) {
         if (isGrid && !isTablet) {

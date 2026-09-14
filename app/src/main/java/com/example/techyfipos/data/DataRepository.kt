@@ -419,6 +419,10 @@ class DataRepository(
     val allSales: Flow<List<Sale>> = saleDao.getAllSales()
     val allSalesWithItems: Flow<List<SaleWithItems>> = saleDao.getAllSalesWithItems()
 
+    fun getSalesWithItemsBetween(startTime: Long, endTime: Long): Flow<List<SaleWithItems>> {
+        return saleDao.getSalesWithItemsBetween(startTime, endTime)
+    }
+
     suspend fun getItemsForSale(saleId: Long): List<SaleItem> = withContext(Dispatchers.IO) {
         saleDao.getItemsForSale(saleId)
     }
@@ -1726,6 +1730,16 @@ class DataRepository(
     val driveAutoBackupFrequencyFlow: Flow<String> = settingsDataStore.driveAutoBackupFrequencyFlow
     val lastLocalBackupTimestampFlow: Flow<Long> = settingsDataStore.lastLocalBackupTimestampFlow
     val cartSnapshotFlow: Flow<String> = settingsDataStore.cartSnapshotFlow
+    val quickSalePresetsFlow: Flow<List<QuickSalePreset>> = settingsDataStore.quickSalePresetsFlow
+    val dueReminderTemplatesFlow: Flow<List<DueTemplate>> = settingsDataStore.dueReminderTemplatesFlow
+
+    suspend fun saveQuickSalePresets(presets: List<QuickSalePreset>) = withContext(Dispatchers.IO) {
+        settingsDataStore.saveQuickSalePresets(presets)
+    }
+
+    suspend fun saveDueReminderTemplates(templates: List<DueTemplate>) = withContext(Dispatchers.IO) {
+        settingsDataStore.saveDueReminderTemplates(templates)
+    }
 
     suspend fun getCartSnapshot(): String = withContext(Dispatchers.IO) {
         try {

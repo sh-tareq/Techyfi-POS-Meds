@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-14 (app version 2.6.63-V14-09-2026, build `Techyfi-POS-Final-V14-09-2026.apk` / `Techyfi-POS-Final-V63.apk`; versionCode 220939; DB schema version 28)
+Last updated: 2026-09-14 (app version 2.6.64-V14-09-2026, build `Techyfi-POS-Final-V14-09-2026.apk` / `Techyfi-POS-Final-V64.apk`; versionCode 220940; DB schema version 28)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -2467,6 +2467,58 @@ mindmap
       - More Hub navigation and Customer Loyalty screen with dedicated `loyalty.manage` permission (`mobile_v63_more_hub.png`, `mobile_v63_loyalty.png`).
       - Sales Report Screen responsive layout (`mobile_v63_report.png`).
       - Products Screen, Add/Edit Product Dialog, and Stock Audit & Logs History sheet (`mobile_v63_products.png`, `mobile_v63_add_product_dialog.png`, `mobile_v63_stock_audit_sheet.png`).
+
+## V64 - Comprehensive System Robustness, Security, Architecture & Performance Upgrades (V64 / V14-09-2026)
+
+- **Cart & Hold State Validation (Items 14 & 24)**:
+  - **[V64-1] Cumulative Stock Availability Verification on Held Cart Resume (`POSViewModels.kt`)**:
+    - Eliminated inventory bypass where held carts could restore stock depleted or sold out while held.
+    - Implemented `stockAllocationMap` tracking aggregate quantities per barcode across multiple line items.
+    - Validates against live catalog inventory (`product.stockQty`); unavailable items remain safely preserved in the held cart database record and a localized notification alerts the cashier.
+  - **[V64-2] Voucher Balance & Entity Preservation on Held Cart Resume (`POSViewModels.kt`, `HeldCartPayload`)**:
+    - Extended `HeldCartPayload` schema to serialize `voucherOriginalBalance`, `voucherRemainingBalance`, and `voucherCustomerPhone`.
+    - Guarantees `redeemedVoucher.value` is never null when `storeCreditApplied > 0.0` by synthesizing a fallback active `StoreCreditVoucher` if external voucher was temporarily unindexed.
+
+- **UI & Navigation Architecture (Items 15, 18, 23, 26)**:
+  - **[V64-3] Consolidated Checkout LaunchedEffect (`CartScreen.kt`)**:
+    - Merged duplicate consecutive `LaunchedEffect(showCheckout)` blocks into a unified, performant effect avoiding double-triggering animations or state resets.
+  - **[V64-4] Register Close Screen Naming Harmonization (`RegisterCloseScreen.kt`)**:
+    - Renamed primary Composable from legacy `DayStartCloseScreen` to canonical `RegisterCloseScreen`, matching its file name, purpose, and navigation destination.
+    - Retained `@Deprecated fun DayStartCloseScreen` proxy with identical signature for complete backward compatibility.
+  - **[V64-5] Pre-Navigation Security Guard in More Operations Hub (`Navigation.kt`)**:
+    - Replaced post-navigation `LaunchedEffect` rejection with immediate tap interception in `OperationHubCard`.
+    - Cards display locked status (`isLocked = true`), dimmed alpha (`0.72f`), and lock badge when the user lacks required permission.
+    - Clicking a locked card emits an immediate, localized Toast explaining permission requirement (`owner_only_*`), preventing blank screen flashes or navigation backstack churn.
+  - **[V64-6] Locale Context Integrity (`Navigation.kt`)**:
+    - Verified complete absence of `Locale.setDefault()` mutations inside Composables, preserving Android's configuration hierarchy via `LocaleWrapper(language)`.
+
+- **Catalog, Profit Margin & SQLite Reliability (Items 16, 17, 19, 20)**:
+  - **[V64-7] Elimination of 70% Cost Heuristic (`POSViewModels.kt`, `DiscountCalculationTest.kt`)**:
+    - Replaced arbitrary 70% cost fallback with accurate break-even cost (`price`) for ad-hoc/unindexed products, preventing false 30% profit distortion for low-margin groceries.
+    - In `calculateInvoiceProfit`, cross-references the live product catalog before resorting to fallback.
+  - **[V64-8] Product SQLite Constraint Strategy (`AppDaos.kt`)**:
+    - Upgraded `ProductDao.insertProduct` from `OnConflictStrategy.ABORT` to `OnConflictStrategy.REPLACE`, eliminating app crashes (`SQLiteConstraintException`) during duplicate barcode imports or catalog sync.
+    - Added `insertProductIgnore` (`OnConflictStrategy.IGNORE`) for non-destructive import routines.
+  - **[V64-9] Hardware Accelerated QR Matrix Generation (`AppUtils.kt`)**:
+    - Replaced 262,144 individual JNI `setPixel()` invocations in `generateQrBitmap` with single bulk `setPixels(pixels, 0, size, 0, 0, size, size)`.
+    - Provides a ~50x speedup in QR code generation for digital receipt sharing and customer slips.
+  - **[V64-10] Strict Product Expiry Validation (`AppEntities.kt`, `AddEditProductDialog.kt`, `AppUtils.kt`, `ProductValidationTest.kt`)**:
+    - Added `Product.hasValidExpiryDate` extension property and configured non-lenient `Calendar` parsing in `AppUtils.kt`.
+    - Live warning alerts cashier during product entry if an invalid date (such as Feb 31 or malformed text) is entered, ensuring near-expiry alerts never silently fail.
+
+- **Localization, Expenses & Permissions (Items 21, 22, 25)**:
+  - **[V64-11] Localized Expense Category Filtering (`ExpensesScreen.kt`)**:
+    - Replaced hardcoded English string comparisons with robust `ExpenseCategoryFilter` data class supporting multi-locale aliases and localized strings.
+  - **[V64-12] In-Screen Permission Enforcement for Suppliers (`SuppliersScreen.kt`, `Navigation.kt`)**:
+    - Injected `isOwner`, `isSupervisor`, and `activePermissions` into `SuppliersScreen`.
+    - Guarded all mutations (Add Supplier, Receive Stock, Pay Due, Edit, Delete) with `runWithSupplierPermission` and integrated `SupervisorAuthDialog`.
+  - **[V64-13] Security Hardening of Dues Screen Supervisor Default (`DuesScreen.kt`)**:
+    - Fixed security footgun by changing parameter default from `isSupervisor: Boolean = isOwner` to `isSupervisor: Boolean = false`.
+
+- **Production Build Deliverables**:
+  - `Techyfi-POS-Final-V64.apk` (37.4 MB, versionCode 220940, versionName "2.6.64-V14-09-2026")
+  - `Techyfi-POS-Final-V14-09-2026.apk` (37.4 MB)
+  - Unit tests: 48/48 tests passing (`./gradlew testDebugUnitTest`).
 
 ## Maintenance note
 

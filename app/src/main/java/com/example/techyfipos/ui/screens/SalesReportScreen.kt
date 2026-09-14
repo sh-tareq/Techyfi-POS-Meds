@@ -95,9 +95,9 @@ private fun ReportTab.localizedTitle(): String = when (this) {
     ReportTab.PAYMENTS -> stringResource(R.string.sales_report_tab_payments)
 }
 
-private enum class TrendMetric(val label: String) {
-    SALES("Sales Volume"),
-    PROFIT("Net Profit")
+private enum class TrendMetric(@androidx.annotation.StringRes val labelRes: Int) {
+    SALES(R.string.sales_report_sales_volume),
+    PROFIT(R.string.sales_report_net_profit_metric)
 }
 
 private enum class TrendViewMode {

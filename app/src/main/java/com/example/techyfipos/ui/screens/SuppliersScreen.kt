@@ -21,6 +21,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import com.example.techyfipos.ui.components.*
+import com.example.techyfipos.ui.viewmodel.AuthViewModel
+import com.example.techyfipos.data.AppPermissions
+import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,9 +62,29 @@ private enum class SupplierDueFilter {
 fun SuppliersScreen(
     supplierViewModel: SupplierViewModel,
     onBack: () -> Unit,
+    isOwner: Boolean = true,
+    isSupervisor: Boolean = false,
+    activePermissions: Set<String> = emptySet(),
+    authViewModel: AuthViewModel? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val canManageSuppliers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
+    var showSupervisorAuthDialog by remember { mutableStateOf(false) }
+    var pendingSupervisorAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var pendingSupervisorDesc by remember { mutableStateOf("") }
+
+    fun runWithSupplierPermission(description: String, action: () -> Unit) {
+        if (canManageSuppliers) {
+            action()
+        } else if (authViewModel != null) {
+            pendingSupervisorDesc = description
+            pendingSupervisorAction = action
+            showSupervisorAuthDialog = true
+        } else {
+            Toast.makeText(context, context.getString(R.string.perm_suppliers_manage_desc), Toast.LENGTH_SHORT).show()
+        }
+    }
     val suppliers by supplierViewModel.allSuppliers.collectAsStateWithLifecycle(emptyList())
     val products by supplierViewModel.allProducts.collectAsStateWithLifecycle(emptyList())
     val purchaseInvoices by supplierViewModel.allPurchaseInvoices.collectAsStateWithLifecycle(emptyList())
@@ -290,7 +313,7 @@ fun SuppliersScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Button(
-                                    onClick = { showAddSupplierDialog = true },
+                                    onClick = { runWithSupplierPermission("Add Supplier") { showAddSupplierDialog = true } },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFF0284C7),
@@ -306,12 +329,14 @@ fun SuppliersScreen(
 
                                 Button(
                                     onClick = {
-                                        if (suppliers.isEmpty()) {
-                                            showAddSupplierDialog = true
-                                        } else if (suppliers.size == 1) {
-                                            selectedSupplierForInflow = suppliers.first()
-                                        } else {
-                                            showSupplierPickerForInflow = true
+                                        runWithSupplierPermission("Receive Stock") {
+                                            if (suppliers.isEmpty()) {
+                                                showAddSupplierDialog = true
+                                            } else if (suppliers.size == 1) {
+                                                selectedSupplierForInflow = suppliers.first()
+                                            } else {
+                                                showSupplierPickerForInflow = true
+                                            }
                                         }
                                     },
                                     shape = RoundedCornerShape(12.dp),
@@ -549,7 +574,7 @@ fun SuppliersScreen(
                             if (searchQuery.isBlank() && dueFilter == SupplierDueFilter.ALL) {
                                 Spacer(Modifier.height(16.dp))
                                 Button(
-                                    onClick = { showAddSupplierDialog = true },
+                                    onClick = { runWithSupplierPermission("Add Supplier") { showAddSupplierDialog = true } },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                 ) {
@@ -563,10 +588,10 @@ fun SuppliersScreen(
                 items(filteredSuppliers, key = { it.id }) { supplier ->
                     SupplierCard(
                         supplier = supplier,
-                        onAddInflow = { selectedSupplierForInflow = supplier },
-                        onPayDue = { selectedSupplierForPayDue = supplier },
-                        onEdit = { supplierToEdit = supplier },
-                        onDelete = { supplierViewModel.deleteSupplier(supplier) }
+                        onAddInflow = { runWithSupplierPermission("Receive Stock") { selectedSupplierForInflow = supplier } },
+                        onPayDue = { runWithSupplierPermission("Record Supplier Payment") { selectedSupplierForPayDue = supplier } },
+                        onEdit = { runWithSupplierPermission("Edit Supplier") { supplierToEdit = supplier } },
+                        onDelete = { runWithSupplierPermission("Delete Supplier") { supplierViewModel.deleteSupplier(supplier) } }
                     )
                 }
             }
@@ -1056,6 +1081,24 @@ fun SuppliersScreen(
                 TextButton(onClick = { selectedSupplierForPayDue = null }) {
                     Text(stringResource(R.string.cancel), fontWeight = FontWeight.Bold)
                 }
+            }
+        )
+    }
+
+    if (showSupervisorAuthDialog && authViewModel != null) {
+        SupervisorAuthDialog(
+            title = stringResource(R.string.users_supervisor_auth_title),
+            actionDescription = pendingSupervisorDesc.ifBlank { stringResource(R.string.perm_suppliers_manage_desc) },
+            authViewModel = authViewModel,
+            onDismiss = {
+                showSupervisorAuthDialog = false
+                pendingSupervisorAction = null
+            },
+            onAuthorized = { supervisor ->
+                showSupervisorAuthDialog = false
+                val action = pendingSupervisorAction
+                pendingSupervisorAction = null
+                action?.invoke()
             }
         )
     }

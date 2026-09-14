@@ -114,16 +114,30 @@ fun ExpensesScreen(
         }
     }
 
-    val categories = listOf("All", "Tea & Refreshments", "Staff Meal", "Electricity (Token)", "Transport", "Shop Rent", "Cleaning", "Supplier Payment", "Float In", "Other")
+    val categories = remember {
+        listOf(
+            ExpenseCategoryFilter("All", R.string.expense_category_all),
+            ExpenseCategoryFilter("Tea & Refreshments", R.string.expense_category_tea, listOf("Tea", "Snacks", "চা")),
+            ExpenseCategoryFilter("Staff Meal", R.string.expense_category_staff_meal, listOf("Meal", "খাবার")),
+            ExpenseCategoryFilter("Electricity (Token)", R.string.expense_category_electricity, listOf("Electricity", "Electricity (DESCO/DPDC)", "Power", "বিদ্যুৎ")),
+            ExpenseCategoryFilter("Shop Rent", R.string.expense_category_rent, listOf("Rent", "দোকান ভাড়া", "ভাড়া")),
+            ExpenseCategoryFilter("Cleaning", R.string.expense_category_cleaning, listOf("পরিষ্কার")),
+            ExpenseCategoryFilter("Transport", R.string.expense_category_transport, listOf("যাতায়াত")),
+            ExpenseCategoryFilter("Supplier Payment", R.string.expense_category_supplier_payment, listOf("সাপ্লায়ার", "মহাজন")),
+            ExpenseCategoryFilter("Float In", R.string.expense_category_float_in, listOf("ফ্লোট ইন", "Owner Capital", "Change Exchange")),
+            ExpenseCategoryFilter("Other", R.string.expense_category_other_format, listOf("অন্যান্য"))
+        )
+    }
 
-    val filteredExpenses = remember(allExpenses, searchQuery, selectedCategoryFilter, selectedTypeFilter) {
+    val filteredExpenses = remember(allExpenses, searchQuery, selectedCategoryFilter, selectedTypeFilter, categories) {
         allExpenses.filter { exp ->
             val matchesSearch = searchQuery.isBlank() ||
                     exp.title.contains(searchQuery, ignoreCase = true) ||
                     (exp.note?.contains(searchQuery, ignoreCase = true) == true) ||
                     exp.category.contains(searchQuery, ignoreCase = true)
 
-            val matchesCat = selectedCategoryFilter == "All" || exp.category.equals(selectedCategoryFilter, ignoreCase = true)
+            val activeCat = categories.find { it.key == selectedCategoryFilter }
+            val matchesCat = activeCat?.matches(exp.category) ?: (selectedCategoryFilter == "All" || exp.category.equals(selectedCategoryFilter, ignoreCase = true))
 
             val matchesType = when (selectedTypeFilter) {
                 "Cash In" -> exp.type == "CASH_IN"
@@ -145,7 +159,7 @@ fun ExpensesScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.expense_screen_title),
-                        metricBadge = "Today",
+                        metricBadge = stringResource(R.string.today),
                         badgeColor = PosSectionColors.Expenses,
                         icon = { size -> Realistic3DExpensesCashIcon(size = size) }
                     )
@@ -316,10 +330,10 @@ fun ExpensesScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    categories.forEach { cat ->
-                        val isSelected = selectedCategoryFilter == cat
+                    categories.forEach { filterItem ->
+                        val isSelected = selectedCategoryFilter == filterItem.key
                         Surface(
-                            onClick = { selectedCategoryFilter = cat },
+                            onClick = { selectedCategoryFilter = filterItem.key },
                             shape = RoundedCornerShape(20.dp),
                             color = if (isSelected) Color(0xFF0072FF) else MaterialTheme.colorScheme.surface,
                             border = BorderStroke(
@@ -329,18 +343,8 @@ fun ExpensesScreen(
                             shadowElevation = if (isSelected) 2.dp else 0.dp
                         ) {
                             Text(
-                                text = when (cat) {
-                                    "All" -> stringResource(R.string.expense_category_all)
-                                    "Tea & Refreshments" -> stringResource(R.string.expense_category_tea)
-                                    "Staff Meal" -> stringResource(R.string.expense_category_staff_meal)
-                                    "Electricity (Token)" -> stringResource(R.string.expense_category_electricity)
-                                    "Shop Rent" -> stringResource(R.string.expense_category_rent)
-                                    "Cleaning" -> stringResource(R.string.expense_category_cleaning)
-                                    "Transport" -> stringResource(R.string.expense_category_transport)
-                                    "Supplier Payment" -> stringResource(R.string.expense_category_supplier_payment)
-                                    "Float In" -> stringResource(R.string.expense_category_float_in)
-                                    else -> stringResource(R.string.expense_category_other_format, cat)
-                                },
+                                text = if (filterItem.key == "Other") stringResource(filterItem.labelRes, stringResource(R.string.category_other))
+                                else stringResource(filterItem.labelRes),
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                 color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
@@ -694,5 +698,17 @@ fun ExpenseRelocationNoticeBanner(
                 )
             }
         }
+    }
+}
+
+data class ExpenseCategoryFilter(
+    val key: String,
+    @androidx.annotation.StringRes val labelRes: Int,
+    val aliases: List<String> = emptyList()
+) {
+    fun matches(category: String): Boolean {
+        if (key == "All") return true
+        if (category.equals(key, ignoreCase = true)) return true
+        return aliases.any { it.equals(category, ignoreCase = true) || category.contains(it, ignoreCase = true) }
     }
 }

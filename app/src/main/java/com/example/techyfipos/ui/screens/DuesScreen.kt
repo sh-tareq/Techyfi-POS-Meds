@@ -67,7 +67,7 @@ import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.R
 import com.example.techyfipos.data.DueTemplate
 import com.example.techyfipos.data.InvoiceSettingsData
-import com.example.techyfipos.data.SettingsDataStore
+import com.example.techyfipos.ui.viewmodel.SettingsViewModel
 import com.example.techyfipos.data.db.Customer
 import com.example.techyfipos.data.db.CustomerDue
 import com.example.techyfipos.data.db.DuePayment
@@ -132,8 +132,9 @@ private enum class DuesSort(@StringRes val labelRes: Int) {
 fun DuesScreen(
     duesViewModel: DuesViewModel,
     customerViewModel: CustomerViewModel? = null,
+    settingsViewModel: SettingsViewModel? = null,
     isOwner: Boolean = true,
-    isSupervisor: Boolean = isOwner,
+    isSupervisor: Boolean = false,
     activePermissions: Set<String> = emptySet(),
     onBack: () -> Unit,
     onStartSaleForCustomer: ((Customer) -> Unit)? = null,
@@ -144,11 +145,12 @@ fun DuesScreen(
     val canSendReminders = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_SEND_REMINDERS)
     val canOverrideLimit = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_OVERRIDE_LIMIT)
     val reminderPermissionRequiredToast = stringResource(R.string.dues_reminder_permission_required_toast)
-    val settingsDataStore = remember { SettingsDataStore(context) }
-    val storeName by settingsDataStore.shopNameFlow.collectAsState(initial = "")
-    val storeAddress by settingsDataStore.shopAddressFlow.collectAsState(initial = "")
-    val storePhone by settingsDataStore.shopPhoneFlow.collectAsState(initial = "")
-    val invoiceSettingsData by settingsDataStore.invoiceSettingsDataFlow.collectAsState(initial = InvoiceSettingsData())
+    val storeName = settingsViewModel?.shopName?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
+    val storeAddress = settingsViewModel?.shopAddress?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
+    val storePhone = settingsViewModel?.shopPhone?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
+    val invoiceSettingsData = settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle(initialValue = InvoiceSettingsData())?.value ?: InvoiceSettingsData()
+    val appLanguage = settingsViewModel?.language?.collectAsStateWithLifecycle(initialValue = "en")?.value ?: "en"
+    val isAppBangla = appLanguage == "bn"
     val deleteOwnerOnlyToast = stringResource(R.string.dues_delete_owner_only_toast)
     val addDueSuccessToast = stringResource(R.string.dues_add_due_success_toast)
     val addDueFailureToast = stringResource(R.string.dues_add_due_failure_toast)
@@ -1095,6 +1097,7 @@ fun DuesScreen(
     if (paymentCustomer != null) {
         RecordPaymentDialog(
             customer = paymentCustomer!!,
+            isAppBangla = isAppBangla,
             onDismiss = { paymentCustomer = null },
             onRecordPayment = { amount, method, reference, onSaved ->
                 val customer = paymentCustomer ?: return@RecordPaymentDialog
@@ -1130,6 +1133,7 @@ fun DuesScreen(
             storeAddress = storeAddress,
             storePhone = storePhone,
             settings = invoiceSettingsData,
+            isAppBangla = isAppBangla,
             onDismiss = { repaymentReceiptData = null }
         )
     }
@@ -1195,6 +1199,7 @@ fun DuesScreen(
         SendDueReminderDialog(
             customer = reminderCustomer!!,
             storeName = storeName,
+            settingsViewModel = settingsViewModel,
             onLogReminder = { phone, name, amount, channel, text, status ->
                 duesViewModel.logReminder(phone, name, amount, channel, text, status)
             },
@@ -1617,20 +1622,19 @@ enum class DeliveryChannel(val titleBn: String, val titleEn: String, val id: Str
 fun SendDueReminderDialog(
     customer: CustomerDue,
     storeName: String,
+    settingsViewModel: SettingsViewModel? = null,
     onLogReminder: (customerPhone: String, customerName: String, dueAmount: Double, channel: String, messageText: String, status: String) -> Unit = { _, _, _, _, _, _ -> },
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val settingsDataStore = remember { SettingsDataStore(context) }
     val reminderPermissionRequiredToast = stringResource(R.string.dues_reminder_permission_required_toast)
 
-    val savedTemplates by settingsDataStore.dueReminderTemplatesFlow.collectAsStateWithLifecycle(
-        initialValue = DueTemplate.defaultTemplates()
-    )
+    val savedTemplates = settingsViewModel?.dueReminderTemplates?.collectAsStateWithLifecycle()?.value
+        ?: DueTemplate.defaultTemplates()
     val templates = if (savedTemplates.isEmpty()) DueTemplate.defaultTemplates() else savedTemplates
-    val shopPhone by settingsDataStore.shopPhoneFlow.collectAsStateWithLifecycle(initialValue = "")
-    val appLanguage by settingsDataStore.languageFlow.collectAsStateWithLifecycle(initialValue = "en")
+    val shopPhone = settingsViewModel?.shopPhone?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
+    val appLanguage = settingsViewModel?.language?.collectAsStateWithLifecycle(initialValue = "en")?.value ?: "en"
     val isAppBangla = appLanguage == "bn"
 
     val effectiveStoreName = storeName.trim().ifBlank { if (isAppBangla) "আমাদের প্রতিষ্ঠান" else "Our Store" }
@@ -2524,10 +2528,8 @@ fun SendDueReminderDialog(
         ManageDueTemplatesDialog(
             templates = templates,
             onSave = { updatedList ->
-                coroutineScope.launch {
-                    settingsDataStore.saveDueReminderTemplates(updatedList)
-                    showTemplateManager = false
-                }
+                settingsViewModel?.saveDueReminderTemplates(updatedList)
+                showTemplateManager = false
             },
             onDismiss = { showTemplateManager = false }
         )
@@ -5284,13 +5286,11 @@ fun CustomerDueDetailsView(
 @Composable
 fun RecordPaymentDialog(
     customer: CustomerDue,
+    isAppBangla: Boolean = false,
     onDismiss: () -> Unit,
     onRecordPayment: (Double, String, String?, (Boolean) -> Unit) -> Unit
 ) {
     val context = LocalContext.current
-    val settingsDataStore = remember { SettingsDataStore(context) }
-    val appLanguage by settingsDataStore.languageFlow.collectAsStateWithLifecycle(initialValue = "en")
-    val isAppBangla = appLanguage == "bn"
 
     var amount by remember(customer.customerPhone) {
         val amt = customer.outstandingAmount
@@ -5314,7 +5314,7 @@ fun RecordPaymentDialog(
             decorFitsSystemWindows = true
         )
     ) {
-        com.example.techyfipos.LocaleWrapper(language = appLanguage) {
+        com.example.techyfipos.LocaleWrapper(language = if (isAppBangla) "bn" else "en") {
             Surface(
                 shape = RoundedCornerShape(26.dp),
                 color = MaterialTheme.colorScheme.surface,
@@ -5995,17 +5995,15 @@ fun DueRepaymentReceiptDialog(
     storeAddress: String,
     storePhone: String,
     settings: InvoiceSettingsData = InvoiceSettingsData(),
+    isAppBangla: Boolean = false,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
-    val settingsDataStore = remember { SettingsDataStore(context) }
-    val appLanguage by settingsDataStore.languageFlow.collectAsStateWithLifecycle(initialValue = "en")
-    val isAppBangla = appLanguage == "bn"
 
     var selectedRollWidth by rememberSaveable { mutableIntStateOf(settings.paperRollWidthMm.takeIf { it == 58 || it == 80 } ?: 80) }
     var zoomScale by rememberSaveable { mutableFloatStateOf(1f) }
-    var isReceiptBangla by remember { mutableStateOf(false) }
+    var isReceiptBangla by remember { mutableStateOf(isAppBangla) }
     var receiptFile by remember { mutableStateOf<java.io.File?>(null) }
     var bitmapPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
 
@@ -6090,7 +6088,7 @@ fun DueRepaymentReceiptDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        com.example.techyfipos.LocaleWrapper(language = appLanguage) {
+        com.example.techyfipos.LocaleWrapper(language = if (isAppBangla) "bn" else "en") {
             Surface(
                 shape = RoundedCornerShape(22.dp),
                 color = MaterialTheme.colorScheme.surface,

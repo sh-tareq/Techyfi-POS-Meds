@@ -24,4 +24,11 @@ class DiscountCalculationTest {
     fun negativeDiscountBecomesZero() {
         assertEquals(0.0, calculateDiscountValue(120.0, -10.0, false), 0.001)
     }
+
+    @Test
+    fun fallbackPurchasePriceUsesZeroForSyntheticAndBreakEvenForRealProducts() {
+        assertEquals(0.0, fallbackPurchasePrice("CUSTOM-12345", 100.0), 0.001)
+        assertEquals(0.0, fallbackPurchasePrice("ADHOC-9999", 50.0), 0.001)
+        assertEquals(100.0, fallbackPurchasePrice("8901234567890", 100.0), 0.001)
+    }
 }

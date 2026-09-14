@@ -14,8 +14,11 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE barcode = :barcode LIMIT 1")
     suspend fun getProductByBarcode(barcode: String): Product?
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProduct(product: Product)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertProductIgnore(product: Product): Long
 
     @Update
     suspend fun updateProduct(product: Product)
@@ -66,6 +69,10 @@ interface SaleDao {
     @Transaction
     @Query("SELECT * FROM sales ORDER BY timestamp DESC")
     fun getAllSalesWithItems(): Flow<List<SaleWithItems>>
+
+    @Transaction
+    @Query("SELECT * FROM sales WHERE timestamp >= :startTime AND timestamp < :endTime ORDER BY timestamp DESC")
+    fun getSalesWithItemsBetween(startTime: Long, endTime: Long): Flow<List<SaleWithItems>>
 
     @Transaction
     @Query("SELECT * FROM sales WHERE id = :saleId")

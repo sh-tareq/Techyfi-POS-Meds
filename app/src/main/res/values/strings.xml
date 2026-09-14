@@ -16,7 +16,7 @@
     <string name="nagad">Nagad</string>
     <string name="rocket">Rocket</string>
     <string name="card">Card</string>
-    <string name="due">Due (বাকি)</string>
+    <string name="due">Due</string>
     <string name="complete_sale">Complete Sale</string>
     <string name="share_receipt">Share Receipt</string>
     <string name="received_amount">Received Amount</string>
@@ -460,6 +460,8 @@
     <string name="sales_history_delete_invoice_message">Invoice #%1$d will be permanently deleted. Stock, dues, returns, and loyalty totals may change.</string>
     <string name="sales_history_invoice_deleted">Invoice #%1$d deleted</string>
     <string name="sales_history_invoice_delete_failed">Unable to delete the invoice</string>
+    <string name="sales_history_no_matches">No transactions match these filters</string>
+    <string name="sales_history_empty_hint">Sales recorded through the Sell screen or barcode scanner will appear here with real-time receipts.</string>
     <string name="supplier_recent_purchase_ledger">Recent purchase ledger</string>
     <string name="supplier_recent_payment_ledger">Recent supplier payments</string>
     <string name="supplier_unknown_vendor">Unknown supplier</string>
@@ -733,6 +735,7 @@
     <string name="history_sort_lowest_total">Lowest total</string>
     <string name="history_period_all">All</string>
     <string name="history_period_today">Today</string>
+    <string name="today">Today</string>
     <string name="history_period_week">Week</string>
     <string name="history_period_month">Month</string>
     <string name="history_period_year">Year</string>
@@ -1235,6 +1238,7 @@
     <string name="products_low_stock_count">Low Stock (%1$d)</string>
     <string name="products_out_of_stock_count">Out of Stock (%1$d)</string>
     <string name="products_date_expiry_tracking_section">DATE &amp; EXPIRY TRACKING</string>
+    <string name="products_invalid_expiry_date_warning">Invalid expiry date. Use format DD-MM-YYYY or DD/MM/YYYY</string>
     <string name="products_date_filter_all_dates">📅 All Dates (%1$d)</string>
     <string name="products_date_filter_expiring_soon">⏳ Expiring Soon (%1$d)</string>
     <string name="products_date_filter_expired">🚨 Expired (%1$d)</string>
@@ -1975,6 +1979,59 @@
     <string name="permission_required_price_tier">Permission required to change price tier</string>
     <string name="permission_required_discount_limit">Discount limit is %1$d%%</string>
     <string name="permission_required_negative_stock">Negative inventory is disabled. Supervisor authorization required.</string>
+
+    <!-- Offline Terminal Status -->
+    <string name="settings_status_offline_terminal">Offline Terminal</string>
+
+    <!-- Cart Quick Add Popular Items -->
+    <string name="cart_quick_add_popular_title">⚡ Quick Add Popular Items</string>
+    <string name="common_add_chip">+ Add</string>
+
+    <!-- Screen Metric Badges -->
+    <string name="customers_metric_badge_total">%1$d Total</string>
+    <string name="loyalty_metric_badge_members">%1$d Members</string>
+    <string name="users_metric_badge_rbac_active">RBAC Active</string>
+
+    <!-- Z-Report Share Formats -->
+    <string name="z_report_format_jpeg_label">JPEG Image</string>
+    <string name="z_report_format_jpeg_desc">High-resolution 80mm receipt image (Default)</string>
+    <string name="z_report_format_pdf_label">PDF Document</string>
+    <string name="z_report_format_pdf_desc">Standard printable PDF document</string>
+    <string name="z_report_format_csv_label">CSV Spreadsheet</string>
+    <string name="z_report_format_csv_desc">Raw data breakdown for Excel &amp; Sheets</string>
+    <string name="common_default_badge">Default</string>
+
+    <!-- Return Dialog Reason Chips & Audit Presets -->
+    <string name="return_reason_defective_damaged">Defective / Damaged</string>
+    <string name="return_reason_wrong_item">Wrong Item</string>
+    <string name="return_reason_exchange">Exchange</string>
+    <string name="return_reason_customer_request">Customer Request</string>
+    <string name="return_reason_price_adjust">Price Adjust</string>
+    <string name="return_reason_other_note">Other Note</string>
+    <string name="return_reason_short_defective">Defective</string>
+    <string name="return_reason_short_wrong">Wrong Item</string>
+    <string name="return_reason_short_exchange">Exchange</string>
+    <string name="return_reason_short_request">Request</string>
+    <string name="return_reason_short_price">Price</string>
+    <string name="return_reason_short_other">Other</string>
+    <string name="return_audit_damaged_box">Damaged box</string>
+    <string name="return_audit_wrong_size">Wrong size</string>
+    <string name="return_audit_defective_unit">Defective unit</string>
+    <string name="return_audit_changed_mind">Changed mind</string>
+    <string name="return_audit_color_mismatch">Color mismatch</string>
+    <string name="common_save_and_close">Save &amp; Close</string>
+    <string name="common_reset_defaults">Reset Defaults</string>
+    <string name="common_all">All</string>
+    <string name="return_audit_placeholder">e.g. 🏷️ Wrong Barcode</string>
+
+    <!-- Voucher Errors & Feedback -->
+    <string name="voucher_err_please_enter">Please enter a voucher code</string>
+    <string name="voucher_err_not_found">Voucher not found</string>
+    <string name="voucher_err_inactive">Voucher is not active</string>
+    <string name="voucher_err_expired">Voucher has expired</string>
+    <string name="voucher_err_zero_balance">Voucher balance is zero</string>
+    <string name="voucher_err_failed">Failed to verify voucher</string>
+    <string name="voucher_toast_applied">Voucher applied: %1$s</string>
 </resources>
 
 

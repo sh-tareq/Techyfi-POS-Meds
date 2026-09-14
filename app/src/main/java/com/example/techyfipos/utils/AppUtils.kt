@@ -63,12 +63,17 @@ fun generateQrCodeBitmap(text: String, size: Int = 512): android.graphics.Bitmap
     return try {
         val writer = com.google.zxing.qrcode.QRCodeWriter()
         val bitMatrix = writer.encode(text, com.google.zxing.BarcodeFormat.QR_CODE, size, size)
-        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.RGB_565)
-        for (x in 0 until size) {
-            for (y in 0 until size) {
-                bitmap.setPixel(x, y, if (bitMatrix.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+        val pixels = IntArray(size * size)
+        val black = android.graphics.Color.BLACK
+        val white = android.graphics.Color.WHITE
+        for (y in 0 until size) {
+            val offset = y * size
+            for (x in 0 until size) {
+                pixels[offset + x] = if (bitMatrix.get(x, y)) black else white
             }
         }
+        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.RGB_565)
+        bitmap.setPixels(pixels, 0, size, 0, 0, size, size)
         bitmap
     } catch (e: Exception) {
         e.printStackTrace()
@@ -116,6 +121,7 @@ fun parseExpiryDateToMillis(rawDate: String?): Long? {
         if (month in 1..12 && day in 1..31 && year in 1970..2100) {
             val cal = java.util.Calendar.getInstance().apply {
                 clear()
+                isLenient = false
                 set(java.util.Calendar.YEAR, year)
                 set(java.util.Calendar.MONTH, month - 1)
                 set(java.util.Calendar.DAY_OF_MONTH, day)
@@ -124,7 +130,11 @@ fun parseExpiryDateToMillis(rawDate: String?): Long? {
                 set(java.util.Calendar.SECOND, 59)
                 set(java.util.Calendar.MILLISECOND, 999)
             }
-            return cal.timeInMillis
+            try {
+                return cal.timeInMillis
+            } catch (e: Exception) {
+                return null
+            }
         }
     } else if (parts.size == 2) {
         // MM-YY or MM-YYYY

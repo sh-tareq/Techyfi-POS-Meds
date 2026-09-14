@@ -24,6 +24,9 @@ data class Product(
     val discountedPrice: Double = 0.0
 )
 
+val Product.hasValidExpiryDate: Boolean
+    get() = expiryDate.isNullOrBlank() || com.example.techyfipos.utils.parseExpiryDateToMillis(expiryDate) != null
+
 @Entity(tableName = "expenses")
 data class Expense(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

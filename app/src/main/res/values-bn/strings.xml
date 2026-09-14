@@ -460,6 +460,8 @@
     <string name="sales_history_delete_invoice_message">ইনভয়েস #%1$d স্থায়ীভাবে মুছে যাবে। স্টক, বাকি, রিটার্ন ও লয়্যালটি হিসাব পরিবর্তিত হতে পারে।</string>
     <string name="sales_history_invoice_deleted">ইনভয়েস #%1$d মুছে ফেলা হয়েছে</string>
     <string name="sales_history_invoice_delete_failed">ইনভয়েস মুছে ফেলা যায়নি</string>
+    <string name="sales_history_no_matches">এই ফিল্টারে কোনো লেনদেন পাওয়া যায়নি</string>
+    <string name="sales_history_empty_hint">বিক্রয় বা বারকোড স্ক্যানার দিয়ে সম্পন্ন করা সকল বিক্রয় এখানে রসিদসহ দেখতে পাবেন।</string>
     <string name="supplier_recent_purchase_ledger">সাম্প্রতিক ক্রয় লেজার</string>
     <string name="supplier_recent_payment_ledger">সাম্প্রতিক সরবরাহকারী পেমেন্ট</string>
     <string name="supplier_unknown_vendor">অজানা সরবরাহকারী</string>
@@ -733,6 +735,7 @@
     <string name="history_sort_lowest_total">সর্বনিম্ন মোট</string>
     <string name="history_period_all">সকল</string>
     <string name="history_period_today">আজ</string>
+    <string name="today">আজ</string>
     <string name="history_period_week">সপ্তাহ</string>
     <string name="history_period_month">মাস</string>
     <string name="history_period_year">বছর</string>
@@ -1235,6 +1238,7 @@
     <string name="products_low_stock_count">কম স্টক (%1$d)</string>
     <string name="products_out_of_stock_count">স্টক শেষ (%1$d)</string>
     <string name="products_date_expiry_tracking_section">তারিখ ও মেয়াদ ট্র্যাকিং</string>
+    <string name="products_invalid_expiry_date_warning">মেয়াদোত্তীর্ণের তারিখ সঠিক নয়। দিন-মাস-বছর (DD-MM-YYYY) ফরম্যাট ব্যবহার করুন</string>
     <string name="products_date_filter_all_dates">📅 সব তারিখ (%1$d)</string>
     <string name="products_date_filter_expiring_soon">⏳ মেয়াদ শীঘ্রই শেষ (%1$d)</string>
     <string name="products_date_filter_expired">🚨 মেয়াদোত্তীর্ণ (%1$d)</string>
@@ -1975,5 +1979,58 @@
     <string name="permission_required_price_tier">মূল্য টিয়ার পরিবর্তন করতে অনুমতির প্রয়োজন</string>
     <string name="permission_required_discount_limit">সর্বোচ্চ ছাড়ের সীমা %1$d%%</string>
     <string name="permission_required_negative_stock">নেগেটিভ ইনভেন্টরি বন্ধ রয়েছে। সুপারভাইজারের অনুমোদন প্রয়োজন।</string>
+
+    <!-- Offline Terminal Status -->
+    <string name="settings_status_offline_terminal">অফলাইন টার্মিনাল</string>
+
+    <!-- Cart Quick Add Popular Items -->
+    <string name="cart_quick_add_popular_title">⚡ দ্রুত যোগ করার জনপ্রিয় পণ্য</string>
+    <string name="common_add_chip">+ যোগ</string>
+
+    <!-- Screen Metric Badges -->
+    <string name="customers_metric_badge_total">সর্বমোট %1$d জন</string>
+    <string name="loyalty_metric_badge_members">%1$d জন সদস্য</string>
+    <string name="users_metric_badge_rbac_active">আরবিএসি সক্রিয়</string>
+
+    <!-- Z-Report Share Formats -->
+    <string name="z_report_format_jpeg_label">জেপিইজি ছবি</string>
+    <string name="z_report_format_jpeg_desc">উচ্চমানের ৮০মিমি রসিদ ছবি (ডিফল্ট)</string>
+    <string name="z_report_format_pdf_label">পিডিএফ ডকুমেন্ট</string>
+    <string name="z_report_format_pdf_desc">প্রিন্টযোগ্য আদর্শ পিডিএফ ডকুমেন্ট</string>
+    <string name="z_report_format_csv_label">সিএসভি স্প্রেডশিট</string>
+    <string name="z_report_format_csv_desc">এক্সেল ও শিটের জন্য বিস্তারিত ডেটা</string>
+    <string name="common_default_badge">ডিফল্ট</string>
+
+    <!-- Return Dialog Reason Chips & Audit Presets -->
+    <string name="return_reason_defective_damaged">ত্রুটিযুক্ত / ক্ষতিগ্রস্ত</string>
+    <string name="return_reason_wrong_item">ভুল পণ্য</string>
+    <string name="return_reason_exchange">বিনিময় / এক্সচেঞ্জ</string>
+    <string name="return_reason_customer_request">ক্রেতার অনুরোধ</string>
+    <string name="return_reason_price_adjust">মূল্য সমন্বয়</string>
+    <string name="return_reason_other_note">অন্যান্য কারণ</string>
+    <string name="return_reason_short_defective">ত্রুটিযুক্ত</string>
+    <string name="return_reason_short_wrong">ভুল পণ্য</string>
+    <string name="return_reason_short_exchange">বিনিময়</string>
+    <string name="return_reason_short_request">অনুরোধ</string>
+    <string name="return_reason_short_price">মূল্য</string>
+    <string name="return_reason_short_other">অন্যান্য</string>
+    <string name="return_audit_damaged_box">ক্ষতিগ্রস্ত বাক্স</string>
+    <string name="return_audit_wrong_size">ভুল সাইজ</string>
+    <string name="return_audit_defective_unit">ত্রুটিপূর্ণ পণ্য</string>
+    <string name="return_audit_changed_mind">সিদ্ধান্ত পরিবর্তন</string>
+    <string name="return_audit_color_mismatch">রং অমিল</string>
+    <string name="common_save_and_close">সংরক্ষণ ও বন্ধ</string>
+    <string name="common_reset_defaults">ডিফল্ট পুনরুদ্ধার</string>
+    <string name="common_all">সব</string>
+    <string name="return_audit_placeholder">যেমন: 🏷️ ভুল বারকোড</string>
+
+    <!-- Voucher Errors & Feedback -->
+    <string name="voucher_err_please_enter">অনুগ্রহ করে ভাউচার কোড লিখুন</string>
+    <string name="voucher_err_not_found">ভাউচারটি পাওয়া যায়নি</string>
+    <string name="voucher_err_inactive">ভাউচারটি সক্রিয় নয়</string>
+    <string name="voucher_err_expired">ভাউচারের মেয়াদ শেষ হয়েছে</string>
+    <string name="voucher_err_zero_balance">ভাউচারের ব্যালেন্স শূন্য</string>
+    <string name="voucher_err_failed">ভাউচার যাচাই করতে ব্যর্থ হয়েছে</string>
+    <string name="voucher_toast_applied">ভাউচার যোগ করা হয়েছে: %1$s</string>
 </resources>
 

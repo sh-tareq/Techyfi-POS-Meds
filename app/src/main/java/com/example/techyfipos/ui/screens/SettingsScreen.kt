@@ -162,7 +162,7 @@ private fun SettingsMasterCard(
                                     .background(Color(0xFF34D399))
                             )
                             Text(
-                                text = stringResource(R.string.settings_status_online_ready),
+                                text = stringResource(R.string.settings_status_offline_terminal),
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF34D399)

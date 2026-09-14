@@ -42,4 +42,28 @@ class HeldCartSerializationTest {
         assertEquals(0.0, decoded!!.storeCreditApplied, 0.001)
         assertEquals(null, decoded.voucherCode)
     }
+
+    @Test
+    fun `held cart preserves voucher balance and customer phone across serialization roundtrip`() {
+        val payload = HeldCartPayload(
+            items = emptyList(),
+            priceMode = PriceMode.DISCOUNTED,
+            paymentMethod = "Cash",
+            storeCreditApplied = 250.0,
+            voucherCode = "VOUCHER-RESTORE-123",
+            voucherOriginalBalance = 500.0,
+            voucherRemainingBalance = 250.0,
+            voucherCustomerPhone = "01711122233"
+        )
+
+        val json = encodeHeldCartPayload(payload)
+        val decoded = decodeHeldCartPayload(json)
+
+        assertNotNull(decoded)
+        assertEquals(250.0, decoded!!.storeCreditApplied, 0.001)
+        assertEquals("VOUCHER-RESTORE-123", decoded.voucherCode)
+        assertEquals(500.0, decoded.voucherOriginalBalance!!, 0.001)
+        assertEquals(250.0, decoded.voucherRemainingBalance!!, 0.001)
+        assertEquals("01711122233", decoded.voucherCustomerPhone)
+    }
 }

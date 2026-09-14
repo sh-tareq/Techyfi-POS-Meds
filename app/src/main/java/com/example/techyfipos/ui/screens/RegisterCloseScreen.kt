@@ -87,10 +87,14 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-enum class ZReportFormat(val label: String, val description: String, val icon: String) {
-    JPEG("JPEG Image", "High-resolution 80mm receipt image (Default)", "🖼️"),
-    PDF("PDF Document", "Standard printable PDF document", "📄"),
-    CSV("CSV Spreadsheet", "Raw data breakdown for Excel & Sheets", "📊")
+enum class ZReportFormat(
+    @androidx.annotation.StringRes val labelRes: Int,
+    @androidx.annotation.StringRes val descRes: Int,
+    val icon: String
+) {
+    JPEG(R.string.z_report_format_jpeg_label, R.string.z_report_format_jpeg_desc, "🖼️"),
+    PDF(R.string.z_report_format_pdf_label, R.string.z_report_format_pdf_desc, "📄"),
+    CSV(R.string.z_report_format_csv_label, R.string.z_report_format_csv_desc, "📊")
 }
 
 enum class DenomCounterMode {
@@ -134,7 +138,7 @@ private fun formatShiftDuration(shiftStart: Long): String {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DayStartCloseScreen(
+fun RegisterCloseScreen(
     registerClosingViewModel: RegisterClosingViewModel,
     expenseViewModel: ExpenseViewModel,
     salesViewModel: SalesViewModel,
@@ -1216,10 +1220,14 @@ fun DayStartCloseScreen(
 }
 
 /**
- * Backward compatibility alias for Navigation.kt
+ * Backward compatibility alias for DayStartCloseScreen
  */
+@Deprecated(
+    message = "Use RegisterCloseScreen instead to match file name and navigation route",
+    replaceWith = ReplaceWith("RegisterCloseScreen(registerClosingViewModel, expenseViewModel, salesViewModel, onBack, onNavigateToExpenses, modifier)")
+)
 @Composable
-fun RegisterCloseScreen(
+fun DayStartCloseScreen(
     registerClosingViewModel: RegisterClosingViewModel,
     expenseViewModel: ExpenseViewModel,
     salesViewModel: SalesViewModel,
@@ -1227,7 +1235,7 @@ fun RegisterCloseScreen(
     onNavigateToExpenses: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    DayStartCloseScreen(
+    RegisterCloseScreen(
         registerClosingViewModel = registerClosingViewModel,
         expenseViewModel = expenseViewModel,
         salesViewModel = salesViewModel,
@@ -2799,7 +2807,7 @@ fun ShareZReportFormatDialog(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                         Text(
-                                            text = format.label,
+                                            text = stringResource(format.labelRes),
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp,
                                             color = MaterialTheme.colorScheme.onSurface
@@ -2810,7 +2818,7 @@ fun ShareZReportFormatDialog(
                                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                             ) {
                                                 Text(
-                                                    text = "Default",
+                                                    text = stringResource(R.string.common_default_badge),
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.primary,
@@ -2820,7 +2828,7 @@ fun ShareZReportFormatDialog(
                                         }
                                     }
                                     Text(
-                                        text = format.description,
+                                        text = stringResource(format.descRes),
                                         fontSize = 11.5.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

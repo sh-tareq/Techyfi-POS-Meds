@@ -119,7 +119,7 @@ fun SalesHistoryScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val salesWithItems by salesViewModel.salesWithItems.collectAsStateWithLifecycle()
+    val salesWithItems by salesViewModel.historySalesWithItems.collectAsStateWithLifecycle()
     val returnsBySaleId by salesViewModel.returnsBySaleId.collectAsStateWithLifecycle()
     var onlyReturnsFilter by rememberSaveable { mutableStateOf(false) }
     var isStealthMode by rememberSaveable { mutableStateOf(false) }
@@ -140,7 +140,7 @@ fun SalesHistoryScreen(
     val canReturn = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_PROCESS)
     val canDelete = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
 
-    var selectedPeriod by remember { mutableStateOf(HistoryReportPeriod.ALL_TIME) }
+    var selectedPeriod by remember { mutableStateOf(HistoryReportPeriod.TODAY) }
     var customStart by remember { mutableStateOf(System.currentTimeMillis()) }
     var customEnd by remember { mutableStateOf(System.currentTimeMillis()) }
     var showStartPicker by remember { mutableStateOf(false) }
@@ -166,9 +166,22 @@ fun SalesHistoryScreen(
     val (rangeStart, rangeEnd) = remember(selectedPeriod, customStart, customEnd) {
         rangeForPeriod(selectedPeriod, customStart, customEnd)
     }
+
+    LaunchedEffect(rangeStart, rangeEnd) {
+        if (rangeStart == 0L && rangeEnd == Long.MAX_VALUE) {
+            salesViewModel.clearHistoryDateRange()
+        } else {
+            salesViewModel.setHistoryDateRange(rangeStart, rangeEnd)
+        }
+    }
+
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
     val dateFilteredSales = remember(salesWithItems, rangeStart, rangeEnd) {
-        salesWithItems.filter { it.sale.timestamp in rangeStart until rangeEnd }
+        if (rangeStart == 0L && rangeEnd == Long.MAX_VALUE) {
+            salesWithItems
+        } else {
+            salesWithItems.filter { it.sale.timestamp in rangeStart until rangeEnd }
+        }
     }
 
     val filteredSales = remember(
@@ -568,14 +581,14 @@ fun SalesHistoryScreen(
                     Realistic3DEmptyReceiptIcon(size = 68.dp)
                     Spacer(Modifier.height(14.dp))
                     Text(
-                        if (salesWithItems.isEmpty()) stringResource(R.string.no_sales) else "No transactions match these filters",
+                        if (salesWithItems.isEmpty()) stringResource(R.string.no_sales) else stringResource(R.string.sales_history_no_matches),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Sales recorded through the Sell screen or barcode scanner will appear here with real-time receipts.",
+                        stringResource(R.string.sales_history_empty_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,

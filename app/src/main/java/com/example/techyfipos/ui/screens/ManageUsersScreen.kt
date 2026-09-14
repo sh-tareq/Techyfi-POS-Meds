@@ -64,7 +64,7 @@ fun ManageUsersScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.users_title),
-                        metricBadge = "RBAC Active",
+                        metricBadge = stringResource(R.string.users_metric_badge_rbac_active),
                         badgeColor = PosSectionColors.Users,
                         icon = { size -> Realistic3DCustomerHubIcon(size = size) }
                     )

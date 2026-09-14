@@ -122,7 +122,7 @@ fun CustomersScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.customers_screen_title),
-                        metricBadge = "$totalCount Total",
+                        metricBadge = stringResource(R.string.customers_metric_badge_total, totalCount),
                         badgeColor = PosSectionColors.Customers,
                         isTablet = isTablet,
                         icon = { size -> Realistic3DCustomerHubIcon(size = size) }
@@ -140,7 +140,7 @@ fun CustomersScreen(
                     if (isTablet) {
                         // Tablet mode: Show full tool deck side-by-side
                         IconButton(
-                            onClick = { customerViewModel.isTableView.value = !isTableView },
+                            onClick = { customerViewModel.toggleTableView() },
                             modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         ) {
                             Icon(
@@ -165,49 +165,49 @@ fun CustomersScreen(
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_recent)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.RECENT_VISIT
+                                        customerViewModel.setSelectedSort(CustomerSortOption.RECENT_VISIT)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_lifetime_spend)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.LIFETIME_SPEND
+                                        customerViewModel.setSelectedSort(CustomerSortOption.LIFETIME_SPEND)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_highest_due)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.HIGHEST_DUE
+                                        customerViewModel.setSelectedSort(CustomerSortOption.HIGHEST_DUE)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_orders_count)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.ORDERS_COUNT
+                                        customerViewModel.setSelectedSort(CustomerSortOption.ORDERS_COUNT)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_loyalty)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.LOYALTY_POINTS
+                                        customerViewModel.setSelectedSort(CustomerSortOption.LOYALTY_POINTS)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_name)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.NAME_ASC
+                                        customerViewModel.setSelectedSort(CustomerSortOption.NAME_ASC)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_store_credit)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.STORE_CREDIT
+                                        customerViewModel.setSelectedSort(CustomerSortOption.STORE_CREDIT)
                                         showSortMenu = false
                                     }
                                 )
@@ -262,49 +262,49 @@ fun CustomersScreen(
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_recent)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.RECENT_VISIT
+                                        customerViewModel.setSelectedSort(CustomerSortOption.RECENT_VISIT)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_lifetime_spend)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.LIFETIME_SPEND
+                                        customerViewModel.setSelectedSort(CustomerSortOption.LIFETIME_SPEND)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_highest_due)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.HIGHEST_DUE
+                                        customerViewModel.setSelectedSort(CustomerSortOption.HIGHEST_DUE)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_orders_count)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.ORDERS_COUNT
+                                        customerViewModel.setSelectedSort(CustomerSortOption.ORDERS_COUNT)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_loyalty)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.LOYALTY_POINTS
+                                        customerViewModel.setSelectedSort(CustomerSortOption.LOYALTY_POINTS)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_name)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.NAME_ASC
+                                        customerViewModel.setSelectedSort(CustomerSortOption.NAME_ASC)
                                         showSortMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.customer_sort_store_credit)) },
                                     onClick = {
-                                        customerViewModel.selectedSort.value = CustomerSortOption.STORE_CREDIT
+                                        customerViewModel.setSelectedSort(CustomerSortOption.STORE_CREDIT)
                                         showSortMenu = false
                                     }
                                 )
@@ -335,7 +335,7 @@ fun CustomersScreen(
                                     },
                                     onClick = {
                                         showPhoneMoreMenu = false
-                                        customerViewModel.isTableView.value = !isTableView
+                                        customerViewModel.toggleTableView()
                                     }
                                 )
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -401,12 +401,12 @@ fun CustomersScreen(
                 // Search Bar
                 OutlinedTextField(
                     value = searchQuery,
-                    onValueChange = { customerViewModel.searchQuery.value = it },
+                    onValueChange = { customerViewModel.setSearchQuery(it) },
                     placeholder = { Text(stringResource(R.string.customer_search_placeholder), fontSize = 12.5.sp) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp)) },
                     trailingIcon = {
                         if (searchQuery.isNotBlank()) {
-                            IconButton(onClick = { customerViewModel.searchQuery.value = "" }) {
+                            IconButton(onClick = { customerViewModel.setSearchQuery("") }) {
                                 Icon(Icons.Default.Clear, contentDescription = "Clear", modifier = Modifier.size(16.dp))
                             }
                         }
@@ -593,7 +593,7 @@ fun CustomersScreen(
                         val isSelected = selectedFilter == segment
                         FilterChip(
                             selected = isSelected,
-                            onClick = { customerViewModel.selectedFilter.value = segment },
+                            onClick = { customerViewModel.setSelectedFilter(segment) },
                             label = { Text(title, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
                             shape = RoundedCornerShape(20.dp)
                         )

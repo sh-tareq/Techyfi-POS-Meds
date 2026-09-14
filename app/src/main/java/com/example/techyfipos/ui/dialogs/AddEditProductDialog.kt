@@ -224,6 +224,10 @@ fun AddEditProductDialog(
                 isError = true
                 Toast.makeText(context, "Prices and stock quantities cannot be negative", Toast.LENGTH_SHORT).show()
             }
+            expiryDate.isNotBlank() && com.example.techyfipos.utils.parseExpiryDateToMillis(expiryDate) == null -> {
+                isError = true
+                Toast.makeText(context, context.getString(R.string.products_invalid_expiry_date_warning), Toast.LENGTH_SHORT).show()
+            }
             else -> {
                 isError = false
                 onSave(
