@@ -1690,7 +1690,12 @@ private fun MoreOperationsHubContent(
 
         val configuration = androidx.compose.ui.platform.LocalConfiguration.current
         val screenHeight = configuration.screenHeightDp.dp
-        val maxContentHeight = (screenHeight * if (isTablet) 0.55f else 0.65f).coerceIn(280.dp, 520.dp)
+        val maxContentHeight = run {
+            // Dynamic available budget leaving comfortable space for drag handle, title, and search header (~130dp)
+            val availableBudget = (screenHeight - 130.dp).coerceAtLeast(160.dp)
+            val desiredHeight = screenHeight * if (isTablet) 0.55f else 0.65f
+            desiredHeight.coerceIn(160.dp, 540.dp).coerceAtMost(availableBudget)
+        }
 
         // Operations List / Grid
         if (isGridView) {

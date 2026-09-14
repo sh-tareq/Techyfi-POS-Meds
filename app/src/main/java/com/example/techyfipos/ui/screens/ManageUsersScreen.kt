@@ -501,7 +501,7 @@ private fun EditStaffDialog(
                     value = editPin,
                     onValueChange = { if (it.length <= 4 && it.all(Char::isDigit)) editPin = it },
                     label = { Text(stringResource(R.string.users_reset_pin_label)) },
-                    placeholder = { Text("Leave blank to keep current PIN") },
+                    placeholder = { Text(stringResource(R.string.users_pin_leave_blank_placeholder)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     modifier = Modifier.fillMaxWidth()

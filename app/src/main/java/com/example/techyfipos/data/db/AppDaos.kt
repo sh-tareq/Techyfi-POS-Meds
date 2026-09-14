@@ -351,6 +351,9 @@ interface HeldCartDao {
     @Query("SELECT COUNT(*) FROM held_carts")
     fun getHeldCartCount(): Flow<Int>
 
+    @Query("UPDATE held_carts SET customerPhone = :newPhone, customerName = CASE WHEN :newName IS NOT NULL AND :newName != '' THEN :newName ELSE customerName END WHERE customerPhone = :oldPhone")
+    suspend fun reassignHeldCartsCustomer(oldPhone: String, newPhone: String, newName: String? = null): Int
+
     @Query("UPDATE held_carts SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
     suspend fun reassignHeldCartsPhone(oldPhone: String, newPhone: String): Int
 }

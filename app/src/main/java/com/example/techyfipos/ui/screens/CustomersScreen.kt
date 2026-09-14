@@ -918,11 +918,11 @@ fun CustomerDataTable(
                         onCheckedChange = { onSelectAll() },
                         modifier = Modifier.size(32.dp)
                     )
-                    Text("Customer", fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(2.2f))
-                    Text("Tag", fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1.1f))
-                    Text("Spend / Due", fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1.6f))
-                    Text("Orders", fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                    Text("Actions", fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.width(90.dp))
+                    Text(stringResource(R.string.customer_col_customer), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(2.2f))
+                    Text(stringResource(R.string.customer_col_tag), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1.1f))
+                    Text(stringResource(R.string.customer_col_spend_due), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1.6f))
+                    Text(stringResource(R.string.customer_col_orders), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.customer_col_actions), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.width(120.dp))
                 }
             }
 
@@ -1023,26 +1023,26 @@ fun CustomerDataTable(
 
                         // Action Shortcuts
                         Row(
-                            modifier = Modifier.width(90.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            modifier = Modifier.width(120.dp),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             IconButton(
                                 onClick = { onStartSale(customer) },
-                                modifier = Modifier.size(26.dp)
+                                modifier = Modifier.size(38.dp)
                             ) {
-                                Icon(Icons.Default.ShoppingCart, contentDescription = "Start Sale", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+                                Icon(Icons.Default.ShoppingCart, contentDescription = "Start Sale", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
                             }
                             IconButton(
                                 onClick = { openWhatsAppChat(context, customer.phone) },
-                                modifier = Modifier.size(26.dp)
+                                modifier = Modifier.size(38.dp)
                             ) {
-                                Text("💬", fontSize = 13.sp)
+                                Text("💬", fontSize = 14.sp)
                             }
                             IconButton(
                                 onClick = { onCustomerClick(customer) },
-                                modifier = Modifier.size(26.dp)
+                                modifier = Modifier.size(38.dp)
                             ) {
-                                Icon(Icons.Default.ChevronRight, contentDescription = "Customer Profile", modifier = Modifier.size(15.dp))
+                                Icon(Icons.Default.ChevronRight, contentDescription = "Customer Profile", modifier = Modifier.size(17.dp))
                             }
                         }
                     }
@@ -1195,15 +1195,15 @@ fun CustomerCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(
                         onClick = onStartSale,
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
-                        Icon(Icons.Default.ShoppingCart, contentDescription = "Start Sale", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.ShoppingCart, contentDescription = "Start Sale", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                     }
                     IconButton(
                         onClick = { openWhatsAppChat(context, customer.phone) },
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
-                        Text("💬", fontSize = 14.sp)
+                        Text("💬", fontSize = 15.sp)
                     }
                 }
             }
@@ -1327,10 +1327,10 @@ fun CustomerMergeDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("✨ Merged Account Preview:", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Text("Combined Orders: ${master.totalOrders + secondary.totalOrders}", fontSize = 10.sp)
-                        Text("Combined Spend: ${formatTaka(master.lifetimeSpent + secondary.lifetimeSpent)}", fontSize = 10.sp)
-                        Text("Combined Dues: ${formatTaka(master.totalDue + secondary.totalDue)}", fontSize = 10.sp)
+                        Text(stringResource(R.string.customer_merged_preview), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.customer_combined_orders, master.totalOrders + secondary.totalOrders), fontSize = 10.sp)
+                        Text(stringResource(R.string.customer_combined_spend, formatTaka(master.lifetimeSpent + secondary.lifetimeSpent)), fontSize = 10.sp)
+                        Text(stringResource(R.string.customer_combined_dues, formatTaka(master.totalDue + secondary.totalDue)), fontSize = 10.sp)
                     }
                 }
             }
@@ -1366,7 +1366,7 @@ fun BulkAssignTagDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Select tag to assign to $count selected customer(s):", fontSize = 12.sp)
+                Text(stringResource(R.string.customer_select_tag_count, count), fontSize = 12.sp)
                 tags.forEach { t ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1383,7 +1383,7 @@ fun BulkAssignTagDialog(
         },
         confirmButton = {
             Button(onClick = { onApplyTag(selectedTag) }) {
-                Text("Apply Tag", fontSize = 12.sp)
+                Text(stringResource(R.string.customer_apply_tag), fontSize = 12.sp)
             }
         },
         dismissButton = {
@@ -1430,7 +1430,7 @@ fun CustomerAddEditDialog(
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = { Text("Phone Number *") },
+                    label = { Text(stringResource(R.string.customer_dialog_phone_req)) },
                     singleLine = true,
                     enabled = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -1439,26 +1439,26 @@ fun CustomerAddEditDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Customer Name *") },
+                    label = { Text(stringResource(R.string.customer_dialog_name_req)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = address,
                     onValueChange = { address = it },
-                    label = { Text("Address / Location") },
+                    label = { Text(stringResource(R.string.customer_dialog_address)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = creditLimitStr,
                     onValueChange = { creditLimitStr = it },
-                    label = { Text("Credit Limit (৳)") },
+                    label = { Text(stringResource(R.string.customer_dialog_credit_limit)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text("Customer Tag / Segment:", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                Text(stringResource(R.string.customer_dialog_tag_segment), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1474,7 +1474,7 @@ fun CustomerAddEditDialog(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Special Notes / Remarks") },
+                    label = { Text(stringResource(R.string.customer_dialog_notes)) },
                     maxLines = 3,
                     modifier = Modifier.fillMaxWidth()
                 )

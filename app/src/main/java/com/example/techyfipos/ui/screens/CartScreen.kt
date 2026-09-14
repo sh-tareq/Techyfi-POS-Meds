@@ -2293,7 +2293,11 @@ fun CartScreen(
                                 val snapshotChange = effectiveChangeAmt
                                 val snapshotSplitJson = if (isSplitPayment) cartViewModel.getSplitPaymentsJson() else null
                                 val snapshotHasDueInPayment = hasDueInPayment
-                                scope.launch {
+                                if (snapshotPaymentMethod == "Cash" && remainingToPay > 0.0 && snapshotAmountPaid < remainingToPay) {
+                                    isCompletingSale = false
+                                    android.widget.Toast.makeText(context, context.getString(R.string.cart_reason_cash_insufficient), android.widget.Toast.LENGTH_SHORT).show()
+                                } else {
+                                    scope.launch {
                                     try {
                                         val snapshotStoreCreditApplied = cartViewModel.storeCreditApplied.value
                                         val snapshotRedeemedVoucher = cartViewModel.redeemedVoucher.value
@@ -2366,6 +2370,7 @@ fun CartScreen(
                                 }
                             }
                         }
+                    }
 
                         Button(
                             onClick = {
@@ -2558,7 +2563,11 @@ fun CartScreen(
                 )
                 val snapshotChange = (snapshotAmountPaid - grandTotal).coerceAtLeast(0.0)
                 val snapshotSplitJson = if (isSplitPayment) cartViewModel.getSplitPaymentsJson() else null
-                scope.launch {
+                val triggerRemainingToPay = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+                if (snapshotPaymentMethod == "Cash" && triggerRemainingToPay > 0.0 && snapshotAmountPaid < triggerRemainingToPay) {
+                    android.widget.Toast.makeText(context, context.getString(R.string.cart_reason_cash_insufficient), android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    scope.launch {
                     try {
                         val snapshotStoreCreditApplied = cartViewModel.storeCreditApplied.value
                         val snapshotRedeemedVoucher = cartViewModel.redeemedVoucher.value
@@ -2624,6 +2633,7 @@ fun CartScreen(
                         android.util.Log.e("CartScreen", "Error completing sale", e)
                         Toast.makeText(context, context.getString(R.string.cart_sale_error_toast, e.localizedMessage ?: ""), Toast.LENGTH_LONG).show()
                     }
+                }
                 }
             }
         )

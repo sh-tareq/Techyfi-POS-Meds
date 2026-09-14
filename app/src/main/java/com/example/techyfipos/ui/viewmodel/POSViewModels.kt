@@ -682,12 +682,14 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 _cartItems.value = restored
                 discountAmount.value = heldCart.discountAmount
                 isPercentageDiscount.value = heldCart.isPercentageDiscount
-                val unifiedCustName = heldCart.customerName?.takeIf { it.isNotBlank() }
+                // Authoritative customer identity: DB entity row is the single source of truth.
+                // Fallback to legacy payload JSON only if the DB row column is null/blank (backwards-compatibility).
+                val authoritativeCustName = heldCart.customerName?.takeIf { it.isNotBlank() }
                     ?: payload.customerName.takeIf { it.isNotBlank() } ?: ""
-                val unifiedCustPhone = heldCart.customerPhone?.takeIf { it.isNotBlank() }
+                val authoritativeCustPhone = heldCart.customerPhone?.takeIf { it.isNotBlank() }
                     ?: payload.customerPhone.takeIf { it.isNotBlank() } ?: ""
-                customerName.value = unifiedCustName
-                customerPhone.value = unifiedCustPhone
+                customerName.value = authoritativeCustName
+                customerPhone.value = authoritativeCustPhone
                 priceMode.value = payload.priceMode
                 paymentMethod.value = payload.paymentMethod
                 walletPhone.value = payload.walletPhone
@@ -697,7 +699,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 isSplitPayment.value = payload.isSplitPayment
                 splitPayments.value = payload.splitPayments
                 val effectiveLoyaltyPhone = payload.loyaltyPhone?.takeIf { it.isNotBlank() }
-                    ?: unifiedCustPhone.takeIf { it.isNotBlank() }
+                    ?: authoritativeCustPhone.takeIf { it.isNotBlank() }
                 loyaltyCustomer.value = effectiveLoyaltyPhone?.let { repository.getLoyaltyByPhone(it) }
                 loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(
                     loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0
@@ -708,7 +710,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                         code = payload.voucherCode,
                         initialAmount = payload.voucherOriginalBalance ?: payload.storeCreditApplied,
                         remainingBalance = payload.voucherRemainingBalance ?: payload.storeCreditApplied,
-                        customerPhone = payload.voucherCustomerPhone ?: unifiedCustPhone.takeIf { it.isNotBlank() } ?: "01700000000",
+                        customerPhone = payload.voucherCustomerPhone ?: authoritativeCustPhone.takeIf { it.isNotBlank() } ?: "01700000000",
                         status = "ACTIVE"
                     )
                 } else null
@@ -716,11 +718,18 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 storeCreditApplied.value = payload.storeCreditApplied
                 persistCartSnapshot(restored)
                 if (unavailable == 0) repository.deleteHeldCart(heldCart.id) else {
+                    val remainingPayload = HeldCartPayload(
+                        items = remaining,
+                        customerName = authoritativeCustName,
+                        customerPhone = authoritativeCustPhone
+                    )
                     repository.insertHeldCart(heldCart.copy(
                         title = "${heldCart.title} · unavailable items",
-                        customerName = null, customerPhone = null,
-                        discountAmount = 0.0, isPercentageDiscount = false,
-                        itemsJson = encodeHeldCartPayload(HeldCartPayload(items = remaining))
+                        customerName = authoritativeCustName.takeIf { it.isNotBlank() },
+                        customerPhone = authoritativeCustPhone.takeIf { it.isNotBlank() },
+                        discountAmount = 0.0,
+                        isPercentageDiscount = false,
+                        itemsJson = encodeHeldCartPayload(remainingPayload)
                     ))
                 }
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
@@ -1148,6 +1157,10 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             neededPoints.coerceIn(0, redeemedCustomer.pointsBalance)
         } else {
             0
+        }
+
+        if (methodToSave == "Cash" && grandTotal.value > 0.0 && amountPaid.value < grandTotal.value) {
+            throw IllegalStateException("Amount paid (${amountPaid.value}) cannot be less than grand total (${grandTotal.value}) for Cash payment")
         }
 
         val saleId = repository.completeSaleWithNotes(

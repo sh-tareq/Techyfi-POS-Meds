@@ -708,6 +708,9 @@ class DataRepository(
                 "Card" -> require(!cardLastFour.isNullOrBlank()) {
                     "The card's last 4 digits are required for Card payments"
                 }
+                "Cash" -> require(grandTotal == 0.0 || amountPaid >= grandTotal) {
+                    "Amount paid ($amountPaid) cannot be less than grand total ($grandTotal) for Cash sale"
+                }
                 "Split" -> {
                     require(splitEntries != null && splitEntries.isNotEmpty()) { "A split sale must list at least one payment row" }
                     val splitTotal = splitEntries!!.sumOf { it.optDouble("amount", 0.0) }
@@ -1355,8 +1358,22 @@ class DataRepository(
                 customerLoyaltyDao.deleteLoyaltyByPhone(oldNorm)
             }
 
-            // 6. Reassign held carts & due reminders
-            heldCartDao.reassignHeldCartsPhone(oldNorm, newNorm)
+            // 6. Reassign held carts & due reminders (authoritative DB row and itemsJson payload kept 100% in sync)
+            heldCartDao.reassignHeldCartsCustomer(oldNorm, newNorm, finalName)
+            val existingHeldCarts = runCatching { heldCartDao.getAllHeldCartsOnce().filter { it.customerPhone == newNorm } }.getOrDefault(emptyList())
+            existingHeldCarts.forEach { cart ->
+                try {
+                    val payload = com.example.techyfipos.ui.viewmodel.decodeHeldCartPayload(cart.itemsJson)
+                    if (payload.customerPhone != newNorm || payload.customerName != finalName) {
+                        val syncedPayload = payload.copy(customerPhone = newNorm, customerName = finalName)
+                        heldCartDao.insertHeldCart(cart.copy(
+                            customerPhone = newNorm,
+                            customerName = finalName,
+                            itemsJson = com.example.techyfipos.ui.viewmodel.encodeHeldCartPayload(syncedPayload)
+                        ))
+                    }
+                } catch (_: Exception) {}
+            }
             scheduledDueReminderDao.reassignScheduledRemindersPhone(oldNorm, newNorm)
             dueReminderLogDao.reassignDueReminderLogsPhone(oldNorm, newNorm)
 

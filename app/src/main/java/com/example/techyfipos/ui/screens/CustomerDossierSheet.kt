@@ -661,7 +661,7 @@ fun CustomerDossierSheet(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Column(modifier = Modifier.weight(1f)) {
-                                                Text("Payment: ${p.paymentMethod}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                Text(stringResource(R.string.customer_payment_method, p.paymentMethod), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                                 Text(
                                                     "${dtFormat.format(Date(p.timestamp))}${if (!p.referenceNote.isNullOrBlank()) " • ${p.referenceNote}" else ""}",
                                                     fontSize = 10.sp,
@@ -879,10 +879,10 @@ fun CustomerReceiptPreviewDialog(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = Color.Gray)
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Customer: $customerName", fontSize = 9.5.sp, color = Color.Black, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.customer_ledger_name, customerName), fontSize = 9.5.sp, color = Color.Black, fontWeight = FontWeight.SemiBold)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Phone: $customerPhone", fontSize = 9.sp, color = Color.DarkGray)
+                            Text(stringResource(R.string.customer_ledger_phone, customerPhone), fontSize = 9.sp, color = Color.DarkGray)
                         }
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = Color.Gray)
@@ -961,7 +961,7 @@ fun CustomerReceiptPreviewDialog(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Share / Print", fontSize = 11.sp)
+                        Text(stringResource(R.string.customer_share_print), fontSize = 11.sp)
                     }
                 }
             }

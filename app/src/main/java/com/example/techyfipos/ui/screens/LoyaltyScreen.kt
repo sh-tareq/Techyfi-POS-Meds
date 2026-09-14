@@ -1515,11 +1515,11 @@ private fun LoyaltyAuditLedgerSheet(
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(onClick = onCall, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Default.Phone, contentDescription = "Call", tint = Color(0xFF0284C7))
+                    IconButton(onClick = onCall, modifier = Modifier.size(42.dp)) {
+                        Icon(Icons.Default.Phone, contentDescription = stringResource(R.string.customer_action_call), tint = Color(0xFF0284C7))
                     }
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(42.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
             }

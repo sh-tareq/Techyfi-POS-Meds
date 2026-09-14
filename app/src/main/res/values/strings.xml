@@ -2079,6 +2079,30 @@
     <string name="settings_default_cost_subtitle">Assumed cost for items with no recorded purchase price</string>
     <string name="settings_default_cost_preset_breakeven">100% (Break-even)</string>
     <string name="settings_default_cost_description">Unrecorded items assume %1$s%% cost (%2$s%% estimated profit margin) in reports.</string>
+
+    <!-- Customers Screen & Dossier Localization -->
+    <string name="customer_col_customer">Customer</string>
+    <string name="customer_col_tag">Tag</string>
+    <string name="customer_col_spend_due">Spend / Due</string>
+    <string name="customer_col_orders">Orders</string>
+    <string name="customer_col_actions">Actions</string>
+    <string name="customer_dialog_phone_req">Phone Number *</string>
+    <string name="customer_dialog_name_req">Customer Name *</string>
+    <string name="customer_dialog_address">Address / Location</string>
+    <string name="customer_dialog_credit_limit">Credit Limit (৳)</string>
+    <string name="customer_dialog_tag_segment">Customer Tag / Segment:</string>
+    <string name="customer_dialog_notes">Special Notes / Remarks</string>
+    <string name="customer_select_tag_count">Select tag to assign to %1$d selected customer(s):</string>
+    <string name="customer_apply_tag">Apply Tag</string>
+    <string name="customer_merged_preview">✨ Merged Account Preview:</string>
+    <string name="customer_combined_orders">Combined Orders: %1$d</string>
+    <string name="customer_combined_spend">Combined Spend: %1$s</string>
+    <string name="customer_combined_dues">Combined Dues: %1$s</string>
+    <string name="customer_share_print">Share / Print</string>
+    <string name="customer_payment_method">Payment: %1$s</string>
+    <string name="customer_ledger_name">Customer: %1$s</string>
+    <string name="customer_ledger_phone">Phone: %1$s</string>
+    <string name="users_pin_leave_blank_placeholder">Leave blank to keep current PIN</string>
 </resources>
 
 

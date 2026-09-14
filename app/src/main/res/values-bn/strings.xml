@@ -2079,5 +2079,29 @@
     <string name="settings_default_cost_subtitle">ক্রয়মূল্য ছাড়া বিক্রিত পণ্যের অনুমিত ক্রয়মূল্য শতকরা হার</string>
     <string name="settings_default_cost_preset_breakeven">১০০% (ব্রেক-ইভেন)</string>
     <string name="settings_default_cost_description">ক্রয়মূল্যবিহীন পণ্যের জন্য রিপোর্টে %1$s%% ক্রয়মূল্য (%2$s%% সম্ভাব্য লাভ) ধরা হবে।</string>
+
+    <!-- Customers Screen & Dossier Localization -->
+    <string name="customer_col_customer">কাস্টমার</string>
+    <string name="customer_col_tag">ট্যাগ</string>
+    <string name="customer_col_spend_due">মোট কেনাকাটা / বকেয়া</string>
+    <string name="customer_col_orders">অর্ডার</string>
+    <string name="customer_col_actions">অ্যাকশন</string>
+    <string name="customer_dialog_phone_req">ফোন নম্বর *</string>
+    <string name="customer_dialog_name_req">কাস্টমারের নাম *</string>
+    <string name="customer_dialog_address">ঠিকানা / অবস্থান</string>
+    <string name="customer_dialog_credit_limit">বাকি সীমা (৳)</string>
+    <string name="customer_dialog_tag_segment">কাস্টমার ট্যাগ / ক্যাটাগরি:</string>
+    <string name="customer_dialog_notes">বিশেষ নোট / বিবরণ</string>
+    <string name="customer_select_tag_count">%1$d জন নির্বাচিত কাস্টমারকে ট্যাগ দিন:</string>
+    <string name="customer_apply_tag">ট্যাগ যুক্ত করুন</string>
+    <string name="customer_merged_preview">✨ একত্রিত অ্যাকাউন্টের বিবরণ:</string>
+    <string name="customer_combined_orders">মোট অর্ডার: %1$dটি</string>
+    <string name="customer_combined_spend">মোট কেনাকাটা: %1$s</string>
+    <string name="customer_combined_dues">মোট বকেয়া: %1$s</string>
+    <string name="customer_share_print">শেয়ার / প্রিন্ট</string>
+    <string name="customer_payment_method">পরিশোধ: %1$s</string>
+    <string name="customer_ledger_name">গ্রাহক: %1$s</string>
+    <string name="customer_ledger_phone">ফোন: %1$s</string>
+    <string name="users_pin_leave_blank_placeholder">বর্তমান পিন রাখতে ফাঁকা রাখুন</string>
 </resources>
 

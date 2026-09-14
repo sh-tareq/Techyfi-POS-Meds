@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-09-15 (app version 2.6.66-V15-09-2026, build `Techyfi-POS-Final-V15-09-2026.apk` / `Techyfi-POS-Final-V66.apk`; versionCode 220942; DB schema version 28)
+Last updated: 2026-09-15 (app version 2.6.67-V15-09-2026, build `Techyfi-POS-Final-V15-09-2026.apk` / `Techyfi-POS-Final-V67.apk`; versionCode 220943; DB schema version 28)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -2561,9 +2561,23 @@ mindmap
     - Modernized `TabRow` to `PrimaryTabRow` in `DuesScreen.kt` and `LoyaltyScreen.kt`.
     - Migrated `Icons.Default.ExitToApp` to `Icons.AutoMirrored.Filled.ExitToApp` in `Navigation.kt`.
     - Added `@get:StringRes` property-getter annotations across all enums and filter data classes to eliminate Android Lint and Kotlin compiler property target warnings.
-  - **Production Build Deliverables (V65)**:
-    - `Techyfi-POS-Final-V65.apk` (36.0 MB, versionCode 220941, versionName "2.6.65-V15-09-2026")
-    - `Techyfi-POS-Final-V15-09-2026.apk` (36.0 MB)
+  - **Production Build Deliverables (V67)**:
+    - `Techyfi-POS-Final-V67.apk` (versionCode 220943, versionName "2.6.67-V15-09-2026")
+    - `Techyfi-POS-Final-V15-09-2026.apk`
+    - Comprehensive UI/UX Touch Target Ergonomics:
+      - Customer CRM table action buttons enlarged to 38dp touch targets within widened 120dp action column.
+      - Mobile customer card action buttons upgraded to 40dp touch targets.
+      - Loyalty bottom sheet call and dismiss actions upgraded to 42dp touch targets.
+      - Supplier due tabs and customer dossier note actions upgraded to min 44dp height.
+    - Deep Bangla Localization:
+      - Localized customer CRM table column headers (Customer, Tag, Spend / Due, Orders, Actions).
+      - Localized merged customer preview stats (Combined Orders, Combined Spend, Combined Dues).
+      - Localized customer bulk tag dialog and tag count selection strings.
+      - Localized Add/Edit Customer form field labels (Phone, Name, Address, Credit Limit, Tag Segment, Notes).
+      - Localized Customer Dossier payment method labels, customer/phone ledger details, and Share/Print receipt action.
+      - Localized staff account PIN reset placeholder in Manage Users.
+    - Database & Query Performance Optimization:
+      - Added Room `@Query("SELECT * FROM sales WHERE customerPhone = :phone ORDER BY timestamp DESC")` in `SaleDao` to fetch customer-specific sales directly by indexed phone number, replacing full in-memory table filtering.
     - Unit tests: 48/48 tests passing (`./gradlew testDebugUnitTest`).
 
 ## Maintenance note
