@@ -96,6 +96,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import com.example.techyfipos.utils.beepAndVibrate
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.isFractionalUnit
 import com.example.techyfipos.utils.HardwareBarcodeScanner
 import com.example.techyfipos.utils.toEnglishDigits
 import android.content.res.Configuration
@@ -2762,7 +2763,7 @@ private fun CartPreviewBottomSheet(
                                     }
 
                                     // Right: Stepper controls
-                                    val isFractionalUnit = item.product.unit.lowercase() in listOf("kg", "gm", "ltr", "liter", "litre", "mtr", "meter", "metre", "g", "ml")
+                                    val isFractionalUnit = isFractionalUnit(item.product.unit)
                                     val stepVal = if (isFractionalUnit) 0.25 else 1.0
 
                                     Row(

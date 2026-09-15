@@ -2602,6 +2602,7 @@ fun ProductsScreen(
     // Add Product Dialog
     if (showAddDialog) {
         AddEditProductDialog(
+            existingBarcodes = allProductsList.map { it.barcode }.toSet(),
             initialBarcode = toEnglishDigits(scannedNewBarcodeForDialog ?: prefilledBarcode ?: ""),
             onDismiss = {
                 showAddDialog = false
@@ -2669,6 +2670,7 @@ fun ProductsScreen(
         val prod = selectedProductForEdit!!
         AddEditProductDialog(
             isEdit = true,
+            existingBarcodes = allProductsList.map { it.barcode }.toSet(),
             initialBarcode = toEnglishDigits(scannedNewBarcodeForDialog ?: prod.barcode),
             initialName = prod.name,
             initialCategory = prod.category,

@@ -72,6 +72,7 @@ import java.util.Locale
 @Composable
 fun AddEditProductDialog(
     isEdit: Boolean = false,
+    existingBarcodes: Set<String> = emptySet(),
     initialBarcode: String = "",
     initialName: String = "",
     initialCategory: String = "",
@@ -208,13 +209,27 @@ fun AddEditProductDialog(
         val qty = stockQty.toDoubleOrNull() ?: 0.0
         val reorder = reorderLevel.toIntOrNull() ?: 0
         val finalBarcode = toEnglishDigits(barcode).trim().ifBlank {
-            (100000000000..999999999999).random().toString()
+            var candidate: String
+            var attempts = 0
+            do {
+                candidate = (100000000000L..999999999999L).random().toString()
+                attempts++
+            } while (existingBarcodes.contains(candidate) && attempts < 100)
+            candidate
         }
+
+        val initialTrimmed = toEnglishDigits(initialBarcode).trim()
+        val isBarcodeCollision = (!isEdit && existingBarcodes.contains(finalBarcode)) ||
+                (isEdit && finalBarcode != initialTrimmed && existingBarcodes.contains(finalBarcode))
 
         when {
             name.isBlank() -> {
                 isError = true
                 Toast.makeText(context, context.getString(R.string.products_enter_product_name_warning), Toast.LENGTH_SHORT).show()
+            }
+            isBarcodeCollision -> {
+                isError = true
+                Toast.makeText(context, context.getString(R.string.products_barcode_already_exists), Toast.LENGTH_SHORT).show()
             }
             effectiveSelling <= 0 -> {
                 isError = true
@@ -422,7 +437,13 @@ fun AddEditProductDialog(
                                                     if (barcode.isBlank()) {
                                                         Surface(
                                                             onClick = {
-                                                                barcode = "SKU" + System.currentTimeMillis().toString().takeLast(8)
+                                                                var candidate: String
+                                                                var attempts = 0
+                                                                do {
+                                                                    candidate = "SKU" + System.currentTimeMillis().toString().takeLast(8)
+                                                                    attempts++
+                                                                } while (existingBarcodes.contains(candidate) && attempts < 100)
+                                                                barcode = candidate
                                                             },
                                                             shape = RoundedCornerShape(6.dp),
                                                             color = Color(0xFFEEF2FF),

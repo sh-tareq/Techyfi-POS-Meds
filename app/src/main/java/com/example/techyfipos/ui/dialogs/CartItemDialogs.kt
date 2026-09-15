@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.example.techyfipos.R
 import com.example.techyfipos.data.db.CustomerDue
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.isFractionalUnit
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -43,7 +44,7 @@ fun ManualQuantityDialog(
     val isValid = parsed != null && parsed > 0.0 && (!isStockTracked || allowNegativeInventory || !isExceedingStock)
 
     val cleanUnit = unit.trim()
-    val isFractional = cleanUnit.lowercase() in listOf("kg", "gm", "g", "ltr", "liter", "litre", "mtr", "meter", "ml")
+    val isFractional = isFractionalUnit(cleanUnit)
     val increments = if (isFractional) listOf(0.25, 0.5, 1.0, 5.0) else listOf(1.0, 5.0, 10.0, 20.0)
     val presets = if (isFractional) listOf(0.25, 0.5, 1.0, 2.75) else listOf(1.0, 2.0, 5.0, 10.0)
 

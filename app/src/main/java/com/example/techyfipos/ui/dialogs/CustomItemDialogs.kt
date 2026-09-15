@@ -53,6 +53,7 @@ import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.screens.sanitizeDiscountInput
 import com.example.techyfipos.ui.viewmodel.CartItem
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.isFractionalUnit
 import com.example.techyfipos.utils.toEnglishDigits
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -658,7 +659,7 @@ fun AddCustomItemDialog(
                     }
 
                     // Quantity Stepper Container (52dp)
-                    val isWeightOrVolume = activeUnit.lowercase() in listOf("kg", "gm", "ltr", "liter", "litre", "mtr", "meter", "metre", "g", "ml")
+                    val isWeightOrVolume = isFractionalUnit(activeUnit)
                     val stepValue = if (isWeightOrVolume) 0.25 else 1.0
 
                     Column(
@@ -743,7 +744,7 @@ fun AddCustomItemDialog(
                 }
 
                 // 7. Enclosed Quick Quantity Preset Chips with 3D Balance Scale
-                val isWeightOrVolumeUnit = activeUnit.lowercase() in listOf("kg", "gm", "ltr", "liter", "litre", "mtr", "meter", "metre", "g", "ml")
+                val isWeightOrVolumeUnit = isFractionalUnit(activeUnit)
                 val fractionalPresets = if (isWeightOrVolumeUnit) {
                     listOf(0.25, 0.5, 1.0, 1.5, 2.75, 5.0)
                 } else {

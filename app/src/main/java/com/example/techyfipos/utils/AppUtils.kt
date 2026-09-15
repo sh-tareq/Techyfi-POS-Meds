@@ -40,6 +40,22 @@ fun formatTaka(amount: Double): String {
     return if (isNegative) "-৳$absFormatted" else "৳$absFormatted"
 }
 
+/**
+ * Checks whether a unit string represents a fractional/weighable quantity (e.g., Kg, Gram, Ltr, Mtr).
+ * Case-insensitive and supports multiple aliases ("Gram", "gm", "g", "Kg", "Ltr", etc.).
+ */
+fun isFractionalUnit(unit: String?): Boolean {
+    if (unit == null) return false
+    val normalized = unit.trim().lowercase()
+    return normalized in listOf(
+        "kg", "kgs", "kilogram", "kilograms",
+        "gm", "g", "gram", "grams",
+        "ltr", "liter", "litre", "liters", "litres",
+        "mtr", "meter", "metre", "meters", "metres",
+        "ml"
+    )
+}
+
 fun beepAndVibrate(context: Context) {
     try {
         val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)

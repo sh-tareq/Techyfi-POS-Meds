@@ -23,8 +23,15 @@ interface ProductDao {
     @Update
     suspend fun updateProduct(product: Product)
 
-    @Query("UPDATE products SET stockQty = MAX(0.0, stockQty + :delta) WHERE barcode = :barcode")
-    suspend fun adjustStockQty(barcode: String, delta: Double)
+    @Query("""
+        UPDATE products 
+        SET stockQty = CASE 
+            WHEN :allowNegative = 1 THEN (stockQty + :delta) 
+            ELSE MAX(0.0, stockQty + :delta) 
+        END 
+        WHERE barcode = :barcode
+    """)
+    suspend fun adjustStockQty(barcode: String, delta: Double, allowNegative: Boolean = false)
 
     @Query("UPDATE products SET stockQty = stockQty - :quantity WHERE barcode = :barcode AND stockQty >= :quantity")
     suspend fun decrementStockIfAvailable(barcode: String, quantity: Double): Int
@@ -232,7 +239,7 @@ interface CustomerDueDao {
         paymentMethod: String = "Cash",
         referenceNote: String? = null
     ) {
-        val currentDue = getCustomerDueByPhone(phone)
+        val currentDue = getActiveCustomerDueByPhone(phone)
             ?: throw IllegalArgumentException("No active due account found for customer $phone")
         require(amountPaid.isFinite() && amountPaid > 0.0) { "Payment amount must be positive and finite" }
         val appliedAmount = amountPaid.coerceAtMost(currentDue.outstandingAmount)

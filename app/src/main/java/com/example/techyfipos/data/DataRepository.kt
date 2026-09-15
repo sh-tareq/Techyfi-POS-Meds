@@ -389,7 +389,9 @@ class DataRepository(
         val cleanBarcode = toEnglishDigits(barcode.trim())
         database.withDriverTransaction {
             val before = productDao.getProductByBarcode(cleanBarcode) ?: return@withDriverTransaction null
-            productDao.adjustStockQty(cleanBarcode, delta)
+            val currentSettings = settingsDataStore.invoiceSettingsDataFlow.first()
+            val allowNegative = currentSettings.allowNegativeInventory || isSessionManagerOrOwner()
+            productDao.adjustStockQty(cleanBarcode, delta, allowNegative)
             val after = productDao.getProductByBarcode(cleanBarcode) ?: return@withDriverTransaction null
             if (after.stockQty != before.stockQty) {
                 inventoryAdjustmentDao.insertAdjustment(
@@ -496,7 +498,9 @@ class DataRepository(
                         val returnedQuantity = returnedByBarcode[barcode] ?: 0.0
                         val netQuantitySold = (soldQuantity - returnedQuantity).coerceAtLeast(0.0)
                         if (netQuantitySold > 0.0) {
-                            productDao.adjustStockQty(barcode, netQuantitySold)
+                            val currentSettings = settingsDataStore.invoiceSettingsDataFlow.first()
+                            val allowNegative = currentSettings.allowNegativeInventory || isSessionManagerOrOwner()
+                            productDao.adjustStockQty(barcode, netQuantitySold, allowNegative)
                             inventoryAdjustmentDao.insertAdjustment(
                                 InventoryAdjustment(
                                     productBarcode = barcode,
@@ -818,7 +822,7 @@ class DataRepository(
                         require(allowNegative) {
                             "Insufficient stock for ${lines.first().first.name}. Enable 'Allow Negative Stock' or elevate with Manager PIN."
                         }
-                        productDao.adjustStockQty(barcode, -requested)
+                        productDao.adjustStockQty(barcode, -requested, allowNegative)
                     }
                 }
 
@@ -842,7 +846,8 @@ class DataRepository(
                 performedByUserId = sessionUser?.id,
                 performedByName = sessionUser?.name,
                 loyaltyPhone = normalizedLoyaltyPhone?.takeIf { loyaltyPointsToRedeem > 0 },
-                loyaltyPointsRedeemed = loyaltyPointsToRedeem
+                loyaltyPointsRedeemed = loyaltyPointsToRedeem,
+                storeCreditApplied = storeCreditToUse
             )
             val saleId = saleDao.insertSale(sale)
 
@@ -1930,6 +1935,7 @@ class DataRepository(
                     put("performedByName", swi.sale.performedByName ?: "")
                     put("loyaltyPhone", swi.sale.loyaltyPhone ?: "")
                     put("loyaltyPointsRedeemed", swi.sale.loyaltyPointsRedeemed)
+                    put("storeCreditApplied", swi.sale.storeCreditApplied)
                 }
                 val itemsArray = JSONArray()
                 for (item in swi.items) {
@@ -2294,7 +2300,8 @@ class DataRepository(
                         performedByUserId = s.optLong("performedByUserId").takeIf { s.has("performedByUserId") && !s.isNull("performedByUserId") },
                         performedByName = s.optString("performedByName"),
                         loyaltyPhone = s.optString("loyaltyPhone"),
-                        loyaltyPointsRedeemed = s.optInt("loyaltyPointsRedeemed", 0)
+                        loyaltyPointsRedeemed = s.optInt("loyaltyPointsRedeemed", 0),
+                        storeCreditApplied = s.optionalDouble("storeCreditApplied")
                     )
                     val saleId = saleDao.insertSale(sale)
                     if (mode == BackupImportMode.MERGE) saleIdMap[backupSaleId] = saleId

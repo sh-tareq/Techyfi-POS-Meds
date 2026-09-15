@@ -62,4 +62,20 @@ class BackupCompatibilityTest {
         assertEquals(0.0, item.price, 0.001)
         assertEquals(1.0, item.quantity, 0.0001)
     }
+
+    @Test
+    fun `storeCreditApplied defaults to zero and preserves explicit value`() {
+        val legacy = buildBackwardCompatibleSale(
+            timestamp = 123456L,
+            grandTotal = 100.0
+        )
+        assertEquals(0.0, legacy.storeCreditApplied, 0.001)
+
+        val withCredit = buildBackwardCompatibleSale(
+            timestamp = 123456L,
+            grandTotal = 100.0,
+            storeCreditApplied = 25.5
+        )
+        assertEquals(25.5, withCredit.storeCreditApplied, 0.001)
+    }
 }
