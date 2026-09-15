@@ -1403,28 +1403,47 @@ fun DuesScreen(
     }
 
     if (customerToDelete != null) {
+        val c = customerToDelete!!
+        val hasDues = c.outstandingAmount > 0.001
         AlertDialog(
             onDismissRequest = { customerToDelete = null },
-            title = { Text(stringResource(R.string.dues_delete_ledger_title), fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = if (hasDues) "Cannot Delete Customer Ledger" else stringResource(R.string.dues_delete_ledger_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
-                Text(stringResource(R.string.dues_delete_ledger_confirm, customerToDelete!!.customerName, customerToDelete!!.customerPhone))
+                if (hasDues) {
+                    Text("Cannot delete due ledger for \"${c.customerName}\" (${c.customerPhone}) because they have an outstanding due of ${formatTaka(c.outstandingAmount)}. All dues must be cleared before deleting the ledger.")
+                } else {
+                    Text(stringResource(R.string.dues_delete_ledger_confirm, c.customerName, c.customerPhone))
+                }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        customerToDelete?.let { c ->
-                            duesViewModel.deleteCustomerDue(c.customerPhone)
-                        }
-                        customerToDelete = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text(stringResource(R.string.dues_archive_button))
+                if (!hasDues) {
+                    Button(
+                        onClick = {
+                            customerToDelete?.let { cust ->
+                                duesViewModel.deleteCustomerDue(cust.customerPhone)
+                            }
+                            customerToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text(stringResource(R.string.dues_archive_button))
+                    }
+                } else {
+                    Button(onClick = { customerToDelete = null }) {
+                        Text(stringResource(R.string.ok))
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { customerToDelete = null }) {
-                    Text(stringResource(R.string.dues_cancel))
+                if (!hasDues) {
+                    TextButton(onClick = { customerToDelete = null }) {
+                        Text(stringResource(R.string.dues_cancel))
+                    }
                 }
             }
         )

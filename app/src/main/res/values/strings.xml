@@ -63,6 +63,8 @@
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
+    <string name="confirm_delete">Confirm Delete</string>
+    <string name="ok">OK</string>
     <string name="scan_to_fill">Scan To Fill</string>
     <string name="generate_qr">Generate QR Code</string>
     <string name="product_not_found">Product Not Found In Database</string>
@@ -590,6 +592,7 @@
     <string name="cart_reason_split_details_required">Enter the wallet number or card digits for each split row</string>
     <string name="cart_reason_wallet_number_required">Enter the 11-digit %1$s mobile number</string>
     <string name="cart_reason_card_digits_required">Enter the card\'s last 4 digits</string>
+    <string name="cart_reason_total_zero">Sale total cannot be ৳0 (100% discount is not allowed)</string>
     <string name="cart_reason_cash_insufficient">Cash received is less than the grand total</string>
     <string name="cart_reason_generic_incomplete">Complete the required information</string>
     <string name="cart_scan_product_added">%1$s added</string>

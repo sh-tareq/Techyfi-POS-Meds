@@ -231,7 +231,7 @@ fun ScannerScreen(
                 hasCameraPermission = hasCameraPermission,
                 onRequestCameraPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) },
                 torchEnabled = torchEnabled,
-                onTorchToggle = { scannerViewModel.torchEnabled.value = !torchEnabled },
+                onTorchToggle = { scannerViewModel.toggleTorch() },
                 scanningPaused = scanningPaused,
                 onScanningPausedToggle = { scanningPaused = !scanningPaused },
                 isSellMode = isSellMode,
@@ -239,7 +239,7 @@ fun ScannerScreen(
                 onModeChanged = scannerViewModel::setMode,
                 heldCartCount = heldCartCount,
                 onShowHeldCarts = { showHeldCartsSheet = true },
-                onManualEntry = { scannerViewModel.showManualDialog.value = true },
+                onManualEntry = { scannerViewModel.setShowManualDialog(true) },
                 cartItems = cartItems,
                 grandTotal = grandTotal,
                 allowNegativeInventory = allowNegativeInventory,
@@ -372,8 +372,8 @@ fun ScannerScreen(
                                 torchEnabled = torchEnabled,
                                 torchAvailable = true,
                                 scanningPaused = scanningPaused,
-                                onTorchClick = { scannerViewModel.torchEnabled.value = !torchEnabled },
-                                onManualEntry = { scannerViewModel.showManualDialog.value = true },
+                                onTorchClick = { scannerViewModel.toggleTorch() },
+                                onManualEntry = { scannerViewModel.setShowManualDialog(true) },
                                 onPauseChanged = { scanningPaused = !scanningPaused },
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
@@ -458,9 +458,9 @@ fun ScannerScreen(
 
             if (showManualDialog) {
                 ManualBarcodeDialog(
-                    onDismiss = { scannerViewModel.showManualDialog.value = false },
+                    onDismiss = { scannerViewModel.setShowManualDialog(false) },
                     onBarcodeEntered = { barcode ->
-                        scannerViewModel.showManualDialog.value = false
+                        scannerViewModel.setShowManualDialog(false)
                         scannerViewModel.onBarcodeScanned(
                             barcode = barcode,
                             cartViewModel = cartViewModel,

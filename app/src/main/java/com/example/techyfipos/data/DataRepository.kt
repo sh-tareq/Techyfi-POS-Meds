@@ -1185,12 +1185,27 @@ class DataRepository(
 
     suspend fun archiveCustomer(phone: String) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.DUES_ADD_DUE)
-        customerDao.archiveCustomer(normalizePhone(phone), System.currentTimeMillis())
+        val normalized = normalizePhone(phone)
+        val activeDue = customerDueDao.getActiveCustomerDueByPhone(normalized)
+        val outstanding = activeDue?.outstandingAmount ?: 0.0
+        val customer = customerDao.getCustomerByPhone(normalized)
+        val totalDue = customer?.totalDue ?: 0.0
+        if (outstanding > 0.001 || totalDue > 0.001) {
+            throw IllegalStateException("Cannot delete or archive customer with outstanding dues")
+        }
+        customerDao.archiveCustomer(normalized, System.currentTimeMillis())
     }
 
     suspend fun deleteCustomerPermanently(phone: String) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.DUES_ADD_DUE)
         val normalized = normalizePhone(phone)
+        val activeDue = customerDueDao.getActiveCustomerDueByPhone(normalized)
+        val outstanding = activeDue?.outstandingAmount ?: 0.0
+        val customer = customerDao.getCustomerByPhone(normalized)
+        val totalDue = customer?.totalDue ?: 0.0
+        if (outstanding > 0.001 || totalDue > 0.001) {
+            throw IllegalStateException("Cannot permanently delete customer with outstanding dues")
+        }
         database.withDriverTransaction {
             customerDao.deleteCustomerPermanently(normalized)
             customerDueDao.deleteCustomerDue(normalized)
@@ -1633,6 +1648,11 @@ class DataRepository(
     suspend fun deleteCustomerDue(phone: String) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.DUES_ADD_DUE)
         val normalized = normalizePhone(phone)
+        val activeDue = customerDueDao.getActiveCustomerDueByPhone(normalized)
+        val outstanding = activeDue?.outstandingAmount ?: 0.0
+        if (outstanding > 0.001) {
+            throw IllegalStateException("Cannot delete due ledger with outstanding dues of ৳$outstanding")
+        }
         val now = System.currentTimeMillis()
         database.withDriverTransaction {
             require(customerDueDao.archiveCustomerDue(normalized, now) == 1) {
@@ -3370,6 +3390,10 @@ class DataRepository(
 
     suspend fun deleteSupplier(supplier: Supplier) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.SUPPLIERS_MANAGE)
+        val current = supplierDao.getSupplierById(supplier.id) ?: supplier
+        if (kotlin.math.abs(current.totalDue) > 0.001) {
+            throw IllegalStateException("Cannot delete supplier with active due balance of ৳${current.totalDue}")
+        }
         supplierDao.deleteSupplier(supplier)
     }
 

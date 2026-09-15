@@ -262,7 +262,12 @@ fun ProductsScreen(
     var sortOptionName by rememberSaveable { mutableStateOf(ProductSortOption.NAME_ASC.name) }
     var viewModeName by rememberSaveable { mutableStateOf(if (isTablet) ProductViewMode.GRID.name else ProductViewMode.LIST.name) }
     var highMarginOnly by rememberSaveable { mutableStateOf(false) }
-    var selectedCategories by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var selectedCategories by rememberSaveable(
+        stateSaver = androidx.compose.runtime.saveable.Saver<Set<String>, ArrayList<String>>(
+            save = { ArrayList(it) },
+            restore = { it.toSet() }
+        )
+    ) { mutableStateOf<Set<String>>(emptySet()) }
     var minimumPrice by rememberSaveable { mutableStateOf("") }
     var maximumPrice by rememberSaveable { mutableStateOf("") }
     var sortMenuExpanded by remember { mutableStateOf(false) }

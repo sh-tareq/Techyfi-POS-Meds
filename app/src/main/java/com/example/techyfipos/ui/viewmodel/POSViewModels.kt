@@ -248,14 +248,30 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems.asStateFlow()
 
-    val discountAmount = MutableStateFlow(0.0)
-    val isPercentageDiscount = MutableStateFlow(false)
-    val paymentMethod = MutableStateFlow("Cash") // "Cash", "bKash", "Nagad", "Rocket", "Card", "Due"
-    val customerName = MutableStateFlow("")
-    val customerPhone = MutableStateFlow("")
-    val walletPhone = MutableStateFlow("")
-    val cardType = MutableStateFlow("Visa")
-    val cardLastFour = MutableStateFlow("")
+    private val _discountAmount = MutableStateFlow(0.0)
+    val discountAmount: StateFlow<Double> = _discountAmount.asStateFlow()
+
+    private val _isPercentageDiscount = MutableStateFlow(false)
+    val isPercentageDiscount: StateFlow<Boolean> = _isPercentageDiscount.asStateFlow()
+
+    private val _paymentMethod = MutableStateFlow("Cash") // "Cash", "bKash", "Nagad", "Rocket", "Card", "Due"
+    val paymentMethod: StateFlow<String> = _paymentMethod.asStateFlow()
+
+    private val _customerName = MutableStateFlow("")
+    val customerName: StateFlow<String> = _customerName.asStateFlow()
+
+    private val _customerPhone = MutableStateFlow("")
+    val customerPhone: StateFlow<String> = _customerPhone.asStateFlow()
+
+    private val _walletPhone = MutableStateFlow("")
+    val walletPhone: StateFlow<String> = _walletPhone.asStateFlow()
+
+    private val _cardType = MutableStateFlow("Visa")
+    val cardType: StateFlow<String> = _cardType.asStateFlow()
+
+    private val _cardLastFour = MutableStateFlow("")
+    val cardLastFour: StateFlow<String> = _cardLastFour.asStateFlow()
+
     private val _manualCashierName = MutableStateFlow<String?>(null)
     val cashierName: StateFlow<String> = combine(
         repository.cashierNameFlow,
@@ -274,43 +290,114 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _manualCashierName.value = name.takeIf { it.isNotBlank() }
     }
 
-    val showReceiptDialog = MutableStateFlow(false)
-    val completedBillSnapshot = MutableStateFlow<BillData?>(null)
+    private val _showReceiptDialog = MutableStateFlow(false)
+    val showReceiptDialog: StateFlow<Boolean> = _showReceiptDialog.asStateFlow()
+
+    private val _completedBillSnapshot = MutableStateFlow<BillData?>(null)
+    val completedBillSnapshot: StateFlow<BillData?> = _completedBillSnapshot.asStateFlow()
 
     fun openReceiptDialog(data: BillData) {
-        completedBillSnapshot.value = data
-        showReceiptDialog.value = true
+        _completedBillSnapshot.value = data
+        _showReceiptDialog.value = true
     }
 
     fun dismissReceiptDialog() {
-        showReceiptDialog.value = false
-        completedBillSnapshot.value = null
+        _showReceiptDialog.value = false
+        _completedBillSnapshot.value = null
     }
 
-    val amountPaid = MutableStateFlow(0.0) // Cash received
+    private val _amountPaid = MutableStateFlow(0.0) // Cash received
+    val amountPaid: StateFlow<Double> = _amountPaid.asStateFlow()
 
     // Price mode (MRP / DISCOUNTED / WHOLESALE)
-    val priceMode = MutableStateFlow(PriceMode.DISCOUNTED)
+    private val _priceMode = MutableStateFlow(PriceMode.DISCOUNTED)
+    val priceMode: StateFlow<PriceMode> = _priceMode.asStateFlow()
 
     fun setPriceMode(mode: PriceMode) {
-        priceMode.value = mode
+        _priceMode.value = mode
     }
 
     // Loyalty points state
-    val loyaltyDiscount = MutableStateFlow(0.0)
-    val loyaltyCustomer = MutableStateFlow<CustomerLoyalty?>(null)
+    private val _loyaltyDiscount = MutableStateFlow(0.0)
+    val loyaltyDiscount: StateFlow<Double> = _loyaltyDiscount.asStateFlow()
+
+    private val _loyaltyCustomer = MutableStateFlow<CustomerLoyalty?>(null)
+    val loyaltyCustomer: StateFlow<CustomerLoyalty?> = _loyaltyCustomer.asStateFlow()
 
     // Store Credit and Voucher state
-    val storeCreditApplied = MutableStateFlow(0.0)
-    val redeemedVoucher = MutableStateFlow<StoreCreditVoucher?>(null)
+    private val _storeCreditApplied = MutableStateFlow(0.0)
+    val storeCreditApplied: StateFlow<Double> = _storeCreditApplied.asStateFlow()
+
+    private val _redeemedVoucher = MutableStateFlow<StoreCreditVoucher?>(null)
+    val redeemedVoucher: StateFlow<StoreCreditVoucher?> = _redeemedVoucher.asStateFlow()
+
+    private val _isCompletingSale = MutableStateFlow(false)
+    val isCompletingSale: StateFlow<Boolean> = _isCompletingSale.asStateFlow()
+
+    fun setDiscount(amount: Double, isPercentage: Boolean) {
+        _discountAmount.value = amount.coerceAtLeast(0.0)
+        _isPercentageDiscount.value = isPercentage
+    }
+
+    fun setDiscountAmount(amount: Double) {
+        _discountAmount.value = amount.coerceAtLeast(0.0)
+    }
+
+    fun setIsPercentageDiscount(isPercentage: Boolean) {
+        _isPercentageDiscount.value = isPercentage
+    }
+
+    fun setPaymentMethod(method: String) {
+        _paymentMethod.value = method
+    }
+
+    fun setCustomerName(name: String) {
+        _customerName.value = name
+    }
+
+    fun setCustomerPhone(phone: String) {
+        _customerPhone.value = phone
+    }
+
+    fun setWalletPhone(phone: String) {
+        _walletPhone.value = phone
+    }
+
+    fun setCardType(type: String) {
+        _cardType.value = type
+    }
+
+    fun setCardLastFour(lastFour: String) {
+        _cardLastFour.value = lastFour
+    }
+
+    fun setAmountPaid(amount: Double) {
+        _amountPaid.value = amount.coerceAtLeast(0.0)
+    }
+
+    fun setLoyaltyDiscount(discount: Double) {
+        _loyaltyDiscount.value = discount.coerceAtLeast(0.0)
+    }
+
+    fun setLoyaltyCustomer(customer: CustomerLoyalty?) {
+        _loyaltyCustomer.value = customer
+    }
+
+    fun setStoreCreditApplied(amount: Double) {
+        _storeCreditApplied.value = amount.coerceAtLeast(0.0)
+    }
+
+    fun setRedeemedVoucher(voucher: StoreCreditVoucher?) {
+        _redeemedVoucher.value = voucher
+    }
 
     fun applyStoreCredit(amount: Double) {
-        val maxAvailable = (resolvedCustomer.value?.storeCredit ?: 0.0) + (redeemedVoucher.value?.remainingBalance ?: 0.0)
-        storeCreditApplied.value = amount.coerceIn(0.0, maxAvailable)
+        val maxAvailable = (_resolvedCustomer.value?.storeCredit ?: 0.0) + (_redeemedVoucher.value?.remainingBalance ?: 0.0)
+        _storeCreditApplied.value = amount.coerceIn(0.0, maxAvailable)
     }
 
     fun removeStoreCredit() {
-        storeCreditApplied.value = 0.0
+        _storeCreditApplied.value = 0.0
     }
 
     fun redeemVoucherCode(
@@ -338,7 +425,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                     return@launch
                 }
                 withContext(Dispatchers.Main) {
-                    redeemedVoucher.value = voucher
+                    _redeemedVoucher.value = voucher
                     applyStoreCredit(voucher.remainingBalance)
                     onSuccess(voucher)
                 }
@@ -351,22 +438,27 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     // Customer Auto-Fill, Resolution and Suggestions
-    val resolvedCustomer = MutableStateFlow<CustomerLookupResult?>(null)
-    val isAutoFilledName = MutableStateFlow(false)
-    val customerSuggestions = MutableStateFlow<List<CustomerLookupResult>>(emptyList())
+    private val _resolvedCustomer = MutableStateFlow<CustomerLookupResult?>(null)
+    val resolvedCustomer: StateFlow<CustomerLookupResult?> = _resolvedCustomer.asStateFlow()
+
+    private val _isAutoFilledName = MutableStateFlow(false)
+    val isAutoFilledName: StateFlow<Boolean> = _isAutoFilledName.asStateFlow()
+
+    private val _customerSuggestions = MutableStateFlow<List<CustomerLookupResult>>(emptyList())
+    val customerSuggestions: StateFlow<List<CustomerLookupResult>> = _customerSuggestions.asStateFlow()
 
     private var customerLookupJob: Job? = null
 
     fun onCustomerPhoneChanged(phone: String) {
-        customerPhone.value = phone
+        _customerPhone.value = phone
         val clean = phone.trim()
         customerLookupJob?.cancel()
         if (clean.isBlank()) {
-            resolvedCustomer.value = null
-            customerSuggestions.value = emptyList()
+            _resolvedCustomer.value = null
+            _customerSuggestions.value = emptyList()
             if (isAutoFilledName.value) {
-                customerName.value = ""
-                isAutoFilledName.value = false
+                _customerName.value = ""
+                _isAutoFilledName.value = false
             }
             lookupLoyalty("")
             return
@@ -380,18 +472,18 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         // what a fresh read (e.g. the credit-limit check at Complete Sale) would return.
         customerLookupJob = viewModelScope.launch(Dispatchers.IO) {
             val resolved = repository.resolveCustomerDetails(clean)
-            resolvedCustomer.value = resolved
+            _resolvedCustomer.value = resolved
             if (resolved != null && resolved.name.isNotBlank()) {
                 if (customerName.value.isBlank() || isAutoFilledName.value) {
-                    customerName.value = resolved.name
-                    isAutoFilledName.value = true
+                    _customerName.value = resolved.name
+                    _isAutoFilledName.value = true
                 }
             }
 
             if (clean.length >= 3) {
-                customerSuggestions.value = repository.searchCustomerSuggestions(clean)
+                _customerSuggestions.value = repository.searchCustomerSuggestions(clean)
             } else {
-                customerSuggestions.value = emptyList()
+                _customerSuggestions.value = emptyList()
             }
         }
     }
@@ -407,46 +499,46 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun onCustomerNameChanged(name: String) {
-        customerName.value = name
+        _customerName.value = name
         if (resolvedCustomer.value?.name != name) {
-            isAutoFilledName.value = false
+            _isAutoFilledName.value = false
         }
         val clean = name.trim()
         if (clean.length >= 2 && customerPhone.value.isBlank()) {
             viewModelScope.launch(Dispatchers.IO) {
-                customerSuggestions.value = repository.searchCustomerSuggestions(clean)
+                _customerSuggestions.value = repository.searchCustomerSuggestions(clean)
             }
         }
     }
 
     fun selectCustomerSuggestion(suggestion: CustomerLookupResult) {
-        customerPhone.value = suggestion.phone
-        customerName.value = suggestion.name
-        isAutoFilledName.value = true
-        resolvedCustomer.value = suggestion
-        customerSuggestions.value = emptyList()
+        _customerPhone.value = suggestion.phone
+        _customerName.value = suggestion.name
+        _isAutoFilledName.value = true
+        _resolvedCustomer.value = suggestion
+        _customerSuggestions.value = emptyList()
         lookupLoyalty(suggestion.phone)
     }
 
     fun clearCustomerDetails() {
-        customerPhone.value = ""
-        customerName.value = ""
-        isAutoFilledName.value = false
-        resolvedCustomer.value = null
-        customerSuggestions.value = emptyList()
+        _customerPhone.value = ""
+        _customerName.value = ""
+        _isAutoFilledName.value = false
+        _resolvedCustomer.value = null
+        _customerSuggestions.value = emptyList()
         lookupLoyalty("")
     }
 
     fun lookupLoyalty(phone: String) {
         val clean = phone.trim()
         if (clean.isBlank()) {
-            loyaltyCustomer.value = null
-            loyaltyDiscount.value = 0.0
+            _loyaltyCustomer.value = null
+            _loyaltyDiscount.value = 0.0
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
             val customer = repository.getLoyaltyByPhone(clean)
-            loyaltyCustomer.value = customer
+            _loyaltyCustomer.value = customer
         }
     }
 
@@ -458,7 +550,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val payableBeforeLoyalty = (subtotal.value - discountValue.value + taxValue.value).coerceAtLeast(0.0)
         val maxAllowedBillDiscount = payableBeforeLoyalty * (settings.maxBillPercentPayable.coerceIn(1, 100) / 100.0)
         val maxPossibleDiscount = minOf(maxDiscountFromPoints, maxAllowedBillDiscount)
-        loyaltyDiscount.value = discount
+        _loyaltyDiscount.value = discount
             .takeIf(Double::isFinite)
             ?.coerceIn(0.0, maxPossibleDiscount)
             ?: 0.0
@@ -508,33 +600,40 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             if (_cartItems.value.none { it.product.barcode == cartProduct.barcode }) skipped++
         }
         val sale = saleWithItems.sale
-        customerName.value = sale.customerName ?: ""
-        customerPhone.value = sale.customerPhone ?: ""
+        _customerName.value = sale.customerName ?: ""
+        _customerPhone.value = sale.customerPhone ?: ""
         // Split payments aren't reconstructed (the original component breakdown isn't guaranteed
         // to still make sense against current prices/stock) — default back to Cash for Split.
-        paymentMethod.value = sale.paymentMethod.takeIf { it != "Split" } ?: "Cash"
+        _paymentMethod.value = sale.paymentMethod.takeIf { it != "Split" } ?: "Cash"
         return skipped
     }
 
     suspend fun verifyPin(pin: String): Boolean = repository.verifyPin(pin) != null
 
     // Split Payment state
-    val isSplitPayment = MutableStateFlow(false)
-    val splitPayments = MutableStateFlow<List<SplitPaymentEntry>>(emptyList())
+    private val _isSplitPayment = MutableStateFlow(false)
+    val isSplitPayment: StateFlow<Boolean> = _isSplitPayment.asStateFlow()
+
+    private val _splitPayments = MutableStateFlow<List<SplitPaymentEntry>>(emptyList())
+    val splitPayments: StateFlow<List<SplitPaymentEntry>> = _splitPayments.asStateFlow()
+
+    fun setSplitPayment(enabled: Boolean) {
+        _isSplitPayment.value = enabled
+    }
 
     fun setSplitPayments(list: List<SplitPaymentEntry>) {
-        splitPayments.value = list
+        _splitPayments.value = list
     }
 
     fun addSplitPayment(entry: SplitPaymentEntry) {
-        splitPayments.value = splitPayments.value + entry
+        _splitPayments.value = _splitPayments.value + entry
     }
 
     fun removeSplitPayment(index: Int) {
-        val current = splitPayments.value.toMutableList()
+        val current = _splitPayments.value.toMutableList()
         if (index in current.indices) {
             current.removeAt(index)
-            splitPayments.value = current
+            _splitPayments.value = current
         }
     }
 
@@ -613,20 +712,20 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.insertHeldCart(heldCart)
             _cartItems.value = emptyList()
-            discountAmount.value = 0.0
-            isPercentageDiscount.value = false
-            customerName.value = ""
-            customerPhone.value = ""
-            walletPhone.value = ""
-            cardLastFour.value = ""
-            amountPaid.value = 0.0
-            isSplitPayment.value = false
-            splitPayments.value = emptyList()
-            priceMode.value = PriceMode.DISCOUNTED
-            loyaltyDiscount.value = 0.0
-            loyaltyCustomer.value = null
-            storeCreditApplied.value = 0.0
-            redeemedVoucher.value = null
+            _discountAmount.value = 0.0
+            _isPercentageDiscount.value = false
+            _customerName.value = ""
+            _customerPhone.value = ""
+            _walletPhone.value = ""
+            _cardLastFour.value = ""
+            _amountPaid.value = 0.0
+            _isSplitPayment.value = false
+            _splitPayments.value = emptyList()
+            _priceMode.value = PriceMode.DISCOUNTED
+            _loyaltyDiscount.value = 0.0
+            _loyaltyCustomer.value = null
+            _storeCreditApplied.value = 0.0
+            _redeemedVoucher.value = null
             persistCartSnapshot(emptyList())
         }
     }
@@ -680,29 +779,29 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                     restored.add(CartItem(product, cappedQuantity, heldItem.note))
                 }
                 _cartItems.value = restored
-                discountAmount.value = heldCart.discountAmount
-                isPercentageDiscount.value = heldCart.isPercentageDiscount
+                _discountAmount.value = heldCart.discountAmount
+                _isPercentageDiscount.value = heldCart.isPercentageDiscount
                 // Authoritative customer identity: DB entity row is the single source of truth.
                 // Fallback to legacy payload JSON only if the DB row column is null/blank (backwards-compatibility).
                 val authoritativeCustName = heldCart.customerName?.takeIf { it.isNotBlank() }
                     ?: payload.customerName.takeIf { it.isNotBlank() } ?: ""
                 val authoritativeCustPhone = heldCart.customerPhone?.takeIf { it.isNotBlank() }
                     ?: payload.customerPhone.takeIf { it.isNotBlank() } ?: ""
-                customerName.value = authoritativeCustName
-                customerPhone.value = authoritativeCustPhone
-                priceMode.value = payload.priceMode
-                paymentMethod.value = payload.paymentMethod
-                walletPhone.value = payload.walletPhone
-                cardType.value = payload.cardType
-                cardLastFour.value = payload.cardLastFour
-                amountPaid.value = payload.amountPaid
-                isSplitPayment.value = payload.isSplitPayment
-                splitPayments.value = payload.splitPayments
+                _customerName.value = authoritativeCustName
+                _customerPhone.value = authoritativeCustPhone
+                _priceMode.value = payload.priceMode
+                _paymentMethod.value = payload.paymentMethod
+                _walletPhone.value = payload.walletPhone
+                _cardType.value = payload.cardType
+                _cardLastFour.value = payload.cardLastFour
+                _amountPaid.value = payload.amountPaid
+                _isSplitPayment.value = payload.isSplitPayment
+                _splitPayments.value = payload.splitPayments
                 val effectiveLoyaltyPhone = payload.loyaltyPhone?.takeIf { it.isNotBlank() }
                     ?: authoritativeCustPhone.takeIf { it.isNotBlank() }
-                loyaltyCustomer.value = effectiveLoyaltyPhone?.let { repository.getLoyaltyByPhone(it) }
-                loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(
-                    loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0
+                _loyaltyCustomer.value = effectiveLoyaltyPhone?.let { repository.getLoyaltyByPhone(it) }
+                _loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(
+                    _loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0
                 )
                 val restoredVoucher = payload.voucherCode?.let { repository.getStoreCreditVoucher(it) }
                 val fallbackVoucher = if (restoredVoucher == null && !payload.voucherCode.isNullOrBlank() && payload.storeCreditApplied > 0.0) {
@@ -714,8 +813,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                         status = "ACTIVE"
                     )
                 } else null
-                redeemedVoucher.value = restoredVoucher ?: fallbackVoucher
-                storeCreditApplied.value = payload.storeCreditApplied
+                _redeemedVoucher.value = restoredVoucher ?: fallbackVoucher
+                _storeCreditApplied.value = payload.storeCreditApplied
                 persistCartSnapshot(restored)
                 if (unavailable == 0) repository.deleteHeldCart(heldCart.id) else {
                     val remainingPayload = HeldCartPayload(
@@ -876,20 +975,20 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 restored.add(CartItem(product, cappedQuantity, saved.note))
             }
             _cartItems.value = restored
-            customerName.value = payload.customerName
-            customerPhone.value = payload.customerPhone
-            discountAmount.value = payload.discountAmount
-            isPercentageDiscount.value = payload.isPercentageDiscount
-            priceMode.value = payload.priceMode
-            paymentMethod.value = payload.paymentMethod
-            walletPhone.value = payload.walletPhone
-            cardType.value = payload.cardType
-            cardLastFour.value = payload.cardLastFour
-            amountPaid.value = payload.amountPaid
-            isSplitPayment.value = payload.isSplitPayment
-            splitPayments.value = payload.splitPayments
-            loyaltyCustomer.value = payload.loyaltyPhone?.let { repository.getLoyaltyByPhone(it) }
-            loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0)
+            _customerName.value = payload.customerName
+            _customerPhone.value = payload.customerPhone
+            _discountAmount.value = payload.discountAmount
+            _isPercentageDiscount.value = payload.isPercentageDiscount
+            _priceMode.value = payload.priceMode
+            _paymentMethod.value = payload.paymentMethod
+            _walletPhone.value = payload.walletPhone
+            _cardType.value = payload.cardType
+            _cardLastFour.value = payload.cardLastFour
+            _amountPaid.value = payload.amountPaid
+            _isSplitPayment.value = payload.isSplitPayment
+            _splitPayments.value = payload.splitPayments
+            _loyaltyCustomer.value = payload.loyaltyPhone?.let { repository.getLoyaltyByPhone(it) }
+            _loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(_loyaltyCustomer.value?.pointsBalance?.toDouble() ?: 0.0)
             val restoredVoucher = payload.voucherCode?.let { repository.getStoreCreditVoucher(it) }
             val fallbackVoucher = if (restoredVoucher == null && !payload.voucherCode.isNullOrBlank() && payload.storeCreditApplied > 0.0) {
                 StoreCreditVoucher(
@@ -900,8 +999,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                     status = "ACTIVE"
                 )
             } else null
-            redeemedVoucher.value = restoredVoucher ?: fallbackVoucher
-            storeCreditApplied.value = payload.storeCreditApplied
+            _redeemedVoucher.value = restoredVoucher ?: fallbackVoucher
+            _storeCreditApplied.value = payload.storeCreditApplied
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -1056,31 +1155,32 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun setDiscountAmount(amount: Double) {
-        discountAmount.value = amount.coerceAtLeast(0.0)
-    }
 
     fun toggleDiscountUnit() {
-        isPercentageDiscount.value = !isPercentageDiscount.value
+        _isPercentageDiscount.value = !_isPercentageDiscount.value
+    }
+
+    fun setCompletingSale(value: Boolean) {
+        _isCompletingSale.value = value
     }
 
     fun clearCart() {
         _cartItems.value = emptyList()
-        discountAmount.value = 0.0
-        isPercentageDiscount.value = false
-        paymentMethod.value = "Cash"
-        customerName.value = ""
-        customerPhone.value = ""
-        walletPhone.value = ""
-        cardType.value = "Visa"
-        cardLastFour.value = ""
+        _discountAmount.value = 0.0
+        _isPercentageDiscount.value = false
+        _paymentMethod.value = "Cash"
+        _customerName.value = ""
+        _customerPhone.value = ""
+        _walletPhone.value = ""
+        _cardType.value = "Visa"
+        _cardLastFour.value = ""
         _manualCashierName.value = null
-        amountPaid.value = 0.0
-        isSplitPayment.value = false
-        splitPayments.value = emptyList()
-        priceMode.value = PriceMode.DISCOUNTED
-        storeCreditApplied.value = 0.0
-        redeemedVoucher.value = null
+        _amountPaid.value = 0.0
+        _isSplitPayment.value = false
+        _splitPayments.value = emptyList()
+        _priceMode.value = PriceMode.DISCOUNTED
+        _storeCreditApplied.value = 0.0
+        _redeemedVoucher.value = null
         persistCartSnapshot(emptyList())
     }
 
@@ -1098,93 +1198,101 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         if (_cartItems.value.isEmpty()) {
             throw IllegalStateException("Cart is empty")
         }
-        val mode = priceMode.value
-        val itemsToSave = _cartItems.value.map {
-            val chargedPrice = effectivePrice(it.product, mode)
-            Triple(it.product.copy(sellingPrice = chargedPrice), it.quantity, it.note)
+        if (grandTotal.value <= 0.0) {
+            throw IllegalStateException("Cannot complete sale with ৳0 total")
         }
-        val settings = taxSettings.value
-        
-        var splitJson: String? = null
-        var methodToSave: String
-        if (isSplitPayment.value && splitPayments.value.isNotEmpty()) {
-            methodToSave = "Split"
-            val array = JSONArray()
-            splitPayments.value.forEach { sp ->
-                array.put(JSONObject().apply {
-                    put("method", sp.method)
-                    put("amount", sp.amount)
-                    if (!sp.walletPhone.isNullOrBlank()) put("walletPhone", sp.walletPhone)
-                    if (!sp.cardType.isNullOrBlank()) put("cardType", sp.cardType)
-                    if (!sp.cardLastFour.isNullOrBlank()) put("cardLastFour", sp.cardLastFour)
-                    if (!sp.referenceNote.isNullOrBlank()) put("referenceNote", sp.referenceNote)
-                })
+        _isCompletingSale.value = true
+        try {
+            val mode = priceMode.value
+            val itemsToSave = _cartItems.value.map {
+                val chargedPrice = effectivePrice(it.product, mode)
+                Triple(it.product.copy(sellingPrice = chargedPrice), it.quantity, it.note)
             }
-            splitJson = array.toString()
-        } else if (storeCreditApplied.value > 0.0 && paymentMethod.value != "Store Credit") {
-            val scAmount = storeCreditApplied.value.coerceAtMost(grandTotal.value)
-            val remainingAmt = (grandTotal.value - scAmount).coerceAtLeast(0.0)
-            val array = JSONArray()
-            array.put(JSONObject().apply {
-                put("method", "Store Credit")
-                put("amount", scAmount)
-                redeemedVoucher.value?.code?.let { put("voucherCode", it) }
-            })
-            if (remainingAmt > 0.0) {
+            val settings = taxSettings.value
+            
+            var splitJson: String? = null
+            var methodToSave: String
+            if (isSplitPayment.value && splitPayments.value.isNotEmpty()) {
+                methodToSave = "Split"
+                val array = JSONArray()
+                splitPayments.value.forEach { sp ->
+                    array.put(JSONObject().apply {
+                        put("method", sp.method)
+                        put("amount", sp.amount)
+                        if (!sp.walletPhone.isNullOrBlank()) put("walletPhone", sp.walletPhone)
+                        if (!sp.cardType.isNullOrBlank()) put("cardType", sp.cardType)
+                        if (!sp.cardLastFour.isNullOrBlank()) put("cardLastFour", sp.cardLastFour)
+                        if (!sp.referenceNote.isNullOrBlank()) put("referenceNote", sp.referenceNote)
+                    })
+                }
+                splitJson = array.toString()
+            } else if (storeCreditApplied.value > 0.0 && paymentMethod.value != "Store Credit") {
+                val scAmount = storeCreditApplied.value.coerceAtMost(grandTotal.value)
+                val remainingAmt = (grandTotal.value - scAmount).coerceAtLeast(0.0)
+                val array = JSONArray()
                 array.put(JSONObject().apply {
-                    put("method", paymentMethod.value)
-                    put("amount", remainingAmt)
-                    if (!walletPhone.value.isNullOrBlank()) put("walletPhone", walletPhone.value)
-                    if (!cardLastFour.value.isNullOrBlank()) put("cardLastFour", cardLastFour.value)
+                    put("method", "Store Credit")
+                    put("amount", scAmount)
+                    redeemedVoucher.value?.code?.let { put("voucherCode", it) }
                 })
+                if (remainingAmt > 0.0) {
+                    array.put(JSONObject().apply {
+                        put("method", paymentMethod.value)
+                        put("amount", remainingAmt)
+                        if (!walletPhone.value.isNullOrBlank()) put("walletPhone", walletPhone.value)
+                        if (!cardLastFour.value.isNullOrBlank()) put("cardLastFour", cardLastFour.value)
+                    })
+                }
+                splitJson = array.toString()
+                methodToSave = "Split"
+            } else {
+                methodToSave = paymentMethod.value
             }
-            splitJson = array.toString()
-            methodToSave = "Split"
-        } else {
-            methodToSave = paymentMethod.value
-        }
 
-        val redeemedCustomer = loyaltyCustomer.value
-        val payableBeforeLoyalty = if (settings.taxEnabled && !settings.taxInclusive) {
-            (subtotal.value - discountValue.value + taxValue.value).coerceAtLeast(0.0)
-        } else {
-            (subtotal.value - discountValue.value).coerceAtLeast(0.0)
-        }
-        val appliedLoyaltyPoints = if (redeemedCustomer != null && loyaltyDiscount.value > 0.0) {
-            val loyaltySettings = repository.getLoyaltySettings()
-            val ptCashVal = loyaltySettings.pointCashValue.takeIf { it > 0.0 } ?: 1.0
-            val neededPoints = kotlin.math.round(loyaltyDiscount.value / ptCashVal).toInt()
-            neededPoints.coerceIn(0, redeemedCustomer.pointsBalance)
-        } else {
-            0
-        }
+            val redeemedCustomer = loyaltyCustomer.value
+            val payableBeforeLoyalty = if (settings.taxEnabled && !settings.taxInclusive) {
+                (subtotal.value - discountValue.value + taxValue.value).coerceAtLeast(0.0)
+            } else {
+                (subtotal.value - discountValue.value).coerceAtLeast(0.0)
+            }
+            val appliedLoyaltyPoints = if (redeemedCustomer != null && loyaltyDiscount.value > 0.0) {
+                val loyaltySettings = repository.getLoyaltySettings()
+                val ptCashVal = loyaltySettings.pointCashValue.takeIf { it > 0.0 } ?: 1.0
+                val neededPoints = kotlin.math.round(loyaltyDiscount.value / ptCashVal).toInt()
+                neededPoints.coerceIn(0, redeemedCustomer.pointsBalance)
+            } else {
+                0
+            }
 
-        if (methodToSave == "Cash" && grandTotal.value > 0.0 && amountPaid.value < grandTotal.value) {
-            throw IllegalStateException("Amount paid (${amountPaid.value}) cannot be less than grand total (${grandTotal.value}) for Cash payment")
+            if (methodToSave == "Cash" && grandTotal.value > 0.0 && amountPaid.value < grandTotal.value) {
+                throw IllegalStateException("Amount paid (${amountPaid.value}) cannot be less than grand total (${grandTotal.value}) for Cash payment")
+            }
+
+            val saleId = repository.completeSaleWithNotes(
+                subtotal = subtotal.value,
+                discountAmount = discountAmount.value,
+                isPercentage = isPercentageDiscount.value,
+                grandTotal = grandTotal.value,
+                paymentMethod = methodToSave,
+                customerName = customerName.value.takeIf { it.isNotBlank() },
+                customerPhone = customerPhone.value.takeIf { it.isNotBlank() },
+                amountPaid = if (methodToSave == "Split") splitPayments.value.filterNot { it.method.equals("Due", ignoreCase = true) }.sumOf { it.amount } else amountPaid.value,
+                walletPhone = walletPhone.value.takeIf { it.isNotBlank() },
+                cardType = cardType.value.takeIf { paymentMethod.value == "Card" },
+                cardLastFour = cardLastFour.value.takeIf { it.isNotBlank() },
+                cartItemsWithNotes = itemsToSave,
+                taxRate = if (settings.taxEnabled) settings.taxRate else 0.0,
+                taxAmount = taxValue.value,
+                splitPaymentJson = splitJson,
+                loyaltyPhone = redeemedCustomer?.phone,
+                loyaltyPointsToRedeem = appliedLoyaltyPoints
+            )
+
+            clearCart()
+            return@withLock saleId
+        } finally {
+            _isCompletingSale.value = false
         }
-
-        val saleId = repository.completeSaleWithNotes(
-            subtotal = subtotal.value,
-            discountAmount = discountAmount.value,
-            isPercentage = isPercentageDiscount.value,
-            grandTotal = grandTotal.value,
-            paymentMethod = methodToSave,
-            customerName = customerName.value.takeIf { it.isNotBlank() },
-            customerPhone = customerPhone.value.takeIf { it.isNotBlank() },
-            amountPaid = if (methodToSave == "Split") splitPayments.value.filterNot { it.method.equals("Due", ignoreCase = true) }.sumOf { it.amount } else amountPaid.value,
-            walletPhone = walletPhone.value.takeIf { it.isNotBlank() },
-            cardType = cardType.value.takeIf { paymentMethod.value == "Card" },
-            cardLastFour = cardLastFour.value.takeIf { it.isNotBlank() },
-            cartItemsWithNotes = itemsToSave,
-            taxRate = if (settings.taxEnabled) settings.taxRate else 0.0,
-            taxAmount = taxValue.value,
-            splitPaymentJson = splitJson,
-            loyaltyPhone = redeemedCustomer?.phone,
-            loyaltyPointsToRedeem = appliedLoyaltyPoints
-        )
-
-        clearCart()
-        return@withLock saleId
     }
 }
 
@@ -1211,8 +1319,23 @@ class ScannerViewModel(private val repository: DataRepository) : ViewModel() {
     private val _addedProductConfirmation = MutableStateFlow<AddedProductConfirmation?>(null)
     val addedProductConfirmation: StateFlow<AddedProductConfirmation?> = _addedProductConfirmation.asStateFlow()
 
-    val torchEnabled = MutableStateFlow(false)
-    val showManualDialog = MutableStateFlow(false)
+    private val _torchEnabled = MutableStateFlow(false)
+    val torchEnabled: StateFlow<Boolean> = _torchEnabled.asStateFlow()
+
+    private val _showManualDialog = MutableStateFlow(false)
+    val showManualDialog: StateFlow<Boolean> = _showManualDialog.asStateFlow()
+
+    fun setTorchEnabled(enabled: Boolean) {
+        _torchEnabled.value = enabled
+    }
+
+    fun toggleTorch() {
+        _torchEnabled.value = !_torchEnabled.value
+    }
+
+    fun setShowManualDialog(show: Boolean) {
+        _showManualDialog.value = show
+    }
 
     fun dismissAddedConfirmation() {
         _addedProductConfirmation.value = null
@@ -3804,9 +3927,12 @@ class SupplierViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun deleteSupplier(supplier: Supplier) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.deleteSupplier(supplier)
+    fun deleteSupplier(supplier: Supplier, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = runCatching {
+                repository.deleteSupplier(supplier)
+            }
+            onResult(result)
         }
     }
 
@@ -3952,9 +4078,26 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
     val allTransactions: StateFlow<List<LoyaltyTransaction>> = repository.allLoyaltyTransactions
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val searchQuery = MutableStateFlow("")
-    val selectedFilter = MutableStateFlow(LoyaltyFilterOption.ALL)
-    val selectedSort = MutableStateFlow(LoyaltySortOption.POINTS_DESC)
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _selectedFilter = MutableStateFlow(LoyaltyFilterOption.ALL)
+    val selectedFilter: StateFlow<LoyaltyFilterOption> = _selectedFilter.asStateFlow()
+
+    private val _selectedSort = MutableStateFlow(LoyaltySortOption.POINTS_DESC)
+    val selectedSort: StateFlow<LoyaltySortOption> = _selectedSort.asStateFlow()
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun setSelectedFilter(filter: LoyaltyFilterOption) {
+        _selectedFilter.value = filter
+    }
+
+    fun setSelectedSort(sort: LoyaltySortOption) {
+        _selectedSort.value = sort
+    }
 
     val kpiStats: StateFlow<LoyaltyKpiData> = combine(allMembers, allTransactions) { members, transactions ->
         val totalMembers = members.size

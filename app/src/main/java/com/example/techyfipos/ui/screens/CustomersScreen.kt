@@ -812,7 +812,22 @@ fun CustomersScreen(
                         }
                     )
                 }
-            }
+            },
+            onDelete = if (editingCustomer != null) {
+                {
+                    customerViewModel.archiveCustomer(
+                        phone = editingCustomer.phone,
+                        onSuccess = {
+                            Toast.makeText(context, "Customer deleted", Toast.LENGTH_SHORT).show()
+                            showAddCustomerDialog = false
+                            customerToEdit = null
+                        },
+                        onError = { err ->
+                            Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                        }
+                    )
+                }
+            } else null
         )
     }
 
@@ -1399,7 +1414,8 @@ fun BulkAssignTagDialog(
 fun CustomerAddEditDialog(
     customer: Customer?,
     onDismiss: () -> Unit,
-    onSave: (phone: String, name: String, email: String?, address: String?, notes: String?, tag: String, creditLimit: Double) -> Unit
+    onSave: (phone: String, name: String, email: String?, address: String?, notes: String?, tag: String, creditLimit: Double) -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
     var phone by remember { mutableStateOf(customer?.phone ?: "") }
     var name by remember { mutableStateOf(customer?.name ?: "") }
@@ -1408,6 +1424,8 @@ fun CustomerAddEditDialog(
     var notes by remember { mutableStateOf(customer?.notes ?: "") }
     var tag by remember { mutableStateOf(customer?.tag ?: "Retail") }
     var creditLimitStr by remember { mutableStateOf(if ((customer?.creditLimit ?: 0.0) > 0) customer!!.creditLimit.toString() else "") }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showDueBlockedDialog by remember { mutableStateOf(false) }
 
     val tagsList = listOf("Retail", "Wholesale", "VIP", "Corporate", "Staff", "Defaulter")
 
@@ -1491,11 +1509,64 @@ fun CustomerAddEditDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (customer != null && onDelete != null) {
+                    TextButton(
+                        onClick = {
+                            if (customer.totalDue > 0.001) {
+                                showDueBlockedDialog = true
+                            } else {
+                                showDeleteConfirmDialog = true
+                            }
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(stringResource(R.string.delete))
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         }
     )
+
+    if (showDueBlockedDialog && customer != null) {
+        AlertDialog(
+            onDismissRequest = { showDueBlockedDialog = false },
+            title = { Text("Cannot Delete Customer", fontWeight = FontWeight.Bold) },
+            text = { Text("Cannot delete customer \"${customer.name}\" because they have an outstanding due of ${formatTaka(customer.totalDue)}. All dues must be cleared or settled before deleting the customer.") },
+            confirmButton = {
+                Button(onClick = { showDueBlockedDialog = false }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        )
+    }
+
+    if (showDeleteConfirmDialog && customer != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text(stringResource(R.string.confirm_delete), fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to delete customer \"${customer.name}\"? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDelete?.invoke()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 }
 
 fun exportCustomerCsv(context: Context, customers: List<Customer>) {

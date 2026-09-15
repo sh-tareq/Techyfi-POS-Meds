@@ -97,6 +97,7 @@ fun SuppliersScreen(
 
     var showAddSupplierDialog by remember { mutableStateOf(false) }
     var supplierToEdit by remember { mutableStateOf<Supplier?>(null) }
+    var supplierToDelete by remember { mutableStateOf<Supplier?>(null) }
     var selectedSupplierForInflow by remember { mutableStateOf<Supplier?>(null) }
     var showSupplierPickerForInflow by remember { mutableStateOf(false) }
     var selectedSupplierForPayDue by remember { mutableStateOf<Supplier?>(null) }
@@ -596,7 +597,7 @@ fun SuppliersScreen(
                         onAddInflow = { runWithSupplierPermission("Receive Stock") { selectedSupplierForInflow = supplier } },
                         onPayDue = { runWithSupplierPermission("Record Supplier Payment") { selectedSupplierForPayDue = supplier } },
                         onEdit = { runWithSupplierPermission("Edit Supplier") { supplierToEdit = supplier } },
-                        onDelete = { runWithSupplierPermission("Delete Supplier") { supplierViewModel.deleteSupplier(supplier) } }
+                        onDelete = { runWithSupplierPermission("Delete Supplier") { supplierToDelete = supplier } }
                     )
                 }
             }
@@ -661,6 +662,56 @@ fun SuppliersScreen(
                 }
             }
         }
+    }
+
+    // Dialog: Delete Supplier Confirmation & Balance Check (D2, D3)
+    if (supplierToDelete != null) {
+        val s = supplierToDelete!!
+        val hasBalance = kotlin.math.abs(s.totalDue) > 0.001
+        AlertDialog(
+            onDismissRequest = { supplierToDelete = null },
+            title = {
+                Text(
+                    text = if (hasBalance) "Cannot Delete Supplier" else stringResource(R.string.confirm_delete),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                if (hasBalance) {
+                    Text("Cannot delete supplier \"${s.companyName}\" because they have an active balance of ${formatTaka(s.totalDue)}. Settle the balance before deleting.")
+                } else {
+                    Text("Are you sure you want to delete supplier \"${s.companyName}\"? This action cannot be undone.")
+                }
+            },
+            confirmButton = {
+                if (!hasBalance) {
+                    Button(
+                        onClick = {
+                            supplierViewModel.deleteSupplier(s) { result ->
+                                result.onFailure {
+                                    Toast.makeText(context, it.message ?: "Failed to delete supplier", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            supplierToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(stringResource(R.string.delete))
+                    }
+                } else {
+                    Button(onClick = { supplierToDelete = null }) {
+                        Text(stringResource(R.string.ok))
+                    }
+                }
+            },
+            dismissButton = {
+                if (!hasBalance) {
+                    TextButton(onClick = { supplierToDelete = null }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            }
+        )
     }
 
     // Dialog: Add New Supplier

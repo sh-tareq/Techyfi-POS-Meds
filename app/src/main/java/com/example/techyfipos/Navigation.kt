@@ -1194,7 +1194,7 @@ fun MainNavigation() {
                                     onBack = { backStack.removeLastOrNull() },
                                     onStartSaleForCustomer = { customer ->
                                         cartViewModel.onCustomerPhoneChanged(customer.phone)
-                                        cartViewModel.customerName.value = customer.name
+                                        cartViewModel.setCustomerName(customer.name)
                                         while (backStack.size > 1) { backStack.removeLastOrNull() }
                                         backStack.add(Scanner)
                                         android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
@@ -1254,7 +1254,7 @@ fun MainNavigation() {
                                         onBack = { backStack.removeLastOrNull() },
                                         onStartSaleForCustomer = { customer ->
                                             cartViewModel.onCustomerPhoneChanged(customer.phone)
-                                            cartViewModel.customerName.value = customer.name
+                                            cartViewModel.setCustomerName(customer.name)
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             backStack.add(Scanner)
                                             android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
@@ -1270,7 +1270,7 @@ fun MainNavigation() {
                                     onBack = { backStack.removeLastOrNull() },
                                     onStartSaleForCustomer = { customer ->
                                         cartViewModel.onCustomerPhoneChanged(customer.phone)
-                                        cartViewModel.customerName.value = customer.name
+                                        cartViewModel.setCustomerName(customer.name)
                                         while (backStack.size > 1) { backStack.removeLastOrNull() }
                                         backStack.add(Scanner)
                                         android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()

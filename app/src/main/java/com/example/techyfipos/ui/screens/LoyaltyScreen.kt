@@ -152,8 +152,8 @@ fun LoyaltyScreen(
             // 2. LIVE INSTANT SEARCH BAR
             LoyaltySearchBar(
                 query = searchQuery,
-                onQueryChange = { loyaltyViewModel.searchQuery.value = it },
-                onClear = { loyaltyViewModel.searchQuery.value = "" },
+                onQueryChange = { loyaltyViewModel.setSearchQuery(it) },
+                onClear = { loyaltyViewModel.setSearchQuery("") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 2.dp)
@@ -162,7 +162,7 @@ fun LoyaltyScreen(
             // 3. HORIZONTAL QUICK FILTER CHIPS
             LoyaltyFilterChipsRow(
                 selectedFilter = selectedFilter,
-                onSelectFilter = { loyaltyViewModel.selectedFilter.value = it },
+                onSelectFilter = { loyaltyViewModel.setSelectedFilter(it) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 4.dp)
@@ -342,7 +342,7 @@ fun LoyaltyScreen(
         LoyaltySortFilterBottomSheet(
             currentSort = selectedSort,
             onSelectSort = {
-                loyaltyViewModel.selectedSort.value = it
+                loyaltyViewModel.setSelectedSort(it)
                 showSortFilterSheet = false
             },
             onDismiss = { showSortFilterSheet = false }
