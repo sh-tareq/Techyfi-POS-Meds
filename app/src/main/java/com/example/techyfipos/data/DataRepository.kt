@@ -2979,6 +2979,7 @@ class DataRepository(
         userId: Long,
         newName: String,
         newPin: String? = null,
+        oldPin: String? = null,
         newRole: String? = null,
         customPermissions: Set<String>? = null,
         isActive: Boolean? = null,
@@ -3005,6 +3006,11 @@ class DataRepository(
 
         val updatedPinHash = if (!newPin.isNullOrBlank()) {
             require(newPin.length == 4 && newPin.all(Char::isDigit)) { "PIN must be 4 digits" }
+            require(!oldPin.isNullOrBlank()) { "Current PIN is required to change PIN" }
+            val currentOwner = sessionUser
+            val matchesExisting = pinMatches(oldPin, existing.pinHash)
+            val matchesSessionOwner = currentOwner != null && pinMatches(oldPin, currentOwner.pinHash)
+            require(matchesExisting || matchesSessionOwner) { "Current PIN is incorrect" }
             require(all.none { it.id != userId && pinMatches(newPin, it.pinHash) }) {
                 "PIN already in use by another user"
             }
@@ -3031,8 +3037,8 @@ class DataRepository(
         )
     }
 
-    suspend fun updateCashier(userId: Long, newName: String, newPin: String? = null) = withContext(Dispatchers.IO) {
-        updateStaff(userId = userId, newName = newName, newPin = newPin)
+    suspend fun updateCashier(userId: Long, newName: String, newPin: String? = null, oldPin: String? = null) = withContext(Dispatchers.IO) {
+        updateStaff(userId = userId, newName = newName, newPin = newPin, oldPin = oldPin)
     }
 
     suspend fun setStaffActive(userId: Long, isActive: Boolean) = withContext(Dispatchers.IO) {

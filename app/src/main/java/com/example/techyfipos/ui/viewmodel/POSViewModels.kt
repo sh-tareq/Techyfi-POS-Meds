@@ -3162,6 +3162,14 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         .map { it?.maxDiscountPercent ?: 10.0 }
         .stateIn(viewModelScope, SharingStarted.Eagerly, 10.0)
 
+    private val _lockoutSeconds = MutableStateFlow(0L)
+    val lockoutSeconds: StateFlow<Long> = _lockoutSeconds.asStateFlow()
+
+    fun refreshLockout() {
+        val remaining = (repository.loginLockRemainingMillis() + 999L) / 1000L
+        _lockoutSeconds.value = remaining
+    }
+
     fun hasPermission(permissionKey: String): Boolean {
         return AppPermissions.hasPermission(_currentUser.value, permissionKey)
     }
@@ -3238,6 +3246,7 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         userId: Long,
         name: String,
         pin: String?,
+        oldPin: String? = null,
         role: String,
         customPermissions: Set<String>?,
         isActive: Boolean,
@@ -3254,6 +3263,7 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
                     userId = userId,
                     newName = name,
                     newPin = pin,
+                    oldPin = oldPin,
                     newRole = role,
                     customPermissions = customPermissions,
                     isActive = isActive,
@@ -3278,14 +3288,14 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun updateCashier(userId: Long, newName: String, newPin: String?, onComplete: (Boolean) -> Unit) {
+    fun updateCashier(userId: Long, newName: String, newPin: String?, oldPin: String? = null, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
                 if (!repository.isSessionOwner()) {
                     onComplete(false)
                     return@launch
                 }
-                repository.updateCashier(userId, newName, newPin)
+                repository.updateCashier(userId, newName, newPin, oldPin)
                 onComplete(true)
             } catch (error: Exception) {
                 android.util.Log.e("AuthViewModel", "Unable to update cashier", error)
@@ -3357,15 +3367,24 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun attemptLogin(pin: String, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
+            val remainingBefore = repository.loginLockRemainingMillis()
+            if (remainingBefore > 0L) {
+                val s = (remainingBefore + 999L) / 1000L
+                _lockoutSeconds.value = s
+                onResult(false, "Too many failed attempts. Try again in $s seconds.")
+                return@launch
+            }
             val user = repository.verifyPin(pin)
             if (user != null && !user.isActive) {
                 onResult(false, "This account is deactivated. Contact store owner.")
                 return@launch
             }
             setCurrentUser(user)
-            val lockSeconds = (repository.loginLockRemainingMillis() + 999L) / 1000L
-            val message = if (user == null && lockSeconds > 0L) {
-                "Too many attempts. Try again in $lockSeconds seconds."
+            val lockMillis = repository.loginLockRemainingMillis()
+            val lockSec = (lockMillis + 999L) / 1000L
+            _lockoutSeconds.value = lockSec
+            val message = if (user == null && lockSec > 0L) {
+                "Too many failed attempts. Try again in $lockSec seconds."
             } else null
             onResult(user != null, message)
         }

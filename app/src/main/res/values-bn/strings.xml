@@ -1446,6 +1446,9 @@
     <string name="users_edit_cashier_title">ক্যাশিয়ার সম্পাদনা</string>
     <string name="users_edit_cashier_success">ক্যাশিয়ার আপডেট হয়েছে</string>
     <string name="users_reset_pin_label">নতুন ৪-সংখ্যার পিন (অপরিবর্তিত রাখতে খালি রাখুন)</string>
+    <string name="users_current_pin_label">বর্তমান পিন (পিন পরিবর্তনের জন্য আবশ্যক)</string>
+    <string name="users_current_pin_required">পিন পরিবর্তনের জন্য বর্তমান পিন লিখুন</string>
+    <string name="users_current_pin_incorrect">বর্তমান পিনটি সঠিক নয়</string>
     <string name="loyalty_delete_confirm_title">সদস্য মুছে ফেলবেন?</string>
     <string name="loyalty_delete_confirm_message">আপনি কি নিশ্চিত যে %1$s-কে লয়ালটি প্রোগ্রাম থেকে মুছে ফেলতে চান?</string>
     <string name="loyalty_member_deleted">সদস্য মুছে ফেলা হয়েছে</string>

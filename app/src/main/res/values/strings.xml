@@ -1446,6 +1446,9 @@
     <string name="users_edit_cashier_title">Edit Cashier</string>
     <string name="users_edit_cashier_success">Cashier updated successfully</string>
     <string name="users_reset_pin_label">New 4-digit PIN (Leave blank to keep)</string>
+    <string name="users_current_pin_label">Current PIN (Required to change PIN)</string>
+    <string name="users_current_pin_required">Please enter current PIN to change PIN</string>
+    <string name="users_current_pin_incorrect">Current PIN is incorrect</string>
     <string name="loyalty_delete_confirm_title">Delete Member?</string>
     <string name="loyalty_delete_confirm_message">Are you sure you want to remove %1$s from loyalty program?</string>
     <string name="loyalty_member_deleted">Member removed</string>

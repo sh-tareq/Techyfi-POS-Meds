@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.techyfipos.R
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private enum class LockMode { LOADING, SETUP, LOGIN }
@@ -163,8 +165,19 @@ fun LockScreen(
         else triggerErrorShake("Device verification is unavailable on this device.")
     }
 
+    val lockoutSeconds by authViewModel.lockoutSeconds.collectAsStateWithLifecycle()
+
     LaunchedEffect(Unit) {
+        authViewModel.refreshLockout()
         mode = if (authViewModel.hasAnyUsers()) LockMode.LOGIN else LockMode.SETUP
+    }
+
+    LaunchedEffect(lockoutSeconds) {
+        if (lockoutSeconds > 0L) {
+            pin = ""
+            delay(1000L)
+            authViewModel.refreshLockout()
+        }
     }
 
     fun reset() {
@@ -174,6 +187,10 @@ fun LockScreen(
     }
 
     fun onDigit(digit: String) {
+        if (lockoutSeconds > 0L) {
+            triggerHaptic(strong = true)
+            return
+        }
         triggerHaptic(strong = false)
         errorMessage = null
         if (mode == LockMode.SETUP && awaitingConfirm) {
@@ -215,6 +232,7 @@ fun LockScreen(
     }
 
     fun onBackspace() {
+        if (lockoutSeconds > 0L) return
         triggerHaptic(strong = false)
         errorMessage = null
         if (mode == LockMode.SETUP && awaitingConfirm) {
@@ -225,6 +243,7 @@ fun LockScreen(
     }
 
     fun onClear() {
+        if (lockoutSeconds > 0L) return
         triggerHaptic(strong = false)
         errorMessage = null
         reset()
@@ -392,11 +411,16 @@ fun LockScreen(
                     }
 
                     AnimatedVisibility(
-                        visible = errorMessage != null,
+                        visible = lockoutSeconds > 0L || errorMessage != null,
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically()
                     ) {
-                        if (errorMessage != null) {
+                        val displayMsg = if (lockoutSeconds > 0L) {
+                            "🔒 Too many failed attempts. Terminal locked for ${lockoutSeconds}s."
+                        } else {
+                            errorMessage?.let { "⚠️ $it" }
+                        }
+                        if (displayMsg != null) {
                             Spacer(Modifier.height(8.dp))
                             Surface(
                                 color = Color(0xFFEF4444).copy(alpha = 0.15f),
@@ -404,7 +428,7 @@ fun LockScreen(
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.4f))
                             ) {
                                 Text(
-                                    text = "⚠️ $errorMessage",
+                                    text = displayMsg,
                                     color = Color(0xFFFCA5A5),
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -441,6 +465,7 @@ fun LockScreen(
                         onBackspace = ::onBackspace,
                         onClear = ::onClear,
                         isCompact = isCompactHeight,
+                        enabled = lockoutSeconds <= 0L,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                 } else {
@@ -640,6 +665,7 @@ private fun Realistic3DNumpad(
     onBackspace: () -> Unit,
     onClear: () -> Unit,
     isCompact: Boolean = false,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val keypadData = listOf(
@@ -670,6 +696,7 @@ private fun Realistic3DNumpad(
                         subText = subText,
                         keyType = keyType,
                         isCompact = isCompact,
+                        enabled = enabled,
                         onClick = {
                             when (keyType) {
                                 KeypadKeyType.DIGIT -> onDigit(mainText)
@@ -693,6 +720,7 @@ private fun Realistic3DNumpadButton(
     subText: String,
     keyType: KeypadKeyType,
     isCompact: Boolean = false,
+    enabled: Boolean = true,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -700,12 +728,12 @@ private fun Realistic3DNumpadButton(
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val pressProgress by animateFloatAsState(
-        targetValue = if (isPressed) 1f else 0f,
+        targetValue = if (isPressed && enabled) 1f else 0f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "btnPress_$mainText"
     )
 
-    val elevation = (5f * (1f - pressProgress)).dp
+    val elevation = if (enabled) (5f * (1f - pressProgress)).dp else 0.dp
     val translateY = (3f * pressProgress).dp
     val btnHeight = if (isCompact) 48.dp else 54.dp
     val shapeRadius = if (isCompact) 16.dp else 18.dp
@@ -718,6 +746,7 @@ private fun Realistic3DNumpadButton(
                 val scale = 1f - (0.04f * pressProgress)
                 this.scaleX = scale
                 this.scaleY = scale
+                this.alpha = if (enabled) 1f else 0.45f
             }
             .shadow(
                 elevation = elevation,
@@ -733,17 +762,17 @@ private fun Realistic3DNumpadButton(
             .background(
                 Brush.verticalGradient(
                     colors = when (keyType) {
-                        KeypadKeyType.DIGIT -> if (isPressed) {
+                        KeypadKeyType.DIGIT -> if (isPressed && enabled) {
                             listOf(Color(0xFF1E293B), Color(0xFF0F172A))
                         } else {
                             listOf(Color(0xFF27354A), Color(0xFF172033))
                         }
-                        KeypadKeyType.CLEAR -> if (isPressed) {
+                        KeypadKeyType.CLEAR -> if (isPressed && enabled) {
                             listOf(Color(0xFF78350F), Color(0xFF451A03))
                         } else {
                             listOf(Color(0xFF92400E).copy(alpha = 0.85f), Color(0xFF451A03))
                         }
-                        KeypadKeyType.BACKSPACE -> if (isPressed) {
+                        KeypadKeyType.BACKSPACE -> if (isPressed && enabled) {
                             listOf(Color(0xFF7F1D1D), Color(0xFF450A0A))
                         } else {
                             listOf(Color(0xFF991B1B).copy(alpha = 0.85f), Color(0xFF450A0A))
@@ -754,7 +783,7 @@ private fun Realistic3DNumpadButton(
             .border(
                 width = 1.2.dp,
                 brush = Brush.verticalGradient(
-                    colors = if (isPressed) {
+                    colors = if (isPressed && enabled) {
                         listOf(Color(0xFF334155), Color(0xFF1E293B))
                     } else {
                         when (keyType) {
@@ -767,6 +796,7 @@ private fun Realistic3DNumpadButton(
                 shape = RoundedCornerShape(shapeRadius)
             )
             .clickable(
+                enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick

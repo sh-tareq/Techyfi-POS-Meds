@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -395,6 +396,7 @@ private fun AddStaffDialog(
                     onValueChange = { if (it.length <= 4 && it.all(Char::isDigit)) pin = it },
                     label = { Text(stringResource(R.string.users_pin_label)) },
                     singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -473,12 +475,14 @@ private fun EditStaffDialog(
 ) {
     var editName by remember(user) { mutableStateOf(user.name) }
     var editPin by remember(user) { mutableStateOf("") }
+    var editOldPin by remember(user) { mutableStateOf("") }
     var editRole by remember(user) { mutableStateOf(user.role) }
     var editActive by remember(user) { mutableStateOf(user.isActive) }
     var editDiscount by remember(user) { mutableStateOf(user.maxDiscountPercent.toInt().toString()) }
     var editError by remember(user) { mutableStateOf<String?>(null) }
     val invalidUserMessage = stringResource(R.string.users_invalid_input)
     val addFailedMessage = stringResource(R.string.users_add_failed)
+    val currentPinRequiredMessage = stringResource(R.string.users_current_pin_required)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -503,9 +507,22 @@ private fun EditStaffDialog(
                     label = { Text(stringResource(R.string.users_reset_pin_label)) },
                     placeholder = { Text(stringResource(R.string.users_pin_leave_blank_placeholder)) },
                     singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                if (editPin.isNotBlank()) {
+                    OutlinedTextField(
+                        value = editOldPin,
+                        onValueChange = { if (it.length <= 4 && it.all(Char::isDigit)) editOldPin = it },
+                        label = { Text(stringResource(R.string.users_current_pin_label)) },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 Text(
                     text = stringResource(R.string.users_role_label),
@@ -557,15 +574,22 @@ private fun EditStaffDialog(
                         editError = invalidUserMessage
                         return@Button
                     }
-                    if (editPin.isNotBlank() && editPin.length != 4) {
-                        editError = invalidUserMessage
-                        return@Button
+                    if (editPin.isNotBlank()) {
+                        if (editPin.length != 4) {
+                            editError = invalidUserMessage
+                            return@Button
+                        }
+                        if (editOldPin.length != 4) {
+                            editError = currentPinRequiredMessage
+                            return@Button
+                        }
                     }
                     val disc = editDiscount.toDoubleOrNull() ?: 10.0
                     authViewModel.updateStaff(
                         userId = user.id,
                         name = editName.trim(),
                         pin = editPin.takeIf { it.isNotBlank() },
+                        oldPin = editOldPin.takeIf { it.isNotBlank() },
                         role = editRole,
                         customPermissions = AppPermissions.deserializePermissions(user.customPermissions),
                         isActive = editActive,

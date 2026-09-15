@@ -945,6 +945,7 @@ fun MainNavigation() {
                                             },
                                             onClick = {
                                                 showUserDropdown = false
+                                                while (backStack.size > 0) { backStack.removeLastOrNull() }
                                                 backStack.add(Lock)
                                             }
                                         )
@@ -983,6 +984,7 @@ fun MainNavigation() {
 
                                 IconButton(
                                     onClick = {
+                                        while (backStack.size > 0) { backStack.removeLastOrNull() }
                                         backStack.add(Lock)
                                     },
                                     modifier = Modifier.size(40.dp)
@@ -1009,7 +1011,11 @@ fun MainNavigation() {
                         modifier = Modifier
                             .fillMaxSize()
                             .background(MaterialTheme.colorScheme.background),
-                        onBack = { backStack.removeLastOrNull() },
+                        onBack = {
+                            if (backStack.lastOrNull() != Lock) {
+                                backStack.removeLastOrNull()
+                            }
+                        },
                         entryProvider = entryProvider {
                             entry<Splash> {
                                 SplashScreen(
