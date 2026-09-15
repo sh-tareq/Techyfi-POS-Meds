@@ -2054,6 +2054,24 @@
     <string name="note_cat_complaint">Complaint</string>
     <string name="products_bulk_price_updated">Prices updated for %1$d products</string>
     <string name="products_bulk_price_failed">Price update failed: %1$s</string>
+    <string name="bulk_price_confirm_title">Confirm Price Adjustment</string>
+    <string name="bulk_price_confirm_message">Are you sure you want to adjust prices for %1$d product(s) by %2$s? This action will immediately update all selected items.</string>
+    <string name="cart_discount_applied_badge">Discount Applied</string>
+    <string name="split_payment_cash_change_desc">Cash change to return to customer</string>
+    <string name="custom_item_taxable_label">Taxable Item</string>
+    <string name="custom_item_taxable_desc">Standard store VAT/tax applies</string>
+    <string name="custom_item_non_taxable_desc">Tax-exempt (No VAT applied)</string>
+    <string name="custom_item_price_negative_error">Price cannot be negative</string>
+    <string name="tax_rate_range_error" formatted="false">Tax/VAT rate must be between 0% and 100%</string>
+    <string name="cost_margin_range_error" formatted="false">Default cost percentage must be between 0% and 100%</string>
+    <string name="settings_custom_cost_margin_label">Custom Cost Percentage</string>
+    <string name="product_expiry_past_warning">Warning: Expiry date is in the past</string>
+    <string name="product_expiry_past_confirm_title">Expired Product Warning</string>
+    <string name="product_expiry_past_confirm_message">The expiry date (%1$s) is in the past. Are you sure you want to save this product as already expired?</string>
+    <string name="products_image_too_large">Image file size exceeds 5MB limit. Please choose a smaller image.</string>
+    <string name="products_invalid_image_type">Invalid file type. Please select a valid image (JPEG, PNG, WEBP).</string>
+    <string name="user_hide_pin">Hide PIN</string>
+    <string name="user_show_pin">Show PIN</string>
     <string name="products_bulk_category_updated">Category updated for %1$d products</string>
     <string name="products_bulk_category_failed">Category update failed: %1$s</string>
     <string name="products_bulk_deleted">Deleted %1$d products</string>

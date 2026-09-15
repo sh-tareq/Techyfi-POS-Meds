@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -20,6 +22,8 @@ import com.example.techyfipos.R
 import com.example.techyfipos.data.db.CustomerDue
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.isFractionalUnit
+import com.example.techyfipos.utils.toEnglishDigits
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -33,16 +37,25 @@ fun ManualQuantityDialog(
     onConfirm: (Double) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        delay(80)
+        try {
+            focusRequester.requestFocus()
+        } catch (_: Exception) {}
+    }
+
     var text by remember {
         mutableStateOf(
             if (currentQuantity % 1.0 == 0.0) currentQuantity.toLong().toString()
             else String.format(Locale.US, "%.2f", currentQuantity).trimEnd('0').trimEnd('.')
         )
     }
-    val parsed = text.toDoubleOrNull()
+    val clean = toEnglishDigits(text)
+    val parsed = clean.toDoubleOrNull()
     val isStockTracked = !isCustomItem
-    val isExceedingStock = isStockTracked && parsed != null && parsed > availableStock
-    val isValid = parsed != null && parsed > 0.0 && (!isStockTracked || allowNegativeInventory || !isExceedingStock)
+    val isExceedingStock = isStockTracked && parsed != null && (parsed > availableStock || (!allowNegativeInventory && availableStock <= 0.0))
+    val isValid = parsed != null && parsed > 0.0 && (!isStockTracked || allowNegativeInventory || (!isExceedingStock && availableStock > 0.0))
 
     val cleanUnit = unit.trim()
     val isFractional = isFractionalUnit(cleanUnit)
@@ -64,7 +77,8 @@ fun ManualQuantityDialog(
                 OutlinedTextField(
                     value = text,
                     onValueChange = { input ->
-                        val filtered = input.filter { it.isDigit() || it == '.' }
+                        val englishInput = toEnglishDigits(input)
+                        val filtered = englishInput.filter { it.isDigit() || it == '.' }
                         if (filtered.count { it == '.' } <= 1) {
                             text = filtered.take(7)
                         }
@@ -75,7 +89,9 @@ fun ManualQuantityDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     keyboardActions = KeyboardActions(onDone = { if (isValid) onConfirm(parsed!!) }),
                     isError = text.isNotEmpty() && !isValid,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
                 )
 
                 // Quick Increment Buttons (+0.25, +0.5, +1, +5)
@@ -86,10 +102,10 @@ fun ManualQuantityDialog(
                     increments.forEach { inc ->
                         OutlinedButton(
                             onClick = {
-                                val cur = text.toDoubleOrNull() ?: 0.0
+                                val cur = toEnglishDigits(text).toDoubleOrNull() ?: 0.0
                                 val added = Math.round((cur + inc) * 100.0) / 100.0
-                                val n = if (isStockTracked && !allowNegativeInventory && availableStock > 0.0) {
-                                    added.coerceAtMost(availableStock)
+                                val n = if (isStockTracked && !allowNegativeInventory) {
+                                    if (availableStock <= 0.0) 0.0 else added.coerceAtMost(availableStock)
                                 } else {
                                     added
                                 }
@@ -121,8 +137,8 @@ fun ManualQuantityDialog(
                     presets.forEach { preset ->
                         Surface(
                             onClick = {
-                                val n = if (isStockTracked && !allowNegativeInventory && availableStock > 0.0) {
-                                    preset.coerceAtMost(availableStock)
+                                val n = if (isStockTracked && !allowNegativeInventory) {
+                                    if (availableStock <= 0.0) 0.0 else preset.coerceAtMost(availableStock)
                                 } else {
                                     preset
                                 }

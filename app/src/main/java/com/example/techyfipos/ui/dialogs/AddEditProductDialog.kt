@@ -170,11 +170,25 @@ fun AddEditProductDialog(
 
     var showEnlargedView by remember { mutableStateOf(false) }
     var isError by remember { mutableStateOf(false) }
+    var showPastExpiryConfirmDialog by remember { mutableStateOf(false) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
+            val mimeType = context.contentResolver.getType(uri)
+            val isImage = mimeType == null || mimeType.startsWith("image/")
+            if (!isImage) {
+                Toast.makeText(context, context.getString(R.string.products_invalid_image_type), Toast.LENGTH_SHORT).show()
+                return@rememberLauncherForActivityResult
+            }
+            val fileSize = try {
+                context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L
+            } catch (_: Exception) { -1L }
+            if (fileSize > 5 * 1024 * 1024L) {
+                Toast.makeText(context, context.getString(R.string.products_image_too_large), Toast.LENGTH_SHORT).show()
+                return@rememberLauncherForActivityResult
+            }
             val savedPath = copyUriToInternalStorage(context, uri)
             if (savedPath != null) {
                 imageUri = savedPath
@@ -242,6 +256,9 @@ fun AddEditProductDialog(
             expiryDate.isNotBlank() && com.example.techyfipos.utils.parseExpiryDateToMillis(expiryDate) == null -> {
                 isError = true
                 Toast.makeText(context, context.getString(R.string.products_invalid_expiry_date_warning), Toast.LENGTH_SHORT).show()
+            }
+            expiryDate.isNotBlank() && (com.example.techyfipos.utils.parseExpiryDateToMillis(expiryDate) ?: Long.MAX_VALUE) < System.currentTimeMillis() && !showPastExpiryConfirmDialog -> {
+                showPastExpiryConfirmDialog = true
             }
             else -> {
                 isError = false
@@ -1460,6 +1477,30 @@ fun AddEditProductDialog(
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
+                                val expiryMillis = com.example.techyfipos.utils.parseExpiryDateToMillis(expiryDate)
+                                val isExpired = expiryMillis != null && expiryMillis < System.currentTimeMillis()
+                                if (isExpired) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color(0xFFFEF3C7),
+                                        border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text("⚠️", fontSize = 12.sp)
+                                            Text(
+                                                text = stringResource(R.string.product_expiry_past_warning),
+                                                color = Color(0xFF92400E),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -1583,6 +1624,55 @@ fun AddEditProductDialog(
                 coroutineScope.launch {
                     settingsDataStore.resetDefaultCategories()
                     Toast.makeText(context, context.getString(R.string.products_categories_reset_toast), Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+
+    if (showPastExpiryConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showPastExpiryConfirmDialog = false },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFD97706)) },
+            title = { Text(stringResource(R.string.product_expiry_past_confirm_title)) },
+            text = { Text(stringResource(R.string.product_expiry_past_confirm_message, expiryDate)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPastExpiryConfirmDialog = false
+                        val pPrice = purchasePrice.toDoubleOrNull() ?: 0.0
+                        val mPrice = mrpPrice.toDoubleOrNull() ?: 0.0
+                        val dPrice = discountedPrice.toDoubleOrNull() ?: 0.0
+                        val wPrice = wholesalePrice.toDoubleOrNull() ?: 0.0
+                        val effectiveSelling = if (dPrice > 0.0) dPrice else if (mPrice > 0.0) mPrice else 0.0
+                        val effectiveMrp = if (mPrice > 0.0) mPrice else effectiveSelling
+                        val effectiveDisc = if (dPrice > 0.0) dPrice else effectiveSelling
+                        val qty = stockQty.toDoubleOrNull() ?: 0.0
+                        val reorder = reorderLevel.toIntOrNull() ?: 0
+                        val finalBarcode = toEnglishDigits(barcode).trim().ifBlank {
+                            var candidate: String
+                            var attempts = 0
+                            do {
+                                candidate = (100000000000L..999999999999L).random().toString()
+                                attempts++
+                            } while (existingBarcodes.contains(candidate) && attempts < 100)
+                            candidate
+                        }
+                        isError = false
+                        onSave(
+                            name, finalBarcode, category, pPrice, effectiveSelling, effectiveMrp,
+                            effectiveDisc, qty, reorder, imageUri, mfgOrPkgType, mfgOrPkgDate,
+                            expiryDate, unit, wPrice, editStockReason.takeIf { isEdit },
+                            editStockNote.trim().takeIf { isEdit && it.isNotBlank() }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
+                ) {
+                    Text("Save Anyway")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPastExpiryConfirmDialog = false }) {
+                    Text(stringResource(R.string.products_cancel_action))
                 }
             }
         )

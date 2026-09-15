@@ -227,6 +227,36 @@ private fun CartTotalSummaryCard(
 
             // Optional Discount Row
             if (discountAmount > 0.0) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFEF4444).copy(alpha = 0.10f),
+                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.30f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🏷️", fontSize = 13.sp)
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = stringResource(R.string.cart_discount_applied_badge),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFFDC2626)
+                            )
+                        }
+                        Text(
+                            text = "-${formatTaka(discountAmount)}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFDC2626)
+                        )
+                    }
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -841,6 +871,7 @@ fun CartScreen(
                                         Toast.makeText(context, context.getString(R.string.permission_required_hold_cart), Toast.LENGTH_SHORT).show()
                                     }
                                 },
+                                enabled = cartItems.isNotEmpty(),
                                 modifier = Modifier
                                     .weight(0.34f)
                                     .height(52.dp),
@@ -848,7 +879,9 @@ fun CartScreen(
                                 shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(0xFFD97706),
-                                    contentColor = Color.White
+                                    contentColor = Color.White,
+                                    disabledContainerColor = Color(0xFFD97706).copy(alpha = 0.4f),
+                                    disabledContentColor = Color.White.copy(alpha = 0.7f)
                                 )
                             ) {
                                 Text("⏸️", fontSize = 15.sp)
@@ -859,6 +892,7 @@ fun CartScreen(
                             // Continue to Checkout Button
                             Button(
                                 onClick = { showCheckout = true },
+                                enabled = cartItems.isNotEmpty(),
                                 modifier = Modifier
                                     .weight(0.66f)
                                     .height(52.dp),
@@ -866,7 +900,9 @@ fun CartScreen(
                                 shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(0xFF10B981),
-                                    contentColor = Color.White
+                                    contentColor = Color.White,
+                                    disabledContainerColor = Color(0xFF10B981).copy(alpha = 0.4f),
+                                    disabledContentColor = Color.White.copy(alpha = 0.7f)
                                 )
                             ) {
                                 Text("🛍️", fontSize = 15.sp)
@@ -1364,6 +1400,53 @@ fun CartScreen(
                                 splitEntries = splitPayments,
                                 onEntriesChanged = { cartViewModel.setSplitPayments(it) }
                             )
+
+                            val hasCashSplit = splitPayments.any { it.method == "Cash" }
+                            val totalSplitCollected = splitPayments.sumOf { it.amount }
+                            val splitChangeDue = if (hasCashSplit && totalSplitCollected > grandTotal) {
+                                (totalSplitCollected - grandTotal)
+                            } else 0.0
+
+                            if (splitChangeDue > 0.0) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFF059669).copy(alpha = 0.12f),
+                                    border = BorderStroke(1.dp, Color(0xFF059669).copy(alpha = 0.35f)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("💵", fontSize = 16.sp)
+                                            Spacer(Modifier.width(8.dp))
+                                            Column {
+                                                Text(
+                                                    text = stringResource(R.string.change),
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 13.sp,
+                                                    color = Color(0xFF059669)
+                                                )
+                                                Text(
+                                                    text = stringResource(R.string.split_payment_cash_change_desc),
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = formatTaka(splitChangeDue),
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 18.sp,
+                                            color = Color(0xFF059669)
+                                        )
+                                    }
+                                }
+                            }
                         } else {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("💳", fontSize = 16.sp)
@@ -2235,7 +2318,14 @@ fun CartScreen(
                         val isCashValid = isSplitPayment || paymentMethod != "Cash" || remainingToPay == 0.0 || (effectiveAmountPaid >= remainingToPay && effectiveAmountPaid > 0.0)
                         val isStoreCreditValid = isSplitPayment || paymentMethod != "Store Credit" || remainingToPay == 0.0 || ((resolvedCustomer?.storeCredit ?: 0.0) >= grandTotal)
                         val expectedSplitTotal = if (storeCreditApplied > 0.0) remainingToPay else grandTotal
-                        val isSplitValid = !isSplitPayment || (splitPayments.isNotEmpty() && (kotlin.math.abs(splitPayments.sumOf { it.amount } - expectedSplitTotal) < 0.01 || kotlin.math.abs(splitPayments.sumOf { it.amount } - grandTotal) < 0.01))
+                        val hasCashInSplit = isSplitPayment && splitPayments.any { it.method == "Cash" }
+                        val splitCollected = splitPayments.sumOf { it.amount }
+                        val isSplitValid = !isSplitPayment || (splitPayments.isNotEmpty() && (
+                            kotlin.math.abs(splitCollected - expectedSplitTotal) < 0.01 ||
+                            kotlin.math.abs(splitCollected - grandTotal) < 0.01 ||
+                            (hasCashInSplit && splitCollected >= expectedSplitTotal) ||
+                            (hasCashInSplit && splitCollected >= grandTotal)
+                        ))
                         val isSplitDetailsValid = !isSplitPayment || splitPayments.all { sp ->
                             when (sp.method) {
                                 "bKash", "Nagad", "Rocket" -> sp.walletPhone?.length == 11

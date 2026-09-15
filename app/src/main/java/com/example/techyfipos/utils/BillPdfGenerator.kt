@@ -328,8 +328,9 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
                       else "*** YOU SAVED: ${formatTaka(totalCustomerSavings)} ($pct%) vs MRP ***")
         sb.appendLine("------------------------------------------")
     }
-    if (settings.showCustomerDetails && (bill.customerName.isNotBlank() || bill.customerPhone.isNotBlank())) {
-        sb.appendLine(if (isBn) "গ্রাহক    : ${bill.customerName.ifBlank { "N/A" }}" else "Customer : ${bill.customerName.ifBlank { "N/A" }}")
+    if (settings.showCustomerDetails) {
+        val custName = bill.customerName.ifBlank { if (isBn) "ওয়াক-ইন কাস্টমার" else "Walk-in Customer" }
+        sb.appendLine(if (isBn) "গ্রাহক    : $custName" else "Customer : $custName")
         if (bill.customerPhone.isNotBlank()) sb.appendLine(if (isBn) "ফোন      : ${bill.customerPhone}" else "Phone    : ${bill.customerPhone}")
         sb.appendLine("------------------------------------------")
     }
@@ -503,7 +504,7 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
     }
 
     // 8. Customer Details
-    if (settings.showCustomerDetails && (bill.customerName.isNotBlank() || bill.customerPhone.isNotBlank())) {
+    if (settings.showCustomerDetails) {
         totalHeight += 30f
         if (bill.customerPhone.isNotBlank()) totalHeight += 30f
         totalHeight += 40f
@@ -853,8 +854,9 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
     currentY += 35f
 
     // 9. Customer details
-    if (settings.showCustomerDetails && (bill.customerName.isNotBlank() || bill.customerPhone.isNotBlank())) {
-        canvas.drawText(String.format(Locale.US, if (isBn) "গ্রাহক    : %s" else "Customer : %s", bill.customerName.ifBlank { "N/A" }), sidePad, currentY + 20f, paintText)
+    if (settings.showCustomerDetails) {
+        val custName = bill.customerName.ifBlank { if (isBn) "ওয়াক-ইন কাস্টমার" else "Walk-in Customer" }
+        canvas.drawText(String.format(Locale.US, if (isBn) "গ্রাহক    : %s" else "Customer : %s", custName), sidePad, currentY + 20f, paintText)
         currentY += 30f
         if (bill.customerPhone.isNotBlank()) {
             val custPhoneDisp = if (isBn) toBanglaDigits(bill.customerPhone) else bill.customerPhone

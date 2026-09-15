@@ -11,7 +11,7 @@ interface ProductDao {
     @Query("SELECT * FROM products ORDER BY name ASC")
     suspend fun getAllProductsList(): List<Product>
 
-    @Query("SELECT * FROM products WHERE barcode = :barcode LIMIT 1")
+    @Query("SELECT * FROM products WHERE barcode = :barcode COLLATE NOCASE LIMIT 1")
     suspend fun getProductByBarcode(barcode: String): Product?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -29,11 +29,11 @@ interface ProductDao {
             WHEN :allowNegative = 1 THEN (stockQty + :delta) 
             ELSE MAX(0.0, stockQty + :delta) 
         END 
-        WHERE barcode = :barcode
+        WHERE barcode = :barcode COLLATE NOCASE
     """)
     suspend fun adjustStockQty(barcode: String, delta: Double, allowNegative: Boolean = false)
 
-    @Query("UPDATE products SET stockQty = stockQty - :quantity WHERE barcode = :barcode AND stockQty >= :quantity")
+    @Query("UPDATE products SET stockQty = stockQty - :quantity WHERE barcode = :barcode COLLATE NOCASE AND stockQty >= :quantity")
     suspend fun decrementStockIfAvailable(barcode: String, quantity: Double): Int
 
     @Delete

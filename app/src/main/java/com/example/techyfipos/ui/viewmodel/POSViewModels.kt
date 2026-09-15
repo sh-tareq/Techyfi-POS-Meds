@@ -1498,6 +1498,7 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     val products: StateFlow<List<Product>> = _searchQuery
+        .debounce { query -> if (query.isBlank()) 0L else 300L }
         .flatMapLatest { query ->
             if (query.isBlank()) {
                 repository.allProducts

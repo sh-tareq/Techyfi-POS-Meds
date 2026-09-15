@@ -77,6 +77,7 @@ fun AddCustomItemDialog(
     var priceText by rememberSaveable { mutableStateOf("") }
     var qtyText by rememberSaveable { mutableStateOf("1") }
     var unit by rememberSaveable { mutableStateOf("Pcs") }
+    var isTaxable by rememberSaveable { mutableStateOf(true) }
     var customUnitText by rememberSaveable { mutableStateOf("") }
     var note by rememberSaveable { mutableStateOf("") }
     var isFreeMode by rememberSaveable { mutableStateOf(false) }
@@ -88,11 +89,14 @@ fun AddCustomItemDialog(
 
     val standardUnits = remember { listOf("Pcs", "Kg", "Gm", "Ltr", "Mtr", "Box", "Service", "Trip", "Other") }
 
-    val parsedPrice = if (isFreeMode) 0.0 else (priceText.toDoubleOrNull() ?: 0.0)
-    val parsedQty = qtyText.toDoubleOrNull() ?: 1.0
+    val rawPrice = toEnglishDigits(priceText).toDoubleOrNull()
+    val isPriceNegative = rawPrice != null && rawPrice < 0.0
+    val isPriceValid = if (isFreeMode) true else (rawPrice != null && rawPrice > 0.0)
+    val parsedPrice = if (isFreeMode) 0.0 else (rawPrice ?: 0.0)
+    val parsedQty = toEnglishDigits(qtyText).toDoubleOrNull() ?: 1.0
     val totalAmount = parsedPrice * parsedQty
     val activeUnit = if (unit == "Other") customUnitText.trim().ifBlank { "Pcs" } else unit
-    val isValid = title.isNotBlank() && parsedPrice >= 0.0 && parsedQty > 0.0
+    val isValid = title.isNotBlank() && isPriceValid && !isPriceNegative && parsedPrice >= 0.0 && parsedQty > 0.0
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -656,6 +660,15 @@ fun AddCustomItemDialog(
                                 }
                             }
                         }
+                        if (isPriceNegative) {
+                            Text(
+                                text = stringResource(R.string.custom_item_price_negative_error),
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(start = 2.dp, top = 2.dp)
+                            )
+                        }
                     }
 
                     // Quantity Stepper Container (52dp)
@@ -1019,7 +1032,41 @@ fun AddCustomItemDialog(
                     }
                 }
 
-                // 10. Real-Time Live Subtotal Card with 3D Calculator
+                // 10. Taxable Item Toggle Card
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.custom_item_taxable_label),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (isTaxable) stringResource(R.string.custom_item_taxable_desc) else stringResource(R.string.custom_item_non_taxable_desc),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isTaxable,
+                            onCheckedChange = { isTaxable = it }
+                        )
+                    }
+                }
+
+                // 11. Real-Time Live Subtotal Card with 3D Calculator
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = if (isFreeMode || parsedPrice == 0.0) Color(0xFFECFDF5) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
@@ -1137,7 +1184,11 @@ fun AddCustomItemDialog(
                                     val itemTitle = title.trim()
                                     val itemPrice = parsedPrice
                                     val itemQty = parsedQty
-                                    val itemNote = note.trim().takeIf { it.isNotBlank() }
+                                    val itemNote = if (!isTaxable) {
+                                        if (note.isBlank()) "(Non-taxable)" else "${note.trim()} (Non-taxable)"
+                                    } else {
+                                        note.trim().takeIf { it.isNotBlank() }
+                                    }
                                     val itemUnit = activeUnit
 
                                     if (onAddAnother != null) {
@@ -1154,6 +1205,7 @@ fun AddCustomItemDialog(
                                     priceText = ""
                                     qtyText = "1"
                                     note = ""
+                                    isTaxable = true
                                     isFreeMode = false
                                     selectedCategory = "Product"
                                     customUnitText = ""
@@ -1206,7 +1258,12 @@ fun AddCustomItemDialog(
                     Button(
                         onClick = {
                             if (isValid) {
-                                onConfirm(title.trim(), parsedPrice, parsedQty, note.trim().takeIf { it.isNotBlank() }, activeUnit)
+                                val itemNote = if (!isTaxable) {
+                                    if (note.isBlank()) "(Non-taxable)" else "${note.trim()} (Non-taxable)"
+                                } else {
+                                    note.trim().takeIf { it.isNotBlank() }
+                                }
+                                onConfirm(title.trim(), parsedPrice, parsedQty, itemNote, activeUnit)
                             }
                         },
                         enabled = isValid,

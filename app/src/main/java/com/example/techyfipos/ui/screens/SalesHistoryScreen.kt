@@ -414,12 +414,34 @@ fun SalesHistoryScreen(
                                 color = Color(0xFF4338CA),
                                 maxLines = 1
                             )
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                contentDescription = null,
-                                tint = Color(0xFF4338CA),
-                                modifier = Modifier.size(16.dp)
-                            )
+                            if (selectedPeriod != HistoryReportPeriod.ALL_TIME) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFC7D2FE).copy(alpha = 0.6f))
+                                        .clickable {
+                                            selectedPeriod = HistoryReportPeriod.ALL_TIME
+                                            customStart = System.currentTimeMillis()
+                                            customEnd = System.currentTimeMillis()
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.history_filter_reset),
+                                        tint = Color(0xFF4338CA),
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    tint = Color(0xFF4338CA),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
 
@@ -478,9 +500,42 @@ fun SalesHistoryScreen(
                                 ) {
                                     Text(
                                         text = label,
-                                        fontSize = 10.5.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        if (selectedPeriod != HistoryReportPeriod.ALL_TIME) {
+                            Surface(
+                                onClick = {
+                                    selectedPeriod = HistoryReportPeriod.ALL_TIME
+                                    customStart = System.currentTimeMillis()
+                                    customEnd = System.currentTimeMillis()
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFFFEE2E2),
+                                border = BorderStroke(0.8.dp, Color(0xFFFCA5A5)),
+                                modifier = Modifier.height(26.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                    modifier = Modifier.padding(horizontal = 6.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Refresh,
+                                        contentDescription = stringResource(R.string.history_filter_reset),
+                                        tint = Color(0xFFDC2626),
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.history_filter_reset),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFDC2626)
                                     )
                                 }
                             }
@@ -838,14 +893,38 @@ fun SalesHistoryScreen(
         )
     }
 
+    val historyCurrentDayEndUtcMillis = remember {
+        val localCal = java.util.Calendar.getInstance()
+        val utcCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+            set(java.util.Calendar.YEAR, localCal.get(java.util.Calendar.YEAR))
+            set(java.util.Calendar.MONTH, localCal.get(java.util.Calendar.MONTH))
+            set(java.util.Calendar.DAY_OF_MONTH, localCal.get(java.util.Calendar.DAY_OF_MONTH))
+            set(java.util.Calendar.HOUR_OF_DAY, 23)
+            set(java.util.Calendar.MINUTE, 59)
+            set(java.util.Calendar.SECOND, 59)
+            set(java.util.Calendar.MILLISECOND, 999)
+        }
+        utcCal.timeInMillis
+    }
+
+    val historySelectableDates = remember(historyCurrentDayEndUtcMillis) {
+        object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis <= historyCurrentDayEndUtcMillis
+            override fun isSelectableYear(year: Int): Boolean = year <= java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        }
+    }
+
     if (showStartPicker) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = customStart)
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = customStart.coerceAtMost(System.currentTimeMillis()),
+            selectableDates = historySelectableDates
+        )
         DatePickerDialog(
             onDismissRequest = { showStartPicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     state.selectedDateMillis?.let {
-                        customStart = it
+                        customStart = it.coerceAtMost(System.currentTimeMillis())
                     }
                     showStartPicker = false
                     showEndPicker = true
@@ -860,13 +939,16 @@ fun SalesHistoryScreen(
     }
 
     if (showEndPicker) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = customEnd)
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = customEnd.coerceAtMost(System.currentTimeMillis()),
+            selectableDates = historySelectableDates
+        )
         DatePickerDialog(
             onDismissRequest = { showEndPicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     state.selectedDateMillis?.let {
-                        customEnd = it
+                        customEnd = it.coerceAtMost(System.currentTimeMillis())
                         selectedPeriod = HistoryReportPeriod.CUSTOM
                     }
                     showEndPicker = false
@@ -938,6 +1020,9 @@ fun SalesHistoryScreen(
                             draftCustomerFilter = HistoryCustomerFilter.ALL
                             draftMinimumTotal = ""
                             draftMaximumTotal = ""
+                            selectedPeriod = HistoryReportPeriod.ALL_TIME
+                            customStart = System.currentTimeMillis()
+                            customEnd = System.currentTimeMillis()
                         },
                         modifier = Modifier.weight(1f)
                     ) { Text(stringResource(R.string.history_filter_reset)) }

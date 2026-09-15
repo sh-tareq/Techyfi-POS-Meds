@@ -445,13 +445,37 @@ fun SalesReportScreen(
         }
     }
 
+    val currentDayEndUtcMillis = remember {
+        val localCal = java.util.Calendar.getInstance()
+        val utcCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+            set(java.util.Calendar.YEAR, localCal.get(java.util.Calendar.YEAR))
+            set(java.util.Calendar.MONTH, localCal.get(java.util.Calendar.MONTH))
+            set(java.util.Calendar.DAY_OF_MONTH, localCal.get(java.util.Calendar.DAY_OF_MONTH))
+            set(java.util.Calendar.HOUR_OF_DAY, 23)
+            set(java.util.Calendar.MINUTE, 59)
+            set(java.util.Calendar.SECOND, 59)
+            set(java.util.Calendar.MILLISECOND, 999)
+        }
+        utcCal.timeInMillis
+    }
+
+    val pastAndPresentSelectableDates = remember(currentDayEndUtcMillis) {
+        object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis <= currentDayEndUtcMillis
+            override fun isSelectableYear(year: Int): Boolean = year <= java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        }
+    }
+
     if (showStartPicker) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = customStart)
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = customStart.coerceAtMost(System.currentTimeMillis()),
+            selectableDates = pastAndPresentSelectableDates
+        )
         DatePickerDialog(
             onDismissRequest = { showStartPicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    state.selectedDateMillis?.let { customStart = it }
+                    state.selectedDateMillis?.let { customStart = it.coerceAtMost(System.currentTimeMillis()) }
                     showStartPicker = false
                     showEndPicker = true
                 }) { Text(stringResource(R.string.dues_next_end_date_button)) }
@@ -461,12 +485,17 @@ fun SalesReportScreen(
     }
 
     if (showEndPicker) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = customEnd)
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = customEnd.coerceAtMost(System.currentTimeMillis()),
+            selectableDates = pastAndPresentSelectableDates
+        )
         DatePickerDialog(
             onDismissRequest = { showEndPicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    state.selectedDateMillis?.let { customEnd = it }
+                    state.selectedDateMillis?.let {
+                        customEnd = it.coerceAtMost(System.currentTimeMillis())
+                    }
                     selectedPeriod = ReportPeriod.CUSTOM
                     showEndPicker = false
                 }) { Text(stringResource(R.string.dues_apply_button)) }

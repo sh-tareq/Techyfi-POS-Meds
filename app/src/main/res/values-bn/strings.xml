@@ -2054,6 +2054,24 @@
     <string name="note_cat_complaint">অভিযোগ</string>
     <string name="products_bulk_price_updated">%1$d টি পণ্যের মূল্য আপডেট করা হয়েছে</string>
     <string name="products_bulk_price_failed">মূল্য আপডেট ব্যর্থ হয়েছে: %1$s</string>
+    <string name="bulk_price_confirm_title">মূল্য পরিবর্তনের নিশ্চিতকরণ</string>
+    <string name="bulk_price_confirm_message">আপনি কি নিশ্চিত যে %1$d টি পণ্যের মূল্য %2$s পরিবর্তন করতে চান? নির্বাচিত সকল পণ্যের মূল্য তাৎক্ষণিকভাবে আপডেট হবে।</string>
+    <string name="cart_discount_applied_badge">ডিসকাউন্ট যুক্ত হয়েছে</string>
+    <string name="split_payment_cash_change_desc">গ্রাহককে ফেরত দেওয়ার মতো ক্যাশ টাকা</string>
+    <string name="custom_item_taxable_label">ভ্যাট প্রযোজ্য পণ্য</string>
+    <string name="custom_item_taxable_desc">দোকানের সাধারণ ভ্যাট প্রযোজ্য হবে</string>
+    <string name="custom_item_non_taxable_desc">ভ্যাটমুক্ত পণ্য (কোনো ভ্যাট যুক্ত হবে না)</string>
+    <string name="custom_item_price_negative_error">মূল্য ঋণাত্মক হতে পারে না</string>
+    <string name="tax_rate_range_error" formatted="false">ট্যাক্স/ভ্যাট হার ০% থেকে ১০০% এর মধ্যে হতে হবে</string>
+    <string name="cost_margin_range_error" formatted="false">ডিফল্ট খরচের শতকরা হার ০% থেকে ১০০% এর মধ্যে হতে হবে</string>
+    <string name="settings_custom_cost_margin_label">কাস্টম খরচের শতকরা হার</string>
+    <string name="product_expiry_past_warning">সতর্কতা: মেয়াদের তারিখ অতিক্রান্ত হয়ে গেছে</string>
+    <string name="product_expiry_past_confirm_title">মেয়াদোত্তীর্ণ পণ্যের সতর্কতা</string>
+    <string name="product_expiry_past_confirm_message">মেয়াদের তারিখ (%1$s) অতীত হয়ে গেছে। আপনি কি নিশ্চিত যে এই পণ্যটি মেয়াদোত্তীর্ণ হিসেবে সংরক্ষণ করতে চান?</string>
+    <string name="products_image_too_large">ছবির সাইজ ৫MB এর বেশি। অনুগ্রহ করে ছোট সাইজের ছবি নির্বাচন করুন।</string>
+    <string name="products_invalid_image_type">অকার্যকর ফাইল ফরম্যাট। অনুগ্রহ করে সঠিক ছবি (JPEG, PNG, WEBP) নির্বাচন করুন।</string>
+    <string name="user_hide_pin">পিন লুকান</string>
+    <string name="user_show_pin">পিন দেখুন</string>
     <string name="products_bulk_category_updated">%1$d টি পণ্যের ক্যাটাগরি আপডেট করা হয়েছে</string>
     <string name="products_bulk_category_failed">ক্যাটাগরি আপডেট ব্যর্থ হয়েছে: %1$s</string>
     <string name="products_bulk_deleted">%1$d টি পণ্য মুছে ফেলা হয়েছে</string>

@@ -3529,7 +3529,9 @@ fun StockCheckBottomSheet(
             }
 
             // Reorder check warning
-            if (product.stockQty <= product.reorderLevel) {
+            val isOut = product.stockQty <= 0.0
+            val isLow = !isOut && product.stockQty <= product.reorderLevel
+            if (isOut || isLow) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
                     shape = RoundedCornerShape(12.dp),
@@ -3542,7 +3544,7 @@ fun StockCheckBottomSheet(
                         Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            stringResource(R.string.warning_stock_low),
+                            stringResource(if (isOut) R.string.out_of_stock else R.string.warning_stock_low),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onErrorContainer

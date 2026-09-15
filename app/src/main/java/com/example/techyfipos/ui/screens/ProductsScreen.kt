@@ -2950,6 +2950,42 @@ fun BulkPriceAdjustmentDialog(
     var mode by remember { mutableIntStateOf(0) } // 0: Percentage, 1: Fixed Amount
     var valueText by remember { mutableStateOf("") }
     var isIncrease by remember { mutableStateOf(true) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
+    if (showConfirmDialog) {
+        val rawVal = valueText.toDoubleOrNull() ?: 0.0
+        val factor = if (isIncrease) 1.0 else -1.0
+        val finalVal = rawVal * factor
+        val changeDesc = if (mode == 0) "${if (isIncrease) "+" else "-"}${rawVal}%" else "${if (isIncrease) "+" else "-"}৳${rawVal}"
+
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text(stringResource(R.string.bulk_price_confirm_title)) },
+            text = {
+                Text(stringResource(R.string.bulk_price_confirm_message, selectedCount, changeDesc))
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showConfirmDialog = false
+                        if (mode == 0) {
+                            onApply(finalVal, null)
+                        } else {
+                            onApply(null, finalVal)
+                        }
+                    }
+                ) {
+                    Text(stringResource(R.string.confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -3017,14 +3053,7 @@ fun BulkPriceAdjustmentDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val rawVal = valueText.toDoubleOrNull() ?: 0.0
-                    val factor = if (isIncrease) 1.0 else -1.0
-                    val finalVal = rawVal * factor
-                    if (mode == 0) {
-                        onApply(finalVal, null)
-                    } else {
-                        onApply(null, finalVal)
-                    }
+                    showConfirmDialog = true
                 },
                 enabled = valueText.toDoubleOrNull() != null && (valueText.toDoubleOrNull() ?: 0.0) > 0.0
             ) {

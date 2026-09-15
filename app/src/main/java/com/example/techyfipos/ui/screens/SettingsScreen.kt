@@ -464,6 +464,36 @@ private fun OptimizedSettingsHome(
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
+
+            var customCostText by remember(defaultCostPercentage) {
+                mutableStateOf(if (defaultCostPercentage % 1.0 == 0.0) defaultCostPercentage.toInt().toString() else defaultCostPercentage.toString())
+            }
+            val parsedCost = customCostText.toDoubleOrNull()
+            val isCostInvalid = parsedCost != null && (parsedCost < 0.0 || parsedCost > 100.0)
+
+            OutlinedTextField(
+                value = customCostText,
+                onValueChange = { input ->
+                    val sanitized = input.filter { ch -> ch.isDigit() || ch == '.' }
+                    customCostText = sanitized
+                    sanitized.toDoubleOrNull()?.let { value ->
+                        if (value in 0.0..100.0) {
+                            onDefaultCostPercentageChanged(value)
+                        }
+                    }
+                },
+                isError = isCostInvalid,
+                supportingText = if (isCostInvalid) {
+                    { Text(stringResource(R.string.cost_margin_range_error), color = MaterialTheme.colorScheme.error) }
+                } else null,
+                label = { Text(stringResource(R.string.settings_custom_cost_margin_label)) },
+                suffix = { Text("%", fontWeight = FontWeight.Bold) },
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = stringResource(
                     R.string.settings_default_cost_description,
@@ -919,15 +949,25 @@ private fun TaxSettings(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                val parsedTaxRate = rateText.toDoubleOrNull()
+                val isTaxRateInvalid = parsedTaxRate != null && (parsedTaxRate < 0.0 || parsedTaxRate > 100.0)
                 OutlinedTextField(
                     value = rateText,
                     onValueChange = { input ->
-                        rateText = input
-                        input.toDoubleOrNull()?.let { rate ->
-                            onSettingsChanged(currentSettings.copy(taxRate = rate.coerceIn(0.0, 100.0)))
+                        val sanitized = input.filter { ch -> ch.isDigit() || ch == '.' }
+                        rateText = sanitized
+                        sanitized.toDoubleOrNull()?.let { rate ->
+                            if (rate in 0.0..100.0) {
+                                onSettingsChanged(currentSettings.copy(taxRate = rate))
+                            }
                         }
                     },
+                    isError = isTaxRateInvalid,
+                    supportingText = if (isTaxRateInvalid) {
+                        { Text(stringResource(R.string.tax_rate_range_error), color = MaterialTheme.colorScheme.error) }
+                    } else null,
                     label = { Text(stringResource(R.string.settings_tax_rate_field)) },
+                    suffix = { Text("%", fontWeight = FontWeight.Bold) },
                     singleLine = true,
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()

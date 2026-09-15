@@ -52,6 +52,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import com.example.techyfipos.R
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,6 +83,7 @@ fun LockScreen(
     var pin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
     var awaitingConfirm by remember { mutableStateOf(false) }
+    var isPinVisible by rememberSaveable { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showPinRecoveryDialog by remember { mutableStateOf(false) }
     var recoveryPin by remember { mutableStateOf("") }
@@ -354,11 +358,33 @@ fun LockScreen(
 
                             Spacer(Modifier.height(if (isCompactHeight) 10.dp else 14.dp))
 
-                            Box(modifier = Modifier.graphicsLayer { translationX = shakeOffset.value }) {
-                                Realistic3DPinDots(
-                                    length = if (awaitingConfirm) confirmPin.length else pin.length,
-                                    isCompact = isCompactHeight
-                                )
+                            val currentSetupPin = if (awaitingConfirm) confirmPin else pin
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Spacer(Modifier.width(48.dp))
+                                Box(modifier = Modifier.graphicsLayer { translationX = shakeOffset.value }) {
+                                    Realistic3DPinDots(
+                                        length = currentSetupPin.length,
+                                        pinText = currentSetupPin,
+                                        isPinVisible = isPinVisible,
+                                        isCompact = isCompactHeight
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { isPinVisible = !isPinVisible },
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .padding(start = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isPinVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = if (isPinVisible) stringResource(R.string.user_hide_pin) else stringResource(R.string.user_show_pin),
+                                        tint = if (isPinVisible) Color(0xFF0082FF) else Color(0xFF94A3B8),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
 
                             Spacer(Modifier.height(6.dp))
@@ -397,8 +423,32 @@ fun LockScreen(
 
                             Spacer(Modifier.height(if (isCompactHeight) 10.dp else 14.dp))
 
-                            Box(modifier = Modifier.graphicsLayer { translationX = shakeOffset.value }) {
-                                Realistic3DPinDots(length = pin.length, isCompact = isCompactHeight)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Spacer(Modifier.width(48.dp))
+                                Box(modifier = Modifier.graphicsLayer { translationX = shakeOffset.value }) {
+                                    Realistic3DPinDots(
+                                        length = pin.length,
+                                        pinText = pin,
+                                        isPinVisible = isPinVisible,
+                                        isCompact = isCompactHeight
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { isPinVisible = !isPinVisible },
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .padding(start = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isPinVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = if (isPinVisible) stringResource(R.string.user_hide_pin) else stringResource(R.string.user_show_pin),
+                                        tint = if (isPinVisible) Color(0xFF0082FF) else Color(0xFF94A3B8),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
 
                             Spacer(Modifier.height(6.dp))
@@ -481,6 +531,7 @@ fun LockScreen(
             icon = { Icon(Icons.Default.VerifiedUser, contentDescription = null) },
             title = { Text(stringResource(R.string.lock_reset_owner_pin)) },
             text = {
+                var recoveryPinVisible by remember { mutableStateOf(false) }
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(stringResource(R.string.lock_ownership_verified))
                     OutlinedTextField(
@@ -488,6 +539,15 @@ fun LockScreen(
                         onValueChange = { recoveryPin = it.filter(Char::isDigit).take(4) },
                         label = { Text(stringResource(R.string.users_pin_label)) },
                         singleLine = true,
+                        visualTransformation = if (recoveryPinVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { recoveryPinVisible = !recoveryPinVisible }) {
+                                Icon(
+                                    if (recoveryPinVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = if (recoveryPinVisible) stringResource(R.string.user_hide_pin) else stringResource(R.string.user_show_pin)
+                                )
+                            }
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
                     )
                     OutlinedTextField(
@@ -495,6 +555,15 @@ fun LockScreen(
                         onValueChange = { recoveryPinConfirm = it.filter(Char::isDigit).take(4) },
                         label = { Text(stringResource(R.string.users_pin_label)) },
                         singleLine = true,
+                        visualTransformation = if (recoveryPinVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { recoveryPinVisible = !recoveryPinVisible }) {
+                                Icon(
+                                    if (recoveryPinVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = if (recoveryPinVisible) stringResource(R.string.user_hide_pin) else stringResource(R.string.user_show_pin)
+                                )
+                            }
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
                     )
                 }
@@ -596,10 +665,15 @@ private fun TechyfiLockBrandingHeader(isCompact: Boolean = false) {
  * 3D Glowing PIN Dots with bouncy animations
  */
 @Composable
-private fun Realistic3DPinDots(length: Int, isCompact: Boolean = false) {
-    val outerSize = if (isCompact) 14.dp else 16.dp
+private fun Realistic3DPinDots(
+    length: Int,
+    pinText: String = "",
+    isPinVisible: Boolean = false,
+    isCompact: Boolean = false
+) {
+    val outerSize = if (isCompact) (if (isPinVisible) 26.dp else 14.dp) else (if (isPinVisible) 30.dp else 16.dp)
     val innerSize = if (isCompact) 9.dp else 11.dp
-    val spacing = if (isCompact) 12.dp else 14.dp
+    val spacing = if (isCompact) 10.dp else 12.dp
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(spacing),
@@ -607,8 +681,9 @@ private fun Realistic3DPinDots(length: Int, isCompact: Boolean = false) {
     ) {
         repeat(4) { index ->
             val filled = index < length
+            val digit = if (filled && isPinVisible) pinText.getOrNull(index)?.toString() ?: "" else ""
             val scale by animateFloatAsState(
-                targetValue = if (filled) 1.2f else 1.0f,
+                targetValue = if (filled) 1.15f else 1.0f,
                 animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
                 label = "pinDotScale_$index"
             )
@@ -622,34 +697,55 @@ private fun Realistic3DPinDots(length: Int, isCompact: Boolean = false) {
                     },
                 contentAlignment = Alignment.Center
             ) {
-                if (filled) {
-                    // Glow ring
-                    Box(
-                        modifier = Modifier
-                            .size(outerSize)
-                            .clip(CircleShape)
-                            .background(Color(0xFF0082FF).copy(alpha = 0.35f))
-                    )
-                    // Inner dot
-                    Box(
-                        modifier = Modifier
-                            .size(innerSize)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.radialGradient(
-                                    colors = listOf(Color(0xFF38BDF8), Color(0xFF0082FF))
-                                )
+                if (isPinVisible) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (filled) Color(0xFF1E293B) else Color(0xFF0F172A),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (filled) Color(0xFF0082FF) else Color(0xFF334155)
+                        ),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = digit,
+                                color = if (filled) Color(0xFF38BDF8) else Color(0xFF64748B),
+                                fontSize = if (isCompact) 13.sp else 15.sp,
+                                fontWeight = FontWeight.ExtraBold
                             )
-                            .border(1.dp, Color.White.copy(alpha = 0.8f), CircleShape)
-                    )
+                        }
+                    }
                 } else {
-                    Box(
-                        modifier = Modifier
-                            .size(innerSize)
-                            .clip(CircleShape)
-                            .background(Color(0xFF1E293B))
-                            .border(1.5.dp, Color(0xFF475569), CircleShape)
-                    )
+                    if (filled) {
+                        // Glow ring
+                        Box(
+                            modifier = Modifier
+                                .size(outerSize)
+                                .clip(CircleShape)
+                                .background(Color(0xFF0082FF).copy(alpha = 0.35f))
+                        )
+                        // Inner dot
+                        Box(
+                            modifier = Modifier
+                                .size(innerSize)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(Color(0xFF38BDF8), Color(0xFF0082FF))
+                                    )
+                                )
+                                .border(1.dp, Color.White.copy(alpha = 0.8f), CircleShape)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(innerSize)
+                                .clip(CircleShape)
+                                .background(Color(0xFF1E293B))
+                                .border(1.5.dp, Color(0xFF475569), CircleShape)
+                        )
+                    }
                 }
             }
         }
