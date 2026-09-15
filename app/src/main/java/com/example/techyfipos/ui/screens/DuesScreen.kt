@@ -1253,7 +1253,24 @@ fun DuesScreen(
             },
             onAddNote = { text, cat ->
                 dossierData?.customer?.phone?.let { phone ->
-                    customerViewModel.addCustomerNote(phone, text, cat)
+                    customerViewModel.addCustomerNote(
+                        phone = phone,
+                        noteText = text,
+                        category = cat,
+                        onSuccess = { Toast.makeText(context, context.getString(R.string.customer_note_saved), Toast.LENGTH_SHORT).show() },
+                        onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
+                    )
+                }
+            },
+            onAdjustCredit = { delta, note ->
+                dossierData?.customer?.phone?.let { phone ->
+                    customerViewModel.adjustCustomerStoreCredit(
+                        phone = phone,
+                        delta = delta,
+                        note = note,
+                        onSuccess = { Toast.makeText(context, context.getString(R.string.store_credit_adjusted_success), Toast.LENGTH_SHORT).show() },
+                        onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
+                    )
                 }
             }
         )

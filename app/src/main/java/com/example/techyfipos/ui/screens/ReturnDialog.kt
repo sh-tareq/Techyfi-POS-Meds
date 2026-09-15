@@ -174,8 +174,8 @@ fun ReturnItemsDialog(
     }
     var selectedMfsChannel by remember { mutableStateOf("Nagad") }
 
-    var selectedReason by remember { mutableStateOf("Defective / Damaged") }
-    var isRestockEnabled by remember { mutableStateOf(false) }
+    var selectedReason by remember { mutableStateOf("Customer Request") }
+    var isRestockEnabled by remember { mutableStateOf(true) }
     var returnNote by remember { mutableStateOf("") }
 
     val refundTotal = displayItems.sumOf { item ->

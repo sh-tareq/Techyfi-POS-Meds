@@ -393,6 +393,24 @@ fun LoyaltyScreen(
             onEditCustomer = { customer ->
                 customerViewModel.clearDossier()
                 customerToEditInLoyalty = customer
+            },
+            onAddNote = { text, category ->
+                customerViewModel.addCustomerNote(
+                    phone = dossierData!!.customer.phone,
+                    noteText = text,
+                    category = category,
+                    onSuccess = { Toast.makeText(context, context.getString(R.string.customer_note_saved), Toast.LENGTH_SHORT).show() },
+                    onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
+                )
+            },
+            onAdjustCredit = { delta, note ->
+                customerViewModel.adjustCustomerStoreCredit(
+                    phone = dossierData!!.customer.phone,
+                    delta = delta,
+                    note = note,
+                    onSuccess = { Toast.makeText(context, context.getString(R.string.store_credit_adjusted_success), Toast.LENGTH_SHORT).show() },
+                    onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
+                )
             }
         )
     }

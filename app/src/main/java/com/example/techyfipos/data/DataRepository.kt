@@ -3183,6 +3183,11 @@ class DataRepository(
                         )
                     }
                 }
+            }
+
+            val loyaltyPhone = sale.loyaltyPhone?.takeIf { it.isNotBlank() } ?: phone?.takeIf { it.isNotBlank() }
+            if (!loyaltyPhone.isNullOrBlank() && sale.grandTotal > 0.0) {
+                val cleanLoyaltyPhone = normalizePhone(loyaltyPhone)
                 val loyaltySettings = getLoyaltySettings()
                 val takaPerPt = loyaltySettings.takaPerPoint.takeIf { it > 0.0 } ?: LOYALTY_TAKA_PER_POINT
                 val pointsBefore = floor(
@@ -3192,18 +3197,31 @@ class DataRepository(
                     (sale.grandTotal - alreadyRefunded - refundTotal).coerceAtLeast(0.0) / takaPerPt
                 ).toInt()
                 val pointsReversed = (pointsBefore - pointsAfter).coerceAtLeast(0)
-                customerLoyaltyDao.reverseEarnedPoints(
-                    normalizePhone(phone),
-                    pointsReversed,
-                    refundTotal,
-                    System.currentTimeMillis()
-                )
-                loyaltyTransactionDao.insert(LoyaltyTransaction(
-                    customerPhone = normalizePhone(phone), pointsChange = -pointsReversed,
-                    spendChange = -refundTotal, type = "RETURN",
-                    reason = "Return for invoice #$saleId", saleId = saleId,
-                    performedByName = sessionUser?.name
-                ))
+                if (pointsReversed > 0) {
+                    customerLoyaltyDao.reverseEarnedPoints(
+                        cleanLoyaltyPhone,
+                        pointsReversed,
+                        refundTotal,
+                        System.currentTimeMillis()
+                    )
+                    loyaltyTransactionDao.insert(LoyaltyTransaction(
+                        customerPhone = cleanLoyaltyPhone, pointsChange = -pointsReversed,
+                        spendChange = -refundTotal, type = "RETURN",
+                        reason = "Return for invoice #$saleId", saleId = saleId,
+                        performedByName = sessionUser?.name
+                    ))
+                }
+                val updatedLoyalty = customerLoyaltyDao.getLoyaltyByPhone(cleanLoyaltyPhone)
+                val existingCustomer = customerDao.getCustomerByPhone(cleanLoyaltyPhone)
+                if (existingCustomer != null) {
+                    val updatedLifetime = (existingCustomer.lifetimeSpent - refundTotal).coerceAtLeast(0.0)
+                    customerDao.upsertCustomer(
+                        existingCustomer.copy(
+                            loyaltyPoints = updatedLoyalty?.pointsBalance ?: 0,
+                            lifetimeSpent = updatedLifetime
+                        )
+                    )
+                }
             }
 
             val dueAdj = if (!phone.isNullOrBlank()) kotlin.math.min(

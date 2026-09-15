@@ -228,7 +228,8 @@ fun ExpensesScreen(
                     totalAmount = todayExpenseTotal,
                     expenseCount = todayExpenseCount,
                     categoryBreakdown = categoryBreakdown,
-                    onRecordExpense = { showAddExpenseDialog = true }
+                    onRecordExpense = { showAddExpenseDialog = true },
+                    onRecordCashIn = { showAddCashInDialog = true }
                 )
             }
 
@@ -489,6 +490,7 @@ fun ExpenseAnalyticsHeroCard(
     expenseCount: Int,
     categoryBreakdown: List<Pair<String, Double>>,
     onRecordExpense: () -> Unit,
+    onRecordCashIn: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -627,24 +629,52 @@ fun ExpenseAnalyticsHeroCard(
                     }
                 }
 
-                // Action Button: Record Expense
-                Button(
-                    onClick = onRecordExpense,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp)
+                // Action Buttons Row: Record Expense & Cash In
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("➕", fontSize = 13.sp)
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.expense_add_expense_button),
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 12.5.sp,
-                        color = Color.White
-                    )
+                    Button(
+                        onClick = onRecordExpense,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) {
+                        Text("➕", fontSize = 12.sp)
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.expense_add_expense_button),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = Color.White
+                        )
+                    }
+
+                    Button(
+                        onClick = onRecordCashIn,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) {
+                        Text("💵", fontSize = 12.sp)
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.expense_add_cash_in_button),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }

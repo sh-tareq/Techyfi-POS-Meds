@@ -671,10 +671,16 @@ fun ReceiptSummaryDialog(
                                         contentDescription = "$selectedRollWidth mm Thermal Receipt",
                                         modifier = Modifier
                                             .then(
-                                                if (isZoomed) Modifier.fillMaxWidth(1.25f)
-                                                else if (selectedRollWidth == 58) Modifier.fillMaxWidth(0.78f)
+                                                if (selectedRollWidth == 58) Modifier.fillMaxWidth(0.78f)
                                                 else Modifier.fillMaxWidth(0.94f)
                                             )
+                                            .graphicsLayer {
+                                                if (isZoomed) {
+                                                    scaleX = 1.25f
+                                                    scaleY = 1.25f
+                                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
+                                                }
+                                            }
                                             .clip(RoundedCornerShape(6.dp))
                                     )
                                 } else {
