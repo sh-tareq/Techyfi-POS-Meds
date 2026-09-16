@@ -2376,6 +2376,7 @@ fun CartScreen(
                                 val snapshotMrpSubtotal = mrpSubtotal
                                 val snapshotMrpSavings = saleModeMrpSavings
                                 val snapshotIsSaleMode = (priceMode == PriceMode.DISCOUNTED)
+                                val snapshotWholesaleSavings = if (priceMode == PriceMode.WHOLESALE) priceModesSavings else 0.0
                                 val snapshotDiscount = discountVal
                                 val snapshotTax = taxVal
                                 val snapshotGrandTotal = grandTotal
@@ -2447,6 +2448,7 @@ fun CartScreen(
                                             mrpSubtotal = snapshotMrpSubtotal,
                                             mrpSavings = snapshotMrpSavings,
                                             isSaleMode = snapshotIsSaleMode,
+                                            wholesaleSavings = snapshotWholesaleSavings,
                                             showItemWiseMrpDiscount = invoiceSettingsData.showItemWiseMrpDiscount,
                                             storeCreditApplied = snapshotStoreCreditApplied.takeIf { it > 0.0 },
                                             voucherCode = snapshotVoucherCode,
@@ -2641,6 +2643,7 @@ fun CartScreen(
                 val snapshotMrpSubtotal = mrpSubtotal
                 val snapshotMrpSavings = saleModeMrpSavings
                 val snapshotIsSaleMode = (priceMode == PriceMode.DISCOUNTED)
+                val snapshotWholesaleSavings = if (priceMode == PriceMode.WHOLESALE) priceModesSavings else 0.0
                 val snapshotDiscount = discountVal
                 val snapshotTax = taxVal
                 val snapshotGrandTotal = grandTotal
@@ -2716,6 +2719,7 @@ fun CartScreen(
                             mrpSubtotal = snapshotMrpSubtotal,
                             mrpSavings = snapshotMrpSavings,
                             isSaleMode = snapshotIsSaleMode,
+                            wholesaleSavings = snapshotWholesaleSavings,
                             showItemWiseMrpDiscount = invoiceSettingsData.showItemWiseMrpDiscount,
                             storeCreditApplied = snapshotStoreCreditApplied.takeIf { it > 0.0 },
                             voucherCode = snapshotVoucherCode,

@@ -1780,6 +1780,8 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     private val allReturnItems: StateFlow<List<com.example.techyfipos.data.db.ReturnItem>> = repository.allReturnItems
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    private val allProductsForProfit: StateFlow<List<Product>> =
+        repository.allProducts.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val allReturnsFlow: StateFlow<List<com.example.techyfipos.data.db.Return>> = allReturns
     val allReturnItemsFlow: StateFlow<List<com.example.techyfipos.data.db.ReturnItem>> = allReturnItems
@@ -1811,7 +1813,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         val discount = calculateDiscountValue(sale.subtotal, sale.discountAmount, sale.isPercentageDiscount)
         val netRevBeforeRefund = (grossRevenue - discount).coerceAtLeast(0.0)
 
-        val productMap = repository.allProducts.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList()).value.associateBy { it.barcode }
+        val productMap = allProductsForProfit.value.associateBy { it.barcode }
         var totalGrossCogs = 0.0
         val itemsProfitList = saleWithItems.items.map { item ->
             val liveCost = productMap[item.productBarcode]?.purchasePrice
