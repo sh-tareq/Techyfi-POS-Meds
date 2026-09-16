@@ -134,6 +134,7 @@ fun AddEditProductDialog(
     val settingsDataStore = remember { SettingsDataStore(context) }
     val customCategories by settingsDataStore.categoriesFlow.collectAsStateWithLifecycle(initialValue = CategoryItem.defaultCategories())
     val coroutineScope = rememberCoroutineScope()
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     var showCategoryManagerDialog by remember { mutableStateOf(false) }
     var categoryDropdownExpanded by remember { mutableStateOf(false) }
     var category by remember { mutableStateOf(initialCategory) }
@@ -1549,13 +1550,34 @@ fun AddEditProductDialog(
 
                         if (isEdit && onDelete != null) {
                             OutlinedButton(
-                                onClick = onDelete,
+                                onClick = { showDeleteConfirm = true },
                                 shape = RoundedCornerShape(9.dp),
                                 border = BorderStroke(1.dp, Color(0xFFFCA5A5)),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
                                 modifier = Modifier.height(44.dp)
                             ) {
                                 Text(stringResource(R.string.products_delete_action), fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                            }
+
+                            if (showDeleteConfirm) {
+                                AlertDialog(
+                                    onDismissRequest = { showDeleteConfirm = false },
+                                    title = { Text(stringResource(R.string.dialog_delete_product_title)) },
+                                    text = { Text(stringResource(R.string.dialog_delete_product_body)) },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            showDeleteConfirm = false
+                                            onDelete()
+                                        }) {
+                                            Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showDeleteConfirm = false }) {
+                                            Text(stringResource(R.string.action_cancel))
+                                        }
+                                    }
+                                )
                             }
                         }
 

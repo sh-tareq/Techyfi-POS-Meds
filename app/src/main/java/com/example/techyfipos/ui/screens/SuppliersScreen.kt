@@ -2,6 +2,9 @@ package com.example.techyfipos.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -104,6 +107,9 @@ fun SuppliersScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var dueFilter by remember { mutableStateOf(SupplierDueFilter.ALL) }
+    var showAllInvoices by remember { mutableStateOf(false) }
+    var showAllPayments by remember { mutableStateOf(false) }
+    val ledgerDateFormat = remember { SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()) }
 
     val totalPurchased = remember(suppliers) { suppliers.sumOf { it.totalPurchased } }
     val totalDue = remember(suppliers) { suppliers.sumOf { it.totalDue } }
@@ -611,16 +617,20 @@ fun SuppliersScreen(
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
-                items(purchaseInvoices.take(20), key = { "invoice-${it.id}" }) { invoice ->
+                val displayedInvoices = if (showAllInvoices) purchaseInvoices else purchaseInvoices.take(20)
+                items(displayedInvoices, key = { "invoice-${it.id}" }) { invoice ->
                     val supplierName = suppliers.firstOrNull { it.id == invoice.supplierId }?.companyName
                         ?: stringResource(R.string.supplier_unknown_vendor)
                     OutlinedCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("#${invoice.invoiceNumber}", fontWeight = FontWeight.Bold)
                                 Text(formatTaka(invoice.totalAmount), fontWeight = FontWeight.ExtraBold)
                             }
-                            Text(supplierName, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text(supplierName, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                                Text(ledgerDateFormat.format(Date(invoice.timestamp)), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                            }
                             Text(
                                 stringResource(
                                     R.string.supplier_purchase_ledger_payment,
@@ -629,6 +639,16 @@ fun SuppliersScreen(
                                 fontSize = 11.5.sp
                             )
                             if (invoice.itemsSummary.isNotBlank()) Text(invoice.itemsSummary, fontSize = 11.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                if (!showAllInvoices && purchaseInvoices.size > 20) {
+                    item(key = "view_all_invoices") {
+                        TextButton(
+                            onClick = { showAllInvoices = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.supplier_view_all_invoices, purchaseInvoices.size))
                         }
                     }
                 }
@@ -642,7 +662,8 @@ fun SuppliersScreen(
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
-                items(supplierPayments.take(20), key = { "payment-${it.id}" }) { payment ->
+                val displayedPayments = if (showAllPayments) supplierPayments else supplierPayments.take(20)
+                items(displayedPayments, key = { "payment-${it.id}" }) { payment ->
                     val supplierName = suppliers.firstOrNull { it.id == payment.supplierId }?.companyName
                         ?: stringResource(R.string.supplier_unknown_vendor)
                     OutlinedCard(Modifier.fillMaxWidth()) {
@@ -654,9 +675,20 @@ fun SuppliersScreen(
                             Column {
                                 Text(supplierName, fontWeight = FontWeight.Bold)
                                 Text(payment.paymentMethod, fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(ledgerDateFormat.format(Date(payment.timestamp)), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
                                 payment.referenceNote?.takeIf { it.isNotBlank() }?.let { Text(it, fontSize = 11.sp) }
                             }
                             Text(formatTaka(payment.amountPaid), fontWeight = FontWeight.ExtraBold, color = Color(0xFF10B981))
+                        }
+                    }
+                }
+                if (!showAllPayments && supplierPayments.size > 20) {
+                    item(key = "view_all_payments") {
+                        TextButton(
+                            onClick = { showAllPayments = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.supplier_view_all_payments, supplierPayments.size))
                         }
                     }
                 }

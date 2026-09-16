@@ -217,6 +217,7 @@ class DataRepository(
     fun hasPermission(permissionKey: String): Boolean = AppPermissions.hasPermission(sessionUser, permissionKey)
 
     class UnauthorizedException(message: String) : Exception(message)
+    class InsufficientStockException(message: String) : Exception(message)
 
     fun requireOwnerSession() {
         if (!isSessionOwner()) throw UnauthorizedException("Owner privileges required for this action")
@@ -834,10 +835,11 @@ class DataRepository(
                 .groupBy { it.first.barcode }
                 .forEach { (barcode, lines) ->
                     val requested = lines.sumOf { it.second }
-                    if (productDao.decrementStockIfAvailable(barcode, requested) != 1) {
-                        require(allowNegative) {
-                            "Insufficient stock for ${lines.first().first.name}. Enable 'Allow Negative Stock' or elevate with Manager PIN."
-                        }
+                    val rows = productDao.decrementStockIfAvailable(barcode, requested)
+                    if (rows == 0 && !allowNegative) {
+                        throw InsufficientStockException("Insufficient stock for ${lines.first().first.name}")
+                    }
+                    if (rows != 1) {
                         productDao.adjustStockQty(barcode, -requested, allowNegative)
                     }
                 }

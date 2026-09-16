@@ -2132,5 +2132,11 @@
     <string name="customer_ledger_name">গ্রাহক: %1$s</string>
     <string name="customer_ledger_phone">ফোন: %1$s</string>
     <string name="users_pin_leave_blank_placeholder">বর্তমান পিন রাখতে ফাঁকা রাখুন</string>
+    <string name="dialog_delete_product_title">পণ্য মুছুন</string>
+    <string name="dialog_delete_product_body">আপনি কি নিশ্চিতভাবে এই পণ্যটি মুছে ফেলতে চান? এই কাজটি পূর্বাবস্থায় ফিরিয়ে আনা যাবে না।</string>
+    <string name="action_delete">মুছুন</string>
+    <string name="action_cancel">বাতিল</string>
+    <string name="supplier_view_all_invoices">সকল %1$dটি ক্রয় ইনভয়েস দেখুন →</string>
+    <string name="supplier_view_all_payments">সকল %1$dটি পেমেন্ট দেখুন →</string>
 </resources>
 

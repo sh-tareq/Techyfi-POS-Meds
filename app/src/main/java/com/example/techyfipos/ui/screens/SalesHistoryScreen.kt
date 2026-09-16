@@ -651,7 +651,7 @@ fun SalesHistoryScreen(
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
-                    if (searchQuery.isNotBlank() || filterCount > 0) {
+                    if (searchQuery.isNotBlank() || filterCount > 0 || selectedPeriod != HistoryReportPeriod.TODAY) {
                         Spacer(Modifier.height(8.dp))
                         TextButton(onClick = {
                             searchQuery = ""
@@ -659,6 +659,9 @@ fun SalesHistoryScreen(
                             customerFilter = HistoryCustomerFilter.ALL
                             minimumTotal = ""
                             maximumTotal = ""
+                            selectedPeriod = HistoryReportPeriod.TODAY
+                            customStart = System.currentTimeMillis()
+                            customEnd = System.currentTimeMillis()
                         }) { Text("Clear search and filters") }
                     }
                 }
@@ -1020,7 +1023,7 @@ fun SalesHistoryScreen(
                             draftCustomerFilter = HistoryCustomerFilter.ALL
                             draftMinimumTotal = ""
                             draftMaximumTotal = ""
-                            selectedPeriod = HistoryReportPeriod.ALL_TIME
+                            selectedPeriod = HistoryReportPeriod.TODAY
                             customStart = System.currentTimeMillis()
                             customEnd = System.currentTimeMillis()
                         },

@@ -2132,6 +2132,12 @@
     <string name="customer_ledger_name">Customer: %1$s</string>
     <string name="customer_ledger_phone">Phone: %1$s</string>
     <string name="users_pin_leave_blank_placeholder">Leave blank to keep current PIN</string>
+    <string name="dialog_delete_product_title">Delete Product</string>
+    <string name="dialog_delete_product_body">Are you sure you want to delete this product? This action cannot be undone.</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="supplier_view_all_invoices">View all %1$d purchase invoices →</string>
+    <string name="supplier_view_all_payments">View all %1$d payments →</string>
 </resources>
 
 
