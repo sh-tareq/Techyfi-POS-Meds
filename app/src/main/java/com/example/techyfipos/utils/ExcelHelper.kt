@@ -227,55 +227,60 @@ object ExcelHelper {
     }
 
     fun exportProducts(products: List<Product>, outputStream: OutputStream) {
-        val workbook = XSSFWorkbook()
-        val sheet = workbook.createSheet("Products")
+        val workbook = SXSSFWorkbook(100)
+        try {
+            val sheet = workbook.createSheet("Products")
 
-        // Header style
-        val headerFont = workbook.createFont().apply {
-            bold = true
-            color = IndexedColors.WHITE.getIndex()
-        }
-        val headerStyle = workbook.createCellStyle().apply {
-            fillForegroundColor = IndexedColors.DARK_BLUE.getIndex()
-            setFillPattern(FillPatternType.SOLID_FOREGROUND)
-            setFont(headerFont)
-        }
+            // Header style
+            val headerFont = workbook.createFont().apply {
+                bold = true
+                color = IndexedColors.WHITE.getIndex()
+            }
+            val headerStyle = workbook.createCellStyle().apply {
+                fillForegroundColor = IndexedColors.DARK_BLUE.getIndex()
+                setFillPattern(FillPatternType.SOLID_FOREGROUND)
+                setFont(headerFont)
+            }
 
-        val headers = arrayOf(
-            "Barcode", "Product Name", "Category", "Purchase Price", "Selling Price", "Stock Qty",
-            "Reorder Level", "Unit", "Wholesale Price", "MRP Price", "Discounted Price",
-            "Mfg or Pkg Type", "Mfg or Pkg Date", "Expiry Date", "Image URI"
-        )
-        val headerRow = sheet.createRow(0)
-        for (i in headers.indices) {
-            val cell = headerRow.createCell(i)
-            cell.setCellValue(headers[i])
-            cell.cellStyle = headerStyle
-            sheet.setColumnWidth(i, 20 * 256)
-        }
+            val headers = arrayOf(
+                "Barcode", "Product Name", "Category", "Purchase Price", "Selling Price", "Stock Qty",
+                "Reorder Level", "Unit", "Wholesale Price", "MRP Price", "Discounted Price",
+                "Mfg or Pkg Type", "Mfg or Pkg Date", "Expiry Date", "Image URI"
+            )
+            val headerRow = sheet.createRow(0)
+            for (i in headers.indices) {
+                val cell = headerRow.createCell(i)
+                cell.setCellValue(headers[i])
+                cell.cellStyle = headerStyle
+                sheet.setColumnWidth(i, 20 * 256)
+            }
 
-        var rowIdx = 1
-        for (p in products) {
-            val row = sheet.createRow(rowIdx++)
-            row.createCell(0).setCellValue(p.barcode)
-            row.createCell(1).setCellValue(p.name)
-            row.createCell(2).setCellValue(p.category)
-            row.createCell(3).setCellValue(p.purchasePrice)
-            row.createCell(4).setCellValue(p.sellingPrice)
-            row.createCell(5).setCellValue(p.stockQty.toDouble())
-            row.createCell(6).setCellValue(p.reorderLevel.toDouble())
-            row.createCell(7).setCellValue(p.unit)
-            row.createCell(8).setCellValue(p.wholesalePrice)
-            row.createCell(9).setCellValue(p.mrpPrice)
-            row.createCell(10).setCellValue(p.discountedPrice)
-            row.createCell(11).setCellValue(p.mfgOrPkgType ?: "")
-            row.createCell(12).setCellValue(p.mfgOrPkgDate ?: "")
-            row.createCell(13).setCellValue(p.expiryDate ?: "")
-            row.createCell(14).setCellValue(p.imageUri ?: "")
-        }
+            var rowIdx = 1
+            for (p in products) {
+                val row = sheet.createRow(rowIdx++)
+                row.createCell(0).setCellValue(p.barcode)
+                row.createCell(1).setCellValue(p.name)
+                row.createCell(2).setCellValue(p.category)
+                row.createCell(3).setCellValue(p.purchasePrice)
+                row.createCell(4).setCellValue(p.sellingPrice)
+                row.createCell(5).setCellValue(p.stockQty.toDouble())
+                row.createCell(6).setCellValue(p.reorderLevel.toDouble())
+                row.createCell(7).setCellValue(p.unit)
+                row.createCell(8).setCellValue(p.wholesalePrice)
+                row.createCell(9).setCellValue(p.mrpPrice)
+                row.createCell(10).setCellValue(p.discountedPrice)
+                row.createCell(11).setCellValue(p.mfgOrPkgType ?: "")
+                row.createCell(12).setCellValue(p.mfgOrPkgDate ?: "")
+                row.createCell(13).setCellValue(p.expiryDate ?: "")
+                row.createCell(14).setCellValue(p.imageUri ?: "")
+            }
 
-        workbook.write(outputStream)
-        workbook.close()
+            workbook.write(outputStream)
+        } finally {
+            try { workbook.dispose() } catch (_: Exception) {}
+            try { workbook.close() } catch (_: Exception) {}
+            try { outputStream.close() } catch (_: Exception) {}
+        }
     }
 
     fun importProducts(inputStream: InputStream): ImportResult {
@@ -568,8 +573,9 @@ object ExcelHelper {
         chargesList: List<DueCharge> = emptyList(),
         outputStream: OutputStream
     ) {
-        val workbook = XSSFWorkbook()
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        val workbook = SXSSFWorkbook(100)
+        try {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 
         val headerFont = workbook.createFont().apply {
             bold = true
@@ -899,8 +905,12 @@ object ExcelHelper {
             }
         }
 
-        workbook.write(outputStream)
-        workbook.close()
+            workbook.write(outputStream)
+        } finally {
+            try { workbook.dispose() } catch (_: Exception) {}
+            try { workbook.close() } catch (_: Exception) {}
+            try { outputStream.close() } catch (_: Exception) {}
+        }
     }
 
     fun exportCustomerStatementExcel(
@@ -910,8 +920,9 @@ object ExcelHelper {
         dueChargesList: List<DueCharge> = emptyList(),
         outputStream: OutputStream
     ) {
-        val workbook = XSSFWorkbook()
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        val workbook = SXSSFWorkbook(100)
+        try {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 
         val titleFont = workbook.createFont().apply {
             bold = true
@@ -1075,13 +1086,18 @@ object ExcelHelper {
             val sc2 = cSumRow.getCell(2); sc2.setCellValue(totalChargesAmt); sc2.cellStyle = summaryCurrencyStyle
         }
 
-        workbook.write(outputStream)
-        workbook.close()
+            workbook.write(outputStream)
+        } finally {
+            try { workbook.dispose() } catch (_: Exception) {}
+            try { workbook.close() } catch (_: Exception) {}
+            try { outputStream.close() } catch (_: Exception) {}
+        }
     }
 
     fun exportCustomers(customersList: List<Customer>, outputStream: OutputStream) {
-        val workbook = XSSFWorkbook()
-        val sheet = workbook.createSheet("Customers Directory")
+        val workbook = SXSSFWorkbook(100)
+        try {
+            val sheet = workbook.createSheet("Customers Directory")
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 
         val headerFont = workbook.createFont().apply {
@@ -1162,13 +1178,18 @@ object ExcelHelper {
         summaryRow.getCell(6).setCellValue(totalLifetimeSpendSum)
         summaryRow.getCell(7).setCellValue(totalDuesSum)
 
-        workbook.write(outputStream)
-        workbook.close()
+            workbook.write(outputStream)
+        } finally {
+            try { workbook.dispose() } catch (_: Exception) {}
+            try { workbook.close() } catch (_: Exception) {}
+            try { outputStream.close() } catch (_: Exception) {}
+        }
     }
 
     fun exportExpenses(expensesList: List<Expense>, outputStream: OutputStream) {
-        val workbook = XSSFWorkbook()
-        val sheet = workbook.createSheet("Expenses & Cash In")
+        val workbook = SXSSFWorkbook(100)
+        try {
+            val sheet = workbook.createSheet("Expenses & Cash In")
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 
         val headerFont = workbook.createFont().apply {
@@ -1231,8 +1252,12 @@ object ExcelHelper {
         summaryRowCashIn.getCell(0).setCellValue("TOTAL CASH IN")
         summaryRowCashIn.getCell(6).setCellValue(totalCashInSum)
 
-        workbook.write(outputStream)
-        workbook.close()
+            workbook.write(outputStream)
+        } finally {
+            try { workbook.dispose() } catch (_: Exception) {}
+            try { workbook.close() } catch (_: Exception) {}
+            try { outputStream.close() } catch (_: Exception) {}
+        }
     }
 
     fun exportSalesReport(
@@ -1240,8 +1265,9 @@ object ExcelHelper {
         dateRangeLabel: String,
         outputStream: OutputStream
     ) {
-        val workbook = XSSFWorkbook()
-        val headerFont = workbook.createFont().apply {
+        val workbook = SXSSFWorkbook(100)
+        try {
+            val headerFont = workbook.createFont().apply {
             bold = true
             color = IndexedColors.WHITE.getIndex()
         }
@@ -1359,8 +1385,12 @@ object ExcelHelper {
             }
         }
 
-        workbook.write(outputStream)
-        workbook.close()
+            workbook.write(outputStream)
+        } finally {
+            try { workbook.dispose() } catch (_: Exception) {}
+            try { workbook.close() } catch (_: Exception) {}
+            try { outputStream.close() } catch (_: Exception) {}
+        }
     }
 }
 
