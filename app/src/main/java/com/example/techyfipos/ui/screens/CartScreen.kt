@@ -81,7 +81,6 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
@@ -634,7 +633,7 @@ fun CartScreen(
                     productName = item.product.name,
                     onDismiss = { editingNoteItemIndex = null },
                     onSave = { newNote ->
-                        cartViewModel.updateItemNote(idx, newNote)
+                        cartViewModel.setItemNote(idx, newNote)
                         editingNoteItemIndex = null
                     }
                 )
@@ -811,7 +810,7 @@ fun CartScreen(
                             unitPrice = cartViewModel.effectivePriceFor(item),
                             allowNegativeInventory = invoiceSettingsData.allowNegativeInventory || isOwner || isSupervisor,
                             onQuantityChanged = { qty ->
-                                cartViewModel.updateQuantity(
+                                cartViewModel.setQuantity(
                                     product = item.product,
                                     newQty = qty,
                                     allowNegative = invoiceSettingsData.allowNegativeInventory || isOwner || isSupervisor
@@ -1298,7 +1297,7 @@ fun CartScreen(
                                         onClick = {
                                             val credAmt = if (redeemedVoucher != null) redeemedVoucher!!.remainingBalance else availableCustCredit
                                             val applyAmt = kotlin.math.min(credAmt, grandTotal)
-                                            cartViewModel.applyStoreCredit(applyAmt)
+                                            cartViewModel.setStoreCreditApplied(applyAmt)
                                         },
                                         shape = RoundedCornerShape(8.dp),
                                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
@@ -1371,7 +1370,7 @@ fun CartScreen(
                                                 onSuccess = { voucher ->
                                                     isCheckingVoucher = false
                                                     val applyAmt = kotlin.math.min(voucher.remainingBalance, grandTotal)
-                                                    cartViewModel.applyStoreCredit(applyAmt)
+                                                    cartViewModel.setStoreCreditApplied(applyAmt)
                                                     showVoucherRedeemDialog = false
                                                     Toast.makeText(context, context.getString(R.string.voucher_toast_applied, formatTaka(applyAmt)), Toast.LENGTH_SHORT).show()
                                                 },
@@ -1854,9 +1853,9 @@ fun CartScreen(
                                     isApplied = loyaltyDiscount > 0.0,
                                     onToggle = { apply ->
                                         if (apply) {
-                                            cartViewModel.applyLoyaltyDiscount(loyaltyCustomer!!.pointsBalance.toDouble())
+                                            cartViewModel.setLoyaltyDiscount(loyaltyCustomer!!.pointsBalance.toDouble())
                                         } else {
-                                            cartViewModel.applyLoyaltyDiscount(0.0)
+                                            cartViewModel.setLoyaltyDiscount(0.0)
                                         }
                                     }
                                 )

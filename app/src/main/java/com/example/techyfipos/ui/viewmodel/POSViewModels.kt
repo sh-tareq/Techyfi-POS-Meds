@@ -375,25 +375,20 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _amountPaid.value = amount.coerceAtLeast(0.0)
     }
 
-    fun setLoyaltyDiscount(discount: Double) {
-        _loyaltyDiscount.value = discount.coerceAtLeast(0.0)
-    }
-
     fun setLoyaltyCustomer(customer: CustomerLoyalty?) {
         _loyaltyCustomer.value = customer
     }
 
     fun setStoreCreditApplied(amount: Double) {
-        _storeCreditApplied.value = amount.coerceAtLeast(0.0)
+        val maxAvailable = (_resolvedCustomer.value?.storeCredit ?: 0.0) + (_redeemedVoucher.value?.remainingBalance ?: 0.0)
+        _storeCreditApplied.value = amount.coerceIn(0.0, maxAvailable)
     }
+
+    @Deprecated("Use setStoreCreditApplied instead", ReplaceWith("setStoreCreditApplied(amount)"))
+    fun applyStoreCredit(amount: Double) = setStoreCreditApplied(amount)
 
     fun setRedeemedVoucher(voucher: StoreCreditVoucher?) {
         _redeemedVoucher.value = voucher
-    }
-
-    fun applyStoreCredit(amount: Double) {
-        val maxAvailable = (_resolvedCustomer.value?.storeCredit ?: 0.0) + (_redeemedVoucher.value?.remainingBalance ?: 0.0)
-        _storeCreditApplied.value = amount.coerceIn(0.0, maxAvailable)
     }
 
     fun removeStoreCredit() {
@@ -426,7 +421,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 }
                 withContext(Dispatchers.Main) {
                     _redeemedVoucher.value = voucher
-                    applyStoreCredit(voucher.remainingBalance)
+                    setStoreCreditApplied(voucher.remainingBalance)
                     onSuccess(voucher)
                 }
             } catch (e: Exception) {
@@ -542,19 +537,23 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun applyLoyaltyDiscount(discount: Double) {
+    fun setLoyaltyDiscount(discount: Double) {
         val settings = repository.getLoyaltySettings()
         val ptCashVal = settings.pointCashValue.takeIf { it > 0.0 } ?: 1.0
         val availablePoints = loyaltyCustomer.value?.pointsBalance ?: 0
         val maxDiscountFromPoints = availablePoints * ptCashVal
         val payableBeforeLoyalty = (subtotal.value - discountValue.value + taxValue.value).coerceAtLeast(0.0)
-        val maxAllowedBillDiscount = payableBeforeLoyalty * (settings.maxBillPercentPayable.coerceIn(1, 100) / 100.0)
+        val maxAllowedBillPercent = settings.maxBillPercentPayable.coerceIn(1, 100) / 100.0
+        val maxAllowedBillDiscount = payableBeforeLoyalty * maxAllowedBillPercent
         val maxPossibleDiscount = minOf(maxDiscountFromPoints, maxAllowedBillDiscount)
         _loyaltyDiscount.value = discount
             .takeIf(Double::isFinite)
             ?.coerceIn(0.0, maxPossibleDiscount)
             ?: 0.0
     }
+
+    @Deprecated("Use setLoyaltyDiscount instead", ReplaceWith("setLoyaltyDiscount(discount)"))
+    fun applyLoyaltyDiscount(discount: Double) = setLoyaltyDiscount(discount)
 
     suspend fun getCustomerDue(phone: String): CustomerDue? = repository.getCustomerDueByPhone(phone)
     suspend fun getCustomerByPhone(phone: String): Customer? = repository.getCustomerByPhone(phone)
@@ -1050,7 +1049,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         persistCartSnapshot(current)
     }
 
-    fun updateItemNote(index: Int, note: String?) {
+    fun setItemNote(index: Int, note: String?) {
         val current = _cartItems.value.toMutableList()
         if (index in current.indices) {
             current[index] = current[index].copy(note = note?.takeIf { it.isNotBlank() })
@@ -1058,6 +1057,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             persistCartSnapshot(current)
         }
     }
+
+    @Deprecated("Use setItemNote instead", ReplaceWith("setItemNote(index, note)"))
+    fun updateItemNote(index: Int, note: String?) = setItemNote(index, note)
 
     fun addToCart(product: Product, quantity: Double = 1.0): Boolean {
         if (!quantity.isFinite() || quantity <= 0.0) return false
@@ -1103,7 +1105,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         )
     }
 
-    fun updateQuantity(product: Product, newQty: Double, allowNegative: Boolean = false) {
+    fun setQuantity(product: Product, newQty: Double, allowNegative: Boolean = false) {
         if (newQty <= 0.0) {
             removeFromCart(product)
             return
@@ -1118,13 +1120,17 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             }
             if (safeQuantity <= 0.0) {
                 removeFromCart(product)
-                return
+            } else {
+                currentList[index] = currentList[index].copy(quantity = safeQuantity)
+                _cartItems.value = currentList
+                persistCartSnapshot(currentList)
             }
-            currentList[index] = currentList[index].copy(quantity = safeQuantity)
-            _cartItems.value = currentList
-            persistCartSnapshot(currentList)
         }
     }
+
+    @Deprecated("Use setQuantity instead", ReplaceWith("setQuantity(product, newQty, allowNegative)"))
+    fun updateQuantity(product: Product, newQty: Double, allowNegative: Boolean = false) =
+        setQuantity(product, newQty, allowNegative)
 
     fun removeFromCart(product: Product) {
         val currentList = _cartItems.value.filter { it.product.barcode != product.barcode }
@@ -3997,9 +4003,12 @@ class RegisterClosingViewModel(private val repository: DataRepository) : ViewMod
     val shiftState: StateFlow<RegisterShiftState?> = repository.registerShiftState
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    fun updateStartingFloat(amount: Double) {
+    fun setStartingFloat(amount: Double) {
         viewModelScope.launch(Dispatchers.IO) { repository.updateRegisterShiftStartingFloat(amount) }
     }
+
+    @Deprecated("Use setStartingFloat instead", ReplaceWith("setStartingFloat(amount)"))
+    fun updateStartingFloat(amount: Double) = setStartingFloat(amount)
 
     fun closeRegister(
         startingFloat: Double,

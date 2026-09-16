@@ -176,11 +176,15 @@ fun LockScreen(
         mode = if (authViewModel.hasAnyUsers()) LockMode.LOGIN else LockMode.SETUP
     }
 
-    LaunchedEffect(lockoutSeconds) {
-        if (lockoutSeconds > 0L) {
+    var successfulLogin by remember { mutableStateOf(false) }
+
+    LaunchedEffect(lockoutSeconds, successfulLogin) {
+        if (!successfulLogin && lockoutSeconds > 0L) {
             pin = ""
             delay(1000L)
-            authViewModel.refreshLockout()
+            if (!successfulLogin) {
+                authViewModel.refreshLockout()
+            }
         }
     }
 
@@ -203,6 +207,7 @@ fun LockScreen(
                 if (confirmPin == pin) {
                     authViewModel.createOwnerAccount(ownerName, pin) { success ->
                         if (success) {
+                            successfulLogin = true
                             triggerHaptic(strong = true)
                             onUnlocked()
                         } else {
@@ -226,6 +231,7 @@ fun LockScreen(
                             triggerErrorShake(loginMessage ?: "Incorrect PIN. Try again.")
                             pin = ""
                         } else {
+                            successfulLogin = true
                             triggerHaptic(strong = true)
                             onUnlocked()
                         }

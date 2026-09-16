@@ -230,7 +230,7 @@ fun RegisterCloseScreen(
     val startingFloat = startingFloatText.toDoubleOrNull() ?: 0.0
     LaunchedEffect(startingFloat) {
         if (startingFloat != (shiftState?.startingFloat ?: 0.0)) {
-            registerClosingViewModel.updateStartingFloat(startingFloat)
+            registerClosingViewModel.setStartingFloat(startingFloat)
         }
     }
 
@@ -1072,7 +1072,7 @@ fun RegisterCloseScreen(
             onDismiss = { showEditFloatDialog = false },
             onSave = { newFloat ->
                 startingFloatText = newFloat.toString().removeSuffix(".0")
-                registerClosingViewModel.updateStartingFloat(newFloat)
+                registerClosingViewModel.setStartingFloat(newFloat)
                 showEditFloatDialog = false
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar("Opening float updated: ${formatTaka(newFloat)}")
@@ -2202,11 +2202,22 @@ fun EditStartingFloatDialog(
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )
+                val isBareDot = floatText.trim() == "."
                 OutlinedTextField(
                     value = floatText,
-                    onValueChange = { input -> floatText = input.filter { it.isDigit() || it == '.' } },
+                    onValueChange = { input ->
+                        val filtered = input.filter { it.isDigit() || it == '.' }
+                        floatText = if (filtered == ".") "0." else filtered
+                    },
                     label = { Text(stringResource(R.string.register_close_starting_float_label)) },
-                    supportingText = { Text(stringResource(R.string.register_close_starting_float_hint)) },
+                    supportingText = {
+                        if (isBareDot) {
+                            Text("Please enter a valid amount", color = MaterialTheme.colorScheme.error)
+                        } else {
+                            Text(stringResource(R.string.register_close_starting_float_hint))
+                        }
+                    },
+                    isError = isBareDot,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(10.dp),
@@ -2218,9 +2229,11 @@ fun EditStartingFloatDialog(
                     }
                     Button(
                         onClick = {
-                            val v = floatText.toDoubleOrNull() ?: 0.0
+                            val clean = if (floatText.trim() == ".") "0.0" else floatText.trim()
+                            val v = clean.toDoubleOrNull() ?: 0.0
                             onSave(v)
                         },
+                        enabled = !isBareDot,
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Save")

@@ -392,7 +392,7 @@ fun ScannerScreen(
                                     quantity = cartItems.firstOrNull { it.product.barcode == product.barcode }?.quantity ?: 0.0,
                                     onUndo = {
                                         cartItems.firstOrNull { it.product.barcode == product.barcode }?.let { item ->
-                                            cartViewModel.updateQuantity(product, (item.quantity - 1.0).coerceAtLeast(0.0))
+                                            cartViewModel.setQuantity(product, (item.quantity - 1.0).coerceAtLeast(0.0))
                                         }
                                         lastScannedProduct = null
                                         scannerViewModel.dismissAddedConfirmation()
@@ -489,7 +489,7 @@ fun ScannerScreen(
                     total = grandTotal,
                     allowNegativeInventory = allowNegativeInventory,
                     onQuantityChanged = { prod, qty ->
-                        cartViewModel.updateQuantity(prod, qty, allowNegative = allowNegativeInventory)
+                        cartViewModel.setQuantity(prod, qty, allowNegative = allowNegativeInventory)
                     },
                     onRemove = { prod -> cartViewModel.removeFromCart(prod) },
                     onDismiss = { showCartPreview = false },
@@ -1102,7 +1102,7 @@ private fun TabletSplitTerminal(
                                     item = item,
                                     allowNegativeInventory = allowNegativeInventory,
                                     onQuantityChange = { newQty ->
-                                        cartViewModel.updateQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
+                                        cartViewModel.setQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
                                     },
                                     onRemove = {
                                         cartViewModel.removeFromCart(item.product)
@@ -1418,7 +1418,7 @@ private fun TabletSplitTerminal(
                                     item = item,
                                     allowNegativeInventory = allowNegativeInventory,
                                     onQuantityChange = { newQty ->
-                                        cartViewModel.updateQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
+                                        cartViewModel.setQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
                                     },
                                     onRemove = {
                                         cartViewModel.removeFromCart(item.product)
