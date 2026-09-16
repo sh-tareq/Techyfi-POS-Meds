@@ -2144,6 +2144,14 @@
     <string name="cart_discount_percent_label">Percentage (%)</string>
     <string name="cart_line_total_preview">Line total: %1$s</string>
     <string name="cart_discounted_unit_price">Discounted unit: %1$s</string>
+
+    <!-- Badges Localization -->
+    <plurals name="products_sku_count">
+        <item quantity="one">%d SKU</item>
+        <item quantity="other">%d SKUs</item>
+    </plurals>
+    <string name="sales_report_live_badge">Live Report</string>
+    <string name="register_close_z_report_badge">Z-Report</string>
 </resources>
 
 

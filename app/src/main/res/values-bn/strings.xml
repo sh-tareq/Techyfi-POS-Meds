@@ -2144,5 +2144,13 @@
     <string name="cart_discount_percent_label">শতকরা (%)</string>
     <string name="cart_line_total_preview">মোট মূল্য: %1$s</string>
     <string name="cart_discounted_unit_price">ছাড়ের পর প্রতি একক: %1$s</string>
+
+    <!-- Badges Localization -->
+    <plurals name="products_sku_count">
+        <item quantity="one">%d স্কু</item>
+        <item quantity="other">%d স্কু</item>
+    </plurals>
+    <string name="sales_report_live_badge">লাইভ রিপোর্ট</string>
+    <string name="register_close_z_report_badge">জেড-রিপোর্ট</string>
 </resources>
 

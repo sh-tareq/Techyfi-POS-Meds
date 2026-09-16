@@ -693,7 +693,7 @@ fun ProductsScreen(
                     title = {
                         PosTopAppBarTitle(
                             title = stringResource(R.string.products),
-                            metricBadge = if (allProductsList.isNotEmpty()) "${allProductsList.size} SKUs" else null,
+                            metricBadge = if (allProductsList.isNotEmpty()) pluralStringResource(R.plurals.products_sku_count, allProductsList.size, allProductsList.size) else null,
                             badgeColor = PosSectionColors.Products,
                             isTablet = isTablet,
                             icon = { size -> Realistic3DProductsBoxIcon(size = size) }

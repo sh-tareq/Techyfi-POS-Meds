@@ -138,7 +138,7 @@ fun SuppliersScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.supplier_screen_title),
-                        metricBadge = "${suppliers.size} Vendors",
+                        metricBadge = pluralStringResource(R.plurals.supplier_active_vendors_count, suppliers.size, suppliers.size),
                         badgeColor = PosSectionColors.Suppliers,
                         isTablet = isTablet,
                         icon = { size -> Realistic3DSupplierTruckIcon(size = size) }

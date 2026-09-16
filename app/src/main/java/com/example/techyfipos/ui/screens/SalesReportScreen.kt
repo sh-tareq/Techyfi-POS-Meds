@@ -218,7 +218,7 @@ fun SalesReportScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.sales_report_title),
-                        metricBadge = "Live Report",
+                        metricBadge = stringResource(R.string.sales_report_live_badge),
                         badgeColor = PosSectionColors.SalesReport,
                         icon = { size -> Realistic3DReportChartIcon(size = size) }
                     )

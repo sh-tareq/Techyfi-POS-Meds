@@ -384,9 +384,6 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _storeCreditApplied.value = amount.coerceIn(0.0, maxAvailable)
     }
 
-    @Deprecated("Use setStoreCreditApplied instead", ReplaceWith("setStoreCreditApplied(amount)"))
-    fun applyStoreCredit(amount: Double) = setStoreCreditApplied(amount)
-
     fun setRedeemedVoucher(voucher: StoreCreditVoucher?) {
         _redeemedVoucher.value = voucher
     }
@@ -551,9 +548,6 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             ?.coerceIn(0.0, maxPossibleDiscount)
             ?: 0.0
     }
-
-    @Deprecated("Use setLoyaltyDiscount instead", ReplaceWith("setLoyaltyDiscount(discount)"))
-    fun applyLoyaltyDiscount(discount: Double) = setLoyaltyDiscount(discount)
 
     suspend fun getCustomerDue(phone: String): CustomerDue? = repository.getCustomerDueByPhone(phone)
     suspend fun getCustomerByPhone(phone: String): Customer? = repository.getCustomerByPhone(phone)
@@ -1059,9 +1053,6 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    @Deprecated("Use setItemNote instead", ReplaceWith("setItemNote(index, note)"))
-    fun updateItemNote(index: Int, note: String?) = setItemNote(index, note)
-
     fun addToCart(product: Product, quantity: Double = 1.0): Boolean {
         if (!quantity.isFinite() || quantity <= 0.0) return false
         val currentList = _cartItems.value.toMutableList()
@@ -1128,10 +1119,6 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             }
         }
     }
-
-    @Deprecated("Use setQuantity instead", ReplaceWith("setQuantity(product, newQty, allowNegative)"))
-    fun updateQuantity(product: Product, newQty: Double, allowNegative: Boolean = false) =
-        setQuantity(product, newQty, allowNegative)
 
     fun removeFromCart(product: Product) {
         val currentList = _cartItems.value.filter { it.product.barcode != product.barcode }
@@ -4007,9 +3994,6 @@ class RegisterClosingViewModel(private val repository: DataRepository) : ViewMod
     fun setStartingFloat(amount: Double) {
         viewModelScope.launch(Dispatchers.IO) { repository.updateRegisterShiftStartingFloat(amount) }
     }
-
-    @Deprecated("Use setStartingFloat instead", ReplaceWith("setStartingFloat(amount)"))
-    fun updateStartingFloat(amount: Double) = setStartingFloat(amount)
 
     fun closeRegister(
         startingFloat: Double,

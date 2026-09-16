@@ -360,7 +360,6 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29,
                         MIGRATION_29_30, MIGRATION_30_31
                     )
-                    .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5)
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)
                 .build()

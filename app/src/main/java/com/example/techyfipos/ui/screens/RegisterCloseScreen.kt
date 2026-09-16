@@ -270,7 +270,7 @@ fun RegisterCloseScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = stringResource(R.string.register_close_screen_title),
-                        metricBadge = "Z-Report",
+                        metricBadge = stringResource(R.string.register_close_z_report_badge),
                         badgeColor = PosSectionColors.RegisterClose,
                         isTablet = isTablet,
                         icon = { size -> Realistic3DRegisterReceiptIcon(size = size) }
