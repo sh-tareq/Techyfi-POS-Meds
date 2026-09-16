@@ -1832,6 +1832,13 @@ private fun SaleDetailDialog(
             } catch (_: Exception) {}
         }
 
+        // Fallback for pure Store Credit payment (no split JSON)
+        if ((appliedSc == null || appliedSc == 0.0) &&
+            saleWithItems.sale.paymentMethod.equals("Store Credit", ignoreCase = true)) {
+            val sc = saleWithItems.sale.storeCreditApplied
+            if (sc > 0.0) appliedSc = sc
+        }
+
         BillData(
             saleId = saleWithItems.sale.id,
             timestampMillis = saleWithItems.sale.timestamp,

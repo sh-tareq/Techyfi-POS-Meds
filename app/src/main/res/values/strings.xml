@@ -510,7 +510,7 @@
     <string name="owner_only_expenses">Expenses are owner-only</string>
     <string name="owner_only_suppliers">Suppliers are owner-only</string>
     <string name="owner_only_settings">Settings are owner-only</string>
-    <string name="owner_only_register_close">Register close is owner-only</string>
+    <string name="owner_only_register_close">Permission required to close register</string>
     <string name="more_report_subtitle">Sales analysis, profit &amp; trends</string>
     <string name="more_report_badge">Insights</string>
     <string name="more_expenses_subtitle">Petty cash, bills &amp; salaries</string>

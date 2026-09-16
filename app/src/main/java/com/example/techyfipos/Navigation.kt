@@ -1181,7 +1181,7 @@ fun MainNavigation() {
                                     expenseViewModel = expenseViewModel,
                                     onBack = { backStack.removeLastOrNull() },
                                     onNavigateToDayStartClose = {
-                                        if (isOwner) {
+                                        if (isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)) {
                                             if (backStack.lastOrNull() != RegisterClose) { backStack.add(RegisterClose) }
                                         } else {
                                             android.widget.Toast.makeText(context, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()

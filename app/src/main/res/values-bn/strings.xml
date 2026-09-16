@@ -510,7 +510,7 @@
     <string name="owner_only_expenses">শুধুমাত্র মালিক খরচ পরিচালনা করতে পারবেন</string>
     <string name="owner_only_suppliers">শুধুমাত্র মালিক সরবরাহকারী পরিচালনা করতে পারবেন</string>
     <string name="owner_only_settings">শুধুমাত্র মালিক সেটিংস পরিবর্তন করতে পারবেন</string>
-    <string name="owner_only_register_close">শুধুমাত্র মালিক রেজিস্টার বন্ধ করতে পারবেন</string>
+    <string name="owner_only_register_close">রেজিস্টার বন্ধের জন্য অনুমতি প্রয়োজন</string>
     <string name="more_report_subtitle">বিক্রয় বিশ্লেষণ, লাভ ও প্রবণতা</string>
     <string name="more_report_badge">বিশ্লেষণ</string>
     <string name="more_expenses_subtitle">খুচরা নগদ, বিল ও বেতন</string>
