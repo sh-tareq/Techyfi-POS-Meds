@@ -1275,7 +1275,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 paymentMethod = methodToSave,
                 customerName = customerName.value.takeIf { it.isNotBlank() },
                 customerPhone = customerPhone.value.takeIf { it.isNotBlank() },
-                amountPaid = if (methodToSave == "Split") splitPayments.value.filterNot { it.method.equals("Due", ignoreCase = true) }.sumOf { it.amount } else amountPaid.value,
+                amountPaid = if (isSplitPayment.value && splitPayments.value.isNotEmpty()) splitPayments.value.filterNot { it.method.equals("Due", ignoreCase = true) }.sumOf { it.amount } else amountPaid.value,
                 walletPhone = walletPhone.value.takeIf { it.isNotBlank() },
                 cardType = cardType.value.takeIf { paymentMethod.value == "Card" },
                 cardLastFour = cardLastFour.value.takeIf { it.isNotBlank() },

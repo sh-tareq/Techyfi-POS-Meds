@@ -1872,7 +1872,8 @@ fun CartScreen(
                             grandTotal = grandTotal,
                             splitPayments = splitPayments
                         )
-                        val effectiveChangeAmt = (effectiveAmountPaid - grandTotal).coerceAtLeast(0.0)
+                        val remainingAfterSC = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+                        val effectiveChangeAmt = (effectiveAmountPaid - remainingAfterSC).coerceAtLeast(0.0)
 
                         // Cash Paid & Change calculation for Cash Payment
                         AnimatedVisibility(visible = !isSplitPayment && paymentMethod == "Cash") {
@@ -2008,8 +2009,8 @@ fun CartScreen(
                                             )
                                         }
                                     }
-                                } else if (paidVal > 0.0 && paidVal < grandTotal) {
-                                    val shortAmt = grandTotal - paidVal
+                                } else if (paidVal > 0.0 && paidVal < remainingAfterSC) {
+                                    val shortAmt = remainingAfterSC - paidVal
                                     Surface(
                                         color = Color(0xFFDC2626).copy(alpha = 0.10f),
                                         shape = RoundedCornerShape(8.dp),
