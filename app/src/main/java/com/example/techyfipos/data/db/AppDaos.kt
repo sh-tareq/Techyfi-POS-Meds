@@ -699,6 +699,9 @@ interface StoreCreditVoucherDao {
 
     @Query("SELECT * FROM store_credit_vouchers WHERE sourceReturnId = :returnId ORDER BY issuedAt DESC LIMIT 1")
     suspend fun getVoucherByReturnId(returnId: Long): StoreCreditVoucher?
+
+    @Query("SELECT * FROM store_credit_vouchers WHERE customerPhone = :phone AND status = 'ACTIVE' LIMIT 1")
+    suspend fun getActiveVoucherForPhone(phone: String): StoreCreditVoucher?
 }
 
 @Dao

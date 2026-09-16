@@ -646,6 +646,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 if (!sp.walletPhone.isNullOrBlank()) put("walletPhone", sp.walletPhone)
                 if (!sp.cardType.isNullOrBlank()) put("cardType", sp.cardType)
                 if (!sp.cardLastFour.isNullOrBlank()) put("cardLastFour", sp.cardLastFour)
+                if (!sp.referenceNote.isNullOrBlank()) put("referenceNote", sp.referenceNote)
             }
             arr.put(obj)
         }

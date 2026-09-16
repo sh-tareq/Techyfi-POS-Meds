@@ -792,6 +792,7 @@ class DataRepository(
                     storeCreditToUse = splitStoreCredit
                 }
             }
+            var activeVoucherForPlainSC: StoreCreditVoucher? = null
             if (storeCreditToUse > 0.0) {
                 require(!normalizedCustomerPhone.isNullOrBlank()) { "Customer phone number is required for Store Credit payment" }
                 val currentCust = customerDao.getCustomerByPhone(normalizedCustomerPhone)
@@ -800,6 +801,15 @@ class DataRepository(
                     "Insufficient store credit balance (Available: ৳${availableCredit})"
                 }
                 customerDao.adjustCustomerStoreCredit(normalizedCustomerPhone, -storeCreditToUse, System.currentTimeMillis())
+                if (paymentMethod.equals("Store Credit", ignoreCase = true) || splitEntries == null) {
+                    val activeVoucher = storeCreditVoucherDao.getActiveVoucherForPhone(normalizedCustomerPhone)
+                    if (activeVoucher != null) {
+                        activeVoucherForPlainSC = activeVoucher
+                        val newBalance = (activeVoucher.remainingBalance - storeCreditToUse).coerceAtLeast(0.0)
+                        val newStatus = if (newBalance < 0.01) "EXHAUSTED" else "ACTIVE"
+                        storeCreditVoucherDao.updateVoucherBalance(activeVoucher.code, newBalance, newStatus)
+                    }
+                }
             }
 
             val cartHash = cartItemsWithNotes.sortedBy { it.first.barcode }
@@ -878,6 +888,7 @@ class DataRepository(
                         balanceAfter = updatedCust?.storeCredit ?: 0.0,
                         type = "SALE_REDEMPTION",
                         referenceInvoiceId = saleId,
+                        voucherCode = activeVoucherForPlainSC?.code,
                         note = "Redeemed at sale #$saleId"
                     )
                 )
