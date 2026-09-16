@@ -655,8 +655,17 @@ interface SaleAuditLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAuditLog(log: SaleAuditLog): Long
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAuditLogIgnore(log: SaleAuditLog): Long
+
     @Query("SELECT * FROM sale_audit_logs ORDER BY timestamp DESC")
     fun getAllAuditLogs(): Flow<List<SaleAuditLog>>
+
+    @Query("SELECT * FROM sale_audit_logs ORDER BY timestamp DESC")
+    suspend fun getAllAuditLogsOnce(): List<SaleAuditLog>
+
+    @Query("SELECT * FROM sale_audit_logs ORDER BY timestamp DESC")
+    suspend fun getAll(): List<SaleAuditLog>
 
     @Query("SELECT * FROM sale_audit_logs WHERE saleId = :saleId ORDER BY timestamp DESC")
     suspend fun getAuditLogsForSale(saleId: Long): List<SaleAuditLog>
@@ -667,8 +676,17 @@ interface ExpenseAuditLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAuditLog(log: ExpenseAuditLog): Long
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAuditLogIgnore(log: ExpenseAuditLog): Long
+
     @Query("SELECT * FROM expense_audit_logs ORDER BY timestamp DESC")
     fun getAllAuditLogs(): Flow<List<ExpenseAuditLog>>
+
+    @Query("SELECT * FROM expense_audit_logs ORDER BY timestamp DESC")
+    suspend fun getAllAuditLogsOnce(): List<ExpenseAuditLog>
+
+    @Query("SELECT * FROM expense_audit_logs ORDER BY timestamp DESC")
+    suspend fun getAll(): List<ExpenseAuditLog>
 
     @Query("SELECT * FROM expense_audit_logs WHERE expenseId = :expenseId ORDER BY timestamp DESC")
     suspend fun getAuditLogsForExpense(expenseId: Long): List<ExpenseAuditLog>

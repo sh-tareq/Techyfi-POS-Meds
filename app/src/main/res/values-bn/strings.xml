@@ -1764,6 +1764,8 @@
     <string name="perm_cat_dues">গ্রাহক, বকেয়া খাতা ও ক্রেডিট</string>
     <string name="perm_customers_view_title">গ্রাহক তালিকা ও বিবরণ</string>
     <string name="perm_customers_view_desc">গ্রাহক ডিরেক্টরি, প্রোফাইল, ক্রয়ের ইতিহাস ও তথ্য দেখুন</string>
+    <string name="perm_customers_edit_title">গ্রাহক সম্পাদনা ও মুছুন</string>
+    <string name="perm_customers_edit_desc">গ্রাহক তৈরি, প্রোফাইল সম্পাদনা, সংরক্ষণ বা মুছে ফেলা</string>
     <string name="perm_dues_view_title">বকেয়া খাতা দর্শন</string>
     <string name="perm_dues_view_desc">গ্রাহকের বকেয়া ব্যালেন্স ও মেয়াদের হিসাব দেখা</string>
     <string name="perm_dues_add_due_title">সরাসরি বকেয়া যোগ</string>

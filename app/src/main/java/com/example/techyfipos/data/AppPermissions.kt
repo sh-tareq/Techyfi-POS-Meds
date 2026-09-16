@@ -47,6 +47,7 @@ object AppPermissions {
 
     // 4. Customer Dues & Credit
     const val CUSTOMERS_VIEW = "customers.view"
+    const val CUSTOMERS_EDIT = "customers.edit"
     const val DUES_VIEW = "dues.view"
     const val DUES_ADD_DUE = "dues.add_due"
     const val DUES_COLLECT_PAYMENT = "dues.collect_payment"
@@ -80,7 +81,7 @@ object AppPermissions {
         SALES_SELL, SALES_APPLY_DISCOUNT, SALES_HIGH_DISCOUNT, SALES_PRICE_TIER, SALES_HOLD_CART, SALES_VOID_CART, SALES_EDIT_INVOICE,
         RETURNS_PROCESS, RETURNS_CASH_REFUND, RETURNS_DELETE_SALE,
         INVENTORY_VIEW, INVENTORY_ADD_EDIT, INVENTORY_ADJUST_STOCK, INVENTORY_VIEW_COSTS, INVENTORY_PRINT_LABELS, INVENTORY_DELETE,
-        CUSTOMERS_VIEW, DUES_VIEW, DUES_ADD_DUE, DUES_COLLECT_PAYMENT, DUES_OVERRIDE_LIMIT, DUES_SEND_REMINDERS,
+        CUSTOMERS_VIEW, CUSTOMERS_EDIT, DUES_VIEW, DUES_ADD_DUE, DUES_COLLECT_PAYMENT, DUES_OVERRIDE_LIMIT, DUES_SEND_REMINDERS,
         REPORTS_VIEW_DAILY, REPORTS_VIEW_PNL, REPORTS_CLOSE_REGISTER, REPORTS_VIEW_Z_REPORT, REPORTS_EXPORT_EXCEL,
         LOYALTY_MANAGE,
         SUPPLIERS_MANAGE,
@@ -94,7 +95,7 @@ object AppPermissions {
         SALES_SELL, SALES_APPLY_DISCOUNT, SALES_HIGH_DISCOUNT, SALES_PRICE_TIER, SALES_HOLD_CART, SALES_VOID_CART, SALES_EDIT_INVOICE,
         RETURNS_PROCESS, RETURNS_CASH_REFUND,
         INVENTORY_VIEW, INVENTORY_ADD_EDIT, INVENTORY_ADJUST_STOCK, INVENTORY_VIEW_COSTS, INVENTORY_PRINT_LABELS,
-        CUSTOMERS_VIEW, DUES_VIEW, DUES_ADD_DUE, DUES_COLLECT_PAYMENT, DUES_OVERRIDE_LIMIT, DUES_SEND_REMINDERS,
+        CUSTOMERS_VIEW, CUSTOMERS_EDIT, DUES_VIEW, DUES_ADD_DUE, DUES_COLLECT_PAYMENT, DUES_OVERRIDE_LIMIT, DUES_SEND_REMINDERS,
         REPORTS_VIEW_DAILY, REPORTS_VIEW_PNL, REPORTS_CLOSE_REGISTER, REPORTS_VIEW_Z_REPORT, REPORTS_EXPORT_EXCEL,
         LOYALTY_MANAGE,
         SUPPLIERS_MANAGE,
@@ -148,6 +149,7 @@ object AppPermissions {
             titleRes = R.string.perm_cat_dues,
             permissions = listOf(
                 PermissionItem(CUSTOMERS_VIEW, R.string.perm_customers_view_title, R.string.perm_customers_view_desc),
+                PermissionItem(CUSTOMERS_EDIT, R.string.perm_customers_edit_title, R.string.perm_customers_edit_desc),
                 PermissionItem(DUES_VIEW, R.string.perm_dues_view_title, R.string.perm_dues_view_desc),
                 PermissionItem(DUES_ADD_DUE, R.string.perm_dues_add_due_title, R.string.perm_dues_add_due_desc),
                 PermissionItem(DUES_COLLECT_PAYMENT, R.string.perm_dues_collect_payment_title, R.string.perm_dues_collect_payment_desc),

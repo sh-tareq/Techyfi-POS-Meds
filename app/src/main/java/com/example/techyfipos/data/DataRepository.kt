@@ -1195,7 +1195,7 @@ class DataRepository(
     }
 
     suspend fun upsertCustomer(customer: Customer) = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.DUES_ADD_DUE)
+        requirePermission(AppPermissions.CUSTOMERS_EDIT)
         val cleanPhone = normalizePhone(customer.phone)
         database.withDriverTransaction {
             val timestamp = System.currentTimeMillis()
@@ -1213,7 +1213,7 @@ class DataRepository(
     }
 
     suspend fun archiveCustomer(phone: String) = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.DUES_ADD_DUE)
+        requirePermission(AppPermissions.CUSTOMERS_EDIT)
         val normalized = normalizePhone(phone)
         val activeDue = customerDueDao.getActiveCustomerDueByPhone(normalized)
         val outstanding = activeDue?.outstandingAmount ?: 0.0
@@ -1226,7 +1226,7 @@ class DataRepository(
     }
 
     suspend fun deleteCustomerPermanently(phone: String) = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.DUES_ADD_DUE)
+        requirePermission(AppPermissions.CUSTOMERS_EDIT)
         val normalized = normalizePhone(phone)
         val activeDue = customerDueDao.getActiveCustomerDueByPhone(normalized)
         val outstanding = activeDue?.outstandingAmount ?: 0.0
@@ -2082,6 +2082,43 @@ class DataRepository(
                     put("note", expense.note ?: ""); put("timestamp", expense.timestamp); put("cashierName", expense.cashierName)
                 }) }
             })
+
+            // Sale audit logs
+            val saleAuditLogs = saleAuditLogDao.getAll()
+            backupJson.put("saleAuditLogs", JSONArray().apply {
+                saleAuditLogs.forEach { log ->
+                    put(JSONObject().apply {
+                        put("id", log.id)
+                        put("saleId", log.saleId)
+                        put("action", log.action)
+                        put("performedBy", log.cashierName)
+                        put("cashierName", log.cashierName)
+                        put("reason", log.reason)
+                        put("grandTotal", log.grandTotal)
+                        put("paymentMethod", log.paymentMethod)
+                        put("timestamp", log.timestamp)
+                    })
+                }
+            })
+
+            // Expense audit logs  
+            val expenseAuditLogs = expenseAuditLogDao.getAll()
+            backupJson.put("expenseAuditLogs", JSONArray().apply {
+                expenseAuditLogs.forEach { log ->
+                    put(JSONObject().apply {
+                        put("id", log.id)
+                        put("expenseId", log.expenseId)
+                        put("action", log.action)
+                        put("performedBy", log.userName)
+                        put("userName", log.userName)
+                        put("reason", log.reason)
+                        put("amount", log.amount)
+                        put("category", log.category)
+                        put("paymentSource", log.paymentSource)
+                        put("timestamp", log.timestamp)
+                    })
+                }
+            })
             backupJson.put("suppliers", JSONArray().apply {
                 suppliersList.forEach { supplier -> put(JSONObject().apply {
                     put("id", supplier.id); put("name", supplier.name); put("companyName", supplier.companyName)
@@ -2495,18 +2532,23 @@ class DataRepository(
                 }
               }
 
+              val expenseIdMap = mutableMapOf<Long, Long>()
               if (backupJson.has("expenses")) {
                 val array = backupJson.getJSONArray("expenses")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
-                    expenseDao.insertExpense(Expense(
-                        id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), title = value.optString("title", "Expense"),
+                    val backupExpenseId = value.optLong("id", 0L)
+                    val newExpenseId = expenseDao.insertExpense(Expense(
+                        id = if (mode == BackupImportMode.MERGE) 0L else backupExpenseId, title = value.optString("title", "Expense"),
                         category = value.optString("category", "Other"), type = value.optString("type", "EXPENSE"),
                         amount = value.optDouble("amount", 0.0), paymentSource = value.optString("paymentSource", "Cash"),
                         note = value.optString("note").takeIf { it.isNotBlank() },
                         timestamp = value.optLong("timestamp", System.currentTimeMillis()),
                         cashierName = value.optString("cashierName", "Admin")
                     ))
+                    if (mode == BackupImportMode.MERGE && backupExpenseId != 0L) {
+                        expenseIdMap[backupExpenseId] = newExpenseId
+                    }
                 }
               }
 
@@ -2785,6 +2827,65 @@ class DataRepository(
                           voucherCode = if (obj.isNull("voucherCode")) null else obj.optString("voucherCode"),
                           note = noteText,
                           timestamp = ts
+                      ))
+                  }
+              }
+
+              // Restore sale audit logs
+              backupJson.optJSONArray("saleAuditLogs")?.let { arr ->
+                  for (i in 0 until arr.length()) {
+                      val obj = arr.getJSONObject(i)
+                      val backupSaleId = obj.optLong("saleId")
+                      val resolvedSaleId = if (mode == BackupImportMode.MERGE) {
+                          saleIdMap[backupSaleId] ?: backupSaleId
+                      } else backupSaleId
+
+                      val cashier = when {
+                          obj.has("cashierName") && !obj.isNull("cashierName") -> obj.optString("cashierName")
+                          obj.has("performedBy") && !obj.isNull("performedBy") -> obj.optString("performedBy")
+                          else -> "Admin"
+                      }
+                      val reason = if (obj.isNull("reason")) "" else obj.optString("reason", "")
+
+                      saleAuditLogDao.insertAuditLogIgnore(SaleAuditLog(
+                          id = if (mode == BackupImportMode.MERGE) 0L else obj.optLong("id", 0L),
+                          saleId = resolvedSaleId,
+                          action = obj.optString("action", "DELETED"),
+                          reason = reason,
+                          grandTotal = obj.optDouble("grandTotal", 0.0),
+                          paymentMethod = obj.optString("paymentMethod", "Cash"),
+                          cashierName = cashier,
+                          timestamp = obj.optLong("timestamp", System.currentTimeMillis())
+                      ))
+                  }
+              }
+
+              // Restore expense audit logs
+              backupJson.optJSONArray("expenseAuditLogs")?.let { arr ->
+                  for (i in 0 until arr.length()) {
+                      val obj = arr.getJSONObject(i)
+                      val backupExpenseId = obj.optLong("expenseId")
+                      val resolvedExpenseId = if (mode == BackupImportMode.MERGE) {
+                          expenseIdMap[backupExpenseId] ?: backupExpenseId
+                      } else backupExpenseId
+
+                      val user = when {
+                          obj.has("userName") && !obj.isNull("userName") -> obj.optString("userName")
+                          obj.has("performedBy") && !obj.isNull("performedBy") -> obj.optString("performedBy")
+                          else -> "Admin"
+                      }
+                      val reason = if (obj.isNull("reason")) "" else obj.optString("reason", "")
+
+                      expenseAuditLogDao.insertAuditLogIgnore(ExpenseAuditLog(
+                          id = if (mode == BackupImportMode.MERGE) 0L else obj.optLong("id", 0L),
+                          expenseId = resolvedExpenseId,
+                          action = obj.optString("action", "DELETED"),
+                          reason = reason,
+                          amount = obj.optDouble("amount", 0.0),
+                          category = obj.optString("category", "Other"),
+                          paymentSource = obj.optString("paymentSource", "Cash"),
+                          userName = user,
+                          timestamp = obj.optLong("timestamp", System.currentTimeMillis())
                       ))
                   }
               }

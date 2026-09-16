@@ -1768,6 +1768,8 @@
     <string name="perm_cat_dues">Customers, Dues &amp; Khata</string>
     <string name="perm_customers_view_title">View &amp; Manage Customers</string>
     <string name="perm_customers_view_desc">View customer directory, profiles, purchase history, and details</string>
+    <string name="perm_customers_edit_title">Edit &amp; Delete Customers</string>
+    <string name="perm_customers_edit_desc">Create, edit profiles, archive, or remove customer accounts</string>
     <string name="perm_dues_view_title">View Dues Ledger</string>
     <string name="perm_dues_view_desc">Inspect customer credit balances and aging analysis</string>
     <string name="perm_dues_add_due_title">Add Direct Due</string>
