@@ -30,6 +30,7 @@ object AppPermissions {
     const val SALES_PRICE_TIER = "sales.price_tier"
     const val SALES_HOLD_CART = "sales.hold_cart"
     const val SALES_VOID_CART = "sales.void_cart"
+    const val SALES_EDIT_INVOICE = "sales.edit_invoice"
 
     // 2. Returns & Refunds
     const val RETURNS_PROCESS = "returns.process"
@@ -45,6 +46,7 @@ object AppPermissions {
     const val INVENTORY_DELETE = "inventory.delete"
 
     // 4. Customer Dues & Credit
+    const val CUSTOMERS_VIEW = "customers.view"
     const val DUES_VIEW = "dues.view"
     const val DUES_ADD_DUE = "dues.add_due"
     const val DUES_COLLECT_PAYMENT = "dues.collect_payment"
@@ -75,10 +77,10 @@ object AppPermissions {
     const val SYSTEM_FACTORY_RESET = "system.factory_reset"
 
     val ALL_PERMISSIONS = listOf(
-        SALES_SELL, SALES_APPLY_DISCOUNT, SALES_HIGH_DISCOUNT, SALES_PRICE_TIER, SALES_HOLD_CART, SALES_VOID_CART,
+        SALES_SELL, SALES_APPLY_DISCOUNT, SALES_HIGH_DISCOUNT, SALES_PRICE_TIER, SALES_HOLD_CART, SALES_VOID_CART, SALES_EDIT_INVOICE,
         RETURNS_PROCESS, RETURNS_CASH_REFUND, RETURNS_DELETE_SALE,
         INVENTORY_VIEW, INVENTORY_ADD_EDIT, INVENTORY_ADJUST_STOCK, INVENTORY_VIEW_COSTS, INVENTORY_PRINT_LABELS, INVENTORY_DELETE,
-        DUES_VIEW, DUES_ADD_DUE, DUES_COLLECT_PAYMENT, DUES_OVERRIDE_LIMIT, DUES_SEND_REMINDERS,
+        CUSTOMERS_VIEW, DUES_VIEW, DUES_ADD_DUE, DUES_COLLECT_PAYMENT, DUES_OVERRIDE_LIMIT, DUES_SEND_REMINDERS,
         REPORTS_VIEW_DAILY, REPORTS_VIEW_PNL, REPORTS_CLOSE_REGISTER, REPORTS_VIEW_Z_REPORT, REPORTS_EXPORT_EXCEL,
         LOYALTY_MANAGE,
         SUPPLIERS_MANAGE,
@@ -89,10 +91,10 @@ object AppPermissions {
     val DEFAULT_OWNER_PERMISSIONS: Set<String> = ALL_PERMISSIONS.toSet()
 
     val DEFAULT_MANAGER_PERMISSIONS: Set<String> = setOf(
-        SALES_SELL, SALES_APPLY_DISCOUNT, SALES_HIGH_DISCOUNT, SALES_PRICE_TIER, SALES_HOLD_CART, SALES_VOID_CART,
+        SALES_SELL, SALES_APPLY_DISCOUNT, SALES_HIGH_DISCOUNT, SALES_PRICE_TIER, SALES_HOLD_CART, SALES_VOID_CART, SALES_EDIT_INVOICE,
         RETURNS_PROCESS, RETURNS_CASH_REFUND,
         INVENTORY_VIEW, INVENTORY_ADD_EDIT, INVENTORY_ADJUST_STOCK, INVENTORY_VIEW_COSTS, INVENTORY_PRINT_LABELS,
-        DUES_VIEW, DUES_ADD_DUE, DUES_COLLECT_PAYMENT, DUES_OVERRIDE_LIMIT, DUES_SEND_REMINDERS,
+        CUSTOMERS_VIEW, DUES_VIEW, DUES_ADD_DUE, DUES_COLLECT_PAYMENT, DUES_OVERRIDE_LIMIT, DUES_SEND_REMINDERS,
         REPORTS_VIEW_DAILY, REPORTS_VIEW_PNL, REPORTS_CLOSE_REGISTER, REPORTS_VIEW_Z_REPORT, REPORTS_EXPORT_EXCEL,
         LOYALTY_MANAGE,
         SUPPLIERS_MANAGE,
@@ -116,7 +118,8 @@ object AppPermissions {
                 PermissionItem(SALES_HIGH_DISCOUNT, R.string.perm_sales_high_discount_title, R.string.perm_sales_high_discount_desc),
                 PermissionItem(SALES_PRICE_TIER, R.string.perm_sales_price_tier_title, R.string.perm_sales_price_tier_desc),
                 PermissionItem(SALES_HOLD_CART, R.string.perm_sales_hold_cart_title, R.string.perm_sales_hold_cart_desc),
-                PermissionItem(SALES_VOID_CART, R.string.perm_sales_void_cart_title, R.string.perm_sales_void_cart_desc)
+                PermissionItem(SALES_VOID_CART, R.string.perm_sales_void_cart_title, R.string.perm_sales_void_cart_desc),
+                PermissionItem(SALES_EDIT_INVOICE, R.string.perm_sales_edit_invoice_title, R.string.perm_sales_edit_invoice_desc)
             )
         ),
         PermissionCategory(
@@ -144,6 +147,7 @@ object AppPermissions {
             id = "dues",
             titleRes = R.string.perm_cat_dues,
             permissions = listOf(
+                PermissionItem(CUSTOMERS_VIEW, R.string.perm_customers_view_title, R.string.perm_customers_view_desc),
                 PermissionItem(DUES_VIEW, R.string.perm_dues_view_title, R.string.perm_dues_view_desc),
                 PermissionItem(DUES_ADD_DUE, R.string.perm_dues_add_due_title, R.string.perm_dues_add_due_desc),
                 PermissionItem(DUES_COLLECT_PAYMENT, R.string.perm_dues_collect_payment_title, R.string.perm_dues_collect_payment_desc),

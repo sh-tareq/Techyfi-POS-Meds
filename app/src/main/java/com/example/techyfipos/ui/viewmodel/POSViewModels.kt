@@ -3287,7 +3287,7 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         .map { it?.maxDiscountPercent ?: 10.0 }
         .stateIn(viewModelScope, SharingStarted.Eagerly, 10.0)
 
-    private val _lockoutSeconds = MutableStateFlow(0L)
+    private val _lockoutSeconds = MutableStateFlow((repository.loginLockRemainingMillis() + 999L) / 1000L)
     val lockoutSeconds: StateFlow<Long> = _lockoutSeconds.asStateFlow()
 
     fun refreshLockout() {

@@ -305,6 +305,7 @@ fun MainNavigation() {
         val ownerOnlySettingsText = stringResource(R.string.owner_only_settings)
         val ownerOnlyRegisterCloseText = stringResource(R.string.owner_only_register_close)
         val ownerOnlyLoyaltyText = stringResource(R.string.owner_only_loyalty)
+        val ownerOnlyCustomersText = stringResource(R.string.owner_only_customers)
         val backStack = rememberNavBackStack(Splash)
         val scope = rememberCoroutineScope()
 
@@ -531,8 +532,13 @@ fun MainNavigation() {
                     },
                     onNavigateToCustomers = {
                         showMoreHubSheet = false
-                        while (backStack.size > 1) { backStack.removeLastOrNull() }
-                        if (backStack.lastOrNull() != Customers) { backStack.add(Customers) }
+                        val canCustomers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
+                        if (canCustomers) {
+                            while (backStack.size > 1) { backStack.removeLastOrNull() }
+                            if (backStack.lastOrNull() != Customers) { backStack.add(Customers) }
+                        } else {
+                            android.widget.Toast.makeText(context, ownerOnlyCustomersText, android.widget.Toast.LENGTH_SHORT).show()
+                        }
                     },
                     isOwner = isOwner,
                     isSupervisor = isSupervisor,
@@ -1265,19 +1271,27 @@ fun MainNavigation() {
                                 }
                             }
                             entry<Customers> {
-                                CustomersScreen(
-                                    customerViewModel = customerViewModel,
-                                    onBack = { backStack.removeLastOrNull() },
-                                    onStartSaleForCustomer = { customer ->
-                                        cartViewModel.onCustomerPhoneChanged(customer.phone)
-                                        cartViewModel.setCustomerName(customer.name)
-                                        while (backStack.size > 1) { backStack.removeLastOrNull() }
-                                        backStack.add(Scanner)
-                                        android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
-                                    },
-                                    isTablet = isTablet,
-                                    modifier = Modifier.padding(contentPadding)
-                                )
+                                val canCustomers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
+                                if (!canCustomers) {
+                                    LaunchedEffect(Unit) {
+                                        android.widget.Toast.makeText(context, ownerOnlyCustomersText, android.widget.Toast.LENGTH_SHORT).show()
+                                        backStack.removeLastOrNull()
+                                    }
+                                } else {
+                                    CustomersScreen(
+                                        customerViewModel = customerViewModel,
+                                        onBack = { backStack.removeLastOrNull() },
+                                        onStartSaleForCustomer = { customer ->
+                                            cartViewModel.onCustomerPhoneChanged(customer.phone)
+                                            cartViewModel.setCustomerName(customer.name)
+                                            while (backStack.size > 1) { backStack.removeLastOrNull() }
+                                            backStack.add(Scanner)
+                                            android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
+                                        },
+                                        isTablet = isTablet,
+                                        modifier = Modifier.padding(contentPadding)
+                                    )
+                                }
                             }
                         }
                     )
@@ -1443,6 +1457,7 @@ private fun MoreOperationsHubContent(
     val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
     val canSuppliers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
     val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
+    val canCustomers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
     val canSettings = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
 
     val operationsList = buildList {
@@ -1525,11 +1540,12 @@ private fun MoreOperationsHubContent(
                 title = stringResource(R.string.customers_hub_title),
                 subtitle = stringResource(R.string.customers_hub_subtitle),
                 navType = Nav3DType.CUSTOMERS,
-                badge = stringResource(R.string.customers_badge),
-                badgeColor = Color(0xFF0D9488),
+                badge = if (canCustomers) stringResource(R.string.customers_badge) else stringResource(R.string.more_locked_badge),
+                badgeColor = if (canCustomers) Color(0xFF0D9488) else Color(0xFF64748B),
                 isSelected = currentKey == Customers,
                 category = OperationCategory.CRM,
-                isLocked = false,
+                isLocked = !canCustomers,
+                lockedMessage = stringResource(R.string.owner_only_customers),
                 onClick = onNavigateToCustomers
             )
         )

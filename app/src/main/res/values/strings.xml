@@ -442,6 +442,7 @@
     <string name="expense_cash_moved_banner">Cash Drawer &amp; Float balance is now securely tracked in Cash Register</string>
     <string name="expense_view_drawer_btn">View Drawer ➔</string>
     <string name="owner_only_loyalty">Loyalty management is owner-only</string>
+    <string name="owner_only_customers">Customer management requires permission</string>
     <string name="loyalty_screen_title">Customer Loyalty</string>
     <string name="loyalty_hub_subtitle">Members, points and purchase totals</string>
     <string name="loyalty_badge">Rewards</string>
@@ -1739,6 +1740,8 @@
     <string name="perm_sales_hold_cart_desc">Park active carts and restore held customer sessions</string>
     <string name="perm_sales_void_cart_title">Void Active Cart</string>
     <string name="perm_sales_void_cart_desc">Clear active cart containing items</string>
+    <string name="perm_sales_edit_invoice_title">Edit Sale Invoice</string>
+    <string name="perm_sales_edit_invoice_desc">Reopen completed sale for modification and re-checkout</string>
 
     <string name="perm_cat_returns">Returns &amp; Refunds</string>
     <string name="perm_returns_process_title">Process Product Return</string>
@@ -1762,7 +1765,9 @@
     <string name="perm_inventory_delete_title">Delete Product</string>
     <string name="perm_inventory_delete_desc">Permanently remove product from inventory</string>
 
-    <string name="perm_cat_dues">Customer Dues &amp; Khata</string>
+    <string name="perm_cat_dues">Customers, Dues &amp; Khata</string>
+    <string name="perm_customers_view_title">View &amp; Manage Customers</string>
+    <string name="perm_customers_view_desc">View customer directory, profiles, purchase history, and details</string>
     <string name="perm_dues_view_title">View Dues Ledger</string>
     <string name="perm_dues_view_desc">Inspect customer credit balances and aging analysis</string>
     <string name="perm_dues_add_due_title">Add Direct Due</string>

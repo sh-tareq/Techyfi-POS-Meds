@@ -1745,7 +1745,7 @@ private fun SaleDetailDialog(
 
     val canReturn = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_PROCESS)
     val canDelete = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
-    val canEdit = isOwner || isSupervisor
+    val canEdit = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_EDIT_INVOICE)
 
     // BillData.totalOutstandingDue isn't stored on the Sale row — it's only meaningful at the
     // moment of checkout — so reopening an old Due invoice from History must re-fetch the

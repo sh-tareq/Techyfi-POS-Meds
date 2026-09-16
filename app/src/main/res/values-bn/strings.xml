@@ -442,6 +442,7 @@
     <string name="expense_cash_moved_banner">ক্যাশ ড্রয়ার ও ফ্লোট ব্যালেন্স এখন নিরাপদে \'ক্যাশ রেজিস্টার\' সেকশনে সংরক্ষিত</string>
     <string name="expense_view_drawer_btn">ড্রয়ার দেখুন ➔</string>
     <string name="owner_only_loyalty">শুধুমাত্র মালিক লয়্যালটি পরিচালনা করতে পারবেন</string>
+    <string name="owner_only_customers">গ্রাহক ব্যবস্থাপনা অনুমোদিত নয়</string>
     <string name="loyalty_screen_title">গ্রাহক লয়্যালটি</string>
     <string name="loyalty_hub_subtitle">সদস্য, পয়েন্ট ও মোট কেনাকাটা</string>
     <string name="loyalty_badge">পুরস্কার</string>
@@ -1735,6 +1736,8 @@
     <string name="perm_sales_hold_cart_desc">চলতি কার্ট সংরক্ষণ ও পুনরায় লোড</string>
     <string name="perm_sales_void_cart_title">চলতি কার্ট বাতিল</string>
     <string name="perm_sales_void_cart_desc">কার্টে পণ্য থাকা অবস্থায় সম্পূর্ণ কার্ট মুছে ফেলা</string>
+    <string name="perm_sales_edit_invoice_title">বিক্রয় চালান সম্পাদনা</string>
+    <string name="perm_sales_edit_invoice_desc">সম্পন্ন চালান পুনরায় পরিবর্তন ও বিলিংয়ের জন্য লোড করা</string>
 
     <string name="perm_cat_returns">পণ্য ফেরত ও রিফান্ড</string>
     <string name="perm_returns_process_title">পণ্য ফেরত প্রক্রিয়া</string>
@@ -1758,7 +1761,9 @@
     <string name="perm_inventory_delete_title">পণ্য মুছে ফেলা</string>
     <string name="perm_inventory_delete_desc">ইনভেন্টরি থেকে স্থায়ীভাবে পণ্য অপসারণ</string>
 
-    <string name="perm_cat_dues">বকেয়া খাতা ও কাস্টমার ক্রেডিট</string>
+    <string name="perm_cat_dues">গ্রাহক, বকেয়া খাতা ও ক্রেডিট</string>
+    <string name="perm_customers_view_title">গ্রাহক তালিকা ও বিবরণ</string>
+    <string name="perm_customers_view_desc">গ্রাহক ডিরেক্টরি, প্রোফাইল, ক্রয়ের ইতিহাস ও তথ্য দেখুন</string>
     <string name="perm_dues_view_title">বকেয়া খাতা দর্শন</string>
     <string name="perm_dues_view_desc">গ্রাহকের বকেয়া ব্যালেন্স ও মেয়াদের হিসাব দেখা</string>
     <string name="perm_dues_add_due_title">সরাসরি বকেয়া যোগ</string>
