@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.execSQL
 import kotlinx.coroutines.Dispatchers
 
-const val APP_DATABASE_VERSION = 29
+const val APP_DATABASE_VERSION = 30
 
 /**
  * Keeps every migration compatible with both Room database backends. Room calls
@@ -257,6 +257,11 @@ val MIGRATION_28_29 = sqlMigration(
     "ALTER TABLE `sales` ADD COLUMN `storeCreditApplied` REAL NOT NULL DEFAULT 0.0"
 )
 
+val MIGRATION_29_30 = sqlMigration(
+    29, 30,
+    "CREATE INDEX IF NOT EXISTS `index_sales_timestamp` ON `sales` (`timestamp`)"
+)
+
 @Database(
     entities = [
         Product::class,
@@ -347,7 +352,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
                         MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
                         MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25,
-                        MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29
+                        MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29,
+                        MIGRATION_29_30
                     )
                     .fallbackToDestructiveMigrationOnDowngrade()
                     .setDriver(BundledSQLiteDriver())

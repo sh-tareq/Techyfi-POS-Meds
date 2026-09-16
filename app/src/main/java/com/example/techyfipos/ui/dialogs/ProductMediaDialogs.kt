@@ -33,6 +33,7 @@ import androidx.core.content.ContextCompat
 import com.example.techyfipos.R
 import com.example.techyfipos.ui.screens.BarcodeAnalyzer
 import com.example.techyfipos.ui.screens.UriImage
+import kotlinx.coroutines.launch
 import com.example.techyfipos.utils.HardwareBarcodeScanner
 import com.example.techyfipos.utils.beepAndVibrate
 import java.util.concurrent.Executors
@@ -40,9 +41,11 @@ import java.util.concurrent.Executors
 @Composable
 fun ProductBarcodeScanDialog(
     onBarcodeScanned: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    checkBarcodeExists: (suspend (String) -> Boolean)? = null
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
     Dialog(
@@ -177,9 +180,14 @@ fun ProductBarcodeScanDialog(
                 ) {
                     TextButton(
                         onClick = {
-                            val newBarcode = (100000000000..999999999999).random().toString()
-                            beepAndVibrate(context)
-                            onBarcodeScanned(newBarcode)
+                            scope.launch {
+                                var candidate = (100000000000..999999999999).random().toString()
+                                while (checkBarcodeExists?.invoke(candidate) == true) {
+                                    candidate = (100000000000..999999999999).random().toString()
+                                }
+                                beepAndVibrate(context)
+                                onBarcodeScanned(candidate)
+                            }
                         }
                     ) {
                         Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(16.dp))

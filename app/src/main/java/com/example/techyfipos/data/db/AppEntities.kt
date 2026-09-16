@@ -184,7 +184,12 @@ data class RegisterShiftState(
     val startingFloat: Double = 0.0
 )
 
-@Entity(tableName = "sales")
+@Entity(
+    tableName = "sales",
+    indices = [
+        Index(value = ["timestamp"])
+    ]
+)
 data class Sale(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val timestamp: Long,

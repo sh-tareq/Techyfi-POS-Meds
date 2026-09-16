@@ -145,7 +145,7 @@ fun ReturnItemsDialog(
 
     // Apportion sale discount/tax proportionally
     val paidRatio = if (saleWithItems.sale.subtotal > 0.0) {
-        (saleWithItems.sale.grandTotal / saleWithItems.sale.subtotal).coerceAtLeast(0.0)
+        (saleWithItems.sale.grandTotal / saleWithItems.sale.subtotal).coerceIn(0.0, 1.0)
     } else 1.0
 
     val alreadyRefundedEstimate = displayItems.sumOf { item ->

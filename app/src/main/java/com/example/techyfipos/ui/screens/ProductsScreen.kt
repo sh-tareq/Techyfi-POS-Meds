@@ -2666,7 +2666,8 @@ fun ProductsScreen(
                     }
                 }
             },
-            onCategoryRenamed = { old, new -> productsViewModel.renameCategory(old, new) }
+            onCategoryRenamed = { old, new -> productsViewModel.renameCategory(old, new) },
+            checkBarcodeExists = { code -> productsViewModel.productExistsByBarcode(code) }
         )
     }
 
@@ -2746,7 +2747,8 @@ fun ProductsScreen(
                         }
                 }
             },
-            onCategoryRenamed = { old, new -> productsViewModel.renameCategory(old, new) }
+            onCategoryRenamed = { old, new -> productsViewModel.renameCategory(old, new) },
+            checkBarcodeExists = { code -> productsViewModel.productExistsByBarcode(code) }
         )
     }
 

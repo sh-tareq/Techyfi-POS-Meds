@@ -320,6 +320,11 @@ class DataRepository(
         productDao.getProductByBarcode(normalized)
     }
 
+    suspend fun productExistsByBarcode(barcode: String): Boolean = withContext(Dispatchers.IO) {
+        val normalized = toEnglishDigits(barcode.trim())
+        productDao.getProductByBarcode(normalized) != null
+    }
+
     suspend fun insertProduct(product: Product) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
         productDao.insertProduct(product)
@@ -3138,7 +3143,7 @@ class DataRepository(
             // than the customer actually paid for it.
             val originalSaleForRatio = originalSale.sale
             val paidRatio = if (originalSaleForRatio.subtotal > 0.0) {
-                (originalSaleForRatio.grandTotal / originalSaleForRatio.subtotal).coerceAtLeast(0.0)
+                (originalSaleForRatio.grandTotal / originalSaleForRatio.subtotal).coerceIn(0.0, 1.0)
             } else 1.0
             val refundTotal = sanitizedLines.sumOf { it.price * it.quantity * paidRatio }
             val alreadyRefunded = returnDao.getRefundTotalForSale(saleId)

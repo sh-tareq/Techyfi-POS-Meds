@@ -1552,6 +1552,10 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         return repository.getProductByBarcode(toEnglishDigits(barcode.trim()))
     }
 
+    suspend fun productExistsByBarcode(barcode: String): Boolean {
+        return repository.productExistsByBarcode(barcode)
+    }
+
     /** Re-tags every product carrying [oldCategory] to [newCategory] so a category-manager rename doesn't orphan existing inventory. */
     suspend fun renameCategory(oldCategory: String, newCategory: String) {
         repository.renameProductCategory(oldCategory, newCategory)

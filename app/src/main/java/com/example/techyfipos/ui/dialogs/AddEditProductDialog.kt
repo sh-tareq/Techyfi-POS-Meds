@@ -109,7 +109,8 @@ fun AddEditProductDialog(
         adjustmentNote: String?
     ) -> Unit,
     onDelete: (() -> Unit)? = null,
-    onCategoryRenamed: suspend (oldName: String, newName: String) -> Unit = { _, _ -> }
+    onCategoryRenamed: suspend (oldName: String, newName: String) -> Unit = { _, _ -> },
+    checkBarcodeExists: (suspend (String) -> Boolean)? = null
 ) {
     val context = LocalContext.current
     var name by remember { mutableStateOf(initialName) }
@@ -1596,7 +1597,8 @@ fun AddEditProductDialog(
                 barcode = scannedCode
                 showBarcodeScanModal = false
             },
-            onDismiss = { showBarcodeScanModal = false }
+            onDismiss = { showBarcodeScanModal = false },
+            checkBarcodeExists = checkBarcodeExists ?: { candidate -> existingBarcodes.contains(candidate) }
         )
     }
 
