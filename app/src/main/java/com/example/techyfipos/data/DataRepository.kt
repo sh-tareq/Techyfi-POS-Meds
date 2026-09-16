@@ -316,30 +316,33 @@ class DataRepository(
     }
 
     suspend fun getProductByBarcode(barcode: String): Product? = withContext(Dispatchers.IO) {
-        val normalized = toEnglishDigits(barcode.trim())
+        val normalized = toEnglishDigits(barcode.trim()).lowercase()
         productDao.getProductByBarcode(normalized)
     }
 
     suspend fun productExistsByBarcode(barcode: String): Boolean = withContext(Dispatchers.IO) {
-        val normalized = toEnglishDigits(barcode.trim())
+        val normalized = toEnglishDigits(barcode.trim()).lowercase()
         productDao.getProductByBarcode(normalized) != null
     }
 
     suspend fun insertProduct(product: Product) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
-        productDao.insertProduct(product)
+        val normalized = product.copy(barcode = toEnglishDigits(product.barcode.trim()).lowercase())
+        productDao.insertProduct(normalized)
     }
 
     suspend fun updateProduct(product: Product) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
-        productDao.updateProduct(product)
+        val normalized = product.copy(barcode = toEnglishDigits(product.barcode.trim()).lowercase())
+        productDao.updateProduct(normalized)
     }
 
     /** Updates a product and records its inventory audit entry as a single transaction, so a manual stock edit can never leave stock changed without an audit row (or vice versa). */
     suspend fun updateProductWithInventoryAdjustment(product: Product, adjustment: InventoryAdjustment) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
+        val normalized = product.copy(barcode = toEnglishDigits(product.barcode.trim()).lowercase())
         database.withDriverTransaction {
-            productDao.updateProduct(product)
+            productDao.updateProduct(normalized)
             inventoryAdjustmentDao.insertAdjustment(adjustment)
         }
     }
@@ -351,18 +354,20 @@ class DataRepository(
         adjustment: InventoryAdjustment? = null
     ) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
-        if (oldBarcode != updatedProduct.barcode) requireProductNotInSavedCarts(oldBarcode)
+        val cleanOldBarcode = toEnglishDigits(oldBarcode.trim()).lowercase()
+        val normalizedProduct = updatedProduct.copy(barcode = toEnglishDigits(updatedProduct.barcode.trim()).lowercase())
+        if (cleanOldBarcode != normalizedProduct.barcode) requireProductNotInSavedCarts(cleanOldBarcode)
         database.withDriverTransaction {
-            if (oldBarcode == updatedProduct.barcode) {
-                productDao.updateProduct(updatedProduct)
+            if (cleanOldBarcode == normalizedProduct.barcode) {
+                productDao.updateProduct(normalizedProduct)
             } else {
-                val oldProduct = productDao.getProductByBarcode(oldBarcode)
+                val oldProduct = productDao.getProductByBarcode(cleanOldBarcode)
                     ?: throw IllegalArgumentException("Product no longer exists")
-                require(productDao.getProductByBarcode(updatedProduct.barcode) == null) {
+                require(productDao.getProductByBarcode(normalizedProduct.barcode) == null) {
                     "Product barcode already exists"
                 }
                 productDao.deleteProduct(oldProduct)
-                productDao.insertProduct(updatedProduct)
+                productDao.insertProduct(normalizedProduct)
             }
             if (adjustment != null) {
                 inventoryAdjustmentDao.insertAdjustment(adjustment)

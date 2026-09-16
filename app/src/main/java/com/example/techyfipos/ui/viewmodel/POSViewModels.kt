@@ -1549,7 +1549,7 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     suspend fun getProductByBarcode(barcode: String): Product? {
-        return repository.getProductByBarcode(toEnglishDigits(barcode.trim()))
+        return repository.getProductByBarcode(toEnglishDigits(barcode.trim()).lowercase())
     }
 
     suspend fun productExistsByBarcode(barcode: String): Boolean {

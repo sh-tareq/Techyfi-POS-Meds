@@ -363,10 +363,17 @@ fun MainNavigation() {
             val dest = pendingNavDestination
             if (dest != null && currentUser != null && backStack.lastOrNull() != Splash && backStack.lastOrNull() != Lock) {
                 MainActivity.pendingNavigationDestination.value = null
-                if (dest == "products") {
+                val targetKey = when (dest.lowercase().trim()) {
+                    "dues" -> Dues
+                    "customers" -> Customers
+                    "sales_history", "saleshistory", "sales" -> SalesHistory
+                    "products" -> Products
+                    else -> null
+                }
+                if (targetKey != null) {
                     while (backStack.size > 1) { backStack.removeLastOrNull() }
-                    if (backStack.lastOrNull() != Products) {
-                        backStack.add(Products)
+                    if (backStack.lastOrNull() != targetKey) {
+                        backStack.add(targetKey)
                     }
                 }
             }
@@ -1043,8 +1050,15 @@ fun MainNavigation() {
                                         }
                                         val dest = MainActivity.pendingNavigationDestination.value
                                         MainActivity.pendingNavigationDestination.value = null
-                                        if (dest == "products") {
-                                            backStack.add(Products)
+                                        val targetKey = when (dest?.lowercase()?.trim()) {
+                                            "dues" -> Dues
+                                            "customers" -> Customers
+                                            "sales_history", "saleshistory", "sales" -> SalesHistory
+                                            "products" -> Products
+                                            else -> null
+                                        }
+                                        if (targetKey != null) {
+                                            backStack.add(targetKey)
                                         } else {
                                             backStack.add(Scanner)
                                         }

@@ -510,6 +510,7 @@ object DueReminderScheduler {
         // Open App Intent
         val appIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("navigate_to", "dues")
         }
         val appPendingIntent = PendingIntent.getActivity(
             context,

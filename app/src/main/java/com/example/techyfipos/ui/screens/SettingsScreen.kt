@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import com.example.techyfipos.BuildConfig
 import com.example.techyfipos.data.DataRepository
 import com.example.techyfipos.ui.components.*
 import androidx.compose.material.icons.Icons
@@ -3010,8 +3011,18 @@ private fun OptimizedAboutSettings() {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(5.dp))
-        SettingsStatusPill(stringResource(R.string.settings_version_pro_pill))
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            SettingsStatusPill(stringResource(R.string.settings_version_pro_pill))
+        }
     }
     SettingsGroup {
         SettingsStaticRow(stringResource(R.string.settings_label_developer), "Techyfi")
