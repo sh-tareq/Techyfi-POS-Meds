@@ -2138,6 +2138,10 @@
     <string name="action_cancel">Cancel</string>
     <string name="supplier_view_all_invoices">View all %1$d purchase invoices →</string>
     <string name="supplier_view_all_payments">View all %1$d payments →</string>
+    <string name="cart_discount_fixed_bdt">Fixed (৳)</string>
+    <string name="cart_discount_percent_label">Percentage (%)</string>
+    <string name="cart_line_total_preview">Line total: %1$s</string>
+    <string name="cart_discounted_unit_price">Discounted unit: %1$s</string>
 </resources>
 
 

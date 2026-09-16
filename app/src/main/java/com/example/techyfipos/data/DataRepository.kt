@@ -1945,6 +1945,7 @@ class DataRepository(
                     put("wholesalePrice", p.wholesalePrice)
                     put("mrpPrice", p.mrpPrice)
                     put("discountedPrice", p.discountedPrice)
+                    put("createdAt", p.createdAt)
                 })
             }
             backupJson.put("products", productsArray)
@@ -2247,6 +2248,7 @@ class DataRepository(
                         ,wholesalePrice = p.optDouble("wholesalePrice", 0.0)
                         ,mrpPrice = p.optDouble("mrpPrice", 0.0)
                         ,discountedPrice = p.optDouble("discountedPrice", 0.0)
+                        ,createdAt = p.optLong("createdAt", p.optLong("created_at", System.currentTimeMillis()))
                     )
                     val existing = productDao.getProductByBarcode(product.barcode)
                     if (existing != null) {

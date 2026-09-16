@@ -1123,8 +1123,11 @@ fun SuppliersScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("Cash", "bKash", "Nagad", "Bank").forEach { method ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    ) {
+                        listOf("Cash", "bKash", "Nagad", "Rocket", "Bank").forEach { method ->
                             FilterChip(
                                 selected = payMethod == method,
                                 onClick = { payMethod = method },

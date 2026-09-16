@@ -371,3 +371,100 @@ fun ConfirmDueSaleDialog(
         }
     )
 }
+
+/**
+ * Fix G11: Per-item discount dialog with live line-total calculation and preview.
+ */
+@Composable
+fun CartItemDiscountDialog(
+    productName: String,
+    originalPrice: Double,
+    quantity: Double,
+    initialDiscount: Double = 0.0,
+    initialIsPercentage: Boolean = false,
+    onConfirm: (discountValue: Double, isPercentage: Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var discountText by remember { mutableStateOf(if (initialDiscount > 0.0) initialDiscount.toString() else "") }
+    var isPercentage by remember { mutableStateOf(initialIsPercentage) }
+
+    val discountValue = toEnglishDigits(discountText).toDoubleOrNull() ?: 0.0
+    val discountedPrice = if (isPercentage) {
+        originalPrice * (1.0 - discountValue / 100.0)
+    } else {
+        originalPrice - discountValue
+    }.coerceAtLeast(0.0)
+    val lineTotal = discountedPrice * quantity
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(productName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    text = "${formatTaka(originalPrice)} × $quantity",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = !isPercentage,
+                        onClick = { isPercentage = false },
+                        label = { Text(stringResource(R.string.cart_discount_fixed_bdt)) }
+                    )
+                    FilterChip(
+                        selected = isPercentage,
+                        onClick = { isPercentage = true },
+                        label = { Text(stringResource(R.string.cart_discount_percent_label)) }
+                    )
+                }
+                OutlinedTextField(
+                    value = discountText,
+                    onValueChange = { input ->
+                        val cleanInput = toEnglishDigits(input).filter { it.isDigit() || it == '.' }
+                        if (cleanInput.count { it == '.' } <= 1) {
+                            discountText = cleanInput
+                        }
+                    },
+                    label = { Text(if (isPercentage) stringResource(R.string.cart_discount_percent_label) else stringResource(R.string.cart_discount_fixed_bdt)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = stringResource(R.string.cart_discounted_unit_price, formatTaka(discountedPrice)),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = stringResource(R.string.cart_line_total_preview, formatTaka(lineTotal)),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(discountValue, isPercentage) }) {
+                Text(stringResource(R.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}

@@ -1,5 +1,6 @@
 package com.example.techyfipos.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -21,7 +22,9 @@ data class Product(
     val unit: String = "Pcs",
     val wholesalePrice: Double = 0.0,
     val mrpPrice: Double = 0.0,
-    val discountedPrice: Double = 0.0
+    val discountedPrice: Double = 0.0,
+    @ColumnInfo(name = "created_at")
+    val createdAt: Long = System.currentTimeMillis()
 )
 
 val Product.hasValidExpiryDate: Boolean

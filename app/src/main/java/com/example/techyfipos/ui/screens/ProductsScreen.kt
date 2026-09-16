@@ -1909,105 +1909,107 @@ fun ProductsScreen(
                     }
                 }
             } else {
-                if (viewMode == ProductViewMode.LIST) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 140.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(visibleProducts, key = { it.barcode }) { product ->
-                            val isSelected = product.barcode in selectedBarcodes
-                            ProductItemRow(
-                                product = product,
-                                isTablet = isTablet,
-                                isSelectionMode = batchSelectMode,
-                                isSelected = isSelected,
-                                onToggleSelect = {
-                                    if (isSelected) selectedBarcodes.remove(product.barcode)
-                                    else selectedBarcodes.add(product.barcode)
-                                },
-                                onRowClick = {
-                                    if (batchSelectMode) {
+                key(selectedCategories.hashCode()) {
+                    if (viewMode == ProductViewMode.LIST) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 140.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(visibleProducts, key = { it.barcode }) { product ->
+                                val isSelected = product.barcode in selectedBarcodes
+                                ProductItemRow(
+                                    product = product,
+                                    isTablet = isTablet,
+                                    isSelectionMode = batchSelectMode,
+                                    isSelected = isSelected,
+                                    onToggleSelect = {
                                         if (isSelected) selectedBarcodes.remove(product.barcode)
                                         else selectedBarcodes.add(product.barcode)
-                                    }
-                                },
-                                onRowLongClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (!batchSelectMode) {
-                                        batchSelectMode = true
-                                        selectedBarcodes.clear()
-                                        selectedBarcodes.add(product.barcode)
-                                    } else {
-                                        if (isSelected) selectedBarcodes.remove(product.barcode)
-                                        else selectedBarcodes.add(product.barcode)
-                                    }
-                                },
-                                onAdjustStock = { stockCheckProduct = product },
-                                onEdit = { requestEditProduct(product) },
-                                onGenerateCode = {
-                                    if (canPrintLabels) {
-                                        productForCodeDialog = product
-                                    } else {
-                                        android.widget.Toast.makeText(context, context.getString(R.string.perm_inventory_print_labels_desc), android.widget.Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                onImageClick = { productForEnlargedImage = Pair(product.imageUri, product.name) },
-                                onDelete = { requestDeleteProduct(product) },
-                                onAddToCart = { addProductToCart(product) }
-                            )
+                                    },
+                                    onRowClick = {
+                                        if (batchSelectMode) {
+                                            if (isSelected) selectedBarcodes.remove(product.barcode)
+                                            else selectedBarcodes.add(product.barcode)
+                                        }
+                                    },
+                                    onRowLongClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        if (!batchSelectMode) {
+                                            batchSelectMode = true
+                                            selectedBarcodes.clear()
+                                            selectedBarcodes.add(product.barcode)
+                                        } else {
+                                            if (isSelected) selectedBarcodes.remove(product.barcode)
+                                            else selectedBarcodes.add(product.barcode)
+                                        }
+                                    },
+                                    onAdjustStock = { stockCheckProduct = product },
+                                    onEdit = { requestEditProduct(product) },
+                                    onGenerateCode = {
+                                        if (canPrintLabels) {
+                                            productForCodeDialog = product
+                                        } else {
+                                            android.widget.Toast.makeText(context, context.getString(R.string.perm_inventory_print_labels_desc), android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    onImageClick = { productForEnlargedImage = Pair(product.imageUri, product.name) },
+                                    onDelete = { requestDeleteProduct(product) },
+                                    onAddToCart = { addProductToCart(product) }
+                                )
+                            }
                         }
-                    }
-                } else {
-                    LazyVerticalGrid(
-                        state = gridState,
-                        columns = if (isTablet) GridCells.Adaptive(minSize = 300.dp) else GridCells.Adaptive(minSize = 160.dp),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 140.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        gridItems(visibleProducts, key = { it.barcode }) { product ->
-                            val isSelected = product.barcode in selectedBarcodes
-                            ProductGridCard(
-                                product = product,
-                                isSelectionMode = batchSelectMode,
-                                isSelected = isSelected,
-                                onToggleSelect = {
-                                    if (isSelected) selectedBarcodes.remove(product.barcode)
-                                    else selectedBarcodes.add(product.barcode)
-                                },
-                                onCardClick = {
-                                    if (batchSelectMode) {
+                    } else {
+                        LazyVerticalGrid(
+                            state = gridState,
+                            columns = if (isTablet) GridCells.Adaptive(minSize = 300.dp) else GridCells.Adaptive(minSize = 160.dp),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 140.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            gridItems(visibleProducts, key = { it.barcode }) { product ->
+                                val isSelected = product.barcode in selectedBarcodes
+                                ProductGridCard(
+                                    product = product,
+                                    isSelectionMode = batchSelectMode,
+                                    isSelected = isSelected,
+                                    onToggleSelect = {
                                         if (isSelected) selectedBarcodes.remove(product.barcode)
                                         else selectedBarcodes.add(product.barcode)
-                                    }
-                                },
-                                onCardLongClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (!batchSelectMode) {
-                                        batchSelectMode = true
-                                        selectedBarcodes.clear()
-                                        selectedBarcodes.add(product.barcode)
-                                    } else {
-                                        if (isSelected) selectedBarcodes.remove(product.barcode)
-                                        else selectedBarcodes.add(product.barcode)
-                                    }
-                                },
-                                onAdjustStock = { stockCheckProduct = product },
-                                onEdit = { requestEditProduct(product) },
-                                onGenerateCode = {
-                                    if (canPrintLabels) {
-                                        productForCodeDialog = product
-                                    } else {
-                                        android.widget.Toast.makeText(context, context.getString(R.string.perm_inventory_print_labels_desc), android.widget.Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                onImageClick = { productForEnlargedImage = Pair(product.imageUri, product.name) },
-                                onDelete = { requestDeleteProduct(product) },
-                                onAddToCart = { addProductToCart(product) }
-                            )
+                                    },
+                                    onCardClick = {
+                                        if (batchSelectMode) {
+                                            if (isSelected) selectedBarcodes.remove(product.barcode)
+                                            else selectedBarcodes.add(product.barcode)
+                                        }
+                                    },
+                                    onCardLongClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        if (!batchSelectMode) {
+                                            batchSelectMode = true
+                                            selectedBarcodes.clear()
+                                            selectedBarcodes.add(product.barcode)
+                                        } else {
+                                            if (isSelected) selectedBarcodes.remove(product.barcode)
+                                            else selectedBarcodes.add(product.barcode)
+                                        }
+                                    },
+                                    onAdjustStock = { stockCheckProduct = product },
+                                    onEdit = { requestEditProduct(product) },
+                                    onGenerateCode = {
+                                        if (canPrintLabels) {
+                                            productForCodeDialog = product
+                                        } else {
+                                            android.widget.Toast.makeText(context, context.getString(R.string.perm_inventory_print_labels_desc), android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    onImageClick = { productForEnlargedImage = Pair(product.imageUri, product.name) },
+                                    onDelete = { requestDeleteProduct(product) },
+                                    onAddToCart = { addProductToCart(product) }
+                                )
+                            }
                         }
                     }
                 }
@@ -2630,7 +2632,8 @@ fun ProductsScreen(
                         unit = unit,
                         wholesalePrice = wPrice,
                         mrpPrice = mrp,
-                        discountedPrice = disc
+                        discountedPrice = disc,
+                        createdAt = System.currentTimeMillis()
                     )
                     val success = productsViewModel.addProduct(p)
                     if (success) {

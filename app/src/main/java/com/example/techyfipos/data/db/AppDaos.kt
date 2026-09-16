@@ -91,6 +91,9 @@ interface SaleDao {
     @Query("SELECT * FROM sales")
     suspend fun getAllSalesOnce(): List<Sale>
 
+    @Query("SELECT * FROM sales ORDER BY timestamp DESC LIMIT :limit OFFSET :offset")
+    suspend fun getSalesPaged(limit: Int, offset: Int): List<Sale>
+
     @Query("SELECT * FROM sale_items WHERE saleId = :saleId")
     suspend fun getItemsForSale(saleId: Long): List<SaleItem>
 

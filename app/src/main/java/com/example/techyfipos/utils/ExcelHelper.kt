@@ -13,6 +13,7 @@ import com.example.techyfipos.data.db.ReturnItem
 import com.example.techyfipos.data.db.ScheduledDueReminder
 import com.example.techyfipos.ui.viewmodel.calculateDiscountValue
 import org.apache.poi.ss.usermodel.*
+import org.apache.poi.xssf.streaming.SXSSFWorkbook
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.json.JSONArray
 import java.io.InputStream
@@ -407,138 +408,148 @@ object ExcelHelper {
         returnItems: List<ReturnItem>,
         outputStream: OutputStream
     ) {
-        val workbook = XSSFWorkbook()
-        val sheet = workbook.createSheet("Sales Report")
+        val workbook = SXSSFWorkbook(100)
+        try {
+            val sheet = workbook.createSheet("Sales Report")
 
-        // Styles
-        val headerFont = workbook.createFont().apply {
-            bold = true
-            color = IndexedColors.WHITE.getIndex()
-        }
-        val headerStyle = workbook.createCellStyle().apply {
-            fillForegroundColor = IndexedColors.DARK_BLUE.getIndex()
-            setFillPattern(FillPatternType.SOLID_FOREGROUND)
-            setFont(headerFont)
-        }
-
-        val summaryFont = workbook.createFont().apply {
-            bold = true
-        }
-        val summaryStyle = workbook.createCellStyle().apply {
-            setFont(summaryFont)
-            fillForegroundColor = IndexedColors.GREY_25_PERCENT.getIndex()
-            setFillPattern(FillPatternType.SOLID_FOREGROUND)
-        }
-
-        val headers = arrayOf(
-            "Date", "Invoice ID", "Items Detail", "Payment Method",
-            "Subtotal", "Discount", "Grand Total", "Returns", "Net Total", "Amount Paid",
-            "Due Amount", "Profit", "Customer"
-        )
-        val headerRow = sheet.createRow(0)
-        for (i in headers.indices) {
-            val cell = headerRow.createCell(i)
-            cell.setCellValue(headers[i])
-            cell.cellStyle = headerStyle
-            sheet.setColumnWidth(i, 20 * 256)
-        }
-
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-        var rowIdx = 1
-        var totalSalesSum = 0.0
-        var totalProfitSum = 0.0
-
-        for (swi in salesList) {
-            val row = sheet.createRow(rowIdx++)
-            val saleDate = dateFormat.format(Date(swi.sale.timestamp))
-            
-            // Format item details e.g., "Soap x 2, Bread x 1"
-            val itemDetails = swi.items.joinToString(", ") { "${it.productName} x ${it.quantity}" }
-            
-            // Historical cost comes from the immutable sale line. A live product lookup is only
-            // used for old rows created before purchasePriceAtSale existed.
-            var purchaseCost = 0.0
-            for (item in swi.items) {
-                val cost = item.purchasePriceAtSale ?: purchasePrices[item.productBarcode]
-                    ?: com.example.techyfipos.ui.viewmodel.fallbackPurchasePrice(item.productBarcode, item.price)
-                purchaseCost += cost * item.quantity
+            // Styles
+            val headerFont = workbook.createFont().apply {
+                bold = true
+                color = IndexedColors.WHITE.getIndex()
             }
-            val saleReturns = returns.filter { it.saleId == swi.sale.id }
-            val returnedAmount = saleReturns.sumOf { it.refundAmount }
-            val returnIds = saleReturns.mapTo(hashSetOf()) { it.id }
-            val returnedCost = returnItems.asSequence()
-                .filter { it.returnId in returnIds }
-                .sumOf { returned ->
-                    val sold = swi.items.firstOrNull { it.productBarcode == returned.productBarcode }
-                    val cost = sold?.purchasePriceAtSale ?: purchasePrices[returned.productBarcode]
-                        ?: com.example.techyfipos.ui.viewmodel.fallbackPurchasePrice(returned.productBarcode, returned.price)
-                    cost * returned.quantity
-                }
-            val profit = (swi.sale.grandTotal - purchaseCost) - (returnedAmount - returnedCost)
-            val netTotal = (swi.sale.grandTotal - returnedAmount).coerceAtLeast(0.0)
-            
-            row.createCell(0).setCellValue(saleDate)
-            row.createCell(1).setCellValue(swi.sale.id.toString())
-            row.createCell(2).setCellValue(itemDetails)
-            val paymentDetail = if (swi.sale.paymentMethod == "Split" && !swi.sale.splitPaymentJson.isNullOrBlank()) {
-                try {
-                    val values = JSONArray(swi.sale.splitPaymentJson)
-                    (0 until values.length()).joinToString(" + ") { index ->
-                        val value = values.getJSONObject(index)
-                        "${value.optString("method", "Other")}: ${value.optDouble("amount", 0.0)}"
-                    }
-                } catch (_: Exception) { "Split" }
-            } else swi.sale.paymentMethod
-            row.createCell(3).setCellValue(paymentDetail)
-            row.createCell(4).setCellValue(swi.sale.subtotal)
-            row.createCell(5).setCellValue(
-                calculateDiscountValue(swi.sale.subtotal, swi.sale.discountAmount, swi.sale.isPercentageDiscount)
+            val headerStyle = workbook.createCellStyle().apply {
+                fillForegroundColor = IndexedColors.DARK_BLUE.getIndex()
+                setFillPattern(FillPatternType.SOLID_FOREGROUND)
+                setFont(headerFont)
+            }
+
+            val summaryFont = workbook.createFont().apply {
+                bold = true
+            }
+            val summaryStyle = workbook.createCellStyle().apply {
+                setFont(summaryFont)
+                fillForegroundColor = IndexedColors.GREY_25_PERCENT.getIndex()
+                setFillPattern(FillPatternType.SOLID_FOREGROUND)
+            }
+
+            val headers = arrayOf(
+                "Date", "Invoice ID", "Items Detail", "Payment Method",
+                "Subtotal", "Discount", "Grand Total", "Returns", "Net Total", "Amount Paid",
+                "Due Amount", "Profit", "Customer"
             )
-            row.createCell(6).setCellValue(swi.sale.grandTotal)
-            row.createCell(7).setCellValue(returnedAmount)
-            row.createCell(8).setCellValue(netTotal)
-            row.createCell(9).setCellValue(swi.sale.amountPaid)
-
-            val originalDue = when {
-                swi.sale.paymentMethod == "Due" -> {
-                    (swi.sale.grandTotal - swi.sale.amountPaid).coerceAtLeast(0.0)
-                        .takeIf { it > 0.0 } ?: swi.sale.grandTotal
-                }
-                swi.sale.paymentMethod == "Split" && !swi.sale.splitPaymentJson.isNullOrBlank() -> try {
-                    val values = JSONArray(swi.sale.splitPaymentJson)
-                    (0 until values.length()).sumOf { index ->
-                        values.getJSONObject(index).takeIf {
-                            it.optString("method", "").equals("Due", ignoreCase = true)
-                        }?.optDouble("amount", 0.0) ?: 0.0
-                    }
-                } catch (_: Exception) { 0.0 }
-                else -> 0.0
+            val headerRow = sheet.createRow(0)
+            for (i in headers.indices) {
+                val cell = headerRow.createCell(i)
+                cell.setCellValue(headers[i])
+                cell.cellStyle = headerStyle
+                sheet.setColumnWidth(i, 20 * 256)
             }
-            val due = (originalDue - saleReturns.sumOf { it.dueAdjustmentAmount }).coerceAtLeast(0.0)
-            row.createCell(10).setCellValue(due)
-            row.createCell(11).setCellValue(profit)
-            
-            val custInfo = if (swi.sale.customerName != null) "${swi.sale.customerName} (${swi.sale.customerPhone ?: ""})" else ""
-            row.createCell(12).setCellValue(custInfo)
 
-            totalSalesSum += netTotal
-            totalProfitSum += profit
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            var rowIdx = 1
+            var totalSalesSum = 0.0
+            var totalProfitSum = 0.0
+
+            salesList.chunked(500).forEach { batch ->
+                for (swi in batch) {
+                    val row = sheet.createRow(rowIdx++)
+                    val saleDate = dateFormat.format(Date(swi.sale.timestamp))
+                    
+                    // Format item details e.g., "Soap x 2, Bread x 1"
+                    val itemDetails = swi.items.joinToString(", ") { "${it.productName} x ${it.quantity}" }
+                    
+                    // Historical cost comes from the immutable sale line. A live product lookup is only
+                    // used for old rows created before purchasePriceAtSale existed.
+                    var purchaseCost = 0.0
+                    for (item in swi.items) {
+                        val cost = item.purchasePriceAtSale ?: purchasePrices[item.productBarcode]
+                            ?: com.example.techyfipos.ui.viewmodel.fallbackPurchasePrice(item.productBarcode, item.price)
+                        purchaseCost += cost * item.quantity
+                    }
+                    val saleReturns = returns.filter { it.saleId == swi.sale.id }
+                    val returnedAmount = saleReturns.sumOf { it.refundAmount }
+                    val returnIds = saleReturns.mapTo(hashSetOf()) { it.id }
+                    val returnedCost = returnItems.asSequence()
+                        .filter { it.returnId in returnIds }
+                        .sumOf { returned ->
+                            val sold = swi.items.firstOrNull { it.productBarcode == returned.productBarcode }
+                            val cost = sold?.purchasePriceAtSale ?: purchasePrices[returned.productBarcode]
+                                ?: com.example.techyfipos.ui.viewmodel.fallbackPurchasePrice(returned.productBarcode, returned.price)
+                            cost * returned.quantity
+                        }
+                    val profit = (swi.sale.grandTotal - purchaseCost) - (returnedAmount - returnedCost)
+                    val netTotal = (swi.sale.grandTotal - returnedAmount).coerceAtLeast(0.0)
+                    
+                    row.createCell(0).setCellValue(saleDate)
+                    row.createCell(1).setCellValue(swi.sale.id.toString())
+                    row.createCell(2).setCellValue(itemDetails)
+                    val paymentDetail = if (swi.sale.paymentMethod == "Split" && !swi.sale.splitPaymentJson.isNullOrBlank()) {
+                        try {
+                            val values = JSONArray(swi.sale.splitPaymentJson)
+                            (0 until values.length()).joinToString(" + ") { index ->
+                                val value = values.getJSONObject(index)
+                                "${value.optString("method", "Other")}: ${value.optDouble("amount", 0.0)}"
+                            }
+                        } catch (_: Exception) { "Split" }
+                    } else swi.sale.paymentMethod
+                    row.createCell(3).setCellValue(paymentDetail)
+                    row.createCell(4).setCellValue(swi.sale.subtotal)
+                    row.createCell(5).setCellValue(
+                        calculateDiscountValue(swi.sale.subtotal, swi.sale.discountAmount, swi.sale.isPercentageDiscount)
+                    )
+                    row.createCell(6).setCellValue(swi.sale.grandTotal)
+                    row.createCell(7).setCellValue(returnedAmount)
+                    row.createCell(8).setCellValue(netTotal)
+                    row.createCell(9).setCellValue(swi.sale.amountPaid)
+
+                    val originalDue = when {
+                        swi.sale.paymentMethod == "Due" -> {
+                            (swi.sale.grandTotal - swi.sale.amountPaid).coerceAtLeast(0.0)
+                                .takeIf { it > 0.0 } ?: swi.sale.grandTotal
+                        }
+                        swi.sale.paymentMethod == "Split" && !swi.sale.splitPaymentJson.isNullOrBlank() -> try {
+                            val values = JSONArray(swi.sale.splitPaymentJson)
+                            (0 until values.length()).sumOf { index ->
+                                values.getJSONObject(index).takeIf {
+                                    it.optString("method", "").equals("Due", ignoreCase = true)
+                                }?.optDouble("amount", 0.0) ?: 0.0
+                            }
+                        } catch (_: Exception) { 0.0 }
+                        else -> 0.0
+                    }
+                    val due = (originalDue - saleReturns.sumOf { it.dueAdjustmentAmount }).coerceAtLeast(0.0)
+                    row.createCell(10).setCellValue(due)
+                    row.createCell(11).setCellValue(profit)
+                    
+                    val custInfo = if (swi.sale.customerName != null) "${swi.sale.customerName} (${swi.sale.customerPhone ?: ""})" else ""
+                    row.createCell(12).setCellValue(custInfo)
+
+                    totalSalesSum += netTotal
+                    totalProfitSum += profit
+                }
+            }
+
+            // Empty row separator
+            rowIdx++
+
+            // Summary row
+            val summaryRow = sheet.createRow(rowIdx)
+            for (i in headers.indices) {
+                summaryRow.createCell(i).cellStyle = summaryStyle
+            }
+            summaryRow.getCell(0).setCellValue("TOTAL SUMMARY")
+            summaryRow.getCell(8).setCellValue(totalSalesSum)
+            summaryRow.getCell(11).setCellValue(totalProfitSum)
+
+            workbook.write(outputStream)
+        } finally {
+            try {
+                workbook.dispose()
+            } catch (_: Exception) {}
+            try {
+                workbook.close()
+            } catch (_: Exception) {}
         }
-
-        // Empty row separator
-        rowIdx++
-
-        // Summary row
-        val summaryRow = sheet.createRow(rowIdx)
-        for (i in headers.indices) {
-            summaryRow.createCell(i).cellStyle = summaryStyle
-        }
-        summaryRow.getCell(0).setCellValue("TOTAL SUMMARY")
-        summaryRow.getCell(8).setCellValue(totalSalesSum)
-        summaryRow.getCell(11).setCellValue(totalProfitSum)
-
-        workbook.write(outputStream)
-        workbook.close()
     }
 
     fun exportDues(duesList: List<CustomerDue>, outputStream: OutputStream) {

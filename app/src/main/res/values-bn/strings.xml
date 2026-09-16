@@ -2138,5 +2138,9 @@
     <string name="action_cancel">বাতিল</string>
     <string name="supplier_view_all_invoices">সকল %1$dটি ক্রয় ইনভয়েস দেখুন →</string>
     <string name="supplier_view_all_payments">সকল %1$dটি পেমেন্ট দেখুন →</string>
+    <string name="cart_discount_fixed_bdt">নির্দিষ্ট (৳)</string>
+    <string name="cart_discount_percent_label">শতকরা (%)</string>
+    <string name="cart_line_total_preview">মোট মূল্য: %1$s</string>
+    <string name="cart_discounted_unit_price">ছাড়ের পর প্রতি একক: %1$s</string>
 </resources>
 
