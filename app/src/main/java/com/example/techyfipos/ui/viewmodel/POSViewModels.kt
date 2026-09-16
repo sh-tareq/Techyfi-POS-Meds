@@ -1175,6 +1175,11 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _priceMode.value = PriceMode.DISCOUNTED
         _storeCreditApplied.value = 0.0
         _redeemedVoucher.value = null
+        _loyaltyCustomer.value = null
+        _loyaltyDiscount.value = 0.0
+        _resolvedCustomer.value = null
+        _customerSuggestions.value = emptyList()
+        _isAutoFilledName.value = false
         persistCartSnapshot(emptyList())
     }
 
