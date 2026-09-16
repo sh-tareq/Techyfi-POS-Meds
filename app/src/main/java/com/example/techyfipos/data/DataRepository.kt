@@ -2169,6 +2169,43 @@ class DataRepository(
                     put("isArchived", c.isArchived); put("storeCredit", c.storeCredit)
                 }) }
             })
+
+            // Store credit vouchers
+            val vouchers = storeCreditVoucherDao.getAllVouchersOnce()
+            backupJson.put("storeCreditVouchers", JSONArray().apply {
+                vouchers.forEach { v ->
+                    put(JSONObject().apply {
+                        put("code", v.code)
+                        put("initialAmount", v.initialAmount)
+                        put("remainingBalance", v.remainingBalance)
+                        put("customerPhone", v.customerPhone ?: JSONObject.NULL)
+                        put("sourceReturnId", v.sourceReturnId ?: JSONObject.NULL)
+                        put("sourceSaleId", v.sourceSaleId ?: JSONObject.NULL)
+                        put("issuedAt", v.issuedAt)
+                        put("expiresAt", v.expiresAt ?: JSONObject.NULL)
+                        put("status", v.status)
+                        put("notes", v.notes ?: JSONObject.NULL)
+                    })
+                }
+            })
+
+            // Store credit ledger
+            val scLedger = storeCreditLedgerDao.getAllEntries()
+            backupJson.put("storeCreditLedger", JSONArray().apply {
+                scLedger.forEach { e ->
+                    put(JSONObject().apply {
+                        put("id", e.id)
+                        put("customerPhone", e.customerPhone)
+                        put("deltaAmount", e.deltaAmount)
+                        put("balanceAfter", e.balanceAfter)
+                        put("type", e.type)
+                        put("referenceInvoiceId", e.referenceInvoiceId ?: JSONObject.NULL)
+                        put("voucherCode", e.voucherCode ?: JSONObject.NULL)
+                        put("note", e.note ?: JSONObject.NULL)
+                        put("timestamp", e.timestamp)
+                    })
+                }
+            })
             // Preferences-backed business configuration (not part of the Room database): quick-sale
             // presets, note presets, due-reminder message templates, and custom product categories.
             backupJson.put("quickSalePresets", QuickSalePreset.listToJson(quickSalePresetsList))
@@ -2669,6 +2706,76 @@ class DataRepository(
                         isArchived = value.optBoolean("isArchived", false)
                     ))
                 }
+              }
+
+              // Restore store credit vouchers
+              backupJson.optJSONArray("storeCreditVouchers")?.let { arr ->
+                  for (i in 0 until arr.length()) {
+                      val obj = arr.getJSONObject(i)
+                      val backupSaleId = obj.optLong("sourceSaleId").takeIf { obj.has("sourceSaleId") && !obj.isNull("sourceSaleId") }
+                          ?: obj.optLong("saleId").takeIf { obj.has("saleId") && !obj.isNull("saleId") }
+                      val resolvedSaleId = if (mode == BackupImportMode.MERGE && backupSaleId != null) {
+                          saleIdMap[backupSaleId] ?: backupSaleId
+                      } else backupSaleId
+
+                      val backupReturnId = obj.optLong("sourceReturnId").takeIf { obj.has("sourceReturnId") && !obj.isNull("sourceReturnId") }
+                      val resolvedReturnId = if (mode == BackupImportMode.MERGE && backupReturnId != null) {
+                          returnIdMap[backupReturnId] ?: backupReturnId
+                      } else backupReturnId
+
+                      val initialAmt = if (obj.has("initialAmount")) obj.optDouble("initialAmount", 0.0) else obj.optDouble("originalAmount", 0.0)
+                      val phone = if (obj.isNull("customerPhone")) null else normalizePhone(obj.getString("customerPhone"))
+                      storeCreditVoucherDao.insertVoucher(StoreCreditVoucher(
+                          code = obj.getString("code"),
+                          initialAmount = initialAmt,
+                          remainingBalance = obj.optDouble("remainingBalance", initialAmt),
+                          customerPhone = phone,
+                          sourceReturnId = resolvedReturnId,
+                          sourceSaleId = resolvedSaleId,
+                          issuedAt = obj.optLong("issuedAt", System.currentTimeMillis()),
+                          expiresAt = if (obj.isNull("expiresAt")) null else obj.optLong("expiresAt"),
+                          status = obj.optString("status", "ACTIVE"),
+                          notes = if (obj.isNull("notes")) null else obj.optString("notes")
+                      ))
+                  }
+              }
+
+              // Restore store credit ledger
+              backupJson.optJSONArray("storeCreditLedger")?.let { arr ->
+                  for (i in 0 until arr.length()) {
+                      val obj = arr.getJSONObject(i)
+                      val delta = if (obj.has("deltaAmount")) obj.optDouble("deltaAmount", 0.0) else obj.optDouble("amount", 0.0)
+                      val backupSaleId = when {
+                          obj.has("referenceInvoiceId") && !obj.isNull("referenceInvoiceId") -> obj.optLong("referenceInvoiceId")
+                          obj.has("saleId") && !obj.isNull("saleId") -> obj.optLong("saleId")
+                          else -> null
+                      }
+                      val resolvedSaleId = if (mode == BackupImportMode.MERGE && backupSaleId != null) {
+                          saleIdMap[backupSaleId] ?: backupSaleId
+                      } else backupSaleId
+
+                      val noteText = when {
+                          obj.has("note") && !obj.isNull("note") -> obj.optString("note")
+                          obj.has("notes") && !obj.isNull("notes") -> obj.optString("notes")
+                          else -> null
+                      }
+                      val ts = when {
+                          obj.has("timestamp") -> obj.optLong("timestamp", System.currentTimeMillis())
+                          obj.has("createdAt") -> obj.optLong("createdAt", System.currentTimeMillis())
+                          else -> System.currentTimeMillis()
+                      }
+                      storeCreditLedgerDao.insertEntry(StoreCreditLedgerEntry(
+                          id = if (mode == BackupImportMode.MERGE) 0L else obj.optLong("id", 0L),
+                          customerPhone = normalizePhone(obj.getString("customerPhone")),
+                          deltaAmount = delta,
+                          balanceAfter = obj.optDouble("balanceAfter", 0.0),
+                          type = obj.optString("type", "MANUAL_ADJUST"),
+                          referenceInvoiceId = resolvedSaleId,
+                          voucherCode = if (obj.isNull("voucherCode")) null else obj.optString("voucherCode"),
+                          note = noteText,
+                          timestamp = ts
+                      ))
+                  }
               }
             }
 

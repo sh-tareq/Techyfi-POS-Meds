@@ -688,6 +688,9 @@ interface StoreCreditVoucherDao {
     @Query("SELECT * FROM store_credit_vouchers ORDER BY issuedAt DESC")
     fun getAllVouchers(): Flow<List<StoreCreditVoucher>>
 
+    @Query("SELECT * FROM store_credit_vouchers ORDER BY issuedAt DESC")
+    suspend fun getAllVouchersOnce(): List<StoreCreditVoucher>
+
     @Query("SELECT * FROM store_credit_vouchers WHERE customerPhone = :phone ORDER BY issuedAt DESC")
     suspend fun getVouchersByPhone(phone: String): List<StoreCreditVoucher>
 
@@ -711,4 +714,7 @@ interface StoreCreditLedgerDao {
 
     @Query("SELECT * FROM store_credit_ledger ORDER BY timestamp DESC LIMIT :limit")
     fun getRecentLedgerEntries(limit: Int = 100): Flow<List<StoreCreditLedgerEntry>>
+
+    @Query("SELECT * FROM store_credit_ledger ORDER BY timestamp ASC")
+    suspend fun getAllEntries(): List<StoreCreditLedgerEntry>
 }
