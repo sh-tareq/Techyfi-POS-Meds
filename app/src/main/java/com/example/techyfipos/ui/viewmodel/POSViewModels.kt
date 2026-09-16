@@ -1195,14 +1195,14 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     fun effectivePriceFor(item: CartItem): Double = effectivePrice(item.product, priceMode.value)
 
     suspend fun completeSale(): Long = saleCompletionMutex.withLock {
-        if (_cartItems.value.isEmpty()) {
-            throw IllegalStateException("Cart is empty")
-        }
-        if (grandTotal.value <= 0.0) {
-            throw IllegalStateException("Cannot complete sale with ৳0 total")
-        }
         _isCompletingSale.value = true
         try {
+            if (_cartItems.value.isEmpty()) {
+                throw IllegalStateException("Cart is empty")
+            }
+            if (grandTotal.value <= 0.0) {
+                throw IllegalStateException("Cannot complete sale with ৳0 total")
+            }
             val mode = priceMode.value
             val itemsToSave = _cartItems.value.map {
                 val chargedPrice = effectivePrice(it.product, mode)
@@ -1285,7 +1285,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 taxAmount = taxValue.value,
                 splitPaymentJson = splitJson,
                 loyaltyPhone = redeemedCustomer?.phone,
-                loyaltyPointsToRedeem = appliedLoyaltyPoints
+                loyaltyPointsToRedeem = appliedLoyaltyPoints,
+                storeCreditApplied = _storeCreditApplied.value
             )
 
             clearCart()

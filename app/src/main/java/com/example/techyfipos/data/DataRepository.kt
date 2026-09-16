@@ -624,7 +624,8 @@ class DataRepository(
         taxAmount: Double = 0.0,
         splitPaymentJson: String? = null,
         loyaltyPhone: String? = null,
-        loyaltyPointsToRedeem: Int = 0
+        loyaltyPointsToRedeem: Int = 0,
+        storeCreditApplied: Double = 0.0
     ): Long = completeSaleWithNotes(
         subtotal = subtotal,
         discountAmount = discountAmount,
@@ -642,7 +643,8 @@ class DataRepository(
         taxAmount = taxAmount,
         splitPaymentJson = splitPaymentJson,
         loyaltyPhone = loyaltyPhone,
-        loyaltyPointsToRedeem = loyaltyPointsToRedeem
+        loyaltyPointsToRedeem = loyaltyPointsToRedeem,
+        storeCreditApplied = storeCreditApplied
     )
 
     suspend fun completeSaleWithNotes(
@@ -662,7 +664,8 @@ class DataRepository(
         taxAmount: Double = 0.0,
         splitPaymentJson: String? = null,
         loyaltyPhone: String? = null,
-        loyaltyPointsToRedeem: Int = 0
+        loyaltyPointsToRedeem: Int = 0,
+        storeCreditApplied: Double = 0.0
     ): Long = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.SALES_SELL)
         if (discountAmount > 0.0) {
@@ -768,12 +771,15 @@ class DataRepository(
             }
 
             // Deduct Store Credit if tender used
-            var storeCreditToUse = 0.0
+            var storeCreditToUse = if (storeCreditApplied > 0.0) storeCreditApplied else 0.0
             if (paymentMethod.equals("Store Credit", ignoreCase = true)) {
                 storeCreditToUse = grandTotal
             } else if (paymentMethod == "Split" && splitEntries != null) {
-                storeCreditToUse = splitEntries.filter { it.optString("method").equals("Store Credit", ignoreCase = true) }
+                val splitStoreCredit = splitEntries.filter { it.optString("method").equals("Store Credit", ignoreCase = true) }
                     .sumOf { it.optDouble("amount", 0.0) }
+                if (splitStoreCredit > 0.0) {
+                    storeCreditToUse = splitStoreCredit
+                }
             }
             if (storeCreditToUse > 0.0) {
                 require(!normalizedCustomerPhone.isNullOrBlank()) { "Customer phone number is required for Store Credit payment" }
