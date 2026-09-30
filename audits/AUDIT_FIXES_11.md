@@ -59,9 +59,9 @@ Re-locate by content before editing.
 - [ ] **A-12** The next shift's opening float resets to 0 on close (repo about 3958). Carry over the counted cash left in the drawer, or prompt for it.
 
 ### Half-built features (decide: implement or hide the setting)
-- [ ] **A-13** `pointsExpiryDays` is saved (LoyaltyScreen about 1332) but never read. Points never expire.
-- [ ] **A-14** Loyalty tiers never auto-upgrade. The thresholds are only used for the progress UI (LoyaltyScreen about 1700). `addPoints`
-  (AppDaos about 501) never changes the tier.
+- [x] **A-13** `pointsExpiryDays` is saved (LoyaltyScreen about 1332) but never read. Points never expire. *(Hid unused setting field)*
+- [x] **A-14** Loyalty tiers never auto-upgrade. The thresholds are only used for the progress UI (LoyaltyScreen about 1700). `addPoints`
+  (AppDaos about 501) never changes the tier. *(Implemented automatic tier upgrades on earning points based on spend thresholds)*
 - [ ] **A-15** `processReturn` for a sale paid with Store Credit doesn't restore the credit. `cashRefundAmount` only counts the cash share.
 
 ---

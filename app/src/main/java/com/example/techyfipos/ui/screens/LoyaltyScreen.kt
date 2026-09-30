@@ -48,18 +48,22 @@ import com.example.techyfipos.utils.LoyaltySettingsHelper
 import com.example.techyfipos.utils.formatTaka
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.launch
+import com.example.techyfipos.TechyfiPOSApplication
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoyaltyScreen(
     loyaltyViewModel: LoyaltyViewModel,
     customerViewModel: CustomerViewModel? = null,
+    settingsViewModel: com.example.techyfipos.ui.viewmodel.SettingsViewModel? = null,
     onBack: () -> Unit,
     onStartSaleForCustomer: ((Customer) -> Unit)? = null,
     isTablet: Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val memberDeletedMessage = stringResource(R.string.loyalty_deleted_success)
 
     // State from ViewModel
@@ -73,7 +77,7 @@ fun LoyaltyScreen(
     val dossierData by (customerViewModel?.selectedCustomerDossier?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) })
 
     // Program settings
-    var programSettings by remember { mutableStateOf(LoyaltySettingsHelper.getSettings(context)) }
+    val programSettings by loyaltyViewModel.programSettings.collectAsStateWithLifecycle()
 
     // Dialog & Sheet States
     var showAddMemberDialog by remember { mutableStateOf(false) }
@@ -109,7 +113,7 @@ fun LoyaltyScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
+                        IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                         }
                         PosTopAppBarTitle(
@@ -263,7 +267,7 @@ fun LoyaltyScreen(
             onDismiss = { memberToAdjust = null },
             onSaveProfile = { name ->
                 loyaltyViewModel.upsertMember(member.phone, name)
-                memberToAdjust = null
+                Toast.makeText(context, context.getString(R.string.loyalty_profile_saved_toast), Toast.LENGTH_SHORT).show()
             },
             onAddPoints = { pts, reason ->
                 loyaltyViewModel.addPoints(member.phone, pts, 0.0, reason)
@@ -329,8 +333,7 @@ fun LoyaltyScreen(
             currentSettings = programSettings,
             onDismiss = { showSettingsDialog = false },
             onSave = { updated ->
-                LoyaltySettingsHelper.saveSettings(context, updated)
-                programSettings = updated
+                loyaltyViewModel.updateProgramSettings(updated)
                 showSettingsDialog = false
                 Toast.makeText(context, context.getString(R.string.loyalty_settings_saved_toast), Toast.LENGTH_SHORT).show()
             }
@@ -371,7 +374,18 @@ fun LoyaltyScreen(
             onStartSale = {
                 if (onStartSaleForCustomer != null) {
                     memberForLedgerSheet = null
-                    onStartSaleForCustomer(Customer(phone = member.phone, name = member.name, tag = member.tier))
+                    scope.launch {
+                        val fullCustomer = customerViewModel?.getCustomerByPhone(member.phone)
+                            ?: loyaltyViewModel.getCustomerByPhone(member.phone)
+                            ?: Customer(
+                                phone = member.phone,
+                                name = member.name,
+                                tag = member.tier,
+                                loyaltyPoints = member.pointsBalance,
+                                loyaltyTier = member.tier
+                            )
+                        onStartSaleForCustomer(fullCustomer)
+                    }
                 }
             },
             onCall = {
@@ -403,6 +417,14 @@ fun LoyaltyScreen(
                     onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
                 )
             },
+            onDeleteNote = { index ->
+                customerViewModel.deleteCustomerNote(
+                    phone = dossierData!!.customer.phone,
+                    noteIndex = index,
+                    onSuccess = { Toast.makeText(context, context.getString(R.string.delete), Toast.LENGTH_SHORT).show() },
+                    onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
+                )
+            },
             onAdjustCredit = { delta, note ->
                 customerViewModel.adjustCustomerStoreCredit(
                     phone = dossierData!!.customer.phone,
@@ -411,7 +433,8 @@ fun LoyaltyScreen(
                     onSuccess = { Toast.makeText(context, context.getString(R.string.store_credit_adjusted_success), Toast.LENGTH_SHORT).show() },
                     onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
                 )
-            }
+            },
+            settingsViewModel = settingsViewModel
         )
     }
 
@@ -465,7 +488,7 @@ private fun LoyaltyKpiBar(
         KpiStatCard(
             title = stringResource(R.string.loyalty_kpi_members),
             value = kpiStats.totalMembers.toString(),
-            subtitle = "Active program",
+            subtitle = stringResource(R.string.loyalty_kpi_active_program),
             icon = { Realistic3DCustomerHubIcon(modifier = Modifier.size(24.dp)) },
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.width(132.dp)
@@ -475,7 +498,7 @@ private fun LoyaltyKpiBar(
         val liability = kpiStats.outstandingPoints * pointCashValue
         KpiStatCard(
             title = stringResource(R.string.loyalty_kpi_outstanding),
-            value = "${kpiStats.outstandingPoints} pts",
+            value = stringResource(R.string.loyalty_pts_suffix, kpiStats.outstandingPoints),
             subtitle = stringResource(R.string.loyalty_kpi_liability_val, formatTaka(liability)),
             icon = { Realistic3DGoldCoinsIcon(modifier = Modifier.size(24.dp)) },
             containerColor = Color(0xFFFEF3C7).copy(alpha = 0.6f),
@@ -485,8 +508,8 @@ private fun LoyaltyKpiBar(
         // Card 3: Redeemed This Month
         KpiStatCard(
             title = stringResource(R.string.loyalty_kpi_redeemed),
-            value = "${kpiStats.redeemedThisMonth} pts",
-            subtitle = "Last 30 days",
+            value = stringResource(R.string.loyalty_pts_suffix, kpiStats.redeemedThisMonth),
+            subtitle = stringResource(R.string.loyalty_kpi_last_30_days),
             icon = { Realistic3DLoyaltyStarIcon(modifier = Modifier.size(24.dp)) },
             containerColor = Color(0xFFDCFCE7).copy(alpha = 0.6f),
             modifier = Modifier.width(132.dp)
@@ -496,7 +519,7 @@ private fun LoyaltyKpiBar(
         KpiStatCard(
             title = stringResource(R.string.loyalty_kpi_vip),
             value = kpiStats.vipMembers.toString(),
-            subtitle = "Gold & Platinum",
+            subtitle = stringResource(R.string.loyalty_kpi_gold_platinum),
             icon = { Realistic3DReportChartIcon(modifier = Modifier.size(24.dp)) },
             containerColor = Color(0xFFF3E8FF).copy(alpha = 0.6f),
             modifier = Modifier.width(132.dp)
@@ -573,7 +596,7 @@ private fun LoyaltySearchBar(
         trailingIcon = {
             if (query.isNotBlank()) {
                 IconButton(onClick = onClear) {
-                    Icon(Icons.Default.Close, contentDescription = "Clear search", tint = Color.Gray)
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_search_cd), tint = Color.Gray)
                 }
             }
         },
@@ -647,16 +670,19 @@ private fun FilterChipItem(
             if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
         ),
         modifier = Modifier
+            .defaultMinSize(minHeight = 48.dp)
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
     ) {
-        Text(
-            text = text,
-            fontSize = 11.5.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                fontSize = 11.5.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+            )
+        }
     }
 }
 
@@ -740,7 +766,7 @@ private fun CompactLoyaltyRow(
                             color = Color.Gray
                         )
                         Text(
-                            text = "${formatTaka(member.lifetimeSpent)} spent",
+                            text = stringResource(R.string.loyalty_spent_suffix, formatTaka(member.lifetimeSpent)),
                             fontSize = 11.sp,
                             color = Color(0xFF059669),
                             fontWeight = FontWeight.SemiBold
@@ -762,7 +788,7 @@ private fun CompactLoyaltyRow(
                         modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "⭐ ${member.pointsBalance} pts",
+                            text = "⭐ " + stringResource(R.string.loyalty_pts_suffix, member.pointsBalance),
                             color = Color(0xFF92400E),
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 11.sp,
@@ -783,11 +809,11 @@ private fun CompactLoyaltyRow(
             Box(contentAlignment = Alignment.Center) {
                 IconButton(
                     onClick = { showMenu = true },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         Icons.Default.MoreVert,
-                        contentDescription = "Options",
+                        contentDescription = stringResource(R.string.options_cd),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
@@ -937,8 +963,9 @@ private fun LoyaltyQuickRedeemDialog(
     onDismiss: () -> Unit,
     onConfirmRedeem: (points: Int, reason: String) -> Unit
 ) {
+    val defaultReason = stringResource(R.string.loyalty_redeem_default_reason)
     var pointsInput by remember { mutableStateOf("") }
-    var reasonInput by remember { mutableStateOf("Points redemption at counter") }
+    var reasonInput by remember(defaultReason) { mutableStateOf(defaultReason) }
     val pointsToRedeem = pointsInput.toIntOrNull() ?: 0
     val cashSaved = pointsToRedeem * pointCashValue
     val newBalance = (member.pointsBalance - pointsToRedeem).coerceAtLeast(0)
@@ -955,50 +982,50 @@ private fun LoyaltyQuickRedeemDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Customer Balance card
+                // Member balance pill
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFFFEF3C7),
-                    border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text(member.name, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(stringResource(R.string.loyalty_current_balance), fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
                         Text(
-                            "Available: ${member.pointsBalance} pts • Cash Value: ${formatTaka(member.pointsBalance * pointCashValue)}",
-                            fontSize = 11.5.sp,
-                            color = Color(0xFF92400E)
+                            text = "${stringResource(R.string.loyalty_pts_suffix, member.pointsBalance)} (${formatTaka(member.pointsBalance * pointCashValue)})",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
 
-                // Quick 1-Touch buttons
-                Text("Quick Preset Amount:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (member.pointsBalance >= 50) {
+                // Quick percentage chips
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(25, 50, 75).forEach { pct ->
+                        val pts = (member.pointsBalance * pct / 100.0).toInt().coerceAtLeast(0)
                         OutlinedButton(
-                            onClick = { pointsInput = "50" },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.weight(1f)
+                            onClick = { pointsInput = pts.toString() },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("50 pts", fontSize = 11.sp)
+                            Text("$pct%", fontSize = 11.sp)
                         }
                     }
-                    if (member.pointsBalance >= 100) {
-                        OutlinedButton(
-                            onClick = { pointsInput = "100" },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("100 pts", fontSize = 11.sp)
-                        }
-                    }
-                    OutlinedButton(
+                    Button(
                         onClick = { pointsInput = member.pointsBalance.toString() },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1.3f),
+                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Max (${member.pointsBalance})", fontSize = 11.sp)
+                        Text(stringResource(R.string.loyalty_max_label, member.pointsBalance), fontSize = 11.sp)
                     }
                 }
 
@@ -1006,7 +1033,7 @@ private fun LoyaltyQuickRedeemDialog(
                 OutlinedTextField(
                     value = pointsInput,
                     onValueChange = { pointsInput = it.filter(Char::isDigit) },
-                    label = { Text("Points to Redeem (Min $minRedeem)") },
+                    label = { Text(stringResource(R.string.loyalty_points_to_redeem_min, minRedeem)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(10.dp),
@@ -1022,8 +1049,8 @@ private fun LoyaltyQuickRedeemDialog(
                     ) {
                         Column(modifier = Modifier.padding(8.dp)) {
                             Text(
-                                text = if (isValid) "✓ Discount: ${formatTaka(cashSaved)} • Remaining: $newBalance pts"
-                                else "⚠️ Must be between $minRedeem and ${member.pointsBalance} pts",
+                                text = if (isValid) stringResource(R.string.loyalty_redeem_valid_preview, formatTaka(cashSaved), newBalance)
+                                else stringResource(R.string.loyalty_redeem_invalid_range, minRedeem, member.pointsBalance),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isValid) Color(0xFF166534) else Color(0xFF991B1B)
@@ -1035,7 +1062,7 @@ private fun LoyaltyQuickRedeemDialog(
                 OutlinedTextField(
                     value = reasonInput,
                     onValueChange = { reasonInput = it },
-                    label = { Text("Reason / Invoice Ref") },
+                    label = { Text(stringResource(R.string.loyalty_redeem_reason_label)) },
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -1043,12 +1070,17 @@ private fun LoyaltyQuickRedeemDialog(
             }
         },
         confirmButton = {
+            val redeemBtnText = if (pointsToRedeem > 0) {
+                stringResource(R.string.loyalty_redeem_amount_button, formatTaka(cashSaved))
+            } else {
+                stringResource(R.string.loyalty_redeem_button_simple)
+            }
             Button(
                 enabled = isValid,
                 onClick = { onConfirmRedeem(pointsToRedeem, reasonInput) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B))
             ) {
-                Text("Redeem ${if (pointsToRedeem > 0) formatTaka(cashSaved) else ""}", fontWeight = FontWeight.Bold)
+                Text(redeemBtnText, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -1120,19 +1152,31 @@ private fun LoyaltyAdjustPointsDialog(
             }
         },
         confirmButton = {
-            Button(
-                enabled = points > 0,
-                onClick = { onAddPoints(points, reason.ifBlank { "Manual points addition" }) }
+            val defaultAddReason = stringResource(R.string.loyalty_manual_add_reason)
+            val defaultDeductReason = stringResource(R.string.loyalty_manual_deduct_reason)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(stringResource(R.string.loyalty_add_points), fontWeight = FontWeight.Bold)
+                OutlinedButton(
+                    enabled = points in 1..member.pointsBalance,
+                    onClick = { onRedeemPoints(points, reason.ifBlank { defaultDeductReason }) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.loyalty_redeem_points), fontWeight = FontWeight.Bold, maxLines = 1)
+                }
+                Button(
+                    enabled = points > 0,
+                    onClick = { onAddPoints(points, reason.ifBlank { defaultAddReason }) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.loyalty_add_points), fontWeight = FontWeight.Bold, maxLines = 1)
+                }
             }
         },
         dismissButton = {
-            OutlinedButton(
-                enabled = points in 1..member.pointsBalance,
-                onClick = { onRedeemPoints(points, reason.ifBlank { "Manual adjustment deduction" }) }
-            ) {
-                Text(stringResource(R.string.loyalty_redeem_points), fontWeight = FontWeight.Bold)
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -1212,7 +1256,7 @@ private fun LoyaltyAddMemberDialog(
                                 shape = RoundedCornerShape(6.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                modifier = Modifier.height(28.dp)
+                                modifier = Modifier.heightIn(min = 48.dp)
                             ) {
                                 Text(
                                     stringResource(R.string.loyalty_duplicate_view_existing),
@@ -1225,9 +1269,14 @@ private fun LoyaltyAddMemberDialog(
                 }
 
                 // Tier Selector
-                Text("Membership Tier:", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.loyalty_membership_tier_label), fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("Regular", "Silver", "Gold", "Platinum").forEach { tier ->
+                    listOf(
+                        "Regular" to R.string.tier_regular,
+                        "Silver" to R.string.tier_silver,
+                        "Gold" to R.string.tier_gold,
+                        "Platinum" to R.string.tier_platinum
+                    ).forEach { (tier, tierRes) ->
                         val isSel = selectedTier == tier
                         Surface(
                             shape = RoundedCornerShape(6.dp),
@@ -1237,7 +1286,7 @@ private fun LoyaltyAddMemberDialog(
                                 .clickable { selectedTier = tier }
                         ) {
                             Text(
-                                text = tier,
+                                text = stringResource(tierRes),
                                 fontSize = 10.5.sp,
                                 fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
@@ -1273,13 +1322,15 @@ private fun LoyaltySettingsDialog(
     onDismiss: () -> Unit,
     onSave: (LoyaltyProgramSettings) -> Unit
 ) {
-    var takaPerPoint by remember { mutableStateOf(currentSettings.takaPerPoint.toString()) }
-    var cashValPerPoint by remember { mutableStateOf(currentSettings.pointCashValue.toString()) }
-    var minRedeemPts by remember { mutableStateOf(currentSettings.minRedeemPoints.toString()) }
-    var maxBillPercent by remember { mutableStateOf(currentSettings.maxBillPercentPayable.toString()) }
-    var silverThresh by remember { mutableStateOf(currentSettings.silverSpendThreshold.toString()) }
-    var goldThresh by remember { mutableStateOf(currentSettings.goldSpendThreshold.toString()) }
-    var platThresh by remember { mutableStateOf(currentSettings.platinumSpendThreshold.toString()) }
+    var takaPerPoint by remember(currentSettings) { mutableStateOf(currentSettings.takaPerPoint.toString()) }
+    var cashValPerPoint by remember(currentSettings) { mutableStateOf(currentSettings.pointCashValue.toString()) }
+    var minRedeemPts by remember(currentSettings) { mutableStateOf(currentSettings.minRedeemPoints.toString()) }
+    var maxBillPercent by remember(currentSettings) { mutableStateOf(currentSettings.maxBillPercentPayable.toString()) }
+    var silverThresh by remember(currentSettings) { mutableStateOf(currentSettings.silverSpendThreshold.toString()) }
+    var goldThresh by remember(currentSettings) { mutableStateOf(currentSettings.goldSpendThreshold.toString()) }
+    var platThresh by remember(currentSettings) { mutableStateOf(currentSettings.platinumSpendThreshold.toString()) }
+    var pointsExpiryDays by remember(currentSettings) { mutableStateOf(currentSettings.pointsExpiryDays.toString()) }
+    var isTiersEnabled by remember(currentSettings) { mutableStateOf(currentSettings.isTiersEnabled) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1332,39 +1383,72 @@ private fun LoyaltySettingsDialog(
                         modifier = Modifier.weight(1f)
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = silverThresh,
-                        onValueChange = { silverThresh = it },
-                        label = { Text("Silver (৳)", fontSize = 11.sp) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.loyalty_settings_enable_tiers),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
                     )
-                    OutlinedTextField(
-                        value = goldThresh,
-                        onValueChange = { goldThresh = it },
-                        label = { Text("Gold (৳)", fontSize = 11.sp) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
+                    Switch(
+                        checked = isTiersEnabled,
+                        onCheckedChange = { isTiersEnabled = it }
                     )
-                    OutlinedTextField(
-                        value = platThresh,
-                        onValueChange = { platThresh = it },
-                        label = { Text("Plat (৳)", fontSize = 11.sp) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
-                    )
+                }
+                if (isTiersEnabled) {
+                    val sVal = silverThresh.toDoubleOrNull() ?: 0.0
+                    val gVal = goldThresh.toDoubleOrNull() ?: 0.0
+                    val pVal = platThresh.toDoubleOrNull() ?: 0.0
+                    val isTiersValid = sVal < gVal && gVal < pVal
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = silverThresh,
+                            onValueChange = { silverThresh = it },
+                            label = { Text(stringResource(R.string.loyalty_tier_silver_bdt), fontSize = 11.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = goldThresh,
+                            onValueChange = { goldThresh = it },
+                            label = { Text(stringResource(R.string.loyalty_tier_gold_bdt), fontSize = 11.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = platThresh,
+                            onValueChange = { platThresh = it },
+                            label = { Text(stringResource(R.string.loyalty_tier_platinum_bdt), fontSize = 11.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (!isTiersValid) {
+                        Text(
+                            text = stringResource(R.string.loyalty_tier_order_error),
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 11.sp
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
+            val sVal = silverThresh.toDoubleOrNull() ?: 0.0
+            val gVal = goldThresh.toDoubleOrNull() ?: 0.0
+            val pVal = platThresh.toDoubleOrNull() ?: 0.0
+            val isTiersValid = !isTiersEnabled || (sVal < gVal && gVal < pVal)
             Button(
+                enabled = isTiersValid,
                 onClick = {
                     val updated = currentSettings.copy(
                         takaPerPoint = takaPerPoint.toDoubleOrNull() ?: currentSettings.takaPerPoint,
@@ -1373,7 +1457,9 @@ private fun LoyaltySettingsDialog(
                         maxBillPercentPayable = maxBillPercent.toIntOrNull() ?: currentSettings.maxBillPercentPayable,
                         silverSpendThreshold = silverThresh.toDoubleOrNull() ?: currentSettings.silverSpendThreshold,
                         goldSpendThreshold = goldThresh.toDoubleOrNull() ?: currentSettings.goldSpendThreshold,
-                        platinumSpendThreshold = platThresh.toDoubleOrNull() ?: currentSettings.platinumSpendThreshold
+                        platinumSpendThreshold = platThresh.toDoubleOrNull() ?: currentSettings.platinumSpendThreshold,
+                        pointsExpiryDays = pointsExpiryDays.toIntOrNull() ?: currentSettings.pointsExpiryDays,
+                        isTiersEnabled = isTiersEnabled
                     )
                     onSave(updated)
                 }
@@ -1533,10 +1619,10 @@ private fun LoyaltyAuditLedgerSheet(
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(onClick = onCall, modifier = Modifier.size(42.dp)) {
+                    IconButton(onClick = onCall, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Default.Phone, contentDescription = stringResource(R.string.customer_action_call), tint = Color(0xFF0284C7))
                     }
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(42.dp)) {
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
@@ -1574,21 +1660,21 @@ private fun LoyaltyAuditLedgerSheet(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text("Current Balance", fontSize = 11.sp, color = Color(0xFF92400E))
+                                Text(stringResource(R.string.loyalty_current_balance), fontSize = 11.sp, color = Color(0xFF92400E))
                                 Text(
-                                    "⭐ ${member.pointsBalance} Points",
+                                    stringResource(R.string.loyalty_points_balance_display, member.pointsBalance),
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFF78350F)
                                 )
                                 Text(
-                                    "Cash value: ${formatTaka(member.pointsBalance * pointCashValue)}",
+                                    stringResource(R.string.loyalty_cash_value_display, formatTaka(member.pointsBalance * pointCashValue)),
                                     fontSize = 11.5.sp,
                                     color = Color(0xFF92400E)
                                 )
                             }
                             Column(horizontalAlignment = Alignment.End) {
-                                Text("Lifetime Spend", fontSize = 11.sp, color = Color(0xFF92400E))
+                                Text(stringResource(R.string.loyalty_lifetime_spend_label), fontSize = 11.sp, color = Color(0xFF92400E))
                                 Text(
                                     formatTaka(member.lifetimeSpent),
                                     fontSize = 16.sp,
@@ -1600,11 +1686,12 @@ private fun LoyaltyAuditLedgerSheet(
                     }
 
                     // Next Tier Progression Bar
+                    val isPlatinum = member.tier.equals("platinum", ignoreCase = true)
                     val (nextTier, nextTarget) = when (member.tier.lowercase()) {
-                        "regular" -> Pair("Silver", settings.silverSpendThreshold)
-                        "silver" -> Pair("Gold", settings.goldSpendThreshold)
-                        "gold" -> Pair("Platinum", settings.platinumSpendThreshold)
-                        else -> Pair("Max Level (Platinum)", settings.platinumSpendThreshold)
+                        "regular" -> Pair(stringResource(R.string.tier_silver), settings.silverSpendThreshold)
+                        "silver" -> Pair(stringResource(R.string.tier_gold), settings.goldSpendThreshold)
+                        "gold" -> Pair(stringResource(R.string.tier_platinum), settings.platinumSpendThreshold)
+                        else -> Pair(stringResource(R.string.tier_max_level_platinum), settings.platinumSpendThreshold)
                     }
                     val progress = if (nextTarget > 0) (member.lifetimeSpent / nextTarget).toFloat().coerceIn(0f, 1f) else 1f
 
@@ -1618,8 +1705,12 @@ private fun LoyaltyAuditLedgerSheet(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Tier Progression", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                                Text("Target: $nextTier (${formatTaka(nextTarget)})", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.primary)
+                                Text(stringResource(R.string.loyalty_tier_progression), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                if (isPlatinum) {
+                                    Text(stringResource(R.string.loyalty_highest_tier_reached), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                } else {
+                                    Text(stringResource(R.string.loyalty_target_label, nextTier, formatTaka(nextTarget)), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.primary)
+                                }
                             }
                             LinearProgressIndicator(
                                 progress = { progress },
@@ -1632,7 +1723,11 @@ private fun LoyaltyAuditLedgerSheet(
                             )
                             val remaining = (nextTarget - member.lifetimeSpent).coerceAtLeast(0.0)
                             Text(
-                                if (remaining > 0) "Spend ${formatTaka(remaining)} more to upgrade to $nextTier!" else "VIP Tier Unlocked! Enjoy exclusive privileges.",
+                                if (isPlatinum || remaining <= 0.0) {
+                                    stringResource(R.string.loyalty_highest_tier_reached)
+                                } else {
+                                    stringResource(R.string.loyalty_upgrade_prompt, formatTaka(remaining), nextTier)
+                                },
                                 fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1747,7 +1842,7 @@ private fun LoyaltyAuditLedgerSheet(
                             .padding(vertical = 16.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(16.dp)) {
-                            Text("No loyalty transactions recorded yet", color = Color.Gray, fontSize = 12.5.sp)
+                            Text(stringResource(R.string.loyalty_no_transactions), color = Color.Gray, fontSize = 12.5.sp)
                         }
                     }
                 } else {
@@ -1786,7 +1881,7 @@ private fun LoyaltyAuditLedgerSheet(
                                         color = if (isPos) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
                                     ) {
                                         Text(
-                                            text = if (isPos) "+${tx.pointsChange} pts" else "${tx.pointsChange} pts",
+                                            text = stringResource(R.string.loyalty_pts_suffix, if (isPos) "+${tx.pointsChange}" else "${tx.pointsChange}"),
                                             color = if (isPos) Color(0xFF166534) else Color(0xFF991B1B),
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 12.sp,

@@ -1073,6 +1073,18 @@ class DataRepository(
                     )
                 }
                 customerLoyaltyDao.addPoints(normalizedCustomerPhone, earnedPoints, grandTotal, timestamp)
+                val updatedLoyalty = customerLoyaltyDao.getLoyaltyByPhone(normalizedCustomerPhone)
+                if (updatedLoyalty != null && loyaltySettings.isTiersEnabled) {
+                    val newTier = when {
+                        updatedLoyalty.lifetimeSpent >= loyaltySettings.platinumSpendThreshold -> "Platinum"
+                        updatedLoyalty.lifetimeSpent >= loyaltySettings.goldSpendThreshold -> "Gold"
+                        updatedLoyalty.lifetimeSpent >= loyaltySettings.silverSpendThreshold -> "Silver"
+                        else -> "Regular"
+                    }
+                    if (!updatedLoyalty.tier.equals(newTier, ignoreCase = true)) {
+                        customerLoyaltyDao.upsertLoyalty(updatedLoyalty.copy(tier = newTier, updatedAt = timestamp))
+                    }
+                }
                 loyaltyTransactionDao.insert(LoyaltyTransaction(
                     customerPhone = normalizedCustomerPhone, pointsChange = earnedPoints,
                     spendChange = grandTotal, type = "SALE_EARN", reason = "Earned on invoice #$saleId",
