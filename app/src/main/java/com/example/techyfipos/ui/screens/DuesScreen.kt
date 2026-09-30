@@ -2107,6 +2107,8 @@ fun SendDueReminderDialog(
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = Color.White,
                                 unfocusedContainerColor = Color.White,
+                                focusedTextColor = Color(0xFF0F172A),
+                                unfocusedTextColor = Color(0xFF334155),
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = Color(0xFFCBD5E1)
                             )

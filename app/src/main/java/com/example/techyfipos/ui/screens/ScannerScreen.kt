@@ -809,6 +809,8 @@ private fun TabletSplitTerminal(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     var showCameraPIP by remember { mutableStateOf(false) }
+    var showClearCartConfirm by remember { mutableStateOf(false) }
+    var itemToRemoveConfirm by remember { mutableStateOf<com.example.techyfipos.data.db.Product?>(null) }
 
 
     val categories = remember(allProducts) {
@@ -1102,12 +1104,12 @@ private fun TabletSplitTerminal(
                                     }
                                 }
 
-                                Surface(
-                                    onClick = { cartViewModel.clearCart() },
+                                 Surface(
+                                    onClick = { showClearCartConfirm = true },
                                     shape = RoundedCornerShape(8.dp),
                                     color = TabletTerminalColors.CardBg,
                                     border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
-                                    modifier = Modifier.size(44.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.tablet_cart_clear), tint = TabletTerminalColors.Rose, modifier = Modifier.size(16.dp))
@@ -1135,7 +1137,7 @@ private fun TabletSplitTerminal(
                                         cartViewModel.setQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
                                     },
                                     onRemove = {
-                                        cartViewModel.removeFromCart(item.product)
+                                        itemToRemoveConfirm = item.product
                                     }
                                 )
                             }
@@ -1436,7 +1438,7 @@ private fun TabletSplitTerminal(
                             }
 
                             Surface(
-                                onClick = { cartViewModel.clearCart() },
+                                onClick = { showClearCartConfirm = true },
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(48.dp),
@@ -1481,7 +1483,7 @@ private fun TabletSplitTerminal(
                                         cartViewModel.setQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
                                     },
                                     onRemove = {
-                                        cartViewModel.removeFromCart(item.product)
+                                        itemToRemoveConfirm = item.product
                                     }
                                 )
                             }
@@ -1499,9 +1501,50 @@ private fun TabletSplitTerminal(
                     onNavigateToCart = onNavigateToCart
                 )
             }
-        }
+    if (showClearCartConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearCartConfirm = false },
+            title = { Text(stringResource(R.string.clear_cart_dialog_title)) },
+            text = { Text(stringResource(R.string.clear_cart_dialog_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    cartViewModel.clearCart()
+                    showClearCartConfirm = false
+                }) {
+                    Text(stringResource(R.string.confirm), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCartConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
+
+    itemToRemoveConfirm?.let { product ->
+        AlertDialog(
+            onDismissRequest = { itemToRemoveConfirm = null },
+            title = { Text(stringResource(R.string.remove_item_confirm_title)) },
+            text = { Text(stringResource(R.string.remove_item_confirm_message_fmt, product.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    cartViewModel.removeFromCart(product)
+                    itemToRemoveConfirm = null
+                }) {
+                    Text(stringResource(R.string.cd_remove), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToRemoveConfirm = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
+}
+}
+}
 }
 
 @Composable

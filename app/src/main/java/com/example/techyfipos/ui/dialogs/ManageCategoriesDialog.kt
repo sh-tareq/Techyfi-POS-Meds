@@ -194,6 +194,8 @@ fun ManageCategoriesDialog(
                                     colors = OutlinedTextFieldDefaults.colors(
                                         unfocusedContainerColor = Color.White,
                                         focusedContainerColor = Color.White,
+                                        focusedTextColor = Color(0xFF0F172A),
+                                        unfocusedTextColor = Color(0xFF334155),
                                         unfocusedBorderColor = Color(0xFFCBD5E1),
                                         focusedBorderColor = Color(0xFF4F46E5)
                                     )
@@ -209,6 +211,8 @@ fun ManageCategoriesDialog(
                                     colors = OutlinedTextFieldDefaults.colors(
                                         unfocusedContainerColor = Color.White,
                                         focusedContainerColor = Color.White,
+                                        focusedTextColor = Color(0xFF0F172A),
+                                        unfocusedTextColor = Color(0xFF334155),
                                         unfocusedBorderColor = Color(0xFFCBD5E1),
                                         focusedBorderColor = Color(0xFF4F46E5)
                                     )
@@ -231,6 +235,8 @@ fun ManageCategoriesDialog(
                                     colors = OutlinedTextFieldDefaults.colors(
                                         unfocusedContainerColor = Color.White,
                                         focusedContainerColor = Color.White,
+                                        focusedTextColor = Color(0xFF0F172A),
+                                        unfocusedTextColor = Color(0xFF334155),
                                         unfocusedBorderColor = Color(0xFFCBD5E1),
                                         focusedBorderColor = Color(0xFF4F46E5)
                                     )

@@ -5,7 +5,9 @@ package com.example.techyfipos.ui.screens
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
+import androidx.compose.ui.window.Dialog
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -4204,62 +4206,139 @@ fun SettingsScreen(
         }
     }
 
-    pendingRestoreUri?.let { restoreUri ->
-        AlertDialog(
-            onDismissRequest = { pendingRestoreUri = null },
-            icon = { Icon(Icons.Default.Restore, contentDescription = null) },
-            title = { Text(stringResource(R.string.settings_dialog_restore_mode_title)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.settings_restore_replace_desc))
-                    Text(stringResource(R.string.settings_restore_merge_desc), style = MaterialTheme.typography.bodySmall)
+    var showReplaceConfirmDialog by remember { mutableStateOf(false) }
+    var isRestoringDatabase by remember { mutableStateOf(false) }
+
+    if (isRestoringDatabase) {
+        Dialog(onDismissRequest = {}) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        stringResource(R.string.settings_restoring_database_progress),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    if (!isOwner) {
-                        Toast.makeText(context, context.getString(R.string.toast_only_owner_restore_backup), Toast.LENGTH_LONG).show()
-                        return@Button
-                    }
-                    pendingRestoreUri = null
-                    scope.launch(Dispatchers.IO) {
-                        val ok = context.contentResolver.openInputStream(restoreUri)?.use { input ->
-                            settingsViewModel.restoreDatabase(input, BackupImportMode.REPLACE)
-                        } ?: false
-                        withContext(Dispatchers.Main) {
-                            if (ok) {
-                                Toast.makeText(context, context.getString(R.string.restore_success), Toast.LENGTH_SHORT).show()
-                                restartApp(context)
-                            } else {
-                                Toast.makeText(context, context.getString(R.string.restore_failed), Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    }
-                }) { Text(stringResource(R.string.settings_button_replace_all_data)) }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    if (!isOwner) {
-                        Toast.makeText(context, context.getString(R.string.toast_only_owner_restore_backup), Toast.LENGTH_LONG).show()
-                        return@TextButton
-                    }
-                    pendingRestoreUri = null
-                    scope.launch(Dispatchers.IO) {
-                        val ok = context.contentResolver.openInputStream(restoreUri)?.use { input ->
-                            settingsViewModel.restoreDatabase(input, BackupImportMode.MERGE)
-                        } ?: false
-                        withContext(Dispatchers.Main) {
-                            if (ok) {
-                                Toast.makeText(context, context.getString(R.string.restore_success), Toast.LENGTH_SHORT).show()
-                                restartApp(context)
-                            } else {
-                                Toast.makeText(context, context.getString(R.string.restore_failed), Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    }
-                }) { Text(stringResource(R.string.settings_button_merge)) }
             }
-        )
+        }
+    }
+
+    pendingRestoreUri?.let { restoreUri ->
+        if (showReplaceConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showReplaceConfirmDialog = false },
+                icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                title = { Text(stringResource(R.string.settings_confirm_replace_title)) },
+                text = { Text(stringResource(R.string.settings_confirm_replace_desc)) },
+                confirmButton = {
+                    Button(
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        onClick = {
+                            showReplaceConfirmDialog = false
+                            val targetUri = pendingRestoreUri
+                            pendingRestoreUri = null
+                            if (targetUri != null) {
+                                isRestoringDatabase = true
+                                scope.launch(Dispatchers.IO) {
+                                    val ok = try {
+                                        context.contentResolver.openInputStream(targetUri)?.use { input ->
+                                            settingsViewModel.restoreDatabase(input, BackupImportMode.REPLACE)
+                                        } ?: false
+                                    } catch (e: Exception) {
+                                        Log.e("SettingsScreen", "Error during REPLACE restore", e)
+                                        false
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        isRestoringDatabase = false
+                                        if (ok) {
+                                            Toast.makeText(context, context.getString(R.string.restore_success), Toast.LENGTH_SHORT).show()
+                                            restartApp(context)
+                                        } else {
+                                            Toast.makeText(context, context.getString(R.string.restore_failed), Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ) {
+                        Text(stringResource(R.string.settings_button_replace_all_data))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showReplaceConfirmDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = { pendingRestoreUri = null },
+                icon = { Icon(Icons.Default.Restore, contentDescription = null) },
+                title = { Text(stringResource(R.string.settings_dialog_restore_mode_title)) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(R.string.settings_restore_replace_desc))
+                        Text(stringResource(R.string.settings_restore_merge_desc), style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {
+                            if (!isOwner) {
+                                Toast.makeText(context, context.getString(R.string.toast_only_owner_restore_backup), Toast.LENGTH_LONG).show()
+                                return@Button
+                            }
+                            showReplaceConfirmDialog = true
+                        }) { Text(stringResource(R.string.settings_button_replace_all_data)) }
+
+                        TextButton(onClick = {
+                            if (!isOwner) {
+                                Toast.makeText(context, context.getString(R.string.toast_only_owner_restore_backup), Toast.LENGTH_LONG).show()
+                                return@TextButton
+                            }
+                            val targetUri = pendingRestoreUri
+                            pendingRestoreUri = null
+                            if (targetUri != null) {
+                                isRestoringDatabase = true
+                                scope.launch(Dispatchers.IO) {
+                                    val ok = try {
+                                        context.contentResolver.openInputStream(targetUri)?.use { input ->
+                                            settingsViewModel.restoreDatabase(input, BackupImportMode.MERGE)
+                                        } ?: false
+                                    } catch (e: Exception) {
+                                        Log.e("SettingsScreen", "Error during MERGE restore", e)
+                                        false
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        isRestoringDatabase = false
+                                        if (ok) {
+                                            Toast.makeText(context, context.getString(R.string.restore_success), Toast.LENGTH_SHORT).show()
+                                            restartApp(context)
+                                        } else {
+                                            Toast.makeText(context, context.getString(R.string.restore_failed), Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
+                            }
+                        }) { Text(stringResource(R.string.settings_button_merge)) }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingRestoreUri = null }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
     }
 
     // Google Drive Backups List Dialog

@@ -2669,6 +2669,13 @@
     <string name="drive_package_description">Techyfi POS Encrypted Backup Package</string>
     <string name="notif_stock_channel_desc">Daily alerts for low stock and expiring inventory</string>
     <string name="restore_success_summary_fmt">Restore successful! Restored %1$d products &amp; %2$d sales records.</string>
+    <string name="clear_cart_dialog_title">Clear Cart</string>
+    <string name="clear_cart_dialog_message">Are you sure you want to clear all items from the cart?</string>
+    <string name="remove_item_confirm_title">Remove Item</string>
+    <string name="remove_item_confirm_message_fmt">Are you sure you want to remove %1$s from the cart?</string>
+    <string name="settings_restoring_database_progress">Restoring database backup, please wait…</string>
+    <string name="settings_confirm_replace_title">Confirm Data Overwrite</string>
+    <string name="settings_confirm_replace_desc">Are you sure you want to permanently replace all existing database data with this backup? This action cannot be undone.</string>
 </resources>
 
 

@@ -2671,4 +2671,11 @@
     <string name="drive_package_description">টেকিফাই পিওএস এনক্রিপ্টেড ব্যাকআপ প্যাকেজ</string>
     <string name="notif_stock_channel_desc">কম স্টক এবং মেয়াদোত্তীর্ণ পণ্যের দৈনন্দিন সতর্কতা</string>
     <string name="restore_success_summary_fmt">রিস্টোর সফল হয়েছে! %1$d টি পণ্য ও %2$d টি বিক্রয় রেকর্ড পুনরুদ্ধার হয়েছে।</string>
+    <string name="clear_cart_dialog_title">কার্ট খালি করুন</string>
+    <string name="clear_cart_dialog_message">আপনি কি কার্ট থেকে সমস্ত পণ্য মুছে ফেলতে চান?</string>
+    <string name="remove_item_confirm_title">পণ্য সরান</string>
+    <string name="remove_item_confirm_message_fmt">আপনি কি কার্ট থেকে \'%1$s\' সরিয়ে ফেলতে চান?</string>
+    <string name="settings_restoring_database_progress">ডাটাবেজ ব্যাকআপ রিস্টোর করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন…</string>
+    <string name="settings_confirm_replace_title">ডাটা প্রতিস্থাপনের নিশ্চিতকরণ</string>
+    <string name="settings_confirm_replace_desc">আপনি কি নিশ্চিত যে বর্তমান সমস্ত ডাটা মুছে ব্যাকআপ ফাইল দিয়ে প্রতিস্থাপন করবেন? এই প্রক্রিয়াটি আর ফেরানো যাবে না।</string>
 </resources>
