@@ -135,6 +135,7 @@ fun AddEditProductDialog(
     val customCategories by settingsDataStore.categoriesFlow.collectAsStateWithLifecycle(initialValue = CategoryItem.defaultCategories())
     val coroutineScope = rememberCoroutineScope()
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
     var showCategoryManagerDialog by remember { mutableStateOf(false) }
     var categoryDropdownExpanded by remember { mutableStateOf(false) }
     var category by remember { mutableStateOf(initialCategory) }
@@ -215,6 +216,7 @@ fun AddEditProductDialog(
     }
 
     val submitProduct = {
+        if (!isSaving) {
         val pPrice = purchasePrice.toDoubleOrNull() ?: 0.0
         val mPrice = mrpPrice.toDoubleOrNull() ?: 0.0
         val dPrice = discountedPrice.toDoubleOrNull() ?: 0.0
@@ -264,6 +266,7 @@ fun AddEditProductDialog(
             }
             else -> {
                 isError = false
+                isSaving = true
                 onSave(
                     name, finalBarcode, category, pPrice, effectiveSelling, effectiveMrp,
                     effectiveDisc, qty, reorder, imageUri, mfgOrPkgType, mfgOrPkgDate,
@@ -271,6 +274,7 @@ fun AddEditProductDialog(
                     editStockNote.trim().takeIf { isEdit && it.isNotBlank() }
                 )
             }
+        }
         }
     }
 
@@ -1583,6 +1587,7 @@ fun AddEditProductDialog(
 
                         Button(
                             onClick = submitProduct,
+                            enabled = !isSaving,
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                             contentPadding = PaddingValues(0.dp),

@@ -583,7 +583,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         var skipped = 0
         for (item in saleWithItems.items) {
             val product = repository.getProductByBarcode(item.productBarcode)
-            val cartProduct = product ?: Product(
+            val cartProduct = product?.copy(sellingPrice = item.price) ?: Product(
                 barcode = item.productBarcode.takeIf(::isSyntheticSaleBarcode)
                     ?: "ADHOC-REPLAY-${saleWithItems.sale.id}-${item.id}",
                 name = item.productName,
@@ -603,9 +603,18 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val sale = saleWithItems.sale
         _customerName.value = sale.customerName ?: ""
         _customerPhone.value = sale.customerPhone ?: ""
-        // Split payments aren't reconstructed (the original component breakdown isn't guaranteed
-        // to still make sense against current prices/stock) — default back to Cash for Split.
         _paymentMethod.value = sale.paymentMethod.takeIf { it != "Split" } ?: "Cash"
+        if (sale.discountAmount > 0.0) {
+            _discountAmount.value = sale.discountAmount
+            _isPercentageDiscount.value = sale.isPercentageDiscount ?: false
+        }
+        val hasWholesaleItems = saleWithItems.items.any { item ->
+            val prod = repository.getProductByBarcode(item.productBarcode)
+            prod != null && prod.wholesalePrice > 0.0 && kotlin.math.abs(item.price - prod.wholesalePrice) < 0.01 && kotlin.math.abs(item.price - prod.sellingPrice) > 0.01
+        }
+        if (hasWholesaleItems) {
+            setPriceMode(PriceMode.WHOLESALE)
+        }
         return skipped
     }
 
@@ -741,6 +750,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     fun restoreHeldCart(heldCart: HeldCart, onResult: (RestoreResult) -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                if (_cartItems.value.isNotEmpty()) {
+                    holdCurrentCart(title = "Auto-saved cart", note = "Auto-saved before resuming held cart")
+                }
                 val payload = decodeHeldCartPayload(heldCart.itemsJson)
                 val restored = mutableListOf<CartItem>()
                 val remaining = mutableListOf<CartItem>()

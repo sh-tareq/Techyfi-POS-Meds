@@ -2597,7 +2597,7 @@ class DataRepository(
                     val c = chargesArray.getJSONObject(i)
                     val backupSaleId = c.optLong("saleId").takeIf { c.has("saleId") && !c.isNull("saleId") }
                     val resolvedSaleId = if (mode == BackupImportMode.MERGE && backupSaleId != null) {
-                        saleIdMap[backupSaleId] ?: backupSaleId
+                        saleIdMap[backupSaleId]
                     } else backupSaleId
                     val charge = DueCharge(
                         id = if (mode == BackupImportMode.MERGE) 0L else c.optLong("id", 0L),
@@ -2624,7 +2624,7 @@ class DataRepository(
                     val value = array.getJSONObject(i)
                     val backupReturnId = value.optLong("id", 0L)
                     val backupSaleId = value.getLong("saleId")
-                    val resolvedSaleId = if (mode == BackupImportMode.MERGE) saleIdMap[backupSaleId] ?: backupSaleId else backupSaleId
+                    val resolvedSaleId = if (mode == BackupImportMode.MERGE) (saleIdMap[backupSaleId] ?: 0L) else backupSaleId
                     val newReturnId = returnDao.insertReturn(Return(
                         id = if (mode == BackupImportMode.MERGE) 0L else backupReturnId, saleId = resolvedSaleId,
                         timestamp = value.optLong("timestamp", System.currentTimeMillis()),
@@ -3519,7 +3519,7 @@ class DataRepository(
             // than the customer actually paid for it.
             val originalSaleForRatio = originalSale.sale
             val paidRatio = if (originalSaleForRatio.subtotal > 0.0) {
-                (originalSaleForRatio.grandTotal / originalSaleForRatio.subtotal).coerceIn(0.0, 1.0)
+                (originalSaleForRatio.grandTotal / originalSaleForRatio.subtotal).coerceAtLeast(0.0)
             } else 1.0
             val refundTotal = sanitizedLines.sumOf { it.price * it.quantity * paidRatio }
             val alreadyRefunded = returnDao.getRefundTotalForSale(saleId)

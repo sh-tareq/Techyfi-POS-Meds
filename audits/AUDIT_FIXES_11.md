@@ -20,37 +20,37 @@ Re-locate by content before editing.
 ## A. Money and stock flows
 
 ### HIGH
-- [ ] **A-1 Every checkout with a phone number wipes the customer's store credit.** In `repo` (about 1052-1072),
+- [x] **A-1 Every checkout with a phone number wipes the customer's store credit.** In `repo` (about 1052-1072),
   `customerDao.upsertCustomer(Customer(...))` omits `storeCredit`, which defaults to 0.0. The upsert
   overwrites every column. *(Verified.)* Fix: build from `existingCust?.copy(...)`, or pass
   `storeCredit = existingCust?.storeCredit ?: 0.0`. Check other `Customer(` constructions in repo for the same bug.
-- [ ] **A-2 Loyalty redemption fails the sale.** (a) In `repo` (about 806), `payableBeforeLoyalty = subtotal - discount + taxAmount`
+- [x] **A-2 Loyalty redemption fails the sale.** (a) In `repo` (about 806), `payableBeforeLoyalty = subtotal - discount + taxAmount`
   always adds tax. With tax-inclusive VAT, every redemption throws "Loyalty redemption does not match the
   sale total" *(verified)*. Add tax only when `!taxInclusive`, matching VM (about 1249). (b) The VM 50%-cap path
   produces fractional discounts (VM about 552-557, 1257). Points get rounded, so the repo check fails (e.g. a ৳555 bill with
   400 pts gives ৳277.50, which rounds to 278 pts, which is more than 277.55). Floor the redemption to whole points × `pointCashValue`, and enforce
   `minRedeemPoints` in the VM.
-- [ ] **A-3 Split payment with a Due leg always throws.** In VM (about 1264), the cash guard checks `paymentMethod.value == "Cash"`,
+- [x] **A-3 Split payment with a Due leg always throws.** In VM (about 1264), the cash guard checks `paymentMethod.value == "Cash"`,
   which stays "Cash" when split is on *(verified)*. Skip the guard when `isSplitPayment.value`.
-- [ ] **A-4 Split plus store credit/voucher always throws.** The split builder targets `grandTotal - storeCreditApplied`
+- [x] **A-4 Split plus store credit/voucher always throws.** The split builder targets `grandTotal - storeCreditApplied`
   (Cart about 1525), but the saved split JSON (VM about 1207-1222) has no Store Credit row. The repo (about 771) requires the rows to sum to
   grandTotal. Add `{"method":"Store Credit","amount":…,"voucherCode":…}` in the split branch.
-- [ ] **A-5 A split cash leg that is overtendered passes the UI but fails the repo.** Cart (about 2468-2471) vs repo (about 771). Save the
+- [x] **A-5 A split cash leg that is overtendered passes the UI but fails the repo.** Cart (about 2468-2471) vs repo (about 771). Save the
   cash leg as the amount owed, and keep the tendered amount only for calculating change.
-- [ ] **A-6 Return vouchers can't be redeemed, and credit is double-deducted.** Voucher redemption sets `storeCreditApplied`
+- [x] **A-6 Return vouchers can't be redeemed, and credit is double-deducted.** Voucher redemption sets `storeCreditApplied`
   (Cart about 1489). The repo (about 832-839) then requires a phone and `customer.storeCredit >= amount`, and (about 939-951) deducts from
   both the customer and the voucher. Walk-in vouchers (issued with no phone, ReturnDialog about 1385) always fail. Treat
   voucher tender separately: decrement only the voucher and don't touch `customer.storeCredit`.
-- [ ] **A-7 Void/edit and delete sale don't refund store credit or voucher balance.** In repo (about 500-617) there is no
+- [x] **A-7 Void/edit and delete sale don't refund store credit or voucher balance.** In repo (about 500-617) there is no
   storeCredit/voucher reversal *(verified)*. Add the credit back plus a `SALE_VOID` ledger entry, and restore voucher
   balances from the split JSON.
 
 ### MEDIUM
-- [ ] **A-8 Returns on tax-exclusive sales under-refund VAT.** The refund ratio `grandTotal/subtotal` is clamped to ≤1.0
+- [x] **A-8 Returns on tax-exclusive sales under-refund VAT.** The refund ratio `grandTotal/subtotal` is clamped to ≤1.0
   (repo about 3479-3482, ReturnDialog about 147-148). ৳1000+15% = ৳1150, but a full return refunds ৳1000. Remove the clamp, or add tax back per taxable line.
-- [ ] **A-9 Void-for-edit rebuilds the cart at current retail prices.** In VM (about 581-609), `clearCart()` resets priceMode, and the
+- [x] **A-9 Void-for-edit rebuilds the cart at current retail prices.** In VM (about 581-609), `clearCart()` resets priceMode, and the
   discount, wholesale mode and loyalty are not restored. Restore priceMode, discount and the sold unit prices.
-- [ ] **A-10 Resuming a held cart silently discards the current cart.** VM (about 787), called from Cart (about 2780) and ScannerScreen (about 512).
+- [x] **A-10 Resuming a held cart silently discards the current cart.** VM (about 787), called from Cart (about 2780) and ScannerScreen (about 512).
   Confirm first, or auto-hold the current cart.
 
 ### LOW
@@ -69,18 +69,18 @@ Re-locate by content before editing.
 ## B. Data, backup, reports, security
 
 ### HIGH
-- [ ] **B-1 REPLACE restore doesn't clear `store_credit_vouchers`, `store_credit_ledger`, `sale_audit_logs` or
+- [x] **B-1 REPLACE restore doesn't clear `store_credit_vouchers`, `store_credit_ledger`, `sale_audit_logs` or
   `expense_audit_logs`.** See `clearBusinessTablesForRestore` in repo (about 4124) *(verified)*. Vouchers insert with ABORT
   (AppDaos about 701), so restoring the device's own backup throws and rolls back. Add the tables to the clear list.
-- [ ] **B-2 MERGE import double-counts and clobbers.** Only sales are de-duplicated. Returns (about 2586), due payments (about 2449),
+- [x] **B-2 MERGE import double-counts and clobbers.** Only sales are de-duplicated. Returns (about 2586), due payments (about 2449),
   due charges (about 2561), expenses, suppliers (about 2663), ledger (about 2921) and loyalty transactions are re-inserted on every merge.
   Dues (about 2439), customers (about 2841) and loyalty (about 2756) are upserted over live balances. The `?: backupSaleId` fallback
   (about 2558, 2585, 2871) links orphans to unrelated local sales. De-dupe by natural key, skip rows whose parent is missing, and
   recompute balances from the ledgers.
-- [ ] **B-3 `adjustCustomerCredit` (repo about 121) has no permission check and no transaction** *(verified)*. The UI
+- [x] **B-3 `adjustCustomerCredit` (repo about 121) has no permission check and no transaction** *(verified)*. The UI
   (CustomerDossierSheet about 79, 898) doesn't gate it either. A cashier can grant themselves credit and spend it. Require the owner or a new
   `CUSTOMERS_ADJUST_CREDIT` permission, and wrap the update and ledger insert in one transaction.
-- [ ] **B-4 Net profit differs between SalesReportScreen and the Z-report.** SalesReportScreen (about 183-186, 540) subtracts the
+- [x] **B-4 Net profit differs between SalesReportScreen and the Z-report.** SalesReportScreen (about 183-186, 540) subtracts the
   auto-created "Supplier Payment" expenses (repo about 3828, 3921), which double-counts COGS. `buildReport` (VM about 1937) excludes them.
   Use `report.totalExpenses` on the screen.
 
@@ -129,8 +129,8 @@ Re-locate by content before editing.
 - [x] **C-3 Local restore** (SettingsScreen about 4224-4256): `openInputStream` has no try/catch, the dialog dismisses
   instantly with no progress, and "Replace all data" is one tap next to Merge with no Cancel *(verified)*. Add try/catch, a blocking
   progress dialog, a Cancel button and a second confirmation for REPLACE.
-- [ ] **C-4 Local backup** (SettingsScreen about 3528-3549) has no progress or busy flag, unlike Drive backup. Add one.
-- [ ] **C-5 Product save allows a double submit** (AddEditProductDialog about 1584; ProductsScreen about 2676, 2784). Add `isSaving`
+- [x] **C-4 Local backup** (SettingsScreen about 3528-3549) has no progress or busy flag, unlike Drive backup. Add one.
+- [x] **C-5 Product save allows a double submit** (AddEditProductDialog about 1584; ProductsScreen about 2676, 2784). Add `isSaving`
   and disable the button while saving.
 
 ### MEDIUM
