@@ -103,14 +103,14 @@ fun SupervisorAuthDialog(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Requires Manager or Owner",
+                                text = stringResource(R.string.requires_manager_or_owner),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
 
@@ -216,7 +216,7 @@ fun SupervisorAuthDialog(
                                     if (key == "⌫") {
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.Backspace,
-                                            contentDescription = "Backspace",
+                                            contentDescription = stringResource(R.string.cd_backspace),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(20.dp)
                                         )

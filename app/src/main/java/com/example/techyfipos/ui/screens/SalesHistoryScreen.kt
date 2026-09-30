@@ -28,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -78,8 +79,7 @@ private enum class HistorySortOption(@get:StringRes val labelRes: Int) {
     LOWEST_PROFIT(R.string.invoice_sort_profit_low)
 }
 
-private fun rangeForPeriod(period: HistoryReportPeriod, customStart: Long, customEnd: Long): Pair<Long, Long> {
-    val now = System.currentTimeMillis()
+private fun rangeForPeriod(period: HistoryReportPeriod, customStart: Long, customEnd: Long, now: Long = System.currentTimeMillis()): Pair<Long, Long> {
     return when (period) {
         HistoryReportPeriod.TODAY -> startOfDay(now) to endOfDay(now) + 1
         HistoryReportPeriod.WEEK -> {
@@ -129,7 +129,9 @@ fun SalesHistoryScreen(
     var issuedVoucherCode by remember { mutableStateOf<String?>(null) }
     var issuedVoucherAmount by remember { mutableStateOf(0.0) }
     var issuedVoucherEntity by remember { mutableStateOf<com.example.techyfipos.data.db.StoreCreditVoucher?>(null) }
-    val historyShopName = settingsViewModel?.shopName?.collectAsStateWithLifecycle(initialValue = "Techyfi POS")?.value ?: "Techyfi POS"
+    val defaultShopName = stringResource(R.string.app_name)
+    val defaultAdminName = stringResource(R.string.more_admin_badge)
+    val historyShopName = settingsViewModel?.shopName?.collectAsStateWithLifecycle(initialValue = defaultShopName)?.value ?: defaultShopName
     val historyShopPhone = settingsViewModel?.shopPhone?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
     val historyShopAddress = settingsViewModel?.shopAddress?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
     val historyInvoiceSettingsData = settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle(initialValue = com.example.techyfipos.data.InvoiceSettingsData())?.value ?: com.example.techyfipos.data.InvoiceSettingsData()
@@ -140,6 +142,23 @@ fun SalesHistoryScreen(
 
     val canReturn = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_PROCESS)
     val canDelete = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
+
+    val now by produceState(initialValue = System.currentTimeMillis()) {
+        while (true) {
+            val currentTime = System.currentTimeMillis()
+            value = currentTime
+            val cal = Calendar.getInstance().apply {
+                timeInMillis = currentTime
+                add(Calendar.DAY_OF_YEAR, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 1)
+            }
+            val millisUntilMidnight = (cal.timeInMillis - currentTime).coerceAtLeast(1000L)
+            kotlinx.coroutines.delay(millisUntilMidnight.coerceAtMost(3600_000L))
+        }
+    }
 
     var selectedPeriod by remember { mutableStateOf(HistoryReportPeriod.TODAY) }
     var customStart by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -163,9 +182,12 @@ fun SalesHistoryScreen(
     var draftCustomerFilter by remember { mutableStateOf(HistoryCustomerFilter.ALL) }
     var draftMinimumTotal by remember { mutableStateOf("") }
     var draftMaximumTotal by remember { mutableStateOf("") }
+    var draftPeriod by remember { mutableStateOf(HistoryReportPeriod.TODAY) }
+    var draftCustomStart by remember { mutableStateOf(System.currentTimeMillis()) }
+    var draftCustomEnd by remember { mutableStateOf(System.currentTimeMillis()) }
 
-    val (rangeStart, rangeEnd) = remember(selectedPeriod, customStart, customEnd) {
-        rangeForPeriod(selectedPeriod, customStart, customEnd)
+    val (rangeStart, rangeEnd) = remember(selectedPeriod, customStart, customEnd, now) {
+        rangeForPeriod(selectedPeriod, customStart, customEnd, now)
     }
 
     LaunchedEffect(rangeStart, rangeEnd) {
@@ -176,7 +198,9 @@ fun SalesHistoryScreen(
         }
     }
 
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
+    val currentLocale = LocalConfiguration.current.locales[0]
+    val dateFormat = remember(currentLocale) { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
+    val dayGroupFormatter = remember(currentLocale) { SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault()) }
     val dateFilteredSales = remember(salesWithItems, rangeStart, rangeEnd) {
         if (rangeStart == 0L && rangeEnd == Long.MAX_VALUE) {
             salesWithItems
@@ -202,7 +226,11 @@ fun SalesHistoryScreen(
                 saleWithItems.items.any {
                     it.productName.lowercase().contains(query) || it.productBarcode.lowercase().contains(query)
                 }
-            val matchesPayment = selectedPayments.isEmpty() || sale.paymentMethod in selectedPayments
+            val matchesPayment = selectedPayments.isEmpty() ||
+                sale.paymentMethod in selectedPayments ||
+                (sale.paymentMethod == "Split" && sale.splitPaymentJson != null && selectedPayments.any { selectedMethod ->
+                    sale.splitPaymentJson.contains(selectedMethod, ignoreCase = true)
+                })
             val isWalkIn = sale.customerName.isNullOrBlank() && sale.customerPhone.isNullOrBlank()
             val matchesCustomer = when (customerFilter) {
                 HistoryCustomerFilter.SAVED_CUSTOMER -> !isWalkIn
@@ -228,8 +256,8 @@ fun SalesHistoryScreen(
         }
     }
 
-    val historyProfit by produceState(initialValue = 0.0 to 0.0, filteredSales) {
-        val report = salesViewModel.buildReport(0L, Long.MAX_VALUE, filteredSales)
+    val historyProfit by produceState(initialValue = 0.0 to 0.0, filteredSales, rangeStart, rangeEnd) {
+        val report = salesViewModel.buildReport(rangeStart, rangeEnd, filteredSales)
         value = report.totalProfit to (if (report.totalRevenue != 0.0) report.totalProfit / report.totalRevenue * 100.0 else 0.0)
     }
 
@@ -244,7 +272,7 @@ fun SalesHistoryScreen(
         HistoryReportPeriod.ALL_TIME -> stringResource(R.string.history_period_all_sales)
         else -> {
             val startText = dateFormat.format(Date(rangeStart))
-            val endText = dateFormat.format(Date((rangeEnd - 1).coerceAtMost(System.currentTimeMillis())))
+            val endText = dateFormat.format(Date((rangeEnd - 1).coerceAtMost(now)))
             if (startText == endText) startText else "$startText – $endText"
         }
     }
@@ -263,8 +291,10 @@ fun SalesHistoryScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                    if (!isTablet) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                        }
                     }
                 },
                 actions = {
@@ -299,7 +329,7 @@ fun SalesHistoryScreen(
                     ) {
                         Realistic3DAnalyticsIcon(size = 18.dp)
                         Spacer(Modifier.width(6.dp))
-                        Text("Reports", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.sales_history_reports_button), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             )
@@ -330,7 +360,7 @@ fun SalesHistoryScreen(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                         modifier = Modifier
                             .weight(1f)
-                            .height(42.dp)
+                            .height(48.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -357,7 +387,7 @@ fun SalesHistoryScreen(
                                 decorationBox = { innerTextField ->
                                     if (searchQuery.isBlank()) {
                                         Text(
-                                            "Search invoice, customer...",
+                                            stringResource(R.string.sales_history_search_placeholder),
                                             fontSize = 12.sp,
                                             color = MaterialTheme.colorScheme.outline
                                         )
@@ -368,11 +398,11 @@ fun SalesHistoryScreen(
                             if (searchQuery.isNotBlank()) {
                                 IconButton(
                                     onClick = { searchQuery = "" },
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
                                         Icons.Default.Close,
-                                        contentDescription = "Clear",
+                                        contentDescription = stringResource(R.string.clear_search_cd),
                                         tint = MaterialTheme.colorScheme.outline,
                                         modifier = Modifier.size(16.dp)
                                     )
@@ -392,7 +422,7 @@ fun SalesHistoryScreen(
                         shape = RoundedCornerShape(10.dp),
                         color = Color(0xFFEEF2FF),
                         border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
-                        modifier = Modifier.height(42.dp)
+                        modifier = Modifier.height(48.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp),
@@ -457,10 +487,13 @@ fun SalesHistoryScreen(
                                 draftCustomerFilter = customerFilter
                                 draftMinimumTotal = minimumTotal
                                 draftMaximumTotal = maximumTotal
+                                draftPeriod = selectedPeriod
+                                draftCustomStart = customStart
+                                draftCustomEnd = customEnd
                                 showFilters = true
                             },
                             shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.size(42.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Realistic3DFilterIcon(size = 18.dp)
                         }
@@ -479,20 +512,23 @@ fun SalesHistoryScreen(
                             .weight(1f, fill = false)
                             .horizontalScroll(rememberScrollState())
                     ) {
-                        listOf(
-                            HistoryReportPeriod.ALL_TIME to stringResource(R.string.history_period_all),
-                            HistoryReportPeriod.TODAY to stringResource(R.string.history_period_today),
-                            HistoryReportPeriod.WEEK to stringResource(R.string.history_period_week),
-                            HistoryReportPeriod.MONTH to stringResource(R.string.history_period_month),
-                            HistoryReportPeriod.YEAR to stringResource(R.string.history_period_year)
-                        ).forEach { (period, label) ->
+                        buildList {
+                            add(HistoryReportPeriod.ALL_TIME to stringResource(R.string.history_period_all))
+                            add(HistoryReportPeriod.TODAY to stringResource(R.string.history_period_today))
+                            add(HistoryReportPeriod.WEEK to stringResource(R.string.history_period_week))
+                            add(HistoryReportPeriod.MONTH to stringResource(R.string.history_period_month))
+                            add(HistoryReportPeriod.YEAR to stringResource(R.string.history_period_year))
+                            if (selectedPeriod == HistoryReportPeriod.CUSTOM) {
+                                add(HistoryReportPeriod.CUSTOM to dateRangeLabel.ifBlank { stringResource(R.string.history_period_selected_dates) })
+                            }
+                        }.forEach { (period, label) ->
                             val isSelected = selectedPeriod == period
                             Surface(
                                 onClick = { selectedPeriod = period },
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                                 border = if (isSelected) null else BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                modifier = Modifier.height(26.dp)
+                                modifier = Modifier.heightIn(min = 48.dp)
                             ) {
                                 Box(
                                     contentAlignment = Alignment.Center,
@@ -518,7 +554,7 @@ fun SalesHistoryScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 color = Color(0xFFFEE2E2),
                                 border = BorderStroke(0.8.dp, Color(0xFFFCA5A5)),
-                                modifier = Modifier.height(26.dp)
+                                modifier = Modifier.heightIn(min = 48.dp)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -550,7 +586,7 @@ fun SalesHistoryScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (onlyReturnsFilter) Color(0xFFEF4444) else Color(0xFFFEF2F2),
                                 border = BorderStroke(0.8.dp, if (onlyReturnsFilter) Color(0xFFB91C1C) else Color(0xFFFECACA)),
-                                modifier = Modifier.height(26.dp)
+                                modifier = Modifier.heightIn(min = 48.dp)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -574,7 +610,7 @@ fun SalesHistoryScreen(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "${filteredSales.size} sales",
+                            text = stringResource(R.string.history_sales_count, filteredSales.size),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -583,7 +619,7 @@ fun SalesHistoryScreen(
                             TextButton(
                                 onClick = { showSortMenu = true },
                                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                                modifier = Modifier.height(26.dp)
+                                modifier = Modifier.heightIn(min = 48.dp)
                             ) {
                                 Text(
                                     text = stringResource(R.string.history_sort_button),
@@ -662,11 +698,11 @@ fun SalesHistoryScreen(
                             selectedPeriod = HistoryReportPeriod.TODAY
                             customStart = System.currentTimeMillis()
                             customEnd = System.currentTimeMillis()
-                        }) { Text("Clear search and filters") }
+                        }) { Text(stringResource(R.string.history_clear_search_filters)) }
                     }
                 }
             } else {
-                val groupedSales = remember(filteredSales) { groupSalesByDay(filteredSales) }
+                val groupedSales = remember(filteredSales, dayGroupFormatter) { groupSalesByDay(filteredSales, dayGroupFormatter) }
 
                 LazyColumn(
                     modifier = Modifier
@@ -790,8 +826,8 @@ fun SalesHistoryScreen(
                     OutlinedTextField(
                         value = deleteReason,
                         onValueChange = { deleteReason = it },
-                        label = { Text("Cancellation / Void Reason") },
-                        placeholder = { Text("e.g. Customer cancelled order") },
+                        label = { Text(stringResource(R.string.sales_history_void_reason_label)) },
+                        placeholder = { Text(stringResource(R.string.sales_history_void_reason_placeholder)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -803,7 +839,7 @@ fun SalesHistoryScreen(
                     onClick = {
                         deleteInProgress = true
                         scope.launch {
-                            val reason = deleteReason.ifBlank { "Invoice #${target.sale.id} Deleted" }
+                            val reason = deleteReason.ifBlank { context.getString(R.string.sales_history_void_reason_fallback, target.sale.id.toString()) }
                             val deleted = salesViewModel.deleteSaleAndAwait(target.sale.id, reason)
                             deleteInProgress = false
                             if (deleted) {
@@ -869,14 +905,14 @@ fun SalesHistoryScreen(
                         } else {
                             Toast.makeText(
                                 context,
-                                "Returned · refunded ${formatTaka(refundTotal)}",
+                                context.getString(R.string.return_success, formatTaka(refundTotal)),
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
                     } else {
                         Toast.makeText(
                             context,
-                            "Could not process the return",
+                            context.getString(R.string.return_failed),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -896,8 +932,8 @@ fun SalesHistoryScreen(
         )
     }
 
-    val historyCurrentDayEndUtcMillis = remember {
-        val localCal = java.util.Calendar.getInstance()
+    val historyCurrentDayEndUtcMillis = remember(now) {
+        val localCal = java.util.Calendar.getInstance().apply { timeInMillis = now }
         val utcCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
             set(java.util.Calendar.YEAR, localCal.get(java.util.Calendar.YEAR))
             set(java.util.Calendar.MONTH, localCal.get(java.util.Calendar.MONTH))
@@ -931,13 +967,13 @@ fun SalesHistoryScreen(
                     }
                     showStartPicker = false
                     showEndPicker = true
-                }) { Text("Next") }
+                }) { Text(stringResource(R.string.next)) }
             },
             dismissButton = {
-                TextButton(onClick = { showStartPicker = false }) { Text("Cancel") }
+                TextButton(onClick = { showStartPicker = false }) { Text(stringResource(R.string.cancel)) }
             }
         ) {
-            DatePicker(state = state, title = { Text("Select start date", Modifier.padding(24.dp, 16.dp)) })
+            DatePicker(state = state, title = { Text(stringResource(R.string.history_select_start_date), Modifier.padding(24.dp, 16.dp)) })
         }
     }
 
@@ -955,13 +991,13 @@ fun SalesHistoryScreen(
                         selectedPeriod = HistoryReportPeriod.CUSTOM
                     }
                     showEndPicker = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showEndPicker = false }) { Text("Cancel") }
+                TextButton(onClick = { showEndPicker = false }) { Text(stringResource(R.string.cancel)) }
             }
         ) {
-            DatePicker(state = state, title = { Text("Select end date", Modifier.padding(24.dp, 16.dp)) })
+            DatePicker(state = state, title = { Text(stringResource(R.string.history_select_end_date), Modifier.padding(24.dp, 16.dp)) })
         }
     }
 
@@ -975,13 +1011,24 @@ fun SalesHistoryScreen(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due").forEach { method ->
+                    listOf("Cash", "bKash", "Nagad", "Rocket", "Card", "Due", "Store Credit", "Split").forEach { method ->
+                        val methodLabel = when (method) {
+                            "Cash" -> stringResource(R.string.cash)
+                            "bKash" -> stringResource(R.string.bkash)
+                            "Nagad" -> stringResource(R.string.nagad)
+                            "Rocket" -> stringResource(R.string.rocket)
+                            "Card" -> stringResource(R.string.card)
+                            "Due" -> stringResource(R.string.due)
+                            "Store Credit" -> stringResource(R.string.payment_store_credit)
+                            "Split" -> stringResource(R.string.cart_split_payment)
+                            else -> method
+                        }
                         FilterChip(
                             selected = method in draftPayments,
                             onClick = {
                                 draftPayments = if (method in draftPayments) draftPayments - method else draftPayments + method
                             },
-                            label = { Text(method) }
+                            label = { Text(methodLabel) }
                         )
                     }
                 }
@@ -1023,9 +1070,9 @@ fun SalesHistoryScreen(
                             draftCustomerFilter = HistoryCustomerFilter.ALL
                             draftMinimumTotal = ""
                             draftMaximumTotal = ""
-                            selectedPeriod = HistoryReportPeriod.TODAY
-                            customStart = System.currentTimeMillis()
-                            customEnd = System.currentTimeMillis()
+                            draftPeriod = HistoryReportPeriod.TODAY
+                            draftCustomStart = System.currentTimeMillis()
+                            draftCustomEnd = System.currentTimeMillis()
                         },
                         modifier = Modifier.weight(1f)
                     ) { Text(stringResource(R.string.history_filter_reset)) }
@@ -1035,6 +1082,9 @@ fun SalesHistoryScreen(
                             customerFilter = draftCustomerFilter
                             minimumTotal = draftMinimumTotal
                             maximumTotal = draftMaximumTotal
+                            selectedPeriod = draftPeriod
+                            customStart = draftCustomStart
+                            customEnd = draftCustomEnd
                             showFilters = false
                         },
                         modifier = Modifier.weight(2f)
@@ -1045,8 +1095,7 @@ fun SalesHistoryScreen(
     }
 }
 
-private fun groupSalesByDay(sales: List<SaleWithItems>): Map<String, List<SaleWithItems>> {
-    val formatter = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault())
+private fun groupSalesByDay(sales: List<SaleWithItems>, formatter: SimpleDateFormat): Map<String, List<SaleWithItems>> {
     return sales.groupBy { formatter.format(Date(it.sale.timestamp)) }
 }
 
@@ -1065,7 +1114,7 @@ private fun HistoryRevenueSummaryCard(
     var isCollapsed by rememberSaveable { mutableStateOf(false) }
     // Profit/margin is owner-only elsewhere in the app; a cashier session can never switch into
     // margin mode here even if this state were somehow set.
-    var showMarginMode by remember { mutableStateOf(false) }
+    var showMarginMode by rememberSaveable { mutableStateOf(false) }
     val canShowMargin = isOwner && showMarginMode
     val avgOrderValue = if (transactionCount > 0) totalRevenue / transactionCount else 0.0
     val estGrossMargin = grossMargin
@@ -1115,7 +1164,7 @@ private fun HistoryRevenueSummaryCard(
                     ) {
                         Realistic3DVaultIcon(size = 18.dp)
                         Text(
-                            text = "REVENUE SUMMARY",
+                            text = stringResource(R.string.history_revenue_summary_title),
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 0.6.sp,
@@ -1154,14 +1203,14 @@ private fun HistoryRevenueSummaryCard(
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text(
-                                        text = if (canShowMargin) "Net Margin" else "Total Revenue",
+                                        text = if (canShowMargin) stringResource(R.string.history_metric_net_margin) else stringResource(R.string.history_metric_total_revenue),
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
                                     )
                                     Icon(
                                         imageVector = Icons.Default.SwapVert,
-                                        contentDescription = "Switch metric",
+                                        contentDescription = stringResource(R.string.history_switch_metric_desc),
                                         tint = Color(0xFFC7D2FE),
                                         modifier = Modifier.size(12.dp)
                                     )
@@ -1175,12 +1224,12 @@ private fun HistoryRevenueSummaryCard(
                             shape = CircleShape,
                             color = Color.White.copy(alpha = 0.16f),
                             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = if (isCollapsed) "Expand Revenue Summary" else "Collapse Revenue Summary",
+                                    contentDescription = if (isCollapsed) stringResource(R.string.history_expand_summary_desc) else stringResource(R.string.history_collapse_summary_desc),
                                     tint = Color.White,
                                     modifier = Modifier
                                         .size(16.dp)
@@ -1215,8 +1264,8 @@ private fun HistoryRevenueSummaryCard(
                                     letterSpacing = (-0.6).sp
                                 )
                                 Text(
-                                    text = if (canShowMargin) "Gross Margin Rate: ${String.format(java.util.Locale.US, "%.1f", marginPercent)}%"
-                                           else "AOV (Avg Ticket): ${formatTaka(avgOrderValue)}",
+                                    text = if (canShowMargin) stringResource(R.string.history_gross_margin_rate, String.format(java.util.Locale.US, "%.1f", marginPercent))
+                                           else stringResource(R.string.history_aov_avg_ticket, formatTaka(avgOrderValue)),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = Color(0xFFA5B4FC)
@@ -1241,7 +1290,7 @@ private fun HistoryRevenueSummaryCard(
                                             color = Color(0xFF34D399)
                                         )
                                         Text(
-                                            text = "Est. Margin (${String.format(java.util.Locale.US, "%.1f", marginPercent)}%)",
+                                            text = stringResource(R.string.history_est_margin_format, String.format(java.util.Locale.US, "%.1f", marginPercent)),
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = Color(0xFFC7D2FE)
@@ -1268,7 +1317,7 @@ private fun HistoryRevenueSummaryCard(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Invoices: ",
+                                    text = stringResource(R.string.history_invoices_label),
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color(0xFFC7D2FE)
@@ -1289,14 +1338,14 @@ private fun HistoryRevenueSummaryCard(
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Units: ",
+                                    text = stringResource(R.string.history_units_label),
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color(0xFFC7D2FE)
                                 )
                                 val itemStr = if (itemCount % 1.0 == 0.0) itemCount.toLong().toString() else String.format(Locale.US, "%.2f", itemCount).trimEnd('0').trimEnd('.')
                                 Text(
-                                    text = "$itemStr Items",
+                                    text = stringResource(R.string.history_items_count, itemStr),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -1311,13 +1360,13 @@ private fun HistoryRevenueSummaryCard(
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Cash Split: ",
+                                    text = stringResource(R.string.history_cash_split_label),
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color(0xFFC7D2FE)
                                 )
                                 Text(
-                                    text = "$cashSplitPercent% Cash",
+                                    text = stringResource(R.string.history_cash_split_value, cashSplitPercent),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -1391,8 +1440,19 @@ fun Payment3DBadge(
                 isDue -> Text("⚠️", fontSize = 11.sp)
                 else -> Text("💳", fontSize = 11.sp)
             }
+            val displayMethod = when (paymentMethod) {
+                "Cash" -> stringResource(R.string.cash)
+                "bKash" -> stringResource(R.string.bkash)
+                "Nagad" -> stringResource(R.string.nagad)
+                "Rocket" -> stringResource(R.string.rocket)
+                "Card" -> stringResource(R.string.card)
+                "Due" -> stringResource(R.string.due)
+                "Store Credit" -> stringResource(R.string.payment_store_credit)
+                "Split" -> stringResource(R.string.cart_split_payment)
+                else -> paymentMethod
+            }
             Text(
-                text = paymentMethod,
+                text = displayMethod,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = contentColor
@@ -1575,8 +1635,8 @@ fun SaleCard(
                         text = when {
                             customerName != null && customerPhone != null -> "$customerName ($customerPhone)"
                             customerName != null -> customerName
-                            customerPhone != null -> "Customer: $customerPhone"
-                            else -> "Walk-in"
+                            customerPhone != null -> stringResource(R.string.history_customer_prefix, customerPhone)
+                            else -> stringResource(R.string.history_customer_walkin)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         fontSize = 11.5.sp,
@@ -1593,7 +1653,7 @@ fun SaleCard(
                 ) {
                     val totalUnitsStr = if (totalUnits % 1.0 == 0.0) totalUnits.toLong().toString() else String.format(Locale.US, "%.2f", totalUnits).trimEnd('0').trimEnd('.')
                     Text(
-                        text = "$totalUnitsStr items",
+                        text = stringResource(R.string.history_items_count, totalUnitsStr),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -1652,7 +1712,7 @@ fun SaleCard(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         ) {
                             Text(
-                                text = "+${saleWithItems.items.size - 2} more",
+                                text = stringResource(R.string.history_items_more_count, saleWithItems.items.size - 2),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.outline,
@@ -1713,7 +1773,7 @@ fun SaleCard(
 
                     if (hasReturns) {
                         Text(
-                            text = "Net after returns",
+                            text = stringResource(R.string.net_after_returns),
                             fontSize = 9.5.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFF991B1B)
@@ -1772,13 +1832,15 @@ private fun SaleDetailDialog(
             salesViewModel.getCustomerDue(phone)?.outstandingAmount ?: 0.0
         } else 0.0
     }
-    val shopName = settingsViewModel?.shopName?.collectAsStateWithLifecycle(initialValue = "Techyfi POS")?.value ?: "Techyfi POS"
-    val shopAddress = settingsViewModel?.shopAddress?.collectAsStateWithLifecycle(initialValue = "Dhaka, Bangladesh")?.value ?: "Dhaka, Bangladesh"
-    val shopPhone = settingsViewModel?.shopPhone?.collectAsStateWithLifecycle(initialValue = "01700000000")?.value ?: "01700000000"
+    val defaultShopName = stringResource(R.string.app_name)
+    val defaultAdminName = stringResource(R.string.more_admin_badge)
+    val shopName = settingsViewModel?.shopName?.collectAsStateWithLifecycle(initialValue = defaultShopName)?.value ?: defaultShopName
+    val shopAddress = settingsViewModel?.shopAddress?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
+    val shopPhone = settingsViewModel?.shopPhone?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
     val shopLogoUri = settingsViewModel?.shopLogoUri?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
     val facebookUrl = settingsViewModel?.facebookUrl?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
     val qrCodeInfo = settingsViewModel?.qrCodeInfo?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val cashierName = settingsViewModel?.cashierName?.collectAsStateWithLifecycle(initialValue = "Admin")?.value ?: "Admin"
+    val cashierName = settingsViewModel?.cashierName?.collectAsStateWithLifecycle(initialValue = defaultAdminName)?.value ?: defaultAdminName
     val invoiceSettingsData = settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle(initialValue = com.example.techyfipos.data.InvoiceSettingsData())?.value ?: com.example.techyfipos.data.InvoiceSettingsData()
 
     var voucherForSale by remember { mutableStateOf<com.example.techyfipos.data.db.StoreCreditVoucher?>(null) }
@@ -1852,7 +1914,8 @@ private fun SaleDetailDialog(
                     unitPrice = item.price,
                     lineTotal = item.price * item.quantity,
                     note = item.note,
-                    purchasePrice = item.purchasePriceAtSale
+                    purchasePrice = item.purchasePriceAtSale,
+                    taxable = item.taxable
                 )
             },
             subtotal = saleWithItems.sale.subtotal,
@@ -1891,7 +1954,7 @@ private fun SaleDetailDialog(
 
     ReceiptSummaryDialog(
         bill = billData,
-        title = "Invoice #${saleWithItems.sale.id}",
+        title = stringResource(R.string.history_invoice_title_fmt, saleWithItems.sale.id),
         onDismiss = onDismiss,
         onReturn = if (onReturn != null) {
             {
@@ -1966,7 +2029,7 @@ private fun SaleDetailDialog(
                     onClick = {
                         showEditConfirm = false
                         scope.launch {
-                            val voided = salesViewModel?.deleteSaleAndAwait(saleWithItems.sale.id, "Voided for Edit") ?: false
+                            val voided = salesViewModel?.deleteSaleAndAwait(saleWithItems.sale.id, context.getString(R.string.void_reason_for_edit)) ?: false
                             if (voided && cartViewModel != null) {
                                 val skipped = cartViewModel.loadFromPastSale(saleWithItems, replaceCart = true)
                                 if (skipped > 0) {

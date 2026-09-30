@@ -24,8 +24,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,8 +45,13 @@ import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.openPhoneDialer
 import com.example.techyfipos.utils.openWhatsAppChat
 import java.text.SimpleDateFormat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.techyfipos.data.SettingsDataStore
 import java.util.Date
 import java.util.Locale
+
+import com.example.techyfipos.data.db.DuePayment
+import com.example.techyfipos.data.db.DueCharge
 
 enum class DossierTab {
     TOP_PRODUCTS,
@@ -55,6 +62,11 @@ enum class DossierTab {
     CREDIT_LEDGER
 }
 
+private sealed class DossierDueLedgerRow(val timestamp: Long) {
+    class Payment(val payment: DuePayment) : DossierDueLedgerRow(payment.timestamp)
+    class Charge(val charge: DueCharge) : DossierDueLedgerRow(charge.timestamp)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerDossierSheet(
@@ -63,7 +75,9 @@ fun CustomerDossierSheet(
     onStartSale: (Customer) -> Unit,
     onEditCustomer: (Customer) -> Unit,
     onAddNote: (noteText: String, category: String) -> Unit = { _, _ -> },
+    onDeleteNote: (index: Int) -> Unit = {},
     onAdjustCredit: (delta: Double, note: String) -> Unit = { _, _ -> },
+    settingsViewModel: com.example.techyfipos.ui.viewmodel.SettingsViewModel? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -78,6 +92,7 @@ fun CustomerDossierSheet(
     val aov = remember(customer.lifetimeSpent, customer.totalOrders) {
         if (customer.totalOrders > 0) customer.lifetimeSpent / customer.totalOrders else 0.0
     }
+    val dtFormat = remember { SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -188,15 +203,15 @@ fun CustomerDossierSheet(
                             onDismiss()
                             onEditCustomer(customer)
                         },
-                        modifier = Modifier.size(34.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit Customer", modifier = Modifier.size(17.dp))
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.customer_edit_cd), modifier = Modifier.size(20.dp))
                     }
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.size(34.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(17.dp))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), modifier = Modifier.size(20.dp))
                     }
                 }
             }
@@ -221,13 +236,13 @@ fun CustomerDossierSheet(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Due: ${formatTaka(customer.totalDue)}",
+                                text = stringResource(R.string.dossier_credit_due_label, formatTaka(customer.totalDue)),
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (customer.totalDue > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Limit: ${formatTaka(customer.creditLimit)} (${(progress * 100).toInt()}%)",
+                                text = stringResource(R.string.dossier_credit_limit_label, formatTaka(customer.creditLimit), (progress * 100).toInt()),
                                 fontSize = 10.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -238,9 +253,9 @@ fun CustomerDossierSheet(
                             trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .padding(top = 4.dp)
                                 .height(5.dp)
                                 .clip(RoundedCornerShape(3.dp))
-                                .padding(top = 4.dp)
                         )
                     }
                 }
@@ -360,10 +375,10 @@ fun CustomerDossierSheet(
                             contentColor = if (customer.storeCredit > 0) Color(0xFF059669) else MaterialTheme.colorScheme.primary
                         ),
                         border = BorderStroke(1.dp, if (customer.storeCredit > 0) Color(0xFF6EE7B7) else MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.height(32.dp)
+                        modifier = Modifier.heightIn(min = 48.dp)
                     ) {
                         Text(
-                            text = "⚖️ Adjust",
+                            text = stringResource(R.string.dossier_credit_adjust_btn),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -394,6 +409,7 @@ fun CustomerDossierSheet(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent)
+                            .heightIn(min = 48.dp)
                             .clickable { selectedTab = tab }
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center
@@ -409,7 +425,8 @@ fun CustomerDossierSheet(
             }
 
             // Tab Content Panes
-            Box(modifier = Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = 290.dp)) {
+            val maxTabHeight = (LocalConfiguration.current.screenHeightDp.dp * 0.45f).coerceAtLeast(290.dp)
+            Box(modifier = Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = maxTabHeight)) {
                 when (selectedTab) {
                     DossierTab.TOP_PRODUCTS -> {
                         if (dossier.topProducts.isEmpty()) {
@@ -436,7 +453,7 @@ fun CustomerDossierSheet(
                                                 Text(stringResource(R.string.customer_dossier_bought_times, item.purchaseCount), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
                                             Column(horizontalAlignment = Alignment.End) {
-                                                Text("${item.totalQty} qty", fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                                                Text(stringResource(R.string.dossier_qty_suffix, item.totalQty), fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
                                                 Text(formatTaka(item.totalSpent), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                                             }
                                         }
@@ -452,7 +469,6 @@ fun CustomerDossierSheet(
                                 Text(stringResource(R.string.customer_no_timeline), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         } else {
-                            val dtFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 items(dossier.timelineEvents, key = { it.id }) { event ->
                                     Surface(
@@ -508,7 +524,6 @@ fun CustomerDossierSheet(
                                 Text(stringResource(R.string.customer_dossier_no_invoices), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         } else {
-                            val dtFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 items(dossier.sales) { saleWithItems ->
                                     val sale = saleWithItems.sale
@@ -528,11 +543,11 @@ fun CustomerDossierSheet(
                                         ) {
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                    Text("Invoice #${sale.id}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                    Text(stringResource(R.string.invoice_id_fmt, sale.id), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                                     Text(stringResource(R.string.customer_dossier_tap_to_view_receipt), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.primary)
                                                 }
                                                 Text(
-                                                    "${dtFormat.format(Date(sale.timestamp))} • ${sale.paymentMethod} • ${saleWithItems.items.size} items",
+                                                    "${dtFormat.format(Date(sale.timestamp))} • ${sale.paymentMethod} • ${pluralStringResource(R.plurals.items_count, saleWithItems.items.size, saleWithItems.items.size)}",
                                                     fontSize = 10.5.sp,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
@@ -607,7 +622,7 @@ fun CustomerDossierSheet(
                                                 }
                                             },
                                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                            modifier = Modifier.defaultMinSize(minHeight = 44.dp)
+                                            modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                                         ) {
                                             Text(stringResource(R.string.customer_note_save_btn), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                                         }
@@ -616,23 +631,44 @@ fun CustomerDossierSheet(
                             }
 
                             // Past Notes Display
-                            if (customer.notes.isNullOrBlank()) {
+                            val noteEntries = remember(customer.notes) {
+                                customer.notes?.split("\u001E")?.flatMap { it.split("\n\n") }?.filter { it.isNotBlank() } ?: emptyList()
+                            }
+                            if (noteEntries.isEmpty()) {
                                 Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                                     Text(stringResource(R.string.customer_no_notes), fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             } else {
-                                customer.notes.split("\n\n").forEach { noteEntry ->
+                                noteEntries.forEachIndexed { index, noteEntry ->
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
                                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text(
-                                            text = noteEntry.trim(),
-                                            fontSize = 11.sp,
-                                            lineHeight = 15.sp,
-                                            modifier = Modifier.padding(8.dp)
-                                        )
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = noteEntry.trim(),
+                                                fontSize = 11.sp,
+                                                lineHeight = 15.sp,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            IconButton(
+                                                onClick = { onDeleteNote(index) },
+                                                modifier = Modifier.size(36.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.DeleteOutline,
+                                                    contentDescription = stringResource(R.string.delete),
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -640,40 +676,123 @@ fun CustomerDossierSheet(
                     }
 
                     DossierTab.DUE_LEDGER -> {
-                        if (dossier.duePayments.isEmpty()) {
+                        val ledgerEntries = remember(dossier.duePayments, dossier.dueCharges) {
+                            (dossier.duePayments.map { DossierDueLedgerRow.Payment(it) } +
+                             dossier.dueCharges.map { DossierDueLedgerRow.Charge(it) })
+                                .sortedByDescending { it.timestamp }
+                        }
+                        if (ledgerEntries.isEmpty()) {
                             Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                                 Text(stringResource(R.string.customer_dossier_no_due_payments), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         } else {
-                            val dtFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                items(dossier.duePayments) { p ->
+                                items(ledgerEntries) { entry ->
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
                                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 10.dp, vertical = 7.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(stringResource(R.string.customer_payment_method, p.paymentMethod), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                                Text(
-                                                    "${dtFormat.format(Date(p.timestamp))}${if (!p.referenceNote.isNullOrBlank()) " • ${p.referenceNote}" else ""}",
-                                                    fontSize = 10.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
+                                        when (entry) {
+                                            is DossierDueLedgerRow.Payment -> {
+                                                val p = entry.payment
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                        modifier = Modifier.weight(1f)
+                                                    ) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(6.dp),
+                                                            color = Color(0xFFECFDF5),
+                                                            border = BorderStroke(0.8.dp, Color(0xFFA7F3D0)),
+                                                            modifier = Modifier.size(28.dp)
+                                                        ) {
+                                                            Box(contentAlignment = Alignment.Center) {
+                                                                Icon(
+                                                                    Icons.Default.Payment,
+                                                                    contentDescription = null,
+                                                                    tint = Color(0xFF00875A),
+                                                                    modifier = Modifier.size(14.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                        Column {
+                                                            Text(stringResource(R.string.customer_payment_method, p.paymentMethod), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                            Text(
+                                                                "${dtFormat.format(Date(p.timestamp))}${if (!p.referenceNote.isNullOrBlank()) " • ${p.referenceNote}" else ""}",
+                                                                fontSize = 10.sp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                    }
+                                                    Text(
+                                                        "+${formatTaka(p.amountPaid)}",
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 12.sp,
+                                                        color = Color(0xFF00875A)
+                                                    )
+                                                }
                                             }
-                                            Text(
-                                                formatTaka(p.amountPaid),
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 12.sp,
-                                                color = Color(0xFF00875A)
-                                            )
+                                            is DossierDueLedgerRow.Charge -> {
+                                                val c = entry.charge
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                        modifier = Modifier.weight(1f)
+                                                    ) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(6.dp),
+                                                            color = Color(0xFFFEF2F2),
+                                                            border = BorderStroke(0.8.dp, Color(0xFFFECACA)),
+                                                            modifier = Modifier.size(28.dp)
+                                                        ) {
+                                                            Box(contentAlignment = Alignment.Center) {
+                                                                Icon(
+                                                                    Icons.Default.ShoppingCart,
+                                                                    contentDescription = null,
+                                                                    tint = Color(0xFFDC2626),
+                                                                    modifier = Modifier.size(14.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                        Column {
+                                                            Text(
+                                                                stringResource(
+                                                                    if (c.reason == "Sale") R.string.dues_charge_reason_sale
+                                                                    else R.string.dues_charge_reason_manual
+                                                                ),
+                                                                fontWeight = FontWeight.Bold,
+                                                                fontSize = 12.sp
+                                                            )
+                                                            Text(
+                                                                "${dtFormat.format(Date(c.timestamp))}${if (!c.note.isNullOrBlank()) " • ${c.note}" else ""}",
+                                                                fontSize = 10.sp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                    }
+                                                    Text(
+                                                        "-${formatTaka(c.amount)}",
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 12.sp,
+                                                        color = Color(0xFFDC2626)
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -687,7 +806,6 @@ fun CustomerDossierSheet(
                                 Text(stringResource(R.string.customer_dossier_no_credit_transactions), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         } else {
-                            val dtFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 items(dossier.storeCreditLedger) { entry ->
                                     val isPositive = entry.deltaAmount > 0
@@ -708,10 +826,10 @@ fun CustomerDossierSheet(
                                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                                     Text(
                                                         text = when (entry.type) {
-                                                            "RETURN_REFUND" -> "🔄 Return Refund"
-                                                            "SALE_REDEMPTION" -> "🛒 Checkout Redemption"
-                                                            "MANUAL_ADJUSTMENT" -> "⚖️ Supervisor Adjustment"
-                                                            else -> "🪙 ${entry.type}"
+                                                            "RETURN_REFUND" -> stringResource(R.string.dossier_credit_return_refund)
+                                                            "SALE_REDEMPTION" -> stringResource(R.string.dossier_credit_checkout_redemption)
+                                                            "MANUAL_ADJUSTMENT" -> stringResource(R.string.dossier_credit_supervisor_adjustment)
+                                                            else -> stringResource(R.string.dossier_credit_unknown_type)
                                                         },
                                                         fontWeight = FontWeight.Bold,
                                                         fontSize = 11.5.sp,
@@ -753,7 +871,7 @@ fun CustomerDossierSheet(
                                                     color = if (isPositive) Color(0xFF059669) else Color(0xFFE11D48)
                                                 )
                                                 Text(
-                                                    text = "Bal: ${formatTaka(entry.balanceAfter)}",
+                                                    text = stringResource(R.string.dossier_balance_abbrev, formatTaka(entry.balanceAfter)),
                                                     fontSize = 9.5.sp,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -789,6 +907,7 @@ fun CustomerDossierSheet(
             saleWithItems = selectedSaleForReceipt!!,
             customerName = customer.name,
             customerPhone = customer.phone,
+            settingsViewModel = settingsViewModel,
             onDismiss = { selectedSaleForReceipt = null }
         )
     }
@@ -799,13 +918,16 @@ fun CustomerReceiptPreviewDialog(
     saleWithItems: SaleWithItems,
     customerName: String,
     customerPhone: String,
+    settingsViewModel: com.example.techyfipos.ui.viewmodel.SettingsViewModel? = null,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val configuredStoreName = settingsViewModel?.shopName?.collectAsStateWithLifecycle()?.value.orEmpty()
+    val effectiveStoreName = configuredStoreName.ifBlank { stringResource(R.string.default_store_name) }
     var is80mm by remember { mutableStateOf(true) }
     var isBangla by remember { mutableStateOf(false) }
     val sale = saleWithItems.sale
-    val dtFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+    val dtFormat = remember { SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -859,7 +981,7 @@ fun CustomerReceiptPreviewDialog(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "TECHYFI RETAIL POS",
+                            text = effectiveStoreName,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 13.sp,
                             color = Color.Black
@@ -871,7 +993,7 @@ fun CustomerReceiptPreviewDialog(
                             color = Color.DarkGray
                         )
                         Text(
-                            text = "Invoice #${sale.id} • ${dtFormat.format(Date(sale.timestamp))}",
+                            text = stringResource(R.string.invoice_num_with_date_fmt, sale.id, dtFormat.format(Date(sale.timestamp))),
                             fontSize = 9.sp,
                             color = Color.DarkGray
                         )
@@ -918,14 +1040,14 @@ fun CustomerReceiptPreviewDialog(
                         }
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(if (isBangla) "পরিশোধিত:" else "Paid (${sale.paymentMethod}):", fontSize = 9.5.sp, color = Color.DarkGray)
+                            Text(if (isBangla) "পরিশোধিত (${sale.paymentMethod}):" else "PAID (${sale.paymentMethod}):", fontSize = 9.5.sp, color = Color.DarkGray)
                             Text(formatTaka(sale.amountPaid), fontSize = 9.5.sp, color = Color.Black)
                         }
 
                         val dueOnSale = (sale.grandTotal - sale.amountPaid).coerceAtLeast(0.0)
                         if (dueOnSale > 0) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(if (isBangla) "বকেয়া:" else "Due Balance:", fontWeight = FontWeight.Bold, fontSize = 10.sp, color = Color.Red)
+                                Text(if (isBangla) "বকেয়া ব্যালেন্স:" else "DUE BALANCE:", fontWeight = FontWeight.Bold, fontSize = 10.sp, color = Color.Red)
                                 Text(formatTaka(dueOnSale), fontWeight = FontWeight.Bold, fontSize = 10.sp, color = Color.Red)
                             }
                         }
@@ -951,13 +1073,13 @@ fun CustomerReceiptPreviewDialog(
                     }
                     Button(
                         onClick = {
-                            val shareText = "Invoice #${sale.id}\nCustomer: $customerName\nTotal: ${formatTaka(sale.grandTotal)}\nThank you for shopping with us!"
+                            val shareText = context.getString(R.string.customer_receipt_share_text, sale.id, customerName, formatTaka(sale.grandTotal))
                             val sendIntent = Intent().apply {
                                 action = Intent.ACTION_SEND
                                 putExtra(Intent.EXTRA_TEXT, shareText)
                                 type = "text/plain"
                             }
-                            context.startActivity(Intent.createChooser(sendIntent, "Share Receipt"))
+                            context.startActivity(Intent.createChooser(sendIntent, context.getString(R.string.customer_share_receipt_chooser)))
                         },
                         modifier = Modifier.weight(1f)
                     ) {
@@ -979,6 +1101,7 @@ fun AdjustStoreCreditDialog(
     var isAdd by remember { mutableStateOf(true) }
     var amountText by remember { mutableStateOf("") }
     var reasonNote by remember { mutableStateOf("") }
+    val defaultAdjustmentNote = stringResource(R.string.store_credit_default_adjustment_note)
 
     val amount = amountText.toDoubleOrNull() ?: 0.0
     val canConfirm = amount > 0 && (isAdd || amount <= currentCredit)
@@ -1069,14 +1192,14 @@ fun AdjustStoreCreditDialog(
                     value = reasonNote,
                     onValueChange = { reasonNote = it },
                     label = { Text(stringResource(R.string.store_credit_note_reason)) },
-                    placeholder = { Text("e.g. Returned item compensation, promotion, correction") },
+                    placeholder = { Text(stringResource(R.string.store_credit_adjust_note_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 if (!isAdd && amount > currentCredit) {
                     Text(
-                        "Deduction cannot exceed current credit (${formatTaka(currentCredit)})",
+                        stringResource(R.string.store_credit_deduct_exceeds_current, formatTaka(currentCredit)),
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 11.sp
                     )
@@ -1087,14 +1210,17 @@ fun AdjustStoreCreditDialog(
             Button(
                 onClick = {
                     val delta = if (isAdd) amount else -amount
-                    onConfirm(delta, reasonNote.trim().ifBlank { "Manual credit adjustment" })
+                    onConfirm(delta, reasonNote.trim().ifBlank { defaultAdjustmentNote })
                 },
                 enabled = canConfirm,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isAdd) Color(0xFF10B981) else Color(0xFFEF4444)
                 )
             ) {
-                Text(if (isAdd) "Add Credit" else "Deduct Credit", fontWeight = FontWeight.Bold)
+                Text(
+                    if (isAdd) stringResource(R.string.store_credit_add_credit_btn) else stringResource(R.string.store_credit_deduct_credit_btn),
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {

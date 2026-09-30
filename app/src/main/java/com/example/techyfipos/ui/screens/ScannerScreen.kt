@@ -188,9 +188,9 @@ fun ScannerScreen(
                     scope.launch {
                         snackbarHostState.showSnackbar(
                             message = if (isSuccess) {
-                                "$name - ${formatTaka(price)} ${context.getString(R.string.add_to_cart)} | Stock: $stock (Total: ${formatTaka(total)})"
+                                context.getString(R.string.scanner_added_snackbar, name, formatTaka(price), stock, formatTaka(total))
                             } else {
-                                "$name - OUT OF STOCK! | Stock: $stock"
+                                context.getString(R.string.scanner_out_of_stock_snackbar, name, stock)
                             },
                             duration = SnackbarDuration.Short
                         )
@@ -468,9 +468,9 @@ fun ScannerScreen(
                             onShowSnackbar = { name, price, stock, total, isSuccess ->
                                 scope.launch {
                                     val msg = if (isSuccess) {
-                                        "$name - ${formatTaka(price)} ${context.getString(R.string.add_to_cart)} | Stock: $stock (Total: ${formatTaka(total)})"
+                                        context.getString(R.string.scanner_added_snackbar, name, formatTaka(price), stock, formatTaka(total))
                                     } else {
-                                        "$name - OUT OF STOCK! | Stock: $stock"
+                                        context.getString(R.string.scanner_out_of_stock_snackbar, name, stock)
                                     }
                                     snackbarHostState.showSnackbar(
                                         message = msg,
@@ -812,7 +812,7 @@ private fun TabletSplitTerminal(
 
 
     val categories = remember(allProducts) {
-        listOf("All") + allProducts.map { it.category }.filter { it.isNotBlank() }.distinct()
+        allProducts.map { it.category }.filter { it.isNotBlank() }.distinct()
     }
 
     val filteredProducts = remember(allProducts, searchQuery, selectedCategory) {
@@ -822,7 +822,7 @@ private fun TabletSplitTerminal(
                 product.name.contains(searchQuery, ignoreCase = true) ||
                 product.barcode.contains(englishQuery, ignoreCase = true)
             }
-            val matchesCat = if (selectedCategory == null || selectedCategory == "All") true else {
+            val matchesCat = if (selectedCategory == null) true else {
                 product.category.equals(selectedCategory, ignoreCase = true)
             }
             matchesQuery && matchesCat
@@ -920,11 +920,41 @@ private fun TabletSplitTerminal(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    item {
+                        val isAllSelected = selectedCategory == null
+                        Surface(
+                            onClick = { selectedCategory = null },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isAllSelected) TabletTerminalColors.EmeraldLight else TabletTerminalColors.CardBg,
+                            border = BorderStroke(1.dp, if (isAllSelected) TabletTerminalColors.Emerald else TabletTerminalColors.CardBorder)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                if (isAllSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(TabletTerminalColors.Emerald)
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(R.string.tablet_category_all),
+                                    fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                    fontSize = 11.5.sp,
+                                    color = if (isAllSelected) TabletTerminalColors.Emerald else TabletTerminalColors.TextSecondary
+                                )
+                            }
+                        }
+                    }
                     items(categories) { cat ->
-                        val isSelected = (selectedCategory == null && cat == "All") || (selectedCategory == cat)
+                        val isSelected = selectedCategory.equals(cat, ignoreCase = true)
                         Surface(
                             onClick = {
-                                selectedCategory = if (cat == "All") null else cat
+                                selectedCategory = if (isSelected) null else cat
                             },
                             shape = RoundedCornerShape(12.dp),
                             color = if (isSelected) TabletTerminalColors.EmeraldLight else TabletTerminalColors.CardBg,
@@ -944,7 +974,7 @@ private fun TabletSplitTerminal(
                                     )
                                 }
                                 Text(
-                                    text = if (cat == "All") stringResource(R.string.tablet_category_all) else cat,
+                                    text = cat,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                                     fontSize = 11.5.sp,
                                     color = if (isSelected) TabletTerminalColors.Emerald else TabletTerminalColors.TextSecondary
@@ -1047,7 +1077,7 @@ private fun TabletSplitTerminal(
                             TabletCartCapsuleButton(
                                 cartUnitCount = cartUnitCount,
                                 onClick = onNavigateToCart,
-                                modifier = Modifier.height(30.dp)
+                                modifier = Modifier.height(48.dp)
                             )
                         }
 
@@ -1065,10 +1095,10 @@ private fun TabletSplitTerminal(
                                     shape = RoundedCornerShape(8.dp),
                                     color = TabletTerminalColors.CardBg,
                                     border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(44.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.Restore, contentDescription = "Hold", tint = TabletTerminalColors.Amber, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.Restore, contentDescription = stringResource(R.string.tablet_cart_hold), tint = TabletTerminalColors.Amber, modifier = Modifier.size(16.dp))
                                     }
                                 }
 
@@ -1077,10 +1107,10 @@ private fun TabletSplitTerminal(
                                     shape = RoundedCornerShape(8.dp),
                                     color = TabletTerminalColors.CardBg,
                                     border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(44.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", tint = TabletTerminalColors.Rose, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.tablet_cart_clear), tint = TabletTerminalColors.Rose, modifier = Modifier.size(16.dp))
                                     }
                                 }
                             }
@@ -1202,11 +1232,41 @@ private fun TabletSplitTerminal(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    item {
+                        val isAllSelected = selectedCategory == null
+                        Surface(
+                            onClick = { selectedCategory = null },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isAllSelected) TabletTerminalColors.EmeraldLight else TabletTerminalColors.CardBg,
+                            border = BorderStroke(1.dp, if (isAllSelected) TabletTerminalColors.Emerald else TabletTerminalColors.CardBorder)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                if (isAllSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(TabletTerminalColors.Emerald)
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(R.string.tablet_category_all),
+                                    fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                    fontSize = 12.sp,
+                                    color = if (isAllSelected) TabletTerminalColors.Emerald else TabletTerminalColors.TextSecondary
+                                )
+                            }
+                        }
+                    }
                     items(categories) { cat ->
-                        val isSelected = (selectedCategory == null && cat == "All") || (selectedCategory == cat)
+                        val isSelected = selectedCategory.equals(cat, ignoreCase = true)
                         Surface(
                             onClick = {
-                                selectedCategory = if (cat == "All") null else cat
+                                selectedCategory = if (isSelected) null else cat
                             },
                             shape = RoundedCornerShape(12.dp),
                             color = if (isSelected) TabletTerminalColors.EmeraldLight else TabletTerminalColors.CardBg,
@@ -1226,7 +1286,7 @@ private fun TabletSplitTerminal(
                                     )
                                 }
                                 Text(
-                                    text = if (cat == "All") stringResource(R.string.tablet_category_all) else cat,
+                                    text = cat,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                                     fontSize = 12.sp,
                                     color = if (isSelected) TabletTerminalColors.Emerald else TabletTerminalColors.TextSecondary
@@ -1359,7 +1419,7 @@ private fun TabletSplitTerminal(
                                 },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(38.dp),
+                                    .height(48.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 color = TabletTerminalColors.CardBg,
                                 border = BorderStroke(1.dp, TabletTerminalColors.CardBorder)
@@ -1369,7 +1429,7 @@ private fun TabletSplitTerminal(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Icon(Icons.Default.Restore, contentDescription = "Hold", modifier = Modifier.size(16.dp), tint = TabletTerminalColors.Amber)
+                                    Icon(Icons.Default.Restore, contentDescription = stringResource(R.string.tablet_cart_hold), modifier = Modifier.size(16.dp), tint = TabletTerminalColors.Amber)
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(stringResource(R.string.tablet_cart_hold), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TabletTerminalColors.Amber)
                                 }
@@ -1379,7 +1439,7 @@ private fun TabletSplitTerminal(
                                 onClick = { cartViewModel.clearCart() },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(38.dp),
+                                    .height(48.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 color = TabletTerminalColors.CardBg,
                                 border = BorderStroke(1.dp, TabletTerminalColors.CardBorder)
@@ -1389,7 +1449,7 @@ private fun TabletSplitTerminal(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", modifier = Modifier.size(16.dp), tint = TabletTerminalColors.Rose)
+                                    Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.tablet_cart_clear), modifier = Modifier.size(16.dp), tint = TabletTerminalColors.Rose)
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(stringResource(R.string.tablet_cart_clear), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TabletTerminalColors.Rose)
                                 }
@@ -1476,7 +1536,7 @@ private fun TabletTopToolbar(
             ),
             modifier = Modifier
                 .weight(1f)
-                .height(44.dp)
+                .height(48.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -1542,7 +1602,7 @@ private fun TabletTopToolbar(
             shape = RoundedCornerShape(10.dp),
             color = if (showCameraPIP) TabletTerminalColors.EmeraldLight else TabletTerminalColors.CardBg,
             border = BorderStroke(1.dp, if (showCameraPIP) TabletTerminalColors.Emerald else TabletTerminalColors.CardBorder),
-            modifier = Modifier.height(44.dp)
+            modifier = Modifier.height(48.dp)
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = if (isPortrait) 8.dp else 10.dp, vertical = 6.dp),
@@ -1571,7 +1631,7 @@ private fun TabletTopToolbar(
             shape = RoundedCornerShape(10.dp),
             color = TabletTerminalColors.CardBg,
             border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
-            modifier = Modifier.height(44.dp)
+            modifier = Modifier.height(48.dp)
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = if (isPortrait) 8.dp else 10.dp, vertical = 6.dp),
@@ -1602,7 +1662,7 @@ private fun TabletTopToolbar(
                 shape = RoundedCornerShape(10.dp),
                 color = if (isStockCheckActive) TabletTerminalColors.AmberLight else TabletTerminalColors.CardBg,
                 border = BorderStroke(1.dp, if (isStockCheckActive) TabletTerminalColors.Amber else TabletTerminalColors.CardBorder),
-                modifier = Modifier.height(44.dp)
+                modifier = Modifier.height(48.dp)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = if (isPortrait) 8.dp else 10.dp, vertical = 6.dp),
@@ -1633,7 +1693,7 @@ private fun TabletTopToolbar(
                 shape = RoundedCornerShape(10.dp),
                 color = TabletTerminalColors.AmberLight,
                 border = BorderStroke(1.dp, TabletTerminalColors.AmberBorder),
-                modifier = Modifier.height(44.dp)
+                modifier = Modifier.height(48.dp)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = if (isPortrait) 8.dp else 10.dp, vertical = 6.dp),
@@ -1847,10 +1907,10 @@ private fun TabletCameraPipView(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text("Camera permission required", color = Color.White, fontSize = 12.sp)
+                    Text(stringResource(R.string.camera_permission_required), color = Color.White, fontSize = 12.sp)
                     Spacer(modifier = Modifier.height(6.dp))
                     Button(onClick = onRequestCameraPermission) {
-                        Text("Grant Permission", fontSize = 12.sp)
+                        Text(stringResource(R.string.grant_permission), fontSize = 12.sp)
                     }
                 }
             }
@@ -1864,7 +1924,7 @@ private fun TabletCameraPipView(
             ) {
                 FilledIconButton(
                     onClick = onTorchToggle,
-                    modifier = Modifier.size(36.dp),
+                    modifier = Modifier.size(44.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = if (torchEnabled) Color(0xFFFFD54F) else Color.DarkGray
                     )
@@ -1874,7 +1934,7 @@ private fun TabletCameraPipView(
 
                 FilledIconButton(
                     onClick = onScanningPausedToggle,
-                    modifier = Modifier.size(36.dp),
+                    modifier = Modifier.size(44.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = if (scanningPaused) Color(0xFFEF5350) else Color.DarkGray
                     )
@@ -1895,7 +1955,7 @@ private fun TabletProductGridCard(
     onClick: () -> Unit
 ) {
     val isOutOfStock = product.stockQty <= 0.0
-    val isLowStock = !isOutOfStock && product.stockQty <= 5.0
+    val isLowStock = !isOutOfStock && product.stockQty <= product.reorderLevel
     val isInCart = inCartQuantity > 0.0
 
     Card(
@@ -1917,12 +1977,12 @@ private fun TabletProductGridCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(135.dp)
+            .height(154.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(10.dp)
+                .padding(horizontal = 9.dp, vertical = 8.dp)
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -1936,8 +1996,8 @@ private fun TabletProductGridCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(10.dp))
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(9.dp))
                             .background(
                                 Brush.linearGradient(
                                     if (TabletTerminalColors.isDark) listOf(Color(0x24FFFFFF), Color(0x0AFFFFFF))
@@ -1947,11 +2007,11 @@ private fun TabletProductGridCard(
                             .border(
                                 1.dp,
                                 if (TabletTerminalColors.isDark) Color(0x26FFFFFF) else Color(0xFFCBD5E1),
-                                RoundedCornerShape(10.dp)
+                                RoundedCornerShape(9.dp)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Realistic3DProductsBoxIcon(size = 22.dp)
+                        Realistic3DProductsBoxIcon(size = 20.dp)
                     }
 
                     val badgeInfo = when {
@@ -1991,22 +2051,31 @@ private fun TabletProductGridCard(
                 }
 
                 // Middle: Product Name & Barcode
-                Column(modifier = Modifier.padding(vertical = 2.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .padding(vertical = 2.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
                     Text(
                         text = product.name,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.5.sp,
-                        lineHeight = 16.sp,
+                        fontSize = 12.sp,
+                        lineHeight = 15.5.sp,
                         color = TabletTerminalColors.TextMain
                     )
                     if (product.barcode.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(1.dp))
                         Text(
                             text = product.barcode,
-                            fontSize = 9.5.sp,
+                            fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace,
-                            color = TabletTerminalColors.TextTertiary
+                            color = TabletTerminalColors.TextTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -2020,8 +2089,10 @@ private fun TabletProductGridCard(
                     Text(
                         text = formatTaka(product.sellingPrice),
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 14.5.sp,
-                        color = TabletTerminalColors.Emerald
+                        fontSize = 14.sp,
+                        color = TabletTerminalColors.Emerald,
+                        maxLines = 1,
+                        softWrap = false
                     )
 
                     if (isInCart) {
@@ -2133,11 +2204,11 @@ private fun TabletCartItemRow(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
                             onClick = { onQuantityChange((item.quantity - 1.0).coerceAtLeast(0.0)) },
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(44.dp)
                         ) {
                             Icon(
                                 Icons.Default.Remove,
-                                contentDescription = "Decrease",
+                                contentDescription = stringResource(R.string.cd_decrease),
                                 tint = TabletTerminalColors.TextSecondary,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -2165,11 +2236,11 @@ private fun TabletCartItemRow(
                                     onQuantityChange(item.quantity + 1.0)
                                 }
                             },
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(44.dp)
                         ) {
                             Icon(
                                 Icons.Default.Add,
-                                contentDescription = "Increase",
+                                contentDescription = stringResource(R.string.cd_increase),
                                 tint = TabletTerminalColors.Emerald,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -2179,11 +2250,11 @@ private fun TabletCartItemRow(
 
                 IconButton(
                     onClick = onRemove,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         Icons.Default.DeleteOutline,
-                        contentDescription = "Remove",
+                        contentDescription = stringResource(R.string.cd_remove),
                         tint = TabletTerminalColors.Rose,
                         modifier = Modifier.size(18.dp)
                     )
@@ -2271,7 +2342,7 @@ private fun SellHeader(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text("Current Sale", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.scanner_current_sale), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             if (itemCount > 0.0) {
                                 val badgeStr = if (itemCount % 1.0 == 0.0) itemCount.toLong().toString() else String.format(Locale.US, "%.2f", itemCount).trimEnd('0').trimEnd('.')
                                 Box(
@@ -2420,7 +2491,7 @@ private fun ScannerToolDock(
                 modifier = Modifier.weight(1f)
             )
             ScannerToolButton(
-                label = "Enter Code",
+                label = stringResource(R.string.scanner_enter_code_label),
                 icon = { Realistic3DDigitKeypadIcon(size = 22.dp) },
                 onClick = onManualEntry,
                 modifier = Modifier.weight(1f)
@@ -2486,7 +2557,7 @@ private fun CompactScanAlert(
             Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFF7B78))
             Spacer(Modifier.width(10.dp))
             Column {
-                Text("Out Of Stock", color = Color(0xFFFF7B78), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(stringResource(R.string.out_of_stock), color = Color(0xFFFF7B78), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 Text(confirmation.productName, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1)
             }
         }
@@ -2519,7 +2590,7 @@ private fun LastScannedItemCard(
             }
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("LAST SCANNED", color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .7.sp)
+                Text(stringResource(R.string.scanner_last_scanned), color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .7.sp)
                 Text(
                     product.name,
                     fontSize = 13.5.sp,
@@ -2534,7 +2605,7 @@ private fun LastScannedItemCard(
             TextButton(onClick = onUndo) {
                 Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Undo", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.scanner_undo), fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -2581,7 +2652,7 @@ private fun SellCheckoutBar(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Realistic3DMoldedCartIcon(size = 22.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("Review Cart", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.cart_review_button), fontWeight = FontWeight.Bold)
                     if (itemCount > 0) {
                         Spacer(Modifier.width(6.dp))
                         val badgeText = if (itemCount % 1.0 == 0.0) {
@@ -2660,16 +2731,16 @@ private fun CartPreviewBottomSheet(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 4.dp)
         ) {
-            Text("CURRENT SALE", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .8.sp)
+            Text(stringResource(R.string.scanner_current_sale_upper), color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .8.sp)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("🛒", fontSize = 22.sp)
                 Spacer(Modifier.width(8.dp))
-                Text("Review Cart", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.cart_review_button), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.height(12.dp))
 
             if (cartItems.isEmpty()) {
-                Text("Your Cart Is Empty.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 28.dp))
+                Text(stringResource(R.string.scanner_cart_empty), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 28.dp))
             } else {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -2751,7 +2822,7 @@ private fun CartPreviewBottomSheet(
                                                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
                                             ) {
                                                 Text(
-                                                    text = "Total: $totalAmountStr",
+                                                    text = stringResource(R.string.scanner_total_fmt, totalAmountStr),
                                                     fontSize = 11.5.sp,
                                                     fontWeight = FontWeight.ExtraBold,
                                                     color = MaterialTheme.colorScheme.primary,
@@ -2802,7 +2873,7 @@ private fun CartPreviewBottomSheet(
                                             shape = RoundedCornerShape(9.dp),
                                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                                             modifier = Modifier
-                                                .height(32.dp)
+                                                .height(48.dp)
                                                 .defaultMinSize(minWidth = 36.dp)
                                                 .padding(horizontal = 1.dp)
                                         ) {
@@ -2893,7 +2964,7 @@ private fun CartPreviewBottomSheet(
             ) {
                 val totalUnits = cartItems.sumOf { it.quantity }
                 val totalUnitsStr = if (totalUnits % 1.0 == 0.0) totalUnits.toLong().toString() else String.format(Locale.US, "%.2f", totalUnits).trimEnd('0').trimEnd('.')
-                Text("Total · $totalUnitsStr items", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.scanner_total_items_fmt, totalUnitsStr), color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
                 Text(formatTaka(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
             }
 
@@ -2912,7 +2983,7 @@ private fun CartPreviewBottomSheet(
                 ) {
                     Text("⏸️", fontSize = 16.sp)
                     Spacer(Modifier.width(6.dp))
-                    Text("Hold Cart", fontWeight = FontWeight.Bold, color = Color(0xFFD97706), fontSize = 13.5.sp)
+                    Text(stringResource(R.string.scanner_hold_cart), fontWeight = FontWeight.Bold, color = Color(0xFFD97706), fontSize = 13.5.sp)
                 }
 
                 Button(
@@ -2929,7 +3000,7 @@ private fun CartPreviewBottomSheet(
                 ) {
                     Text("🛍️", fontSize = 16.sp)
                     Spacer(Modifier.width(6.dp))
-                    Text("Checkout", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                    Text(stringResource(R.string.checkout), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                     Spacer(Modifier.width(4.dp))
                     Text("➔", fontSize = 14.sp)
                 }
@@ -3401,7 +3472,7 @@ fun StockCheckBottomSheet(
                         ),
                         modifier = Modifier.size(44.dp)
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = "Decrease stock", tint = Color.White)
+                        Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease_stock), tint = Color.White)
                     }
 
                     OutlinedTextField(
@@ -3433,7 +3504,7 @@ fun StockCheckBottomSheet(
                         ),
                         modifier = Modifier.size(44.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Increase stock", tint = Color.White)
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase_stock), tint = Color.White)
                     }
                 }
 
@@ -3593,7 +3664,7 @@ fun ManualBarcodeDialog(
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = .8.sp
             )
-            Text("Enter Barcode", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.enter_barcode), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
                 value = barcode,
@@ -3602,7 +3673,7 @@ fun ManualBarcodeDialog(
                     isError = false
                 },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Barcode Number") },
+                label = { Text(stringResource(R.string.barcode)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
                 isError = isError,
                 supportingText = if (isError) {
@@ -3610,7 +3681,7 @@ fun ManualBarcodeDialog(
                 } else null,
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
-                placeholder = { Text("e.g. 8941100501234") },
+                placeholder = { Text(stringResource(R.string.scanner_barcode_placeholder)) },
                 shape = RoundedCornerShape(14.dp)
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -3628,7 +3699,7 @@ fun ManualBarcodeDialog(
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp)
             ) {
-                Text("Find & Add Product", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.scanner_find_add_product), fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(20.dp))
         }
@@ -3852,11 +3923,11 @@ fun ProductAddedConfirmationBanner(
 
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Dismiss",
+                        contentDescription = stringResource(R.string.cd_dismiss),
                         tint = Color(0xFF94A3B8),
                         modifier = Modifier.size(18.dp)
                     )

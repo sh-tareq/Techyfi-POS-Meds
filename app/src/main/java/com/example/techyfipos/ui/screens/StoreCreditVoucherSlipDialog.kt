@@ -241,7 +241,7 @@ fun StoreCreditVoucherSlipDialog(
                                         )
                                         Icon(
                                             Icons.Default.ContentCopy,
-                                            contentDescription = "Copy",
+                                            contentDescription = stringResource(R.string.cd_copy),
                                             tint = Color(0xFF4F46E5),
                                             modifier = Modifier.size(11.dp)
                                         )
@@ -272,7 +272,7 @@ fun StoreCreditVoucherSlipDialog(
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.close),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -481,7 +481,7 @@ fun StoreCreditVoucherSlipDialog(
                                         if (slipBitmap != null) {
                                             Image(
                                                 bitmap = slipBitmap!!,
-                                                contentDescription = "Barcode",
+                                                contentDescription = stringResource(R.string.barcode),
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .height(80.dp),
@@ -517,7 +517,7 @@ fun StoreCreditVoucherSlipDialog(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Text(
-                                        text = "Ready for Cashier Barcode Scanner",
+                                        text = stringResource(R.string.store_credit_ready_scanner),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = Color(0xFFC7D2FE)
@@ -542,7 +542,7 @@ fun StoreCreditVoucherSlipDialog(
                                         modifier = Modifier.size(28.dp)
                                     )
                                     Text(
-                                        text = "Rendering ${selectedRollWidth}mm thermal voucher...",
+                                        text = stringResource(R.string.store_credit_rendering_thermal_voucher, selectedRollWidth),
                                         fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -588,7 +588,7 @@ fun StoreCreditVoucherSlipDialog(
                                     ) {
                                         Image(
                                             bitmap = slipBitmap!!,
-                                            contentDescription = "Store Credit Voucher Slip ${selectedRollWidth}mm",
+                                            contentDescription = stringResource(R.string.cd_store_credit_voucher_slip_fmt, selectedRollWidth),
                                             modifier = Modifier.fillMaxWidth(),
                                             contentScale = ContentScale.FillWidth
                                         )
@@ -628,13 +628,13 @@ fun StoreCreditVoucherSlipDialog(
                                         )
                                     } catch (e: Exception) {
                                         android.util.Log.e("StoreCreditVoucher", "Print voucher failed", e)
-                                        Toast.makeText(context, "Print failed: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.store_credit_print_failed_fmt, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
                                     } finally {
                                         isPrinting = false
                                     }
                                 }
                             } else {
-                                Toast.makeText(context, "Voucher slip not ready", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.store_credit_slip_not_ready), Toast.LENGTH_SHORT).show()
                             }
                         },
                         modifier = Modifier
@@ -789,7 +789,7 @@ fun StoreCreditVoucherSlipDialog(
                                     color = Color(0xFF075E54)
                                 )
                                 Text(
-                                    text = "Send formatted voucher to customer's WhatsApp",
+                                    text = stringResource(R.string.store_credit_share_whatsapp_desc),
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -805,7 +805,7 @@ fun StoreCreditVoucherSlipDialog(
                             if (file != null && file.exists()) {
                                 shareStoreCreditVoucherSlip(context, file, voucher.code, voucher.initialAmount)
                             } else {
-                                Toast.makeText(context, "Voucher slip image not ready", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.store_credit_slip_image_not_ready), Toast.LENGTH_SHORT).show()
                             }
                         },
                         shape = RoundedCornerShape(12.dp),
@@ -832,7 +832,7 @@ fun StoreCreditVoucherSlipDialog(
                                     fontSize = 13.5.sp
                                 )
                                 Text(
-                                    text = "JPEG voucher slip via Bluetooth, QuickShare, etc.",
+                                    text = stringResource(R.string.store_credit_share_image_desc),
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -868,7 +868,7 @@ fun StoreCreditVoucherSlipDialog(
                                     fontSize = 13.5.sp
                                 )
                                 Text(
-                                    text = "Send voucher code and details via SMS app",
+                                    text = stringResource(R.string.store_credit_share_sms_desc),
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -921,7 +921,7 @@ fun StoreCreditVoucherSlipDialog(
             dismissButton = {
                 TextButton(
                     onClick = { showShareOptionsSheet = false },
-                    modifier = Modifier.height(44.dp)
+                    modifier = Modifier.height(48.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.cancel),

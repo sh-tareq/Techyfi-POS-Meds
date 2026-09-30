@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.room.support.getSupportWrapper
+import com.example.techyfipos.R
 import com.example.techyfipos.TechyfiPOSApplication
 import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.data.SettingsDataStore
@@ -380,7 +381,7 @@ object BackupPackageManager {
 
             RestoreResult(
                 isSuccess = true,
-                message = "Restore successful! Restored ${metadata.productCount} products & ${metadata.salesCount} sales records.",
+                message = context.getString(R.string.restore_success_summary_fmt, metadata.productCount, metadata.salesCount),
                 restoredMetadata = metadata,
                 requiresUiReload = true
             )

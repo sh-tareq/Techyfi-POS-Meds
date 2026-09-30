@@ -344,7 +344,7 @@ fun LockScreen(
                                 OutlinedTextField(
                                     value = ownerName,
                                     onValueChange = { ownerName = it },
-                                    label = { Text("Owner / Admin Name", color = Color(0xFF94A3B8)) },
+                                    label = { Text(stringResource(R.string.lock_screen_owner_admin_name), color = Color(0xFF94A3B8)) },
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                                     colors = OutlinedTextFieldDefaults.colors(
@@ -419,7 +419,7 @@ fun LockScreen(
                                             .background(Color(0xFF10B981))
                                     )
                                     Text(
-                                        text = "Terminal Locked · Cash Register",
+                                        text = stringResource(R.string.lock_terminal_locked),
                                         color = Color(0xFFE2E8F0),
                                         fontSize = if (isCompactHeight) 11.sp else 12.sp,
                                         fontWeight = FontWeight.SemiBold
@@ -459,7 +459,7 @@ fun LockScreen(
 
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                text = "Enter your 4-digit cashier/owner PIN",
+                                text = stringResource(R.string.lock_enter_pin_hint),
                                 color = Color(0xFF94A3B8),
                                 fontSize = if (isCompactHeight) 11.5.sp else 12.5.sp
                             )
@@ -629,7 +629,7 @@ private fun TechyfiLockBrandingHeader(isCompact: Boolean = false) {
         ) {
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = "Techyfi Logo",
+                contentDescription = stringResource(R.string.cd_techyfi_logo),
                 modifier = Modifier
                     .fillMaxSize(0.9f)
                     .graphicsLayer {
@@ -945,7 +945,7 @@ private fun Realistic3DNumpadButton(
                 KeypadKeyType.BACKSPACE -> {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Backspace,
-                        contentDescription = "Backspace",
+                        contentDescription = stringResource(R.string.cd_backspace),
                         tint = Color(0xFFFCA5A5),
                         modifier = Modifier.size(if (isCompact) 18.dp else 20.dp)
                     )

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.techyfipos.R
 import com.example.techyfipos.TechyfiPOSApplication
 import com.example.techyfipos.data.DataRepository
 import com.example.techyfipos.data.SettingsDataStore
@@ -137,16 +138,16 @@ class AutoBackupWorker(
                     driveNeedsUserAuthorization -> {
                         notifyBackupFailure(
                             context = context,
-                            title = "Google Drive Reconnect Required",
-                            message = "Google Drive authorization has expired or needs reconnecting. Please open Settings to re-authorize."
+                            title = context.getString(R.string.notif_drive_reconnect_title),
+                            message = context.getString(R.string.notif_drive_reconnect_desc)
                         )
                         Result.retry()
                     }
                     driveFailed -> {
                         notifyBackupFailure(
                             context = context,
-                            title = "Google Drive Auto-Backup Failed",
-                            message = "Automatic backup upload to Google Drive could not complete. Check your connection or Google account."
+                            title = context.getString(R.string.notif_drive_backup_failed_title),
+                            message = context.getString(R.string.notif_drive_backup_failed_desc)
                         )
                         Result.retry()
                     }
@@ -217,7 +218,7 @@ class AutoBackupWorker(
                     "Backup Alerts",
                     android.app.NotificationManager.IMPORTANCE_HIGH
                 ).apply {
-                    description = "Alerts about failed or disconnected backups"
+                    description = context.getString(R.string.notif_drive_channel_desc)
                 }
                 notificationManager.createNotificationChannel(channel)
             }

@@ -5,6 +5,9 @@ import com.example.techyfipos.data.db.*
 import com.example.techyfipos.utils.normalizePhone
 import com.example.techyfipos.utils.toEnglishDigits
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -12,6 +15,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import android.net.Uri
 import android.util.Base64
+import android.util.Log
 import androidx.room.immediateTransaction
 import androidx.room.support.getSupportWrapper
 import androidx.room.useWriterConnection
@@ -61,18 +65,25 @@ data class ReturnProcessResult(
 )
 
 class DataRepository(
-    private val context: Context,
+    val context: Context,
     private val database: AppDatabase,
     private val settingsDataStore: SettingsDataStore
 ) {
-    val appContext: Context get() = context
-    fun getLoyaltySettings(): com.example.techyfipos.utils.LoyaltyProgramSettings =
-        com.example.techyfipos.utils.LoyaltySettingsHelper.getSettings(context)
-
     companion object {
+        val DEFAULT_PAYMENT_METHODS = listOf("Cash", "bKash", "Nagad", "Rocket", "Bank")
         // 1 loyalty point (redeemable 1:1 as taka off a future sale) per 100 taka of grand total.
         private const val LOYALTY_TAKA_PER_POINT = 100.0
         private const val CREDIT_OVERRIDE_VALIDITY_MS = 60_000L
+    }
+    val appContext: Context get() = context
+    private val _loyaltySettingsFlow = MutableStateFlow(com.example.techyfipos.utils.LoyaltySettingsHelper.getSettings(context))
+    val loyaltySettingsFlow: StateFlow<com.example.techyfipos.utils.LoyaltyProgramSettings> = _loyaltySettingsFlow.asStateFlow()
+
+    fun getLoyaltySettings(): com.example.techyfipos.utils.LoyaltyProgramSettings =
+        _loyaltySettingsFlow.value
+
+    fun updateLoyaltySettings(settings: com.example.techyfipos.utils.LoyaltyProgramSettings) {
+        _loyaltySettingsFlow.value = settings
     }
 
     private val productDao = database.productDao()
@@ -209,7 +220,15 @@ class DataRepository(
     }
 
     val currentSessionUser: User? get() = sessionUser
-    val sessionUserName: String get() = sessionUser?.name ?: "Admin"
+    val sessionUserName: String
+        get() {
+            val user = sessionUser
+            if (user == null) {
+                Log.w("DataRepository", "sessionUser is null when accessing sessionUserName")
+                return "Unknown"
+            }
+            return user.name
+        }
 
     fun isSessionOwner(): Boolean = sessionUser?.role == AppRoles.OWNER
     fun isSessionManager(): Boolean = sessionUser?.role == AppRoles.MANAGER
@@ -276,9 +295,7 @@ class DataRepository(
             (grant.maxAmount >= requestedAmount - 0.01) &&
             (grant.cartHash == null || cartHash == null || grant.cartHash == cartHash)
 
-        if (grant?.phone == phone || grant?.expiresAt?.let { it < System.currentTimeMillis() } == true) {
-            pendingCreditOverride = null
-        }
+        pendingCreditOverride = null
         valid
     }
 
@@ -414,7 +431,10 @@ class DataRepository(
                         difference = after.stockQty - before.stockQty,
                         reason = reason,
                         note = note,
-                        cashierName = sessionUser?.name ?: "Admin"
+                        cashierName = sessionUser?.name ?: run {
+                            Log.w("DataRepository", "sessionUser is null when recording inventory adjustment")
+                            "Unknown"
+                        }
                     )
                 )
             }
@@ -487,21 +507,11 @@ class DataRepository(
             val saleWithItems = saleDao.getSaleWithItemsById(saleId)
             if (saleWithItems != null) {
                 val sale = saleWithItems.sale
-                saleAuditLogDao.insertAuditLog(
-                    com.example.techyfipos.data.db.SaleAuditLog(
-                        saleId = saleId,
-                        action = "DELETED",
-                        reason = reason,
-                        grandTotal = sale.grandTotal,
-                        paymentMethod = sale.paymentMethod,
-                        cashierName = sessionUser?.name ?: "Admin",
-                        timestamp = System.currentTimeMillis()
-                    )
-                )
                 val returnedItems = returnDao.getReturnItemsForSale(saleId)
                 val returnedByBarcode = returnedItems
                     .groupBy { it.productBarcode }
                     .mapValues { (_, items) -> items.sumOf { it.quantity } }
+                val pendingAdjustments = mutableListOf<InventoryAdjustment>()
                 saleWithItems.items.groupBy { it.productBarcode }.forEach { (barcode, soldItems) ->
                     val product = productDao.getProductByBarcode(barcode)
                     if (product != null) {
@@ -512,21 +522,30 @@ class DataRepository(
                             val currentSettings = settingsDataStore.invoiceSettingsDataFlow.first()
                             val allowNegative = currentSettings.allowNegativeInventory || isSessionManagerOrOwner()
                             productDao.adjustStockQty(barcode, netQuantitySold, allowNegative)
-                            inventoryAdjustmentDao.insertAdjustment(
+                            val after = productDao.getProductByBarcode(barcode)
+                            val finalNewStock = after?.stockQty ?: (product.stockQty + netQuantitySold)
+                            val finalDiff = if (after != null) (after.stockQty - product.stockQty) else netQuantitySold
+                            pendingAdjustments.add(
                                 InventoryAdjustment(
                                     productBarcode = barcode,
                                     productName = product.name,
                                     previousStock = product.stockQty,
-                                    newStock = product.stockQty + netQuantitySold,
-                                    difference = netQuantitySold,
+                                    newStock = finalNewStock,
+                                    difference = finalDiff,
                                     reason = "Sale Cancelled/Deleted",
                                     note = "Sale #$saleId deleted",
-                                    cashierName = sessionUser?.name ?: "Admin"
+                                    cashierName = sessionUser?.name ?: run {
+                                        Log.w("DataRepository", "sessionUser is null when recording sale deletion adjustment")
+                                        "Unknown"
+                                    }
                                 )
                             )
                         }
                     }
                 }
+                // Record inventory adjustments after all adjustStockQty calls complete
+                pendingAdjustments.forEach { inventoryAdjustmentDao.insertAdjustment(it) }
+
                 val phone = saleWithItems.sale.customerPhone
                 if (!phone.isNullOrBlank() && saleWithItems.sale.grandTotal > 0.0) {
                     val dueForSale = calculateDueAddition(
@@ -570,6 +589,62 @@ class DataRepository(
                         saleId = saleId, performedByName = sessionUser?.name
                     ))
                 }
+
+                val scApplied = sale.storeCreditApplied
+                if (scApplied > 0.0) {
+                    var restoredVoucher = false
+                    if (!sale.splitPaymentJson.isNullOrBlank()) {
+                        try {
+                            val array = JSONArray(sale.splitPaymentJson)
+                            for (i in 0 until array.length()) {
+                                val obj = array.getJSONObject(i)
+                                val vCode = obj.optString("voucherCode", "")
+                                val vAmt = obj.optDouble("amount", 0.0)
+                                if (vCode.isNotBlank() && vAmt > 0.0) {
+                                    val voucher = storeCreditVoucherDao.getVoucherByCode(vCode.trim().uppercase())
+                                    if (voucher != null) {
+                                        val restoredBal = voucher.remainingBalance + vAmt
+                                        storeCreditVoucherDao.updateVoucherBalance(voucher.code, restoredBal, "ACTIVE")
+                                        restoredVoucher = true
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.w("DataRepository", "Error parsing splitPaymentJson for voucher restoration", e)
+                        }
+                    }
+                    if (!restoredVoucher && !phone.isNullOrBlank()) {
+                        customerDao.adjustCustomerStoreCredit(phone, scApplied, System.currentTimeMillis())
+                        val newBal = (customerDao.getCustomerByPhone(normalizePhone(phone))?.storeCredit ?: 0.0)
+                        storeCreditLedgerDao.insertEntry(
+                            StoreCreditLedgerEntry(
+                                customerPhone = normalizePhone(phone),
+                                deltaAmount = scApplied,
+                                balanceAfter = newBal,
+                                type = "VOID",
+                                referenceInvoiceId = saleId,
+                                note = "Store credit restored from voided sale #$saleId",
+                                timestamp = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                }
+
+                // Audit log recorded after stock, dues, and loyalty restorations complete
+                saleAuditLogDao.insertAuditLog(
+                    com.example.techyfipos.data.db.SaleAuditLog(
+                        saleId = saleId,
+                        action = "DELETED",
+                        reason = reason,
+                        grandTotal = sale.grandTotal,
+                        paymentMethod = sale.paymentMethod,
+                        cashierName = sessionUser?.name ?: run {
+                            Log.w("DataRepository", "sessionUser is null when recording sale audit log")
+                            "Unknown"
+                        },
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
             }
             // The due amount itself was already reversed above via reduceCustomerDue — this only
             // removes the now-stale ledger entry so Transaction History doesn't keep showing a
@@ -676,7 +751,9 @@ class DataRepository(
         splitPaymentJson: String? = null,
         loyaltyPhone: String? = null,
         loyaltyPointsToRedeem: Int = 0,
-        storeCreditApplied: Double = 0.0
+        storeCreditApplied: Double = 0.0,
+        appliedVoucherCode: String? = null,
+        nonTaxableBarcodes: Set<String> = emptySet()
     ): Long = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.SALES_SELL)
         if (discountAmount > 0.0) {
@@ -767,7 +844,12 @@ class DataRepository(
                 } else {
                     discountAmount.coerceAtMost(subtotal)
                 }
-                val payableBeforeLoyalty = (subtotal - regularDiscount + taxAmount).coerceAtLeast(0.0)
+                val isTaxInclusive = settingsDataStore.invoiceSettingsDataFlow.first().taxInclusive
+                val payableBeforeLoyalty = if (isTaxInclusive) {
+                    (subtotal - regularDiscount).coerceAtLeast(0.0)
+                } else {
+                    (subtotal - regularDiscount + taxAmount).coerceAtLeast(0.0)
+                }
                 val ptCashVal = loyaltySettings.pointCashValue.takeIf { it > 0.0 } ?: 1.0
                 val loyaltyDiscountAmount = loyaltyPointsToRedeem * ptCashVal
                 val maxAllowedPercent = loyaltySettings.maxBillPercentPayable.coerceIn(1, 100) / 100.0
@@ -794,21 +876,26 @@ class DataRepository(
             }
             var activeVoucherForPlainSC: StoreCreditVoucher? = null
             if (storeCreditToUse > 0.0) {
-                require(!normalizedCustomerPhone.isNullOrBlank()) { "Customer phone number is required for Store Credit payment" }
-                val currentCust = customerDao.getCustomerByPhone(normalizedCustomerPhone)
-                val availableCredit = currentCust?.storeCredit ?: 0.0
-                require(availableCredit >= storeCreditToUse - 0.01) {
-                    "Insufficient store credit balance (Available: ৳${availableCredit})"
-                }
-                customerDao.adjustCustomerStoreCredit(normalizedCustomerPhone, -storeCreditToUse, System.currentTimeMillis())
-                if (paymentMethod.equals("Store Credit", ignoreCase = true) || splitEntries == null) {
-                    val activeVoucher = storeCreditVoucherDao.getActiveVoucherForPhone(normalizedCustomerPhone)
-                    if (activeVoucher != null) {
-                        activeVoucherForPlainSC = activeVoucher
-                        val newBalance = (activeVoucher.remainingBalance - storeCreditToUse).coerceAtLeast(0.0)
-                        val newStatus = if (newBalance < 0.01) "EXHAUSTED" else "ACTIVE"
-                        storeCreditVoucherDao.updateVoucherBalance(activeVoucher.code, newBalance, newStatus)
+                val vCodeInSplit = splitEntries?.firstNotNullOfOrNull { it.optString("voucherCode", "").takeIf { c -> c.isNotBlank() } }
+                val targetVCode = vCodeInSplit ?: appliedVoucherCode
+                if (!targetVCode.isNullOrBlank()) {
+                    val cleanCode = targetVCode.trim().uppercase()
+                    val voucher = storeCreditVoucherDao.getVoucherByCode(cleanCode)
+                    require(voucher != null) { "Invalid store credit voucher code: $cleanCode" }
+                    require(voucher.remainingBalance >= storeCreditToUse - 0.01) {
+                        "Insufficient voucher balance (Available: ৳${voucher.remainingBalance})"
                     }
+                    val newBalance = (voucher.remainingBalance - storeCreditToUse).coerceAtLeast(0.0)
+                    val newStatus = if (newBalance < 0.01) "EXHAUSTED" else "ACTIVE"
+                    storeCreditVoucherDao.updateVoucherBalance(voucher.code, newBalance, newStatus)
+                } else {
+                    require(!normalizedCustomerPhone.isNullOrBlank()) { "Customer phone number is required for Store Credit payment" }
+                    val currentCust = customerDao.getCustomerByPhone(normalizedCustomerPhone)
+                    val availableCredit = currentCust?.storeCredit ?: 0.0
+                    require(availableCredit >= storeCreditToUse - 0.01) {
+                        "Insufficient store credit balance (Available: ৳${availableCredit})"
+                    }
+                    customerDao.adjustCustomerStoreCredit(normalizedCustomerPhone, -storeCreditToUse, System.currentTimeMillis())
                 }
             }
 
@@ -877,7 +964,13 @@ class DataRepository(
                 loyaltyPointsRedeemed = loyaltyPointsToRedeem,
                 storeCreditApplied = storeCreditToUse
             )
-            val saleId = saleDao.insertSale(sale)
+            val saleId = try {
+                saleDao.insertSale(sale)
+            } catch (e: android.database.sqlite.SQLiteConstraintException) {
+                throw IllegalStateException("Failed to record sale: unique constraint conflict", e)
+            } catch (e: androidx.sqlite.SQLiteException) {
+                throw IllegalStateException("Failed to record sale: unique constraint conflict", e)
+            }
 
             if (storeCreditToUse > 0.0 && !normalizedCustomerPhone.isNullOrBlank()) {
                 val updatedCust = customerDao.getCustomerByPhone(normalizedCustomerPhone)
@@ -894,20 +987,7 @@ class DataRepository(
                 )
             }
 
-            if (splitEntries != null) {
-                splitEntries.forEach { entry ->
-                    val vCode = entry.optString("voucherCode", "")
-                    val vAmt = entry.optDouble("amount", 0.0)
-                    if (vCode.isNotBlank() && vAmt > 0.0) {
-                        val voucher = storeCreditVoucherDao.getVoucherByCode(vCode.trim().uppercase())
-                        if (voucher != null) {
-                            val newBal = (voucher.remainingBalance - vAmt).coerceAtLeast(0.0)
-                            val newStatus = if (newBal <= 0.01) "EXHAUSTED" else "ACTIVE"
-                            storeCreditVoucherDao.updateVoucherBalance(voucher.code, newBal, newStatus)
-                        }
-                    }
-                }
-            }
+
         
             val saleItems = cartItemsWithNotes.map { (product, quantity, note) ->
                 SaleItem(
@@ -917,10 +997,17 @@ class DataRepository(
                     price = product.sellingPrice,
                     quantity = quantity,
                     note = note,
-                    purchasePriceAtSale = product.purchasePrice
+                    purchasePriceAtSale = product.purchasePrice,
+                    taxable = product.barcode !in nonTaxableBarcodes
                 )
             }
-            saleDao.insertSaleItems(saleItems)
+            try {
+                saleDao.insertSaleItems(saleItems)
+            } catch (e: android.database.sqlite.SQLiteConstraintException) {
+                throw IllegalStateException("Failed to record sale items: unique constraint conflict", e)
+            } catch (e: androidx.sqlite.SQLiteException) {
+                throw IllegalStateException("Failed to record sale items: unique constraint conflict", e)
+            }
 
         // Handle Due payments/registrations
             if (dueAddition > 0.0 && !normalizedCustomerPhone.isNullOrBlank()) {
@@ -937,6 +1024,7 @@ class DataRepository(
                             (currentDue?.creditLimit ?: 0.0) > 0.0 -> currentDue!!.creditLimit
                             else -> customer?.creditLimit ?: 0.0
                         },
+                        createdAt = currentDue?.createdAt ?: System.currentTimeMillis(),
                         updatedAt = System.currentTimeMillis()
                     )
                 )
@@ -1008,6 +1096,7 @@ class DataRepository(
                         notes = existingCust?.notes,
                         tag = existingCust?.tag ?: "Retail",
                         creditLimit = existingCust?.creditLimit ?: 0.0,
+                        storeCredit = existingCust?.storeCredit ?: 0.0,
                         totalOrders = updatedOrders,
                         lifetimeSpent = updatedLifetime,
                         totalDue = currentDue,
@@ -1156,9 +1245,12 @@ class DataRepository(
         if (clean.isBlank()) return@withContext emptyList()
         val customers = customerDao.searchCustomerSuggestions(clean)
         if (customers.isNotEmpty()) {
+            val phones = customers.map { it.phone }
+            val duesByPhone = customerDueDao.getCustomerDuesByPhones(phones).associateBy { it.customerPhone }
+            val loyaltyByPhone = customerLoyaltyDao.getLoyaltyByPhones(phones).associateBy { it.phone }
             return@withContext customers.map { c ->
-                val due = customerDueDao.getCustomerDueByPhone(c.phone)
-                val loyalty = customerLoyaltyDao.getLoyaltyByPhone(c.phone)
+                val due = duesByPhone[c.phone]
+                val loyalty = loyaltyByPhone[c.phone]
                 CustomerLookupResult(
                     phone = c.phone,
                     name = c.name,
@@ -1176,12 +1268,13 @@ class DataRepository(
                 )
             }
         }
-        val salesContacts = saleDao.getAllPastCustomerContacts()
-            .filter { it.customerPhone.contains(clean) || (it.customerName?.contains(clean, ignoreCase = true) == true) }
-            .take(5)
+        val salesContacts = saleDao.searchPastCustomerContacts("%$clean%")
+        val scPhones = salesContacts.map { it.customerPhone }
+        val duesByPhone = customerDueDao.getCustomerDuesByPhones(scPhones).associateBy { it.customerPhone }
+        val loyaltyByPhone = customerLoyaltyDao.getLoyaltyByPhones(scPhones).associateBy { it.phone }
         salesContacts.map { sc ->
-            val due = customerDueDao.getCustomerDueByPhone(sc.customerPhone)
-            val loyalty = customerLoyaltyDao.getLoyaltyByPhone(sc.customerPhone)
+            val due = duesByPhone[sc.customerPhone]
+            val loyalty = loyaltyByPhone[sc.customerPhone]
             CustomerLookupResult(
                 phone = sc.customerPhone,
                 name = sc.customerName ?: "",
@@ -1379,6 +1472,7 @@ class DataRepository(
                     customerName = finalName,
                     outstandingAmount = dueAmount,
                     creditLimit = finalCreditLimit,
+                    createdAt = oldDue?.createdAt ?: System.currentTimeMillis(),
                     updatedAt = System.currentTimeMillis()
                 )
             )
@@ -1404,7 +1498,7 @@ class DataRepository(
                         updatedAt = System.currentTimeMillis()
                     )
                 )
-                customerLoyaltyDao.deleteLoyaltyByPhone(oldNorm)
+                customerLoyaltyDao.delete(oldNorm)
             }
 
             // 6. Reassign held carts & due reminders (authoritative DB row and itemsJson payload kept 100% in sync)
@@ -1447,12 +1541,27 @@ class DataRepository(
         val customer = customerDao.getCustomerByPhone(cleanPhone) ?: return@withContext false
         val timeStr = java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
         val newEntry = "• [$timeStr | $category] ${noteText.trim()}"
-        val updatedNotes = if (customer.notes.isNullOrBlank()) newEntry else "$newEntry\n\n${customer.notes}"
+        val updatedNotes = if (customer.notes.isNullOrBlank()) newEntry else "$newEntry\u001E${customer.notes}"
         customerDao.upsertCustomer(customer.copy(notes = updatedNotes, updatedAt = System.currentTimeMillis()))
         true
     }
 
-    suspend fun getTopProductsForCustomer(phone: String, limit: Int = 10): List<CustomerProductPurchaseSummary> = withContext(Dispatchers.IO) {
+    suspend fun deleteCustomerNote(phone: String, noteIndex: Int): Boolean = withContext(Dispatchers.IO) {
+        val cleanPhone = normalizePhone(phone)
+        val customer = customerDao.getCustomerByPhone(cleanPhone) ?: return@withContext false
+        val currentNotes = customer.notes ?: return@withContext false
+        val notesList = currentNotes.split("\u001E").flatMap { it.split("\n\n") }.filter { it.isNotBlank() }.toMutableList()
+        if (noteIndex in notesList.indices) {
+            notesList.removeAt(noteIndex)
+            val updatedNotes = notesList.joinToString("\u001E")
+            customerDao.upsertCustomer(customer.copy(notes = updatedNotes, updatedAt = System.currentTimeMillis()))
+            true
+        } else {
+            false
+        }
+    }
+
+    suspend fun getTopProductsForCustomer(phone: String, limit: Int = 25): List<CustomerProductPurchaseSummary> = withContext(Dispatchers.IO) {
         saleDao.getTopProductsForCustomer(normalizePhone(phone), limit)
     }
 
@@ -1611,13 +1720,19 @@ class DataRepository(
     ) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.DUES_COLLECT_PAYMENT)
         val cleanPhone = normalizePhone(phone)
-        customerDueDao.recordDuePayment(
-            phone = cleanPhone,
-            amountPaid = amountPaid,
-            timestamp = System.currentTimeMillis(),
-            paymentMethod = paymentMethod,
-            referenceNote = referenceNote?.trim()?.takeIf { it.isNotEmpty() }
-        )
+        try {
+            customerDueDao.recordDuePayment(
+                phone = cleanPhone,
+                amountPaid = amountPaid,
+                timestamp = System.currentTimeMillis(),
+                paymentMethod = paymentMethod,
+                referenceNote = referenceNote?.trim()?.takeIf { it.isNotEmpty() }
+            )
+        } catch (e: android.database.sqlite.SQLiteConstraintException) {
+            throw IllegalStateException("Failed to record due payment: constraint conflict", e)
+        } catch (e: androidx.sqlite.SQLiteException) {
+            throw IllegalStateException("Failed to record due payment: constraint conflict", e)
+        }
         syncCustomerProfileFromLedgers(cleanPhone)
     }
 
@@ -1748,6 +1863,7 @@ class DataRepository(
                         customerName = latest.customerName,
                         outstandingAmount = group.mergedOutstanding,
                         creditLimit = group.rows.maxOf { it.creditLimit },
+                        createdAt = group.rows.mapNotNull { it.createdAt.takeIf { c -> c > 0 } }.minOrNull() ?: System.currentTimeMillis(),
                         updatedAt = System.currentTimeMillis(),
                         isArchived = group.rows.all { it.isArchived }
                     )
@@ -1996,6 +2112,7 @@ class DataRepository(
                         put("quantity", item.quantity)
                         put("note", item.note ?: "")
                         item.purchasePriceAtSale?.let { put("purchasePriceAtSale", it) }
+                        put("taxable", item.taxable)
                     })
                 }
                 saleJson.put("items", itemsArray)
@@ -2354,6 +2471,7 @@ class DataRepository(
                         customerName = d.optString("customerName", d.getString("customerPhone")),
                         outstandingAmount = d.optDouble("outstandingAmount", d.optDouble("amount", 0.0)),
                         creditLimit = d.optDouble("creditLimit", 0.0),
+                        createdAt = d.optLong("createdAt", d.optLong("updatedAt", System.currentTimeMillis())),
                         updatedAt = d.optLong("updatedAt", System.currentTimeMillis()),
                         isArchived = d.optBoolean("isArchived", false)
                     )
@@ -2374,7 +2492,13 @@ class DataRepository(
                         paymentMethod = p.optString("paymentMethod", "Cash"),
                         referenceNote = p.optString("referenceNote").takeIf { it.isNotBlank() }
                     )
-                    customerDueDao.insertDuePayment(payment)
+                    try {
+                        customerDueDao.insertDuePayment(payment)
+                    } catch (e: android.database.sqlite.SQLiteConstraintException) {
+                        throw IllegalStateException("Failed to restore due payment: duplicate record conflict", e)
+                    } catch (e: androidx.sqlite.SQLiteException) {
+                        throw IllegalStateException("Failed to restore due payment: duplicate record conflict", e)
+                    }
                 }
               }
 
@@ -2428,7 +2552,13 @@ class DataRepository(
                         loyaltyPointsRedeemed = s.optInt("loyaltyPointsRedeemed", 0),
                         storeCreditApplied = s.optionalDouble("storeCreditApplied")
                     )
-                    val saleId = saleDao.insertSale(sale)
+                    val saleId = try {
+                        saleDao.insertSale(sale)
+                    } catch (e: android.database.sqlite.SQLiteConstraintException) {
+                        throw IllegalStateException("Failed to restore sale: duplicate record conflict", e)
+                    } catch (e: androidx.sqlite.SQLiteException) {
+                        throw IllegalStateException("Failed to restore sale: duplicate record conflict", e)
+                    }
                     if (mode == BackupImportMode.MERGE) saleIdMap[backupSaleId] = saleId
                     val itemsArray = s.optJSONArray("items") ?: s.optJSONArray("saleItems") ?: JSONArray()
                     val items = mutableListOf<SaleItem>()
@@ -2441,10 +2571,19 @@ class DataRepository(
                             price = itemObj.optionalDouble("price") ?: itemObj.optionalDouble("sellingPrice"),
                             quantity = itemObj.optionalDouble("quantity") ?: itemObj.optionalDouble("qty"),
                             note = itemObj.optString("note").takeIf { it.isNotBlank() },
-                            purchasePriceAtSale = itemObj.optionalDouble("purchasePriceAtSale")
+                            purchasePriceAtSale = itemObj.optionalDouble("purchasePriceAtSale"),
+                            taxable = itemObj.optBoolean("taxable", true)
                         ))
                     }
-                    if (items.isNotEmpty()) saleDao.insertSaleItems(items)
+                    if (items.isNotEmpty()) {
+                        try {
+                            saleDao.insertSaleItems(items)
+                        } catch (e: android.database.sqlite.SQLiteConstraintException) {
+                            throw IllegalStateException("Failed to restore sale items: duplicate record conflict", e)
+                        } catch (e: androidx.sqlite.SQLiteException) {
+                            throw IllegalStateException("Failed to restore sale items: duplicate record conflict", e)
+                        }
+                    }
                 }
               }
 
@@ -2544,7 +2683,7 @@ class DataRepository(
                         amount = value.optDouble("amount", 0.0), paymentSource = value.optString("paymentSource", "Cash"),
                         note = value.optString("note").takeIf { it.isNotBlank() },
                         timestamp = value.optLong("timestamp", System.currentTimeMillis()),
-                        cashierName = value.optString("cashierName", "Admin")
+                        cashierName = value.optString("cashierName", "")
                     ))
                     if (mode == BackupImportMode.MERGE && backupExpenseId != 0L) {
                         expenseIdMap[backupExpenseId] = newExpenseId
@@ -2644,7 +2783,7 @@ class DataRepository(
                         notes = value.optString("notes").takeIf { it.isNotBlank() },
                         discrepancyReason = value.optString("discrepancyReason").takeIf { it.isNotBlank() },
                         timestamp = value.optLong("timestamp", System.currentTimeMillis()),
-                        cashierName = value.optString("cashierName", "Admin")
+                        cashierName = value.optString("cashierName", "")
                     ))
                 }
               }
@@ -2702,7 +2841,7 @@ class DataRepository(
                         difference = value.optDouble("difference", 0.0), reason = value.optString("reason", "Other"),
                         note = value.optString("note").takeIf { it.isNotBlank() },
                         timestamp = value.optLong("timestamp", System.currentTimeMillis()),
-                        cashierName = value.optString("cashierName", "Admin")
+                        cashierName = value.optString("cashierName", "")
                     ))
                 }
               }
@@ -2843,7 +2982,7 @@ class DataRepository(
                       val cashier = when {
                           obj.has("cashierName") && !obj.isNull("cashierName") -> obj.optString("cashierName")
                           obj.has("performedBy") && !obj.isNull("performedBy") -> obj.optString("performedBy")
-                          else -> "Admin"
+                          else -> ""
                       }
                       val reason = if (obj.isNull("reason")) "" else obj.optString("reason", "")
 
@@ -2872,7 +3011,7 @@ class DataRepository(
                       val user = when {
                           obj.has("userName") && !obj.isNull("userName") -> obj.optString("userName")
                           obj.has("performedBy") && !obj.isNull("performedBy") -> obj.optString("performedBy")
-                          else -> "Admin"
+                          else -> ""
                       }
                       val reason = if (obj.isNull("reason")) "" else obj.optString("reason", "")
 
@@ -3169,16 +3308,22 @@ class DataRepository(
             throw IllegalStateException("PIN already in use by another user")
         }
         val permissionsJson = AppPermissions.serializePermissions(customPermissions)
-        userDao.insertUser(
-            User(
-                name = name.trim(),
-                pinHash = hashPin(pin),
-                role = role,
-                customPermissions = permissionsJson,
-                isActive = true,
-                maxDiscountPercent = maxDiscount
+        try {
+            userDao.insertUser(
+                User(
+                    name = name.trim(),
+                    pinHash = hashPin(pin),
+                    role = role,
+                    customPermissions = permissionsJson,
+                    isActive = true,
+                    maxDiscountPercent = maxDiscount
+                )
             )
-        )
+        } catch (e: android.database.sqlite.SQLiteConstraintException) {
+            throw IllegalStateException("Failed to create user: account constraint conflict", e)
+        } catch (e: androidx.sqlite.SQLiteException) {
+            throw IllegalStateException("Failed to create user: account constraint conflict", e)
+        }
     }
 
     /** Called only after Android has confirmed the device owner's lock-screen credential. */
@@ -3414,15 +3559,21 @@ class DataRepository(
                 val dueReduction = kotlin.math.min(refundTotal, remainingDueForSale)
                 if (dueReduction > 0.0) {
                     reduceCustomerDue(phone, dueReduction)
-                    customerDueDao.insertDuePayment(
-                        DuePayment(
-                            customerPhone = normalizePhone(phone),
-                            amountPaid = dueReduction,
-                            timestamp = System.currentTimeMillis(),
-                            paymentMethod = "Return Adjustment",
-                            referenceNote = "Due reduced by return on invoice #$saleId"
+                    try {
+                        customerDueDao.insertDuePayment(
+                            DuePayment(
+                                customerPhone = normalizePhone(phone),
+                                amountPaid = dueReduction,
+                                timestamp = System.currentTimeMillis(),
+                                paymentMethod = "Return Adjustment",
+                                referenceNote = "Due reduced by return on invoice #$saleId"
+                            )
                         )
-                    )
+                    } catch (e: android.database.sqlite.SQLiteConstraintException) {
+                        throw IllegalStateException("Failed to record return due adjustment: constraint conflict", e)
+                    } catch (e: androidx.sqlite.SQLiteException) {
+                        throw IllegalStateException("Failed to record return due adjustment: constraint conflict", e)
+                    }
                 }
 
                 if (refundMethod.equals("Store Credit", ignoreCase = true) && !issueVoucher) {
@@ -3498,7 +3649,9 @@ class DataRepository(
                 dueAdjustmentAmount = dueAdj,
                 note = note?.trim()?.takeIf { it.isNotEmpty() },
                 performedByUserId = sessionUser?.id,
-                performedByName = sessionUser?.name ?: "Admin"
+                performedByName = sessionUser?.name.orEmpty().also {
+                    if (sessionUser == null) Log.w("DataRepository", "sessionUser null at write time")
+                }
             )
             val returnId = returnDao.insertReturn(returnRecord)
             returnDao.insertReturnItems(
@@ -3517,22 +3670,34 @@ class DataRepository(
             var generatedVoucher: StoreCreditVoucher? = null
             if (refundMethod.equals("Store Credit", ignoreCase = true)) {
                 if (issueVoucher) {
-                    val code = "SC-" + (1000..9999).random() + "-" + (1000..9999).random()
-                    generatedVoucherCode = code
-                    val voucherToInsert = StoreCreditVoucher(
-                        code = code,
-                        initialAmount = refundTotal,
-                        remainingBalance = refundTotal,
-                        customerPhone = phone ?: walkinPhone?.trim()?.takeIf { it.isNotBlank() },
-                        sourceReturnId = returnId,
-                        sourceSaleId = saleId,
-                        issuedAt = System.currentTimeMillis(),
-                        expiresAt = System.currentTimeMillis() + (90L * 24 * 3600 * 1000),
-                        status = "ACTIVE",
-                        notes = "Return voucher on invoice #$saleId"
-                    )
-                    storeCreditVoucherDao.insertVoucher(voucherToInsert)
-                    generatedVoucher = voucherToInsert
+                    var inserted = false
+                    for (attempt in 1..5) {
+                        val code = "SC-${(1000..9999).random()}-${(1000..9999).random()}"
+                        val voucherToInsert = StoreCreditVoucher(
+                            code = code,
+                            initialAmount = refundTotal,
+                            remainingBalance = refundTotal,
+                            customerPhone = phone ?: walkinPhone?.trim()?.takeIf { it.isNotBlank() },
+                            sourceReturnId = returnId,
+                            sourceSaleId = saleId,
+                            issuedAt = System.currentTimeMillis(),
+                            expiresAt = System.currentTimeMillis() + (90L * 24 * 3600 * 1000),
+                            status = "ACTIVE",
+                            notes = "Return voucher on invoice #$saleId"
+                        )
+                        try {
+                            storeCreditVoucherDao.insertVoucher(voucherToInsert)
+                            generatedVoucherCode = code
+                            generatedVoucher = voucherToInsert
+                            inserted = true
+                            break
+                        } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                        } catch (_: androidx.sqlite.SQLiteException) {
+                        }
+                    }
+                    if (!inserted) {
+                        throw IllegalStateException("Failed to generate unique voucher code after 5 attempts")
+                    }
                 } else if (phone.isNullOrBlank() && !walkinPhone.isNullOrBlank()) {
                     // Walk-in customer registered with phone
                     val normWalkin = normalizePhone(walkinPhone)
@@ -3597,7 +3762,9 @@ class DataRepository(
                     amount = expense.amount,
                     category = expense.category,
                     paymentSource = expense.paymentSource,
-                    userName = sessionUser?.name ?: "Admin",
+                    userName = sessionUser?.name.orEmpty().also {
+                        if (sessionUser == null) Log.w("DataRepository", "sessionUser null at write time")
+                    },
                     timestamp = System.currentTimeMillis()
                 )
             )
@@ -3703,7 +3870,9 @@ class DataRepository(
                             paymentSource = "Cash",
                             note = "Paid to supplier on Invoice #$invoiceNumber${if (!note.isNullOrBlank()) " - $note" else ""}",
                             timestamp = System.currentTimeMillis(),
-                            cashierName = sessionUser?.name ?: "Admin"
+                            cashierName = sessionUser?.name.orEmpty().also {
+                                if (sessionUser == null) Log.w("DataRepository", "sessionUser null at write time")
+                            }
                         )
                     )
                 }
@@ -3740,7 +3909,9 @@ class DataRepository(
                             difference = line.quantity,
                             reason = "Purchase Invoice",
                             note = "Purchase Invoice #$invoiceNumber",
-                            cashierName = sessionUser?.name ?: "Admin"
+                            cashierName = sessionUser?.name.orEmpty().also {
+                                if (sessionUser == null) Log.w("DataRepository", "sessionUser null at write time")
+                            }
                         )
                     )
                     PurchaseInvoiceItem(
@@ -3792,7 +3963,9 @@ class DataRepository(
                         paymentSource = "Cash",
                         note = referenceNote?.trim()?.takeIf { it.isNotEmpty() } ?: "Payment to $supplierName",
                         timestamp = timestamp,
-                        cashierName = sessionUser?.name ?: "Admin"
+                        cashierName = sessionUser?.name.orEmpty().also {
+                            if (sessionUser == null) Log.w("DataRepository", "sessionUser null at write time")
+                        }
                     )
                 )
             }
@@ -3907,7 +4080,7 @@ class DataRepository(
         requirePermission(AppPermissions.DUES_ADD_DUE)
         val normalized = normalizePhone(phone)
         database.withDriverTransaction {
-            customerLoyaltyDao.deleteLoyaltyByPhone(normalized)
+            customerLoyaltyDao.delete(normalized)
             syncCustomerProfileFromLedgers(normalized)
         }
     }

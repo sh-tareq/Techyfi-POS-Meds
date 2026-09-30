@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ImageBitmap
 import com.example.techyfipos.BuildConfig
 import com.example.techyfipos.data.DataRepository
 import com.example.techyfipos.ui.components.*
@@ -101,6 +102,8 @@ private fun SettingsMasterCard(
     storeName: String,
     address: String,
     paperRollWidthMm: Int = 80,
+    driveConnected: Boolean = false,
+    stockCheckEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -203,15 +206,25 @@ private fun SettingsMasterCard(
                 ) {
                     Column {
                         Text(stringResource(R.string.settings_label_printer_engine), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC7D2FE))
-                        Text("${paperRollWidthMm}mm Thermal", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF34D399))
+                        Text("${paperRollWidthMm}mm ${stringResource(R.string.settings_printer_type_thermal)}", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF34D399))
                     }
                     Column {
                         Text(stringResource(R.string.settings_label_data_backup), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC7D2FE))
-                        Text(stringResource(R.string.settings_value_local_drive_ready), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF60A5FA))
+                        Text(
+                            text = if (driveConnected) stringResource(R.string.settings_value_local_drive_ready) else stringResource(R.string.settings_value_local_only),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (driveConnected) Color(0xFF60A5FA) else Color(0xFFA5B4FC)
+                        )
                     }
                     Column {
                         Text(stringResource(R.string.settings_label_display_mode), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC7D2FE))
-                        Text(stringResource(R.string.settings_value_stock_check_on), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFBBF24))
+                        Text(
+                            text = if (stockCheckEnabled) stringResource(R.string.settings_value_stock_check_on) else stringResource(R.string.settings_value_stock_check_off),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (stockCheckEnabled) Color(0xFFFBBF24) else Color(0xFF94A3B8)
+                        )
                     }
                 }
             }
@@ -262,6 +275,8 @@ private fun OptimizedSettingsHome(
         storeName = storeName,
         address = address,
         paperRollWidthMm = paperRollWidthMm,
+        driveConnected = driveConnected,
+        stockCheckEnabled = !allowNegativeInventory,
         modifier = Modifier.fillMaxWidth()
     )
 
@@ -553,9 +568,9 @@ private fun OptimizedSettingsHome(
                 Realistic3DNegativeStockWarningIcon(size = 32.dp)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text("Allow Negative Inventory", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(stringResource(R.string.settings_allow_negative_inventory_title), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Text(
-                        "Permit cashiers to complete sales even if an item is out of stock (0 or negative)",
+                        stringResource(R.string.settings_allow_negative_inventory_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -644,6 +659,7 @@ private fun OptimizedSettingsHome(
                     onClick = {
                         scope.launch { triggerCashDrawerKick(context, cashDrawerPrinterAddress) }
                     },
+                    enabled = cashDrawerPrinterAddress.isNotBlank(),
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                 ) {
@@ -695,7 +711,7 @@ private fun OptimizedSettingsHome(
                         color = Color(0xFFF43F5E)
                     )
                     Text(
-                        text = "Lock register session & return to cashier PIN entry",
+                        text = stringResource(R.string.settings_lock_register_session_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1048,7 +1064,7 @@ private fun OptimizedReceiptOverview(
             icon = { Realistic3DStoreIcon(size = 36.dp) },
             title = stringResource(R.string.settings_row_shop_identity_title),
             subtitle = stringResource(R.string.settings_row_shop_identity_subtitle),
-            status = if (settings.storeName.isNotBlank()) stringResource(R.string.settings_status_configured) else "Empty",
+            status = if (settings.storeName.isNotBlank()) stringResource(R.string.settings_status_configured) else stringResource(R.string.settings_status_empty),
             statusColor = if (settings.storeName.isNotBlank()) Color(0xFF059669) else MaterialTheme.colorScheme.primary,
             onClick = onOpenShopIdentity
         )
@@ -1107,6 +1123,7 @@ private fun ShopIdentitySettings(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            val defaultAdmin = stringResource(R.string.more_admin_badge)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -1213,12 +1230,12 @@ private fun ShopIdentitySettings(
                                 IconButton(
                                     onClick = {
                                         val updatedList = currentSettings.cashierPresets.filter { it != preset }
-                                        val newDefault = if (currentSettings.cashierName == preset) (updatedList.firstOrNull() ?: "Admin") else currentSettings.cashierName
+                                        val newDefault = if (currentSettings.cashierName == preset) (updatedList.firstOrNull() ?: defaultAdmin) else currentSettings.cashierName
                                         onSettingsChanged(currentSettings.copy(cashierPresets = updatedList, cashierName = newDefault))
                                     },
                                     modifier = Modifier.size(16.dp)
                                 ) {
-                                    Icon(Icons.Default.Close, contentDescription = "Remove", modifier = Modifier.size(12.dp))
+                                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_remove), modifier = Modifier.size(12.dp))
                                 }
                             }
                         }
@@ -1290,34 +1307,38 @@ private fun ShopLogoSettings(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                val logoImageBitmap = remember(currentSettings.logoUri) {
+                var logoImageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+                var monochromeLogoBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+
+                LaunchedEffect(currentSettings.logoUri) {
                     if (currentSettings.logoUri.isNotBlank()) {
-                        try {
-                            val uri = Uri.parse(currentSettings.logoUri)
-                            context.contentResolver.openInputStream(uri)?.use { stream ->
-                                BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                        val (orig, mono) = withContext(Dispatchers.IO) {
+                            try {
+                                val uri = Uri.parse(currentSettings.logoUri)
+                                var oBmp: ImageBitmap? = null
+                                var mBmp: ImageBitmap? = null
+                                context.contentResolver.openInputStream(uri)?.use { stream ->
+                                    val decoded = BitmapFactory.decodeStream(stream)
+                                    if (decoded != null) {
+                                        oBmp = decoded.asImageBitmap()
+                                        mBmp = convertToMonochromeThresholdBitmap(decoded, 180).asImageBitmap()
+                                    }
+                                }
+                                Pair(oBmp, mBmp)
+                            } catch (e: Exception) {
+                                Pair(null, null)
                             }
-                        } catch (e: Exception) {
-                            null
                         }
-                    } else null
+                        logoImageBitmap = orig
+                        monochromeLogoBitmap = mono
+                    } else {
+                        logoImageBitmap = null
+                        monochromeLogoBitmap = null
+                    }
                 }
 
-                val monochromeLogoBitmap = remember(currentSettings.logoUri) {
-                    if (currentSettings.logoUri.isNotBlank()) {
-                        try {
-                            val uri = Uri.parse(currentSettings.logoUri)
-                            context.contentResolver.openInputStream(uri)?.use { stream ->
-                                val decoded = BitmapFactory.decodeStream(stream)
-                                if (decoded != null) {
-                                    convertToMonochromeThresholdBitmap(decoded, 180).asImageBitmap()
-                                } else null
-                            }
-                        } catch (e: Exception) {
-                            null
-                        }
-                    } else null
-                }
+                val currentLogo = logoImageBitmap
+                val currentMono = monochromeLogoBitmap
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(stringResource(R.string.settings_color_original_label), fontSize = 10.sp, color = Color.Gray)
@@ -1325,8 +1346,8 @@ private fun ShopLogoSettings(
                         modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)),
                         color = MaterialTheme.colorScheme.surface
                     ) {
-                        if (logoImageBitmap != null) {
-                            Image(bitmap = logoImageBitmap, contentDescription = "Logo Original", modifier = Modifier.fillMaxSize())
+                        if (currentLogo != null) {
+                            Image(bitmap = currentLogo, contentDescription = stringResource(R.string.cd_logo_original), modifier = Modifier.fillMaxSize())
                         } else {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(Icons.Default.Storefront, contentDescription = null, tint = Color.Gray)
@@ -1341,8 +1362,8 @@ private fun ShopLogoSettings(
                         modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)),
                         color = Color.White
                     ) {
-                        if (monochromeLogoBitmap != null) {
-                            Image(bitmap = monochromeLogoBitmap, contentDescription = "Thermal 1-Bit Logo", modifier = Modifier.fillMaxSize())
+                        if (currentMono != null) {
+                            Image(bitmap = currentMono, contentDescription = stringResource(R.string.cd_thermal_logo), modifier = Modifier.fillMaxSize())
                         } else {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(stringResource(R.string.settings_none_label), fontSize = 11.sp, color = Color.Gray)
@@ -1584,13 +1605,13 @@ private fun ReceiptLayoutSettings(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Thermal Paper Roll Width",
+                            text = stringResource(R.string.settings_paper_roll_width_title),
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "80mm Standard vs 58mm Compact POS Roll",
+                            text = stringResource(R.string.settings_paper_roll_width_desc),
                             fontSize = 10.5.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1643,13 +1664,13 @@ private fun ReceiptLayoutSettings(
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                             Text(
-                                text = "Direct Bluetooth ESC/POS Driver",
+                                text = stringResource(R.string.settings_direct_bluetooth_driver_title),
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Bypass Android Print Spooler for instant, ultra-fast thermal printing",
+                                text = stringResource(R.string.settings_direct_bluetooth_driver_desc),
                                 fontSize = 10.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1760,7 +1781,7 @@ private fun ReceiptLayoutSettings(
             ) {
                 Text(stringResource(R.string.settings_custom_info_blocks_label), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 IconButton(onClick = onAddInfoBlock) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Info Block")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_info_block))
                 }
             }
             Text(
@@ -1794,10 +1815,10 @@ private fun ReceiptLayoutSettings(
                                 }
                             )
                             IconButton(onClick = { onEditInfoBlock(block) }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit Block", modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.cd_edit_block), modifier = Modifier.size(16.dp))
                             }
                             IconButton(onClick = { onDeleteInfoBlock(block.id) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete Block", tint = Color.Red, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_delete_block), tint = Color.Red, modifier = Modifier.size(16.dp))
                             }
                         }
                     }
@@ -1829,7 +1850,7 @@ private fun ReceiptLayoutSettings(
                     if (previewBitmap != null) {
                         Image(
                             bitmap = previewBitmap,
-                            contentDescription = "Real-time Receipt Preview",
+                            contentDescription = stringResource(R.string.cd_receipt_preview),
                             modifier = Modifier.fillMaxWidth(0.9f).clip(RoundedCornerShape(4.dp))
                         )
                     } else {
@@ -2149,7 +2170,7 @@ private fun MoneyReceiptVoucherSettings(
                         fontSize = 13.5.sp
                     )
                     Text(
-                        text = if (currentSettings.paperRollWidthMm == 58) "58mm Compact POS" else "80mm Standard POS",
+                        text = if (currentSettings.paperRollWidthMm == 58) stringResource(R.string.settings_paper_roll_58mm_compact) else stringResource(R.string.settings_paper_roll_80mm_standard),
                         fontSize = 10.5.sp,
                         color = Color.Gray
                     )
@@ -2232,7 +2253,7 @@ private fun MoneyReceiptVoucherSettings(
                         val slipFraction = if (currentSettings.paperRollWidthMm == 58) 0.65f else 0.88f
                         Image(
                             bitmap = previewBitmap,
-                            contentDescription = "Live Due Voucher Preview",
+                            contentDescription = stringResource(R.string.cd_due_voucher_preview),
                             modifier = Modifier
                                 .fillMaxWidth(slipFraction)
                                 .clip(RoundedCornerShape(6.dp))
@@ -2422,7 +2443,7 @@ private fun OptimizedBackupSettings(
                         onClick = onGoogleSignIn,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(42.dp),
+                            .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0082FF))
                     ) {
@@ -2439,7 +2460,7 @@ private fun OptimizedBackupSettings(
                             onClick = onDriveBackupNow,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(42.dp),
+                                .height(48.dp),
                             shape = RoundedCornerShape(12.dp),
                             enabled = !isBackingUpToDrive,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0082FF))
@@ -2463,7 +2484,7 @@ private fun OptimizedBackupSettings(
                             onClick = onOpenDriveHistory,
                             modifier = Modifier
                                 .weight(0.7f)
-                                .height(42.dp),
+                                .height(48.dp),
                             shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
@@ -2478,14 +2499,14 @@ private fun OptimizedBackupSettings(
                         onClick = onTestDriveConnection,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(38.dp),
+                            .height(48.dp),
                         shape = RoundedCornerShape(11.dp),
                         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
                     ) {
                         Icon(Icons.Default.NetworkCheck, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Test Drive Connection Status", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.settings_test_drive_connection), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -2803,8 +2824,8 @@ private fun OptimizedBackupSettings(
                         ) {
                             Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             Column {
-                                Text("Encrypted Standalone Vault (.posenc)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                Text("Password protected AES-256-GCM encrypted backup file", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.settings_vault_title), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(stringResource(R.string.settings_vault_desc), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         Row(
@@ -2813,21 +2834,21 @@ private fun OptimizedBackupSettings(
                         ) {
                             OutlinedButton(
                                 onClick = onExportEncryptedBackup,
-                                modifier = Modifier.weight(1f).height(38.dp),
+                                modifier = Modifier.weight(1f).height(48.dp),
                                 shape = RoundedCornerShape(9.dp)
                             ) {
                                 Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(15.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Export .posenc", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.settings_export_posenc), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                             OutlinedButton(
                                 onClick = onImportEncryptedBackup,
-                                modifier = Modifier.weight(1f).height(38.dp),
+                                modifier = Modifier.weight(1f).height(48.dp),
                                 shape = RoundedCornerShape(9.dp)
                             ) {
                                 Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(15.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Import .posenc", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.settings_import_posenc), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -3001,7 +3022,7 @@ private fun OptimizedAboutSettings() {
     ) {
         Image(
             painter = painterResource(R.drawable.techyfi_logo),
-            contentDescription = "Techyfi POS logo",
+            contentDescription = stringResource(R.string.cd_techyfi_logo),
             modifier = Modifier.size(64.dp).clip(RoundedCornerShape(16.dp))
         )
         Spacer(modifier = Modifier.height(10.dp))
@@ -3036,7 +3057,7 @@ private fun OptimizedAboutSettings() {
     SettingsGroup {
         SettingsNavigationRow3D(
             icon = { Icon(Icons.Default.BugReport, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            title = "Crash Logs",
+            title = stringResource(R.string.settings_crash_logs_title),
             subtitle = if (crashLogFiles.isEmpty()) "No crashes recorded" else "${crashLogFiles.size} recorded — tap to view & share",
             onClick = {
                 crashLogFiles = com.example.techyfipos.utils.CrashLogger.listLogs(context)
@@ -3076,10 +3097,10 @@ private fun CrashLogsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Crash Logs (${files.size})") },
+        title = { Text(stringResource(R.string.settings_crash_logs_title_fmt, files.size)) },
         text = {
             if (files.isEmpty()) {
-                Text("No crashes have been recorded on this device.", color = Color.Gray, fontSize = 13.sp)
+                Text(stringResource(R.string.settings_no_crashes), color = Color.Gray, fontSize = 13.sp)
             } else {
                 Column(
                     modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
@@ -3111,7 +3132,7 @@ private fun CrashLogsDialog(
                                     TextButton(onClick = {
                                         shareReceiptAsText(context, com.example.techyfipos.utils.CrashLogger.readLog(file))
                                     }) {
-                                        Text("Share", fontSize = 12.sp)
+                                        Text(stringResource(R.string.share), fontSize = 12.sp)
                                     }
                                 }
                                 if (expandedFile == file) {
@@ -3129,10 +3150,10 @@ private fun CrashLogsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
         },
         dismissButton = if (files.isNotEmpty()) {
-            { TextButton(onClick = { onCleared(); onDismiss() }) { Text("Clear All", color = MaterialTheme.colorScheme.error) } }
+            { TextButton(onClick = { onCleared(); onDismiss() }) { Text(stringResource(R.string.settings_clear_all), color = MaterialTheme.colorScheme.error) } }
         } else null
     )
 }
@@ -3838,7 +3859,7 @@ fun SettingsScreen(
                                 }
                             }
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                         }
                     }
                 }
@@ -4092,13 +4113,13 @@ fun SettingsScreen(
                         if (isOwner) {
                             importEncryptedBackupLauncher.launch(arrayOf("*/*"))
                         } else {
-                            Toast.makeText(context, "Only the shop owner can restore database backups", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, context.getString(R.string.toast_only_owner_restore_backup), Toast.LENGTH_LONG).show()
                         }
                     },
                     onTestDriveConnection = {
                         driveConnection?.let { connection ->
                             scope.launch {
-                                Toast.makeText(context, "Testing Google Drive connection...", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.toast_testing_drive_connection), Toast.LENGTH_SHORT).show()
                                 val ok = GoogleDriveHelper.testDriveConnection(context, connection.email).isSuccess
                                 Toast.makeText(
                                     context,
@@ -4197,7 +4218,7 @@ fun SettingsScreen(
             confirmButton = {
                 Button(onClick = {
                     if (!isOwner) {
-                        Toast.makeText(context, "Only the shop owner can restore database backups", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.toast_only_owner_restore_backup), Toast.LENGTH_LONG).show()
                         return@Button
                     }
                     pendingRestoreUri = null
@@ -4219,7 +4240,7 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = {
                     if (!isOwner) {
-                        Toast.makeText(context, "Only the shop owner can restore database backups", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.toast_only_owner_restore_backup), Toast.LENGTH_LONG).show()
                         return@TextButton
                     }
                     pendingRestoreUri = null
@@ -4261,7 +4282,7 @@ fun SettingsScreen(
                         },
                         modifier = Modifier.size(28.dp)
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.cd_refresh), modifier = Modifier.size(18.dp))
                     }
                 }
             },
@@ -4454,7 +4475,7 @@ fun SettingsScreen(
                 Button(
                     onClick = {
                         if (!isOwner) {
-                            Toast.makeText(context, "Only the shop owner can restore database backups", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, context.getString(R.string.toast_only_owner_restore_backup), Toast.LENGTH_LONG).show()
                             return@Button
                         }
                         driveConnection?.let { connection ->
@@ -4655,7 +4676,7 @@ fun SettingsScreen(
                 Button(
                     onClick = {
                         if (!isOwner) {
-                            Toast.makeText(context, "Only the shop owner can perform a factory reset", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, context.getString(R.string.toast_only_owner_factory_reset), Toast.LENGTH_LONG).show()
                             return@Button
                         }
                         settingsViewModel.resetFactoryDefaults {
@@ -4836,7 +4857,7 @@ fun SettingsScreen(
                 }
             },
             icon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text("Set Backup Password", fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.settings_set_backup_password), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -4847,7 +4868,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it; errorMessage = null },
-                        label = { Text("Password (min 4 chars)") },
+                        label = { Text(stringResource(R.string.settings_password_min_4_chars)) },
                         singleLine = true,
                         visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
                         trailingIcon = {
@@ -4860,7 +4881,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = confirmPassword,
                         onValueChange = { confirmPassword = it; errorMessage = null },
-                        label = { Text("Confirm Password") },
+                        label = { Text(stringResource(R.string.settings_confirm_password)) },
                         singleLine = true,
                         visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth()
@@ -4908,7 +4929,7 @@ fun SettingsScreen(
                     if (isExporting) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Text("Encrypt & Save")
+                        Text(stringResource(R.string.settings_encrypt_and_save))
                     }
                 }
             },
@@ -4920,7 +4941,7 @@ fun SettingsScreen(
                     },
                     enabled = !isExporting
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -4942,7 +4963,7 @@ fun SettingsScreen(
                 }
             },
             icon = { Icon(Icons.Default.Key, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text("Decrypt Backup File", fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.settings_decrypt_backup_file), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
@@ -4953,7 +4974,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it; errorMessage = null },
-                        label = { Text("Backup Password") },
+                        label = { Text(stringResource(R.string.settings_backup_password)) },
                         singleLine = true,
                         visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
                         trailingIcon = {
@@ -4970,13 +4991,13 @@ fun SettingsScreen(
                         FilterChip(
                             selected = isReplacing,
                             onClick = { isReplacing = true },
-                            label = { Text("Full Replace") },
+                            label = { Text(stringResource(R.string.settings_full_replace)) },
                             modifier = Modifier.weight(1f)
                         )
                         FilterChip(
                             selected = !isReplacing,
                             onClick = { isReplacing = false },
-                            label = { Text("Merge") },
+                            label = { Text(stringResource(R.string.settings_merge)) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -5021,7 +5042,7 @@ fun SettingsScreen(
                     if (isImporting) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Text("Decrypt & Restore")
+                        Text(stringResource(R.string.settings_decrypt_and_restore))
                     }
                 }
             },
@@ -5033,7 +5054,7 @@ fun SettingsScreen(
                     },
                     enabled = !isImporting
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )

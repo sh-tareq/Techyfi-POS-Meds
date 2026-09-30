@@ -268,7 +268,7 @@ fun Animated3DCameraScannerToggleIcon(modifier: Modifier = Modifier) {
         } else {
             Icon(
                 imageVector = Icons.Default.QrCodeScanner,
-                contentDescription = "Scan Barcode",
+                contentDescription = stringResource(R.string.cd_scan_barcode),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )
@@ -309,7 +309,7 @@ fun Animated3DScannerIcon(modifier: Modifier = Modifier) {
     ) {
         Icon(
             imageVector = Icons.Default.QrCodeScanner,
-            contentDescription = "Scan Barcode",
+            contentDescription = stringResource(R.string.cd_scan_barcode),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(22.dp)
         )
@@ -634,7 +634,7 @@ fun DateInputField(
                     decorationBox = { innerTextField ->
                         Box(contentAlignment = Alignment.CenterStart) {
                             if (value.isEmpty()) {
-                                Text("DD-MM-YY", color = Color.Gray, fontSize = 12.sp)
+                                Text(stringResource(R.string.date_placeholder_ddmmyy), color = Color.Gray, fontSize = 12.sp)
                             }
                             innerTextField()
                         }

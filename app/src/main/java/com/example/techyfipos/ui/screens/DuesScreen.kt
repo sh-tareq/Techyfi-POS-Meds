@@ -63,6 +63,7 @@ import android.widget.Toast
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.flowOf
 import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.R
 import com.example.techyfipos.data.DueTemplate
@@ -146,11 +147,11 @@ fun DuesScreen(
     val canSendReminders = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_SEND_REMINDERS)
     val canOverrideLimit = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_OVERRIDE_LIMIT)
     val reminderPermissionRequiredToast = stringResource(R.string.dues_reminder_permission_required_toast)
-    val storeName = settingsViewModel?.shopName?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val storeAddress = settingsViewModel?.shopAddress?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val storePhone = settingsViewModel?.shopPhone?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val invoiceSettingsData = settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle(initialValue = InvoiceSettingsData())?.value ?: InvoiceSettingsData()
-    val appLanguage = settingsViewModel?.language?.collectAsStateWithLifecycle(initialValue = "en")?.value ?: "en"
+    val storeName by (settingsViewModel?.shopName ?: flowOf("")).collectAsStateWithLifecycle("")
+    val storeAddress by (settingsViewModel?.shopAddress ?: flowOf("")).collectAsStateWithLifecycle("")
+    val storePhone by (settingsViewModel?.shopPhone ?: flowOf("")).collectAsStateWithLifecycle("")
+    val invoiceSettingsData by (settingsViewModel?.invoiceSettingsData ?: flowOf(InvoiceSettingsData())).collectAsStateWithLifecycle(InvoiceSettingsData())
+    val appLanguage by (settingsViewModel?.language ?: flowOf("en")).collectAsStateWithLifecycle("en")
     val isAppBangla = appLanguage == "bn"
     val deleteOwnerOnlyToast = stringResource(R.string.dues_delete_owner_only_toast)
     val addDueSuccessToast = stringResource(R.string.dues_add_due_success_toast)
@@ -178,7 +179,7 @@ fun DuesScreen(
                         if (success) {
                             Toast.makeText(context, duesExportSuccessMessage, Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(context, "$duesExportFailedPrefix Failed to generate workbook", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "$duesExportFailedPrefix ${context.getString(R.string.dues_workbook_failed)}", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } catch (e: Exception) {
@@ -199,7 +200,7 @@ fun DuesScreen(
                         if (success) {
                             Toast.makeText(context, statementExportSuccessMessage, Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(context, "$duesExportFailedPrefix Failed to generate statement", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "$duesExportFailedPrefix ${context.getString(R.string.dues_statement_failed)}", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } catch (e: Exception) {
@@ -213,12 +214,12 @@ fun DuesScreen(
 
     var selectedTab by rememberSaveable { mutableStateOf(DuesTab.OUTSTANDING) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    var sort by remember { mutableStateOf(DuesSort.HIGHEST) }
+    var sort by rememberSaveable { mutableStateOf(DuesSort.HIGHEST) }
     var showSortMenu by remember { mutableStateOf(false) }
-    var duePeriod by remember { mutableStateOf(DuePeriodFilter.ALL_TIME) }
+    var duePeriod by rememberSaveable { mutableStateOf(DuePeriodFilter.ALL_TIME) }
     var showDuePeriodMenu by remember { mutableStateOf(false) }
-    var customDueStart by remember { mutableStateOf<Long?>(null) }
-    var customDueEnd by remember { mutableStateOf<Long?>(null) }
+    var customDueStart by rememberSaveable { mutableStateOf<Long?>(null) }
+    var customDueEnd by rememberSaveable { mutableStateOf<Long?>(null) }
     var showDuesStartPicker by remember { mutableStateOf(false) }
     var showDuesEndPicker by remember { mutableStateOf(false) }
     var minimumDue by remember { mutableStateOf("") }
@@ -241,8 +242,13 @@ fun DuesScreen(
     val duesAuditEntries by duesViewModel.allDuesAuditEntries.collectAsStateWithLifecycle()
     val reminderLogs by duesViewModel.allDueReminderLogs.collectAsStateWithLifecycle()
 
-    val now = remember { System.currentTimeMillis() }
-    val monthStart = remember {
+    val now by produceState(initialValue = System.currentTimeMillis()) {
+        while (true) {
+            delay(60_000L)
+            value = System.currentTimeMillis()
+        }
+    }
+    val monthStart = remember(now) {
         Calendar.getInstance().apply {
             timeInMillis = now
             set(Calendar.DAY_OF_MONTH, 1)
@@ -261,7 +267,7 @@ fun DuesScreen(
     val paymentsByPhone = remember(allPayments) { allPayments.groupBy { it.customerPhone } }
     val customerByPhone = remember(allDues) { allDues.associateBy { it.customerPhone } }
 
-    val overdueThresholdMillis = remember { now - (14L * 24L * 60L * 60L * 1000L) }
+    val overdueThresholdMillis = remember(now) { now - (14L * 24L * 60L * 60L * 1000L) }
 
     val (dueStartRange, dueEndRange) = remember(duePeriod, customDueStart, customDueEnd, now, monthStart) {
         when (duePeriod) {
@@ -298,15 +304,16 @@ fun DuesScreen(
                 customer.customerPhone.lowercase().contains(query)
             val matchesMin = minimum == null || customer.outstandingAmount >= minimum
             val matchesDate = if (dueStartRange != null && dueEndRange != null) {
-                customer.updatedAt in dueStartRange..dueEndRange
+                val dueCreated = if (customer.createdAt > 0L) customer.createdAt else customer.updatedAt
+                dueCreated in dueStartRange..dueEndRange
             } else true
 
             matchesTab && matchesSearch && matchesMin && matchesDate
         }.let { rows ->
             when (sort) {
                 DuesSort.HIGHEST -> rows.sortedByDescending { it.outstandingAmount }
-                DuesSort.OLDEST -> rows.sortedBy { it.updatedAt }
-                DuesSort.RECENT -> rows.sortedByDescending { it.updatedAt }
+                DuesSort.OLDEST -> rows.sortedBy { if (it.createdAt > 0L) it.createdAt else it.updatedAt }
+                DuesSort.RECENT -> rows.sortedByDescending { if (it.createdAt > 0L) it.createdAt else it.updatedAt }
             }
         }
     }
@@ -343,7 +350,7 @@ fun DuesScreen(
                                 if (selectedCustomer != null) duesViewModel.selectCustomer(null) else onBack()
                             }
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                         }
                     }
                 },
@@ -352,15 +359,15 @@ fun DuesScreen(
                         // 1. Dues & Credit Audit Trail Ledger Icon
                         IconButton(
                             onClick = { showDuesAuditSheet = true },
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
-                            Realistic3DDigitalKhataIcon(size = 22.dp)
+                            Realistic3DDigitalKhataIcon(size = 24.dp)
                         }
 
                         // 2. Permanent Reminder Bell Icon with BadgedBox
                         IconButton(
                             onClick = { showReminderHubSheet = true },
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             BadgedBox(
                                 badge = {
@@ -374,7 +381,7 @@ fun DuesScreen(
                                     }
                                 }
                             ) {
-                                Realistic3DReminderBellIcon(size = 22.dp, animate = scheduledReminders.isNotEmpty())
+                                Realistic3DReminderBellIcon(size = 24.dp, animate = scheduledReminders.isNotEmpty())
                             }
                         }
 
@@ -384,9 +391,9 @@ fun DuesScreen(
                                 val cleanDate = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date())
                                 exportDuesExcelLauncher.launch("dues-ledger-$cleanDate.xlsx")
                             },
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
-                            Realistic3DExcelSpreadsheetIcon(size = 22.dp)
+                            Realistic3DExcelSpreadsheetIcon(size = 24.dp)
                         }
 
                         // 4. + Add Due (Compact filled icon button for owner)
@@ -397,13 +404,13 @@ fun DuesScreen(
                                 colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primary),
                                 modifier = Modifier
                                     .padding(start = 2.dp, end = 4.dp)
-                                    .size(32.dp)
+                                    .size(48.dp)
                             ) {
                                 Icon(
                                     Icons.Default.PersonAdd,
                                     contentDescription = stringResource(R.string.dues_add_due_button),
                                     tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
@@ -417,9 +424,9 @@ fun DuesScreen(
                                     exportCustomerStatementExcelLauncher.launch("statement-$cleanPhone-$cleanDate.xlsx")
                                 }
                             },
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
-                            Realistic3DExcelSpreadsheetIcon(size = 22.dp)
+                            Realistic3DExcelSpreadsheetIcon(size = 24.dp)
                         }
 
                         // 2. Share Customer Statement as Text
@@ -429,9 +436,9 @@ fun DuesScreen(
                                     shareCustomerStatement(context, c, selectedPayments, storeName)
                                 }
                             },
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
-                            Icon(Icons.Default.Share, contentDescription = "Share customer statement", modifier = Modifier.size(19.dp))
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.dues_share_statement_cd), modifier = Modifier.size(22.dp))
                         }
 
                         // 3. Delete Due Account
@@ -440,9 +447,9 @@ fun DuesScreen(
                                 onClick = {
                                     customerToDelete = selectedCustomer
                                 },
-                                modifier = Modifier.size(34.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete Due Account", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.dues_delete_account_cd), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                             }
                         }
                     }
@@ -533,7 +540,7 @@ fun DuesScreen(
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(42.dp)
+                                .height(48.dp)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -582,7 +589,7 @@ fun DuesScreen(
                                     ) {
                                         Icon(
                                             Icons.Default.Close,
-                                            contentDescription = "Clear",
+                                            contentDescription = stringResource(R.string.cd_clear),
                                             tint = MaterialTheme.colorScheme.outline,
                                             modifier = Modifier.size(16.dp)
                                         )
@@ -598,7 +605,7 @@ fun DuesScreen(
                                 shape = RoundedCornerShape(10.dp),
                                 color = Color(0xFFEEF2FF),
                                 border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
-                                modifier = Modifier.height(42.dp)
+                                modifier = Modifier.height(48.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 8.dp),
@@ -1262,6 +1269,16 @@ fun DuesScreen(
                     )
                 }
             },
+            onDeleteNote = { index ->
+                dossierData?.customer?.phone?.let { phone ->
+                    customerViewModel.deleteCustomerNote(
+                        phone = phone,
+                        noteIndex = index,
+                        onSuccess = { Toast.makeText(context, context.getString(R.string.delete), Toast.LENGTH_SHORT).show() },
+                        onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
+                    )
+                }
+            },
             onAdjustCredit = { delta, note ->
                 dossierData?.customer?.phone?.let { phone ->
                     customerViewModel.adjustCustomerStoreCredit(
@@ -1272,7 +1289,8 @@ fun DuesScreen(
                         onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
                     )
                 }
-            }
+            },
+            settingsViewModel = settingsViewModel
         )
     }
 
@@ -1409,13 +1427,13 @@ fun DuesScreen(
             onDismissRequest = { customerToDelete = null },
             title = {
                 Text(
-                    text = if (hasDues) "Cannot Delete Customer Ledger" else stringResource(R.string.dues_delete_ledger_title),
+                    text = if (hasDues) stringResource(R.string.dues_cannot_delete_title) else stringResource(R.string.dues_delete_ledger_title),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 if (hasDues) {
-                    Text("Cannot delete due ledger for \"${c.customerName}\" (${c.customerPhone}) because they have an outstanding due of ${formatTaka(c.outstandingAmount)}. All dues must be cleared before deleting the ledger.")
+                    Text(stringResource(R.string.dues_cannot_delete_message, c.customerName, c.customerPhone, formatTaka(c.outstandingAmount)))
                 } else {
                     Text(stringResource(R.string.dues_delete_ledger_confirm, c.customerName, c.customerPhone))
                 }
@@ -1667,16 +1685,15 @@ fun SendDueReminderDialog(
     val coroutineScope = rememberCoroutineScope()
     val reminderPermissionRequiredToast = stringResource(R.string.dues_reminder_permission_required_toast)
 
-    val savedTemplates = settingsViewModel?.dueReminderTemplates?.collectAsStateWithLifecycle()?.value
-        ?: DueTemplate.defaultTemplates()
+    val savedTemplates by (settingsViewModel?.dueReminderTemplates ?: flowOf(DueTemplate.defaultTemplates())).collectAsStateWithLifecycle(DueTemplate.defaultTemplates())
     val templates = if (savedTemplates.isEmpty()) DueTemplate.defaultTemplates() else savedTemplates
-    val shopPhone = settingsViewModel?.shopPhone?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val appLanguage = settingsViewModel?.language?.collectAsStateWithLifecycle(initialValue = "en")?.value ?: "en"
+    val shopPhone by (settingsViewModel?.shopPhone ?: flowOf("")).collectAsStateWithLifecycle("")
+    val appLanguage by (settingsViewModel?.language ?: flowOf("en")).collectAsStateWithLifecycle("en")
     val isAppBangla = appLanguage == "bn"
 
     val effectiveStoreName = storeName.trim().ifBlank { if (isAppBangla) "আমাদের প্রতিষ্ঠান" else "Our Store" }
     val effectiveStoreNameEng = storeName.trim().ifBlank { "Our Store" }
-    val effectiveBkash = shopPhone.trim().ifBlank { "01XXXXXXXXX" }
+    val effectiveBkash = shopPhone.trim()
 
     var mode by rememberSaveable { mutableStateOf(ReminderMode.INSTANT) }
     var selectedLang by rememberSaveable { mutableStateOf(if (isAppBangla) ReminderLanguage.BANGLA else ReminderLanguage.ENGLISH) }
@@ -1706,12 +1723,25 @@ fun SendDueReminderDialog(
     }
 
     fun formatTemplateString(raw: String): String {
-        return raw
+        var res = raw
             .replace("{customer}", customer.customerName)
             .replace("{due}", formatTaka(customer.outstandingAmount))
             .replace("{store}", if (selectedLang == ReminderLanguage.ENGLISH) effectiveStoreNameEng else effectiveStoreName)
-            .replace("{bkash}", effectiveBkash)
             .replace("{phone}", customer.customerPhone)
+        if (effectiveBkash.isNotBlank()) {
+            res = res.replace("{bkash}", effectiveBkash)
+        } else {
+            res = res
+                .replace(" bKash/Nagad: {bkash}।", "।")
+                .replace(" bKash/Nagad: {bkash}.", ".")
+                .replace(" via bKash/Nagad: {bkash}.", ".")
+                .replace("bKash/Nagad: {bkash}।", "")
+                .replace("bKash/Nagad: {bkash}.", "")
+                .replace("via bKash/Nagad: {bkash}.", "")
+                .replace("{bkash}", "")
+                .trim()
+        }
+        return res
     }
 
     val activeTemplate = templates.find { it.id == selectedTemplateId } ?: templates.firstOrNull() ?: DueTemplate.defaultTemplates().first()
@@ -1840,7 +1870,7 @@ fun SendDueReminderDialog(
                 ) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.close),
                         tint = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.size(20.dp)
                     )
@@ -2011,7 +2041,7 @@ fun SendDueReminderDialog(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) Color(0xFF059669) else Color.White,
                                     border = BorderStroke(1.dp, if (isSelected) Color(0xFF059669) else Color(0xFFCBD5E1)),
-                                    modifier = Modifier.weight(1f).height(32.dp)
+                                    modifier = Modifier.weight(1f).height(48.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
@@ -2041,7 +2071,7 @@ fun SendDueReminderDialog(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) Color(0xFFEFF6FF) else Color.White,
                                     border = BorderStroke(1.dp, if (isSelected) Color(0xFF3B82F6) else Color(0xFFCBD5E1)),
-                                    modifier = Modifier.height(32.dp)
+                                    modifier = Modifier.height(48.dp)
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(horizontal = 10.dp),
@@ -2134,7 +2164,7 @@ fun SendDueReminderDialog(
                                     )
                                 }
                                 Text(
-                                    text = "Exact Alarm Engine",
+                                    text = stringResource(R.string.dues_exact_alarm_engine),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF0284C7)
@@ -2154,7 +2184,7 @@ fun SendDueReminderDialog(
                                         shape = RoundedCornerShape(8.dp),
                                         color = if (isSelected) Color(0xFF0284C7) else Color.White,
                                         border = BorderStroke(1.dp, if (isSelected) Color(0xFF0284C7) else Color(0xFFBAE6FD)),
-                                        modifier = Modifier.weight(1f).height(34.dp)
+                                        modifier = Modifier.weight(1f).height(48.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Text(
@@ -2410,7 +2440,7 @@ fun SendDueReminderDialog(
                                         color = Color(0xFF475569)
                                     )
                                     Text(
-                                        text = "Auto SMS + WhatsApp Prompt",
+                                        text = stringResource(R.string.dues_auto_sms_whatsapp_prompt),
                                         fontSize = 9.5.sp,
                                         color = Color(0xFF0284C7),
                                         fontWeight = FontWeight.SemiBold
@@ -2427,7 +2457,7 @@ fun SendDueReminderDialog(
                                             shape = RoundedCornerShape(8.dp),
                                             color = if (isSelected) Color(0xFF0284C7) else Color.White,
                                             border = BorderStroke(1.dp, if (isSelected) Color(0xFF0284C7) else Color(0xFFCBD5E1)),
-                                            modifier = Modifier.weight(1f).height(32.dp)
+                                            modifier = Modifier.weight(1f).height(48.dp)
                                         ) {
                                             Row(
                                                 modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
@@ -2615,7 +2645,7 @@ fun ManageDueTemplatesDialog(
                         )
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(26.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), modifier = Modifier.size(16.dp))
                     }
                 }
 
@@ -2666,7 +2696,7 @@ fun ManageDueTemplatesDialog(
                                         ) {
                                             Icon(
                                                 Icons.Default.Delete,
-                                                contentDescription = "Delete",
+                                                contentDescription = stringResource(R.string.delete),
                                                 tint = Color(0xFFEF4444),
                                                 modifier = Modifier.size(14.dp)
                                             )
@@ -2751,7 +2781,7 @@ fun ManageDueTemplatesDialog(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .height(48.dp)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
@@ -2764,7 +2794,7 @@ fun ManageDueTemplatesDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .height(48.dp)
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
@@ -2887,7 +2917,7 @@ fun DuesAuditHistorySheet(
                     }
                 }
                 IconButton(onClick = onDismiss, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -2902,17 +2932,17 @@ fun DuesAuditHistorySheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(horizontalAlignment = Alignment.Start) {
-                    Text("Total Repaid", fontSize = 9.5.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.dues_total_repaid_label), fontSize = 9.5.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
                     Text(formatTaka(totalRepaidInView), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF059669))
                 }
                 Box(modifier = Modifier.width(1.dp).height(24.dp).background(MaterialTheme.colorScheme.outlineVariant))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Credit Given", fontSize = 9.5.sp, color = Color(0xFFD97706), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.dues_credit_given), fontSize = 9.5.sp, color = Color(0xFFD97706), fontWeight = FontWeight.Bold)
                     Text(formatTaka(totalCreditInView), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFD97706))
                 }
                 Box(modifier = Modifier.width(1.dp).height(24.dp).background(MaterialTheme.colorScheme.outlineVariant))
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Return Settled", fontSize = 9.5.sp, color = Color(0xFF2563EB), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.dues_return_settled), fontSize = 9.5.sp, color = Color(0xFF2563EB), fontWeight = FontWeight.Bold)
                     Text(formatTaka(totalReturnsInView), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF2563EB))
                 }
             }
@@ -2927,7 +2957,7 @@ fun DuesAuditHistorySheet(
                 trailingIcon = if (searchQuery.isNotEmpty()) {
                     {
                         IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_clear), modifier = Modifier.size(16.dp))
                         }
                     }
                 } else null,
@@ -3157,8 +3187,8 @@ fun DuesReminderHubSheet(
                         )
                     }
                 }
-                IconButton(onClick = onDismiss, modifier = Modifier.size(30.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(18.dp))
+                IconButton(onClick = onDismiss, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), modifier = Modifier.size(18.dp))
                 }
             }
 
@@ -3383,7 +3413,7 @@ fun DuesReminderHubSheet(
                                         onClick = { onDeleteLog(log.id) },
                                         modifier = Modifier.size(24.dp)
                                     ) {
-                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = stringResource(R.string.delete), tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
                                     }
                                 }
                             }
@@ -3523,7 +3553,7 @@ private fun DuesFilterBottomSheet(
                 OutlinedButton(
                     onClick = onDismiss,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f).height(44.dp)
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
                     Text(stringResource(R.string.dues_cancel), fontWeight = FontWeight.SemiBold)
                 }
@@ -3533,7 +3563,7 @@ private fun DuesFilterBottomSheet(
                         onDismiss()
                     },
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1.5f).height(44.dp)
+                    modifier = Modifier.weight(1.5f).height(48.dp)
                 ) {
                     Text(
                         text = if (draftMin.isBlank()) stringResource(R.string.dues_show_all_debtors_button) else stringResource(R.string.dues_apply_filter_button),
@@ -3643,7 +3673,7 @@ private fun DuesExecutiveSummaryCard(
                                 )
                                 Icon(
                                     imageVector = Icons.Default.SwapVert,
-                                    contentDescription = "Switch metric",
+                                    contentDescription = stringResource(R.string.cd_switch_metric),
                                     tint = Color(0xFFFECDD3),
                                     modifier = Modifier.size(12.dp)
                                 )
@@ -3907,7 +3937,7 @@ fun CustomerDueRow(
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
-                            modifier = Modifier.weight(1.05f).height(32.dp)
+                            modifier = Modifier.weight(1.05f).height(48.dp)
                         ) {
                             Realistic3DWalletCollectIcon(size = 13.dp)
                             Spacer(Modifier.width(3.dp))
@@ -3920,7 +3950,7 @@ fun CustomerDueRow(
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF065F46)),
-                        modifier = Modifier.weight(1.05f).height(32.dp)
+                        modifier = Modifier.weight(1.05f).height(48.dp)
                     ) {
                         Text("💬", fontSize = 11.5.sp)
                         Spacer(Modifier.width(3.dp))
@@ -3931,7 +3961,7 @@ fun CustomerDueRow(
                         onClick = onRemind,
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                        modifier = Modifier.weight(0.95f).height(32.dp)
+                        modifier = Modifier.weight(0.95f).height(48.dp)
                     ) {
                         Realistic3DMessageReminderIcon(size = 12.dp)
                         Spacer(Modifier.width(3.dp))
@@ -3942,7 +3972,7 @@ fun CustomerDueRow(
                         onClick = onCall,
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                        modifier = Modifier.weight(0.9f).height(32.dp)
+                        modifier = Modifier.weight(0.9f).height(48.dp)
                     ) {
                         Realistic3DPhoneDialerIcon(size = 13.dp)
                         Spacer(Modifier.width(4.dp))
@@ -3961,7 +3991,7 @@ fun CustomerDueRow(
                     ) {
                         Icon(
                             Icons.Default.MoreVert,
-                            contentDescription = "Options",
+                            contentDescription = stringResource(R.string.cd_options),
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.outline
                         )
@@ -3971,7 +4001,7 @@ fun CustomerDueRow(
                         onDismissRequest = { showCardMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Edit Customer & Due Info", fontSize = 13.sp) },
+                            text = { Text(stringResource(R.string.dues_edit_customer_info), fontSize = 13.sp) },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp)) },
                             onClick = {
                                 showCardMenu = false
@@ -3980,7 +4010,7 @@ fun CustomerDueRow(
                         )
                         if (canDelete) {
                             DropdownMenuItem(
-                                text = { Text("Delete / Archive Due", fontSize = 13.sp, color = MaterialTheme.colorScheme.error) },
+                                text = { Text(stringResource(R.string.dues_delete_archive_due), fontSize = 13.sp, color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error) },
                                 onClick = {
                                     showCardMenu = false
@@ -4068,11 +4098,11 @@ fun AddDueDialog(
                     }
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.close),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
@@ -4170,7 +4200,7 @@ fun AddDueDialog(
                                 border = BorderStroke(0.9.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(38.dp)
+                                    .height(48.dp)
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -4229,7 +4259,7 @@ fun AddDueDialog(
                                 border = BorderStroke(0.9.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(38.dp)
+                                    .height(48.dp)
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -4299,7 +4329,7 @@ fun AddDueDialog(
                                 letterSpacing = 0.4.sp
                             )
                             Text(
-                                text = "Enter or Tap Preset",
+                                text = stringResource(R.string.dues_enter_or_tap_preset),
                                 fontSize = 8.5.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.outline
@@ -4313,7 +4343,7 @@ fun AddDueDialog(
                             border = BorderStroke(1.2.dp, Color(0xFFF59E0B)),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(40.dp)
+                                .height(48.dp)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -4365,7 +4395,7 @@ fun AddDueDialog(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Cancel,
-                                            contentDescription = "Clear",
+                                            contentDescription = stringResource(R.string.cd_clear),
                                             tint = MaterialTheme.colorScheme.outline,
                                             modifier = Modifier.size(15.dp)
                                         )
@@ -4444,14 +4474,14 @@ fun AddDueDialog(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Previous Due", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.dues_previous_due), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline, fontWeight = FontWeight.Medium)
                             Text(formatTaka(initialDue), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("New Unpaid Credit", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.dues_new_unpaid_credit), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline, fontWeight = FontWeight.Medium)
                             Text("+${formatTaka(addedDue)}", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706), fontFamily = FontFamily.Monospace)
                         }
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), thickness = 0.8.dp)
@@ -4460,7 +4490,7 @@ fun AddDueDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Updated Outstanding", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                            Text(stringResource(R.string.dues_updated_outstanding), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                             Text(formatTaka(totalUpdatedDue), fontSize = 12.sp, fontWeight = FontWeight.Black, color = if (isOverLimit) Color(0xFFF43F5E) else Color(0xFFD97706), fontFamily = FontFamily.Monospace)
                         }
 
@@ -4472,7 +4502,7 @@ fun AddDueDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Credit Limit: ${formatTaka(limitVal)}",
+                                    text = stringResource(R.string.dues_credit_limit_val_fmt, formatTaka(limitVal)),
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.outline
@@ -4520,7 +4550,7 @@ fun AddDueDialog(
                             border = BorderStroke(0.9.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(38.dp)
+                                .height(48.dp)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -4572,7 +4602,7 @@ fun AddDueDialog(
                             border = BorderStroke(0.9.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(38.dp)
+                                .height(48.dp)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -4585,7 +4615,7 @@ fun AddDueDialog(
                                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                     if (creditLimit.isEmpty()) {
                                         Text(
-                                            text = "No limit",
+                                            text = stringResource(R.string.dues_no_limit),
                                             fontSize = 11.5.sp,
                                             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
                                         )
@@ -4629,7 +4659,7 @@ fun AddDueDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .height(48.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.dues_cancel),
@@ -4664,7 +4694,7 @@ fun AddDueDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .weight(1.4f)
-                            .height(38.dp)
+                            .height(48.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -4946,7 +4976,7 @@ fun CustomerDueDetailsView(
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
-                modifier = Modifier.weight(1.15f).height(42.dp)
+                modifier = Modifier.weight(1.15f).height(48.dp)
             ) {
                 Realistic3DWalletCollectIcon(size = 15.dp)
                 Spacer(Modifier.width(4.dp))
@@ -4958,7 +4988,7 @@ fun CustomerDueDetailsView(
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5)),
-                modifier = Modifier.weight(1.15f).height(42.dp)
+                modifier = Modifier.weight(1.15f).height(48.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(15.dp))
                 Spacer(Modifier.width(4.dp))
@@ -4969,7 +4999,7 @@ fun CustomerDueDetailsView(
                 onClick = onRemind,
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                modifier = Modifier.weight(1f).height(42.dp)
+                modifier = Modifier.weight(1f).height(48.dp)
             ) {
                 Realistic3DMessageReminderIcon(size = 14.dp)
                 Spacer(Modifier.width(3.dp))
@@ -4980,7 +5010,7 @@ fun CustomerDueDetailsView(
                 onClick = onCall,
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                modifier = Modifier.weight(0.9f).height(42.dp)
+                modifier = Modifier.weight(0.9f).height(48.dp)
             ) {
                 Realistic3DPhoneDialerIcon(size = 14.dp)
                 Spacer(Modifier.width(3.dp))
@@ -5010,14 +5040,14 @@ fun CustomerDueDetailsView(
                     FilledTonalButton(
                         onClick = onShareStatement,
                         shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                        modifier = Modifier.weight(1f).height(36.dp)
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                        modifier = Modifier.weight(1f).height(48.dp)
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(4.dp))
                         Text(
                             text = stringResource(R.string.dues_share_statement_button),
-                            fontSize = 11.sp,
+                            fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -5028,15 +5058,15 @@ fun CustomerDueDetailsView(
                         FilledTonalButton(
                             onClick = onViewDossier,
                             shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                             colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)),
-                            modifier = Modifier.weight(1f).height(36.dp)
+                            modifier = Modifier.weight(1f).height(48.dp)
                         ) {
                             Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
                                 text = stringResource(R.string.dues_customer_profile_button),
-                                fontSize = 11.sp,
+                                fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
                                 maxLines = 1,
@@ -5057,14 +5087,14 @@ fun CustomerDueDetailsView(
                             FilledTonalButton(
                                 onClick = onEditClick,
                                 shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                modifier = Modifier.weight(1f).height(36.dp)
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                modifier = Modifier.weight(1f).height(48.dp)
                             ) {
                                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(6.dp))
+                                Spacer(Modifier.width(4.dp))
                                 Text(
                                     text = stringResource(R.string.dues_edit_info_button),
-                                    fontSize = 11.sp,
+                                    fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -5075,14 +5105,14 @@ fun CustomerDueDetailsView(
                         OutlinedButton(
                             onClick = { showSetCreditLimitDialog = true },
                             shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            modifier = Modifier.weight(1f).height(36.dp)
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                            modifier = Modifier.weight(1f).height(48.dp)
                         ) {
                             Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
                                 text = if (customer.creditLimit > 0.0) stringResource(R.string.dues_limit_amount_label, formatTaka(customer.creditLimit)) else stringResource(R.string.dues_set_limit_button),
-                                fontSize = 11.sp,
+                                fontSize = 10.5.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -5196,7 +5226,7 @@ fun CustomerDueDetailsView(
                                             }
                                             Icon(
                                                 Icons.Default.ChevronRight,
-                                                contentDescription = "View Receipt",
+                                                contentDescription = stringResource(R.string.cd_view_receipt),
                                                 tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
                                                 modifier = Modifier.size(16.dp)
                                             )
@@ -5295,7 +5325,7 @@ fun CustomerDueDetailsView(
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.width(4.dp))
-                    Text("Delete / Archive Due Account", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.dues_delete_archive_account), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -5404,7 +5434,7 @@ fun RecordPaymentDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Close",
+                                    contentDescription = stringResource(R.string.close),
                                     tint = MaterialTheme.colorScheme.outline,
                                     modifier = Modifier.size(19.dp)
                                 )
@@ -5594,7 +5624,7 @@ fun RecordPaymentDialog(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Cancel,
-                                            contentDescription = "Clear",
+                                            contentDescription = stringResource(R.string.cd_clear),
                                             tint = MaterialTheme.colorScheme.outline,
                                             modifier = Modifier.size(18.dp)
                                         )
@@ -5891,7 +5921,7 @@ fun RecordPaymentDialog(
                         border = BorderStroke(0.9.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(44.dp)
+                            .height(48.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -6229,7 +6259,7 @@ fun DueRepaymentReceiptDialog(
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         Icons.Default.Close,
-                                        contentDescription = "Close",
+                                        contentDescription = stringResource(R.string.close),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(15.dp)
                                     )
@@ -6559,7 +6589,7 @@ fun DueRepaymentReceiptDialog(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Share,
-                                            contentDescription = "Share text",
+                                            contentDescription = stringResource(R.string.cd_share_text),
                                             tint = Color(0xFF0284C7),
                                             modifier = Modifier.size(10.dp)
                                         )
@@ -6634,7 +6664,7 @@ fun DueRepaymentReceiptDialog(
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                             modifier = Modifier
                                 .weight(1.25f)
-                                .height(40.dp)
+                                .height(48.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -6691,7 +6721,7 @@ fun DueRepaymentReceiptDialog(
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                             modifier = Modifier
                                 .weight(1.05f)
-                                .height(40.dp)
+                                .height(48.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -6758,7 +6788,7 @@ fun DueRepaymentReceiptDialog(
                             shadowElevation = 1.dp,
                             modifier = Modifier
                                 .weight(0.95f)
-                                .height(40.dp)
+                                .height(48.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,

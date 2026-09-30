@@ -283,7 +283,7 @@ fun printPdfDocument(
         return true
     } catch (error: Exception) {
         error.printStackTrace()
-        Toast.makeText(context, "Print error: ${error.localizedMessage}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.toast_print_error_fmt, error.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
         return false
     }
 }
@@ -665,7 +665,7 @@ fun openWhatsAppChat(context: Context, phone: String): Boolean {
             // 3. Fallback to clipboard
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             clipboard?.setPrimaryClip(ClipData.newPlainText("Customer Phone", phone.trim()))
-            Toast.makeText(context, "Phone copied to clipboard. WhatsApp not available.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.toast_phone_copied_whatsapp_unavailable), Toast.LENGTH_SHORT).show()
             false
         }
     }
@@ -852,7 +852,7 @@ fun shareStoreCreditVoucherSlip(
         true
     } catch (e: Exception) {
         e.printStackTrace()
-        Toast.makeText(context, "Could not open share menu", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.toast_could_not_open_share_menu), Toast.LENGTH_SHORT).show()
         false
     }
 }

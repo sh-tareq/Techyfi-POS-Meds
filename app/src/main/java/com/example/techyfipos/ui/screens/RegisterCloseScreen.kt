@@ -465,13 +465,13 @@ fun RegisterCloseScreen(
                                         Text("⚠️", fontSize = 16.sp)
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "Shift active for ${shiftHours}h (>24h)",
+                                                text = stringResource(R.string.shift_active_hours_fmt, shiftHours),
                                                 fontSize = 11.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(0xFFF59E0B)
                                             )
                                             Text(
-                                                text = "Recommend closing register for daily reconciliation.",
+                                                text = stringResource(R.string.shift_recommend_closing),
                                                 fontSize = 10.sp,
                                                 color = Color(0xFFCBD5E1)
                                             )
@@ -591,7 +591,7 @@ fun RegisterCloseScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(46.dp),
+                                        .height(48.dp),
                                     contentPadding = PaddingValues(horizontal = 8.dp)
                                 ) {
                                     Text("➕", fontSize = 13.sp)
@@ -611,7 +611,7 @@ fun RegisterCloseScreen(
                                     border = BorderStroke(1.dp, Color(0xFF64748B).copy(alpha = 0.4f)),
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(46.dp),
+                                        .height(48.dp),
                                     contentPadding = PaddingValues(horizontal = 8.dp)
                                 ) {
                                     Text("🔒", fontSize = 13.sp)
@@ -671,7 +671,7 @@ fun RegisterCloseScreen(
                         onClick = {
                             if (hasShiftTransactions) {
                                 coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("Opening float is locked once transactions exist in the shift.")
+                                    snackbarHostState.showSnackbar(context.getString(R.string.snackbar_opening_float_locked))
                                 }
                             } else {
                                 showEditFloatDialog = true
@@ -760,7 +760,7 @@ fun RegisterCloseScreen(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Shift Total: ${formatTaka(providerSales.cash + providerSales.bkash + providerSales.nagad + providerSales.rocket + providerSales.card + providerSales.due)}",
+                                text = stringResource(R.string.shift_total_fmt, formatTaka(providerSales.cash + providerSales.bkash + providerSales.nagad + providerSales.rocket + providerSales.card + providerSales.due)),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -1018,7 +1018,7 @@ fun RegisterCloseScreen(
                 appliedAuditNote = note
                 showDenomDialog = false
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Physical cash counted: ${formatTaka(countedTotal)}")
+                    snackbarHostState.showSnackbar(context.getString(R.string.snackbar_cash_counted_fmt, formatTaka(countedTotal)))
                 }
             }
         )
@@ -1037,7 +1037,7 @@ fun RegisterCloseScreen(
                 )
                 showCashInDialog = false
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Cash float added: +${formatTaka(amount)}")
+                    snackbarHostState.showSnackbar(context.getString(R.string.snackbar_cash_float_added_fmt, formatTaka(amount)))
                 }
             }
         )
@@ -1059,7 +1059,7 @@ fun RegisterCloseScreen(
                 )
                 showSafeDropDialog = false
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Safe drop recorded: -${formatTaka(amount)}")
+                    snackbarHostState.showSnackbar(context.getString(R.string.snackbar_safe_drop_recorded_fmt, formatTaka(amount)))
                 }
             }
         )
@@ -1075,7 +1075,7 @@ fun RegisterCloseScreen(
                 registerClosingViewModel.setStartingFloat(newFloat)
                 showEditFloatDialog = false
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Opening float updated: ${formatTaka(newFloat)}")
+                    snackbarHostState.showSnackbar(context.getString(R.string.snackbar_opening_float_updated_fmt, formatTaka(newFloat)))
                 }
             }
         )
@@ -1139,7 +1139,7 @@ fun RegisterCloseScreen(
                     val jpegFile = generateXReportJpeg(context, r, rangeLabel)
                     printBillJpeg(context, jpegFile, "X-Report - $rangeLabel")
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Print error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.toast_print_error_fmt, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
                 }
             },
             onSave = {
@@ -1327,7 +1327,7 @@ fun DenominationCounterDialog(
                         }
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
 
@@ -1838,7 +1838,7 @@ fun DenominationCounterDialog(
                             onClick = { onApply(currentTotal, auditNote) },
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
-                            modifier = Modifier.height(44.dp)
+                            modifier = Modifier.height(48.dp)
                         ) {
                             Text(
                                 text = stringResource(R.string.denom_apply_to_shift),
@@ -1985,14 +1985,14 @@ fun AddCashFloatDialog(
                         )
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
 
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { input -> amountText = input.filter { it.isDigit() || it == '.' } },
-                    label = { Text("Amount (৳ Taka)") },
+                    label = { Text(stringResource(R.string.register_close_amount_label)) },
                     leadingIcon = { Text("৳", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -2096,14 +2096,14 @@ fun SafeDropDialog(
                                 fontSize = 15.sp
                             )
                             Text(
-                                text = "Current in Drawer: ${formatTaka(currentDrawerCash)}",
+                                text = stringResource(R.string.current_in_drawer_fmt, formatTaka(currentDrawerCash)),
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
 
@@ -2115,7 +2115,7 @@ fun SafeDropDialog(
                     singleLine = true,
                     isError = isOverAmount,
                     supportingText = if (isOverAmount) {
-                        { Text("Amount exceeds current drawer cash balance!", color = MaterialTheme.colorScheme.error) }
+                        { Text(stringResource(R.string.register_close_amount_exceeds_error), color = MaterialTheme.colorScheme.error) }
                     } else null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(12.dp),
@@ -2198,7 +2198,7 @@ fun EditStartingFloatDialog(
         ) {
             Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = "Edit Opening Float (৳)",
+                    text = stringResource(R.string.edit_opening_float_title),
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )
@@ -2212,7 +2212,7 @@ fun EditStartingFloatDialog(
                     label = { Text(stringResource(R.string.register_close_starting_float_label)) },
                     supportingText = {
                         if (isBareDot) {
-                            Text("Please enter a valid amount", color = MaterialTheme.colorScheme.error)
+                            Text(stringResource(R.string.register_close_enter_valid_amount), color = MaterialTheme.colorScheme.error)
                         } else {
                             Text(stringResource(R.string.register_close_starting_float_hint))
                         }
@@ -2225,7 +2225,7 @@ fun EditStartingFloatDialog(
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                     Button(
                         onClick = {
@@ -2236,7 +2236,7 @@ fun EditStartingFloatDialog(
                         enabled = !isBareDot,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Save")
+                        Text(stringResource(R.string.save))
                     }
                 }
             }
@@ -2287,15 +2287,15 @@ fun CloseRegisterReconciliationDialog(
                         Text("🔒", fontSize = 20.sp)
                         Column {
                             Text(
-                                text = "Close Register & Audit",
+                                text = stringResource(R.string.close_register_and_audit),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
-                            Text("Reconcile physical cash drawer", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.register_close_reconcile_subtitle), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
 
@@ -2311,7 +2311,7 @@ fun CloseRegisterReconciliationDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("System Expected Cash", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                            Text(stringResource(R.string.register_close_system_expected_cash), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
                             Text(formatTaka(expectedCash), fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color(0xFF34D399))
                         }
                         TextButton(onClick = onOpenDenominationCounter) {
@@ -2324,7 +2324,7 @@ fun CloseRegisterReconciliationDialog(
                 OutlinedTextField(
                     value = actualCashText,
                     onValueChange = { input -> actualCashText = input.filter { it.isDigit() || it == '.' } },
-                    label = { Text("Actual Counted Cash (৳)") },
+                    label = { Text(stringResource(R.string.register_close_actual_counted_cash)) },
                     leadingIcon = { Text("৳", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -2390,8 +2390,8 @@ fun CloseRegisterReconciliationDialog(
                 OutlinedTextField(
                     value = notesText,
                     onValueChange = { notesText = it },
-                    label = { Text("Shift Closing Note (Optional)") },
-                    placeholder = { Text("e.g. End of evening shift") },
+                    label = { Text(stringResource(R.string.register_close_shift_note_label)) },
+                    placeholder = { Text(stringResource(R.string.register_close_shift_note_placeholder)) },
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -2407,7 +2407,7 @@ fun CloseRegisterReconciliationDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                     Button(
                         onClick = {
@@ -2432,7 +2432,7 @@ fun CloseRegisterReconciliationDialog(
                                 color = Color.White
                             )
                         } else {
-                            Text("Confirm & Close", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.register_close_confirm_close_btn), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -2533,38 +2533,38 @@ private fun HistoricalClosingDetailDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Shift Closing Summary", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(stringResource(R.string.register_close_shift_summary_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Text(dateLabel, fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
                 HorizontalDivider()
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Cashier: ${closing.cashierName}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Starting Float: ${formatTaka(closing.startingFloat)}", fontSize = 12.5.sp)
-                    Text("Cash Sales: ${formatTaka(closing.cashSales)}", fontSize = 12.5.sp)
-                    Text("Digital Sales: ${formatTaka(closing.digitalSales)}", fontSize = 12.5.sp)
+                    Text(stringResource(R.string.register_close_cashier_name_fmt, closing.cashierName), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.register_close_starting_float_fmt, formatTaka(closing.startingFloat)), fontSize = 12.5.sp)
+                    Text(stringResource(R.string.register_close_cash_sales_fmt, formatTaka(closing.cashSales)), fontSize = 12.5.sp)
+                    Text(stringResource(R.string.register_close_digital_sales_fmt, formatTaka(closing.digitalSales)), fontSize = 12.5.sp)
                     if (closing.bkashSales > 0 || closing.nagadSales > 0 || closing.cardSales > 0) {
                         Text("  • bKash: ${formatTaka(closing.bkashSales)}  • Nagad: ${formatTaka(closing.nagadSales)}  • Card: ${formatTaka(closing.cardSales)}", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Text("Cash In: +${formatTaka(closing.cashIn)} · Cash Out: -${formatTaka(closing.cashOut)}", fontSize = 12.5.sp)
-                    Text("Cash Refunds: -${formatTaka(closing.cashRefunds)}", fontSize = 12.5.sp)
+                    Text(stringResource(R.string.register_close_cash_in_out_fmt, formatTaka(closing.cashIn), formatTaka(closing.cashOut)), fontSize = 12.5.sp)
+                    Text(stringResource(R.string.register_close_cash_refunds_fmt, formatTaka(closing.cashRefunds)), fontSize = 12.5.sp)
                 }
                 HorizontalDivider()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Expected Cash:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(stringResource(R.string.register_close_expected_cash_label), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Text(formatTaka(closing.expectedCash), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Counted Physical Cash:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(stringResource(R.string.register_close_counted_cash_label), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Text(formatTaka(closing.actualCountedCash), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
                 val varianceColor = when {
@@ -2576,11 +2576,11 @@ private fun HistoricalClosingDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Variance:", fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                    Text(stringResource(R.string.register_close_variance_label), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
                     Text(formatTaka(closing.variance), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = varianceColor)
                 }
                 if (!closing.notes.isNullOrBlank()) {
-                    Text("Note: ${closing.notes}", fontSize = 12.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                    Text(stringResource(R.string.register_close_note_fmt, closing.notes), fontSize = 12.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
                 }
                 if (!closing.discrepancyReason.isNullOrBlank()) {
                     Text(
@@ -2596,7 +2596,7 @@ private fun HistoricalClosingDetailDialog(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Close")
+                    Text(stringResource(R.string.close))
                 }
             }
         }
@@ -2646,11 +2646,11 @@ fun ZReportDialog(
                         Realistic3DRegisterAuditZReportIcon(size = 32.dp)
                         Column {
                             Text(reportTitle, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
-                            Text("Period: $rangeLabel", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                            Text(stringResource(R.string.register_close_period_fmt, rangeLabel), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
                         }
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
 
@@ -2678,7 +2678,7 @@ fun ZReportDialog(
                             modifier = Modifier.fillMaxWidth()
                         )
                         Text(
-                            text = "Period: $rangeLabel\n" +
+                            text = stringResource(R.string.report_period_fmt, rangeLabel) + "\n" +
                                 "Invoices: ${data.transactionCount} | Units: ${data.itemsSold}\n" +
                                 "--------------------------------\n" +
                                 "Gross Sales:      ${formatTaka(data.totalRevenue)}\n" +
@@ -2710,7 +2710,7 @@ fun ZReportDialog(
                     ) {
                         Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Print", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(stringResource(R.string.print), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                     FilledTonalButton(
                         onClick = onSave,
@@ -2719,7 +2719,7 @@ fun ZReportDialog(
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Save", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(stringResource(R.string.save), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
 
@@ -2733,7 +2733,7 @@ fun ZReportDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Close", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.close), fontWeight = FontWeight.SemiBold)
                     }
                     Button(
                         onClick = onShare,
@@ -2743,7 +2743,7 @@ fun ZReportDialog(
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Share", fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                        Text(stringResource(R.string.share), fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                     }
                 }
             }
@@ -2784,12 +2784,12 @@ fun ShareZReportFormatDialog(
                     ) {
                         Text("📤", fontSize = 20.sp)
                         Column {
-                            Text("Share Report", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text("Select export format", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                            Text(stringResource(R.string.register_close_share_report_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(stringResource(R.string.register_close_select_export_format), fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                         }
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
 
@@ -2866,7 +2866,7 @@ fun ShareZReportFormatDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                     Button(
                         onClick = { onFormatSelected(selectedFormat) },
@@ -2876,7 +2876,7 @@ fun ShareZReportFormatDialog(
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Share ${selectedFormat.name}", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.register_close_share_format_fmt, selectedFormat.name), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -2932,7 +2932,7 @@ private fun shareReport(context: android.content.Context, r: SalesReportData, ra
         }
     } catch (e: Exception) {
         e.printStackTrace()
-        Toast.makeText(context, "Failed to share: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.toast_failed_to_share_fmt, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
     }
 }
 

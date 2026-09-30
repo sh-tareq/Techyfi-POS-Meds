@@ -70,7 +70,7 @@ class StockAlertWorker(
                 CHANNEL_NAME,
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Daily alerts for low stock and expiring inventory"
+                description = context.getString(R.string.notif_stock_channel_desc)
                 enableVibration(true)
             }
             notificationManager.createNotificationChannel(channel)

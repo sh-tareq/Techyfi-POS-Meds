@@ -255,7 +255,7 @@ fun ReturnItemsDialog(
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
-                                    text = "Return Items",
+                                    text = stringResource(R.string.return_dialog_return_items),
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -295,7 +295,7 @@ fun ReturnItemsDialog(
                                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECDD3))
                                     ) {
                                         Text(
-                                            text = "Due: ${formatTaka(remainingDue)}",
+                                            text = stringResource(R.string.return_dialog_due_fmt, formatTaka(remainingDue)),
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = Color(0xFFE11D48),
@@ -310,13 +310,13 @@ fun ReturnItemsDialog(
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
-                            .size(30.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.close),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
@@ -427,7 +427,7 @@ fun ReturnItemsDialog(
                                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC7D2FE))
                                         ) {
                                             Text(
-                                                text = "Return: $qtyStr",
+                                                text = stringResource(R.string.return_dialog_return_qty_fmt, qtyStr),
                                                 fontSize = 10.5.sp,
                                                 fontWeight = FontWeight.ExtraBold,
                                                 color = Color(0xFF4F46E5),
@@ -485,7 +485,7 @@ fun ReturnItemsDialog(
                                             color = MaterialTheme.colorScheme.surfaceVariant
                                         ) {
                                             Text(
-                                                text = "Fully Returned",
+                                                text = stringResource(R.string.return_dialog_fully_returned),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -504,11 +504,11 @@ fun ReturnItemsDialog(
                                             ) {
                                                 Row(
                                                     verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier.height(30.dp)
+                                                    modifier = Modifier.height(48.dp)
                                                 ) {
                                                     Box(
                                                         modifier = Modifier
-                                                            .size(30.dp)
+                                                            .size(48.dp)
                                                             .clickable(enabled = qty > 0.0) {
                                                                 quantities = quantities + (item.productBarcode to (qty - 1.0).coerceAtLeast(0.0))
                                                             },
@@ -544,7 +544,7 @@ fun ReturnItemsDialog(
 
                                                     Box(
                                                         modifier = Modifier
-                                                            .size(30.dp)
+                                                            .size(48.dp)
                                                             .clickable(enabled = qty < maxReturnable) {
                                                                 quantities = quantities + (item.productBarcode to (qty + 1.0).coerceAtMost(maxReturnable))
                                                             },
@@ -565,7 +565,7 @@ fun ReturnItemsDialog(
                                                 color = if (qty == maxReturnable && maxReturnable > 0.0) Color(0xFF4F46E5) else Color(0xFFEEF2FF),
                                                 border = androidx.compose.foundation.BorderStroke(1.dp, if (qty == maxReturnable && maxReturnable > 0.0) Color(0xFF4F46E5) else Color(0xFFC7D2FE)),
                                                 modifier = Modifier
-                                                    .height(30.dp)
+                                                    .height(48.dp)
                                                     .clickable {
                                                         quantities = quantities + (item.productBarcode to maxReturnable)
                                                     }
@@ -575,7 +575,7 @@ fun ReturnItemsDialog(
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     Text(
-                                                        text = "All",
+                                                        text = stringResource(R.string.common_all),
                                                         fontSize = 10.5.sp,
                                                         fontWeight = FontWeight.ExtraBold,
                                                         color = if (qty == maxReturnable && maxReturnable > 0.0) Color.White else Color(0xFF4F46E5)
@@ -722,7 +722,7 @@ fun ReturnItemsDialog(
                             ) {
                                 Text("⚙️", fontSize = 10.sp)
                                 Text(
-                                    text = "Manage Presets",
+                                    text = stringResource(R.string.return_dialog_manage_presets),
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF4338CA)
@@ -877,7 +877,7 @@ fun ReturnItemsDialog(
 
                             // DUE TAB
                             SettlementTabButton(
-                                label = "Due Debt",
+                                label = stringResource(R.string.return_dialog_label_due_debt),
                                 icon = "📉",
                                 isSelected = selectedSettlementDestination == "DUE",
                                 modifier = Modifier.weight(1f)
@@ -885,7 +885,7 @@ fun ReturnItemsDialog(
 
                             // MFS TAB
                             SettlementTabButton(
-                                label = "Digital / MFS",
+                                label = stringResource(R.string.return_dialog_label_digital_mfs),
                                 icon = "📱",
                                 isSelected = selectedSettlementDestination == "MFS",
                                 modifier = Modifier.weight(1f)
@@ -893,7 +893,7 @@ fun ReturnItemsDialog(
 
                             // WALLET TAB
                             SettlementTabButton(
-                                label = "Store Credit",
+                                label = stringResource(R.string.return_dialog_label_store_credit),
                                 icon = "🪙",
                                 isSelected = selectedSettlementDestination == "WALLET",
                                 modifier = Modifier.weight(1f)
@@ -999,7 +999,7 @@ fun ReturnItemsDialog(
                                                 modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp)
                                             ) {
                                                 Text(
-                                                    text = "Due Debt:",
+                                                    text = stringResource(R.string.return_dialog_due_debt_colon),
                                                     fontSize = 9.5.sp,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = Color(0xFF9F1239)
@@ -1047,14 +1047,14 @@ fun ReturnItemsDialog(
                                             modifier = Modifier.weight(1f)
                                         ) {
                                             Text(
-                                                text = "Return will deduct from customer's due ledger",
+                                                text = stringResource(R.string.return_dialog_due_deduct_notice),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(0xFF9F1239),
                                                 lineHeight = 15.sp
                                             )
                                             Text(
-                                                text = "Cash register drawer remains untouched (no cash payout)",
+                                                text = stringResource(R.string.return_dialog_drawer_untouched_notice),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Medium,
                                                 color = Color(0xFFBE123C),
@@ -1069,7 +1069,7 @@ fun ReturnItemsDialog(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("Select Payment Gateway:", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4338CA))
+                                        Text(stringResource(R.string.return_dialog_select_payment_gateway), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4338CA))
                                         Text(selectedMfsChannel, fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4F46E5))
                                     }
                                     Row(
@@ -1273,7 +1273,7 @@ fun ReturnItemsDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Gross Item Total", fontSize = 11.5.sp, color = Color(0xFF94A3B8))
+                                Text(stringResource(R.string.return_dialog_gross_item_total), fontSize = 11.5.sp, color = Color(0xFF94A3B8))
                                 Text(formatTaka(refundTotal), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
 
@@ -1282,7 +1282,7 @@ fun ReturnItemsDialog(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Due Debt Cleared", fontSize = 11.5.sp, color = Color(0xFFFCD34D))
+                                    Text(stringResource(R.string.return_dialog_due_debt_cleared), fontSize = 11.5.sp, color = Color(0xFFFCD34D))
                                     Text("-${formatTaka(dueAdjustment)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCD34D))
                                 }
                             }
@@ -1338,7 +1338,7 @@ fun ReturnItemsDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp)
+                            .height(48.dp)
                     ) {
                         Text(stringResource(R.string.cancel), fontWeight = FontWeight.Bold)
                     }
@@ -1397,7 +1397,7 @@ fun ReturnItemsDialog(
                         ),
                         modifier = Modifier
                             .weight(2f)
-                            .height(44.dp)
+                            .height(48.dp)
                     ) {
                         Text(
                             text = if (!hasSelection) {
@@ -1517,7 +1517,7 @@ private fun ManualReturnQuantityDialog(
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Enter Return Quantity",
+                    text = stringResource(R.string.return_dialog_enter_qty),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.ExtraBold
                 )
@@ -1540,7 +1540,7 @@ private fun ManualReturnQuantityDialog(
                             textValue = input
                         }
                     },
-                    label = { Text("Quantity (Max: $maxStr)") },
+                    label = { Text(stringResource(R.string.return_dialog_quantity_max_fmt, maxStr)) },
                     placeholder = { Text("0") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -1592,7 +1592,7 @@ private fun ManualReturnQuantityDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "All ($maxStr)",
+                                text = stringResource(R.string.return_dialog_all_max_fmt, maxStr),
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFF4F46E5)
@@ -1635,12 +1635,12 @@ private fun ManualReturnQuantityDialog(
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
             ) {
-                Text("Set Quantity", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.return_dialog_set_quantity), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -1669,7 +1669,7 @@ fun ManageAuditPresetsDialog(
                 ) {
                     Box(contentAlignment = Alignment.Center) { Text("⚙️", fontSize = 14.sp) }
                 }
-                Text("Manage Audit Presets", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                Text(stringResource(R.string.return_dialog_manage_audit_presets), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
             }
         },
         text = {

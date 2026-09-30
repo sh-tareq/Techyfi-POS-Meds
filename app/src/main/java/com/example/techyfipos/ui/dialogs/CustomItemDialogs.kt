@@ -62,8 +62,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun AddCustomItemDialog(
     onDismiss: () -> Unit,
-    onConfirm: (title: String, price: Double, quantity: Double, note: String?, unit: String) -> Unit,
-    onAddAnother: ((title: String, price: Double, quantity: Double, note: String?, unit: String) -> Unit)? = null
+    onConfirm: (title: String, price: Double, quantity: Double, note: String?, unit: String, taxable: Boolean) -> Unit,
+    onAddAnother: ((title: String, price: Double, quantity: Double, note: String?, unit: String, taxable: Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val settingsDataStore = remember { SettingsDataStore(context) }
@@ -162,7 +162,7 @@ fun AddCustomItemDialog(
                                         border = BorderStroke(1.dp, Color(0xFF10B981))
                                     ) {
                                         Text(
-                                            text = "✓ $sessionAddedCount in Cart",
+                                            text = stringResource(R.string.custom_item_in_cart_badge, sessionAddedCount),
                                             fontSize = 10.5.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = Color(0xFF047857),
@@ -173,7 +173,7 @@ fun AddCustomItemDialog(
                             }
                             Text(
                                 text = if (sessionAddedCount > 0) {
-                                    "Added to cart! Add another or tap Done when finished"
+                                    stringResource(R.string.custom_item_added_another_hint)
                                 } else {
                                     stringResource(R.string.cart_custom_quick_sale_subtitle)
                                 },
@@ -186,12 +186,12 @@ fun AddCustomItemDialog(
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(48.dp)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), CircleShape)
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.close),
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -205,7 +205,7 @@ fun AddCustomItemDialog(
                         if (isFreeMode) {
                             priceText = "0"
                             selectedCategory = "Freebie"
-                            if (note.isBlank()) note = "Customer Complimentary Gift"
+                            if (note.isBlank()) note = context.getString(R.string.custom_item_complimentary_note)
                         } else {
                             if (priceText == "0") priceText = ""
                             selectedCategory = "Product"
@@ -255,7 +255,7 @@ fun AddCustomItemDialog(
                                 if (isFreeMode) {
                                     priceText = "0"
                                     selectedCategory = "Freebie"
-                                    if (note.isBlank()) note = "Customer Complimentary Gift"
+                                    if (note.isBlank()) note = context.getString(R.string.custom_item_complimentary_note)
                                 } else {
                                     if (priceText == "0") priceText = ""
                                     selectedCategory = "Product"
@@ -381,7 +381,7 @@ fun AddCustomItemDialog(
                         ) {
                             Icon(
                                 Icons.Default.Tune,
-                                contentDescription = "Edit Presets",
+                                contentDescription = stringResource(R.string.custom_item_edit_presets_cd),
                                 modifier = Modifier.size(13.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -497,7 +497,7 @@ fun AddCustomItemDialog(
                             ) {
                                 Icon(
                                     Icons.Default.Add,
-                                    contentDescription = "Add Preset",
+                                    contentDescription = stringResource(R.string.custom_item_add_preset_cd),
                                     modifier = Modifier.size(13.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
@@ -568,8 +568,8 @@ fun AddCustomItemDialog(
                                 )
                             }
                             if (title.isNotEmpty()) {
-                                IconButton(onClick = { title = "" }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                IconButton(onClick = { title = "" }, modifier = Modifier.size(48.dp)) {
+                                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_clear), modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
@@ -706,11 +706,11 @@ fun AddCustomItemDialog(
                                         val next = (Math.round((cur - stepValue) * 100.0) / 100.0).coerceAtLeast(0.01)
                                         qtyText = if (next % 1.0 == 0.0) next.toLong().toString() else String.format(Locale.US, "%.2f", next).trimEnd('0').trimEnd('.')
                                     },
-                                    modifier = Modifier.size(34.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
                                         Icons.Default.Remove,
-                                        contentDescription = "Decrease",
+                                        contentDescription = stringResource(R.string.cd_decrease),
                                         modifier = Modifier.size(16.dp),
                                         tint = MaterialTheme.colorScheme.onSurface
                                     )
@@ -742,11 +742,11 @@ fun AddCustomItemDialog(
                                         val next = Math.round((cur + stepValue) * 100.0) / 100.0
                                         qtyText = if (next % 1.0 == 0.0) next.toLong().toString() else String.format(Locale.US, "%.2f", next).trimEnd('0').trimEnd('.')
                                     },
-                                    modifier = Modifier.size(34.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
                                         Icons.Default.Add,
-                                        contentDescription = "Increase",
+                                        contentDescription = stringResource(R.string.cd_increase),
                                         modifier = Modifier.size(16.dp),
                                         tint = MaterialTheme.colorScheme.onSurface
                                     )
@@ -977,10 +977,10 @@ fun AddCustomItemDialog(
                                 )
                             }
                             if (note.isNotEmpty()) {
-                                IconButton(onClick = { note = "" }, modifier = Modifier.size(24.dp)) {
+                                IconButton(onClick = { note = "" }, modifier = Modifier.size(48.dp)) {
                                     Icon(
                                         Icons.Default.Close,
-                                        contentDescription = "Clear",
+                                        contentDescription = stringResource(R.string.cd_clear),
                                         modifier = Modifier.size(14.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1169,7 +1169,7 @@ fun AddCustomItemDialog(
                             )
                         ) {
                             Text(
-                                text = if (sessionAddedCount > 0) "Done ($sessionAddedCount)" else stringResource(R.string.cancel),
+                                text = if (sessionAddedCount > 0) stringResource(R.string.custom_item_done_count, sessionAddedCount) else stringResource(R.string.cancel),
                                 fontWeight = if (sessionAddedCount > 0) FontWeight.Bold else FontWeight.SemiBold,
                                 fontSize = 13.sp,
                                 color = if (sessionAddedCount > 0) Color(0xFF047857) else MaterialTheme.colorScheme.onSurface,
@@ -1184,21 +1184,22 @@ fun AddCustomItemDialog(
                                     val itemTitle = title.trim()
                                     val itemPrice = parsedPrice
                                     val itemQty = parsedQty
-                                    val itemNote = if (!isTaxable) {
-                                        if (note.isBlank()) "(Non-taxable)" else "${note.trim()} (Non-taxable)"
-                                    } else {
-                                        note.trim().takeIf { it.isNotBlank() }
-                                    }
+                                    val itemNote = note.trim().takeIf { it.isNotBlank() }
                                     val itemUnit = activeUnit
 
                                     if (onAddAnother != null) {
-                                        onAddAnother(itemTitle, itemPrice, itemQty, itemNote, itemUnit)
+                                        onAddAnother(itemTitle, itemPrice, itemQty, itemNote, itemUnit, isTaxable)
                                     } else {
-                                        onConfirm(itemTitle, itemPrice, itemQty, itemNote, itemUnit)
+                                        onConfirm(itemTitle, itemPrice, itemQty, itemNote, itemUnit, isTaxable)
                                     }
 
                                     sessionAddedCount++
-                                    Toast.makeText(context, "Added \"$itemTitle\" to cart! Enter next item.", Toast.LENGTH_SHORT).show()
+                                    val msg = if (onAddAnother != null) {
+                                        context.getString(R.string.custom_item_added_enter_next, itemTitle)
+                                    } else {
+                                        context.getString(R.string.custom_item_added_to_cart, itemTitle)
+                                    }
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
 
                                     // Reset inputs to allow immediate entry of next item
                                     title = ""
@@ -1243,7 +1244,7 @@ fun AddCustomItemDialog(
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    text = "Add Another",
+                                    text = stringResource(R.string.custom_item_add_another),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = if (isValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
@@ -1258,12 +1259,8 @@ fun AddCustomItemDialog(
                     Button(
                         onClick = {
                             if (isValid) {
-                                val itemNote = if (!isTaxable) {
-                                    if (note.isBlank()) "(Non-taxable)" else "${note.trim()} (Non-taxable)"
-                                } else {
-                                    note.trim().takeIf { it.isNotBlank() }
-                                }
-                                onConfirm(title.trim(), parsedPrice, parsedQty, itemNote, activeUnit)
+                                val itemNote = note.trim().takeIf { it.isNotBlank() }
+                                onConfirm(title.trim(), parsedPrice, parsedQty, itemNote, activeUnit, isTaxable)
                             }
                         },
                         enabled = isValid,
@@ -1381,10 +1378,10 @@ fun ManageQuickSalePresetsDialog(
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
-                            .size(30.dp)
+                            .size(48.dp)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), CircleShape)
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(15.dp))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), modifier = Modifier.size(15.dp))
                     }
                 }
 
@@ -1395,67 +1392,82 @@ fun ManageQuickSalePresetsDialog(
                 )
 
                 // Presets List
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 240.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    items(presetsList, key = { it.id }) { item ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                if (presetsList.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.custom_item_no_presets_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 240.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(presetsList, key = { it.id }) { item ->
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = item.name,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "৳${if (item.defaultPrice % 1.0 == 0.0) item.defaultPrice.toLong().toString() else item.defaultPrice} • ${item.defaultUnit}",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    IconButton(
-                                        onClick = { editingPreset = item },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Edit,
-                                            contentDescription = "Edit",
-                                            modifier = Modifier.size(15.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = item.name,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "৳${if (item.defaultPrice % 1.0 == 0.0) item.defaultPrice.toLong().toString() else item.defaultPrice} • ${item.defaultUnit}",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
-                                    IconButton(
-                                        onClick = {
-                                            val updated = presetsList.toMutableList().apply { remove(item) }
-                                            presetsList = updated
-                                            onSavePresets(updated)
-                                        },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.DeleteOutline,
-                                            contentDescription = "Delete",
-                                            modifier = Modifier.size(15.dp),
-                                            tint = Color(0xFFEF4444)
-                                        )
+
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        IconButton(
+                                            onClick = { editingPreset = item },
+                                            modifier = Modifier.size(48.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Edit,
+                                                contentDescription = stringResource(R.string.cd_edit),
+                                                modifier = Modifier.size(15.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                val updated = presetsList.toMutableList().apply { remove(item) }
+                                                presetsList = updated
+                                                onSavePresets(updated)
+                                            },
+                                            modifier = Modifier.size(48.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.DeleteOutline,
+                                                contentDescription = stringResource(R.string.delete),
+                                                modifier = Modifier.size(15.dp),
+                                                tint = Color(0xFFEF4444)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1588,11 +1600,11 @@ fun ManageQuickSalePresetsDialog(
 
     // Edit Preset Sub-Dialog
     editingPreset?.let { target ->
-        var editName by remember { mutableStateOf(target.name) }
-        var editPriceText by remember {
+        var editName by remember(target.id) { mutableStateOf(target.name) }
+        var editPriceText by remember(target.id) {
             mutableStateOf(if (target.defaultPrice % 1.0 == 0.0) target.defaultPrice.toLong().toString() else target.defaultPrice.toString())
         }
-        var editUnit by remember { mutableStateOf(target.defaultUnit) }
+        var editUnit by remember(target.id) { mutableStateOf(target.defaultUnit) }
 
         AlertDialog(
             onDismissRequest = { editingPreset = null },
@@ -1834,7 +1846,7 @@ fun ManageNotePresetsDialog(
                     Text(stringResource(R.string.cart_manage_note_presets_title), fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 }
                 IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), modifier = Modifier.size(18.dp))
                 }
             }
         },
@@ -1925,7 +1937,7 @@ fun ManageNotePresetsDialog(
                                             editingIndex = index
                                             editingText = preset
                                         },
-                                        modifier = Modifier.size(28.dp)
+                                        modifier = Modifier.size(48.dp)
                                     ) {
                                         Text("✏️", fontSize = 12.sp)
                                     }
@@ -1935,7 +1947,7 @@ fun ManageNotePresetsDialog(
                                             presetsList = updated
                                             onSavePresets(updated)
                                         },
-                                        modifier = Modifier.size(28.dp)
+                                        modifier = Modifier.size(48.dp)
                                     ) {
                                         Text("🗑️", fontSize = 12.sp)
                                     }

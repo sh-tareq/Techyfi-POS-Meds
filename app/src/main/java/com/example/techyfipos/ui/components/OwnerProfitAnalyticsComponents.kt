@@ -139,7 +139,7 @@ fun OwnerProfitAnalyticsContent(
                         color = Color(0xFFFDE68A)
                     )
                     Text(
-                        text = "Invoice #${bill.saleId} · ${bill.items.size} SKUs",
+                        text = stringResource(R.string.owner_analytics_invoice_sku_fmt, bill.saleId, bill.items.size),
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF94A3B8)
@@ -563,7 +563,7 @@ fun OwnerProfitAnalyticsContent(
                         ) {
                             val qStr = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.1f", item.quantity)
                             Text(
-                                text = "Qty: $qStr · Sale: ${formatTaka(item.unitPrice)} · Cost: ${formatTaka(unitCost)}",
+                                text = stringResource(R.string.owner_analytics_qty_sale_cost_fmt, qStr, formatTaka(item.unitPrice), formatTaka(unitCost)),
                                 fontSize = 10.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

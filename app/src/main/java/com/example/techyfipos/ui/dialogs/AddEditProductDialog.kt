@@ -253,7 +253,7 @@ fun AddEditProductDialog(
             }
             pPrice < 0.0 || wPrice < 0.0 || qty < 0.0 || reorder < 0 -> {
                 isError = true
-                Toast.makeText(context, "Prices and stock quantities cannot be negative", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.toast_negative_price_stock_error), Toast.LENGTH_SHORT).show()
             }
             expiryDate.isNotBlank() && com.example.techyfipos.utils.parseExpiryDateToMillis(expiryDate) == null -> {
                 isError = true
@@ -608,7 +608,7 @@ fun AddEditProductDialog(
                                                     }
                                                     Icon(
                                                         imageVector = Icons.Default.ArrowDropDown,
-                                                        contentDescription = "Expand category dropdown",
+                                                        contentDescription = stringResource(R.string.cd_expand_category),
                                                         tint = Color(0xFF64748B),
                                                         modifier = Modifier.size(20.dp)
                                                     )
@@ -1097,7 +1097,7 @@ fun AddEditProductDialog(
                                                         color = if (profitPerUnit >= 0) Color(0xFF059669) else Color(0xFFE11D48)
                                                     ) {
                                                         Text(
-                                                            text = "Margin ${String.format(Locale.US, "%.1f", marginPct)}%",
+                                                            text = stringResource(R.string.product_margin_fmt, String.format(Locale.US, "%.1f", marginPct)),
                                                             fontWeight = FontWeight.Bold,
                                                             fontSize = 10.sp,
                                                             color = Color.White,
@@ -1110,7 +1110,7 @@ fun AddEditProductDialog(
                                                             color = Color(0xFF4338CA)
                                                         ) {
                                                             Text(
-                                                                text = "Markup ${String.format(Locale.US, "%.1f", markupPct)}%",
+                                                                text = stringResource(R.string.product_markup_fmt, String.format(Locale.US, "%.1f", markupPct)),
                                                                 fontWeight = FontWeight.Bold,
                                                                 fontSize = 10.sp,
                                                                 color = Color.White,
@@ -1332,7 +1332,7 @@ fun AddEditProductDialog(
                                                     )
                                                     Icon(
                                                         imageVector = Icons.Default.ArrowDropDown,
-                                                        contentDescription = "Select unit",
+                                                        contentDescription = stringResource(R.string.cd_select_unit),
                                                         tint = Color(0xFF64748B),
                                                         modifier = Modifier.size(20.dp)
                                                     )
@@ -1446,7 +1446,7 @@ fun AddEditProductDialog(
                                         FilterChip(
                                             selected = mfgOrPkgType == "Mfg",
                                             onClick = { mfgOrPkgType = "Mfg" },
-                                            label = { Text("Mfg", fontSize = 10.5.sp, fontWeight = FontWeight.Bold) },
+                                            label = { Text(stringResource(R.string.products_mfg_abbr), fontSize = 10.5.sp, fontWeight = FontWeight.Bold) },
                                             leadingIcon = { Animated3DFactoryIcon() },
                                             shape = RoundedCornerShape(7.dp),
                                             modifier = Modifier.height(28.dp)
@@ -1454,7 +1454,7 @@ fun AddEditProductDialog(
                                         FilterChip(
                                             selected = mfgOrPkgType == "Pkg",
                                             onClick = { mfgOrPkgType = "Pkg" },
-                                            label = { Text("Pkg", fontSize = 10.5.sp, fontWeight = FontWeight.Bold) },
+                                            label = { Text(stringResource(R.string.products_pkg_abbr), fontSize = 10.5.sp, fontWeight = FontWeight.Bold) },
                                             leadingIcon = { Animated3DPackageIcon(fontSize = 12.sp) },
                                             shape = RoundedCornerShape(7.dp),
                                             modifier = Modifier.height(28.dp)
@@ -1691,7 +1691,7 @@ fun AddEditProductDialog(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
                 ) {
-                    Text("Save Anyway")
+                    Text(stringResource(R.string.save_anyway))
                 }
             },
             dismissButton = {

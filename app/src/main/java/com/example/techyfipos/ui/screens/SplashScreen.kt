@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -183,7 +184,7 @@ fun SplashScreen(
 
         // Subdued enterprise footer safely anchored above navigation insets
         Text(
-            text = "Enterprise POS • Secure Offline Engine",
+            text = stringResource(R.string.splash_subtitle),
             color = Color(0xFF475569),
             fontSize = if (isTabletDevice) 11.5.sp else 10.sp,
             fontWeight = FontWeight.Medium,
@@ -208,7 +209,7 @@ private fun TechyfiSplashLogo(
     ) {
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_foreground),
-            contentDescription = "Techyfi Logo",
+            contentDescription = stringResource(R.string.cd_techyfi_logo),
             modifier = Modifier.size(logoSize)
         )
 

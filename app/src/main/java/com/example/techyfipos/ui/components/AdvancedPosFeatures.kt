@@ -954,7 +954,7 @@ private fun InventoryAlertItemCard(
                     )
                     if (product.barcode.isNotBlank()) {
                         Text(
-                            text = "Barcode: ${product.barcode}",
+                            text = stringResource(R.string.barcode_label_fmt, product.barcode),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.outline,
                             maxLines = 1,
@@ -1779,7 +1779,7 @@ fun InwardStockDialog(
                             val updated = stockLines.filterNot { it.productBarcode == line.productBarcode }
                             stockLines = updated
                             recalculateTotal(updated)
-                        }) { Icon(Icons.Default.Delete, contentDescription = "Remove stock line") }
+                        }) { Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_remove_stock_line)) }
                     }
                 }
 

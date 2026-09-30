@@ -652,7 +652,7 @@ fun BatchProductCodePrintDialog(
                         enabled = !isGenerating,
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
 
@@ -856,7 +856,7 @@ fun BatchProductCodePrintDialog(
                                     shareProductCodeLabelPdf(context, result.second, "Batch_Labels")
                                     onDismiss()
                                 } else {
-                                    Toast.makeText(context, "Failed to generate batch labels PDF", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.toast_failed_batch_labels_pdf), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -1246,14 +1246,14 @@ fun ProductCodeImageDialog(
                                 FilterChip(
                                     selected = mfgOrPkgType == "Mfg",
                                     onClick = { mfgOrPkgType = "Mfg" },
-                                    label = { Text("Mfg", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                    label = { Text(stringResource(R.string.products_mfg_abbr), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                                     leadingIcon = { Animated3DFactoryIcon() },
                                     modifier = Modifier.height(32.dp)
                                 )
                                 FilterChip(
                                     selected = mfgOrPkgType == "Pkg",
                                     onClick = { mfgOrPkgType = "Pkg" },
-                                    label = { Text("Pkg", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                    label = { Text(stringResource(R.string.products_pkg_abbr), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                                     leadingIcon = { Animated3DPackageIcon(fontSize = 14.sp) },
                                     modifier = Modifier.height(32.dp)
                                 )

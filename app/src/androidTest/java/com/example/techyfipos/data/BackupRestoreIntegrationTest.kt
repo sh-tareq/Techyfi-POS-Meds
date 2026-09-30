@@ -584,4 +584,43 @@ class BackupRestoreIntegrationTest {
         assertEquals(0, afterDelete.totalOrders)
         assertEquals(0.0, afterDelete.totalDue, 0.001)
     }
+
+    @Test
+    fun nonTaxableProductPreservesTaxableFalseAcrossBackupRestore() = runBlocking {
+        val product = Product("CUSTOM-X", "Non-Taxable Item", "Test", 50.0, 100.0, 5.0, 1)
+        database.productDao().insertProduct(product)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 100.0,
+            paymentMethod = "Cash",
+            customerName = null,
+            customerPhone = null,
+            amountPaid = 100.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(product, 1.0, null)),
+            taxRate = 5.0,
+            taxAmount = 0.0,
+            nonTaxableBarcodes = setOf("CUSTOM-X")
+        )
+
+        val saleWithItemsBefore = database.saleDao().getSaleWithItemsById(saleId)!!
+        val itemBefore = saleWithItemsBefore.items.single()
+        assertEquals(false, itemBefore.taxable)
+
+        val backup = File(context.cacheDir, "nontaxable-round-trip.json")
+        assertEquals(true, repository.exportBackup(backup))
+        database.clearAllTables()
+        assertEquals(true, repository.importBackup(backup))
+
+        val saleWithItemsAfter = database.saleDao().getSaleWithItemsById(saleId)!!
+        val itemAfter = saleWithItemsAfter.items.single()
+        assertEquals(false, itemAfter.taxable)
+        backup.delete()
+    }
 }
+
