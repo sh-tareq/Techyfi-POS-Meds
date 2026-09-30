@@ -44,6 +44,7 @@ import com.example.techyfipos.data.db.Supplier
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.startOfDay
 import com.example.techyfipos.utils.endOfDay
+import com.example.techyfipos.utils.toBanglaDigits
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -105,8 +106,7 @@ private enum class TrendViewMode {
 }
 
 
-private fun rangeFor(period: ReportPeriod, customStart: Long, customEnd: Long): Pair<Long, Long> {
-    val now = System.currentTimeMillis()
+private fun rangeFor(period: ReportPeriod, customStart: Long, customEnd: Long, now: Long = System.currentTimeMillis()): Pair<Long, Long> {
     return when (period) {
         ReportPeriod.TODAY -> startOfDay(now) to endOfDay(now) + 1
         ReportPeriod.WEEK -> {
@@ -149,8 +149,23 @@ fun SalesReportScreen(
     val configuration = LocalConfiguration.current
     val emptyReportMessage = stringResource(R.string.sales_report_empty_title)
     val salesSnapshot by salesViewModel.salesWithItems.collectAsStateWithLifecycle()
-    var selectedPeriod by remember { mutableStateOf(ReportPeriod.WEEK) }
-    val now = remember { System.currentTimeMillis() }
+    var selectedPeriod by remember { mutableStateOf(ReportPeriod.TODAY) }
+    val now by produceState(initialValue = System.currentTimeMillis()) {
+        while (true) {
+            val currentTime = System.currentTimeMillis()
+            value = currentTime
+            val cal = Calendar.getInstance().apply {
+                timeInMillis = currentTime
+                add(Calendar.DAY_OF_YEAR, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 1)
+            }
+            val millisUntilMidnight = (cal.timeInMillis - currentTime).coerceAtLeast(1000L)
+            kotlinx.coroutines.delay(millisUntilMidnight.coerceAtMost(3600_000L))
+        }
+    }
     var customStart by remember { mutableStateOf(now) }
     var customEnd by remember { mutableStateOf(now) }
     var showStartPicker by remember { mutableStateOf(false) }
@@ -160,13 +175,13 @@ fun SalesReportScreen(
     var report by remember { mutableStateOf<SalesReportData?>(null) }
     var previousReport by remember { mutableStateOf<SalesReportData?>(null) }
 
-    val (rangeStart, rangeEnd) = remember(selectedPeriod, customStart, customEnd) {
-        rangeFor(selectedPeriod, customStart, customEnd)
+    val (rangeStart, rangeEnd) = remember(selectedPeriod, customStart, customEnd, now) {
+        rangeFor(selectedPeriod, customStart, customEnd, now)
     }
 
     val allExpenses by (expenseViewModel?.allExpenses?.collectAsStateWithLifecycle(emptyList()) ?: remember { mutableStateOf(emptyList()) })
     val periodExpenses = remember(allExpenses, rangeStart, rangeEnd) {
-        allExpenses.filter { it.timestamp in rangeStart until rangeEnd && it.type != "CASH_IN" }
+        allExpenses.filter { it.timestamp in rangeStart until rangeEnd && it.type != "CASH_IN" && !it.category.equals("Supplier Payment", ignoreCase = true) }
     }
     val periodExpenseTotal = remember(periodExpenses) { periodExpenses.sumOf { it.amount } }
 
@@ -179,11 +194,13 @@ fun SalesReportScreen(
     }
 
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
+    val exportFileDateFormat = remember { SimpleDateFormat("yyyyMMdd", Locale.getDefault()) }
     val rangeLabel = remember(rangeStart, rangeEnd) {
         val start = dateFormat.format(Date(rangeStart))
         val end = dateFormat.format(Date((rangeEnd - 1).coerceAtLeast(rangeStart)))
         if (start == end) start else "$start – $end"
     }
+    val currentRangeLabel by rememberUpdatedState(rangeLabel)
 
     val exportSuccessToast = stringResource(R.string.sales_report_export_success)
     val exportReportLauncher = rememberLauncherForActivityResult(
@@ -194,7 +211,7 @@ fun SalesReportScreen(
                 try {
                     val stream = context.contentResolver.openOutputStream(uri)
                     if (stream != null) {
-                        val success = stream.use { salesViewModel.exportSalesReportToExcel(report!!, rangeLabel, it) }
+                        val success = stream.use { salesViewModel.exportSalesReportToExcel(report!!, currentRangeLabel, it) }
                         if (success) {
                             Toast.makeText(context, exportSuccessToast, Toast.LENGTH_LONG).show()
                         } else {
@@ -231,20 +248,20 @@ fun SalesReportScreen(
                     }
                 },
                 actions = {
+                    val hasTransactions = report != null && report!!.transactionCount > 0
                     IconButton(
                         onClick = {
-                            if (report != null && report!!.transactionCount > 0) {
-                                val cleanDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(rangeStart))
+                            if (hasTransactions) {
+                                val cleanDate = exportFileDateFormat.format(Date(rangeStart))
                                 exportReportLauncher.launch("sales-report-$cleanDate.xlsx")
-                            } else {
-                                Toast.makeText(context, emptyReportMessage, Toast.LENGTH_SHORT).show()
                             }
-                        }
+                        },
+                        enabled = hasTransactions
                     ) {
                         Icon(
                             imageVector = Icons.Default.FileDownload,
                             contentDescription = stringResource(R.string.sales_report_export_excel),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = if (hasTransactions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                         )
                     }
                 }
@@ -284,15 +301,18 @@ fun SalesReportScreen(
                             1.dp,
                             if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
                         ),
-                        shadowElevation = if (isSelected) 3.dp else 1.dp
+                        shadowElevation = if (isSelected) 3.dp else 1.dp,
+                        modifier = Modifier.heightIn(min = 48.dp)
                     ) {
-                        Text(
-                            text = period.localizedLabel(),
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = period.localizedLabel(),
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -369,6 +389,7 @@ fun SalesReportScreen(
                 ReportExecutiveSummaryCard(
                     data = data,
                     previous = previousReport,
+                    periodExpenseTotal = periodExpenseTotal,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -445,8 +466,8 @@ fun SalesReportScreen(
         }
     }
 
-    val currentDayEndUtcMillis = remember {
-        val localCal = java.util.Calendar.getInstance()
+    val currentDayEndUtcMillis = remember(now) {
+        val localCal = java.util.Calendar.getInstance().apply { timeInMillis = now }
         val utcCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
             set(java.util.Calendar.YEAR, localCal.get(java.util.Calendar.YEAR))
             set(java.util.Calendar.MONTH, localCal.get(java.util.Calendar.MONTH))
@@ -510,12 +531,14 @@ fun SalesReportScreen(
 private fun ReportExecutiveSummaryCard(
     data: SalesReportData,
     previous: SalesReportData?,
+    periodExpenseTotal: Double = 0.0,
     modifier: Modifier = Modifier
 ) {
     var showProfitMode by remember { mutableStateOf(false) }
     val average = data.totalRevenue / data.transactionCount.coerceAtLeast(1)
     val netSales = (data.totalRevenue - data.totalTax).coerceAtLeast(0.0)
-    val marginPercent = if (netSales == 0.0) 0.0 else (data.netProfit / netSales * 100)
+    val effectiveNetProfit = data.grossProfit - data.totalDiscount - (if (data.totalLoyaltyDiscount > 0.0) data.totalLoyaltyDiscount else 0.0) - periodExpenseTotal
+    val marginPercent = if (netSales == 0.0) 0.0 else (effectiveNetProfit / netSales * 100)
     val growthDelta = change(data.totalRevenue, previous?.totalRevenue)
 
     Surface(
@@ -600,7 +623,7 @@ private fun ReportExecutiveSummaryCard(
                 ) {
                     Column {
                         Text(
-                            text = if (showProfitMode) formatTaka(data.netProfit) else formatTaka(data.totalRevenue),
+                            text = if (showProfitMode) formatTaka(effectiveNetProfit) else formatTaka(data.totalRevenue),
                             fontSize = 30.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White,
@@ -625,7 +648,7 @@ private fun ReportExecutiveSummaryCard(
                             horizontalAlignment = Alignment.End
                         ) {
                             Text(
-                                text = "${if (data.netProfit >= 0) "+" else ""}${formatTaka(data.netProfit)}",
+                                text = "${if (effectiveNetProfit >= 0) "+" else ""}${formatTaka(effectiveNetProfit)}",
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFF34D399)
@@ -692,16 +715,16 @@ private fun ReportExecutiveSummaryCard(
                     color = Color(0xFFC7D2FE)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                NetProfitBreakdownRow(stringResource(R.string.sales_report_gross_profit), data.totalProfit, isTotal = false)
+                NetProfitBreakdownRow(stringResource(R.string.sales_report_gross_profit), data.grossProfit, isTotal = false)
                 NetProfitBreakdownRow(stringResource(R.string.sales_report_discounts_given), -data.totalDiscount, isTotal = false)
                 if (data.totalLoyaltyDiscount > 0.0) {
-                    NetProfitBreakdownRow("Loyalty Points Redeemed", -data.totalLoyaltyDiscount, isTotal = false)
+                    NetProfitBreakdownRow(stringResource(R.string.sales_report_loyalty_points_redeemed), -data.totalLoyaltyDiscount, isTotal = false)
                 }
-                NetProfitBreakdownRow(stringResource(R.string.sales_report_total_expenses), -data.totalExpenses, isTotal = false)
+                NetProfitBreakdownRow(stringResource(R.string.sales_report_total_expenses), -periodExpenseTotal, isTotal = false)
                 Spacer(modifier = Modifier.height(6.dp))
                 HorizontalDivider(color = Color.White.copy(alpha = 0.15f), thickness = 0.8.dp)
                 Spacer(modifier = Modifier.height(6.dp))
-                NetProfitBreakdownRow(stringResource(R.string.sales_report_net_profit), data.netProfit, isTotal = true)
+                NetProfitBreakdownRow(stringResource(R.string.sales_report_net_profit), effectiveNetProfit, isTotal = true)
             }
         }
     }
@@ -782,7 +805,7 @@ private fun EmptyReportState(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "💡 View Historical Period Analytics:",
+                        text = stringResource(R.string.sales_report_view_historical_analytics),
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -798,7 +821,7 @@ private fun EmptyReportState(
                                 shape = RoundedCornerShape(10.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                             ) {
-                                Text("🔄 ${stringResource(R.string.sales_report_period_week)}", fontSize = 11.sp)
+                                Text(stringResource(R.string.sales_report_empty_switch_week, stringResource(R.string.sales_report_period_week)), fontSize = 11.sp)
                             }
                         }
 
@@ -808,7 +831,7 @@ private fun EmptyReportState(
                                 shape = RoundedCornerShape(10.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                             ) {
-                                Text("🗓️ ${stringResource(R.string.sales_report_period_month)}", fontSize = 11.sp)
+                                Text(stringResource(R.string.sales_report_empty_switch_month, stringResource(R.string.sales_report_period_month)), fontSize = 11.sp)
                             }
                         }
 
@@ -818,7 +841,7 @@ private fun EmptyReportState(
                                 shape = RoundedCornerShape(10.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                             ) {
-                                Text("📊 ${stringResource(R.string.sales_report_period_year)}", fontSize = 11.sp)
+                                Text(stringResource(R.string.sales_report_empty_switch_year, stringResource(R.string.sales_report_period_year)), fontSize = 11.sp)
                             }
                         }
                     }
@@ -844,7 +867,7 @@ private fun OverviewPanel(
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         if (hasExpenseFeature || hasSupplierFeature) {
-            val netOperatingProfit = data.totalProfit - periodExpenseTotal
+            val netOperatingProfit = data.grossProfit - periodExpenseTotal
             Card(
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -983,9 +1006,9 @@ private fun OverviewPanel(
             ) {
                 Realistic3DAnalyticsIcon(size = 22.dp)
                 Column(Modifier.weight(1f)) {
-                    Text("Performance Trend", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                    Text(stringResource(R.string.sales_report_performance_trend), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                     Text(
-                        if (viewMode == TrendViewMode.DAILY) "Daily sales & profit volume" else "24-hour hourly distribution breakdown",
+                        if (viewMode == TrendViewMode.DAILY) stringResource(R.string.sales_report_daily_sales_profit) else stringResource(R.string.sales_report_hourly_distribution_breakdown),
                         color = MaterialTheme.colorScheme.outline,
                         fontSize = 11.sp
                     )
@@ -1008,7 +1031,7 @@ private fun OverviewPanel(
                         modifier = Modifier.padding(2.dp),
                         horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        listOf(TrendViewMode.DAILY to "📅 Daily", TrendViewMode.HOURLY to "⏱️ Hourly").forEach { (mode, label) ->
+                        listOf(TrendViewMode.DAILY to stringResource(R.string.sales_report_trend_daily), TrendViewMode.HOURLY to stringResource(R.string.sales_report_trend_hourly)).forEach { (mode, label) ->
                             val isSelected = viewMode == mode
                             Surface(
                                 onClick = { viewMode = mode },
@@ -1086,7 +1109,7 @@ private fun OverviewPanel(
                             Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "Best Day: $day",
+                                text = stringResource(R.string.sales_report_best_day_format, day),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -1137,7 +1160,7 @@ private fun OverviewPanel(
                                 )
                                 val itemsSoldStr = if (peak.itemsSold % 1.0 == 0.0) peak.itemsSold.toLong().toString() else String.format(Locale.US, "%.1f", peak.itemsSold)
                                 Text(
-                                    text = "${peak.transactionCount} invoices • $itemsSoldStr units sold",
+                                    text = stringResource(R.string.sales_report_hourly_invoices_units_sold, peak.transactionCount, itemsSoldStr),
                                     fontSize = 10.5.sp,
                                     color = Color(0xFFB45309),
                                     maxLines = 1,
@@ -1171,6 +1194,22 @@ private fun HourlyTrendChart(points: List<HourlyReportData>, metric: TrendMetric
     val values = points.map { if (metric == TrendMetric.SALES) it.revenue else it.profit.coerceAtLeast(0.0) }
     val maxValue = values.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
     val peakIndex = values.indexOfFirst { it == maxValue }.takeIf { maxValue > 0.0 } ?: -1
+
+    val currentLocale = LocalConfiguration.current.locales[0]
+    val hourLabels = remember(currentLocale) {
+        val sdf = SimpleDateFormat("ha", Locale.getDefault())
+        val cal = Calendar.getInstance()
+        (0..23).associateWith { hour ->
+            cal.set(Calendar.HOUR_OF_DAY, hour)
+            cal.set(Calendar.MINUTE, 0)
+            val formatted = sdf.format(cal.time)
+            if (currentLocale.language == "bn") {
+                toBanglaDigits(formatted)
+            } else {
+                formatted
+            }
+        }
+    }
 
     Canvas(Modifier.fillMaxWidth().height(160.dp)) {
         val w = size.width
@@ -1232,7 +1271,7 @@ private fun HourlyTrendChart(points: List<HourlyReportData>, metric: TrendMetric
 
             // Draw X-axis Hour Ticks at key intervals (0, 4, 8, 12, 16, 20, 23)
             if (index in listOf(0, 4, 8, 12, 16, 20, 23)) {
-                val label = when (index) {
+                val label = hourLabels[index] ?: when (index) {
                     0 -> "12A"
                     12 -> "12P"
                     in 1..11 -> "${index}A"
@@ -1294,11 +1333,11 @@ private fun HourlyPanel(data: SalesReportData) {
                 Column(Modifier.padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("🔥", fontSize = 12.sp)
-                        Text("PEAK HOUR", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1E40AF), letterSpacing = 0.4.sp)
+                        Text(stringResource(R.string.sales_report_peak_hour_badge), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1E40AF), letterSpacing = 0.4.sp)
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = peakHour?.hourLabel ?: "None",
+                        text = peakHour?.hourLabel ?: stringResource(R.string.sales_report_none),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF1E3A8A),
@@ -1326,11 +1365,11 @@ private fun HourlyPanel(data: SalesReportData) {
                 Column(Modifier.padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("⚡", fontSize = 12.sp)
-                        Text("BUSIEST HOUR", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF065F46), letterSpacing = 0.4.sp)
+                        Text(stringResource(R.string.sales_report_busiest_hour_badge), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF065F46), letterSpacing = 0.4.sp)
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = busiestHour?.hourLabel ?: "None",
+                        text = busiestHour?.hourLabel ?: stringResource(R.string.sales_report_none),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF064E3B),
@@ -1338,7 +1377,7 @@ private fun HourlyPanel(data: SalesReportData) {
                         softWrap = false
                     )
                     Text(
-                        text = busiestHour?.let { "${it.transactionCount} Invoices" } ?: "0 Invoices",
+                        text = busiestHour?.let { stringResource(R.string.sales_report_invoices_format, it.transactionCount) } ?: stringResource(R.string.sales_report_invoices_format, 0),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF059669),
@@ -1358,12 +1397,12 @@ private fun HourlyPanel(data: SalesReportData) {
                 Column(Modifier.padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("⏱️", fontSize = 12.sp)
-                        Text("ACTIVE HOURS", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF6B21A8), letterSpacing = 0.4.sp)
+                        Text(stringResource(R.string.sales_report_active_hours_badge), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF6B21A8), letterSpacing = 0.4.sp)
                     }
                     Spacer(Modifier.height(4.dp))
                     val activeHoursCount = data.hourlyBreakdown.count { it.transactionCount > 0 }
                     Text(
-                        text = "$activeHoursCount Hours",
+                        text = stringResource(R.string.sales_report_hours_format, activeHoursCount),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF581C87),
@@ -1371,7 +1410,7 @@ private fun HourlyPanel(data: SalesReportData) {
                         softWrap = false
                     )
                     Text(
-                        text = "${data.hourlyBreakdown.size} Tracked",
+                        text = stringResource(R.string.sales_report_tracked_format, data.hourlyBreakdown.size),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF7E22CE),
@@ -1396,8 +1435,8 @@ private fun HourlyPanel(data: SalesReportData) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Hourly Volume Curve", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
-                        Text("24-hour timeline analysis", color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
+                        Text(stringResource(R.string.sales_report_hourly_volume_curve), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                        Text(stringResource(R.string.sales_report_24h_timeline_analysis), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
                     }
 
                     // Metric Switcher
@@ -1451,8 +1490,8 @@ private fun HourlyPanel(data: SalesReportData) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Time-Slot Breakdown", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
-                        Text("${activeHours.size} active hourly time windows", color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
+                        Text(stringResource(R.string.sales_report_timeslot_breakdown), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                        Text(stringResource(R.string.sales_report_active_windows_count, activeHours.size), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
                     }
 
                     Surface(
@@ -1462,7 +1501,7 @@ private fun HourlyPanel(data: SalesReportData) {
                         border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
                         Text(
-                            text = if (showOnlyActiveHours) "Active Only" else "All 24h",
+                            text = if (showOnlyActiveHours) stringResource(R.string.sales_report_active_only) else stringResource(R.string.sales_report_all_24h),
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -1478,7 +1517,7 @@ private fun HourlyPanel(data: SalesReportData) {
                         modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No hourly sales recorded in this period.", color = MaterialTheme.colorScheme.outline, fontSize = 12.5.sp)
+                        Text(stringResource(R.string.sales_report_no_hourly_sales), color = MaterialTheme.colorScheme.outline, fontSize = 12.5.sp)
                     }
                 } else {
                     displayedHours.forEachIndexed { index, hourData ->
@@ -1530,13 +1569,13 @@ private fun HourlyPanel(data: SalesReportData) {
                                                     shape = RoundedCornerShape(4.dp),
                                                     color = Color(0xFFFEF3C7)
                                                 ) {
-                                                    Text("PEAK", fontSize = 8.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF92400E), modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+                                                    Text(stringResource(R.string.sales_report_peak_tag), fontSize = 8.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF92400E), modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
                                                 }
                                             }
                                         }
                                         val itemsQtyStr = if (hourData.itemsSold % 1.0 == 0.0) hourData.itemsSold.toLong().toString() else String.format(Locale.US, "%.1f", hourData.itemsSold)
                                         Text(
-                                            text = "${hourData.transactionCount} invoices • $itemsQtyStr units",
+                                            text = stringResource(R.string.sales_report_hourly_invoices_units, hourData.transactionCount, itemsQtyStr),
                                             fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.outline
                                         )
@@ -1551,7 +1590,7 @@ private fun HourlyPanel(data: SalesReportData) {
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     Text(
-                                        text = "Profit: ${formatTaka(hourData.profit)}",
+                                        text = stringResource(R.string.sales_report_profit_prefix, formatTaka(hourData.profit)),
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = Color(0xFF059669)
@@ -1586,6 +1625,7 @@ private fun TrendChart(points: List<DailyReportData>, metric: TrendMetric) {
     val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     val textMeasurer = rememberTextMeasurer()
     val labelColor = MaterialTheme.colorScheme.outline
+    val dayFormat = remember { SimpleDateFormat("EEE", Locale.getDefault()) }
     val values = points.map { if (metric == TrendMetric.SALES) it.revenue else it.profit.coerceAtLeast(0.0) }
     val maxValue = values.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
 
@@ -1603,7 +1643,6 @@ private fun TrendChart(points: List<DailyReportData>, metric: TrendMetric) {
 
         val gap = 6.dp.toPx()
         val barWidth = ((w - gap * (values.size + 1)) / values.size.coerceAtLeast(1)).coerceAtLeast(6.dp.toPx())
-        val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
 
         // 2. Render 3D Cylindrical Glowing Bars
         values.forEachIndexed { index, value ->
@@ -1676,8 +1715,8 @@ private fun ProductsPanel(data: SalesReportData) {
             ) {
                 Realistic3DLeaderboardTrophyIcon(size = 22.dp)
                 Column {
-                    Text("Top Selling Products", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
-                    Text("Ranked by revenue contribution", color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
+                    Text(stringResource(R.string.sales_report_top_products_title), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                    Text(stringResource(R.string.sales_report_ranked_by_revenue), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -1741,11 +1780,11 @@ private fun ProductsPanel(data: SalesReportData) {
                                 lineHeight = 17.sp
                             )
                             val qStr = if (product.quantity % 1.0 == 0.0) product.quantity.toLong().toString() else String.format(java.util.Locale.US, "%.2f", product.quantity).trimEnd('0').trimEnd('.')
-                            Text("$qStr units sold", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                            Text(stringResource(R.string.sales_report_product_units_sold, qStr), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
                         }
                         Text(formatTaka(product.revenue), fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(4.dp))
-                        Icon(Icons.Default.ChevronRight, "View product details", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+                        Icon(Icons.Default.ChevronRight, stringResource(R.string.sales_report_view_product_details_cd), Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
                     }
 
                     if (expandedBarcode == product.barcode) {
@@ -1757,11 +1796,11 @@ private fun ProductsPanel(data: SalesReportData) {
                         ) {
                             Row(Modifier.fillMaxWidth().padding(10.dp)) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("BARCODE / SKU", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
+                                    Text(stringResource(R.string.sales_report_barcode_sku_header), fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
                                     Text(product.barcode, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("AVG UNIT PRICE", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
+                                    Text(stringResource(R.string.sales_report_avg_unit_price_header), fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
                                     val avgPrice = if (product.quantity > 0.0) product.revenue / product.quantity else 0.0
                                     Text(formatTaka(avgPrice), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 }
@@ -1790,8 +1829,8 @@ private fun PaymentsPanel(data: SalesReportData) {
             ) {
                 Realistic3DMultiPaymentMixIcon(size = 22.dp)
                 Column {
-                    Text("Payment Channel Mix", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
-                    Text("Revenue collected per channel", color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
+                    Text(stringResource(R.string.sales_report_payment_channel_mix), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                    Text(stringResource(R.string.sales_report_revenue_collected_per_channel), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -1815,7 +1854,7 @@ private fun PaymentsPanel(data: SalesReportData) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("${payment.transactionCount} sales ($percent%)", color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
+                            Text(stringResource(R.string.sales_report_payment_sales_percent, payment.transactionCount, percent), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
                             Text(formatTaka(payment.amount), fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = MaterialTheme.colorScheme.onSurface)
                         }
                     }

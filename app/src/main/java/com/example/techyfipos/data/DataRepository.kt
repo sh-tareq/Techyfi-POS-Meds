@@ -119,28 +119,31 @@ class DataRepository(
     }
 
     suspend fun adjustCustomerCredit(phone: String, delta: Double, note: String? = null): Customer = withContext(Dispatchers.IO) {
-        val norm = normalizePhone(phone)
-        var customer = customerDao.getCustomerByPhone(norm)
-        if (customer == null) {
-            customer = Customer(
-                phone = norm,
-                name = "Customer ${norm.takeLast(4)}",
-                storeCredit = 0.0
+        requirePermission(AppPermissions.CUSTOMERS_EDIT)
+        database.withDriverTransaction {
+            val norm = normalizePhone(phone)
+            var customer = customerDao.getCustomerByPhone(norm)
+            if (customer == null) {
+                customer = Customer(
+                    phone = norm,
+                    name = "Customer ${norm.takeLast(4)}",
+                    storeCredit = 0.0
+                )
+                customerDao.upsertCustomer(customer)
+            }
+            customerDao.adjustCustomerStoreCredit(norm, delta, System.currentTimeMillis())
+            val updated = customerDao.getCustomerByPhone(norm) ?: customer
+            storeCreditLedgerDao.insertEntry(
+                StoreCreditLedgerEntry(
+                    customerPhone = norm,
+                    deltaAmount = delta,
+                    balanceAfter = updated.storeCredit,
+                    type = "MANUAL_ADJUST",
+                    note = note ?: "Manual store credit adjustment"
+                )
             )
-            customerDao.upsertCustomer(customer)
+            updated
         }
-        customerDao.adjustCustomerStoreCredit(norm, delta, System.currentTimeMillis())
-        val updated = customerDao.getCustomerByPhone(norm) ?: customer
-        storeCreditLedgerDao.insertEntry(
-            StoreCreditLedgerEntry(
-                customerPhone = norm,
-                deltaAmount = delta,
-                balanceAfter = updated.storeCredit,
-                type = "MANUAL_ADJUST",
-                note = note ?: "Manual store credit adjustment"
-            )
-        )
-        updated
     }
 
     suspend fun getStoreCreditVoucher(code: String): StoreCreditVoucher? = withContext(Dispatchers.IO) {
@@ -4166,7 +4169,8 @@ class DataRepository(
             "return_items", "returns", "sale_items", "sales", "due_payments", "due_charges", "customer_dues",
             "customers", "due_reminder_logs", "supplier_payments", "purchase_invoice_items", "purchase_invoices",
             "suppliers", "held_carts", "expenses", "register_closings", "register_shift_state",
-            "loyalty_transactions", "customer_loyalty", "products", "inventory_adjustments", "scheduled_due_reminders"
+            "loyalty_transactions", "customer_loyalty", "products", "inventory_adjustments", "scheduled_due_reminders",
+            "store_credit_vouchers", "store_credit_ledger", "sale_audit_logs", "expense_audit_logs"
         ).forEach { table -> sql.execSQL("DELETE FROM `$table`") }
     }
 
