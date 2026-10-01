@@ -138,5 +138,12 @@ class BackupCompatibilityTest {
         )
         assertTrue(restoredLegacy.taxable)
     }
+
+    @Test
+    fun `system backup method name exportBackupForSystem exists and is distinct from permission gated exportBackup`() {
+        val methods = DataRepository::class.java.methods.map { it.name }
+        assertTrue(methods.contains("exportBackupForSystem"))
+        assertTrue(methods.contains("exportBackup"))
+    }
 }
 

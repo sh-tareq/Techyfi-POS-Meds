@@ -1613,7 +1613,8 @@ private fun csvEscape(s: String): String = "\"${s.replace("\"", "\"\"")}\""
 
 suspend fun exportCustomerCsv(context: Context, customers: List<Customer>) = withContext(Dispatchers.IO) {
     try {
-        val file = File(context.cacheDir, "customers_export_${System.currentTimeMillis()}.csv")
+        val exportsDir = File(context.cacheDir, "exports").apply { mkdirs() }
+        val file = File(exportsDir, "customers_export_${System.currentTimeMillis()}.csv")
         FileWriter(file).use { writer ->
             writer.append("Phone,Name,Tag,TotalDue,CreditLimit,TotalOrders,LifetimeSpent,LoyaltyPoints,LoyaltyTier,Address,Notes\n")
             for (c in customers) {

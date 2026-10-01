@@ -2083,8 +2083,14 @@ class DataRepository(
     }
 
     // Backup & Restore Database as JSON
-    suspend fun exportBackup(outputFile: File): Boolean = withContext(Dispatchers.IO) {
+    suspend fun exportBackupForSystem(outputFile: File): Boolean = performExportBackup(outputFile)
+
+    suspend fun exportBackup(outputFile: File): Boolean {
         requirePermission(AppPermissions.SYSTEM_BACKUP_RESTORE)
+        return performExportBackup(outputFile)
+    }
+
+    private suspend fun performExportBackup(outputFile: File): Boolean = withContext(Dispatchers.IO) {
         try {
             val productsList = productDao.getAllProducts().first()
             val salesList = saleDao.getAllSalesWithItems().first()

@@ -2352,6 +2352,7 @@
     <string name="due_reminder_sms_review_body">%1$s এর বকেয়া পরিশোধের তাগিদ। পর্যালোচনা করতে ট্যাপ করুন।</string>
     <string name="due_reminder_wa_ready_body">নির্ধারিত হোয়াটসঅ্যাপ তাগিদ প্রস্তুত। পাঠাতে \'হোয়াটসঅ্যাপ\' ট্যাপ করুন।</string>
     <string name="due_reminder_action_send_whatsapp">💬 হোয়াটসঅ্যাপ পাঠান</string>
+    <string name="due_reminder_action_send_sms">💬 SMS পাঠান</string>
     <string name="cd_sort">সাজান</string>
     <string name="cd_more_options">আরও বিকল্প</string>
     <string name="cd_select_cashier">ক্যাশিয়ার নির্বাচন করুন</string>

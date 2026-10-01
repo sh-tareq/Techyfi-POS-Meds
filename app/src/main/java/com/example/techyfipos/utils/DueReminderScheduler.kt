@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.telephony.SmsManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.WorkManager
@@ -315,28 +314,22 @@ object DueReminderScheduler {
 
         Log.i(TAG, "Executing due reminder for $customerName ($normalizedPhone), channel=$channel")
 
-        var smsSent = false
-        if ((channel == "sms" || channel == "both") && normalizedPhone.isNotBlank() && messageText.isNotBlank()) {
-            smsSent = trySendSmsDirectly(context, normalizedPhone, messageText)
-        }
-
         val notificationShown = showReminderNotification(
             context = context,
             customerName = customerName,
             customerPhone = normalizedPhone,
             dueAmount = dueAmount,
             messageText = messageText,
-            channel = channel,
-            smsSentDirectly = smsSent
+            channel = channel
         )
 
         // Log the reminder
         try {
-            val status = if (smsSent) "SENT" else "NOTIFIED"
+            val status = "NOTIFIED"
             val channelName = when (channel) {
                 "sms" -> "SMS"
                 "wa" -> "WHATSAPP"
-                else -> if (smsSent) "SMS" else "WHATSAPP"
+                else -> "BOTH"
             }
             AppDatabase.getDatabase(context).dueReminderLogDao().insertLog(
                 DueReminderLog(
@@ -390,42 +383,7 @@ object DueReminderScheduler {
             }
         }
 
-        return smsSent || notificationShown
-    }
-
-    private fun trySendSmsDirectly(context: Context, phone: String, message: String): Boolean {
-        return try {
-            val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager
-            val hasSim = telephonyManager != null && telephonyManager.simState == android.telephony.TelephonyManager.SIM_STATE_READY
-            if (!hasSim) {
-                Log.w(TAG, "No ready SIM card detected (Wi-Fi only POS terminal); gracefully falling back to WhatsApp/Notification")
-                return false
-            }
-
-            val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.SEND_SMS
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-
-            if (hasPermission) {
-                val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    context.getSystemService(SmsManager::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    SmsManager.getDefault()
-                }
-                val parts = smsManager.divideMessage(message)
-                smsManager.sendMultipartTextMessage(phone, null, parts, null, null)
-                Log.i(TAG, "Direct SMS dispatched successfully to $phone")
-                true
-            } else {
-                Log.w(TAG, "SEND_SMS permission not granted; falling back to actionable notification")
-                false
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to send direct SMS: ${e.message}")
-            false
-        }
+        return notificationShown
     }
 
     private fun showReminderNotification(
@@ -434,8 +392,7 @@ object DueReminderScheduler {
         customerPhone: String,
         dueAmount: Double,
         messageText: String,
-        channel: String,
-        smsSentDirectly: Boolean
+        channel: String
     ): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             androidx.core.content.ContextCompat.checkSelfPermission(
@@ -462,7 +419,6 @@ object DueReminderScheduler {
             notificationManager.createNotificationChannel(notificationChannel)
         }
 
-        // WhatsApp Intent Action
         val cleanPhone = customerPhone.replace(Regex("[^0-9+]"), "").let {
             if (it.startsWith("01")) "+88$it" else it
         }
@@ -476,6 +432,17 @@ object DueReminderScheduler {
             context,
             baseCode,
             waIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+        )
+        val smsUri = Uri.parse("smsto:$cleanPhone")
+        val smsIntent = Intent(Intent.ACTION_SENDTO, smsUri).apply {
+            putExtra("sms_body", messageText)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        val smsPendingIntent = PendingIntent.getActivity(
+            context,
+            baseCode + 2,
+            smsIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
@@ -492,9 +459,7 @@ object DueReminderScheduler {
         )
 
         val title = context.getString(R.string.due_reminder_notification_title, customerName, formatTaka(dueAmount))
-        val subtitle = if (smsSentDirectly) {
-            context.getString(R.string.due_reminder_sms_dispatched_body)
-        } else if (channel == "sms") {
+        val subtitle = if (channel == "sms") {
             context.getString(R.string.due_reminder_sms_review_body, customerName)
         } else {
             context.getString(R.string.due_reminder_wa_ready_body)
@@ -509,7 +474,14 @@ object DueReminderScheduler {
             .setContentIntent(appPendingIntent)
             .setAutoCancel(true)
 
-        // Add WhatsApp Action Button
+        // Add Action Buttons
+        if (channel == "sms" || channel == "both") {
+            builder.addAction(
+                android.R.drawable.ic_menu_send,
+                context.getString(R.string.due_reminder_action_send_sms),
+                smsPendingIntent
+            )
+        }
         if (channel == "wa" || channel == "both") {
             builder.addAction(
                 android.R.drawable.ic_menu_send,

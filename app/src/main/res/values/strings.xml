@@ -2356,6 +2356,7 @@
     <string name="due_reminder_sms_review_body">Payment reminder due for %1$s. Tap to review.</string>
     <string name="due_reminder_wa_ready_body">Scheduled WhatsApp reminder ready. Tap \'WhatsApp\' to send.</string>
     <string name="due_reminder_action_send_whatsapp">💬 Send WhatsApp</string>
+    <string name="due_reminder_action_send_sms">💬 Send SMS</string>
     <string name="cd_sort">Sort</string>
     <string name="cd_more_options">More Options</string>
     <string name="cd_select_cashier">Select Cashier</string>

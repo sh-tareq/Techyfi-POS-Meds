@@ -1808,12 +1808,7 @@ fun SendDueReminderDialog(
             androidx.core.content.ContextCompat.checkSelfPermission(
                 context, android.Manifest.permission.POST_NOTIFICATIONS
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        val smsNeeded = selectedChannel == DeliveryChannel.SMS || selectedChannel == DeliveryChannel.BOTH
-        val smsGranted = !smsNeeded || grants[android.Manifest.permission.SEND_SMS] == true ||
-            androidx.core.content.ContextCompat.checkSelfPermission(
-                context, android.Manifest.permission.SEND_SMS
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        if (notificationGranted && (!smsNeeded || smsGranted)) {
+        if (notificationGranted) {
             scheduleReminder()
         } else {
             Toast.makeText(context, reminderPermissionRequiredToast, Toast.LENGTH_LONG).show()
@@ -2562,11 +2557,6 @@ fun SendDueReminderDialog(
                                                 context, android.Manifest.permission.POST_NOTIFICATIONS
                                             ) != android.content.pm.PackageManager.PERMISSION_GRANTED
                                         ) add(android.Manifest.permission.POST_NOTIFICATIONS)
-                                        if ((selectedChannel == DeliveryChannel.SMS || selectedChannel == DeliveryChannel.BOTH) &&
-                                            androidx.core.content.ContextCompat.checkSelfPermission(
-                                                context, android.Manifest.permission.SEND_SMS
-                                            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
-                                        ) add(android.Manifest.permission.SEND_SMS)
                                     }
                                     if (permissions.isEmpty()) scheduleReminder()
                                     else reminderPermissionLauncher.launch(permissions.toTypedArray())

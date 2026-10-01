@@ -69,7 +69,7 @@ class AutoBackupWorker(
             val tempFile = File(context.cacheDir, "auto_backup_${id}.json")
             val tempEncryptedFile = File(context.cacheDir, "auto_backup_enc_${id}.enc")
             try {
-                val exported = repository.exportBackup(tempFile)
+                val exported = repository.exportBackupForSystem(tempFile)
                 if (!exported || !tempFile.exists() || tempFile.length() == 0L) {
                     Log.e(TAG, "Backup export failed or produced an empty file")
                     return Result.retry()
