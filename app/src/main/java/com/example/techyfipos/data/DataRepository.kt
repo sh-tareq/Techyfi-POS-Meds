@@ -1141,7 +1141,7 @@ class DataRepository(
                         lifetimeSpent = updatedLifetime,
                         totalDue = currentDue,
                         loyaltyPoints = loyalty?.pointsBalance ?: 0,
-                        loyaltyTier = loyalty?.tier ?: "Silver",
+                        loyaltyTier = loyalty?.tier ?: "Regular",
                         firstPurchaseDate = firstDate,
                         lastPurchaseDate = timestamp,
                         createdAt = existingCust?.createdAt ?: timestamp,
@@ -1179,7 +1179,7 @@ class DataRepository(
         val dueAmount = due?.outstandingAmount ?: customer?.totalDue ?: 0.0
         val creditLimit = due?.creditLimit ?: customer?.creditLimit ?: 0.0
         val loyaltyPoints = loyalty?.pointsBalance ?: customer?.loyaltyPoints ?: 0
-        val loyaltyTier = loyalty?.tier ?: customer?.loyaltyTier ?: "Silver"
+        val loyaltyTier = loyalty?.tier ?: customer?.loyaltyTier ?: "Regular"
 
         // 1. Priority: Customer Database
         if (customer != null && customer.name.isNotBlank()) {
@@ -1321,7 +1321,7 @@ class DataRepository(
                 source = "PAST_SALE",
                 dueAmount = due?.outstandingAmount ?: 0.0,
                 loyaltyPoints = loyalty?.pointsBalance ?: 0,
-                tier = loyalty?.tier ?: "Silver",
+                tier = loyalty?.tier ?: "Regular",
                 tag = "Past Customer"
             )
         }
@@ -1448,11 +1448,22 @@ class DataRepository(
             )
             customerDao.upsertCustomer(updatedMaster)
             if (secondary.storeCredit > 0.0) {
-                customerDao.adjustCustomerStoreCredit(secNorm, -secondary.storeCredit, System.currentTimeMillis())
+                val transferredAmt = secondary.storeCredit
+                customerDao.adjustCustomerStoreCredit(secNorm, -transferredAmt, System.currentTimeMillis())
+                storeCreditLedgerDao.insertEntry(
+                    StoreCreditLedgerEntry(
+                        customerPhone = secNorm,
+                        deltaAmount = -transferredAmt,
+                        balanceAfter = 0.0,
+                        type = "MERGE_TRANSFER",
+                        note = "Store credit merged to master account $masterNorm",
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
                 storeCreditLedgerDao.insertEntry(
                     StoreCreditLedgerEntry(
                         customerPhone = masterNorm,
-                        deltaAmount = secondary.storeCredit,
+                        deltaAmount = transferredAmt,
                         balanceAfter = combinedStoreCredit,
                         type = "MERGE_TRANSFER",
                         note = "Store credit merged from archived account $secNorm",
@@ -1674,7 +1685,7 @@ class DataRepository(
                     firstPurchaseDate = firstSaleTimestamp ?: existing?.firstPurchaseDate,
                     lastPurchaseDate = if (lastSaleTimestamp > 0) lastSaleTimestamp else existing?.lastPurchaseDate,
                     loyaltyPoints = loyalty?.pointsBalance ?: 0,
-                    loyaltyTier = loyalty?.tier ?: existing?.loyaltyTier ?: "Silver",
+                    loyaltyTier = loyalty?.tier ?: existing?.loyaltyTier ?: "Regular",
                     tag = tag,
                     updatedAt = System.currentTimeMillis()
                 )
@@ -2998,7 +3009,7 @@ class DataRepository(
                     val value = array.getJSONObject(i)
                     customerLoyaltyDao.upsertLoyalty(CustomerLoyalty(
                         phone = normalizePhone(value.getString("phone")), name = value.optString("name", "Customer"),
-                        pointsBalance = value.optInt("pointsBalance", 0), tier = value.optString("tier", "Silver"),
+                        pointsBalance = value.optInt("pointsBalance", 0), tier = value.optString("tier", "Regular"),
                         lifetimeSpent = value.optDouble("lifetimeSpent", 0.0),
                         updatedAt = value.optLong("updatedAt", System.currentTimeMillis()),
                         isActive = value.optBoolean("isActive", true)
@@ -3129,7 +3140,7 @@ class DataRepository(
                         lifetimeSpent = value.optDouble("lifetimeSpent", 0.0),
                         totalDue = value.optDouble("totalDue", 0.0),
                         loyaltyPoints = value.optInt("loyaltyPoints", 0),
-                        loyaltyTier = value.optString("loyaltyTier", "Silver"),
+                        loyaltyTier = value.optString("loyaltyTier", "Regular"),
                         firstPurchaseDate = value.optLong("firstPurchaseDate").takeIf { value.has("firstPurchaseDate") && !value.isNull("firstPurchaseDate") },
                         lastPurchaseDate = value.optLong("lastPurchaseDate").takeIf { value.has("lastPurchaseDate") && !value.isNull("lastPurchaseDate") },
                         createdAt = value.optLong("createdAt", System.currentTimeMillis()),
@@ -3768,8 +3779,9 @@ class DataRepository(
         val lockUntilElapsed = securityPrefs.getLong("lock_until_elapsed", 0L)
         val nowWall = System.currentTimeMillis()
         val lockUntilWall = securityPrefs.getLong("lock_until", 0L)
+        val remainingLock = loginLockRemainingMillis()
 
-        if (lockUntilElapsed > nowElapsed || lockUntilWall > nowWall) return@withContext null
+        if (remainingLock > 0L) return@withContext null
 
         val all = userDao.getAllUsersOnce()
         val matchingUser = all.firstOrNull { pinMatches(pin, it.pinHash) }
@@ -3796,7 +3808,7 @@ class DataRepository(
                 totalFailures >= 15 -> 5 * 60 * 1000L  // 5 mins
                 totalFailures >= 10 -> 2 * 60 * 1000L  // 2 mins
                 else -> 30 * 1000L                      // 30 secs
-            }
+            }.coerceAtMost(15 * 60 * 1000L)
             editor.putLong("lock_until_elapsed", nowElapsed + lockDurationMs)
                 .putLong("lock_until", nowWall + lockDurationMs)
                 .putInt("failed_attempts", 0)
@@ -3808,12 +3820,24 @@ class DataRepository(
     fun loginLockRemainingMillis(): Long {
         val securityPrefs = context.getSharedPreferences("auth_security", Context.MODE_PRIVATE)
         val lockUntilElapsed = securityPrefs.getLong("lock_until_elapsed", 0L)
-        val nowElapsed = android.os.SystemClock.elapsedRealtime()
-        val remainingElapsed = (lockUntilElapsed - nowElapsed).coerceAtLeast(0L)
-        if (remainingElapsed > 0) return remainingElapsed
+        val lockUntilWall = securityPrefs.getLong("lock_until", 0L)
+        if (lockUntilElapsed == 0L && lockUntilWall == 0L) return 0L
 
-        val lockUntil = securityPrefs.getLong("lock_until", 0L)
-        return (lockUntil - System.currentTimeMillis()).coerceAtLeast(0L)
+        val nowElapsed = android.os.SystemClock.elapsedRealtime()
+        val nowWall = System.currentTimeMillis()
+
+        val remainingElapsed = lockUntilElapsed - nowElapsed
+        val remainingWall = lockUntilWall - nowWall
+        val maxLockMs = 15 * 60 * 1000L
+
+        // If either deadline has passed, or if reboot occurred (remainingElapsed > maxLockMs): treat as expired
+        if (remainingElapsed <= 0L || remainingWall <= 0L || remainingElapsed > maxLockMs) {
+            securityPrefs.edit().remove("lock_until_elapsed").remove("lock_until").apply()
+            return 0L
+        }
+
+        val remaining = minOf(remainingElapsed, remainingWall).coerceAtMost(maxLockMs)
+        return maxOf(0L, remaining)
     }
 
     suspend fun deleteUser(user: User) = withContext(Dispatchers.IO) {

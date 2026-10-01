@@ -495,7 +495,7 @@ data class Customer(
     val lifetimeSpent: Double = 0.0,
     val totalDue: Double = 0.0,
     val loyaltyPoints: Int = 0,
-    val loyaltyTier: String = "Silver",
+    val loyaltyTier: String = "Regular",
     val firstPurchaseDate: Long? = null,
     val lastPurchaseDate: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
@@ -510,7 +510,7 @@ data class CustomerLookupResult(
     val source: String, // "CUSTOMER_DB", "DUE_RECORD", "LOYALTY", "PAST_SALE"
     val dueAmount: Double = 0.0,
     val loyaltyPoints: Int = 0,
-    val tier: String = "Silver",
+    val tier: String = "Regular",
     val tag: String? = null,
     val creditLimit: Double = 0.0,
     val lifetimeSpent: Double = 0.0,

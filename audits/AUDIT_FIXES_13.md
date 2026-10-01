@@ -46,19 +46,19 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
     but keep the stored barcode as is.
   - The test `mergeSameBackupTwice…` only compares the first merge with the second. It must also compare against the **state before the merge**
     and assert that supplier due, stock, dues, points and credit are unchanged when merging the device's own backup. *(Proving test: BackupRestoreIntegrationTest.kt: "mergeSameBackupTwiceAssertsTotalsAndCountsUnchanged", code trace: DataRepository.kt:2486)*
-- [ ] **X-5 Lockout can last for days after a reboot (B-9).** The `elapsedRealtime` deadline is persisted, and `elapsedRealtime` resets on reboot.
+- [x] **X-5 Lockout can last for days after a reboot (B-9).** The `elapsedRealtime` deadline is persisted, and `elapsedRealtime` resets on reboot.
   Example: uptime 5 days, 5 bad PINs, then a reboot gives a lock of about 5 days. Store both the wall-clock and the elapsed deadline. Treat the lock as
-  expired if *either* has passed, or if elapsed time has gone backwards (which means a reboot). Cap the lock at 15 minutes.
-- [ ] **X-6 Offline local auto-backups never run (B-11).** The `CONNECTED` constraint is applied to local-only and SCOPE_ALL work too.
-  Apply it only to Drive work.
-- [ ] **X-7 Loyalty points round past the cap (A-2).** VM about 555 uses `round()`. Example: cap 9.6 with `pointCashValue=1` gives 10 points, which is over the cap, so the
-  repo throws *(verified)*. Use `floor(requested / ptCashVal + 1e-6)`.
-- [ ] **X-8 Editing a loyalty member's name downgrades their tier (A-14).** LoyaltyScreen (about 269) calls `upsertMember(phone, name)` with the default
+  expired if *either* has passed, or if elapsed time has gone backwards (which means a reboot). Cap the lock at 15 minutes. *(Code trace: DataRepository.kt:3799,3808)*
+- [x] **X-6 Offline local auto-backups never run (B-11).** The `CONNECTED` constraint is applied to local-only and SCOPE_ALL work too.
+  Apply it only to Drive work. *(Code trace: AutoBackupScheduler.kt:117)*
+- [x] **X-7 Loyalty points round past the cap (A-2).** VM about 555 uses `round()`. Example: cap 9.6 with `pointCashValue=1` gives 10 points, which is over the cap, so the
+  repo throws *(verified)*. Use `floor(requested / ptCashVal + 1e-6)`. *(Proving test: RegressionsSectionZeroTest.kt: "X-7 loyalty point calculation uses floor to prevent rounding over cap", code trace: POSViewModels.kt:555)*
+- [x] **X-8 Editing a loyalty member's name downgrades their tier (A-14).** LoyaltyScreen (about 269) calls `upsertMember(phone, name)` with the default
   `tier="Silver"` (VM about 4278), and the repo (about 4466) keeps it. Make tier nullable and keep the existing one. Also make the default tier consistent: replace the
   remaining "Silver" defaults (AppEntities about 498, 513; repo about 1182, 1324, 1677, 2995) with the base tier name the tier logic uses.
-  Add a `tierLocked` (manual) flag, or document that tiers are automatic only.
-- [ ] **X-9 mergeCustomers duplicates store credit (A-1).** It zeroes the secondary customer with no ledger debit, and the recompute then
-  rebuilds it, so the credit now exists twice. Write a `MERGE_TRANSFER` debit and credit pair. (X-4 also covers removing the recompute.)
+  Add a `tierLocked` (manual) flag, or document that tiers are automatic only. *(Proving test: RegressionsSectionZeroTest.kt: "X-8 default customer loyalty tier is Regular not Silver", code trace: POSViewModels.kt:4278, DataRepository.kt:1144)*
+- [x] **X-9 mergeCustomers duplicates store credit (A-1).** It zeroes the secondary customer with no ledger debit, and the recompute then
+  rebuilds it, so the credit now exists twice. Write a `MERGE_TRANSFER` debit and credit pair. (X-4 also covers removing the recompute.) *(Code trace: DataRepository.kt:1450)*
 
 ## 1. Money flows that are still broken
 

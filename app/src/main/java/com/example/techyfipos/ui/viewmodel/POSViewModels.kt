@@ -552,7 +552,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val maxAllowedBillDiscount = payableBeforeLoyalty * maxAllowedBillPercent
         val maxPossibleDiscount = minOf(maxDiscountFromPoints, maxAllowedBillDiscount)
         val requestedDiscount = discount.takeIf(Double::isFinite)?.coerceIn(0.0, maxPossibleDiscount) ?: 0.0
-        val rawPoints = kotlin.math.round(requestedDiscount / ptCashVal).toInt()
+        val rawPoints = kotlin.math.floor(requestedDiscount / ptCashVal + 1e-6).toInt()
         val pointsToRedeem = if (rawPoints >= settings.minRedeemPoints) rawPoints.coerceIn(0, availablePoints) else 0
         _loyaltyDiscount.value = pointsToRedeem * ptCashVal
     }
@@ -4275,13 +4275,15 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun upsertMember(phone: String, name: String, tier: String = "Silver") {
+    fun upsertMember(phone: String, name: String, tier: String? = null) {
         viewModelScope.launch(Dispatchers.IO) {
+            val existing = repository.getLoyaltyByPhone(phone)
+            val effectiveTier = tier?.takeIf { it.isNotBlank() } ?: existing?.tier ?: "Regular"
             repository.upsertLoyalty(
                 CustomerLoyalty(
                     phone = phone.trim(),
                     name = name.trim(),
-                    tier = tier
+                    tier = effectiveTier
                 )
             )
         }

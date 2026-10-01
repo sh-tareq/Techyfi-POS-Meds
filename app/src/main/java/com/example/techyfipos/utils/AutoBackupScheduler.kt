@@ -114,9 +114,10 @@ object AutoBackupScheduler {
         respectDueTime: Boolean = false
     ) {
         val workManager = WorkManager.getInstance(context)
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        val constraintsBuilder = Constraints.Builder()
+        if (scope == SCOPE_DRIVE) {
+            constraintsBuilder.setRequiredNetworkType(NetworkType.CONNECTED)
+        }
         val workRequest = OneTimeWorkRequestBuilder<AutoBackupWorker>()
             .setInputData(
                 workDataOf(
@@ -124,7 +125,7 @@ object AutoBackupScheduler {
                     INPUT_RESPECT_DUE_TIME to respectDueTime
                 )
             )
-            .setConstraints(constraints)
+            .setConstraints(constraintsBuilder.build())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
             .build()
         workManager.enqueueUniqueWork(
