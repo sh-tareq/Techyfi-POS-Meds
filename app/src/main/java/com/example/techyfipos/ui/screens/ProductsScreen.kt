@@ -2672,7 +2672,7 @@ fun ProductsScreen(
                 showAddDialog = false
                 scannedNewBarcodeForDialog = null
             },
-            onSave = { name, barcode, cat, pPrice, sPrice, mrp, disc, qty, reorder, imageUri, mfgType, mfgDate, expDate, unit, wPrice, reason, note ->
+            onSave = { name, barcode, cat, pPrice, sPrice, mrp, disc, qty, reorder, imageUri, mfgType, mfgDate, expDate, unit, wPrice, reason, note, onResult ->
                 scope.launch {
                     val p = Product(
                         barcode = barcode,
@@ -2717,6 +2717,7 @@ fun ProductsScreen(
                             duration = SnackbarDuration.Short
                         )
                     } else {
+                        onResult?.invoke(false)
                         Toast.makeText(
                             context,
                             context.getString(R.string.products_barcode_already_exists),
@@ -2761,7 +2762,7 @@ fun ProductsScreen(
                 selectedProductForEdit = null
                 scannedNewBarcodeForDialog = null
             },
-            onSave = { name, barcode, cat, pPrice, sPrice, mrp, disc, qty, reorder, imageUri, mfgType, mfgDate, expDate, unit, wPrice, reason, note ->
+            onSave = { name, barcode, cat, pPrice, sPrice, mrp, disc, qty, reorder, imageUri, mfgType, mfgDate, expDate, unit, wPrice, reason, note, onResult ->
                 val prevStock = prod.stockQty
                 val diff = qty - prevStock
                 val p = Product(
@@ -2801,6 +2802,7 @@ fun ProductsScreen(
                             snackbarHostState.showSnackbar(context.getString(R.string.products_updated_successfully, p.name), duration = SnackbarDuration.Short)
                         }
                         .onFailure { error ->
+                            onResult?.invoke(false)
                             val message = error.message ?: context.getString(R.string.products_unable_to_update)
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Long)

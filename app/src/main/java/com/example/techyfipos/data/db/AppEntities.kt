@@ -167,7 +167,7 @@ data class CustomerLoyalty(
     @PrimaryKey val phone: String,
     val name: String,
     val pointsBalance: Int = 0,
-    val tier: String = "Silver",
+    val tier: String = "Regular",
     val lifetimeSpent: Double = 0.0,
     val updatedAt: Long = System.currentTimeMillis(),
     val isActive: Boolean = true

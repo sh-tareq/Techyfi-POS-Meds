@@ -1081,7 +1081,7 @@ class DataRepository(
                         updatedLoyalty.lifetimeSpent >= loyaltySettings.silverSpendThreshold -> "Silver"
                         else -> "Regular"
                     }
-                    if (!updatedLoyalty.tier.equals(newTier, ignoreCase = true)) {
+                    if (getTierRank(newTier) > getTierRank(updatedLoyalty.tier)) {
                         customerLoyaltyDao.upsertLoyalty(updatedLoyalty.copy(tier = newTier, updatedAt = timestamp))
                     }
                 }
@@ -2637,6 +2637,9 @@ class DataRepository(
                     val backupReturnId = value.optLong("id", 0L)
                     val backupSaleId = value.getLong("saleId")
                     val resolvedSaleId = if (mode == BackupImportMode.MERGE) (saleIdMap[backupSaleId] ?: 0L) else backupSaleId
+                    if (mode == BackupImportMode.MERGE && (resolvedSaleId == 0L)) {
+                        continue // Skip orphan return whose parent sale is missing
+                    }
                     val newReturnId = returnDao.insertReturn(Return(
                         id = if (mode == BackupImportMode.MERGE) 0L else backupReturnId, saleId = resolvedSaleId,
                         timestamp = value.optLong("timestamp", System.currentTimeMillis()),
@@ -2659,7 +2662,10 @@ class DataRepository(
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
                     val backupReturnId = value.getLong("returnId")
-                    val resolvedReturnId = if (mode == BackupImportMode.MERGE) returnIdMap[backupReturnId] ?: backupReturnId else backupReturnId
+                    val resolvedReturnId = if (mode == BackupImportMode.MERGE) returnIdMap[backupReturnId] else backupReturnId
+                    if (resolvedReturnId == null || resolvedReturnId == 0L) {
+                        continue // Skip orphan return item whose parent return was skipped or missing
+                    }
                     records += ReturnItem(
                         id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), returnId = resolvedReturnId,
                         productBarcode = value.optString("productBarcode"), productName = value.optString("productName"),
@@ -4193,5 +4199,12 @@ class DataRepository(
         val snapshots = dir.listFiles { file -> file.name.startsWith("pre_restore_portable_") }
             ?.sortedByDescending { it.lastModified() }.orEmpty()
         snapshots.drop(3).forEach { it.delete() }
+    }
+
+    private fun getTierRank(tier: String?): Int = when (tier?.lowercase(java.util.Locale.ROOT)) {
+        "platinum" -> 3
+        "gold" -> 2
+        "silver" -> 1
+        else -> 0
     }
 }

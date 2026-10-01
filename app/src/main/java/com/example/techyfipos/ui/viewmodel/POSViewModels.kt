@@ -579,41 +579,70 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
      * Returns the number of lines that couldn't be re-added.
      */
     suspend fun loadFromPastSale(saleWithItems: SaleWithItems, replaceCart: Boolean): Int {
-        if (replaceCart) clearCart()
         var skipped = 0
-        for (item in saleWithItems.items) {
-            val product = repository.getProductByBarcode(item.productBarcode)
-            val cartProduct = product?.copy(sellingPrice = item.price) ?: Product(
-                barcode = item.productBarcode.takeIf(::isSyntheticSaleBarcode)
-                    ?: "ADHOC-REPLAY-${saleWithItems.sale.id}-${item.id}",
-                name = item.productName,
-                category = "Historical sale",
-                purchasePrice = item.purchasePriceAtSale ?: fallbackPurchasePrice(item.productBarcode, item.price),
-                sellingPrice = item.price,
-                stockQty = item.quantity,
-                reorderLevel = 0,
-                unit = "Pcs",
-                wholesalePrice = item.price,
-                mrpPrice = item.price,
-                discountedPrice = item.price
-            )
-            addToCart(cartProduct, item.quantity)
-            if (_cartItems.value.none { it.product.barcode == cartProduct.barcode }) skipped++
-        }
-        val sale = saleWithItems.sale
-        _customerName.value = sale.customerName ?: ""
-        _customerPhone.value = sale.customerPhone ?: ""
-        _paymentMethod.value = sale.paymentMethod.takeIf { it != "Split" } ?: "Cash"
-        if (sale.discountAmount > 0.0) {
-            _discountAmount.value = sale.discountAmount
-            _isPercentageDiscount.value = sale.isPercentageDiscount ?: false
-        }
-        val hasWholesaleItems = saleWithItems.items.any { item ->
-            val prod = repository.getProductByBarcode(item.productBarcode)
-            prod != null && prod.wholesalePrice > 0.0 && kotlin.math.abs(item.price - prod.wholesalePrice) < 0.01 && kotlin.math.abs(item.price - prod.sellingPrice) > 0.01
-        }
-        if (hasWholesaleItems) {
-            setPriceMode(PriceMode.WHOLESALE)
+        if (replaceCart) {
+            clearCart()
+            for (item in saleWithItems.items) {
+                val product = repository.getProductByBarcode(item.productBarcode)
+                val cartProduct = product?.copy(sellingPrice = item.price) ?: Product(
+                    barcode = item.productBarcode.takeIf(::isSyntheticSaleBarcode)
+                        ?: "ADHOC-REPLAY-${saleWithItems.sale.id}-${item.id}",
+                    name = item.productName,
+                    category = "Historical sale",
+                    purchasePrice = item.purchasePriceAtSale ?: fallbackPurchasePrice(item.productBarcode, item.price),
+                    sellingPrice = item.price,
+                    stockQty = item.quantity,
+                    reorderLevel = 0,
+                    unit = "Pcs",
+                    wholesalePrice = item.price,
+                    mrpPrice = item.price,
+                    discountedPrice = item.price
+                )
+                addToCart(cartProduct, item.quantity)
+                if (_cartItems.value.none { it.product.barcode == cartProduct.barcode }) skipped++
+            }
+            val sale = saleWithItems.sale
+            _customerName.value = sale.customerName ?: ""
+            _customerPhone.value = sale.customerPhone ?: ""
+            _paymentMethod.value = sale.paymentMethod.takeIf { it != "Split" } ?: "Cash"
+            if (sale.discountAmount > 0.0) {
+                _discountAmount.value = sale.discountAmount
+                _isPercentageDiscount.value = sale.isPercentageDiscount ?: false
+            }
+            val hasWholesaleItems = saleWithItems.items.any { item ->
+                val prod = repository.getProductByBarcode(item.productBarcode)
+                prod != null && prod.wholesalePrice > 0.0 && kotlin.math.abs(item.price - prod.wholesalePrice) < 0.01 && kotlin.math.abs(item.price - prod.sellingPrice) > 0.01
+            }
+            if (hasWholesaleItems) {
+                setPriceMode(PriceMode.WHOLESALE)
+            }
+        } else {
+            // Add to Cart Again: use current catalog products and prices; don't overwrite cart discount or price mode
+            for (item in saleWithItems.items) {
+                val product = repository.getProductByBarcode(item.productBarcode) ?: Product(
+                    barcode = item.productBarcode.takeIf(::isSyntheticSaleBarcode)
+                        ?: "ADHOC-REPLAY-${saleWithItems.sale.id}-${item.id}",
+                    name = item.productName,
+                    category = "Historical sale",
+                    purchasePrice = item.purchasePriceAtSale ?: fallbackPurchasePrice(item.productBarcode, item.price),
+                    sellingPrice = item.price,
+                    stockQty = item.quantity,
+                    reorderLevel = 0,
+                    unit = "Pcs",
+                    wholesalePrice = item.price,
+                    mrpPrice = item.price,
+                    discountedPrice = item.price
+                )
+                addToCart(product, item.quantity)
+                if (_cartItems.value.none { it.product.barcode == product.barcode }) skipped++
+            }
+            val sale = saleWithItems.sale
+            if (_customerName.value.isBlank() && !sale.customerName.isNullOrBlank()) {
+                _customerName.value = sale.customerName
+            }
+            if (_customerPhone.value.isBlank() && !sale.customerPhone.isNullOrBlank()) {
+                _customerPhone.value = sale.customerPhone
+            }
         }
         return skipped
     }
@@ -724,23 +753,24 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             note = note?.takeIf { it.isNotBlank() }
         )
 
+        _cartItems.value = emptyList()
+        _discountAmount.value = 0.0
+        _isPercentageDiscount.value = false
+        _customerName.value = ""
+        _customerPhone.value = ""
+        _walletPhone.value = ""
+        _cardLastFour.value = ""
+        _amountPaid.value = 0.0
+        _isSplitPayment.value = false
+        _splitPayments.value = emptyList()
+        _priceMode.value = PriceMode.DISCOUNTED
+        _loyaltyDiscount.value = 0.0
+        _loyaltyCustomer.value = null
+        _storeCreditApplied.value = 0.0
+        _redeemedVoucher.value = null
+
         viewModelScope.launch(Dispatchers.IO) {
             repository.insertHeldCart(heldCart)
-            _cartItems.value = emptyList()
-            _discountAmount.value = 0.0
-            _isPercentageDiscount.value = false
-            _customerName.value = ""
-            _customerPhone.value = ""
-            _walletPhone.value = ""
-            _cardLastFour.value = ""
-            _amountPaid.value = 0.0
-            _isSplitPayment.value = false
-            _splitPayments.value = emptyList()
-            _priceMode.value = PriceMode.DISCOUNTED
-            _loyaltyDiscount.value = 0.0
-            _loyaltyCustomer.value = null
-            _storeCreditApplied.value = 0.0
-            _redeemedVoucher.value = null
             persistCartSnapshot(emptyList())
         }
     }
@@ -751,7 +781,10 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (_cartItems.value.isNotEmpty()) {
-                    holdCurrentCart(title = "Auto-saved cart", note = "Auto-saved before resuming held cart")
+                    val ctx = repository.appContext
+                    val autoSavedTitle = ctx.getString(R.string.held_cart_auto_saved_title)
+                    val autoSavedNote = ctx.getString(R.string.held_cart_auto_saved_note)
+                    holdCurrentCart(title = autoSavedTitle, note = autoSavedNote)
                 }
                 val payload = decodeHeldCartPayload(heldCart.itemsJson)
                 val restored = mutableListOf<CartItem>()

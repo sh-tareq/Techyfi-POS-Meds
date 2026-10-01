@@ -106,7 +106,8 @@ fun AddEditProductDialog(
         unit: String,
         wholesalePrice: Double,
         adjustmentReason: String?,
-        adjustmentNote: String?
+        adjustmentNote: String?,
+        onResult: ((Boolean) -> Unit)?
     ) -> Unit,
     onDelete: (() -> Unit)? = null,
     onCategoryRenamed: suspend (oldName: String, newName: String) -> Unit = { _, _ -> },
@@ -271,7 +272,8 @@ fun AddEditProductDialog(
                     name, finalBarcode, category, pPrice, effectiveSelling, effectiveMrp,
                     effectiveDisc, qty, reorder, imageUri, mfgOrPkgType, mfgOrPkgDate,
                     expiryDate, unit, wPrice, editStockReason.takeIf { isEdit },
-                    editStockNote.trim().takeIf { isEdit && it.isNotBlank() }
+                    editStockNote.trim().takeIf { isEdit && it.isNotBlank() },
+                    { success -> if (!success) isSaving = false }
                 )
             }
         }
@@ -1687,11 +1689,13 @@ fun AddEditProductDialog(
                             candidate
                         }
                         isError = false
+                        isSaving = true
                         onSave(
                             name, finalBarcode, category, pPrice, effectiveSelling, effectiveMrp,
                             effectiveDisc, qty, reorder, imageUri, mfgOrPkgType, mfgOrPkgDate,
                             expiryDate, unit, wPrice, editStockReason.takeIf { isEdit },
-                            editStockNote.trim().takeIf { isEdit && it.isNotBlank() }
+                            editStockNote.trim().takeIf { isEdit && it.isNotBlank() },
+                            { success -> if (!success) isSaving = false }
                         )
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))

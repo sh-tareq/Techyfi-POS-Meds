@@ -151,6 +151,26 @@ fun ScannerScreen(
     var lastScannedProduct by remember { mutableStateOf<Product?>(null) }
     val latestScanningPaused by rememberUpdatedState(scanningPaused)
     
+    val canVoidCart = isOwner || isSupervisor
+    val canRemoveItem = isOwner || isSupervisor
+    var showClearCartConfirm by remember { mutableStateOf(false) }
+    var itemToRemoveConfirm by remember { mutableStateOf<Product?>(null) }
+
+    val handleClearCartRequest = {
+        if (canVoidCart) {
+            showClearCartConfirm = true
+        } else {
+            Toast.makeText(context, context.getString(R.string.permission_required_void_cart), Toast.LENGTH_SHORT).show()
+        }
+    }
+    val handleRemoveItemRequest: (Product) -> Unit = { product ->
+        if (canRemoveItem) {
+            itemToRemoveConfirm = product
+        } else {
+            Toast.makeText(context, context.getString(R.string.permission_required_remove_item), Toast.LENGTH_SHORT).show()
+        }
+    }
+
     // Snackbar states
     val snackbarHostState = remember { SnackbarHostState() }
     
@@ -244,6 +264,8 @@ fun ScannerScreen(
                 grandTotal = grandTotal,
                 allowNegativeInventory = allowNegativeInventory,
                 onNavigateToCart = onNavigateToCart,
+                onClearCartRequested = handleClearCartRequest,
+                onRemoveItemRequested = handleRemoveItemRequest,
                 modifier = Modifier.fillMaxSize()
             )
             SnackbarHost(
@@ -491,7 +513,7 @@ fun ScannerScreen(
                     onQuantityChanged = { prod, qty ->
                         cartViewModel.setQuantity(prod, qty, allowNegative = allowNegativeInventory)
                     },
-                    onRemove = { prod -> cartViewModel.removeFromCart(prod) },
+                    onRemove = { prod -> handleRemoveItemRequest(prod) },
                     onDismiss = { showCartPreview = false },
                     onHoldCart = {
                         cartViewModel.holdCurrentCart()
@@ -521,6 +543,48 @@ fun ScannerScreen(
                         cartViewModel.deleteHeldCart(cartId)
                     },
                     onDismiss = { showHeldCartsSheet = false }
+                )
+            }
+
+            if (showClearCartConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showClearCartConfirm = false },
+                    title = { Text(stringResource(R.string.clear_cart_dialog_title)) },
+                    text = { Text(stringResource(R.string.clear_cart_dialog_message)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            cartViewModel.clearCart()
+                            showClearCartConfirm = false
+                        }) {
+                            Text(stringResource(R.string.confirm), color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearCartConfirm = false }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                )
+            }
+
+            itemToRemoveConfirm?.let { product ->
+                AlertDialog(
+                    onDismissRequest = { itemToRemoveConfirm = null },
+                    title = { Text(stringResource(R.string.remove_item_confirm_title)) },
+                    text = { Text(stringResource(R.string.remove_item_confirm_message_fmt, product.name)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            cartViewModel.removeFromCart(product)
+                            itemToRemoveConfirm = null
+                        }) {
+                            Text(stringResource(R.string.cd_remove), color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { itemToRemoveConfirm = null }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
                 )
             }
         }
@@ -797,6 +861,8 @@ private fun TabletSplitTerminal(
     grandTotal: Double,
     allowNegativeInventory: Boolean = false,
     onNavigateToCart: () -> Unit,
+    onClearCartRequested: () -> Unit,
+    onRemoveItemRequested: (com.example.techyfipos.data.db.Product) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -809,8 +875,6 @@ private fun TabletSplitTerminal(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     var showCameraPIP by remember { mutableStateOf(false) }
-    var showClearCartConfirm by remember { mutableStateOf(false) }
-    var itemToRemoveConfirm by remember { mutableStateOf<com.example.techyfipos.data.db.Product?>(null) }
 
 
     val categories = remember(allProducts) {
@@ -1105,7 +1169,7 @@ private fun TabletSplitTerminal(
                                 }
 
                                  Surface(
-                                    onClick = { showClearCartConfirm = true },
+                                    onClick = onClearCartRequested,
                                     shape = RoundedCornerShape(8.dp),
                                     color = TabletTerminalColors.CardBg,
                                     border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
@@ -1137,7 +1201,7 @@ private fun TabletSplitTerminal(
                                         cartViewModel.setQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
                                     },
                                     onRemove = {
-                                        itemToRemoveConfirm = item.product
+                                        onRemoveItemRequested(item.product)
                                     }
                                 )
                             }
@@ -1438,7 +1502,7 @@ private fun TabletSplitTerminal(
                             }
 
                             Surface(
-                                onClick = { showClearCartConfirm = true },
+                                onClick = onClearCartRequested,
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(48.dp),
@@ -1483,7 +1547,7 @@ private fun TabletSplitTerminal(
                                         cartViewModel.setQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
                                     },
                                     onRemove = {
-                                        itemToRemoveConfirm = item.product
+                                        onRemoveItemRequested(item.product)
                                     }
                                 )
                             }
@@ -1501,47 +1565,6 @@ private fun TabletSplitTerminal(
                     onNavigateToCart = onNavigateToCart
                 )
             }
-    if (showClearCartConfirm) {
-        AlertDialog(
-            onDismissRequest = { showClearCartConfirm = false },
-            title = { Text(stringResource(R.string.clear_cart_dialog_title)) },
-            text = { Text(stringResource(R.string.clear_cart_dialog_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    cartViewModel.clearCart()
-                    showClearCartConfirm = false
-                }) {
-                    Text(stringResource(R.string.confirm), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearCartConfirm = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    itemToRemoveConfirm?.let { product ->
-        AlertDialog(
-            onDismissRequest = { itemToRemoveConfirm = null },
-            title = { Text(stringResource(R.string.remove_item_confirm_title)) },
-            text = { Text(stringResource(R.string.remove_item_confirm_message_fmt, product.name)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    cartViewModel.removeFromCart(product)
-                    itemToRemoveConfirm = null
-                }) {
-                    Text(stringResource(R.string.cd_remove), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { itemToRemoveConfirm = null }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
 }
 }
 }

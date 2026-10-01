@@ -179,6 +179,8 @@
     <string name="held_cart_held_toast">⏸️ \'%1$s\'-এর জন্য কার্ট হোল্ড করা হয়েছে!</string>
     <string name="held_cart_restored_toast">%1$s-এর কার্ট পুনরুদ্ধার করা হয়েছে</string>
     <string name="held_cart_fallback_title">কার্ট #%1$d</string>
+    <string name="held_cart_auto_saved_title">স্বয়ংক্রিয় সংরক্ষিত কার্ট</string>
+    <string name="held_cart_auto_saved_note">হোল্ড করা কার্ট পুনরুদ্ধারের আগে স্বয়ংক্রিয় সংরক্ষিত</string>
 
     <!-- Shared content descriptions -->
     <string name="cd_back">পেছনে যান</string>

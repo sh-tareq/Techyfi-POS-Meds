@@ -179,6 +179,8 @@
     <string name="held_cart_held_toast">⏸️ Cart held for \'%1$s\'!</string>
     <string name="held_cart_restored_toast">Restored cart for %1$s</string>
     <string name="held_cart_fallback_title">Cart #%1$d</string>
+    <string name="held_cart_auto_saved_title">Auto-saved cart</string>
+    <string name="held_cart_auto_saved_note">Auto-saved before resuming held cart</string>
 
     <!-- Shared content descriptions -->
     <string name="cd_back">Back</string>
