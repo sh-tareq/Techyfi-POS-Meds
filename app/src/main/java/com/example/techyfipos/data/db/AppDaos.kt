@@ -11,7 +11,8 @@ interface ProductDao {
     @Query("SELECT * FROM products ORDER BY name ASC")
     suspend fun getAllProductsList(): List<Product>
 
-    @Query("SELECT * FROM products WHERE LOWER(barcode) = LOWER(:barcode) LIMIT 1")
+    // Repository contract: barcodes must be lowercased before passing to the DAO.
+    @Query("SELECT * FROM products WHERE barcode = :barcode LIMIT 1")
     suspend fun getProductByBarcode(barcode: String): Product?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -29,11 +30,11 @@ interface ProductDao {
             WHEN :allowNegative = 1 THEN (stockQty + :delta) 
             ELSE MAX(0.0, stockQty + :delta) 
         END 
-        WHERE barcode = :barcode COLLATE NOCASE
+        WHERE barcode = :barcode
     """)
     suspend fun adjustStockQty(barcode: String, delta: Double, allowNegative: Boolean = false)
 
-    @Query("UPDATE products SET stockQty = stockQty - :quantity WHERE barcode = :barcode COLLATE NOCASE AND stockQty >= :quantity")
+    @Query("UPDATE products SET stockQty = stockQty - :quantity WHERE barcode = :barcode AND stockQty >= :quantity")
     suspend fun decrementStockIfAvailable(barcode: String, quantity: Double): Int
 
     @Delete
@@ -67,10 +68,10 @@ data class SaleWithItems(
 
 @Dao
 interface SaleDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertSale(sale: Sale): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertSaleItems(items: List<SaleItem>)
 
     @Transaction
@@ -88,7 +89,7 @@ interface SaleDao {
     @Query("SELECT * FROM sales ORDER BY timestamp DESC")
     fun getAllSales(): Flow<List<Sale>>
 
-    @Query("SELECT * FROM sales")
+    @Query("SELECT * FROM sales ORDER BY timestamp DESC")
     suspend fun getAllSalesOnce(): List<Sale>
 
     @Query("SELECT * FROM sales ORDER BY timestamp DESC LIMIT :limit OFFSET :offset")
@@ -112,8 +113,8 @@ interface SaleDao {
     @Query("SELECT customerName FROM sales WHERE customerPhone = :phone AND customerName IS NOT NULL AND TRIM(customerName) != '' ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLatestCustomerNameByPhone(phone: String): String?
 
-    @Query("SELECT DISTINCT customerPhone, customerName FROM sales WHERE customerPhone IS NOT NULL AND TRIM(customerPhone) != '' ORDER BY timestamp DESC")
-    suspend fun getAllPastCustomerContacts(): List<CustomerContactInfo>
+    @Query("SELECT DISTINCT customerPhone, customerName FROM sales WHERE (customerName LIKE :q OR customerPhone LIKE :q) AND customerPhone IS NOT NULL AND TRIM(customerPhone) != '' LIMIT 5")
+    suspend fun searchPastCustomerContacts(q: String): List<CustomerContactInfo>
 
     @Query("SELECT * FROM sales WHERE customerPhone = :phone ORDER BY timestamp DESC")
     fun getSalesForCustomer(phone: String): Flow<List<Sale>>
@@ -130,18 +131,18 @@ interface SaleDao {
     suspend fun reassignCustomerForSales(oldPhone: String, newPhone: String, newName: String): Int
 
     @Query("""
-        SELECT si.productBarcode AS barcode, si.productName AS name, 
+        SELECT si.productBarcode AS barcode, MAX(si.productName) AS name, 
                SUM(si.quantity) AS totalQty, 
                SUM(si.price * si.quantity) AS totalSpent, 
                COUNT(si.id) AS purchaseCount 
         FROM sale_items si 
         INNER JOIN sales s ON si.saleId = s.id 
         WHERE s.customerPhone = :phone 
-        GROUP BY si.productBarcode, si.productName 
+        GROUP BY si.productBarcode 
         ORDER BY totalQty DESC, totalSpent DESC 
         LIMIT :limit
     """)
-    suspend fun getTopProductsForCustomer(phone: String, limit: Int = 10): List<CustomerProductPurchaseSummary>
+    suspend fun getTopProductsForCustomer(phone: String, limit: Int = 25): List<CustomerProductPurchaseSummary>
 }
 
 @Dao
@@ -158,6 +159,9 @@ interface CustomerDueDao {
     @Query("SELECT * FROM customer_dues WHERE customerPhone = :phone LIMIT 1")
     suspend fun getCustomerDueByPhone(phone: String): CustomerDue?
 
+    @Query("SELECT * FROM customer_dues WHERE customerPhone IN (:phones)")
+    suspend fun getCustomerDuesByPhones(phones: List<String>): List<CustomerDue>
+
     @Query("SELECT * FROM customer_dues WHERE customerPhone = :phone AND isArchived = 0 LIMIT 1")
     suspend fun getActiveCustomerDueByPhone(phone: String): CustomerDue?
 
@@ -173,7 +177,7 @@ interface CustomerDueDao {
     @Query("SELECT * FROM due_payments")
     fun getAllDuePayments(): Flow<List<DuePayment>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertDuePayment(payment: DuePayment)
 
     // Used only by the duplicate-ledger repair tool to move a stale (unnormalized-phone) row's
@@ -289,7 +293,7 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE (role = 'OWNER' OR role = 'MANAGER') AND isActive = 1")
     suspend fun getActiveSupervisors(): List<User>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertUser(user: User): Long
 
     @Query("UPDATE users SET pinHash = :pinHash WHERE id = :userId")
@@ -487,6 +491,9 @@ interface CustomerLoyaltyDao {
     @Query("SELECT * FROM customer_loyalty WHERE phone = :phone LIMIT 1")
     suspend fun getLoyaltyByPhone(phone: String): CustomerLoyalty?
 
+    @Query("SELECT * FROM customer_loyalty WHERE phone IN (:phones)")
+    suspend fun getLoyaltyByPhones(phones: List<String>): List<CustomerLoyalty>
+
     @Upsert
     suspend fun upsertLoyalty(loyalty: CustomerLoyalty)
 
@@ -510,9 +517,6 @@ interface CustomerLoyaltyDao {
 
     @Delete
     suspend fun deleteLoyalty(loyalty: CustomerLoyalty)
-
-    @Query("DELETE FROM customer_loyalty WHERE phone = :phone")
-    suspend fun deleteLoyaltyByPhone(phone: String)
 }
 
 @Dao
@@ -571,7 +575,7 @@ interface DueReminderLogDao {
     @Query("SELECT * FROM due_reminder_logs WHERE customerPhone = :phone ORDER BY timestamp DESC")
     fun getLogsForCustomer(phone: String): Flow<List<DueReminderLog>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertLog(log: DueReminderLog): Long
 
     @Query("DELETE FROM due_reminder_logs WHERE id = :id")
@@ -694,7 +698,7 @@ interface ExpenseAuditLogDao {
 
 @Dao
 interface StoreCreditVoucherDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertVoucher(voucher: StoreCreditVoucher): Long
 
     @Query("SELECT * FROM store_credit_vouchers WHERE code = :code LIMIT 1")

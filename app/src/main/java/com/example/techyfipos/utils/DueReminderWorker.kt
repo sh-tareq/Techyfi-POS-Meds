@@ -12,7 +12,6 @@ class DueReminderWorker(
     companion object {
         const val TAG = "DueReminderWorker"
         const val CHANNEL_ID = DueReminderScheduler.CHANNEL_ID
-        const val CHANNEL_NAME = DueReminderScheduler.CHANNEL_NAME
 
         const val KEY_CUSTOMER_NAME = "customer_name"
         const val KEY_CUSTOMER_PHONE = "customer_phone"

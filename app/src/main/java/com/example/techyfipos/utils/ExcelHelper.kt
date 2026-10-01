@@ -11,6 +11,7 @@ import com.example.techyfipos.data.db.SaleWithItems
 import com.example.techyfipos.data.db.Return
 import com.example.techyfipos.data.db.ReturnItem
 import com.example.techyfipos.data.db.ScheduledDueReminder
+import com.example.techyfipos.data.db.Supplier
 import com.example.techyfipos.ui.viewmodel.calculateDiscountValue
 import org.apache.poi.ss.usermodel.*
 import org.apache.poi.xssf.streaming.SXSSFWorkbook
@@ -1177,6 +1178,87 @@ object ExcelHelper {
         summaryRow.getCell(5).setCellValue(totalOrdersSum.toDouble())
         summaryRow.getCell(6).setCellValue(totalLifetimeSpendSum)
         summaryRow.getCell(7).setCellValue(totalDuesSum)
+
+            workbook.write(outputStream)
+        } finally {
+            try { workbook.dispose() } catch (_: Exception) {}
+            try { workbook.close() } catch (_: Exception) {}
+            try { outputStream.close() } catch (_: Exception) {}
+        }
+    }
+
+    fun exportSuppliers(suppliersList: List<Supplier>, outputStream: OutputStream) {
+        val workbook = SXSSFWorkbook(100)
+        try {
+            val sheet = workbook.createSheet("Suppliers Directory")
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+
+            val headerFont = workbook.createFont().apply {
+                bold = true
+                color = IndexedColors.WHITE.getIndex()
+            }
+            val headerStyle = workbook.createCellStyle().apply {
+                fillForegroundColor = IndexedColors.DARK_BLUE.getIndex()
+                setFillPattern(FillPatternType.SOLID_FOREGROUND)
+                setFont(headerFont)
+            }
+
+            val summaryFont = workbook.createFont().apply {
+                bold = true
+            }
+            val summaryStyle = workbook.createCellStyle().apply {
+                setFont(summaryFont)
+                fillForegroundColor = IndexedColors.GREY_25_PERCENT.getIndex()
+                setFillPattern(FillPatternType.SOLID_FOREGROUND)
+            }
+
+            val headers = arrayOf(
+                "Supplier ID",
+                "Company Name",
+                "Contact Person",
+                "Phone Number",
+                "Address",
+                "Total Purchased",
+                "Total Due",
+                "Notes",
+                "Last Updated"
+            )
+            val headerRow = sheet.createRow(0)
+            for (i in headers.indices) {
+                val cell = headerRow.createCell(i)
+                cell.setCellValue(headers[i])
+                cell.cellStyle = headerStyle
+                sheet.setColumnWidth(i, 20 * 256)
+            }
+
+            var rowIdx = 1
+            var totalPurchasedSum = 0.0
+            var totalDuesSum = 0.0
+
+            for (s in suppliersList) {
+                val row = sheet.createRow(rowIdx++)
+                row.createCell(0).setCellValue(s.id.toDouble())
+                row.createCell(1).setCellValue(s.companyName)
+                row.createCell(2).setCellValue(s.name)
+                row.createCell(3).setCellValue(s.phone)
+                row.createCell(4).setCellValue(s.address ?: "")
+                row.createCell(5).setCellValue(s.totalPurchased)
+                row.createCell(6).setCellValue(s.totalDue)
+                row.createCell(7).setCellValue(s.notes ?: "")
+                row.createCell(8).setCellValue(if (s.updatedAt > 0) dateFormat.format(Date(s.updatedAt)) else "")
+
+                totalPurchasedSum += s.totalPurchased
+                totalDuesSum += s.totalDue
+            }
+
+            rowIdx++
+            val summaryRow = sheet.createRow(rowIdx)
+            for (i in headers.indices) {
+                summaryRow.createCell(i).cellStyle = summaryStyle
+            }
+            summaryRow.getCell(0).setCellValue("TOTAL SUMMARY")
+            summaryRow.getCell(5).setCellValue(totalPurchasedSum)
+            summaryRow.getCell(6).setCellValue(totalDuesSum)
 
             workbook.write(outputStream)
         } finally {

@@ -71,7 +71,8 @@ internal fun buildBackwardCompatibleSaleItem(
     price: Double?,
     quantity: Double?,
     note: String? = null,
-    purchasePriceAtSale: Double? = null
+    purchasePriceAtSale: Double? = null,
+    taxable: Boolean = true
 ): SaleItem {
     val barcode = toEnglishDigits(productBarcode?.trim().orEmpty())
     return SaleItem(
@@ -81,6 +82,7 @@ internal fun buildBackwardCompatibleSaleItem(
         price = (price ?: 0.0).coerceAtLeast(0.0),
         quantity = (quantity ?: 1.0).coerceAtLeast(0.001),
         note = note?.trim()?.takeIf { it.isNotEmpty() && it != "null" },
-        purchasePriceAtSale = purchasePriceAtSale
+        purchasePriceAtSale = purchasePriceAtSale,
+        taxable = taxable
     )
 }

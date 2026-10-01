@@ -114,7 +114,7 @@ fun ManualQuantityDialog(
                             contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(36.dp),
+                                .height(48.dp),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             val incStr = if (inc % 1.0 == 0.0) "+${inc.toInt()}" else "+$inc"
@@ -149,7 +149,7 @@ fun ManualQuantityDialog(
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(36.dp)
+                                .height(48.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 1.dp)) {
                                 val pNum = if (preset % 1.0 == 0.0) "${preset.toInt()}" else "$preset"
@@ -279,7 +279,7 @@ fun CreditLimitWarningDialog(
                 OutlinedTextField(
                     value = ownerPin,
                     onValueChange = { input ->
-                        ownerPin = input.filter { it.isDigit() }.take(4)
+                        ownerPin = input.filter { it.isDigit() }
                         pinError = false
                     },
                     label = { Text(stringResource(R.string.cart_owner_pin_label)) },
@@ -305,7 +305,7 @@ fun CreditLimitWarningDialog(
                         if (authorized) onAuthorize() else pinError = true
                     }
                 },
-                enabled = ownerPin.length == 4 && !isVerifying,
+                enabled = ownerPin.isNotEmpty() && !isVerifying,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
                 shape = RoundedCornerShape(10.dp)
             ) {
@@ -375,6 +375,12 @@ fun ConfirmDueSaleDialog(
 /**
  * Fix G11: Per-item discount dialog with live line-total calculation and preview.
  */
+private fun editableAmount(value: Double): String = when {
+    value <= 0.0 -> "0"
+    value % 1.0 == 0.0 -> value.toLong().toString()
+    else -> value.toString()
+}
+
 @Composable
 fun CartItemDiscountDialog(
     productName: String,
@@ -385,7 +391,7 @@ fun CartItemDiscountDialog(
     onConfirm: (discountValue: Double, isPercentage: Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var discountText by remember { mutableStateOf(if (initialDiscount > 0.0) initialDiscount.toString() else "") }
+    var discountText by remember { mutableStateOf(editableAmount(initialDiscount)) }
     var isPercentage by remember { mutableStateOf(initialIsPercentage) }
 
     val discountValue = toEnglishDigits(discountText).toDoubleOrNull() ?: 0.0
@@ -457,7 +463,14 @@ fun CartItemDiscountDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(discountValue, isPercentage) }) {
+            val isDiscountValid = if (isPercentage) discountValue in 0.0..100.0 else discountValue in 0.0..originalPrice
+            Button(
+                onClick = {
+                    val safeValue = if (!isPercentage) discountValue.coerceAtMost(originalPrice) else discountValue.coerceAtMost(100.0)
+                    onConfirm(safeValue, isPercentage)
+                },
+                enabled = isDiscountValid
+            ) {
                 Text(stringResource(R.string.confirm))
             }
         },

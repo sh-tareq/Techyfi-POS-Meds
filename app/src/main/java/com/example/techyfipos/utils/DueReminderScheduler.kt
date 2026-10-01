@@ -11,18 +11,16 @@ import android.os.Build
 import android.telephony.SmsManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.work.Data
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.techyfipos.MainActivity
+import com.example.techyfipos.R
 import com.example.techyfipos.data.db.AppDatabase
 import com.example.techyfipos.data.db.DueReminderLog
 import com.example.techyfipos.data.db.ScheduledDueReminder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.util.Calendar
@@ -31,7 +29,11 @@ import java.util.concurrent.TimeUnit
 object DueReminderScheduler {
     private const val TAG = "DueReminderScheduler"
     const val CHANNEL_ID = "due_reminders_channel"
-    const val CHANNEL_NAME = "Due Payment Reminders"
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    fun cancel() {
+        scope.cancel()
+    }
 
     enum class SchedulePreset(val titleBn: String, val titleEn: String) {
         TOMORROW_10AM("আগামীকাল ১০টা", "Tomorrow 10 AM"),
@@ -117,21 +119,16 @@ object DueReminderScheduler {
             isRecurring = isRecurring
         )
 
-        // 2. Schedule WorkManager persistent fallback
-        scheduleWorkManagerReminder(
-            context = context,
-            customerName = customerName,
-            customerPhone = normalizedPhone,
-            dueAmount = dueAmount,
-            messageText = messageText,
-            channel = channel,
-            safeDelay = safeDelay,
-            isRecurring = isRecurring
-        )
+        // 2. Cancel any legacy WorkManager periodic/one-time reminder for this customer so AlarmManager is the sole scheduler
+        try {
+            WorkManager.getInstance(context).cancelUniqueWork("due_reminder_$normalizedPhone")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to cancel legacy WorkManager work: ${e.message}")
+        }
 
         // 3. Persist in database
         val now = System.currentTimeMillis()
-        CoroutineScope(Dispatchers.IO).launch {
+        scope.launch {
             try {
                 AppDatabase.getDatabase(context).scheduledDueReminderDao().upsert(
                     ScheduledDueReminder(
@@ -201,52 +198,6 @@ object DueReminderScheduler {
         }
     }
 
-    private fun scheduleWorkManagerReminder(
-        context: Context,
-        customerName: String,
-        customerPhone: String,
-        dueAmount: Double,
-        messageText: String,
-        channel: String,
-        safeDelay: Long,
-        isRecurring: Boolean
-    ) {
-        val uniqueWorkName = "due_reminder_$customerPhone"
-        val inputData = Data.Builder()
-            .putString(DueReminderWorker.KEY_CUSTOMER_NAME, customerName)
-            .putString(DueReminderWorker.KEY_CUSTOMER_PHONE, customerPhone)
-            .putDouble(DueReminderWorker.KEY_DUE_AMOUNT, dueAmount)
-            .putString(DueReminderWorker.KEY_MESSAGE_TEXT, messageText)
-            .putString(DueReminderWorker.KEY_DELIVERY_CHANNEL, channel)
-            .putBoolean(DueReminderWorker.KEY_IS_RECURRING, isRecurring)
-            .build()
-
-        if (isRecurring) {
-            val periodicRequest = PeriodicWorkRequestBuilder<DueReminderWorker>(
-                DueReminderWorker.RECURRING_INTERVAL_MILLIS, TimeUnit.MILLISECONDS
-            )
-                .setInputData(inputData)
-                .setInitialDelay(safeDelay, TimeUnit.MILLISECONDS)
-                .addTag("due_reminder")
-                .build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                uniqueWorkName,
-                ExistingPeriodicWorkPolicy.UPDATE,
-                periodicRequest
-            )
-        } else {
-            val workRequest = OneTimeWorkRequestBuilder<DueReminderWorker>()
-                .setInputData(inputData)
-                .setInitialDelay(safeDelay, TimeUnit.MILLISECONDS)
-                .addTag("due_reminder")
-                .build()
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                uniqueWorkName,
-                ExistingWorkPolicy.REPLACE,
-                workRequest
-            )
-        }
-    }
 
     fun cancelDueReminder(context: Context, customerPhone: String) {
         val normalizedPhone = normalizePhone(customerPhone)
@@ -279,7 +230,7 @@ object DueReminderScheduler {
         }
 
         // Delete from Room
-        CoroutineScope(Dispatchers.IO).launch {
+        scope.launch {
             try {
                 AppDatabase.getDatabase(context).scheduledDueReminderDao().deleteByPhone(normalizedPhone)
             } catch (e: Exception) {
@@ -293,6 +244,14 @@ object DueReminderScheduler {
         val reminders = AppDatabase.getDatabase(context).scheduledDueReminderDao().getAllOnce()
         val now = System.currentTimeMillis()
         reminders.forEach { reminder ->
+            if (!reminder.isRecurring && reminder.fireAt < now) {
+                try {
+                    AppDatabase.getDatabase(context).scheduledDueReminderDao().deleteByPhone(reminder.customerPhone)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to cleanup expired one-shot reminder: ${e.message}")
+                }
+                return@forEach
+            }
             val remainingDelay = (reminder.fireAt - now).coerceAtLeast(3_000L)
             scheduleDueReminder(
                 context = context,
@@ -479,12 +438,13 @@ object DueReminderScheduler {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelName = context.getString(R.string.due_reminder_channel_name)
             val notificationChannel = NotificationChannel(
                 CHANNEL_ID,
-                CHANNEL_NAME,
+                channelName,
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Automated due collection alerts and WhatsApp/SMS triggers"
+                description = context.getString(R.string.due_reminder_channel_description)
                 enableLights(true)
                 enableVibration(true)
             }
@@ -500,9 +460,10 @@ object DueReminderScheduler {
         val waIntent = Intent(Intent.ACTION_VIEW, waUri).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
+        val baseCode = customerPhone.hashCode() and 0x7FFFFFFF
         val waPendingIntent = PendingIntent.getActivity(
             context,
-            customerPhone.hashCode(),
+            baseCode,
             waIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
@@ -514,18 +475,18 @@ object DueReminderScheduler {
         }
         val appPendingIntent = PendingIntent.getActivity(
             context,
-            0,
+            baseCode + 1,
             appIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
-        val title = "⏰ Due Reminder: $customerName (${formatTaka(dueAmount)})"
+        val title = context.getString(R.string.due_reminder_notification_title, customerName, formatTaka(dueAmount))
         val subtitle = if (smsSentDirectly) {
-            "✅ SMS dispatched automatically. Tap to send via WhatsApp."
+            context.getString(R.string.due_reminder_sms_dispatched_body)
         } else if (channel == "sms") {
-            "Payment reminder due for $customerName. Tap to review."
+            context.getString(R.string.due_reminder_sms_review_body, customerName)
         } else {
-            "Scheduled WhatsApp reminder ready. Tap 'WhatsApp' to send."
+            context.getString(R.string.due_reminder_wa_ready_body)
         }
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
@@ -541,7 +502,7 @@ object DueReminderScheduler {
         if (channel == "wa" || channel == "both") {
             builder.addAction(
                 android.R.drawable.ic_menu_send,
-                "💬 Send WhatsApp",
+                context.getString(R.string.due_reminder_action_send_whatsapp),
                 waPendingIntent
             )
         }

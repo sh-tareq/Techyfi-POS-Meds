@@ -641,7 +641,7 @@ fun ExpenseAnalyticsHeroCard(
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp)
+                            .height(48.dp)
                     ) {
                         Text("➕", fontSize = 12.sp)
                         Spacer(Modifier.width(4.dp))
@@ -662,7 +662,7 @@ fun ExpenseAnalyticsHeroCard(
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp)
+                            .height(48.dp)
                     ) {
                         Text("💵", fontSize = 12.sp)
                         Spacer(Modifier.width(4.dp))
@@ -723,7 +723,7 @@ fun ExpenseRelocationNoticeBanner(
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                modifier = Modifier.height(34.dp)
+                modifier = Modifier.height(48.dp)
             ) {
                 Text(
                     text = stringResource(R.string.expense_view_drawer_btn),

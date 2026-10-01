@@ -33,6 +33,7 @@ import com.example.techyfipos.utils.HardwareBarcodeScanner
 class MainActivity : ComponentActivity() {
   companion object {
     var currentActivity: java.lang.ref.WeakReference<android.app.Activity>? = null
+      private set
     val pendingNavigationDestination = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
   }
 
@@ -86,6 +87,13 @@ class MainActivity : ComponentActivity() {
     // Persist a WorkManager request before the UI process can be removed.
     // The worker checks the configured daily/weekly/monthly due time.
     com.example.techyfipos.utils.AutoBackupScheduler.performImmediateBackupIfDue(this)
+  }
+
+  override fun onDestroy() {
+    if (currentActivity?.get() == this) {
+      currentActivity = null
+    }
+    super.onDestroy()
   }
 
   override fun onNewIntent(intent: Intent) {

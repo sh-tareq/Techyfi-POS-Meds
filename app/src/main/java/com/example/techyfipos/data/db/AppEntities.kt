@@ -6,7 +6,13 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "products")
+@Entity(
+    tableName = "products",
+    indices = [
+        Index(value = ["name"], name = "idx_products_name"),
+        Index(value = ["category"], name = "idx_products_category")
+    ]
+)
 data class Product(
     @PrimaryKey val barcode: String,
     val name: String,
@@ -40,7 +46,7 @@ data class Expense(
     val paymentSource: String = "Cash", // "Cash", "bKash", "Nagad", "Bank"
     val note: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
-    val cashierName: String = "Admin"
+    val cashierName: String = ""
 )
 
 @Entity(tableName = "suppliers")
@@ -148,7 +154,7 @@ data class RegisterClosing(
     val notes: String? = null,
     val discrepancyReason: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
-    val cashierName: String = "Admin",
+    val cashierName: String = "",
     val bkashSales: Double = 0.0,
     val nagadSales: Double = 0.0,
     val rocketSales: Double = 0.0,
@@ -190,7 +196,8 @@ data class RegisterShiftState(
 @Entity(
     tableName = "sales",
     indices = [
-        Index(value = ["timestamp"])
+        Index(value = ["timestamp"]),
+        Index(value = ["customerPhone"], name = "idx_sales_customer_phone")
     ]
 )
 data class Sale(
@@ -261,7 +268,10 @@ fun Sale.getFormattedPaymentMethod(): String {
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["saleId"])]
+    indices = [
+        Index(value = ["saleId"]),
+        Index(value = ["productBarcode"], name = "idx_sale_items_barcode")
+    ]
 )
 data class SaleItem(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -274,7 +284,8 @@ data class SaleItem(
     // The product's purchasePrice at the moment of sale, so historical profit reports stay stable
     // even if the product's cost is edited (or the product is deleted) afterward. Null on rows
     // written before this field existed; reports fall back to a live/estimated cost for those.
-    val purchasePriceAtSale: Double? = null
+    val purchasePriceAtSale: Double? = null,
+    val taxable: Boolean = true
 )
 
 @Entity(tableName = "customer_dues")
@@ -283,11 +294,15 @@ data class CustomerDue(
     val customerName: String,
     val outstandingAmount: Double,
     val creditLimit: Double = 0.0,
+    val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val isArchived: Boolean = false
 )
 
-@Entity(tableName = "inventory_adjustments")
+@Entity(
+    tableName = "inventory_adjustments",
+    indices = [Index(value = ["productBarcode"])]
+)
 data class InventoryAdjustment(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val productBarcode: String,
@@ -298,7 +313,7 @@ data class InventoryAdjustment(
     val reason: String, // "Damage", "Expired", "Discrepancy", "Sample", "Internal", "Other"
     val note: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
-    val cashierName: String = "Admin"
+    val cashierName: String = ""
 )
 
 @Entity(
@@ -445,7 +460,10 @@ data class ScheduledDueReminder(
     val isRecurring: Boolean = false
 )
 
-@Entity(tableName = "due_reminder_logs")
+@Entity(
+    tableName = "due_reminder_logs",
+    indices = [Index(value = ["customerPhone"])]
+)
 data class DueReminderLog(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val customerPhone: String,
@@ -457,7 +475,14 @@ data class DueReminderLog(
     val status: String = "SENT" // "SENT", "SCHEDULED", "CANCELLED", "FIRED"
 )
 
-@Entity(tableName = "customers")
+@Entity(
+    tableName = "customers",
+    indices = [
+        Index(value = ["name"]),
+        Index(value = ["tag"]),
+        Index(value = ["phone"])
+    ]
+)
 data class Customer(
     @PrimaryKey val phone: String,
     val name: String,

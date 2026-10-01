@@ -35,7 +35,8 @@ data class BillLineItem(
     val unit: String = "Pcs",
     val note: String? = null,
     val mrpPrice: Double = 0.0,
-    val purchasePrice: Double? = null
+    val purchasePrice: Double? = null,
+    val taxable: Boolean = true
 )
 
 data class BillData(
@@ -300,6 +301,9 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
             val mrpSubline = if (isBn) "  অফার: ${formatTaka(itemOfferPrice)} (সাশ্রয় ${formatTaka(itemSavings)})"
                              else "  Offer: ${formatTaka(itemOfferPrice)} (Save ${formatTaka(itemSavings)})"
             sb.appendLine(mrpSubline)
+        }
+        if (!item.note.isNullOrBlank()) {
+            sb.appendLine(if (isBn) "  • ${item.note}" else "  • Note: ${item.note}")
         }
     }
     sb.appendLine("------------------------------------------")

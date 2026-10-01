@@ -18,16 +18,32 @@ data class LoyaltyProgramSettings(
 object LoyaltySettingsHelper {
     private const val PREFS_NAME = "loyalty_program_prefs"
 
+    private fun SharedPreferences.getDouble(key: String, defaultValue: Double): Double {
+        return if (contains(key)) {
+            try {
+                java.lang.Double.longBitsToDouble(getLong(key, defaultValue.toBits()))
+            } catch (e: ClassCastException) {
+                getFloat(key, defaultValue.toFloat()).toDouble()
+            }
+        } else {
+            defaultValue
+        }
+    }
+
+    private fun SharedPreferences.Editor.putDouble(key: String, value: Double): SharedPreferences.Editor {
+        return putLong(key, value.toBits())
+    }
+
     fun getSettings(context: Context): LoyaltyProgramSettings {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return LoyaltyProgramSettings(
-            takaPerPoint = prefs.getFloat("taka_per_point", 100.0f).toDouble(),
-            pointCashValue = prefs.getFloat("point_cash_value", 1.0f).toDouble(),
+            takaPerPoint = prefs.getDouble("taka_per_point", 100.0),
+            pointCashValue = prefs.getDouble("point_cash_value", 1.0),
             minRedeemPoints = prefs.getInt("min_redeem_points", 20),
             maxBillPercentPayable = prefs.getInt("max_bill_percent_payable", 50),
-            silverSpendThreshold = prefs.getFloat("silver_spend_threshold", 3000.0f).toDouble(),
-            goldSpendThreshold = prefs.getFloat("gold_spend_threshold", 7500.0f).toDouble(),
-            platinumSpendThreshold = prefs.getFloat("platinum_spend_threshold", 15000.0f).toDouble(),
+            silverSpendThreshold = prefs.getDouble("silver_spend_threshold", 3000.0),
+            goldSpendThreshold = prefs.getDouble("gold_spend_threshold", 7500.0),
+            platinumSpendThreshold = prefs.getDouble("platinum_spend_threshold", 15000.0),
             pointsExpiryDays = prefs.getInt("points_expiry_days", 365),
             isTiersEnabled = prefs.getBoolean("is_tiers_enabled", true)
         )
@@ -35,13 +51,13 @@ object LoyaltySettingsHelper {
 
     fun saveSettings(context: Context, settings: LoyaltyProgramSettings) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-            .putFloat("taka_per_point", settings.takaPerPoint.toFloat())
-            .putFloat("point_cash_value", settings.pointCashValue.toFloat())
+            .putDouble("taka_per_point", settings.takaPerPoint)
+            .putDouble("point_cash_value", settings.pointCashValue)
             .putInt("min_redeem_points", settings.minRedeemPoints)
             .putInt("max_bill_percent_payable", settings.maxBillPercentPayable)
-            .putFloat("silver_spend_threshold", settings.silverSpendThreshold.toFloat())
-            .putFloat("gold_spend_threshold", settings.goldSpendThreshold.toFloat())
-            .putFloat("platinum_spend_threshold", settings.platinumSpendThreshold.toFloat())
+            .putDouble("silver_spend_threshold", settings.silverSpendThreshold)
+            .putDouble("gold_spend_threshold", settings.goldSpendThreshold)
+            .putDouble("platinum_spend_threshold", settings.platinumSpendThreshold)
             .putInt("points_expiry_days", settings.pointsExpiryDays)
             .putBoolean("is_tiers_enabled", settings.isTiersEnabled)
             .apply()

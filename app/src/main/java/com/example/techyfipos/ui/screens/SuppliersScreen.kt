@@ -5,8 +5,12 @@ import android.net.Uri
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material3.*
 import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
@@ -58,6 +63,12 @@ private enum class SupplierDueFilter {
     ALL,
     HAS_DUE,
     SETTLED
+}
+
+private enum class SupplierSortOption {
+    NAME_ASC,
+    TOTAL_PURCHASED_DESC,
+    DUE_AMOUNT_DESC
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,15 +118,40 @@ fun SuppliersScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var dueFilter by remember { mutableStateOf(SupplierDueFilter.ALL) }
+    var selectedSort by rememberSaveable { mutableStateOf(SupplierSortOption.NAME_ASC) }
+    var showSortMenu by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
+    val exportSuppliersExcelLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { output ->
+                        val success = supplierViewModel.exportSuppliersExcel(output)
+                        if (success) {
+                            Toast.makeText(context, context.getString(R.string.supplier_export_success), Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.supplier_export_failed, "Write error"), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, context.getString(R.string.supplier_export_failed, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     var showAllInvoices by remember { mutableStateOf(false) }
     var showAllPayments by remember { mutableStateOf(false) }
-    val ledgerDateFormat = remember { SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()) }
+    val ledgerDateFormat = remember(Locale.getDefault()) { SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()) }
 
     val totalPurchased = remember(suppliers) { suppliers.sumOf { it.totalPurchased } }
     val totalDue = remember(suppliers) { suppliers.sumOf { it.totalDue } }
 
-    val filteredSuppliers = remember(suppliers, searchQuery, dueFilter) {
-        suppliers.filter { sup ->
+    val filteredSuppliers = remember(suppliers, searchQuery, dueFilter, selectedSort) {
+        val list = suppliers.filter { sup ->
             val matchesSearch = searchQuery.isBlank() ||
                     sup.companyName.contains(searchQuery, ignoreCase = true) ||
                     sup.name.contains(searchQuery, ignoreCase = true) ||
@@ -129,6 +165,11 @@ fun SuppliersScreen(
             }
 
             matchesSearch && matchesDue
+        }
+        when (selectedSort) {
+            SupplierSortOption.NAME_ASC -> list.sortedBy { it.companyName.lowercase() }
+            SupplierSortOption.TOTAL_PURCHASED_DESC -> list.sortedByDescending { it.totalPurchased }
+            SupplierSortOption.DUE_AMOUNT_DESC -> list.sortedByDescending { it.totalDue }
         }
     }
 
@@ -145,17 +186,67 @@ fun SuppliersScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.size(48.dp)
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 actions = {
+                    // Sort Menu
+                    Box {
+                        IconButton(
+                            onClick = { showSortMenu = true },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.cd_sort))
+                        }
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.supplier_sort_name)) },
+                                onClick = {
+                                    selectedSort = SupplierSortOption.NAME_ASC
+                                    showSortMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.supplier_sort_total_purchased)) },
+                                onClick = {
+                                    selectedSort = SupplierSortOption.TOTAL_PURCHASED_DESC
+                                    showSortMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.supplier_sort_highest_due)) },
+                                onClick = {
+                                    selectedSort = SupplierSortOption.DUE_AMOUNT_DESC
+                                    showSortMenu = false
+                                }
+                            )
+                        }
+                    }
+
+                    // Export Excel Button
+                    IconButton(
+                        onClick = {
+                            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                            exportSuppliersExcelLauncher.launch("suppliers-$dateStr.xlsx")
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Realistic3DExcelSpreadsheetIcon(size = 24.dp)
+                    }
+
                     // Live Hub Status Pill
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = Color(0xFFF0F9FF),
                         border = BorderStroke(1.dp, Color(0xFFBAE6FD)),
-                        modifier = Modifier.padding(end = 12.dp)
+                        modifier = Modifier.padding(end = 8.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -322,7 +413,7 @@ fun SuppliersScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Button(
-                                    onClick = { runWithSupplierPermission("Add Supplier") { showAddSupplierDialog = true } },
+                                    onClick = { runWithSupplierPermission(context.getString(R.string.supplier_auth_add_supplier)) { showAddSupplierDialog = true } },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFF0284C7),
@@ -330,7 +421,7 @@ fun SuppliersScreen(
                                     ),
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(40.dp),
+                                        .heightIn(min = 48.dp),
                                     contentPadding = PaddingValues(0.dp)
                                 ) {
                                     Text(stringResource(R.string.supplier_add_vendor), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
@@ -338,8 +429,9 @@ fun SuppliersScreen(
 
                                 Button(
                                     onClick = {
-                                        runWithSupplierPermission("Receive Stock") {
+                                        runWithSupplierPermission(context.getString(R.string.supplier_auth_receive_stock)) {
                                             if (suppliers.isEmpty()) {
+                                                Toast.makeText(context, context.getString(R.string.supplier_add_before_receiving_stock), Toast.LENGTH_SHORT).show()
                                                 showAddSupplierDialog = true
                                             } else if (suppliers.size == 1) {
                                                 selectedSupplierForInflow = suppliers.first()
@@ -355,7 +447,7 @@ fun SuppliersScreen(
                                     ),
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(40.dp),
+                                        .heightIn(min = 48.dp),
                                     contentPadding = PaddingValues(0.dp)
                                 ) {
                                     Text(stringResource(R.string.supplier_quick_inward), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
@@ -413,7 +505,7 @@ fun SuppliersScreen(
                             shadowElevation = if (isAll) 2.dp else 0.dp,
                             modifier = Modifier
                                 .weight(1.1f)
-                                .defaultMinSize(minHeight = 44.dp)
+                                .defaultMinSize(minHeight = 48.dp)
                                 .clickable { dueFilter = SupplierDueFilter.ALL }
                         ) {
                             Row(
@@ -452,7 +544,7 @@ fun SuppliersScreen(
                             shadowElevation = if (isDue) 2.dp else 0.dp,
                             modifier = Modifier
                                 .weight(1.3f)
-                                .defaultMinSize(minHeight = 44.dp)
+                                .defaultMinSize(minHeight = 48.dp)
                                 .clickable { dueFilter = SupplierDueFilter.HAS_DUE }
                         ) {
                             Row(
@@ -491,7 +583,7 @@ fun SuppliersScreen(
                             shadowElevation = if (isSettled) 2.dp else 0.dp,
                             modifier = Modifier
                                 .weight(1.2f)
-                                .defaultMinSize(minHeight = 44.dp)
+                                .defaultMinSize(minHeight = 48.dp)
                                 .clickable { dueFilter = SupplierDueFilter.SETTLED }
                         ) {
                             Row(
@@ -586,7 +678,7 @@ fun SuppliersScreen(
                             if (searchQuery.isBlank() && dueFilter == SupplierDueFilter.ALL) {
                                 Spacer(Modifier.height(16.dp))
                                 Button(
-                                    onClick = { runWithSupplierPermission("Add Supplier") { showAddSupplierDialog = true } },
+                                    onClick = { runWithSupplierPermission(context.getString(R.string.supplier_auth_add_supplier)) { showAddSupplierDialog = true } },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                 ) {
@@ -600,10 +692,10 @@ fun SuppliersScreen(
                 items(filteredSuppliers, key = { it.id }) { supplier ->
                     SupplierCard(
                         supplier = supplier,
-                        onAddInflow = { runWithSupplierPermission("Receive Stock") { selectedSupplierForInflow = supplier } },
-                        onPayDue = { runWithSupplierPermission("Record Supplier Payment") { selectedSupplierForPayDue = supplier } },
-                        onEdit = { runWithSupplierPermission("Edit Supplier") { supplierToEdit = supplier } },
-                        onDelete = { runWithSupplierPermission("Delete Supplier") { supplierToDelete = supplier } }
+                        onAddInflow = { runWithSupplierPermission(context.getString(R.string.supplier_auth_receive_stock)) { selectedSupplierForInflow = supplier } },
+                        onPayDue = { runWithSupplierPermission(context.getString(R.string.supplier_auth_record_payment)) { selectedSupplierForPayDue = supplier } },
+                        onEdit = { runWithSupplierPermission(context.getString(R.string.supplier_auth_edit_supplier)) { supplierToEdit = supplier } },
+                        onDelete = { runWithSupplierPermission(context.getString(R.string.supplier_auth_delete_supplier)) { supplierToDelete = supplier } }
                     )
                 }
             }
@@ -704,15 +796,15 @@ fun SuppliersScreen(
             onDismissRequest = { supplierToDelete = null },
             title = {
                 Text(
-                    text = if (hasBalance) "Cannot Delete Supplier" else stringResource(R.string.confirm_delete),
+                    text = if (hasBalance) stringResource(R.string.supplier_cannot_delete_title) else stringResource(R.string.confirm_delete),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 if (hasBalance) {
-                    Text("Cannot delete supplier \"${s.companyName}\" because they have an active balance of ${formatTaka(s.totalDue)}. Settle the balance before deleting.")
+                    Text(stringResource(R.string.supplier_cannot_delete_balance_desc, s.companyName, formatTaka(s.totalDue)))
                 } else {
-                    Text("Are you sure you want to delete supplier \"${s.companyName}\"? This action cannot be undone.")
+                    Text(stringResource(R.string.supplier_delete_confirm_desc, s.companyName))
                 }
             },
             confirmButton = {
@@ -721,7 +813,7 @@ fun SuppliersScreen(
                         onClick = {
                             supplierViewModel.deleteSupplier(s) { result ->
                                 result.onFailure {
-                                    Toast.makeText(context, it.message ?: "Failed to delete supplier", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, it.message ?: context.getString(R.string.supplier_delete_failed), Toast.LENGTH_LONG).show()
                                 }
                             }
                             supplierToDelete = null
@@ -822,7 +914,7 @@ fun SuppliersScreen(
                             supplierViewModel.addSupplier(
                                 name = name.ifBlank { companyName },
                                 companyName = companyName,
-                                phone = phone.ifBlank { "N/A" },
+                                phone = phone.trim(),
                                 address = address.ifBlank { null },
                                 notes = notes.ifBlank { null },
                                 onResult = { result ->
@@ -927,7 +1019,7 @@ fun SuppliersScreen(
                                 currentSupplier.copy(
                                     name = name.ifBlank { companyName },
                                     companyName = companyName,
-                                    phone = phone.ifBlank { "N/A" },
+                                    phone = phone.trim(),
                                     address = address.ifBlank { null },
                                     notes = notes.ifBlank { null },
                                     updatedAt = System.currentTimeMillis()
@@ -1085,7 +1177,10 @@ fun SuppliersScreen(
     selectedSupplierForPayDue?.let { sup ->
         var payAmountText by remember { mutableStateOf("") }
         var payNote by remember { mutableStateOf("") }
-        var payMethod by remember { mutableStateOf("Cash") }
+        var payMethod by remember { mutableStateOf(supplierViewModel.paymentMethods.firstOrNull() ?: "") }
+        val payAmount = payAmountText.toDoubleOrNull() ?: 0.0
+        val isExceeding = payAmount > sup.totalDue
+        val isAmountValid = payAmount > 0.0 && !isExceeding
 
         AlertDialog(
             onDismissRequest = { selectedSupplierForPayDue = null },
@@ -1117,8 +1212,12 @@ fun SuppliersScreen(
                         onValueChange = { payAmountText = it },
                         label = { Text(stringResource(R.string.supplier_amount_to_pay_label)) },
                         placeholder = { Text("0.00") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
+                        isError = isExceeding,
+                        supportingText = if (isExceeding) {
+                            { Text(stringResource(R.string.supplier_payment_exceeds_due, formatTaka(sup.totalDue)), color = MaterialTheme.colorScheme.error) }
+                        } else null,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1127,11 +1226,20 @@ fun SuppliersScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.horizontalScroll(rememberScrollState())
                     ) {
-                        listOf("Cash", "bKash", "Nagad", "Rocket", "Bank").forEach { method ->
+                        supplierViewModel.paymentMethods.forEach { method ->
+                            val label = when (method) {
+                                "Cash" -> stringResource(R.string.cash)
+                                "bKash" -> stringResource(R.string.bkash)
+                                "Nagad" -> stringResource(R.string.nagad)
+                                "Rocket" -> stringResource(R.string.rocket)
+                                "Bank" -> stringResource(R.string.bank)
+                                "Card" -> stringResource(R.string.card)
+                                else -> method
+                            }
                             FilterChip(
                                 selected = payMethod == method,
                                 onClick = { payMethod = method },
-                                label = { Text(method, fontSize = 11.sp) }
+                                label = { Text(label, fontSize = 11.sp) }
                             )
                         }
                     }
@@ -1149,9 +1257,10 @@ fun SuppliersScreen(
             },
             confirmButton = {
                 Button(
+                    enabled = payMethod.isNotBlank() && isAmountValid,
                     onClick = {
                         val amount = payAmountText.toDoubleOrNull() ?: 0.0
-                        if (amount > 0) {
+                        if (amount > 0 && amount <= sup.totalDue) {
                             supplierViewModel.paySupplierDue(sup, amount, payMethod, payNote) { result ->
                                 result.onSuccess {
                                     selectedSupplierForPayDue = null

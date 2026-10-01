@@ -45,8 +45,19 @@ fun ManageUsersScreen(
     authViewModel: AuthViewModel,
     onBack: () -> Unit,
     isTablet: Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600,
+    isOwner: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    if (!isOwner) {
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            onBack()
+        }
+        Box(Modifier.fillMaxSize(), Alignment.Center) {
+            Text(stringResource(R.string.access_denied), style = MaterialTheme.typography.titleMedium)
+        }
+        return
+    }
+
     val context = LocalContext.current
     val users by authViewModel.users.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -83,13 +94,15 @@ fun ManageUsersScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showAddDialog = true },
-                icon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
-                text = { Text(stringResource(R.string.users_add_staff), fontWeight = FontWeight.Bold) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
+            if (isOwner) {
+                ExtendedFloatingActionButton(
+                    onClick = { showAddDialog = true },
+                    icon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
+                    text = { Text(stringResource(R.string.users_add_staff), fontWeight = FontWeight.Bold) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         }
     ) { padding ->
         if (users.isEmpty()) {
@@ -290,7 +303,7 @@ private fun StaffUserCard(
 
                             if (user.role == AppRoles.CASHIER) {
                                 Text(
-                                    text = "Max Disc: ${user.maxDiscountPercent.toInt()}%",
+                                    text = stringResource(R.string.users_max_discount_format, user.maxDiscountPercent.toInt()),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -325,7 +338,7 @@ private fun StaffUserCard(
                     onClick = onPermissions,
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    modifier = Modifier.defaultMinSize(minHeight = 40.dp)
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Tune,
@@ -340,14 +353,14 @@ private fun StaffUserCard(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(onClick = onEdit) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
                         Icon(
                             Icons.Default.Edit,
                             contentDescription = stringResource(R.string.users_edit_staff_title),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                    IconButton(onClick = onDelete) {
+                    IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = stringResource(R.string.users_remove),
@@ -373,6 +386,11 @@ private fun AddStaffDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val invalidUserMessage = stringResource(R.string.users_invalid_input)
     val addFailedMessage = stringResource(R.string.users_add_failed)
+    val invalidDiscountMessage = stringResource(R.string.users_max_discount_invalid_error)
+    val isDiscountValid = if (selectedRole == AppRoles.CASHIER) {
+        val d = maxDiscount.toDoubleOrNull()
+        d != null && d in 0.0..100.0
+    } else true
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -422,9 +440,16 @@ private fun AddStaffDialog(
                 if (selectedRole == AppRoles.CASHIER) {
                     OutlinedTextField(
                         value = maxDiscount,
-                        onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) maxDiscount = it },
+                        onValueChange = { maxDiscount = it },
                         label = { Text(stringResource(R.string.users_max_discount_label)) },
-                        supportingText = { Text(stringResource(R.string.users_max_discount_hint)) },
+                        supportingText = {
+                            if (!isDiscountValid) {
+                                Text(invalidDiscountMessage, color = MaterialTheme.colorScheme.error)
+                            } else {
+                                Text(stringResource(R.string.users_max_discount_hint))
+                            }
+                        },
+                        isError = !isDiscountValid,
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
@@ -438,12 +463,17 @@ private fun AddStaffDialog(
         },
         confirmButton = {
             Button(
+                enabled = name.isNotBlank() && pin.length == 4 && isDiscountValid,
                 onClick = {
                     if (name.isBlank() || pin.length != 4) {
                         errorMessage = invalidUserMessage
                         return@Button
                     }
-                    val disc = maxDiscount.toDoubleOrNull() ?: 10.0
+                    if (!isDiscountValid) {
+                        errorMessage = invalidDiscountMessage
+                        return@Button
+                    }
+                    val disc = if (selectedRole == AppRoles.CASHIER) (maxDiscount.toDoubleOrNull() ?: 10.0) else 10.0
                     authViewModel.addStaff(
                         name = name.trim(),
                         pin = pin,
@@ -483,6 +513,11 @@ private fun EditStaffDialog(
     val invalidUserMessage = stringResource(R.string.users_invalid_input)
     val addFailedMessage = stringResource(R.string.users_add_failed)
     val currentPinRequiredMessage = stringResource(R.string.users_current_pin_required)
+    val invalidDiscountMessage = stringResource(R.string.users_max_discount_invalid_error)
+    val isDiscountValid = if (editRole == AppRoles.CASHIER) {
+        val d = editDiscount.toDoubleOrNull()
+        d != null && d in 0.0..100.0
+    } else true
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -538,9 +573,16 @@ private fun EditStaffDialog(
                 if (editRole == AppRoles.CASHIER) {
                     OutlinedTextField(
                         value = editDiscount,
-                        onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) editDiscount = it },
+                        onValueChange = { editDiscount = it },
                         label = { Text(stringResource(R.string.users_max_discount_label)) },
-                        supportingText = { Text(stringResource(R.string.users_max_discount_hint)) },
+                        supportingText = {
+                            if (!isDiscountValid) {
+                                Text(invalidDiscountMessage, color = MaterialTheme.colorScheme.error)
+                            } else {
+                                Text(stringResource(R.string.users_max_discount_hint))
+                            }
+                        },
+                        isError = !isDiscountValid,
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
@@ -569,6 +611,7 @@ private fun EditStaffDialog(
         },
         confirmButton = {
             Button(
+                enabled = editName.isNotBlank() && isDiscountValid,
                 onClick = {
                     if (editName.isBlank()) {
                         editError = invalidUserMessage
@@ -584,7 +627,11 @@ private fun EditStaffDialog(
                             return@Button
                         }
                     }
-                    val disc = editDiscount.toDoubleOrNull() ?: 10.0
+                    if (!isDiscountValid) {
+                        editError = invalidDiscountMessage
+                        return@Button
+                    }
+                    val disc = if (editRole == AppRoles.CASHIER) (editDiscount.toDoubleOrNull() ?: 10.0) else 10.0
                     authViewModel.updateStaff(
                         userId = user.id,
                         name = editName.trim(),
@@ -633,6 +680,7 @@ private fun RoleSelectorRow(
                 border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, color) else null,
                 modifier = Modifier
                     .weight(1f)
+                    .heightIn(min = 48.dp)
                     .clickable { onRoleSelected(role) }
             ) {
                 Box(
@@ -660,6 +708,8 @@ private fun PermissionsMatrixDialog(
     onDismiss: () -> Unit,
     onSaved: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val initialPermissions = remember(user) {
         AppPermissions.getEffectivePermissions(user).toMutableSet()
     }
@@ -696,14 +746,24 @@ private fun PermissionsMatrixDialog(
                             text = stringResource(R.string.users_permissions_title, user.name),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
+                        val roleLabel = when (user.role) {
+                            AppRoles.OWNER -> stringResource(R.string.role_owner)
+                            AppRoles.MANAGER -> stringResource(R.string.role_manager)
+                            else -> stringResource(R.string.role_cashier)
+                        }
                         Text(
-                            text = "Role: ${user.role} · ${currentPermissions.size} / ${AppPermissions.ALL_PERMISSIONS.size} Active",
+                            text = stringResource(
+                                R.string.users_role_permissions_active_format,
+                                roleLabel,
+                                currentPermissions.size,
+                                AppPermissions.ALL_PERMISSIONS.size
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
 
@@ -771,9 +831,12 @@ private fun PermissionsMatrixDialog(
 
                     Button(
                         onClick = {
+                            errorMessage = null
                             authViewModel.updateStaffPermissions(user.id, currentPermissions) { success ->
                                 if (success) {
                                     onSaved()
+                                } else {
+                                    errorMessage = context.getString(R.string.users_permissions_save_failed)
                                 }
                             }
                         },
@@ -782,6 +845,17 @@ private fun PermissionsMatrixDialog(
                     ) {
                         Text(stringResource(R.string.save))
                     }
+                }
+
+                if (!errorMessage.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage!!,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }

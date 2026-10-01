@@ -1,8 +1,10 @@
 package com.example.techyfipos.data
 
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BackupCompatibilityTest {
@@ -78,4 +80,63 @@ class BackupCompatibilityTest {
         )
         assertEquals(25.5, withCredit.storeCreditApplied, 0.001)
     }
+
+    @Test
+    fun `taxable property defaults to true and preserves false for non-taxable sale items`() {
+        val defaultItem = buildBackwardCompatibleSaleItem(
+            saleId = 1,
+            productBarcode = "CUSTOM-100",
+            productName = "Standard Item",
+            price = 50.0,
+            quantity = 1.0
+        )
+        assertTrue(defaultItem.taxable)
+
+        val nonTaxableItem = buildBackwardCompatibleSaleItem(
+            saleId = 1,
+            productBarcode = "CUSTOM-200",
+            productName = "Non-taxable Item",
+            price = 100.0,
+            quantity = 1.0,
+            taxable = false
+        )
+        assertFalse(nonTaxableItem.taxable)
+    }
+
+    @Test
+    fun `json backup restores non-taxable items with taxable false and legacy backups as true`() {
+        val nonTaxableJson = JSONObject().apply {
+            put("productBarcode", "CUSTOM-300")
+            put("productName", "Service Fee")
+            put("price", 150.0)
+            put("quantity", 1.0)
+            put("taxable", false)
+        }
+        val restoredNonTaxable = buildBackwardCompatibleSaleItem(
+            saleId = 1,
+            productBarcode = nonTaxableJson.optString("productBarcode"),
+            productName = nonTaxableJson.optString("productName"),
+            price = nonTaxableJson.optDouble("price"),
+            quantity = nonTaxableJson.optDouble("quantity"),
+            taxable = nonTaxableJson.optBoolean("taxable", true)
+        )
+        assertFalse(restoredNonTaxable.taxable)
+
+        val legacyJson = JSONObject().apply {
+            put("productBarcode", "123456")
+            put("productName", "Legacy Item")
+            put("price", 80.0)
+            put("quantity", 2.0)
+        }
+        val restoredLegacy = buildBackwardCompatibleSaleItem(
+            saleId = 1,
+            productBarcode = legacyJson.optString("productBarcode"),
+            productName = legacyJson.optString("productName"),
+            price = legacyJson.optDouble("price"),
+            quantity = legacyJson.optDouble("quantity"),
+            taxable = legacyJson.optBoolean("taxable", true)
+        )
+        assertTrue(restoredLegacy.taxable)
+    }
 }
+

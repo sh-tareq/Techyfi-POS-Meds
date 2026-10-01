@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.execSQL
 import kotlinx.coroutines.Dispatchers
 
-const val APP_DATABASE_VERSION = 31
+const val APP_DATABASE_VERSION = 35
 
 /**
  * Keeps every migration compatible with both Room database backends. Room calls
@@ -267,6 +267,33 @@ val MIGRATION_30_31 = sqlMigration(
     "ALTER TABLE `products` ADD COLUMN `created_at` INTEGER NOT NULL DEFAULT 0"
 )
 
+val MIGRATION_31_32 = sqlMigration(
+    31, 32,
+    "ALTER TABLE `customer_dues` ADD COLUMN `createdAt` INTEGER NOT NULL DEFAULT 0",
+    "CREATE INDEX IF NOT EXISTS `idx_products_name` ON `products` (`name`)",
+    "CREATE INDEX IF NOT EXISTS `idx_products_category` ON `products` (`category`)",
+    "CREATE INDEX IF NOT EXISTS `idx_sales_customer_phone` ON `sales` (`customerPhone`)",
+    "CREATE INDEX IF NOT EXISTS `idx_sale_items_barcode` ON `sale_items` (`productBarcode`)"
+)
+
+val MIGRATION_32_33 = sqlMigration(
+    32, 33,
+    "CREATE INDEX IF NOT EXISTS `index_inventory_adjustments_productBarcode` ON `inventory_adjustments` (`productBarcode`)",
+    "CREATE INDEX IF NOT EXISTS `index_due_reminder_logs_customerPhone` ON `due_reminder_logs` (`customerPhone`)"
+)
+
+val MIGRATION_33_34 = sqlMigration(
+    33, 34,
+    "CREATE INDEX IF NOT EXISTS `index_customers_name` ON `customers` (`name`)"
+)
+
+val MIGRATION_34_35 = sqlMigration(
+    34, 35,
+    "ALTER TABLE sale_items ADD COLUMN taxable INTEGER NOT NULL DEFAULT 1",
+    "CREATE INDEX IF NOT EXISTS `index_customers_tag` ON `customers` (`tag`)",
+    "CREATE INDEX IF NOT EXISTS `index_customers_phone` ON `customers` (`phone`)"
+)
+
 @Database(
     entities = [
         Product::class,
@@ -358,7 +385,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
                         MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25,
                         MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29,
-                        MIGRATION_29_30, MIGRATION_30_31
+                        MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33,
+                        MIGRATION_33_34, MIGRATION_34_35
                     )
                     .setDriver(BundledSQLiteDriver())
                     .setQueryCoroutineContext(Dispatchers.IO)

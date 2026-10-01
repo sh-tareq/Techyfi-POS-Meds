@@ -32,6 +32,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,7 +50,9 @@ import com.example.techyfipos.ui.viewmodel.DuplicateCustomerPair
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.openPhoneDialer
 import com.example.techyfipos.utils.openWhatsAppChat
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileWriter
 
@@ -56,6 +60,7 @@ import java.io.FileWriter
 @Composable
 fun CustomersScreen(
     customerViewModel: CustomerViewModel,
+    settingsViewModel: com.example.techyfipos.ui.viewmodel.SettingsViewModel? = null,
     onBack: () -> Unit,
     onStartSaleForCustomer: (Customer) -> Unit,
     isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
@@ -156,7 +161,7 @@ fun CustomersScreen(
                                 onClick = { showSortMenu = true },
                                 modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort")
+                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.cd_sort))
                             }
                             DropdownMenu(
                                 expanded = showSortMenu,
@@ -218,7 +223,7 @@ fun CustomersScreen(
                         Box {
                             IconButton(
                                 onClick = { showExportMenu = true },
-                                modifier = Modifier.size(38.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
                                 Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.customer_export_title))
                             }
@@ -240,7 +245,7 @@ fun CustomersScreen(
                                     leadingIcon = { Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
                                     onClick = {
                                         showExportMenu = false
-                                        exportCustomerCsv(context, customers)
+                                        scope.launch { exportCustomerCsv(context, customers) }
                                     }
                                 )
                             }
@@ -251,9 +256,9 @@ fun CustomersScreen(
                         Box {
                             IconButton(
                                 onClick = { showSortMenu = true },
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort", modifier = Modifier.size(20.dp))
+                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.customer_sort_cd), modifier = Modifier.size(20.dp))
                             }
                             DropdownMenu(
                                 expanded = showSortMenu,
@@ -316,9 +321,9 @@ fun CustomersScreen(
                         Box {
                             IconButton(
                                 onClick = { showPhoneMoreMenu = true },
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More Options", modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more_options), modifier = Modifier.size(20.dp))
                             }
                             DropdownMenu(
                                 expanded = showPhoneMoreMenu,
@@ -353,7 +358,7 @@ fun CustomersScreen(
                                     leadingIcon = { Text("📄", fontSize = 16.sp) },
                                     onClick = {
                                         showPhoneMoreMenu = false
-                                        exportCustomerCsv(context, customers)
+                                        scope.launch { exportCustomerCsv(context, customers) }
                                     }
                                 )
                             }
@@ -375,13 +380,13 @@ fun CustomersScreen(
                     } else {
                         FilledIconButton(
                             onClick = { showAddCustomerDialog = true },
-                            modifier = Modifier.padding(end = 4.dp).size(36.dp),
+                            modifier = Modifier.padding(end = 4.dp).size(48.dp),
                             colors = IconButtonDefaults.filledIconButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = MaterialTheme.colorScheme.onPrimary
                             )
                         ) {
-                            Icon(Icons.Default.PersonAdd, contentDescription = "Add Customer", modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.PersonAdd, contentDescription = stringResource(R.string.customer_add_cd), modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -407,7 +412,7 @@ fun CustomersScreen(
                     trailingIcon = {
                         if (searchQuery.isNotBlank()) {
                             IconButton(onClick = { customerViewModel.setSearchQuery("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear", modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.customer_clear_cd), modifier = Modifier.size(16.dp))
                             }
                         }
                     },
@@ -558,7 +563,7 @@ fun CustomersScreen(
                                 onClick = { showMergeDialog = true },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.defaultMinSize(minHeight = 40.dp)
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                             ) {
                                 Text(
                                     text = stringResource(R.string.customer_btn_review_merge),
@@ -688,13 +693,16 @@ fun CustomersScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             FilledTonalButton(
                                 onClick = {
-                                    val firstSelected = selectedPhones.firstOrNull()
-                                    if (firstSelected != null) {
-                                        openWhatsAppChat(context, firstSelected)
+                                    val target = selectedPhones.singleOrNull()
+                                    if (target != null) {
+                                        openWhatsAppChat(context, target)
+                                    } else {
+                                        Toast.makeText(context, context.getString(R.string.customer_whatsapp_single_only), Toast.LENGTH_SHORT).show()
                                     }
                                 },
+                                enabled = selectedPhones.size == 1,
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                modifier = Modifier.defaultMinSize(minHeight = 40.dp)
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                             ) {
                                 Text("💬 ${stringResource(R.string.customer_action_whatsapp)}", fontSize = 11.sp)
                             }
@@ -702,16 +710,16 @@ fun CustomersScreen(
                             FilledTonalButton(
                                 onClick = { showBulkTagDialog = true },
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                modifier = Modifier.defaultMinSize(minHeight = 40.dp)
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                             ) {
                                 Text("🏷️ ${stringResource(R.string.customer_bulk_tag)}", fontSize = 11.sp)
                             }
 
                             IconButton(
                                 onClick = { customerViewModel.clearCustomerSelection() },
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.customer_bulk_deselect), modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.customer_bulk_deselect), modifier = Modifier.size(20.dp))
                             }
                         }
                     }
@@ -739,6 +747,14 @@ fun CustomersScreen(
                     onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
                 )
             },
+            onDeleteNote = { index ->
+                customerViewModel.deleteCustomerNote(
+                    phone = dossierData!!.customer.phone,
+                    noteIndex = index,
+                    onSuccess = { Toast.makeText(context, context.getString(R.string.delete), Toast.LENGTH_SHORT).show() },
+                    onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
+                )
+            },
             onAdjustCredit = { delta, note ->
                 customerViewModel.adjustCustomerStoreCredit(
                     phone = dossierData!!.customer.phone,
@@ -747,7 +763,8 @@ fun CustomersScreen(
                     onSuccess = { Toast.makeText(context, context.getString(R.string.store_credit_adjusted_success), Toast.LENGTH_SHORT).show() },
                     onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
                 )
-            }
+            },
+            settingsViewModel = settingsViewModel
         )
     }
 
@@ -782,7 +799,7 @@ fun CustomersScreen(
                             collisionMergePair = com.example.techyfipos.ui.viewmodel.DuplicateCustomerPair(
                                 customerA = existingCust,
                                 customerB = editingCustomer,
-                                matchReason = "Phone Collision (${existingCust.phone})"
+                                matchReason = context.getString(R.string.customer_match_phone_collision, existingCust.phone)
                             )
                         },
                         onError = { err ->
@@ -818,7 +835,7 @@ fun CustomersScreen(
                     customerViewModel.archiveCustomer(
                         phone = editingCustomer.phone,
                         onSuccess = {
-                            Toast.makeText(context, "Customer deleted", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.customer_deleted_toast), Toast.LENGTH_SHORT).show()
                             showAddCustomerDialog = false
                             customerToEdit = null
                         },
@@ -931,13 +948,13 @@ fun CustomerDataTable(
                     Checkbox(
                         checked = selectedPhones.size == customers.size && customers.isNotEmpty(),
                         onCheckedChange = { onSelectAll() },
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(48.dp)
                     )
                     Text(stringResource(R.string.customer_col_customer), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(2.2f))
                     Text(stringResource(R.string.customer_col_tag), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1.1f))
                     Text(stringResource(R.string.customer_col_spend_due), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1.6f))
                     Text(stringResource(R.string.customer_col_orders), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                    Text(stringResource(R.string.customer_col_actions), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.width(120.dp))
+                    Text(stringResource(R.string.customer_col_actions), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.width(150.dp))
                 }
             }
 
@@ -957,7 +974,7 @@ fun CustomerDataTable(
                         Checkbox(
                             checked = isSelected,
                             onCheckedChange = { onToggleSelect(customer.phone) },
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(48.dp)
                         )
 
                         // Customer Info
@@ -988,7 +1005,7 @@ fun CustomerDataTable(
                                 }
                             ) {
                                 Text(
-                                    text = customer.tag,
+                                    text = getLocalizedCustomerTag(customer.tag),
                                     fontSize = 9.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = when (customer.tag) {
@@ -1012,13 +1029,13 @@ fun CustomerDataTable(
                             )
                             if (customer.totalDue > 0) {
                                 Text(
-                                    text = "Due: ${formatTaka(customer.totalDue)}",
+                                    text = stringResource(R.string.customers_table_due_label, formatTaka(customer.totalDue)),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 9.5.sp,
                                     color = MaterialTheme.colorScheme.error
                                 )
                             } else {
-                                Text("৳0 due", fontSize = 9.5.sp, color = Color(0xFF00875A))
+                                Text(stringResource(R.string.customers_table_zero_due), fontSize = 9.5.sp, color = Color(0xFF00875A))
                             }
                             if (customer.storeCredit > 0) {
                                 Text(
@@ -1032,32 +1049,32 @@ fun CustomerDataTable(
 
                         // Orders
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("${customer.totalOrders} ord", fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
-                            Text("⭐ ${customer.loyaltyPoints}p", fontSize = 9.5.sp, color = Color(0xFFE5A100))
+                            Text(stringResource(R.string.customers_table_orders_count, customer.totalOrders), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.customers_table_loyalty_points, customer.loyaltyPoints), fontSize = 9.5.sp, color = Color(0xFFE5A100))
                         }
 
                         // Action Shortcuts
                         Row(
-                            modifier = Modifier.width(120.dp),
+                            modifier = Modifier.width(150.dp),
                             horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             IconButton(
                                 onClick = { onStartSale(customer) },
-                                modifier = Modifier.size(38.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
-                                Icon(Icons.Default.ShoppingCart, contentDescription = "Start Sale", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
+                                Icon(Icons.Default.ShoppingCart, contentDescription = stringResource(R.string.customer_start_sale_cd), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
                             }
                             IconButton(
                                 onClick = { openWhatsAppChat(context, customer.phone) },
-                                modifier = Modifier.size(38.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
                                 Text("💬", fontSize = 14.sp)
                             }
                             IconButton(
                                 onClick = { onCustomerClick(customer) },
-                                modifier = Modifier.size(38.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
-                                Icon(Icons.Default.ChevronRight, contentDescription = "Customer Profile", modifier = Modifier.size(17.dp))
+                                Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.customer_profile_cd), modifier = Modifier.size(17.dp))
                             }
                         }
                     }
@@ -1129,7 +1146,7 @@ fun CustomerCard(
                     Checkbox(
                         checked = isSelected,
                         onCheckedChange = { onToggleSelect() },
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(48.dp)
                     )
 
                     Box(
@@ -1210,13 +1227,16 @@ fun CustomerCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(
                         onClick = onStartSale,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Icon(Icons.Default.ShoppingCart, contentDescription = "Start Sale", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.ShoppingCart, contentDescription = stringResource(R.string.customer_start_sale_cd), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                     }
+                    val whatsappCd = stringResource(R.string.customer_whatsapp_chat_cd)
                     IconButton(
                         onClick = { openWhatsAppChat(context, customer.phone) },
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier
+                            .size(48.dp)
+                            .semantics { contentDescription = whatsappCd }
                     ) {
                         Text("💬", fontSize = 15.sp)
                     }
@@ -1246,14 +1266,14 @@ fun CustomerCard(
                 )
                 if (customer.loyaltyPoints > 0) {
                     Text(
-                        text = "⭐ ${customer.loyaltyPoints} pts",
+                        text = stringResource(R.string.customer_pts_display, customer.loyaltyPoints),
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFE5A100)
                     )
                 } else {
                     Text(
-                        text = "🏷️ ${customer.tag}",
+                        text = "🏷️ ${getLocalizedCustomerTag(customer.tag)}",
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1290,7 +1310,7 @@ fun CustomerMergeDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "Match Reason: ${pair.matchReason}",
+                    text = stringResource(R.string.customer_match_reason_label, pair.matchReason),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFFF59E0B)
@@ -1312,8 +1332,8 @@ fun CustomerMergeDialog(
                         RadioButton(selected = isMasterA, onClick = { selectedMasterPhone = pair.customerA.phone })
                         Column {
                             Text(pair.customerA.name, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                            Text("📞 ${pair.customerA.phone} • Tag: ${pair.customerA.tag}", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("Orders: ${pair.customerA.totalOrders} • Spend: ${formatTaka(pair.customerA.lifetimeSpent)}", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.customer_merge_phone_tag, pair.customerA.phone, getLocalizedCustomerTag(pair.customerA.tag)), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.customer_merge_orders_spend, pair.customerA.totalOrders, formatTaka(pair.customerA.lifetimeSpent)), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -1329,8 +1349,8 @@ fun CustomerMergeDialog(
                         RadioButton(selected = !isMasterA, onClick = { selectedMasterPhone = pair.customerB.phone })
                         Column {
                             Text(pair.customerB.name, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                            Text("📞 ${pair.customerB.phone} • Tag: ${pair.customerB.tag}", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("Orders: ${pair.customerB.totalOrders} • Spend: ${formatTaka(pair.customerB.lifetimeSpent)}", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.customer_merge_phone_tag, pair.customerB.phone, getLocalizedCustomerTag(pair.customerB.tag)), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.customer_merge_orders_spend, pair.customerB.totalOrders, formatTaka(pair.customerB.lifetimeSpent)), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -1365,13 +1385,27 @@ fun CustomerMergeDialog(
     )
 }
 
+private val CUSTOMER_TAG_OPTIONS = listOf(
+    "Retail" to R.string.customer_tag_retail,
+    "Wholesale" to R.string.customer_tag_wholesale,
+    "VIP" to R.string.customer_tag_vip,
+    "Corporate" to R.string.customer_tag_corporate,
+    "Staff" to R.string.customer_tag_staff,
+    "Defaulter" to R.string.customer_tag_defaulter
+)
+
+@Composable
+fun getLocalizedCustomerTag(tag: String): String {
+    val resId = CUSTOMER_TAG_OPTIONS.firstOrNull { it.first.equals(tag, ignoreCase = true) }?.second
+    return if (resId != null) stringResource(resId) else tag
+}
+
 @Composable
 fun BulkAssignTagDialog(
     count: Int,
     onDismiss: () -> Unit,
     onApplyTag: (String) -> Unit
 ) {
-    val tags = listOf("Retail", "VIP", "Wholesale", "Corporate", "Staff", "Defaulter")
     var selectedTag by remember { mutableStateOf("VIP") }
 
     AlertDialog(
@@ -1382,16 +1416,16 @@ fun BulkAssignTagDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.customer_select_tag_count, count), fontSize = 12.sp)
-                tags.forEach { t ->
+                CUSTOMER_TAG_OPTIONS.forEach { (tagKey, stringResId) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { selectedTag = t }
+                            .clickable { selectedTag = tagKey }
                             .padding(vertical = 4.dp)
                     ) {
-                        RadioButton(selected = selectedTag == t, onClick = { selectedTag = t })
-                        Text(t, fontSize = 12.5.sp, modifier = Modifier.padding(start = 6.dp))
+                        RadioButton(selected = selectedTag == tagKey, onClick = { selectedTag = tagKey })
+                        Text(stringResource(stringResId), fontSize = 12.5.sp, modifier = Modifier.padding(start = 6.dp))
                     }
                 }
             }
@@ -1427,8 +1461,6 @@ fun CustomerAddEditDialog(
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showDueBlockedDialog by remember { mutableStateOf(false) }
 
-    val tagsList = listOf("Retail", "Wholesale", "VIP", "Corporate", "Staff", "Defaulter")
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -1462,6 +1494,14 @@ fun CustomerAddEditDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text(stringResource(R.string.customer_dialog_email)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
                     value = address,
                     onValueChange = { address = it },
                     label = { Text(stringResource(R.string.customer_dialog_address)) },
@@ -1481,11 +1521,11 @@ fun CustomerAddEditDialog(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    tagsList.forEach { t ->
+                    CUSTOMER_TAG_OPTIONS.forEach { (tagKey, stringResId) ->
                         FilterChip(
-                            selected = tag == t,
-                            onClick = { tag = t },
-                            label = { Text(t, fontSize = 11.sp) }
+                            selected = tag == tagKey,
+                            onClick = { tag = tagKey },
+                            label = { Text(stringResource(stringResId), fontSize = 11.sp) }
                         )
                     }
                 }
@@ -1534,8 +1574,8 @@ fun CustomerAddEditDialog(
     if (showDueBlockedDialog && customer != null) {
         AlertDialog(
             onDismissRequest = { showDueBlockedDialog = false },
-            title = { Text("Cannot Delete Customer", fontWeight = FontWeight.Bold) },
-            text = { Text("Cannot delete customer \"${customer.name}\" because they have an outstanding due of ${formatTaka(customer.totalDue)}. All dues must be cleared or settled before deleting the customer.") },
+            title = { Text(stringResource(R.string.customer_cannot_delete_title), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.customer_cannot_delete_due_desc, customer.name, formatTaka(customer.totalDue))) },
             confirmButton = {
                 Button(onClick = { showDueBlockedDialog = false }) {
                     Text(stringResource(R.string.ok))
@@ -1548,7 +1588,7 @@ fun CustomerAddEditDialog(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
             title = { Text(stringResource(R.string.confirm_delete), fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to delete customer \"${customer.name}\"? This action cannot be undone.") },
+            text = { Text(stringResource(R.string.customer_delete_confirm_desc, customer.name)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -1569,13 +1609,15 @@ fun CustomerAddEditDialog(
     }
 }
 
-fun exportCustomerCsv(context: Context, customers: List<Customer>) {
+private fun csvEscape(s: String): String = "\"${s.replace("\"", "\"\"")}\""
+
+suspend fun exportCustomerCsv(context: Context, customers: List<Customer>) = withContext(Dispatchers.IO) {
     try {
         val file = File(context.cacheDir, "customers_export_${System.currentTimeMillis()}.csv")
         FileWriter(file).use { writer ->
             writer.append("Phone,Name,Tag,TotalDue,CreditLimit,TotalOrders,LifetimeSpent,LoyaltyPoints,LoyaltyTier,Address,Notes\n")
             for (c in customers) {
-                writer.append("\"${c.phone}\",\"${c.name}\",\"${c.tag}\",${c.totalDue},${c.creditLimit},${c.totalOrders},${c.lifetimeSpent},${c.loyaltyPoints},\"${c.loyaltyTier}\",\"${c.address ?: ""}\",\"${c.notes ?: ""}\"\n")
+                writer.append("${csvEscape(c.phone)},${csvEscape(c.name)},${csvEscape(c.tag)},${c.totalDue},${c.creditLimit},${c.totalOrders},${c.lifetimeSpent},${c.loyaltyPoints},${csvEscape(c.loyaltyTier)},${csvEscape(c.address ?: "")},${csvEscape(c.notes ?: "")}\n")
             }
         }
         val uri = androidx.core.content.FileProvider.getUriForFile(
@@ -1588,9 +1630,13 @@ fun exportCustomerCsv(context: Context, customers: List<Customer>) {
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, context.getString(R.string.customer_export_csv_chooser_title)))
+        withContext(Dispatchers.Main) {
+            context.startActivity(Intent.createChooser(intent, context.getString(R.string.customer_export_csv_chooser_title)))
+        }
     } catch (e: Exception) {
         e.printStackTrace()
-        Toast.makeText(context, context.getString(R.string.customer_export_failed, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, context.getString(R.string.customer_export_failed, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+        }
     }
 }

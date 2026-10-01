@@ -101,6 +101,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -225,12 +226,27 @@ fun ProductsScreen(
         allProductsList.count { it.stockQty <= 0.0 }
     }
 
-    val nowTimestamp = remember { System.currentTimeMillis() }
-    val in30DaysTimestamp = remember { System.currentTimeMillis() + (30L * 24 * 60 * 60 * 1000) }
+    val nowTimestamp by produceState(initialValue = System.currentTimeMillis()) {
+        while (true) {
+            val now = System.currentTimeMillis()
+            value = now
+            val cal = java.util.Calendar.getInstance().apply {
+                timeInMillis = now
+                add(java.util.Calendar.DAY_OF_YEAR, 1)
+                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 1)
+            }
+            val millisUntilMidnight = (cal.timeInMillis - now).coerceAtLeast(1000L)
+            kotlinx.coroutines.delay(millisUntilMidnight.coerceAtMost(3600_000L))
+        }
+    }
+    val in30DaysTimestamp = remember(nowTimestamp) { nowTimestamp + (30L * 24 * 60 * 60 * 1000) }
     val dateTrackedCount = remember(allProductsList) {
         allProductsList.count { !it.expiryDate.isNullOrBlank() || !it.mfgOrPkgDate.isNullOrBlank() }
     }
-    val expiringSoonCount = remember(allProductsList) {
+    val expiringSoonCount = remember(allProductsList, nowTimestamp) {
         allProductsList.count { p ->
             if (!p.expiryDate.isNullOrBlank()) {
                 val exp = parseExpiryDateToMillis(p.expiryDate)
@@ -238,7 +254,7 @@ fun ProductsScreen(
             } else false
         }
     }
-    val expiredCount = remember(allProductsList) {
+    val expiredCount = remember(allProductsList, nowTimestamp) {
         allProductsList.count { p ->
             if (!p.expiryDate.isNullOrBlank()) {
                 val exp = parseExpiryDateToMillis(p.expiryDate)
@@ -262,12 +278,7 @@ fun ProductsScreen(
     var sortOptionName by rememberSaveable { mutableStateOf(ProductSortOption.NAME_ASC.name) }
     var viewModeName by rememberSaveable { mutableStateOf(if (isTablet) ProductViewMode.GRID.name else ProductViewMode.LIST.name) }
     var highMarginOnly by rememberSaveable { mutableStateOf(false) }
-    var selectedCategories by rememberSaveable(
-        stateSaver = androidx.compose.runtime.saveable.Saver<Set<String>, ArrayList<String>>(
-            save = { ArrayList(it) },
-            restore = { it.toSet() }
-        )
-    ) { mutableStateOf<Set<String>>(emptySet()) }
+    var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
     var minimumPrice by rememberSaveable { mutableStateOf("") }
     var maximumPrice by rememberSaveable { mutableStateOf("") }
     var sortMenuExpanded by remember { mutableStateOf(false) }
@@ -304,24 +315,31 @@ fun ProductsScreen(
                         if (success) {
                             Toast.makeText(context, exportSuccessToast, Toast.LENGTH_LONG).show()
                         } else {
-                            Toast.makeText(context, "Export failed. Check storage permissions.", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, context.getString(R.string.products_export_failed_storage), Toast.LENGTH_LONG).show()
                         }
                     } else {
-                        Toast.makeText(context, "Unable to open destination file.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.products_export_failed_open_file), Toast.LENGTH_LONG).show()
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("ProductsScreen", "Excel export failed", e)
-                    Toast.makeText(context, "Export error: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.products_export_error, e.localizedMessage ?: "Unknown error"), Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
 
+    var isImporting by remember { mutableStateOf(false) }
+
     val importExcelLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
+            if (!canEdit) {
+                Toast.makeText(context, context.getString(R.string.products_editing_owner_only), Toast.LENGTH_SHORT).show()
+                return@rememberLauncherForActivityResult
+            }
             scope.launch {
+                isImporting = true
                 try {
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
                         val result = productsViewModel.importProductsFromExcel(inputStream)
@@ -330,8 +348,10 @@ fun ProductsScreen(
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    val errorMsg = e.localizedMessage ?: "File could not be parsed"
-                    Toast.makeText(context, "Excel Import Failed: $errorMsg", Toast.LENGTH_LONG).show()
+                    val errorMsg = e.localizedMessage ?: context.getString(R.string.products_import_parse_error)
+                    Toast.makeText(context, context.getString(R.string.products_import_error, errorMsg), Toast.LENGTH_LONG).show()
+                } finally {
+                    isImporting = false
                 }
             }
         }
@@ -353,6 +373,8 @@ fun ProductsScreen(
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "cartPressScale"
     )
+
+    val exportExcelDateFormat = remember { SimpleDateFormat("yyyyMMdd", Locale.getDefault()) }
 
     fun requestEditProduct(product: Product) {
         if (canEdit) {
@@ -377,7 +399,7 @@ fun ProductsScreen(
     val availableCategories = remember(productsList) {
         productsList.map { it.category.trim() }.filter { it.isNotBlank() }.distinct().sorted()
     }
-    val activeFilterCount = selectedCategories.size +
+    val activeFilterCount = (if (selectedCategory != null) 1 else 0) +
         (if (stockFilter != ProductStockFilter.ALL) 1 else 0) +
         (if (highMarginOnly) 1 else 0) +
         (if (dateFilter != ProductDateFilter.ALL) 1 else 0) +
@@ -390,23 +412,25 @@ fun ProductsScreen(
         stockFilter,
         dateFilter,
         highMarginOnly,
-        selectedCategories,
+        selectedCategory,
         minimumPrice,
         maximumPrice,
-        sortOption
+        sortOption,
+        canViewCosts,
+        nowTimestamp
     ) {
         val minPrice = minimumPrice.toDoubleOrNull()
         val maxPrice = maximumPrice.toDoubleOrNull()
-        val now = System.currentTimeMillis()
+        val now = nowTimestamp
         val in30Days = now + (30L * 24 * 60 * 60 * 1000)
 
         productsList
             .asSequence()
             .filter { product ->
-                selectedCategories.isEmpty() || product.category.trim() in selectedCategories
+                selectedCategory == null || product.category.trim() == selectedCategory
             }
             .filter { product ->
-                if (!highMarginOnly) true
+                if (!highMarginOnly || !canViewCosts) true
                 else product.purchasePrice > 0 && (product.sellingPrice - product.purchasePrice) / product.purchasePrice >= 0.3
             }
             .filter { product ->
@@ -608,7 +632,7 @@ fun ProductsScreen(
         } else {
             scope.launch {
                 snackbarHostState.showSnackbar(
-                    message = "${product.name} - OUT OF STOCK!",
+                    message = context.getString(R.string.products_out_of_stock_snackbar, product.name),
                     duration = SnackbarDuration.Short
                 )
             }
@@ -711,12 +735,12 @@ fun ProductsScreen(
                         Box(
                             modifier = Modifier
                                 .padding(horizontal = 2.dp)
-                                .size(38.dp),
+                                .size(48.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             IconButton(
                                 onClick = { showInventoryAlertsModal = true },
-                                modifier = Modifier.size(38.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
                                 Realistic3DBrassAlertBellIcon(size = 22.dp)
                             }
@@ -750,7 +774,9 @@ fun ProductsScreen(
                         // 3D Indigo Cart Capsule with Tap & Add Animations
                         Surface(
                             onClick = {
-                                cartAnimKey = System.currentTimeMillis()
+                                if (cartUnitCount > 0) {
+                                    cartAnimKey = System.currentTimeMillis()
+                                }
                                 onNavigateToCart()
                             },
                             interactionSource = cartInteractionSource,
@@ -760,7 +786,7 @@ fun ProductsScreen(
                             shadowElevation = 2.dp,
                             modifier = Modifier
                                 .padding(end = 8.dp)
-                                .height(36.dp)
+                                .height(48.dp)
                                 .graphicsLayer {
                                     scaleX = cartPressScale * cartCapsuleBounceScale.value
                                     scaleY = cartPressScale * cartCapsuleBounceScale.value
@@ -839,7 +865,7 @@ fun ProductsScreen(
                                 shape = RoundedCornerShape(20.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                                modifier = Modifier.height(34.dp)
+                                modifier = Modifier.height(48.dp)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -847,13 +873,13 @@ fun ProductsScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Description,
-                                        contentDescription = "Excel Tools",
+                                        contentDescription = stringResource(R.string.products_excel_tools),
                                         tint = Color(0xFF059669),
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        text = "Excel Tools",
+                                        text = stringResource(R.string.products_excel_tools),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface
@@ -873,9 +899,14 @@ fun ProductsScreen(
                             ) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.products_import_excel), fontWeight = FontWeight.SemiBold) },
-                                    leadingIcon = { Icon(Icons.Default.FileUpload, null, tint = MaterialTheme.colorScheme.primary) },
+                                    leadingIcon = { Icon(Icons.Default.FileUpload, null, tint = if (canEdit) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                                    enabled = !isImporting,
                                     onClick = {
                                         showExcelMenu = false
+                                        if (!canEdit) {
+                                            Toast.makeText(context, context.getString(R.string.products_editing_owner_only), Toast.LENGTH_SHORT).show()
+                                            return@DropdownMenuItem
+                                        }
                                         importExcelLauncher.launch(
                                             arrayOf(
                                                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -890,7 +921,7 @@ fun ProductsScreen(
                                     leadingIcon = { Icon(Icons.Default.FileDownload, null, tint = MaterialTheme.colorScheme.primary) },
                                     onClick = {
                                         showExcelMenu = false
-                                        val cleanDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+                                        val cleanDate = exportExcelDateFormat.format(Date())
                                         exportExcelLauncher.launch("products-$cleanDate.xlsx")
                                     }
                                 )
@@ -898,33 +929,35 @@ fun ProductsScreen(
                         }
 
                         // 2. Batch Select Mode Chip
-                        Surface(
-                            onClick = {
-                                batchSelectMode = !batchSelectMode
-                                if (!batchSelectMode) selectedBarcodes.clear()
-                            },
-                            shape = RoundedCornerShape(20.dp),
-                            color = if (batchSelectMode) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            border = BorderStroke(1.dp, if (batchSelectMode) Color(0xFF6EE7B7) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                            modifier = Modifier.height(34.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 12.dp)
+                        if (canEdit || canDelete) {
+                            Surface(
+                                onClick = {
+                                    batchSelectMode = !batchSelectMode
+                                    if (!batchSelectMode) selectedBarcodes.clear()
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (batchSelectMode) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = BorderStroke(1.dp, if (batchSelectMode) Color(0xFF6EE7B7) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                                modifier = Modifier.height(48.dp)
                             ) {
-                                Icon(
-                                    imageVector = if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
-                                    contentDescription = "Batch Operations",
-                                    tint = if (batchSelectMode) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = if (batchSelectMode) "Exit Batch" else "Batch Select",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (batchSelectMode) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
+                                        contentDescription = stringResource(R.string.products_batch_operations_cd),
+                                        tint = if (batchSelectMode) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = if (batchSelectMode) stringResource(R.string.products_exit_batch) else stringResource(R.string.products_batch_select),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (batchSelectMode) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
                             }
                         }
 
@@ -934,7 +967,7 @@ fun ProductsScreen(
                             shape = RoundedCornerShape(20.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                            modifier = Modifier.height(34.dp)
+                            modifier = Modifier.height(48.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -943,7 +976,7 @@ fun ProductsScreen(
                                 Realistic3DClipboardDuesIcon(size = 16.dp)
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    text = "Stock Audit",
+                                    text = stringResource(R.string.products_stock_audit),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -957,7 +990,7 @@ fun ProductsScreen(
                             shape = RoundedCornerShape(20.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                            modifier = Modifier.height(34.dp)
+                            modifier = Modifier.height(48.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -965,19 +998,25 @@ fun ProductsScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Print,
-                                    contentDescription = "Print Labels",
+                                    contentDescription = stringResource(R.string.products_print_labels),
                                     tint = Color(0xFF4F46E5),
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    text = "Print Labels",
+                                    text = stringResource(R.string.products_print_labels),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
+                    }
+                    if (isImporting) {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
             }
         },
@@ -1242,17 +1281,17 @@ fun ProductsScreen(
                                         }
                                     }
                                 },
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
                                 Icon(
                                     imageVector = if (allVisibleSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                                    contentDescription = "Select All",
+                                    contentDescription = stringResource(R.string.products_select_all_cd),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
                             Text(
-                                text = "${selectedBarcodes.size} selected",
+                                text = stringResource(R.string.products_selected_count, selectedBarcodes.size),
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1268,9 +1307,9 @@ fun ProductsScreen(
                                 enabled = selectedBarcodes.isNotEmpty() && canEdit,
                                 shape = RoundedCornerShape(8.dp),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                modifier = Modifier.height(32.dp)
+                                modifier = Modifier.height(48.dp)
                             ) {
-                                Text("Price %", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.products_batch_price_pct), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
 
                             FilledTonalButton(
@@ -1278,9 +1317,9 @@ fun ProductsScreen(
                                 enabled = selectedBarcodes.isNotEmpty() && canEdit,
                                 shape = RoundedCornerShape(8.dp),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                modifier = Modifier.height(32.dp)
+                                modifier = Modifier.height(48.dp)
                             ) {
-                                Text("Category", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.products_batch_category), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
 
                             if (canDelete) {
@@ -1290,9 +1329,9 @@ fun ProductsScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                    modifier = Modifier.height(32.dp)
+                                    modifier = Modifier.height(48.dp)
                                 ) {
-                                    Text("Delete", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onError)
+                                    Text(stringResource(R.string.products_batch_delete), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onError)
                                 }
                             }
 
@@ -1301,11 +1340,11 @@ fun ProductsScreen(
                                     batchSelectMode = false
                                     selectedBarcodes.clear()
                                 },
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
                                 Icon(
                                     Icons.Default.Close,
-                                    contentDescription = "Exit Selection",
+                                    contentDescription = stringResource(R.string.products_exit_selection_cd),
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -1331,7 +1370,7 @@ fun ProductsScreen(
                     shadowElevation = 0.5.dp,
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp)
+                        .height(48.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -1373,7 +1412,7 @@ fun ProductsScreen(
                         if (searchQuery.isNotEmpty()) {
                             IconButton(
                                 onClick = { productsViewModel.setSearchQuery("") },
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
                                 Icon(
                                     Icons.Default.Close,
@@ -1394,7 +1433,7 @@ fun ProductsScreen(
                             },
                             shape = RoundedCornerShape(8.dp),
                             color = if (stockScannerEnabled) Color(0xFF4F46E5) else Color(0xFFEEF2FF),
-                            modifier = Modifier.size(30.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Realistic3DHardwareBarcodeScannerIcon(size = 20.dp, animate = true)
@@ -1404,11 +1443,13 @@ fun ProductsScreen(
                 }
 
                 // Native Tune/Filter Button (Opens Filter Bottom Sheet)
-                val hasActiveFilters = selectedCategories.isNotEmpty() ||
+                val hasActiveFilters = selectedCategory != null ||
                         stockFilter != ProductStockFilter.ALL ||
                         highMarginOnly ||
                         minimumPrice.isNotEmpty() ||
-                        maximumPrice.isNotEmpty()
+                        maximumPrice.isNotEmpty() ||
+                        dateFilter != ProductDateFilter.ALL ||
+                        sortOption != ProductSortOption.NAME_ASC
 
                 Surface(
                     onClick = { showFilters = true },
@@ -1416,7 +1457,7 @@ fun ProductsScreen(
                     color = if (hasActiveFilters) Color(0xFFEEF2FF) else MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, if (hasActiveFilters) Color(0xFF6366F1) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
                     shadowElevation = 0.5.dp,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
@@ -1444,10 +1485,10 @@ fun ProductsScreen(
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
                     shadowElevation = 0.5.dp,
-                    modifier = Modifier.height(44.dp)
+                    modifier = Modifier.height(48.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(3.dp),
+                        modifier = Modifier.padding(2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
@@ -1455,7 +1496,7 @@ fun ProductsScreen(
                             shape = RoundedCornerShape(8.dp),
                             color = if (viewMode == ProductViewMode.GRID) Color(0xFFEEF2FF) else Color.Transparent,
                             border = if (viewMode == ProductViewMode.GRID) BorderStroke(1.dp, Color(0xFFA5B4FC)) else null,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
@@ -1471,7 +1512,7 @@ fun ProductsScreen(
                             shape = RoundedCornerShape(8.dp),
                             color = if (viewMode == ProductViewMode.LIST) Color(0xFFEEF2FF) else Color.Transparent,
                             border = if (viewMode == ProductViewMode.LIST) BorderStroke(1.dp, Color(0xFFA5B4FC)) else null,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
@@ -1495,7 +1536,7 @@ fun ProductsScreen(
                             contentColor = Color.White
                         ),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
-                        modifier = Modifier.height(44.dp)
+                        modifier = Modifier.height(48.dp)
                     ) {
                         Text("+", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.width(4.dp))
@@ -1534,7 +1575,7 @@ fun ProductsScreen(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = "All SKUs",
+                            text = stringResource(R.string.products_filter_all_skus),
                             fontSize = 12.sp,
                             fontWeight = if (isAllSkus) FontWeight.Bold else FontWeight.Medium,
                             color = if (isAllSkus) Color.White else MaterialTheme.colorScheme.onSurface
@@ -1571,7 +1612,7 @@ fun ProductsScreen(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = "⚠️ Low Stock",
+                            text = stringResource(R.string.products_filter_low_stock_chip),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFD97706)
@@ -1608,7 +1649,7 @@ fun ProductsScreen(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = "🚫 Out of Stock",
+                            text = stringResource(R.string.products_filter_out_of_stock_chip),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFDC2626)
@@ -1629,28 +1670,30 @@ fun ProductsScreen(
                 }
 
                 // 4. 💎 High Margin (>30%)
-                Surface(
-                    onClick = {
-                        highMarginOnly = !highMarginOnly
-                        if (highMarginOnly) {
-                            stockFilterName = ProductStockFilter.ALL.name
-                        }
-                    },
-                    shape = RoundedCornerShape(999.dp),
-                    color = if (highMarginOnly) Color(0xFFD1FAE5) else MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, if (highMarginOnly) Color(0xFF10B981) else Color(0xFF10B981).copy(alpha = 0.45f))
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                if (canViewCosts) {
+                    Surface(
+                        onClick = {
+                            highMarginOnly = !highMarginOnly
+                            if (highMarginOnly) {
+                                stockFilterName = ProductStockFilter.ALL.name
+                            }
+                        },
+                        shape = RoundedCornerShape(999.dp),
+                        color = if (highMarginOnly) Color(0xFFD1FAE5) else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, if (highMarginOnly) Color(0xFF10B981) else Color(0xFF10B981).copy(alpha = 0.45f))
                     ) {
-                        Text(
-                            text = "💎 High Margin (>30%)",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF047857)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.products_filter_high_margin_chip),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF047857)
+                            )
+                        }
                     }
                 }
 
@@ -1664,15 +1707,15 @@ fun ProductsScreen(
                 )
 
                 // 5. All Categories
-                val isAllCats = selectedCategories.isEmpty()
+                val isAllCats = selectedCategory == null
                 Surface(
-                    onClick = { selectedCategories = emptySet() },
+                    onClick = { selectedCategory = null },
                     shape = RoundedCornerShape(999.dp),
                     color = if (isAllCats) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, if (isAllCats) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
                 ) {
                     Text(
-                        text = "All Categories",
+                        text = stringResource(R.string.products_filter_all_categories),
                         fontSize = 12.sp,
                         fontWeight = if (isAllCats) FontWeight.Bold else FontWeight.Medium,
                         color = if (isAllCats) Color.White else MaterialTheme.colorScheme.onSurface,
@@ -1682,11 +1725,11 @@ fun ProductsScreen(
 
                 // 6. Dynamic Categories with Emojis & Counts
                 availableCategories.forEach { category ->
-                    val isCatActive = category in selectedCategories
+                    val isCatActive = selectedCategory == category
                     val emoji = getCategoryEmoji(category)
                     Surface(
                         onClick = {
-                            selectedCategories = if (isCatActive) emptySet() else setOf(category)
+                            selectedCategory = if (isCatActive) null else category
                         },
                         shape = RoundedCornerShape(999.dp),
                         color = if (isCatActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -1709,10 +1752,11 @@ fun ProductsScreen(
             }
 
             // Active Filter Indicator Strip (Visible only when filters are active)
-            val hasActiveFilterBar = selectedCategories.isNotEmpty() ||
+            val hasActiveFilterBar = selectedCategory != null ||
                     stockFilter != ProductStockFilter.ALL ||
                     dateFilter != ProductDateFilter.ALL ||
                     sortOption != ProductSortOption.NAME_ASC ||
+                    highMarginOnly ||
                     minimumPrice.isNotEmpty() ||
                     maximumPrice.isNotEmpty()
 
@@ -1737,9 +1781,17 @@ fun ProductsScreen(
                     val priceLowLabel = stringResource(R.string.products_sort_price_low)
                     val priceHighLabel = stringResource(R.string.products_sort_price_high)
                     val expirySoonLabel = stringResource(R.string.products_sort_expiry_soon)
+                    val stockLowChipLabel = stringResource(R.string.products_filter_low_stock_chip)
+                    val stockOutChipLabel = stringResource(R.string.products_filter_out_of_stock_chip)
+                    val inStockLabel = stringResource(R.string.in_stock)
                     val filterSummary = buildList {
-                        if (selectedCategories.isNotEmpty()) add(selectedCategories.joinToString(", "))
-                        if (stockFilter != ProductStockFilter.ALL) add(stockFilter.name)
+                        if (selectedCategory != null) add(selectedCategory!!)
+                        if (stockFilter != ProductStockFilter.ALL) add(when (stockFilter) {
+                            ProductStockFilter.AVAILABLE -> inStockLabel
+                            ProductStockFilter.LOW -> stockLowChipLabel
+                            ProductStockFilter.OUT -> stockOutChipLabel
+                            ProductStockFilter.ALL -> ""
+                        })
                         if (dateFilter != ProductDateFilter.ALL) add(when (dateFilter) {
                             ProductDateFilter.EXPIRING_SOON -> expiringSoonLabel
                             ProductDateFilter.EXPIRED -> expiredLabel
@@ -1756,6 +1808,7 @@ fun ProductsScreen(
                             ProductSortOption.EXPIRY_SOONEST -> expirySoonLabel
                             ProductSortOption.NAME_ASC -> ""
                         })
+                        if (highMarginOnly) add(stringResource(R.string.products_filter_high_margin_chip))
                         if (minimumPrice.isNotEmpty() || maximumPrice.isNotEmpty()) add("৳$minimumPrice-৳$maximumPrice")
                     }.joinToString(" • ")
 
@@ -1771,10 +1824,11 @@ fun ProductsScreen(
 
                     TextButton(
                         onClick = {
-                            selectedCategories = emptySet()
+                            selectedCategory = null
                             stockFilterName = ProductStockFilter.ALL.name
                             dateFilterName = ProductDateFilter.ALL.name
                             sortOptionName = ProductSortOption.NAME_ASC.name
+                            highMarginOnly = false
                             minimumPrice = ""
                             maximumPrice = ""
                         },
@@ -1828,7 +1882,7 @@ fun ProductsScreen(
                                 onClick = onNavigateToCart,
                                 shape = RoundedCornerShape(8.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.height(30.dp)
+                                modifier = Modifier.height(48.dp)
                             ) {
                                 Text(stringResource(R.string.products_view_cart), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
@@ -1896,10 +1950,11 @@ fun ProductsScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         OutlinedButton(
                             onClick = {
-                                selectedCategories = emptySet()
+                                selectedCategory = null
                                 stockFilterName = ProductStockFilter.ALL.name
                                 dateFilterName = ProductDateFilter.ALL.name
                                 sortOptionName = ProductSortOption.NAME_ASC.name
+                                highMarginOnly = false
                                 minimumPrice = ""
                                 maximumPrice = ""
                             }
@@ -1909,7 +1964,7 @@ fun ProductsScreen(
                     }
                 }
             } else {
-                key(selectedCategories.hashCode()) {
+                key(selectedCategory) {
                     if (viewMode == ProductViewMode.LIST) {
                         LazyColumn(
                             state = listState,
@@ -1935,14 +1990,16 @@ fun ProductsScreen(
                                         }
                                     },
                                     onRowLongClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        if (!batchSelectMode) {
-                                            batchSelectMode = true
-                                            selectedBarcodes.clear()
-                                            selectedBarcodes.add(product.barcode)
-                                        } else {
-                                            if (isSelected) selectedBarcodes.remove(product.barcode)
-                                            else selectedBarcodes.add(product.barcode)
+                                        if (canEdit || canDelete) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            if (!batchSelectMode) {
+                                                batchSelectMode = true
+                                                selectedBarcodes.clear()
+                                                selectedBarcodes.add(product.barcode)
+                                            } else {
+                                                if (isSelected) selectedBarcodes.remove(product.barcode)
+                                                else selectedBarcodes.add(product.barcode)
+                                            }
                                         }
                                     },
                                     onAdjustStock = { stockCheckProduct = product },
@@ -1986,14 +2043,16 @@ fun ProductsScreen(
                                         }
                                     },
                                     onCardLongClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        if (!batchSelectMode) {
-                                            batchSelectMode = true
-                                            selectedBarcodes.clear()
-                                            selectedBarcodes.add(product.barcode)
-                                        } else {
-                                            if (isSelected) selectedBarcodes.remove(product.barcode)
-                                            else selectedBarcodes.add(product.barcode)
+                                        if (canEdit || canDelete) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            if (!batchSelectMode) {
+                                                batchSelectMode = true
+                                                selectedBarcodes.clear()
+                                                selectedBarcodes.add(product.barcode)
+                                            } else {
+                                                if (isSelected) selectedBarcodes.remove(product.barcode)
+                                                else selectedBarcodes.add(product.barcode)
+                                            }
                                         }
                                     },
                                     onAdjustStock = { stockCheckProduct = product },
@@ -2019,12 +2078,13 @@ fun ProductsScreen(
 
     if (showFilters) {
         val filterSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val hasActiveFilters = selectedCategories.isNotEmpty() ||
+        val hasActiveFilters = selectedCategory != null ||
                 stockFilter != ProductStockFilter.ALL ||
                 dateFilter != ProductDateFilter.ALL ||
                 sortOption != ProductSortOption.NAME_ASC ||
                 minimumPrice.isNotBlank() ||
-                maximumPrice.isNotBlank()
+                maximumPrice.isNotBlank() ||
+                highMarginOnly
 
         ModalBottomSheet(
             onDismissRequest = { showFilters = false },
@@ -2083,12 +2143,13 @@ fun ProductsScreen(
                     if (hasActiveFilters) {
                         Surface(
                             onClick = {
-                                selectedCategories = emptySet()
+                                selectedCategory = null
                                 stockFilterName = ProductStockFilter.ALL.name
                                 dateFilterName = ProductDateFilter.ALL.name
                                 sortOptionName = ProductSortOption.NAME_ASC.name
                                 minimumPrice = ""
                                 maximumPrice = ""
+                                highMarginOnly = false
                             },
                             shape = RoundedCornerShape(8.dp),
                             color = Color(0xFFFEE2E2),
@@ -2131,9 +2192,9 @@ fun ProductsScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val isAllSelected = selectedCategories.isEmpty()
+                        val isAllSelected = selectedCategory == null
                         Surface(
-                            onClick = { selectedCategories = emptySet() },
+                            onClick = { selectedCategory = null },
                             shape = RoundedCornerShape(10.dp),
                             color = if (isAllSelected) Color(0xFF4F46E5) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                             border = if (isAllSelected) BorderStroke(1.dp, Color(0xFF4338CA)) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -2148,15 +2209,11 @@ fun ProductsScreen(
                         }
 
                         availableCategories.forEach { category ->
-                            val isSelected = category in selectedCategories
+                            val isSelected = selectedCategory == category
                             val count = allProductsList.count { it.category.trim() == category }
                             Surface(
                                 onClick = {
-                                    selectedCategories = if (isSelected) {
-                                        selectedCategories - category
-                                    } else {
-                                        selectedCategories + category
-                                    }
+                                    selectedCategory = if (isSelected) null else category
                                 },
                                 shape = RoundedCornerShape(10.dp),
                                 color = if (isSelected) Color(0xFF4F46E5) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
@@ -2528,7 +2585,7 @@ fun ProductsScreen(
                 ) {
                     OutlinedButton(
                         onClick = {
-                            selectedCategories = emptySet()
+                            selectedCategory = null
                             stockFilterName = ProductStockFilter.ALL.name
                             dateFilterName = ProductDateFilter.ALL.name
                             sortOptionName = ProductSortOption.NAME_ASC.name
@@ -2538,7 +2595,7 @@ fun ProductsScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .weight(0.9f)
-                            .height(44.dp)
+                            .height(48.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.reset),
@@ -2553,7 +2610,7 @@ fun ProductsScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .weight(1.4f)
-                            .height(44.dp)
+                            .height(48.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.products_apply_filters_count, visibleProducts.size),
@@ -2644,8 +2701,8 @@ fun ProductsScreen(
                                 previousStock = 0.0,
                                 newStock = qty,
                                 difference = qty,
-                                reason = reason ?: "Restock",
-                                note = note ?: "Initial stock recorded upon product creation"
+                                reason = reason ?: context.getString(R.string.products_reason_restock),
+                                note = note ?: context.getString(R.string.products_initial_stock_note)
                             )
                         }
                         showAddDialog = false
@@ -2732,7 +2789,7 @@ fun ProductsScreen(
                             previousStock = prevStock,
                             newStock = qty,
                             difference = diff,
-                            reason = reason ?: if (diff > 0) "Restock" else "Discrepancy",
+                            reason = reason ?: if (diff > 0) context.getString(R.string.products_reason_restock) else context.getString(R.string.products_reason_discrepancy),
                             note = note
                         )
                     } else null
@@ -2769,8 +2826,8 @@ fun ProductsScreen(
                     previousStock = prevStock,
                     newStock = newStock,
                     difference = addedQty.toDouble(),
-                    reason = "Restock",
-                    note = "Quick restock from Inventory Alerts"
+                    reason = context.getString(R.string.products_reason_restock),
+                    note = context.getString(R.string.products_quick_restock_note)
                 )
                 Toast.makeText(context, context.getString(R.string.products_added_stock_toast, addedQty, prod.name), Toast.LENGTH_SHORT).show()
             },
@@ -2995,12 +3052,12 @@ fun BulkPriceAdjustmentDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Bulk Price Adjustment", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(R.string.bulk_price_dialog_title), fontWeight = FontWeight.Bold, fontSize = 18.sp)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "Adjust prices for $selectedCount selected product(s).",
+                    stringResource(R.string.bulk_price_adjust_desc, selectedCount),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -3009,12 +3066,12 @@ fun BulkPriceAdjustmentDialog(
                     FilterChip(
                         selected = mode == 0,
                         onClick = { mode = 0 },
-                        label = { Text("Percentage (%)") }
+                        label = { Text(stringResource(R.string.bulk_price_mode_percentage)) }
                     )
                     FilterChip(
                         selected = mode == 1,
                         onClick = { mode = 1 },
-                        label = { Text("Fixed (৳)") }
+                        label = { Text(stringResource(R.string.bulk_price_mode_fixed)) }
                     )
                 }
 
@@ -3022,12 +3079,12 @@ fun BulkPriceAdjustmentDialog(
                     FilterChip(
                         selected = isIncrease,
                         onClick = { isIncrease = true },
-                        label = { Text("Increase (+)") }
+                        label = { Text(stringResource(R.string.bulk_price_dir_increase)) }
                     )
                     FilterChip(
                         selected = !isIncrease,
                         onClick = { isIncrease = false },
-                        label = { Text("Decrease (-)") }
+                        label = { Text(stringResource(R.string.bulk_price_dir_decrease)) }
                     )
                 }
 
@@ -3048,7 +3105,7 @@ fun BulkPriceAdjustmentDialog(
                 OutlinedTextField(
                     value = valueText,
                     onValueChange = { valueText = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text(if (mode == 0) "Percentage (e.g. 10)" else "Amount in ৳ (e.g. 20)") },
+                    label = { Text(if (mode == 0) stringResource(R.string.bulk_price_label_percentage) else stringResource(R.string.bulk_price_label_fixed)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -3062,12 +3119,12 @@ fun BulkPriceAdjustmentDialog(
                 },
                 enabled = valueText.toDoubleOrNull() != null && (valueText.toDoubleOrNull() ?: 0.0) > 0.0
             ) {
-                Text("Apply to $selectedCount items")
+                Text(stringResource(R.string.bulk_price_apply_button, selectedCount))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -3088,7 +3145,7 @@ fun BulkCategoryReassignmentDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Reassign Category", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(R.string.bulk_category_dialog_title), fontWeight = FontWeight.Bold, fontSize = 18.sp)
         },
         text = {
             Column(
@@ -3096,13 +3153,13 @@ fun BulkCategoryReassignmentDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    "Reassign category for $selectedCount product(s):",
+                    stringResource(R.string.bulk_category_dialog_desc, selectedCount),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 if (existingCategories.isNotEmpty()) {
-                    Text("Select existing category:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.bulk_category_select_existing), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -3123,14 +3180,14 @@ fun BulkCategoryReassignmentDialog(
                 FilterChip(
                     selected = isCustomCat,
                     onClick = { isCustomCat = true },
-                    label = { Text("+ New Category") }
+                    label = { Text(stringResource(R.string.bulk_category_new_chip)) }
                 )
 
                 if (isCustomCat) {
                     OutlinedTextField(
                         value = customCatText,
                         onValueChange = { customCatText = it },
-                        label = { Text("Enter Category Name") },
+                        label = { Text(stringResource(R.string.bulk_category_name_label)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -3143,12 +3200,12 @@ fun BulkCategoryReassignmentDialog(
                 onClick = { onApply(targetCategory) },
                 enabled = targetCategory.isNotBlank()
             ) {
-                Text("Reassign ($selectedCount)")
+                Text(stringResource(R.string.bulk_category_reassign_button, selectedCount))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -3163,11 +3220,11 @@ fun BulkDeleteConfirmationDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Delete $selectedCount Products?", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(R.string.bulk_delete_dialog_title, selectedCount), fontWeight = FontWeight.Bold, fontSize = 18.sp)
         },
         text = {
             Text(
-                "Are you sure you want to permanently delete $selectedCount selected products? This action cannot be undone.",
+                stringResource(R.string.bulk_delete_dialog_message, selectedCount),
                 fontSize = 13.5.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -3177,12 +3234,12 @@ fun BulkDeleteConfirmationDialog(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("Delete $selectedCount Products", color = MaterialTheme.colorScheme.onError)
+                Text(stringResource(R.string.bulk_delete_confirm_button, selectedCount), color = MaterialTheme.colorScheme.onError)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -3301,9 +3358,9 @@ private fun HardwareStockCheckDialog(
         )
     }
     val quantity = quantityText.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
-    var selectedReason by remember { mutableStateOf("Restock") }
+    val reasonsList = stringArrayResource(R.array.stock_adjustment_reasons).toList()
+    var selectedReason by remember(reasonsList) { mutableStateOf(reasonsList.firstOrNull() ?: "") }
     var adjustmentNote by remember { mutableStateOf("") }
-    val reasonsList = listOf("Restock", "Damage", "Expired", "Discrepancy", "Sample", "Internal Use")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -4000,7 +4057,7 @@ private fun ProductAddButton(
         shape = RoundedCornerShape(10.dp),
         color = if (enabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         contentColor = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-        modifier = modifier.height(34.dp)
+        modifier = modifier.height(48.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -4393,7 +4450,7 @@ fun ProductItemRow(
                         softWrap = false
                     )
                     Text(
-                        text = "/ ${product.unit.ifBlank { "Pcs" }}",
+                        text = "/ ${product.unit.ifBlank { stringResource(R.string.unit_pcs_default) }}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
@@ -4415,7 +4472,7 @@ fun ProductItemRow(
                             contentColor = Color.White
                         ),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                        modifier = Modifier.height(32.dp)
+                        modifier = Modifier.height(48.dp)
                     ) {
                         Realistic3DSupermarketCartIcon(size = 14.dp)
                         Spacer(Modifier.width(4.dp))
@@ -4427,7 +4484,7 @@ fun ProductItemRow(
                         shape = RoundedCornerShape(8.dp),
                         color = Color(0xFFEEF2FF),
                         border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
-                        modifier = Modifier.height(32.dp)
+                        modifier = Modifier.height(48.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -4628,7 +4685,7 @@ fun ProductItemRow(
                         softWrap = false
                     )
                     Text(
-                        text = "/ ${product.unit.ifBlank { "Pcs" }}",
+                        text = "/ ${product.unit.ifBlank { stringResource(R.string.unit_pcs_default) }}",
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
@@ -4651,7 +4708,7 @@ fun ProductItemRow(
                             contentColor = Color.White
                         ),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                        modifier = Modifier.height(32.dp)
+                        modifier = Modifier.height(48.dp)
                     ) {
                         Realistic3DSupermarketCartIcon(size = 15.dp)
                         Spacer(Modifier.width(4.dp))
@@ -4664,7 +4721,7 @@ fun ProductItemRow(
                         shape = RoundedCornerShape(8.dp),
                         color = Color(0xFFEEF2FF),
                         border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
-                        modifier = Modifier.height(32.dp)
+                        modifier = Modifier.height(48.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -4946,7 +5003,7 @@ private fun ProductGridCard(
                     softWrap = false
                 )
                 Text(
-                    text = "/ ${product.unit.ifBlank { "Pcs" }}",
+                    text = "/ ${product.unit.ifBlank { stringResource(R.string.unit_pcs_default) }}",
                     fontSize = 11.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
@@ -4974,7 +5031,7 @@ private fun ProductGridCard(
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(32.dp)
+                        .height(48.dp)
                 ) {
                     Realistic3DSupermarketCartIcon(size = 14.dp)
                     Spacer(Modifier.width(4.dp))
@@ -4992,7 +5049,7 @@ private fun ProductGridCard(
                     shape = RoundedCornerShape(8.dp),
                     color = Color(0xFFEEF2FF),
                     border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
-                    modifier = Modifier.height(32.dp)
+                    modifier = Modifier.height(48.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
