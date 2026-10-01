@@ -527,10 +527,10 @@ fun CartScreen(
         val snapshotDiscount = discountVal
         val snapshotTax = taxVal
         val snapshotGrandTotal = grandTotal
-        val snapshotPaymentMethod = if (isSplitPayment) "Split" else paymentMethod
+        val snapshotSplitJson = cartViewModel.buildAuthoritativeSplitJson()
+        val snapshotPaymentMethod = if (snapshotSplitJson != null) "Split" else paymentMethod
         val snapshotCustomerName = customerName
         val snapshotCustomerPhone = customerPhone
-        val snapshotSplitJson = if (isSplitPayment) cartViewModel.getSplitPaymentsJson() else null
         val snapshotHasDueInPayment = hasDueInPayment
         try {
             val snapshotStoreCreditApplied = cartViewModel.storeCreditApplied.value

@@ -835,6 +835,8 @@ fun CustomerDossierSheet(
                                                             "RETURN_REFUND" -> stringResource(R.string.dossier_credit_return_refund)
                                                             "SALE_REDEMPTION" -> stringResource(R.string.dossier_credit_checkout_redemption)
                                                             "MANUAL_ADJUSTMENT" -> stringResource(R.string.dossier_credit_supervisor_adjustment)
+                                                            "SALE_VOID" -> stringResource(R.string.dossier_credit_sale_void)
+                                                            "MERGE_TRANSFER" -> stringResource(R.string.dossier_credit_merge_transfer)
                                                             else -> stringResource(R.string.dossier_credit_unknown_type)
                                                         },
                                                         fontWeight = FontWeight.Bold,

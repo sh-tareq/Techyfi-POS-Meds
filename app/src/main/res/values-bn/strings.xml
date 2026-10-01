@@ -2386,6 +2386,8 @@
     <string name="dossier_credit_return_refund">🔄 ফেরত রিফান্ড</string>
     <string name="dossier_credit_checkout_redemption">🛒 চেকআউট রিডিম</string>
     <string name="dossier_credit_supervisor_adjustment">⚖️ সুপারভাইজার সমন্বয়</string>
+    <string name="dossier_credit_sale_void">🚫 বাতিল পুনর্উদ্ধার</string>
+    <string name="dossier_credit_merge_transfer">🔀 মার্জ স্থানান্তর</string>
     <string name="customer_share_receipt_chooser">রসিদ শেয়ার করুন</string>
     <string name="store_credit_adjust_note_placeholder">যেমন: ফেরত পণ্যের ক্ষতিপূরণ, প্রমোশন, সংশোধন</string>
     <string name="store_credit_deduct_exceeds_current">কর্তন বর্তমান ক্রেডিটের (%1$s) বেশি হতে পারে না</string>

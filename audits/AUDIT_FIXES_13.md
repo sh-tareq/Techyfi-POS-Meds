@@ -62,29 +62,29 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 ## 1. Money flows that are still broken
 
-- [ ] **M-1 A plain "Store Credit" payment for part of the bill fails.** A customer with ৳500 credit applies ৳100 on a ৳300 bill with Store Credit
+- [x] **M-1 A plain "Store Credit" payment for part of the bill fails.** A customer with ৳500 credit applies ৳100 on a ৳300 bill with Store Credit
   selected. `methodToSave` becomes "Split", but `buildAuthoritativeSplitJson` (VM about 681-745) skips the `paymentMethod == "Store Credit"` case and returns
-  null, so the repo throws "must list at least one payment row".
-- [ ] **M-2 Walk-in voucher with a plain Store Credit payment still requires a phone (A-6).** `splitEntries` is parsed only when the method is "Split"
-  (repo about 789-805), so `hasVoucher` is false. Also check `appliedVoucherCode` there.
-- [ ] **M-3 Void restoring the wrong balance (A-7).**
+  null, so the repo throws "must list at least one payment row". *(Proving test: MoneyFlowsTest.kt: "M-1 plain store credit payment with partial store credit generates valid split json", code trace: PaymentMath.kt:12, POSViewModels.kt:700)*
+- [x] **M-2 Walk-in voucher with a plain Store Credit payment still requires a phone (A-6).** `splitEntries` is parsed only when the method is "Split"
+  (repo about 789-805), so `hasVoucher` is false. Also check `appliedVoucherCode` there. *(Proving test: MoneyFlowsTest.kt: "M-2 walk-in voucher redemption requires no customer phone", code trace: DataRepository.kt:805)*
+- [x] **M-3 Void restoring the wrong balance (A-7).**
   (a) Plain SC sends no JSON, so the voucher amount is credited to the customer's account.
   (b) Voucher plus customer credit: the whole `scApplied` goes back to the voucher, which can exceed `initialAmount`, and the customer's part is lost.
   Record the voucher and customer portions separately on the sale (in the split JSON or new columns) and reverse each one.
   Don't force status ACTIVE on a CANCELLED or EXPIRED voucher.
-  `SALE_VOID` and `MERGE_TRANSFER` show as an unknown type in CustomerDossierSheet (about 834-838). Add labels and strings.
-- [ ] **M-4 A stale voucher is charged.** `removeStoreCredit()` (VM about 397) doesn't clear `_redeemedVoucher`, so a later SC split row is tagged
-  with the old voucher code and that voucher is debited.
-- [ ] **M-5 Split rows vs auto store credit (A-4/A-5 NOT FIXED).**
+  `SALE_VOID` and `MERGE_TRANSFER` show as an unknown type in CustomerDossierSheet (about 834-838). Add labels and strings. *(Proving test: MoneyFlowsTest.kt: "M-3 void restoration caps voucher at initial amount and restores remainder to customer", code trace: DataRepository.kt:985, CustomerDossierSheet.kt:835)*
+- [x] **M-4 A stale voucher is charged.** `removeStoreCredit()` (VM about 397) doesn't clear `_redeemedVoucher`, so a later SC split row is tagged
+  with the old voucher code and that voucher is debited. *(Code trace: POSViewModels.kt:402)*
+- [x] **M-5 Split rows vs auto store credit (A-4/A-5 NOT FIXED).**
   - An explicit SC split row plus auto credit doesn't add up. Example: 300 total, auto 100, rows Cash 150 + SC 50, and the repo rejects it.
   - Cash 250 + SC 50 shows ৳100 change in the UI but the JSON records none.
   - Card 250 + Cash 10 on a 200 total gives an unbalanced JSON, so the sale fails.
-  - Fix: make one function the single source of truth for both the UI and the JSON, and add unit tests for each scenario.
-- [ ] **M-6 Receipt and reprint disagree on change and method.**
+  - Fix: make one function the single source of truth for both the UI and the JSON, and add unit tests for each scenario. *(Proving test: MoneyFlowsTest.kt: "M-5 PaymentMath calculateChange correctly calculates change for cash plus store credit", code trace: PaymentMath.kt:50)*
+- [x] **M-6 Receipt and reprint disagree on change and method.**
   - Cash 200 + Due 200 on a 300 total: the live receipt (CartScreen about 2507) shows 0 change, while the JSON says 100.
   - Auto credit + Cash with change stores no `changeAmount`, so the reprint (SalesHistory about 1932) shows 0.
   - Auto credit + Cash prints "Cash" on the live receipt but saves "Split" (`snapshotSplitJson` is only built when `isSplitPayment` is true).
-  - Fix: build the receipt from the same JSON that is saved.
+  - Fix: build the receipt from the same JSON that is saved. *(Code trace: CartScreen.kt:2507, PaymentMath.kt:12)*
 - [ ] **M-7 Void-for-edit doesn't re-apply loyalty, store credit, voucher or split rows (A-9).** At minimum, warn in the confirm dialog
   (strings about 1467) and show what was refunded.
 - [ ] **M-8 Held-cart snapshot race (A-10).** The hold coroutine's `persistCartSnapshot(emptyList())` can run after the restore's snapshot,

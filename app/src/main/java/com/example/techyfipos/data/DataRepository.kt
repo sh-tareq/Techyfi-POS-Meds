@@ -595,7 +595,6 @@ class DataRepository(
 
                 val scApplied = sale.storeCreditApplied
                 if (scApplied > 0.0) {
-                    var restoredVoucher = false
                     val vCodeFromSale = sale.splitPaymentJson?.let { json ->
                         try {
                             val array = JSONArray(json)
@@ -605,22 +604,32 @@ class DataRepository(
                         } catch (_: Exception) { null }
                     } ?: storeCreditLedgerDao.getEntriesForInvoiceOnce(saleId).firstNotNullOfOrNull { it.voucherCode?.takeIf { c -> c.isNotBlank() } }
 
+                    var voucherPortion = 0.0
                     if (!vCodeFromSale.isNullOrBlank()) {
                         val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
                         if (voucher != null) {
-                            val restoredBal = voucher.remainingBalance + scApplied
+                            val maxRestoreToVoucher = (voucher.initialAmount - voucher.remainingBalance).coerceAtLeast(0.0)
+                            voucherPortion = minOf(scApplied, maxRestoreToVoucher)
+                            val restoredBal = voucher.remainingBalance + voucherPortion
                             val isExpired = voucher.expiresAt != null && voucher.expiresAt > 0L && voucher.expiresAt < System.currentTimeMillis()
-                            storeCreditVoucherDao.updateVoucherBalance(voucher.code, restoredBal, if (isExpired) "EXPIRED" else "ACTIVE")
-                            restoredVoucher = true
+                            val newStatus = when {
+                                voucher.status == "CANCELLED" -> "CANCELLED"
+                                isExpired || voucher.status == "EXPIRED" -> "EXPIRED"
+                                restoredBal > 0.0 -> "ACTIVE"
+                                else -> "EXHAUSTED"
+                            }
+                            storeCreditVoucherDao.updateVoucherBalance(voucher.code, restoredBal, newStatus)
                         }
                     }
-                    if (!restoredVoucher && !phone.isNullOrBlank()) {
-                        customerDao.adjustCustomerStoreCredit(phone, scApplied, System.currentTimeMillis())
+
+                    val customerPortion = (scApplied - voucherPortion).coerceAtLeast(0.0)
+                    if (customerPortion > 0.0 && !phone.isNullOrBlank()) {
+                        customerDao.adjustCustomerStoreCredit(phone, customerPortion, System.currentTimeMillis())
                         val newBal = (customerDao.getCustomerByPhone(normalizePhone(phone))?.storeCredit ?: 0.0)
                         storeCreditLedgerDao.insertEntry(
                             StoreCreditLedgerEntry(
                                 customerPhone = normalizePhone(phone),
-                                deltaAmount = scApplied,
+                                deltaAmount = customerPortion,
                                 balanceAfter = newBal,
                                 type = "SALE_VOID",
                                 referenceInvoiceId = saleId,
@@ -786,7 +795,7 @@ class DataRepository(
             // Payment-method-specific completeness checks. The current UI already enforces
             // these client-side, but the repository must not trust a caller (a future screen,
             // a scripted import) to have done so before persisting a sale.
-            val splitEntries: List<JSONObject>? = if (paymentMethod == "Split" && !splitPaymentJson.isNullOrBlank()) {
+            val splitEntries: List<JSONObject>? = if (!splitPaymentJson.isNullOrBlank()) {
                 val array = JSONArray(splitPaymentJson)
                 (0 until array.length()).map { array.getJSONObject(it) }
             } else null
@@ -796,7 +805,7 @@ class DataRepository(
                     "Customer name and phone are required for a Due sale"
                 }
                 "Store Credit" -> {
-                    val hasVoucher = splitEntries?.any { !it.optString("voucherCode").isNullOrBlank() } == true
+                    val hasVoucher = !appliedVoucherCode.isNullOrBlank() || splitEntries?.any { !it.optString("voucherCode").isNullOrBlank() } == true
                     if (!hasVoucher) {
                         require(customerName?.isNotBlank() == true && !normalizedCustomerPhone.isNullOrBlank()) {
                             "Customer name and phone are required for a Store Credit sale"
