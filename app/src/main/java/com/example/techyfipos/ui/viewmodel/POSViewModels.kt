@@ -2129,7 +2129,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
             var saleProfit = 0.0
             var saleItemsQty = 0.0
-            val isTaxInclusive = swi.sale.taxAmount > 0.0 && swi.sale.taxRate > 0.0 && kotlin.math.abs(swi.sale.subtotal - swi.sale.grandTotal) < 0.01
+            val isTaxInclusive = swi.sale.taxAmount > 0.0 && swi.sale.taxRate > 0.0
             for (item in swi.items) {
                 // The cost recorded at the moment of this exact sale, when available, so editing a
                 // product's current purchase price (or deleting it) later never changes what a past
@@ -2211,7 +2211,8 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             )
         }
 
-        val totalLoyaltyDiscount = list.sumOf { it.sale.loyaltyPointsRedeemed.toDouble() }
+        val ptCashVal = repository.getLoyaltySettings().pointCashValue.takeIf { it > 0.0 } ?: 1.0
+        val totalLoyaltyDiscount = list.sumOf { it.sale.loyaltyPointsRedeemed * ptCashVal }
         val grossMargin = profitSum - refundedProfit
         SalesReportData(
             transactionCount = list.size,
@@ -4090,7 +4091,7 @@ class RegisterClosingViewModel(private val repository: DataRepository) : ViewMod
         dueSales: Double = 0.0,
         onResult: (Result<Long>) -> Unit = {}
     ) {
-        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
         val variance = actualCountedCash - expectedCash
         viewModelScope.launch {
             val result = runCatching {

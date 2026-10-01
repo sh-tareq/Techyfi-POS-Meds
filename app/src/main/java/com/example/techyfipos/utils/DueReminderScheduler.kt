@@ -256,6 +256,14 @@ object DueReminderScheduler {
                             timestamp = reminder.fireAt
                         )
                     )
+                    showReminderNotification(
+                        context = context,
+                        customerName = reminder.customerName,
+                        customerPhone = reminder.customerPhone,
+                        dueAmount = reminder.dueAmount,
+                        messageText = reminder.messageText,
+                        channel = reminder.channel
+                    )
                     AppDatabase.getDatabase(context).scheduledDueReminderDao().deleteByPhone(reminder.customerPhone)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to cleanup expired one-shot reminder: ${e.message}")
