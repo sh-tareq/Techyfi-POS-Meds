@@ -194,7 +194,7 @@ fun SalesReportScreen(
     }
 
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
-    val exportFileDateFormat = remember { SimpleDateFormat("yyyyMMdd", Locale.getDefault()) }
+    val exportFileDateFormat = remember { SimpleDateFormat("yyyyMMdd", Locale.US) }
     val rangeLabel = remember(rangeStart, rangeEnd) {
         val start = dateFormat.format(Date(rangeStart))
         val end = dateFormat.format(Date((rangeEnd - 1).coerceAtLeast(rangeStart)))

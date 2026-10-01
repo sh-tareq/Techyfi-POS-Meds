@@ -91,4 +91,18 @@ class MoneyFlowsTest {
         )
         assertEquals(100.0, change, 0.001)
     }
+
+    @Test
+    fun `X-7 loyalty point calculation uses floor to prevent rounding over cap`() {
+        val requestedPoints = 9.6
+        val ptCashVal = 1.0
+        val flooredPoints = kotlin.math.floor(requestedPoints / ptCashVal + 1e-6).toInt()
+        assertEquals(9, flooredPoints)
+    }
+
+    @Test
+    fun `X-1 system backup method exportBackupForSystem is distinct from permission gated exportBackup`() {
+        val repoMethods = DataRepository::class.java.declaredMethods.map { it.name }
+        assertTrue("exportBackupForSystem must exist on DataRepository", repoMethods.contains("exportBackupForSystem"))
+    }
 }

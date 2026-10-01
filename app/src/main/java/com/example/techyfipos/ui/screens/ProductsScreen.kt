@@ -375,7 +375,7 @@ fun ProductsScreen(
         label = "cartPressScale"
     )
 
-    val exportExcelDateFormat = remember { SimpleDateFormat("yyyyMMdd", Locale.getDefault()) }
+    val exportExcelDateFormat = remember { SimpleDateFormat("yyyyMMdd", Locale.US) }
 
     fun requestEditProduct(product: Product) {
         if (canEdit) {

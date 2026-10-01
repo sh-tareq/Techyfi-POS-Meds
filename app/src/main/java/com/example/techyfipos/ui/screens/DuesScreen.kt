@@ -389,7 +389,7 @@ fun DuesScreen(
                         // 3. Export Comprehensive Dues to Excel (.xlsx)
                         IconButton(
                             onClick = {
-                                val cleanDate = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date())
+                                val cleanDate = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
                                 exportDuesExcelLauncher.launch("dues-ledger-$cleanDate.xlsx")
                             },
                             modifier = Modifier.size(48.dp)
@@ -420,7 +420,7 @@ fun DuesScreen(
                         IconButton(
                             onClick = {
                                 selectedCustomer?.let { c ->
-                                    val cleanDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+                                    val cleanDate = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
                                     val cleanPhone = c.customerPhone.filter { it.isDigit() }
                                     exportCustomerStatementExcelLauncher.launch("statement-$cleanPhone-$cleanDate.xlsx")
                                 }
@@ -3141,8 +3141,33 @@ fun DuesReminderHubSheet(
     onDismiss: () -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
+    var showClearAllConfirm by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val dateFormat = remember { SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()) }
+
+    if (showClearAllConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearAllConfirm = false },
+            title = { Text(stringResource(R.string.dues_clear_reminder_logs)) },
+            text = { Text(stringResource(R.string.confirm_delete)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClearAllConfirm = false
+                        onClearAllLogs()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearAllConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -3317,7 +3342,7 @@ fun DuesReminderHubSheet(
                         horizontalArrangement = Arrangement.End
                     ) {
                         TextButton(
-                            onClick = onClearAllLogs,
+                            onClick = { showClearAllConfirm = true },
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Icon(Icons.Default.DeleteSweep, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(15.dp))

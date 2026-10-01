@@ -233,7 +233,7 @@ fun SuppliersScreen(
                     // Export Excel Button
                     IconButton(
                         onClick = {
-                            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
                             exportSuppliersExcelLauncher.launch("suppliers-$dateStr.xlsx")
                         },
                         modifier = Modifier.size(48.dp)

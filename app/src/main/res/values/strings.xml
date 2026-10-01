@@ -2578,6 +2578,8 @@
     <string name="settings_full_replace">Full Replace</string>
     <string name="settings_merge">Merge</string>
     <string name="settings_decrypt_and_restore">Decrypt &amp; Restore</string>
+    <string name="settings_hide_password">Hide password</string>
+    <string name="settings_show_password">Show password</string>
     <string name="cd_store_credit_voucher_slip_fmt">Store Credit Voucher Slip %1$dmm</string>
     <string name="dues_cannot_delete_title">Cannot Delete Customer Ledger</string>
     <string name="dues_cannot_delete_message">Cannot delete due ledger for &quot;%1$s&quot; (%2$s) because they have an outstanding due of %3$s. All dues must be cleared before deleting the ledger.</string>

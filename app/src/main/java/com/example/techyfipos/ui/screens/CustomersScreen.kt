@@ -237,7 +237,7 @@ fun CustomersScreen(
                                     leadingIcon = { Icon(Icons.Default.TableChart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
                                     onClick = {
                                         showExportMenu = false
-                                        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+                                        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
                                         exportCustomersExcelLauncher.launch("customers-$dateStr.xlsx")
                                     }
                                 )
@@ -350,7 +350,7 @@ fun CustomersScreen(
                                     leadingIcon = { Text("📊", fontSize = 16.sp) },
                                     onClick = {
                                         showPhoneMoreMenu = false
-                                        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+                                        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
                                         exportCustomersExcelLauncher.launch("customers-$dateStr.xlsx")
                                     }
                                 )

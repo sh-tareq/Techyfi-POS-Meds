@@ -2512,6 +2512,8 @@
     <string name="settings_full_replace">সম্পূর্ণ প্রতিস্থাপন</string>
     <string name="settings_merge">একত্রিতকরণ</string>
     <string name="settings_decrypt_and_restore">ডিক্রিপ্ট ও রিস্টোর করুন</string>
+    <string name="settings_hide_password">পাসওয়ার্ড লুকান</string>
+    <string name="settings_show_password">পাসওয়ার্ড দেখান</string>
     <string name="cd_store_credit_voucher_slip_fmt">স্টোর ক্রেডিট ভাউচার স্লিপ %1$dমিমি</string>
     <string name="dues_cannot_delete_title">গ্রাহকের বাকি খাতা মোছা সম্ভব নয়</string>
     <string name="dues_cannot_delete_message">&quot;%1$s&quot; (%2$s)-এর বকেয়া বাকি রয়েছে %3$s। বকেয়া শূন্য না হওয়া পর্যন্ত বাকি খাতা মোছা সম্ভব নয়।</string>

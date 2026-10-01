@@ -5013,7 +5013,7 @@ fun SettingsScreen(
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                                    contentDescription = stringResource(if (passwordVisible) R.string.settings_hide_password else R.string.settings_show_password)
                                 )
                             }
                         },
@@ -5122,7 +5122,7 @@ fun SettingsScreen(
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                                    contentDescription = stringResource(if (passwordVisible) R.string.settings_hide_password else R.string.settings_show_password)
                                 )
                             }
                         },
