@@ -61,6 +61,7 @@ import java.io.FileWriter
 fun CustomersScreen(
     customerViewModel: CustomerViewModel,
     settingsViewModel: com.example.techyfipos.ui.viewmodel.SettingsViewModel? = null,
+    authViewModel: com.example.techyfipos.ui.viewmodel.AuthViewModel? = null,
     onBack: () -> Unit,
     onStartSaleForCustomer: (Customer) -> Unit,
     isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
@@ -732,6 +733,7 @@ fun CustomersScreen(
     if (dossierData != null) {
         CustomerDossierSheet(
             dossier = dossierData!!,
+            authViewModel = authViewModel,
             onDismiss = { customerViewModel.clearDossier() },
             onStartSale = onStartSaleForCustomer,
             onEditCustomer = { customer ->

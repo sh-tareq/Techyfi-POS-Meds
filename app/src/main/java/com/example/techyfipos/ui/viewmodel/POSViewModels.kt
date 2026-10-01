@@ -782,7 +782,43 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                     val ctx = repository.appContext
                     val autoSavedTitle = ctx.getString(R.string.held_cart_auto_saved_title)
                     val autoSavedNote = ctx.getString(R.string.held_cart_auto_saved_note)
-                    holdCurrentCart(title = autoSavedTitle, note = autoSavedNote)
+                    val currentItems = _cartItems.value
+                    val curCustomerName = customerName.value.trim()
+                    val curCustomerPhone = customerPhone.value.trim()
+                    val payloadJson = encodeHeldCartPayload(
+                        HeldCartPayload(
+                            items = currentItems,
+                            customerName = curCustomerName,
+                            customerPhone = curCustomerPhone,
+                            priceMode = priceMode.value,
+                            paymentMethod = paymentMethod.value,
+                            walletPhone = walletPhone.value,
+                            cardType = cardType.value,
+                            cardLastFour = cardLastFour.value,
+                            amountPaid = amountPaid.value,
+                            isSplitPayment = isSplitPayment.value,
+                            splitPayments = splitPayments.value,
+                            loyaltyPhone = loyaltyCustomer.value?.phone ?: curCustomerPhone.takeIf { it.isNotBlank() },
+                            loyaltyDiscount = loyaltyDiscount.value,
+                            storeCreditApplied = storeCreditApplied.value,
+                            voucherCode = redeemedVoucher.value?.code,
+                            voucherOriginalBalance = redeemedVoucher.value?.initialAmount,
+                            voucherRemainingBalance = redeemedVoucher.value?.remainingBalance,
+                            voucherCustomerPhone = redeemedVoucher.value?.customerPhone
+                        )
+                    )
+                    repository.insertHeldCart(
+                        HeldCart(
+                            title = autoSavedTitle,
+                            customerName = curCustomerName.takeIf { it.isNotBlank() },
+                            customerPhone = curCustomerPhone.takeIf { it.isNotBlank() },
+                            itemsJson = payloadJson,
+                            discountAmount = discountAmount.value,
+                            isPercentageDiscount = isPercentageDiscount.value,
+                            timestamp = System.currentTimeMillis(),
+                            note = autoSavedNote
+                        )
+                    )
                 }
                 val payload = decodeHeldCartPayload(heldCart.itemsJson)
                 val restored = mutableListOf<CartItem>()
@@ -876,8 +912,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                         customerName = authoritativeCustName,
                         customerPhone = authoritativeCustPhone
                     )
+                    val suffix = repository.appContext.getString(R.string.held_cart_unavailable_suffix)
                     repository.insertHeldCart(heldCart.copy(
-                        title = "${heldCart.title} · unavailable items",
+                        title = "${heldCart.title}$suffix",
                         customerName = authoritativeCustName.takeIf { it.isNotBlank() },
                         customerPhone = authoritativeCustPhone.takeIf { it.isNotBlank() },
                         discountAmount = 0.0,

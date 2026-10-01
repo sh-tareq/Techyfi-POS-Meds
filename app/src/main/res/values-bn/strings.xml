@@ -181,6 +181,7 @@
     <string name="held_cart_fallback_title">কার্ট #%1$d</string>
     <string name="held_cart_auto_saved_title">স্বয়ংক্রিয় সংরক্ষিত কার্ট</string>
     <string name="held_cart_auto_saved_note">হোল্ড করা কার্ট পুনরুদ্ধারের আগে স্বয়ংক্রিয় সংরক্ষিত</string>
+    <string name="held_cart_unavailable_suffix"> · অনুপলব্ধ আইটেম</string>
 
     <!-- Shared content descriptions -->
     <string name="cd_back">পেছনে যান</string>
@@ -1460,7 +1461,7 @@
     <string name="cart_add_to_cart_again_button">আবার কার্টে যোগ করুন</string>
     <string name="cart_edit_sale_button">সম্পাদনা</string>
     <string name="cart_edit_sale_confirm_title">এই বিক্রয় সম্পাদনা করবেন?</string>
-    <string name="cart_edit_sale_confirm_message">এটি মূল বিক্রয়টি বাতিল করবে (স্টক, বকেয়া ব্যালেন্স ও লয়্যালটি পয়েন্ট পুনরুদ্ধার করে) এবং এর পণ্যগুলো কার্টে পুনরায় লোড করবে, যাতে আপনি পরিবর্তন করে আবার চেকআউট করতে পারেন।</string>
+    <string name="cart_edit_sale_confirm_message">এটি মূল বিক্রয়টি বাতিল করবে (স্টক, বকেয়া ব্যালেন্স ও লয়্যালটি পয়েন্ট পুনরুদ্ধার করে) এবং এর পণ্যগুলো কার্টে পুনরায় লোড করবে, যাতে আপনি পরিবর্তন করে আবার চেকআউট করতে পারেন। নোট: ভাউচার, ব্যবহৃত পয়েন্ট এবং স্প্লিট পেমেন্ট সেটআপ নতুন কার্টে স্বয়ংক্রিয়ভাবে পুনরায় প্রয়োগ হবে না; চেকআউটের সময় আপনাকে সেগুলি পুনরায় প্রয়োগ করতে হবে।</string>
     <string name="cart_edit_sale_confirm_button">বাতিল করে সম্পাদনা করুন</string>
     <string name="cart_add_to_cart_again_skipped_toast">%1$d টি আইটেম পুনরায় যোগ করা যায়নি (পণ্য আর নেই)</string>
     <string name="lock_device_verification_cancelled">ডিভাইস যাচাইকরণ বাতিল করা হয়েছে।</string>

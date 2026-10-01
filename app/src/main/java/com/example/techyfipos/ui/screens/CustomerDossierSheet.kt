@@ -83,7 +83,7 @@ fun CustomerDossierSheet(
 ) {
     val context = LocalContext.current
     val currentUserState = authViewModel?.currentUser?.collectAsStateWithLifecycle()
-    val isOwner = authViewModel?.let { currentUserState?.value?.role?.equals("OWNER", ignoreCase = true) == true } ?: true
+    val isOwner = authViewModel?.let { currentUserState?.value?.role?.equals("OWNER", ignoreCase = true) == true } ?: false
     val customer = dossier.customer
     var selectedTab by remember { mutableStateOf(DossierTab.TOP_PRODUCTS) }
     var selectedSaleForReceipt by remember { mutableStateOf<SaleWithItems?>(null) }

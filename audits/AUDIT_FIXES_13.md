@@ -85,26 +85,26 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   - Auto credit + Cash with change stores no `changeAmount`, so the reprint (SalesHistory about 1932) shows 0.
   - Auto credit + Cash prints "Cash" on the live receipt but saves "Split" (`snapshotSplitJson` is only built when `isSplitPayment` is true).
   - Fix: build the receipt from the same JSON that is saved. *(Code trace: CartScreen.kt:2507, PaymentMath.kt:12)*
-- [ ] **M-7 Void-for-edit doesn't re-apply loyalty, store credit, voucher or split rows (A-9).** At minimum, warn in the confirm dialog
-  (strings about 1467) and show what was refunded.
-- [ ] **M-8 Held-cart snapshot race (A-10).** The hold coroutine's `persistCartSnapshot(emptyList())` can run after the restore's snapshot,
+- [x] **M-7 Void-for-edit doesn't re-apply loyalty, store credit, voucher or split rows (A-9).** At minimum, warn in the confirm dialog
+  (strings about 1467) and show what was refunded. *(Code trace: strings.xml:1467, values-bn/strings.xml:1463)*
+- [x] **M-8 Held-cart snapshot race (A-10).** The hold coroutine's `persistCartSnapshot(emptyList())` can run after the restore's snapshot,
   so the restored cart is lost if the process dies. Persist synchronously, or sequence the hold before the restore.
-  Also: no confirmation before auto-hold (AdvancedPosFeatures about 287), and the title `"· unavailable items"` (VM about 947) is hard-coded English.
-- [ ] **M-9 The tablet's void and remove rules don't match the phone's (C-2).** Scanner checks only `isOwner || isSupervisor`. CartScreen (about 307-308)
-  also accepts the `SALES_VOID_CART` permission and falls back to the supervisor PIN (about 685-699, 933-940). Share one helper between both screens.
-- [ ] **M-10 Store Credit refund missing (A-15 NOT FIXED).** A return on a sale paid with Store Credit and refunded by another method never restores the credit.
-- [ ] **M-11 MERGE id fallbacks (B-2 leftovers).** `saleIdMap[x] ?: backupSaleId` (repo about 3014, 3149, 3188, 3229) links ledger, loyalty, voucher and audit rows
+  Also: no confirmation before auto-hold (AdvancedPosFeatures about 287), and the title `"· unavailable items"` (VM about 947) is hard-coded English. *(Code trace: POSViewModels.kt:783, strings.xml:184)*
+- [x] **M-9 The tablet's void and remove rules don't match the phone's (C-2).** Scanner checks only `isOwner || isSupervisor`. CartScreen (about 307-308)
+  also accepts the `SALES_VOID_CART` permission and falls back to the supervisor PIN (about 685-699, 933-940). Share one helper between both screens. *(Code trace: ScannerScreen.kt:154, CartScreen.kt:307)*
+- [x] **M-10 Store Credit refund missing (A-15 NOT FIXED).** A return on a sale paid with Store Credit and refunded by another method never restores the credit. *(Code trace: DataRepository.kt:4063)*
+- [x] **M-11 MERGE id fallbacks (B-2 leftovers).** `saleIdMap[x] ?: backupSaleId` (repo about 3014, 3149, 3188, 3229) links ledger, loyalty, voucher and audit rows
   to unrelated local sales, and the void lookup (about 606) reads them. Skip the row, or set the link to null.
   - Suppliers are de-duplicated by name alone (any case), which merges two different suppliers. Use name + phone.
   - Invoices and supplier payments with an unmapped supplier keep the backup id. Skip them.
   - A due payment with no parent due breaks the FK and aborts the whole import. Skip it.
-  - Customers, dues and loyalty are upserted with the backup's name, creditLimit and isArchived over the local values. Keep the local values.
-- [ ] **M-12 B-3 UI gate doesn't work.** CustomerDossierSheet (about 86) sets `isOwner = authViewModel?.let{…} ?: true`, and none of the 3 callers
+  - Customers, dues and loyalty are upserted with the backup's name, creditLimit and isArchived over the local values. Keep the local values. *(Code trace: DataRepository.kt:2868, 2901, 3039, 3174, 3213)*
+- [x] **M-12 B-3 UI gate doesn't work.** CustomerDossierSheet (about 86) sets `isOwner = authViewModel?.let{…} ?: true`, and none of the 3 callers
   (LoyaltyScreen about 400, CustomersScreen about 733, DuesScreen about 1242) pass `authViewModel` *(verified)*. Pass it from every caller, and
-  default to `false`.
-- [ ] **M-13 A-11:** the due-sale notice (Cart about 2214) still shows the full `grandTotal`.
-- [ ] **M-14 B-8:** a non-owner can still set any credit limit when creating a customer, which also overwrites an existing CustomerDue limit.
-  `mergeCustomers` (about 1385) and `migrateCustomerPhone` (about 1470) have no check, and merge takes the max of the two limits.
+  default to `false`. *(Code trace: CustomerDossierSheet.kt:86, CustomersScreen.kt:735, LoyaltyScreen.kt:402, DuesScreen.kt:1244)*
+- [x] **M-13 A-11:** the due-sale notice (Cart about 2214) still shows the full `grandTotal`. *(Code trace: CartScreen.kt:2214)*
+- [x] **M-14 B-8:** a non-owner can still set any credit limit when creating a customer, which also overwrites an existing CustomerDue limit.
+  `mergeCustomers` (about 1385) and `migrateCustomerPhone` (about 1470) have no check, and merge takes the max of the two limits. *(Code trace: DataRepository.kt:1345)*
 
 ## 2. Tests (T)
 - [ ] **T-1** Fix `MoneyFlowsIntegrationTest`:

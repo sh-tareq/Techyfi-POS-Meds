@@ -57,6 +57,7 @@ fun LoyaltyScreen(
     loyaltyViewModel: LoyaltyViewModel,
     customerViewModel: CustomerViewModel? = null,
     settingsViewModel: com.example.techyfipos.ui.viewmodel.SettingsViewModel? = null,
+    authViewModel: com.example.techyfipos.ui.viewmodel.AuthViewModel? = null,
     onBack: () -> Unit,
     onStartSaleForCustomer: ((Customer) -> Unit)? = null,
     isTablet: Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600,
@@ -399,6 +400,7 @@ fun LoyaltyScreen(
     if (dossierData != null && customerViewModel != null) {
         CustomerDossierSheet(
             dossier = dossierData!!,
+            authViewModel = authViewModel,
             onDismiss = { customerViewModel.clearDossier() },
             onStartSale = { customer ->
                 customerViewModel.clearDossier()

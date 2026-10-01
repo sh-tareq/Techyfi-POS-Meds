@@ -181,6 +181,7 @@
     <string name="held_cart_fallback_title">Cart #%1$d</string>
     <string name="held_cart_auto_saved_title">Auto-saved cart</string>
     <string name="held_cart_auto_saved_note">Auto-saved before resuming held cart</string>
+    <string name="held_cart_unavailable_suffix"> · unavailable items</string>
 
     <!-- Shared content descriptions -->
     <string name="cd_back">Back</string>
@@ -1464,7 +1465,7 @@
     <string name="cart_add_to_cart_again_button">Add to Cart Again</string>
     <string name="cart_edit_sale_button">Edit</string>
     <string name="cart_edit_sale_confirm_title">Edit This Sale?</string>
-    <string name="cart_edit_sale_confirm_message">This will void the original sale (restoring stock, due balance, and loyalty points) and reload its items into the cart so you can make changes and check out again.</string>
+    <string name="cart_edit_sale_confirm_message">This will void the original sale (restoring stock, due balance, and loyalty points) and reload its items into the cart so you can make changes and check out again. Note: vouchers, redeemed loyalty points, and split row setups will NOT be re-applied automatically to the new cart; you must re-apply them at checkout.</string>
     <string name="cart_edit_sale_confirm_button">Void &amp; Edit</string>
     <string name="cart_add_to_cart_again_skipped_toast">%1$d item(s) could not be re-added (product no longer exists)</string>
     <string name="lock_device_verification_cancelled">Device verification was cancelled.</string>

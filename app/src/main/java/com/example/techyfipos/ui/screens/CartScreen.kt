@@ -2211,7 +2211,7 @@ fun CartScreen(
                                             color = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
                                         Text(
-                                            text = stringResource(R.string.cart_due_sale_notice, formatTaka(grandTotal)),
+                                            text = stringResource(R.string.cart_due_sale_notice, formatTaka((grandTotal - (amountPaid + storeCreditApplied)).coerceAtLeast(0.0))),
                                             fontSize = 11.5.sp,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
                                         )

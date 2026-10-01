@@ -134,6 +134,7 @@ fun DuesScreen(
     duesViewModel: DuesViewModel,
     customerViewModel: CustomerViewModel? = null,
     settingsViewModel: SettingsViewModel? = null,
+    authViewModel: com.example.techyfipos.ui.viewmodel.AuthViewModel? = null,
     isOwner: Boolean = true,
     isSupervisor: Boolean = false,
     activePermissions: Set<String> = emptySet(),
@@ -1241,6 +1242,7 @@ fun DuesScreen(
     if (dossierData != null && customerViewModel != null) {
         CustomerDossierSheet(
             dossier = dossierData!!,
+            authViewModel = authViewModel,
             onDismiss = { customerViewModel.clearDossier() },
             onStartSale = { customer ->
                 customerViewModel.clearDossier()

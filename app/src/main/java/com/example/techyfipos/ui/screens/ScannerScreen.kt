@@ -3,6 +3,7 @@
 package com.example.techyfipos.ui.screens
 
 import com.example.techyfipos.ui.dialogs.*
+import com.example.techyfipos.data.AppPermissions
 import android.Manifest
 import java.util.Locale
 import android.content.Context
@@ -116,6 +117,7 @@ fun ScannerScreen(
     cartViewModel: CartViewModel,
     productsViewModel: ProductsViewModel? = null,
     settingsViewModel: SettingsViewModel? = null,
+    authViewModel: com.example.techyfipos.ui.viewmodel.AuthViewModel? = null,
     isTablet: Boolean = false,
     isOwner: Boolean = true,
     isSupervisor: Boolean = false,
@@ -128,6 +130,7 @@ fun ScannerScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val activePermissions by (authViewModel?.activePermissions ?: kotlinx.coroutines.flow.MutableStateFlow(emptySet())).collectAsStateWithLifecycle(initialValue = emptySet())
     val invoiceSettingsData by settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
     val allowNegativeInventory = invoiceSettingsData?.allowNegativeInventory == true || isOwner || isSupervisor
 
@@ -151,8 +154,8 @@ fun ScannerScreen(
     var lastScannedProduct by remember { mutableStateOf<Product?>(null) }
     val latestScanningPaused by rememberUpdatedState(scanningPaused)
     
-    val canVoidCart = isOwner || isSupervisor
-    val canRemoveItem = isOwner || isSupervisor
+    val canVoidCart = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_VOID_CART)
+    val canRemoveItem = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_VOID_CART)
     var showClearCartConfirm by remember { mutableStateOf(false) }
     var itemToRemoveConfirm by remember { mutableStateOf<Product?>(null) }
 

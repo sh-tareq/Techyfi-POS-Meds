@@ -1342,8 +1342,8 @@ class DataRepository(
         database.withDriverTransaction {
             val timestamp = System.currentTimeMillis()
             val existing = customerDao.getCustomerByPhone(cleanPhone)
-            val effectiveCreditLimit = if (existing != null && existing.creditLimit != customer.creditLimit && !isSessionOwner()) {
-                existing.creditLimit
+            val effectiveCreditLimit = if (!isSessionOwner()) {
+                existing?.creditLimit ?: 0.0
             } else {
                 customer.creditLimit.coerceAtLeast(0.0)
             }
@@ -2604,9 +2604,9 @@ class DataRepository(
                     try {
                         customerDueDao.insertDuePayment(payment)
                     } catch (e: android.database.sqlite.SQLiteConstraintException) {
-                        throw IllegalStateException("Failed to restore due payment: duplicate record conflict", e)
+                        if (mode != BackupImportMode.MERGE) throw IllegalStateException("Failed to restore due payment: duplicate record conflict", e)
                     } catch (e: androidx.sqlite.SQLiteException) {
-                        throw IllegalStateException("Failed to restore due payment: duplicate record conflict", e)
+                        if (mode != BackupImportMode.MERGE) throw IllegalStateException("Failed to restore due payment: duplicate record conflict", e)
                     }
                 }
               }
@@ -2868,8 +2868,8 @@ class DataRepository(
                     val sPhone = value.optString("phone")
                     if (mode == BackupImportMode.MERGE) {
                         val duplicate = existingSuppliersInDb.firstOrNull {
-                            it.name.equals(sName, ignoreCase = true) ||
-                            (sPhone.isNotBlank() && normalizePhone(it.phone) == normalizePhone(sPhone))
+                            it.name.equals(sName, ignoreCase = true) &&
+                            (sPhone.isBlank() || normalizePhone(it.phone) == normalizePhone(sPhone))
                         }
                         if (duplicate != null) {
                             supplierIdMap[backupSupplierId] = duplicate.id
@@ -2898,7 +2898,8 @@ class DataRepository(
                     val invNum = value.optString("invoiceNumber")
                     val totalAmt = value.optDouble("totalAmount", 0.0)
                     val ts = value.optLong("timestamp", System.currentTimeMillis())
-                    val resolvedSupplierId = if (mode == BackupImportMode.MERGE) supplierIdMap[backupSupplierId] ?: backupSupplierId else backupSupplierId
+                    val resolvedSupplierId = if (mode == BackupImportMode.MERGE) supplierIdMap[backupSupplierId] else backupSupplierId
+                    if (mode == BackupImportMode.MERGE && resolvedSupplierId == null) continue
                     if (mode == BackupImportMode.MERGE) {
                         val duplicate = existingInvoicesInDb.firstOrNull {
                             it.supplierId == resolvedSupplierId &&
@@ -2910,7 +2911,7 @@ class DataRepository(
                         }
                     }
                     val newInvoiceId = purchaseInvoiceDao.insertPurchaseInvoice(PurchaseInvoice(
-                        id = if (mode == BackupImportMode.MERGE) 0L else backupInvoiceId, supplierId = resolvedSupplierId,
+                        id = if (mode == BackupImportMode.MERGE) 0L else backupInvoiceId, supplierId = resolvedSupplierId!!,
                         invoiceNumber = invNum, totalAmount = totalAmt,
                         paidAmount = value.optDouble("paidAmount", 0.0), dueAmount = value.optDouble("dueAmount", 0.0),
                         itemsSummary = value.optString("itemsSummary"), paymentMethod = value.optString("paymentMethod", "Cash"),
@@ -3037,7 +3038,7 @@ class DataRepository(
                     val typeStr = value.optString("type", "ADJUSTMENT")
                     val backupSaleId = value.optLong("saleId").takeIf { value.has("saleId") && !value.isNull("saleId") }
                     val resolvedSaleId = if (mode == BackupImportMode.MERGE && backupSaleId != null) {
-                        saleIdMap[backupSaleId] ?: backupSaleId
+                        saleIdMap[backupSaleId]
                     } else backupSaleId
                     if (mode == BackupImportMode.MERGE) {
                         val isDuplicate = existingLoyaltyTxnsInDb.any {
@@ -3172,12 +3173,12 @@ class DataRepository(
                       val backupSaleId = obj.optLong("sourceSaleId").takeIf { obj.has("sourceSaleId") && !obj.isNull("sourceSaleId") }
                           ?: obj.optLong("saleId").takeIf { obj.has("saleId") && !obj.isNull("saleId") }
                       val resolvedSaleId = if (mode == BackupImportMode.MERGE && backupSaleId != null) {
-                          saleIdMap[backupSaleId] ?: backupSaleId
+                          saleIdMap[backupSaleId]
                       } else backupSaleId
 
                       val backupReturnId = obj.optLong("sourceReturnId").takeIf { obj.has("sourceReturnId") && !obj.isNull("sourceReturnId") }
                       val resolvedReturnId = if (mode == BackupImportMode.MERGE && backupReturnId != null) {
-                          returnIdMap[backupReturnId] ?: backupReturnId
+                          returnIdMap[backupReturnId]
                       } else backupReturnId
 
                       val initialAmt = if (obj.has("initialAmount")) obj.optDouble("initialAmount", 0.0) else obj.optDouble("originalAmount", 0.0)
@@ -3211,7 +3212,7 @@ class DataRepository(
                           else -> null
                       }
                       val resolvedSaleId = if (mode == BackupImportMode.MERGE && backupSaleId != null) {
-                          saleIdMap[backupSaleId] ?: backupSaleId
+                          saleIdMap[backupSaleId]
                       } else backupSaleId
 
                       val noteText = when {
@@ -4067,6 +4068,24 @@ class DataRepository(
                                 type = "RETURN_REFUND",
                                 referenceInvoiceId = saleId,
                                 note = "Return refund on invoice #$saleId"
+                            )
+                        )
+                    }
+                } else if (sale.storeCreditApplied > 0.0) {
+                    val storeCreditRestoredSoFar = previousReturns.sumOf { it.refundAmount }
+                    val remainingScToRestore = (sale.storeCreditApplied - storeCreditRestoredSoFar).coerceAtLeast(0.0)
+                    val scToRestore = minOf(refundTotal, remainingScToRestore)
+                    if (scToRestore > 0.0) {
+                        customerDao.adjustCustomerStoreCredit(normalizePhone(phone), scToRestore, System.currentTimeMillis())
+                        val updated = customerDao.getCustomerByPhone(normalizePhone(phone))
+                        storeCreditLedgerDao.insertEntry(
+                            StoreCreditLedgerEntry(
+                                customerPhone = normalizePhone(phone),
+                                deltaAmount = scToRestore,
+                                balanceAfter = updated?.storeCredit ?: scToRestore,
+                                type = "RETURN_REFUND",
+                                referenceInvoiceId = saleId,
+                                note = "Store credit restored for return on invoice #$saleId"
                             )
                         )
                     }
