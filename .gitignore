@@ -11,6 +11,5 @@ local.properties
 .cxx
 .kotlin/
 window_dump.xml
-Techyfi-POS-Final-V60.apk
-Techyfi-POS-Final-V61.apk
-
+Backup Files/
+*.apk
