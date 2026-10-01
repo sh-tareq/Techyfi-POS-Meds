@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.example.techyfipos.utils.BillData
 import com.example.techyfipos.utils.BillLineItem
+import com.example.techyfipos.ui.dialogs.ReceiptSummaryDialog
 import org.junit.Rule
 import org.junit.Test
 

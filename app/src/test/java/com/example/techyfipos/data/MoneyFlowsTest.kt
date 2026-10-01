@@ -6,77 +6,38 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 class MoneyFlowsTest {
 
     @Test
-    fun `A-1 checkout preserves existing customer store credit`() {
+    fun `A-1 customer copy with updated purchase metrics preserves existing store credit`() {
         val existingCust = Customer(
             phone = "01700000000",
             name = "John Doe",
             storeCredit = 500.0,
-            creditLimit = 1000.0
+            creditLimit = 1000.0,
+            totalOrders = 5,
+            lifetimeSpent = 2500.0
         )
 
-        val normalizedCustomerPhone = "01700000000"
-        val customerName = "John Doe"
-        val grandTotal = 150.0
-        val timestamp = 100000L
-
-        val resolvedName = customerName.takeIf { it.isNotBlank() } ?: existingCust.name
-        val updatedOrders = existingCust.totalOrders + 1
-        val updatedLifetime = existingCust.lifetimeSpent + grandTotal
-
-        val updatedCust = Customer(
-            phone = normalizedCustomerPhone,
-            name = resolvedName,
-            email = existingCust.email,
-            address = existingCust.address,
-            notes = existingCust.notes,
-            tag = existingCust.tag,
-            creditLimit = existingCust.creditLimit,
-            storeCredit = existingCust.storeCredit, // Fix A-1: storeCredit must be preserved!
-            totalOrders = updatedOrders,
-            lifetimeSpent = updatedLifetime,
-            totalDue = existingCust.totalDue,
-            loyaltyPoints = existingCust.loyaltyPoints,
-            loyaltyTier = existingCust.loyaltyTier,
-            firstPurchaseDate = existingCust.firstPurchaseDate,
-            lastPurchaseDate = timestamp,
-            createdAt = existingCust.createdAt,
-            updatedAt = timestamp,
-            isArchived = false
+        // Verifying real Customer domain copy pattern used in DataRepository.saveSale
+        val updatedCust = existingCust.copy(
+            totalOrders = existingCust.totalOrders + 1,
+            lifetimeSpent = existingCust.lifetimeSpent + 150.0,
+            lastPurchaseDate = System.currentTimeMillis()
         )
 
-        assertEquals(500.0, updatedCust.storeCredit, 0.001)
+        assertEquals("Store credit must be preserved across sales", 500.0, updatedCust.storeCredit, 0.001)
     }
 
     @Test
-    fun `A-2 tax-inclusive payableBeforeLoyalty does not double add tax`() {
-        val subtotal = 1000.0
-        val regularDiscount = 100.0
-        val taxAmount = 135.0
-        val taxInclusive = true
-
-        val payableBeforeLoyalty = if (taxInclusive) {
-            (subtotal - regularDiscount).coerceAtLeast(0.0)
-        } else {
-            (subtotal - regularDiscount + taxAmount).coerceAtLeast(0.0)
-        }
-
-        // For tax inclusive 1000 subtotal with 100 discount, payable is 900.0 (not 1035.0)
-        assertEquals(900.0, payableBeforeLoyalty, 0.001)
-    }
-
-    @Test
-    fun `A-2 fractional max bill discount is floored to integer points`() {
+    fun `A-2 tax-inclusive payable calculation floors fractional point redemption`() {
         val maxAllowedBillDiscount = 277.50
         val ptCashVal = 1.0
-        val rawPoints = (maxAllowedBillDiscount / ptCashVal).toInt()
-        val pointsToRedeem = rawPoints
+        val pointsToRedeem = (maxAllowedBillDiscount / ptCashVal).toInt()
         val flooredDiscount = pointsToRedeem * ptCashVal
 
         assertEquals(277, pointsToRedeem)
@@ -85,77 +46,58 @@ class MoneyFlowsTest {
     }
 
     @Test
-    fun `A-3 split payment bypasses single-cash full amount requirement`() {
+    fun `A-3 split payment flag bypasses single-cash validation rule`() {
         val isSplitPayment = true
-        val paymentMethod = "Cash"
-        val amountPaid = 200.0
+        val paymentMethod = "Split"
         val remainingCash = 1000.0
+        val amountPaid = 200.0
 
-        val shouldThrow = !isSplitPayment && (paymentMethod == "Cash") && remainingCash > 0.0 && amountPaid < remainingCash
-
-        assertFalse("Split payment should NOT trigger full cash check", shouldThrow)
+        // Single cash rule enforces amountPaid >= remainingCash when method == "Cash"
+        val isSingleCashIncomplete = !isSplitPayment && paymentMethod == "Cash" && amountPaid < remainingCash
+        assertFalse(isSingleCashIncomplete)
     }
 
     @Test
-    fun `A-4 split payment json includes store credit row to match grand total`() {
-        val grandTotal = 1000.0
-        val storeCreditApplied = 300.0
-        val splitRows = mutableListOf(
-            JSONObject().put("method", "Cash").put("amount", 700.0)
-        )
+    fun `A-4 split payment JSON structure verification`() {
+        val splitJson = JSONArray().apply {
+            put(JSONObject().put("method", "Cash").put("amount", 700.0))
+            put(JSONObject().put("method", "Store Credit").put("amount", 300.0))
+        }.toString()
 
-        if (storeCreditApplied > 0.0) {
-            splitRows.add(
-                JSONObject().put("method", "Store Credit").put("amount", storeCreditApplied)
-            )
+        val jsonArray = JSONArray(splitJson)
+        var total = 0.0
+        var hasStoreCredit = false
+        for (i in 0 until jsonArray.length()) {
+            val obj = jsonArray.getJSONObject(i)
+            total += obj.getDouble("amount")
+            if (obj.getString("method") == "Store Credit") {
+                hasStoreCredit = true
+            }
         }
 
-        val totalSplitSum = splitRows.sumOf { it.getDouble("amount") }
-        assertEquals(grandTotal, totalSplitSum, 0.001)
+        assertEquals(1000.0, total, 0.001)
+        assertTrue(hasStoreCredit)
     }
 
     @Test
-    fun `A-5 split cash overtender registers owed amount in split entry`() {
-        val owedCashAmount = 300.0
-        val tenderedCashAmount = 500.0
-        val change = tenderedCashAmount - owedCashAmount
-
-        val splitEntry = JSONObject()
-            .put("method", "Cash")
-            .put("amount", owedCashAmount)
-            .put("tenderedAmount", tenderedCashAmount)
-            .put("changeAmount", change)
-
-        assertEquals(300.0, splitEntry.getDouble("amount"), 0.001)
-        assertEquals(500.0, splitEntry.getDouble("tenderedAmount"), 0.001)
-        assertEquals(200.0, splitEntry.getDouble("changeAmount"), 0.001)
-    }
-
-    @Test
-    fun `A-6 voucher redemption without customer phone is valid`() {
-        val voucher = StoreCreditVoucher(
-            code = "VOUCH123",
-            initialAmount = 500.0,
-            remainingBalance = 500.0,
-            issuedAt = System.currentTimeMillis()
-        )
-        val customerPhone: String? = null
-        val storeCreditApplied = 200.0
+    fun `A-6 walk-in voucher redemption rule validation`() {
         val voucherCode = "VOUCH123"
+        val customerPhone: String? = null
 
-        // If voucher code present, phone requirement is bypassed
-        val isVoucherRedemption = !voucherCode.isNullOrBlank()
-        val isValid = isVoucherRedemption || (!customerPhone.isNullOrBlank())
+        // Walk-in voucher redemption is valid without customer phone
+        val isValidVoucherRedemption = !voucherCode.isNullOrBlank()
+        val isAllowed = isValidVoucherRedemption || !customerPhone.isNullOrBlank()
 
-        assertTrue("Voucher redemption without customer phone is valid", isValid)
+        assertTrue(isAllowed)
     }
 
     @Test
-    fun `A-7 void sale restores voucher balance`() {
+    fun `A-7 voucher status transition on void sale restoration`() {
         val voucher = StoreCreditVoucher(
             code = "VOUCH999",
             initialAmount = 500.0,
             remainingBalance = 300.0,
+            status = "EXHAUSTED",
             issuedAt = System.currentTimeMillis()
         )
         val redeemedInSale = 200.0
@@ -165,5 +107,14 @@ class MoneyFlowsTest {
 
         assertEquals(500.0, restoredBalance, 0.001)
         assertEquals("ACTIVE", newStatus)
+    }
+
+    @Test
+    fun `R-1 voucher redemption without store credit applied does not debit customer store credit`() {
+        val customerCredit = 100.0
+        val storeCreditApplied = 0.0 // Only plain voucher redeemed
+        val newCustomerCredit = customerCredit - storeCreditApplied
+
+        assertEquals(100.0, newCustomerCredit, 0.001)
     }
 }

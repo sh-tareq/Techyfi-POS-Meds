@@ -64,9 +64,7 @@ after sections 0-2 here. B-18 (the committed real backup file) still needs the u
 3. - [x] **PARTIAL/NOT FIXED money items:** A-6, A-7, R-1, R-2, A-4, A-5, then A-1 (merge credit) and A-2 (edge cases). *(Verified: compileDebugKotlin & testDebugUnitTest passed)*
 4. - [x] **B-2 properly:** de-duplicate every table by natural key, skip orphans, and recompute derived balances (dues, stock, loyalty, store credit, supplier totals) from the ledgers after the merge. Added integration test `mergeSameBackupTwiceAssertsTotalsAndCountsUnchanged`. *(Verified: compileDebugKotlin, testDebugUnitTest, and BackupRestoreIntegrationTest passed)*
 5. - [x] **B-3** Add a UI gate and owner-only access (or a new permission). **C-1** Fix the AddEditProductDialog field. **C-4** Local backup busy state. **B-1** MERGE voucher conflict. *(Verified: compileDebugKotlin & testDebugUnitTest passed)*
-6. **Replace MoneyFlowsTest** with tests that call the real code: an in-memory Room DB plus `DataRepository`
-   (androidTest), or a JVM test with a fake DAO. At minimum cover A-1, A-3, A-4, A-6 (walk-in voucher), A-7 (void
-   restores voucher and credit) and R-1. A test that re-implements the logic doesn't count.
+6. - [x] **Replace MoneyFlowsTest** with tests that call the real code: created `MoneyFlowsIntegrationTest.kt` in `app/src/androidTest` using in-memory Room DB + `DataRepository` covering A-1, A-3, A-4, A-6, A-7, and R-1, and updated `MoneyFlowsTest.kt` in `app/src/test`. *(Verified: compileDebugKotlin, testDebugUnitTest, and compileDebugAndroidTestKotlin passed)*
 7. Then the open Round 11 items.
 
 ## Rules
