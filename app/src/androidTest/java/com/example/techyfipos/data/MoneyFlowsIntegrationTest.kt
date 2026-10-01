@@ -6,6 +6,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.techyfipos.data.db.*
+import com.example.techyfipos.utils.PaymentMath
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
@@ -102,10 +103,17 @@ class MoneyFlowsIntegrationTest {
         )
         database.productDao().insertProduct(prod)
 
-        val splitJson = JSONArray().apply {
-            put(JSONObject().put("method", "Cash").put("amount", 200.0))
-            put(JSONObject().put("method", "bKash").put("amount", 300.0))
-        }.toString()
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = listOf(
+                SplitPaymentEntry("Cash", 200.0),
+                SplitPaymentEntry("bKash", 300.0)
+            ),
+            storeCreditApplied = 0.0,
+            grandTotal = 500.0,
+            paymentMethod = "Split",
+            walletPhone = "01700000000"
+        )
 
         val saleId = repository.completeSaleWithNotes(
             subtotal = 500.0,
@@ -116,7 +124,7 @@ class MoneyFlowsIntegrationTest {
             customerName = null,
             customerPhone = null,
             amountPaid = 500.0,
-            walletPhone = null,
+            walletPhone = "01700000000",
             cardType = null,
             cardLastFour = null,
             cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
@@ -145,10 +153,16 @@ class MoneyFlowsIntegrationTest {
         )
         database.productDao().insertProduct(prod)
 
-        val splitJson = JSONArray().apply {
-            put(JSONObject().put("method", "Cash").put("amount", 700.0))
-            put(JSONObject().put("method", "Store Credit").put("amount", 300.0))
-        }.toString()
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = listOf(
+                SplitPaymentEntry("Cash", 700.0),
+                SplitPaymentEntry("Store Credit", 300.0)
+            ),
+            storeCreditApplied = 300.0,
+            grandTotal = 1000.0,
+            paymentMethod = "Split"
+        )
 
         val saleId = repository.completeSaleWithNotes(
             subtotal = 1000.0,
@@ -198,12 +212,21 @@ class MoneyFlowsIntegrationTest {
         )
         database.productDao().insertProduct(prod)
 
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = false,
+            splitPayments = emptyList(),
+            storeCreditApplied = 200.0,
+            grandTotal = 200.0,
+            paymentMethod = "Store Credit",
+            redeemedVoucherCode = "WALKIN_VOUCH"
+        )
+
         val saleId = repository.completeSaleWithNotes(
             subtotal = 200.0,
             discountAmount = 0.0,
             isPercentage = false,
             grandTotal = 200.0,
-            paymentMethod = "Voucher",
+            paymentMethod = "Store Credit",
             customerName = null,
             customerPhone = null,
             amountPaid = 200.0,
@@ -211,6 +234,8 @@ class MoneyFlowsIntegrationTest {
             cardType = null,
             cardLastFour = null,
             cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 200.0,
             appliedVoucherCode = "WALKIN_VOUCH"
         )
 
@@ -226,8 +251,8 @@ class MoneyFlowsIntegrationTest {
 
         val voucher = StoreCreditVoucher(
             code = "VOID_VOUCH",
-            initialAmount = 500.0,
-            remainingBalance = 500.0,
+            initialAmount = 300.0,
+            remainingBalance = 300.0,
             status = "ACTIVE",
             issuedAt = System.currentTimeMillis()
         )
@@ -244,10 +269,17 @@ class MoneyFlowsIntegrationTest {
         )
         database.productDao().insertProduct(prod)
 
-        val splitJson = JSONArray().apply {
-            put(JSONObject().put("method", "Store Credit").put("amount", 100.0))
-            put(JSONObject().put("method", "Voucher").put("amount", 300.0).put("voucherCode", "VOID_VOUCH"))
-        }.toString()
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = listOf(
+                SplitPaymentEntry("Store Credit", 100.0),
+                SplitPaymentEntry("Store Credit", 300.0)
+            ),
+            storeCreditApplied = 400.0,
+            grandTotal = 400.0,
+            paymentMethod = "Split",
+            redeemedVoucherCode = "VOID_VOUCH"
+        )
 
         val saleId = repository.completeSaleWithNotes(
             subtotal = 400.0,
@@ -263,14 +295,14 @@ class MoneyFlowsIntegrationTest {
             cardLastFour = null,
             cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
             splitPaymentJson = splitJson,
-            storeCreditApplied = 100.0,
+            storeCreditApplied = 400.0,
             appliedVoucherCode = "VOID_VOUCH"
         )
 
         var cust = repository.getCustomerByPhone(custPhone)
         assertEquals(100.0, cust?.storeCredit ?: 0.0, 0.001)
         var vouch = database.storeCreditVoucherDao().getVoucherByCode("VOID_VOUCH")
-        assertEquals(200.0, vouch?.remainingBalance ?: 0.0, 0.001)
+        assertEquals(0.0, vouch?.remainingBalance ?: 0.0, 0.001)
 
         repository.deleteSale(saleId = saleId, reason = "Customer request")
 
@@ -278,7 +310,7 @@ class MoneyFlowsIntegrationTest {
         assertEquals(200.0, cust?.storeCredit ?: 0.0, 0.001)
 
         vouch = database.storeCreditVoucherDao().getVoucherByCode("VOID_VOUCH")
-        assertEquals(500.0, vouch?.remainingBalance ?: 0.0, 0.001)
+        assertEquals(300.0, vouch?.remainingBalance ?: 0.0, 0.001)
         assertEquals("ACTIVE", vouch?.status)
     }
 
@@ -307,12 +339,21 @@ class MoneyFlowsIntegrationTest {
         )
         database.productDao().insertProduct(prod)
 
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = false,
+            splitPayments = emptyList(),
+            storeCreditApplied = 200.0,
+            grandTotal = 200.0,
+            paymentMethod = "Store Credit",
+            redeemedVoucherCode = "PLAIN_VOUCH"
+        )
+
         repository.completeSaleWithNotes(
             subtotal = 200.0,
             discountAmount = 0.0,
             isPercentage = false,
             grandTotal = 200.0,
-            paymentMethod = "Voucher",
+            paymentMethod = "Store Credit",
             customerName = "Plain Voucher Cust",
             customerPhone = custPhone,
             amountPaid = 200.0,
@@ -320,7 +361,8 @@ class MoneyFlowsIntegrationTest {
             cardType = null,
             cardLastFour = null,
             cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
-            storeCreditApplied = 0.0,
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 200.0,
             appliedVoucherCode = "PLAIN_VOUCH"
         )
 
@@ -328,7 +370,7 @@ class MoneyFlowsIntegrationTest {
         assertEquals(0.0, cust?.storeCredit ?: 0.0, 0.001)
 
         val ledgerEntries = database.storeCreditLedgerDao().getLedgerForCustomerOnce(custPhone)
-        val redeemEntries = ledgerEntries.filter { it.type == "STORE_CREDIT_REDEEMED" }
+        val redeemEntries = ledgerEntries.filter { it.type == "SALE_REDEMPTION" }
         assertTrue("No customer store credit redeem entries should be created for plain voucher redemption", redeemEntries.isEmpty())
     }
 }

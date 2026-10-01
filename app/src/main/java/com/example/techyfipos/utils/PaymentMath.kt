@@ -55,9 +55,12 @@ object PaymentMath {
                             if (isStoreCredit && !redeemedVoucherCode.isNullOrBlank()) {
                                 put("voucherCode", redeemedVoucherCode)
                             }
-                            if (!sp.walletPhone.isNullOrBlank()) put("walletPhone", sp.walletPhone)
-                            if (!sp.cardType.isNullOrBlank()) put("cardType", sp.cardType)
-                            if (!sp.cardLastFour.isNullOrBlank()) put("cardLastFour", sp.cardLastFour)
+                            val resolvedWalletPhone = sp.walletPhone.takeIf { !it.isNullOrBlank() } ?: walletPhone
+                            val resolvedCardType = sp.cardType.takeIf { !it.isNullOrBlank() } ?: cardType
+                            val resolvedCardLastFour = sp.cardLastFour.takeIf { !it.isNullOrBlank() } ?: cardLastFour
+                            if (!resolvedWalletPhone.isNullOrBlank()) put("walletPhone", resolvedWalletPhone)
+                            if (!resolvedCardType.isNullOrBlank()) put("cardType", resolvedCardType)
+                            if (!resolvedCardLastFour.isNullOrBlank()) put("cardLastFour", resolvedCardLastFour)
                             if (!sp.referenceNote.isNullOrBlank()) put("referenceNote", sp.referenceNote)
                         })
                     }

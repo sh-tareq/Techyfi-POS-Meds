@@ -107,7 +107,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   `mergeCustomers` (about 1385) and `migrateCustomerPhone` (about 1470) have no check, and merge takes the max of the two limits. *(Code trace: DataRepository.kt:1345)*
 
 ## 2. Tests (T)
-- [x] **T-1** Fix `MoneyFlowsIntegrationTest`: *(Note: No emulator was available to execute connectedDebugAndroidTest; unit tests verified via MoneyFlowsTest)*
+- [x] **T-1** Fix `MoneyFlowsIntegrationTest`: *(Proving integration test: MoneyFlowsIntegrationTest.kt - 53/53 passed on emulator-5554 / Techyfi_Mobile_Emulator)*
 - [x] **T-2** The unit test `MoneyFlowsTest` is rewritten to test pure `PaymentMath` functions without tautological assertions or invalid `.toInt()` calls. *(Proving test: MoneyFlowsTest.kt)*
 - [x] **T-3** Add tests for X-1 (worker with no session), X-4 (merging the device's own backup changes nothing), X-7 and M-1. *(Proving tests: MoneyFlowsTest.kt, RegressionsSectionZeroTest.kt, BackupCompatibilityTest.kt, BackupRestoreIntegrationTest.kt)*
 
