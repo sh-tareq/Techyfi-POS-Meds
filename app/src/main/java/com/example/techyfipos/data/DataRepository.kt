@@ -2484,13 +2484,19 @@ class DataRepository(
 
             database.withDriverTransaction {
               if (mode == BackupImportMode.REPLACE) clearBusinessTablesForRestore()
+
+              val newlyInsertedSaleItems = mutableListOf<SaleItem>()
+              val newlyInsertedReturnItems = mutableListOf<ReturnItem>()
+              val newlyInsertedPurchaseItems = mutableListOf<PurchaseInvoiceItem>()
+              val newlyInsertedAdjustments = mutableListOf<InventoryAdjustment>()
+
               // Products import
               if (backupJson.has("products")) {
                 val productsArray = backupJson.getJSONArray("products")
                 for (i in 0 until productsArray.length()) {
                     val p = productsArray.getJSONObject(i)
                     val product = Product(
-                        barcode = p.getString("barcode"),
+                        barcode = p.getString("barcode").lowercase(),
                         name = p.optString("name", p.getString("barcode")),
                         category = p.optString("category", "Uncategorized"),
                         purchasePrice = p.optDouble("purchasePrice", 0.0),
@@ -2509,7 +2515,11 @@ class DataRepository(
                     )
                     val existing = productDao.getProductByBarcode(product.barcode)
                     if (existing != null) {
-                        productDao.updateProduct(product)
+                        if (mode == BackupImportMode.MERGE) {
+                            productDao.updateProduct(product.copy(stockQty = existing.stockQty))
+                        } else {
+                            productDao.updateProduct(product)
+                        }
                     } else {
                         productDao.insertProduct(product)
                     }
@@ -2535,18 +2545,28 @@ class DataRepository(
               }
 
               // Due Payments import
+              val existingDuePaymentsInDb = if (mode == BackupImportMode.MERGE) customerDueDao.getAllDuePaymentsOnce() else emptyList()
               if (backupJson.has("duePayments")) {
                 val paymentsArray = backupJson.getJSONArray("duePayments")
                 for (i in 0 until paymentsArray.length()) {
                     val p = paymentsArray.getJSONObject(i)
+                    val phone = normalizePhone(p.getString("customerPhone"))
+                    val amt = p.optDouble("amountPaid", p.optDouble("amount", 0.0))
+                    val ts = p.optLong("timestamp", System.currentTimeMillis())
                     val payment = DuePayment(
                         id = if (mode == BackupImportMode.MERGE) 0L else p.optLong("id", 0L),
-                        customerPhone = normalizePhone(p.getString("customerPhone")),
-                        amountPaid = p.optDouble("amountPaid", p.optDouble("amount", 0.0)),
-                        timestamp = p.optLong("timestamp", System.currentTimeMillis()),
+                        customerPhone = phone,
+                        amountPaid = amt,
+                        timestamp = ts,
                         paymentMethod = p.optString("paymentMethod", "Cash"),
                         referenceNote = p.optString("referenceNote").takeIf { it.isNotBlank() }
                     )
+                    if (mode == BackupImportMode.MERGE) {
+                        val isDuplicate = existingDuePaymentsInDb.any {
+                            it.customerPhone == phone && kotlin.math.abs(it.amountPaid - amt) < 0.01 && it.timestamp == ts
+                        }
+                        if (isDuplicate) continue
+                    }
                     try {
                         customerDueDao.insertDuePayment(payment)
                     } catch (e: android.database.sqlite.SQLiteConstraintException) {
@@ -2557,10 +2577,6 @@ class DataRepository(
                 }
               }
 
-              // Sales import. REPLACE mode preserves backup IDs so repeated restores replace the
-              // same transactions instead of creating duplicate History rows. MERGE mode forces a
-              // fresh auto-generated ID instead and deduplicates existing sales by timestamp & total.
-              // Every FK that referenced a sale by its backup ID is remapped to the freshly generated one via saleIdMap.
               val saleIdMap = mutableMapOf<Long, Long>()
               val existingSalesInDb = if (mode == BackupImportMode.MERGE) saleDao.getAllSalesOnce() else emptyList()
               if (backupJson.has("sales")) {
@@ -2633,6 +2649,7 @@ class DataRepository(
                     if (items.isNotEmpty()) {
                         try {
                             saleDao.insertSaleItems(items)
+                            if (mode == BackupImportMode.MERGE) newlyInsertedSaleItems.addAll(items)
                         } catch (e: android.database.sqlite.SQLiteConstraintException) {
                             throw IllegalStateException("Failed to restore sale items: duplicate record conflict", e)
                         } catch (e: androidx.sqlite.SQLiteException) {
@@ -2642,52 +2659,71 @@ class DataRepository(
                 }
               }
 
-              // Due Charges import (debit side of the ledger — see DueCharge)
+              // Due Charges import
+              val existingDueChargesInDb = if (mode == BackupImportMode.MERGE) customerDueDao.getAllDueChargesOnce() else emptyList()
               if (backupJson.has("dueCharges")) {
                 val chargesArray = backupJson.getJSONArray("dueCharges")
                 for (i in 0 until chargesArray.length()) {
                     val c = chargesArray.getJSONObject(i)
+                    val phone = normalizePhone(c.getString("customerPhone"))
+                    val amt = c.optDouble("amount", 0.0)
+                    val ts = c.optLong("timestamp", System.currentTimeMillis())
                     val backupSaleId = c.optLong("saleId").takeIf { c.has("saleId") && !c.isNull("saleId") }
                     val resolvedSaleId = if (mode == BackupImportMode.MERGE && backupSaleId != null) {
                         saleIdMap[backupSaleId]
                     } else backupSaleId
                     val charge = DueCharge(
                         id = if (mode == BackupImportMode.MERGE) 0L else c.optLong("id", 0L),
-                        customerPhone = normalizePhone(c.getString("customerPhone")),
-                        amount = c.optDouble("amount", 0.0),
-                        timestamp = c.optLong("timestamp", System.currentTimeMillis()),
+                        customerPhone = phone,
+                        amount = amt,
+                        timestamp = ts,
                         reason = c.optString("reason", "Manual"),
                         saleId = resolvedSaleId,
                         note = c.optString("note").takeIf { it.isNotBlank() }
                     )
+                    if (mode == BackupImportMode.MERGE) {
+                        val isDuplicate = existingDueChargesInDb.any {
+                            it.customerPhone == phone && kotlin.math.abs(it.amount - amt) < 0.01 &&
+                            it.timestamp == ts && it.saleId == resolvedSaleId
+                        }
+                        if (isDuplicate) continue
+                    }
                     customerDueDao.insertDueCharge(charge)
                 }
               }
 
-              // Legacy JSON may contain users, but PIN hashes are intentionally ignored. The
-              // device's existing owner/staff accounts remain authoritative after portable restore.
-
-              // Same MERGE-safety approach as sales above: force a fresh ID and remap referencing
-              // FKs (return -> sale, returnItem -> return) via id maps instead of reusing backup IDs.
               val returnIdMap = mutableMapOf<Long, Long>()
+              val existingReturnsInDb = if (mode == BackupImportMode.MERGE) returnDao.getAllReturnsOnce() else emptyList()
               if (backupJson.has("returns")) {
                 val array = backupJson.getJSONArray("returns")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
                     val backupReturnId = value.optLong("id", 0L)
                     val backupSaleId = value.getLong("saleId")
+                    val ts = value.optLong("timestamp", System.currentTimeMillis())
+                    val refundAmt = value.optDouble("refundAmount", 0.0)
                     val resolvedSaleId = if (mode == BackupImportMode.MERGE) (saleIdMap[backupSaleId] ?: 0L) else backupSaleId
                     if (mode == BackupImportMode.MERGE && (resolvedSaleId == 0L)) {
                         continue // Skip orphan return whose parent sale is missing
                     }
+                    if (mode == BackupImportMode.MERGE) {
+                        val duplicate = existingReturnsInDb.firstOrNull {
+                            it.saleId == resolvedSaleId && it.timestamp == ts &&
+                            kotlin.math.abs(it.refundAmount - refundAmt) < 0.01
+                        }
+                        if (duplicate != null) {
+                            returnIdMap[backupReturnId] = duplicate.id
+                            continue
+                        }
+                    }
                     val newReturnId = returnDao.insertReturn(Return(
                         id = if (mode == BackupImportMode.MERGE) 0L else backupReturnId, saleId = resolvedSaleId,
-                        timestamp = value.optLong("timestamp", System.currentTimeMillis()),
+                        timestamp = ts,
                         refundMethod = value.optString("refundMethod", "Cash"),
-                        refundAmount = value.optDouble("refundAmount", 0.0),
+                        refundAmount = refundAmt,
                         externalRefundAmount = if (value.has("externalRefundAmount")) {
                             value.optDouble("externalRefundAmount", 0.0)
-                        } else value.optDouble("refundAmount", 0.0),
+                        } else refundAmt,
                         dueAdjustmentAmount = value.optDouble("dueAdjustmentAmount", 0.0),
                         note = value.optString("note").takeIf { it.isNotBlank() },
                         performedByUserId = value.optLong("performedByUserId").takeIf { value.has("performedByUserId") && !value.isNull("performedByUserId") },
@@ -2696,6 +2732,8 @@ class DataRepository(
                     if (mode == BackupImportMode.MERGE) returnIdMap[backupReturnId] = newReturnId
                 }
               }
+
+              val existingReturnItemsInDb = if (mode == BackupImportMode.MERGE) returnDao.getAllReturnItemsOnce() else emptyList()
               if (backupJson.has("returnItems")) {
                 val array = backupJson.getJSONArray("returnItems")
                 val records = mutableListOf<ReturnItem>()
@@ -2706,44 +2744,77 @@ class DataRepository(
                     if (resolvedReturnId == null || resolvedReturnId == 0L) {
                         continue // Skip orphan return item whose parent return was skipped or missing
                     }
+                    val barcode = value.optString("productBarcode")
+                    val price = value.optDouble("price", 0.0)
+                    val qty = value.optDouble("quantity", 1.0)
+                    if (mode == BackupImportMode.MERGE) {
+                        val isDuplicate = existingReturnItemsInDb.any {
+                            it.returnId == resolvedReturnId && it.productBarcode.equals(barcode, ignoreCase = true) &&
+                            kotlin.math.abs(it.price - price) < 0.01 && kotlin.math.abs(it.quantity - qty) < 0.01
+                        }
+                        if (isDuplicate) continue
+                    }
                     records += ReturnItem(
                         id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), returnId = resolvedReturnId,
-                        productBarcode = value.optString("productBarcode"), productName = value.optString("productName"),
-                        price = value.optDouble("price", 0.0), quantity = value.optDouble("quantity", 1.0)
+                        productBarcode = barcode, productName = value.optString("productName"),
+                        price = price, quantity = qty
                     )
                 }
-                if (records.isNotEmpty()) returnDao.insertReturnItems(records)
+                if (records.isNotEmpty()) {
+                    returnDao.insertReturnItems(records)
+                    if (mode == BackupImportMode.MERGE) newlyInsertedReturnItems.addAll(records)
+                }
               }
 
+              val existingHeldCartsInDb = if (mode == BackupImportMode.MERGE) heldCartDao.getAllHeldCartsOnce() else emptyList()
               if (backupJson.has("heldCarts")) {
                 val array = backupJson.getJSONArray("heldCarts")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
+                    val title = value.optString("title", "Held cart")
+                    val ts = value.optLong("timestamp", System.currentTimeMillis())
+                    if (mode == BackupImportMode.MERGE) {
+                        val isDuplicate = existingHeldCartsInDb.any { it.title == title && it.timestamp == ts }
+                        if (isDuplicate) continue
+                    }
                     heldCartDao.insertHeldCart(HeldCart(
-                        id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), title = value.optString("title", "Held cart"),
+                        id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), title = title,
                         customerName = value.optString("customerName").takeIf { it.isNotBlank() },
                         customerPhone = value.optString("customerPhone").takeIf { it.isNotBlank() },
                         itemsJson = value.optString("itemsJson", "[]"),
                         discountAmount = value.optDouble("discountAmount", 0.0),
                         isPercentageDiscount = value.optBoolean("isPercentageDiscount", false),
-                        timestamp = value.optLong("timestamp", System.currentTimeMillis()),
+                        timestamp = ts,
                         note = value.optString("note").takeIf { it.isNotBlank() }
                     ))
                 }
               }
 
               val expenseIdMap = mutableMapOf<Long, Long>()
+              val existingExpensesInDb = if (mode == BackupImportMode.MERGE) expenseDao.getAllExpensesOnce() else emptyList()
               if (backupJson.has("expenses")) {
                 val array = backupJson.getJSONArray("expenses")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
                     val backupExpenseId = value.optLong("id", 0L)
+                    val title = value.optString("title", "Expense")
+                    val amt = value.optDouble("amount", 0.0)
+                    val ts = value.optLong("timestamp", System.currentTimeMillis())
+                    if (mode == BackupImportMode.MERGE) {
+                        val duplicate = existingExpensesInDb.firstOrNull {
+                            it.title == title && kotlin.math.abs(it.amount - amt) < 0.01 && it.timestamp == ts
+                        }
+                        if (duplicate != null) {
+                            expenseIdMap[backupExpenseId] = duplicate.id
+                            continue
+                        }
+                    }
                     val newExpenseId = expenseDao.insertExpense(Expense(
-                        id = if (mode == BackupImportMode.MERGE) 0L else backupExpenseId, title = value.optString("title", "Expense"),
+                        id = if (mode == BackupImportMode.MERGE) 0L else backupExpenseId, title = title,
                         category = value.optString("category", "Other"), type = value.optString("type", "EXPENSE"),
-                        amount = value.optDouble("amount", 0.0), paymentSource = value.optString("paymentSource", "Cash"),
+                        amount = amt, paymentSource = value.optString("paymentSource", "Cash"),
                         note = value.optString("note").takeIf { it.isNotBlank() },
-                        timestamp = value.optLong("timestamp", System.currentTimeMillis()),
+                        timestamp = ts,
                         cashierName = value.optString("cashierName", "")
                     ))
                     if (mode == BackupImportMode.MERGE && backupExpenseId != 0L) {
@@ -2752,17 +2823,28 @@ class DataRepository(
                 }
               }
 
-              // Suppliers -> purchase invoices/payments follow the same id-map remap pattern as
-              // sales/returns above.
               val supplierIdMap = mutableMapOf<Long, Long>()
+              val existingSuppliersInDb = if (mode == BackupImportMode.MERGE) supplierDao.getAllSuppliersOnce() else emptyList()
               if (backupJson.has("suppliers")) {
                 val array = backupJson.getJSONArray("suppliers")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
                     val backupSupplierId = value.optLong("id", 0L)
+                    val sName = value.optString("name", "Supplier")
+                    val sPhone = value.optString("phone")
+                    if (mode == BackupImportMode.MERGE) {
+                        val duplicate = existingSuppliersInDb.firstOrNull {
+                            it.name.equals(sName, ignoreCase = true) ||
+                            (sPhone.isNotBlank() && normalizePhone(it.phone) == normalizePhone(sPhone))
+                        }
+                        if (duplicate != null) {
+                            supplierIdMap[backupSupplierId] = duplicate.id
+                            continue
+                        }
+                    }
                     val newSupplierId = supplierDao.upsertSupplier(Supplier(
-                        id = if (mode == BackupImportMode.MERGE) 0L else backupSupplierId, name = value.optString("name", "Supplier"),
-                        companyName = value.optString("companyName"), phone = value.optString("phone"),
+                        id = if (mode == BackupImportMode.MERGE) 0L else backupSupplierId, name = sName,
+                        companyName = value.optString("companyName"), phone = sPhone,
                         address = value.optString("address").takeIf { it.isNotBlank() },
                         totalPurchased = value.optDouble("totalPurchased", 0.0), totalDue = value.optDouble("totalDue", 0.0),
                         notes = value.optString("notes").takeIf { it.isNotBlank() },
@@ -2772,63 +2854,110 @@ class DataRepository(
                 }
               }
               val purchaseInvoiceIdMap = mutableMapOf<Long, Long>()
+              val existingInvoicesInDb = if (mode == BackupImportMode.MERGE) purchaseInvoiceDao.getAllInvoicesOnce() else emptyList()
               if (backupJson.has("purchaseInvoices")) {
                 val array = backupJson.getJSONArray("purchaseInvoices")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
                     val backupInvoiceId = value.optLong("id", 0L)
                     val backupSupplierId = value.getLong("supplierId")
+                    val invNum = value.optString("invoiceNumber")
+                    val totalAmt = value.optDouble("totalAmount", 0.0)
+                    val ts = value.optLong("timestamp", System.currentTimeMillis())
                     val resolvedSupplierId = if (mode == BackupImportMode.MERGE) supplierIdMap[backupSupplierId] ?: backupSupplierId else backupSupplierId
+                    if (mode == BackupImportMode.MERGE) {
+                        val duplicate = existingInvoicesInDb.firstOrNull {
+                            it.supplierId == resolvedSupplierId &&
+                            ((invNum.isNotBlank() && it.invoiceNumber == invNum) || (it.timestamp == ts && kotlin.math.abs(it.totalAmount - totalAmt) < 0.01))
+                        }
+                        if (duplicate != null) {
+                            purchaseInvoiceIdMap[backupInvoiceId] = duplicate.id
+                            continue
+                        }
+                    }
                     val newInvoiceId = purchaseInvoiceDao.insertPurchaseInvoice(PurchaseInvoice(
                         id = if (mode == BackupImportMode.MERGE) 0L else backupInvoiceId, supplierId = resolvedSupplierId,
-                        invoiceNumber = value.optString("invoiceNumber"), totalAmount = value.optDouble("totalAmount", 0.0),
+                        invoiceNumber = invNum, totalAmount = totalAmt,
                         paidAmount = value.optDouble("paidAmount", 0.0), dueAmount = value.optDouble("dueAmount", 0.0),
                         itemsSummary = value.optString("itemsSummary"), paymentMethod = value.optString("paymentMethod", "Cash"),
-                        timestamp = value.optLong("timestamp", System.currentTimeMillis()),
+                        timestamp = ts,
                         note = value.optString("note").takeIf { it.isNotBlank() }
                   ))
                     if (mode == BackupImportMode.MERGE) purchaseInvoiceIdMap[backupInvoiceId] = newInvoiceId
                 }
               }
+
+              val existingInvoiceItemsInDb = if (mode == BackupImportMode.MERGE) purchaseInvoiceDao.getAllPurchaseInvoiceItemsOnce() else emptyList()
               if (backupJson.has("purchaseInvoiceItems")) {
                 val array = backupJson.getJSONArray("purchaseInvoiceItems")
                 val records = mutableListOf<PurchaseInvoiceItem>()
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
                     val backupInvoiceId = value.getLong("invoiceId")
-                    val resolvedInvoiceId = if (mode == BackupImportMode.MERGE) purchaseInvoiceIdMap[backupInvoiceId] ?: backupInvoiceId else backupInvoiceId
+                    val resolvedInvoiceId = if (mode == BackupImportMode.MERGE) purchaseInvoiceIdMap[backupInvoiceId] ?: 0L else backupInvoiceId
+                    if (mode == BackupImportMode.MERGE && resolvedInvoiceId == 0L) continue
+                    val barcode = value.optString("productBarcode")
+                    val qty = value.optDouble("quantity", 0.0)
+                    if (mode == BackupImportMode.MERGE) {
+                        val isDuplicate = existingInvoiceItemsInDb.any {
+                            it.invoiceId == resolvedInvoiceId && it.productBarcode.equals(barcode, ignoreCase = true) &&
+                            kotlin.math.abs(it.quantity - qty) < 0.01
+                        }
+                        if (isDuplicate) continue
+                    }
                     records += PurchaseInvoiceItem(
                         id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), invoiceId = resolvedInvoiceId,
-                        productBarcode = value.optString("productBarcode"),
+                        productBarcode = barcode,
                         productName = value.optString("productName"),
-                        quantity = value.optDouble("quantity", 0.0), unitCost = value.optDouble("unitCost", 0.0)
+                        quantity = qty, unitCost = value.optDouble("unitCost", 0.0)
                     )
                 }
-                if (records.isNotEmpty()) purchaseInvoiceDao.insertPurchaseInvoiceItems(records)
+                if (records.isNotEmpty()) {
+                    purchaseInvoiceDao.insertPurchaseInvoiceItems(records)
+                    if (mode == BackupImportMode.MERGE) newlyInsertedPurchaseItems.addAll(records)
+                }
               }
+
+              val existingSupplierPaymentsInDb = if (mode == BackupImportMode.MERGE) supplierDao.getAllSupplierPaymentsOnce() else emptyList()
               if (backupJson.has("supplierPayments")) {
                 val array = backupJson.getJSONArray("supplierPayments")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
                     val backupSupplierId = value.getLong("supplierId")
+                    val amtPaid = value.optDouble("amountPaid", 0.0)
+                    val ts = value.optLong("timestamp", System.currentTimeMillis())
                     val resolvedSupplierId = if (mode == BackupImportMode.MERGE) supplierIdMap[backupSupplierId] ?: backupSupplierId else backupSupplierId
+                    if (mode == BackupImportMode.MERGE) {
+                        val isDuplicate = existingSupplierPaymentsInDb.any {
+                            it.supplierId == resolvedSupplierId && kotlin.math.abs(it.amountPaid - amtPaid) < 0.01 &&
+                            it.timestamp == ts
+                        }
+                        if (isDuplicate) continue
+                    }
                     supplierDao.insertSupplierPayment(SupplierPayment(
                         id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), supplierId = resolvedSupplierId,
-                        amountPaid = value.optDouble("amountPaid", 0.0),
+                        amountPaid = amtPaid,
                         paymentMethod = value.optString("paymentMethod", "Cash"),
                         referenceNote = value.optString("referenceNote").takeIf { it.isNotBlank() },
-                        timestamp = value.optLong("timestamp", System.currentTimeMillis()),
+                        timestamp = ts,
                         performedByName = value.optString("performedByName").takeIf { it.isNotBlank() }
                     ))
                 }
               }
 
+              val existingClosingsInDb = if (mode == BackupImportMode.MERGE) registerClosingDao.getAllClosingsOnce() else emptyList()
               if (backupJson.has("registerClosings")) {
                 val array = backupJson.getJSONArray("registerClosings")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
+                    val dateStr = value.optString("date")
+                    val ts = value.optLong("timestamp", System.currentTimeMillis())
+                    if (mode == BackupImportMode.MERGE) {
+                        val isDuplicate = existingClosingsInDb.any { it.date == dateStr && it.timestamp == ts }
+                        if (isDuplicate) continue
+                    }
                     registerClosingDao.insertClosing(RegisterClosing(
-                        id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), date = value.optString("date"),
+                        id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), date = dateStr,
                         startingFloat = value.optDouble("startingFloat", 0.0), cashSales = value.optDouble("cashSales", 0.0),
                         digitalSales = value.optDouble("digitalSales", 0.0),
                         bkashSales = value.optDouble("bkashSales", 0.0),
@@ -2843,7 +2972,7 @@ class DataRepository(
                         actualCountedCash = value.optDouble("actualCountedCash", 0.0), variance = value.optDouble("variance", 0.0),
                         notes = value.optString("notes").takeIf { it.isNotBlank() },
                         discrepancyReason = value.optString("discrepancyReason").takeIf { it.isNotBlank() },
-                        timestamp = value.optLong("timestamp", System.currentTimeMillis()),
+                        timestamp = ts,
                         cashierName = value.optString("cashierName", "")
                     ))
                 }
@@ -2862,23 +2991,36 @@ class DataRepository(
                     ))
                 }
               }
+
+              val existingLoyaltyTxnsInDb = if (mode == BackupImportMode.MERGE) loyaltyTransactionDao.getAllOnce() else emptyList()
               if (backupJson.has("loyaltyTransactions")) {
                 val array = backupJson.getJSONArray("loyaltyTransactions")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
+                    val phone = normalizePhone(value.optString("customerPhone"))
+                    val pts = value.optInt("pointsChange", 0)
+                    val ts = value.optLong("timestamp", System.currentTimeMillis())
+                    val typeStr = value.optString("type", "ADJUSTMENT")
                     val backupSaleId = value.optLong("saleId").takeIf { value.has("saleId") && !value.isNull("saleId") }
                     val resolvedSaleId = if (mode == BackupImportMode.MERGE && backupSaleId != null) {
                         saleIdMap[backupSaleId] ?: backupSaleId
                     } else backupSaleId
+                    if (mode == BackupImportMode.MERGE) {
+                        val isDuplicate = existingLoyaltyTxnsInDb.any {
+                            it.customerPhone == phone && it.pointsChange == pts &&
+                            it.timestamp == ts && it.type == typeStr
+                        }
+                        if (isDuplicate) continue
+                    }
                     loyaltyTransactionDao.insert(LoyaltyTransaction(
                         id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L),
-                        customerPhone = normalizePhone(value.optString("customerPhone")),
-                        pointsChange = value.optInt("pointsChange", 0),
+                        customerPhone = phone,
+                        pointsChange = pts,
                         spendChange = value.optDouble("spendChange", 0.0),
-                        type = value.optString("type", "ADJUSTMENT"),
+                        type = typeStr,
                         reason = value.optString("reason", "Imported adjustment"),
                         saleId = resolvedSaleId,
-                        timestamp = value.optLong("timestamp", System.currentTimeMillis()),
+                        timestamp = ts,
                         performedByName = value.optString("performedByName").takeIf { it.isNotBlank() }
                     ))
                 }
@@ -2891,19 +3033,33 @@ class DataRepository(
                   ))
               }
 
+              val existingAdjustmentsInDb = if (mode == BackupImportMode.MERGE) inventoryAdjustmentDao.getAllAdjustmentsOnce() else emptyList()
               if (backupJson.has("inventoryAdjustments")) {
                 val array = backupJson.getJSONArray("inventoryAdjustments")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
-                    inventoryAdjustmentDao.insertAdjustment(InventoryAdjustment(
+                    val barcode = value.optString("productBarcode")
+                    val diff = value.optDouble("difference", 0.0)
+                    val ts = value.optLong("timestamp", System.currentTimeMillis())
+                    if (mode == BackupImportMode.MERGE) {
+                        val isDuplicate = existingAdjustmentsInDb.any {
+                            it.productBarcode.equals(barcode, ignoreCase = true) &&
+                            kotlin.math.abs(it.difference - diff) < 0.0001 &&
+                            it.timestamp == ts
+                        }
+                        if (isDuplicate) continue
+                    }
+                    val adjustment = InventoryAdjustment(
                         id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L),
-                        productBarcode = value.optString("productBarcode"), productName = value.optString("productName"),
+                        productBarcode = barcode, productName = value.optString("productName"),
                         previousStock = value.optDouble("previousStock", 0.0), newStock = value.optDouble("newStock", 0.0),
-                        difference = value.optDouble("difference", 0.0), reason = value.optString("reason", "Other"),
+                        difference = diff, reason = value.optString("reason", "Other"),
                         note = value.optString("note").takeIf { it.isNotBlank() },
-                        timestamp = value.optLong("timestamp", System.currentTimeMillis()),
+                        timestamp = ts,
                         cashierName = value.optString("cashierName", "")
-                    ))
+                    )
+                    inventoryAdjustmentDao.insertAdjustment(adjustment)
+                    if (mode == BackupImportMode.MERGE) newlyInsertedAdjustments.add(adjustment)
                 }
               }
               if (backupJson.has("scheduledDueReminders")) {
@@ -2920,16 +3076,24 @@ class DataRepository(
                     ))
                 }
               }
+
+              val existingLogsInDb = if (mode == BackupImportMode.MERGE) dueReminderLogDao.getAllLogsOnce() else emptyList()
               if (backupJson.has("dueReminderLogs")) {
                 val array = backupJson.getJSONArray("dueReminderLogs")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
+                    val phone = normalizePhone(value.getString("customerPhone"))
+                    val ts = value.optLong("timestamp", System.currentTimeMillis())
+                    if (mode == BackupImportMode.MERGE) {
+                        val isDuplicate = existingLogsInDb.any { it.customerPhone == phone && it.timestamp == ts }
+                        if (isDuplicate) continue
+                    }
                     dueReminderLogDao.insertLog(DueReminderLog(
                         id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L),
-                        customerPhone = normalizePhone(value.getString("customerPhone")), customerName = value.optString("customerName", "Customer"),
+                        customerPhone = phone, customerName = value.optString("customerName", "Customer"),
                         dueAmount = value.optDouble("dueAmount", 0.0), channel = value.optString("channel", "WHATSAPP"),
                         messageText = value.optString("messageText", ""),
-                        timestamp = value.optLong("timestamp", System.currentTimeMillis()),
+                        timestamp = ts,
                         status = value.optString("status", "SENT")
                     ))
                 }
@@ -2965,6 +3129,12 @@ class DataRepository(
               backupJson.optJSONArray("storeCreditVouchers")?.let { arr ->
                   for (i in 0 until arr.length()) {
                       val obj = arr.getJSONObject(i)
+                      val codeStr = obj.getString("code")
+                      if (mode == BackupImportMode.MERGE) {
+                          val existingVoucher = storeCreditVoucherDao.getVoucherByCode(codeStr)
+                          if (existingVoucher != null) continue // Skip duplicate voucher code (Fixes B-1)
+                      }
+
                       val backupSaleId = obj.optLong("sourceSaleId").takeIf { obj.has("sourceSaleId") && !obj.isNull("sourceSaleId") }
                           ?: obj.optLong("saleId").takeIf { obj.has("saleId") && !obj.isNull("saleId") }
                       val resolvedSaleId = if (mode == BackupImportMode.MERGE && backupSaleId != null) {
@@ -2979,7 +3149,7 @@ class DataRepository(
                       val initialAmt = if (obj.has("initialAmount")) obj.optDouble("initialAmount", 0.0) else obj.optDouble("originalAmount", 0.0)
                       val phone = if (obj.isNull("customerPhone")) null else normalizePhone(obj.getString("customerPhone"))
                       storeCreditVoucherDao.insertVoucher(StoreCreditVoucher(
-                          code = obj.getString("code"),
+                          code = codeStr,
                           initialAmount = initialAmt,
                           remainingBalance = obj.optDouble("remainingBalance", initialAmt),
                           customerPhone = phone,
@@ -2994,10 +3164,13 @@ class DataRepository(
               }
 
               // Restore store credit ledger
+              val existingEntriesInDb = if (mode == BackupImportMode.MERGE) storeCreditLedgerDao.getAllEntries() else emptyList()
               backupJson.optJSONArray("storeCreditLedger")?.let { arr ->
                   for (i in 0 until arr.length()) {
                       val obj = arr.getJSONObject(i)
                       val delta = if (obj.has("deltaAmount")) obj.optDouble("deltaAmount", 0.0) else obj.optDouble("amount", 0.0)
+                      val phone = normalizePhone(obj.getString("customerPhone"))
+                      val typeStr = obj.optString("type", "MANUAL_ADJUST")
                       val backupSaleId = when {
                           obj.has("referenceInvoiceId") && !obj.isNull("referenceInvoiceId") -> obj.optLong("referenceInvoiceId")
                           obj.has("saleId") && !obj.isNull("saleId") -> obj.optLong("saleId")
@@ -3017,12 +3190,19 @@ class DataRepository(
                           obj.has("createdAt") -> obj.optLong("createdAt", System.currentTimeMillis())
                           else -> System.currentTimeMillis()
                       }
+                      if (mode == BackupImportMode.MERGE) {
+                          val isDuplicate = existingEntriesInDb.any {
+                              it.customerPhone == phone && kotlin.math.abs(it.deltaAmount - delta) < 0.01 &&
+                              it.timestamp == ts && it.type == typeStr
+                          }
+                          if (isDuplicate) continue
+                      }
                       storeCreditLedgerDao.insertEntry(StoreCreditLedgerEntry(
                           id = if (mode == BackupImportMode.MERGE) 0L else obj.optLong("id", 0L),
-                          customerPhone = normalizePhone(obj.getString("customerPhone")),
+                          customerPhone = phone,
                           deltaAmount = delta,
                           balanceAfter = obj.optDouble("balanceAfter", 0.0),
-                          type = obj.optString("type", "MANUAL_ADJUST"),
+                          type = typeStr,
                           referenceInvoiceId = resolvedSaleId,
                           voucherCode = if (obj.isNull("voucherCode")) null else obj.optString("voucherCode"),
                           note = noteText,
@@ -3032,6 +3212,7 @@ class DataRepository(
               }
 
               // Restore sale audit logs
+              val existingSaleAuditLogsInDb = if (mode == BackupImportMode.MERGE) saleAuditLogDao.getAllAuditLogsOnce() else emptyList()
               backupJson.optJSONArray("saleAuditLogs")?.let { arr ->
                   for (i in 0 until arr.length()) {
                       val obj = arr.getJSONObject(i)
@@ -3039,6 +3220,15 @@ class DataRepository(
                       val resolvedSaleId = if (mode == BackupImportMode.MERGE) {
                           saleIdMap[backupSaleId] ?: backupSaleId
                       } else backupSaleId
+                      val actionStr = obj.optString("action", "DELETED")
+                      val ts = obj.optLong("timestamp", System.currentTimeMillis())
+
+                      if (mode == BackupImportMode.MERGE) {
+                          val isDuplicate = existingSaleAuditLogsInDb.any {
+                              it.saleId == resolvedSaleId && it.timestamp == ts && it.action == actionStr
+                          }
+                          if (isDuplicate) continue
+                      }
 
                       val cashier = when {
                           obj.has("cashierName") && !obj.isNull("cashierName") -> obj.optString("cashierName")
@@ -3050,17 +3240,18 @@ class DataRepository(
                       saleAuditLogDao.insertAuditLogIgnore(SaleAuditLog(
                           id = if (mode == BackupImportMode.MERGE) 0L else obj.optLong("id", 0L),
                           saleId = resolvedSaleId,
-                          action = obj.optString("action", "DELETED"),
+                          action = actionStr,
                           reason = reason,
                           grandTotal = obj.optDouble("grandTotal", 0.0),
                           paymentMethod = obj.optString("paymentMethod", "Cash"),
                           cashierName = cashier,
-                          timestamp = obj.optLong("timestamp", System.currentTimeMillis())
+                          timestamp = ts
                       ))
                   }
               }
 
               // Restore expense audit logs
+              val existingExpenseAuditLogsInDb = if (mode == BackupImportMode.MERGE) expenseAuditLogDao.getAllAuditLogsOnce() else emptyList()
               backupJson.optJSONArray("expenseAuditLogs")?.let { arr ->
                   for (i in 0 until arr.length()) {
                       val obj = arr.getJSONObject(i)
@@ -3068,6 +3259,15 @@ class DataRepository(
                       val resolvedExpenseId = if (mode == BackupImportMode.MERGE) {
                           expenseIdMap[backupExpenseId] ?: backupExpenseId
                       } else backupExpenseId
+                      val actionStr = obj.optString("action", "DELETED")
+                      val ts = obj.optLong("timestamp", System.currentTimeMillis())
+
+                      if (mode == BackupImportMode.MERGE) {
+                          val isDuplicate = existingExpenseAuditLogsInDb.any {
+                              it.expenseId == resolvedExpenseId && it.timestamp == ts && it.action == actionStr
+                          }
+                          if (isDuplicate) continue
+                      }
 
                       val user = when {
                           obj.has("userName") && !obj.isNull("userName") -> obj.optString("userName")
@@ -3079,15 +3279,24 @@ class DataRepository(
                       expenseAuditLogDao.insertAuditLogIgnore(ExpenseAuditLog(
                           id = if (mode == BackupImportMode.MERGE) 0L else obj.optLong("id", 0L),
                           expenseId = resolvedExpenseId,
-                          action = obj.optString("action", "DELETED"),
+                          action = actionStr,
                           reason = reason,
                           amount = obj.optDouble("amount", 0.0),
                           category = obj.optString("category", "Other"),
                           paymentSource = obj.optString("paymentSource", "Cash"),
                           userName = user,
-                          timestamp = obj.optLong("timestamp", System.currentTimeMillis())
+                          timestamp = ts
                       ))
                   }
+              }
+
+              if (mode == BackupImportMode.MERGE) {
+                  recomputeAllDerivedBalances(
+                      newlyInsertedSaleItems,
+                      newlyInsertedReturnItems,
+                      newlyInsertedPurchaseItems,
+                      newlyInsertedAdjustments
+                  )
               }
             }
 
@@ -3154,6 +3363,146 @@ class DataRepository(
         } catch (e: Exception) {
             e.printStackTrace()
             false
+        }
+    }
+
+    private suspend fun recomputeAllDerivedBalances(
+        newlyInsertedSaleItems: List<SaleItem>,
+        newlyInsertedReturnItems: List<ReturnItem>,
+        newlyInsertedPurchaseItems: List<PurchaseInvoiceItem>,
+        newlyInsertedAdjustments: List<InventoryAdjustment>
+    ) {
+        // 1. Recompute Customer Dues
+        val allCustomersInDb = customerDao.getAllCustomersOnce()
+        val allDueCharges = customerDueDao.getAllDueChargesOnce()
+        val allDuePayments = customerDueDao.getAllDuePaymentsOnce()
+
+        val customerPhones = (allCustomersInDb.map { normalizePhone(it.phone) } +
+                allDueCharges.map { normalizePhone(it.customerPhone) } +
+                allDuePayments.map { normalizePhone(it.customerPhone) }).filter { it.isNotBlank() }.toSet()
+
+        for (phone in customerPhones) {
+            val totalCharges = allDueCharges.filter { normalizePhone(it.customerPhone) == phone }.sumOf { it.amount }
+            val totalPayments = allDuePayments.filter { normalizePhone(it.customerPhone) == phone }.sumOf { it.amountPaid }
+            val computedDue = (totalCharges - totalPayments).coerceAtLeast(0.0)
+
+            val existingDue = customerDueDao.getCustomerDueByPhone(phone)
+            val customerName = existingDue?.customerName
+                ?: allCustomersInDb.firstOrNull { normalizePhone(it.phone) == phone }?.name
+                ?: phone
+            customerDueDao.upsertCustomerDue(
+                CustomerDue(
+                    customerPhone = phone,
+                    customerName = customerName,
+                    outstandingAmount = computedDue,
+                    creditLimit = existingDue?.creditLimit ?: 0.0,
+                    createdAt = existingDue?.createdAt ?: System.currentTimeMillis(),
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+            val customer = customerDao.getCustomerByPhone(phone)
+            if (customer != null) {
+                customerDao.updateCustomerTotalDue(phone, computedDue, System.currentTimeMillis())
+            }
+        }
+
+        // 2. Recompute Customer Loyalty
+        val allLoyaltyInDb = customerLoyaltyDao.getAllIncludingInactive()
+        val allLoyaltyTxns = loyaltyTransactionDao.getAllOnce()
+        val loyaltyPhones = (allLoyaltyInDb.map { normalizePhone(it.phone) } +
+                allLoyaltyTxns.map { normalizePhone(it.customerPhone) }).filter { it.isNotBlank() }.toSet()
+
+        val loyaltySettings = getLoyaltySettings()
+        for (phone in loyaltyPhones) {
+            val txns = allLoyaltyTxns.filter { normalizePhone(it.customerPhone) == phone }
+            val pts = maxOf(0, txns.sumOf { it.pointsChange })
+            val spend = maxOf(0.0, txns.sumOf { it.spendChange })
+            val existing = customerLoyaltyDao.getLoyaltyByPhone(phone)
+            val name = existing?.name ?: allCustomersInDb.firstOrNull { normalizePhone(it.phone) == phone }?.name ?: "Customer"
+            val calculatedTier = when {
+                !loyaltySettings.isTiersEnabled -> existing?.tier ?: "Regular"
+                spend >= loyaltySettings.platinumSpendThreshold -> "Platinum"
+                spend >= loyaltySettings.goldSpendThreshold -> "Gold"
+                spend >= loyaltySettings.silverSpendThreshold -> "Silver"
+                else -> "Regular"
+            }
+            val finalTier = if (getTierRank(calculatedTier) > getTierRank(existing?.tier)) calculatedTier else (existing?.tier ?: calculatedTier)
+
+            customerLoyaltyDao.upsertLoyalty(
+                CustomerLoyalty(
+                    phone = phone,
+                    name = name,
+                    pointsBalance = pts,
+                    tier = finalTier,
+                    lifetimeSpent = spend,
+                    updatedAt = System.currentTimeMillis(),
+                    isActive = existing?.isActive ?: true
+                )
+            )
+            val customer = customerDao.getCustomerByPhone(phone)
+            if (customer != null) {
+                customerDao.updateCustomerLoyalty(phone, pts, finalTier, System.currentTimeMillis())
+            }
+        }
+
+        // 3. Recompute Store Credit
+        val allLedgerEntries = storeCreditLedgerDao.getAllEntries()
+        val scPhones = (allCustomersInDb.map { normalizePhone(it.phone) } +
+                allLedgerEntries.map { normalizePhone(it.customerPhone) }).filter { it.isNotBlank() }.toSet()
+
+        for (phone in scPhones) {
+            val totalCredit = maxOf(0.0, allLedgerEntries.filter { normalizePhone(it.customerPhone) == phone }.sumOf { it.deltaAmount })
+            val customer = customerDao.getCustomerByPhone(phone)
+            if (customer != null) {
+                customerDao.updateCustomerStoreCredit(phone, totalCredit, System.currentTimeMillis())
+            }
+        }
+
+        // 4. Recompute Supplier Totals
+        val allSuppliers = supplierDao.getAllSuppliersOnce()
+        val allInvoices = purchaseInvoiceDao.getAllInvoicesOnce()
+        val allSupplierPayments = supplierDao.getAllSupplierPaymentsOnce()
+
+        for (supplier in allSuppliers) {
+            val supplierInvoices = allInvoices.filter { it.supplierId == supplier.id }
+            val totalPurchased = supplierInvoices.sumOf { it.totalAmount }
+            val totalInvoicePaid = supplierInvoices.sumOf { it.paidAmount }
+            val totalDirectPayments = allSupplierPayments.filter { it.supplierId == supplier.id }.sumOf { it.amountPaid }
+            val totalPaid = totalInvoicePaid + totalDirectPayments
+            val totalDue = (totalPurchased - totalPaid).coerceAtLeast(0.0)
+
+            supplierDao.upsertSupplier(
+                supplier.copy(
+                    totalPurchased = totalPurchased,
+                    totalDue = totalDue,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+        }
+
+        // 5. Recompute Product Stock Delta from Newly Inserted Transactions
+        val barcodeDeltas = mutableMapOf<String, Double>()
+        for (item in newlyInsertedPurchaseItems) {
+            val code = item.productBarcode.lowercase()
+            barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) + item.quantity
+        }
+        for (item in newlyInsertedSaleItems) {
+            val code = item.productBarcode.lowercase()
+            barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) - item.quantity
+        }
+        for (item in newlyInsertedReturnItems) {
+            val code = item.productBarcode.lowercase()
+            barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) + item.quantity
+        }
+        for (adj in newlyInsertedAdjustments) {
+            val code = adj.productBarcode.lowercase()
+            barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) + adj.difference
+        }
+
+        for ((barcode, delta) in barcodeDeltas) {
+            if (kotlin.math.abs(delta) > 0.0001) {
+                productDao.adjustStockQty(barcode, delta, allowNegative = true)
+            }
         }
     }
 

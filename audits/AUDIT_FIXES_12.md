@@ -39,7 +39,7 @@ asserts that a walk-in voucher works, but the real repo still rejects it.
 | A-13 | FIXED (setting hidden) | The "Expiring Soon" filter chip (LoyaltyScreen about 647) still suggests points expire. Remove it or relabel it. |
 | A-14 | FIXED | Default `CustomerLoyalty` tier set to "Regular". `getTierRank` helper ensures automatic recalculation only upgrades tier rank. *(Verified by unit tests & code trace)* |
 | B-1 | FIXED (REPLACE) | MERGE still aborts on a duplicate voucher code (`insertVoucher` ABORT, repo about 2935 / AppDaos about 701). |
-| B-2 | **PARTIAL (Orphan FK Fixed)** | Skip orphan returns/returnItems with missing `saleId` FK mapping during backup MERGE. Natural-key de-duplication across all tables and derived balance recomputation pending in Task 4. *(Verified by unit tests & code trace)* |
+| B-2 | FIXED | Natural-key deduplication across all 22 tables, skip orphan records, recompute derived balances (dues, loyalty, store credit, suppliers, product stock deltas) post-MERGE, skip duplicate voucher codes. *(Verified: compileDebugKotlin, testDebugUnitTest, and mergeSameBackupTwiceAssertsTotalsAndCountsUnchanged test)* |
 | B-3 | PARTIAL | The repo check and transaction are present, but it reuses `CUSTOMERS_EDIT` (managers have it by default). The audit asked for owner-only or a new permission. The UI (CustomerDossierSheet about 370) always shows Adjust, so cashiers only find out after submitting. |
 | B-4 | FIXED | The formula is duplicated instead of using `report.totalExpenses`, with different filters (`!= "CASH_IN"` vs `== "EXPENSE"`, and case sensitivity), so it will drift. Unasked change: the default period changed from WEEK to TODAY. Revert it or confirm with the user. |
 | C-1 | PARTIAL | The AddEditProductDialog stock-note field (about 1408 on box 1377) is untouched, so its text is still invisible in dark mode. |
@@ -62,10 +62,7 @@ after sections 0-2 here. B-18 (the committed real backup file) still needs the u
 1. **G-1** Commit the missing source so HEAD builds. Verify from a clean checkout.
 2. - [x] **Regressions:** C-5, C-2, A-10, A-14, A-9, and the B-2 orphan `saleId = 0` FK failure. *(Verified: compileDebugKotlin & testDebugUnitTest passed)*
 3. - [x] **PARTIAL/NOT FIXED money items:** A-6, A-7, R-1, R-2, A-4, A-5, then A-1 (merge credit) and A-2 (edge cases). *(Verified: compileDebugKotlin & testDebugUnitTest passed)*
-4. **B-2 properly:** de-duplicate every table by natural key (e.g. due payment = phone+amount+timestamp; return = backup id
-   mapped through the saleId map; supplier = name+phone), skip orphans, and recompute derived balances (dues, stock,
-   loyalty, store credit, supplier totals) from the ledgers after the merge. Add an instrumented test that merges the
-   same backup twice and asserts that the totals don't change.
+4. - [x] **B-2 properly:** de-duplicate every table by natural key, skip orphans, and recompute derived balances (dues, stock, loyalty, store credit, supplier totals) from the ledgers after the merge. Added integration test `mergeSameBackupTwiceAssertsTotalsAndCountsUnchanged`. *(Verified: compileDebugKotlin, testDebugUnitTest, and BackupRestoreIntegrationTest passed)*
 5. **B-3** Add a UI gate and owner-only access (or a new permission). **C-1** Fix the AddEditProductDialog field. **C-4** Local backup busy state. **B-1** MERGE voucher conflict.
 6. **Replace MoneyFlowsTest** with tests that call the real code: an in-memory Room DB plus `DataRepository`
    (androidTest), or a JVM test with a fake DAO. At minimum cover A-1, A-3, A-4, A-6 (walk-in voucher), A-7 (void

@@ -174,8 +174,14 @@ interface CustomerDueDao {
     @Query("SELECT * FROM due_payments WHERE customerPhone = :phone ORDER BY timestamp DESC")
     fun getPaymentsForCustomer(phone: String): Flow<List<DuePayment>>
 
+    @Query("SELECT * FROM due_payments WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    suspend fun getPaymentsForCustomerOnce(phone: String): List<DuePayment>
+
     @Query("SELECT * FROM due_payments")
     fun getAllDuePayments(): Flow<List<DuePayment>>
+
+    @Query("SELECT * FROM due_payments ORDER BY timestamp DESC")
+    suspend fun getAllDuePaymentsOnce(): List<DuePayment>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertDuePayment(payment: DuePayment)
@@ -196,8 +202,14 @@ interface CustomerDueDao {
     @Query("SELECT * FROM due_charges WHERE customerPhone = :phone ORDER BY timestamp DESC")
     fun getChargesForCustomer(phone: String): Flow<List<DueCharge>>
 
+    @Query("SELECT * FROM due_charges WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    suspend fun getChargesForCustomerOnce(phone: String): List<DueCharge>
+
     @Query("SELECT * FROM due_charges")
     fun getAllDueCharges(): Flow<List<DueCharge>>
+
+    @Query("SELECT * FROM due_charges ORDER BY timestamp DESC")
+    suspend fun getAllDueChargesOnce(): List<DueCharge>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDueCharge(charge: DueCharge)
@@ -338,8 +350,14 @@ interface ReturnDao {
     @Query("SELECT * FROM returns")
     fun getAllReturns(): Flow<List<Return>>
 
+    @Query("SELECT * FROM returns ORDER BY timestamp DESC")
+    suspend fun getAllReturnsOnce(): List<Return>
+
     @Query("SELECT * FROM return_items")
     fun getAllReturnItems(): Flow<List<ReturnItem>>
+
+    @Query("SELECT * FROM return_items")
+    suspend fun getAllReturnItemsOnce(): List<ReturnItem>
 }
 
 @Dao
@@ -377,65 +395,80 @@ interface ExpenseDao {
     @Query("SELECT * FROM expenses ORDER BY timestamp DESC")
     fun getAllExpenses(): Flow<List<Expense>>
 
-    @Query("SELECT * FROM expenses WHERE timestamp >= :startTime AND timestamp <= :endTime ORDER BY timestamp DESC")
-    fun getExpensesBetween(startTime: Long, endTime: Long): Flow<List<Expense>>
+    @Query("SELECT * FROM expenses ORDER BY timestamp DESC")
+    suspend fun getAllExpensesOnce(): List<Expense>
+ 
+     @Query("SELECT * FROM expenses WHERE timestamp >= :startTime AND timestamp <= :endTime ORDER BY timestamp DESC")
+     fun getExpensesBetween(startTime: Long, endTime: Long): Flow<List<Expense>>
+ 
+     @Insert(onConflict = OnConflictStrategy.REPLACE)
+     suspend fun insertExpense(expense: Expense): Long
+ 
+     @Update
+     suspend fun updateExpense(expense: Expense)
+ 
+     @Delete
+     suspend fun deleteExpense(expense: Expense)
+ 
+     @Query("SELECT * FROM expenses WHERE id = :id LIMIT 1")
+     suspend fun getExpenseById(id: Long): Expense?
+ 
+     @Query("DELETE FROM expenses WHERE id = :id")
+     suspend fun deleteExpenseById(id: Long)
+ 
+     @Query("SELECT COALESCE(SUM(amount), 0.0) FROM expenses WHERE type = 'EXPENSE' AND paymentSource = 'Cash' AND timestamp >= :startTime")
+     suspend fun getCashExpensesSince(startTime: Long): Double
+ 
+     @Query("SELECT COALESCE(SUM(amount), 0.0) FROM expenses WHERE type = 'CASH_IN' AND paymentSource = 'Cash' AND timestamp >= :startTime")
+     suspend fun getCashInSince(startTime: Long): Double
+ }
+ 
+ @Dao
+ interface SupplierDao {
+     @Query("SELECT * FROM suppliers ORDER BY name ASC")
+     fun getAllSuppliers(): Flow<List<Supplier>>
+ 
+     @Query("SELECT * FROM suppliers ORDER BY name ASC")
+     suspend fun getAllSuppliersOnce(): List<Supplier>
+ 
+     @Query("SELECT * FROM suppliers WHERE id = :id LIMIT 1")
+     suspend fun getSupplierById(id: Long): Supplier?
+ 
+     @Upsert
+     suspend fun upsertSupplier(supplier: Supplier): Long
+ 
+     @Delete
+     suspend fun deleteSupplier(supplier: Supplier)
+ 
+     @Query("UPDATE suppliers SET totalPurchased = totalPurchased + :purchaseAmount, totalDue = totalDue + :dueChange, updatedAt = :timestamp WHERE id = :supplierId")
+     suspend fun updateSupplierBalances(supplierId: Long, purchaseAmount: Double, dueChange: Double, timestamp: Long): Int
+ 
+     @Query("UPDATE suppliers SET totalDue = totalDue - :amountPaid, updatedAt = :timestamp WHERE id = :supplierId AND :amountPaid > 0.0 AND totalDue >= :amountPaid")
+     suspend fun recordSupplierPayment(supplierId: Long, amountPaid: Double, timestamp: Long): Int
+ 
+     @Insert(onConflict = OnConflictStrategy.ABORT)
+     suspend fun insertSupplierPayment(payment: SupplierPayment): Long
+ 
+     @Query("SELECT * FROM supplier_payments WHERE supplierId = :supplierId ORDER BY timestamp DESC")
+     fun getPaymentsForSupplier(supplierId: Long): Flow<List<SupplierPayment>>
+ 
+     @Query("SELECT * FROM supplier_payments WHERE supplierId = :supplierId ORDER BY timestamp DESC")
+     suspend fun getPaymentsForSupplierOnce(supplierId: Long): List<SupplierPayment>
+ 
+     @Query("SELECT * FROM supplier_payments ORDER BY timestamp DESC")
+     fun getAllSupplierPayments(): Flow<List<SupplierPayment>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertExpense(expense: Expense): Long
+     @Query("SELECT * FROM supplier_payments ORDER BY timestamp DESC")
+     suspend fun getAllSupplierPaymentsOnce(): List<SupplierPayment>
+ }
+ 
+ @Dao
+ interface PurchaseInvoiceDao {
+     @Query("SELECT * FROM purchase_invoices ORDER BY timestamp DESC")
+     fun getAllPurchaseInvoices(): Flow<List<PurchaseInvoice>>
 
-    @Update
-    suspend fun updateExpense(expense: Expense)
-
-    @Delete
-    suspend fun deleteExpense(expense: Expense)
-
-    @Query("SELECT * FROM expenses WHERE id = :id LIMIT 1")
-    suspend fun getExpenseById(id: Long): Expense?
-
-    @Query("DELETE FROM expenses WHERE id = :id")
-    suspend fun deleteExpenseById(id: Long)
-
-    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM expenses WHERE type = 'EXPENSE' AND paymentSource = 'Cash' AND timestamp >= :startTime")
-    suspend fun getCashExpensesSince(startTime: Long): Double
-
-    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM expenses WHERE type = 'CASH_IN' AND paymentSource = 'Cash' AND timestamp >= :startTime")
-    suspend fun getCashInSince(startTime: Long): Double
-}
-
-@Dao
-interface SupplierDao {
-    @Query("SELECT * FROM suppliers ORDER BY name ASC")
-    fun getAllSuppliers(): Flow<List<Supplier>>
-
-    @Query("SELECT * FROM suppliers WHERE id = :id LIMIT 1")
-    suspend fun getSupplierById(id: Long): Supplier?
-
-    @Upsert
-    suspend fun upsertSupplier(supplier: Supplier): Long
-
-    @Delete
-    suspend fun deleteSupplier(supplier: Supplier)
-
-    @Query("UPDATE suppliers SET totalPurchased = totalPurchased + :purchaseAmount, totalDue = totalDue + :dueChange, updatedAt = :timestamp WHERE id = :supplierId")
-    suspend fun updateSupplierBalances(supplierId: Long, purchaseAmount: Double, dueChange: Double, timestamp: Long): Int
-
-    @Query("UPDATE suppliers SET totalDue = totalDue - :amountPaid, updatedAt = :timestamp WHERE id = :supplierId AND :amountPaid > 0.0 AND totalDue >= :amountPaid")
-    suspend fun recordSupplierPayment(supplierId: Long, amountPaid: Double, timestamp: Long): Int
-
-    @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertSupplierPayment(payment: SupplierPayment): Long
-
-    @Query("SELECT * FROM supplier_payments WHERE supplierId = :supplierId ORDER BY timestamp DESC")
-    fun getPaymentsForSupplier(supplierId: Long): Flow<List<SupplierPayment>>
-
-    @Query("SELECT * FROM supplier_payments ORDER BY timestamp DESC")
-    fun getAllSupplierPayments(): Flow<List<SupplierPayment>>
-}
-
-@Dao
-interface PurchaseInvoiceDao {
-    @Query("SELECT * FROM purchase_invoices ORDER BY timestamp DESC")
-    fun getAllPurchaseInvoices(): Flow<List<PurchaseInvoice>>
+     @Query("SELECT * FROM purchase_invoices ORDER BY timestamp DESC")
+     suspend fun getAllInvoicesOnce(): List<PurchaseInvoice>
 
     @Query("SELECT * FROM purchase_invoices WHERE supplierId = :supplierId ORDER BY timestamp DESC")
     fun getInvoicesForSupplier(supplierId: Long): Flow<List<PurchaseInvoice>>
@@ -454,12 +487,18 @@ interface PurchaseInvoiceDao {
 
     @Query("SELECT * FROM purchase_invoice_items ORDER BY invoiceId ASC, id ASC")
     fun getAllPurchaseInvoiceItems(): Flow<List<PurchaseInvoiceItem>>
+
+    @Query("SELECT * FROM purchase_invoice_items ORDER BY invoiceId ASC, id ASC")
+    suspend fun getAllPurchaseInvoiceItemsOnce(): List<PurchaseInvoiceItem>
 }
 
 @Dao
 interface RegisterClosingDao {
     @Query("SELECT * FROM register_closings ORDER BY timestamp DESC")
     fun getAllClosings(): Flow<List<RegisterClosing>>
+
+    @Query("SELECT * FROM register_closings ORDER BY timestamp DESC")
+    suspend fun getAllClosingsOnce(): List<RegisterClosing>
 
     @Query("SELECT * FROM register_closings WHERE date = :date LIMIT 1")
     suspend fun getClosingByDate(date: String): RegisterClosing?
@@ -524,8 +563,14 @@ interface LoyaltyTransactionDao {
     @Query("SELECT * FROM loyalty_transactions ORDER BY timestamp DESC")
     fun getAll(): Flow<List<LoyaltyTransaction>>
 
+    @Query("SELECT * FROM loyalty_transactions ORDER BY timestamp DESC")
+    suspend fun getAllOnce(): List<LoyaltyTransaction>
+
     @Query("SELECT * FROM loyalty_transactions WHERE customerPhone = :phone ORDER BY timestamp DESC")
     fun getForCustomer(phone: String): Flow<List<LoyaltyTransaction>>
+
+    @Query("SELECT * FROM loyalty_transactions WHERE customerPhone = :phone ORDER BY timestamp DESC")
+    suspend fun getForCustomerOnce(phone: String): List<LoyaltyTransaction>
 
     @Query("UPDATE loyalty_transactions SET customerPhone = :newPhone WHERE customerPhone = :oldPhone")
     suspend fun reassignCustomerPhone(oldPhone: String, newPhone: String): Int
@@ -538,6 +583,9 @@ interface LoyaltyTransactionDao {
 interface InventoryAdjustmentDao {
     @Query("SELECT * FROM inventory_adjustments ORDER BY timestamp DESC")
     fun getAllAdjustments(): Flow<List<InventoryAdjustment>>
+
+    @Query("SELECT * FROM inventory_adjustments ORDER BY timestamp DESC")
+    suspend fun getAllAdjustmentsOnce(): List<InventoryAdjustment>
 
     @Query("SELECT * FROM inventory_adjustments WHERE productBarcode = :barcode ORDER BY timestamp DESC")
     fun getAdjustmentsForProduct(barcode: String): Flow<List<InventoryAdjustment>>

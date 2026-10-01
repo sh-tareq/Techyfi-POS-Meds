@@ -622,5 +622,45 @@ class BackupRestoreIntegrationTest {
         assertEquals(false, itemAfter.taxable)
         backup.delete()
     }
+
+    @Test
+    fun mergeSameBackupTwiceAssertsTotalsAndCountsUnchanged() = runBlocking {
+        val product = Product("PROD-100", "Merge Product", "Test", 50.0, 100.0, 10.0, 1)
+        database.productDao().insertProduct(product)
+        database.customerDao().upsertCustomer(Customer(phone = "01999999999", name = "Merge Customer", totalDue = 0.0))
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0, discountAmount = 0.0, isPercentage = false, grandTotal = 100.0,
+            paymentMethod = "Due", customerName = "Merge Customer", customerPhone = "01999999999",
+            amountPaid = 0.0, walletPhone = null, cardType = null, cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(product, 2.0, null)), taxRate = 0.0, taxAmount = 0.0
+        )
+
+        val backup = File(context.cacheDir, "merge-twice-test.json")
+        assertEquals(true, repository.exportBackup(backup))
+
+        // First MERGE import
+        assertEquals(true, repository.importBackup(backup, BackupImportMode.MERGE))
+
+        val salesCount1 = database.saleDao().getAllSalesOnce().size
+        val dueCharges1 = database.customerDueDao().getAllDueChargesOnce().size
+        val customerDue1 = database.customerDao().getCustomerByPhone("01999999999")!!.totalDue
+        val stock1 = database.productDao().getProductByBarcode("prod-100")!!.stockQty
+
+        // Second MERGE import (merging the exact same backup file again)
+        assertEquals(true, repository.importBackup(backup, BackupImportMode.MERGE))
+
+        val salesCount2 = database.saleDao().getAllSalesOnce().size
+        val dueCharges2 = database.customerDueDao().getAllDueChargesOnce().size
+        val customerDue2 = database.customerDao().getCustomerByPhone("01999999999")!!.totalDue
+        val stock2 = database.productDao().getProductByBarcode("prod-100")!!.stockQty
+
+        assertEquals(salesCount1, salesCount2)
+        assertEquals(dueCharges1, dueCharges2)
+        assertEquals(customerDue1, customerDue2, 0.001)
+        assertEquals(stock1, stock2, 0.001)
+
+        backup.delete()
+    }
 }
 
