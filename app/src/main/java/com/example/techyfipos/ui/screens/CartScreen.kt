@@ -2522,7 +2522,7 @@ fun CartScreen(
                                     val newDue = if (isSplitPayment) {
                                         splitPayments.firstOrNull { it.method == "Due" }?.amount ?: 0.0
                                     } else if (paymentMethod == "Due") {
-                                        (grandTotal - effectiveAmountPaid).coerceAtLeast(0.0)
+                                        (grandTotal - storeCreditApplied - effectiveAmountPaid).coerceAtLeast(0.0)
                                     } else 0.0
 
                                     val proceedWithSale = {

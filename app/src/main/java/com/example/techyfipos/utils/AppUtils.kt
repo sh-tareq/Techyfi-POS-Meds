@@ -9,8 +9,21 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
+
+object DateFormatters {
+    fun formatDateTime(timestamp: Long, locale: Locale = Locale.getDefault()): String =
+        SimpleDateFormat("dd MMM yyyy, hh:mm a", locale).format(Date(timestamp))
+
+    fun formatDate(timestamp: Long, locale: Locale = Locale.getDefault()): String =
+        SimpleDateFormat("dd MMM yyyy", locale).format(Date(timestamp))
+
+    fun formatISO(timestamp: Long): String =
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(timestamp))
+}
 
 /**
  * Returns epoch timestamp in milliseconds for the very beginning of the day (00:00:00.000).
@@ -39,6 +52,18 @@ fun formatTaka(amount: Double): String {
     val absFormatted = MoneyUtils.formatBanglaGrouping(Math.abs(amount))
     return if (isNegative) "-৳$absFormatted" else "৳$absFormatted"
 }
+
+fun formatMoney(amount: Double, isBangla: Boolean = false): String {
+    val en = formatTaka(amount)
+    if (!isBangla) return en
+    val digits = mapOf(
+        '0' to '০', '1' to '১', '2' to '২', '3' to '৩', '4' to '৪',
+        '5' to '৫', '6' to '৬', '7' to '৭', '8' to '৮', '9' to '৯'
+    )
+    return en.map { digits[it] ?: it }.joinToString("")
+}
+
+fun formatTakaBn(amount: Double): String = formatMoney(amount, isBangla = true)
 
 /**
  * Checks whether a unit string represents a fractional/weighable quantity (e.g., Kg, Gram, Ltr, Mtr).

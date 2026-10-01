@@ -27,6 +27,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.layout.*
@@ -4802,7 +4803,7 @@ private fun ProductGridCard(
     isSelected: Boolean = false,
     onToggleSelect: () -> Unit = {}
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val productImage = rememberUriImagePainter(product.imageUri)
     val isOut = product.stockQty <= 0.0
     val isLow = product.stockQty > 0.0 && product.stockQty <= product.reorderLevel

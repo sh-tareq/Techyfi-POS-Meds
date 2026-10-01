@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -72,7 +73,7 @@ fun PriceTierSwitcherCard(
     onShowBanglaDigitsChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
     val cardBorderColor = Color(0xFFC084FC)
     val headerTitleColor = if (isDark) Color(0xFFE9D5FF) else Color(0xFF581C87)

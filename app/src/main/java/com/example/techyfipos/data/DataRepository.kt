@@ -119,7 +119,7 @@ class DataRepository(
     }
 
     suspend fun adjustCustomerCredit(phone: String, delta: Double, note: String? = null): Customer = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.CUSTOMERS_EDIT)
+        requireOwnerSession()
         database.withDriverTransaction {
             val norm = normalizePhone(phone)
             var customer = customerDao.getCustomerByPhone(norm)
@@ -1332,12 +1332,18 @@ class DataRepository(
         val cleanPhone = normalizePhone(customer.phone)
         database.withDriverTransaction {
             val timestamp = System.currentTimeMillis()
-            customerDao.upsertCustomer(customer.copy(phone = cleanPhone, updatedAt = timestamp))
+            val existing = customerDao.getCustomerByPhone(cleanPhone)
+            val effectiveCreditLimit = if (existing != null && existing.creditLimit != customer.creditLimit && !isSessionOwner()) {
+                existing.creditLimit
+            } else {
+                customer.creditLimit.coerceAtLeast(0.0)
+            }
+            customerDao.upsertCustomer(customer.copy(phone = cleanPhone, creditLimit = effectiveCreditLimit, updatedAt = timestamp))
             customerDueDao.getCustomerDueByPhone(cleanPhone)?.let { due ->
                 customerDueDao.upsertCustomerDue(
                     due.copy(
                         customerName = customer.name.trim().ifBlank { due.customerName },
-                        creditLimit = customer.creditLimit.coerceAtLeast(0.0),
+                        creditLimit = effectiveCreditLimit,
                         updatedAt = timestamp
                     )
                 )
@@ -2078,6 +2084,7 @@ class DataRepository(
 
     // Backup & Restore Database as JSON
     suspend fun exportBackup(outputFile: File): Boolean = withContext(Dispatchers.IO) {
+        requirePermission(AppPermissions.SYSTEM_BACKUP_RESTORE)
         try {
             val productsList = productDao.getAllProducts().first()
             val salesList = saleDao.getAllSalesWithItems().first()
@@ -2184,6 +2191,7 @@ class DataRepository(
                     put("outstandingAmount", due.outstandingAmount)
                     put("isArchived", due.isArchived)
                     put("creditLimit", due.creditLimit)
+                    put("createdAt", due.createdAt)
                     put("updatedAt", due.updatedAt)
                 })
             }
@@ -3750,8 +3758,12 @@ class DataRepository(
     /** Returns the matching user for [pin], or null if no user has that PIN or account is inactive. */
     suspend fun verifyPin(pin: String): User? = withContext(Dispatchers.IO) {
         val securityPrefs = context.getSharedPreferences("auth_security", Context.MODE_PRIVATE)
-        val now = System.currentTimeMillis()
-        if (securityPrefs.getLong("lock_until", 0L) > now) return@withContext null
+        val nowElapsed = android.os.SystemClock.elapsedRealtime()
+        val lockUntilElapsed = securityPrefs.getLong("lock_until_elapsed", 0L)
+        val nowWall = System.currentTimeMillis()
+        val lockUntilWall = securityPrefs.getLong("lock_until", 0L)
+
+        if (lockUntilElapsed > nowElapsed || lockUntilWall > nowWall) return@withContext null
 
         val all = userDao.getAllUsersOnce()
         val matchingUser = all.firstOrNull { pinMatches(pin, it.pinHash) }
@@ -3766,18 +3778,35 @@ class DataRepository(
             return@withContext matchingUser
         }
 
-        val failures = securityPrefs.getInt("failed_attempts", 0) + 1
-        val editor = securityPrefs.edit().putInt("failed_attempts", failures)
-        if (failures >= 5) {
-            editor.putLong("lock_until", now + 30_000L).putInt("failed_attempts", 0)
+        val totalFailures = securityPrefs.getInt("total_failures", 0) + 1
+        val failuresInWindow = securityPrefs.getInt("failed_attempts", 0) + 1
+        val editor = securityPrefs.edit()
+            .putInt("total_failures", totalFailures)
+            .putInt("failed_attempts", failuresInWindow)
+
+        if (failuresInWindow >= 5) {
+            val lockDurationMs = when {
+                totalFailures >= 20 -> 15 * 60 * 1000L // 15 mins
+                totalFailures >= 15 -> 5 * 60 * 1000L  // 5 mins
+                totalFailures >= 10 -> 2 * 60 * 1000L  // 2 mins
+                else -> 30 * 1000L                      // 30 secs
+            }
+            editor.putLong("lock_until_elapsed", nowElapsed + lockDurationMs)
+                .putLong("lock_until", nowWall + lockDurationMs)
+                .putInt("failed_attempts", 0)
         }
         editor.apply()
         null
     }
 
     fun loginLockRemainingMillis(): Long {
-        val lockUntil = context.getSharedPreferences("auth_security", Context.MODE_PRIVATE)
-            .getLong("lock_until", 0L)
+        val securityPrefs = context.getSharedPreferences("auth_security", Context.MODE_PRIVATE)
+        val lockUntilElapsed = securityPrefs.getLong("lock_until_elapsed", 0L)
+        val nowElapsed = android.os.SystemClock.elapsedRealtime()
+        val remainingElapsed = (lockUntilElapsed - nowElapsed).coerceAtLeast(0L)
+        if (remainingElapsed > 0) return remainingElapsed
+
+        val lockUntil = securityPrefs.getLong("lock_until", 0L)
         return (lockUntil - System.currentTimeMillis()).coerceAtLeast(0L)
     }
 
@@ -4079,7 +4108,7 @@ class DataRepository(
             var generatedVoucherCode: String? = null
             var generatedVoucher: StoreCreditVoucher? = null
             if (refundMethod.equals("Store Credit", ignoreCase = true)) {
-                if (issueVoucher) {
+                if (issueVoucher || (phone.isNullOrBlank() && walkinPhone.isNullOrBlank())) {
                     var inserted = false
                     for (attempt in 1..5) {
                         val code = "SC-${(1000..9999).random()}-${(1000..9999).random()}"
@@ -4404,7 +4433,7 @@ class DataRepository(
             val id = registerClosingDao.insertClosing(
                 closing.copy(timestamp = timestamp, cashierName = sessionUser?.name ?: closing.cashierName)
             )
-            registerShiftStateDao.upsert(RegisterShiftState(startedAt = timestamp, startingFloat = 0.0))
+            registerShiftStateDao.upsert(RegisterShiftState(startedAt = timestamp, startingFloat = closing.actualCountedCash))
             id
         }
     }

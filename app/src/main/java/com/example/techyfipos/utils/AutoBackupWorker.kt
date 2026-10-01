@@ -141,7 +141,7 @@ class AutoBackupWorker(
                             title = context.getString(R.string.notif_drive_reconnect_title),
                             message = context.getString(R.string.notif_drive_reconnect_desc)
                         )
-                        Result.retry()
+                        Result.failure()
                     }
                     driveFailed -> {
                         notifyBackupFailure(

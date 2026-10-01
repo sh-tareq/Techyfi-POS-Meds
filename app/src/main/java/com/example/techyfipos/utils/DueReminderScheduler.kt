@@ -246,6 +246,17 @@ object DueReminderScheduler {
         reminders.forEach { reminder ->
             if (!reminder.isRecurring && reminder.fireAt < now) {
                 try {
+                    AppDatabase.getDatabase(context).dueReminderLogDao().insertLog(
+                        com.example.techyfipos.data.db.DueReminderLog(
+                            customerPhone = reminder.customerPhone,
+                            customerName = reminder.customerName,
+                            dueAmount = reminder.dueAmount,
+                            messageText = reminder.messageText,
+                            channel = reminder.channel,
+                            status = "MISSED",
+                            timestamp = reminder.fireAt
+                        )
+                    )
                     AppDatabase.getDatabase(context).scheduledDueReminderDao().deleteByPhone(reminder.customerPhone)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to cleanup expired one-shot reminder: ${e.message}")

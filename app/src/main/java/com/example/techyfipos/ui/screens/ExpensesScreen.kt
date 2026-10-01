@@ -174,7 +174,7 @@ fun ExpensesScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
                             exportExpensesLauncher.launch("expenses-$dateStr.xlsx")
                         }
                     ) {

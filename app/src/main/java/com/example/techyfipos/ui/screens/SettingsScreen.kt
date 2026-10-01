@@ -3155,7 +3155,27 @@ private fun CrashLogsDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
         },
         dismissButton = if (files.isNotEmpty()) {
-            { TextButton(onClick = { onCleared(); onDismiss() }) { Text(stringResource(R.string.settings_clear_all), color = MaterialTheme.colorScheme.error) } }
+            {
+                var showConfirmClear by remember { mutableStateOf(false) }
+                if (showConfirmClear) {
+                    AlertDialog(
+                        onDismissRequest = { showConfirmClear = false },
+                        title = { Text(stringResource(R.string.confirm)) },
+                        text = { Text(stringResource(R.string.settings_confirm_clear_crash_logs_msg)) },
+                        confirmButton = {
+                            TextButton(onClick = { showConfirmClear = false; onCleared(); onDismiss() }) {
+                                Text(stringResource(R.string.confirm), color = MaterialTheme.colorScheme.error)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showConfirmClear = false }) {
+                                Text(stringResource(R.string.cancel))
+                            }
+                        }
+                    )
+                }
+                TextButton(onClick = { showConfirmClear = true }) { Text(stringResource(R.string.settings_clear_all), color = MaterialTheme.colorScheme.error) }
+            }
         } else null
     )
 }
@@ -4104,7 +4124,7 @@ fun SettingsScreen(
                     driveNetworkPolicy = driveNetworkPolicy,
                     isBackingUpToDrive = isBackingUpToDrive,
                     onLocalBackup = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
                         backupLauncher.launch("techyfi-pos-backup-$dateStr.json")
                     },
                     onLocalRestore = {
@@ -4115,7 +4135,7 @@ fun SettingsScreen(
                         }
                     },
                     onExportEncryptedBackup = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
                         exportEncryptedBackupLauncher.launch("techyfi-pos-encrypted-$dateStr.posenc")
                     },
                     onImportEncryptedBackup = {
@@ -4186,22 +4206,22 @@ fun SettingsScreen(
                 )
                 SettingsPage.TRANSFER -> OptimizedTransferSettings(
                     onExportProducts = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
                         exportProductsLauncher.launch("products-export-$dateStr.xlsx")
                     },
                     onImportProducts = {
                         importProductsLauncher.launch(arrayOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     },
                     onExportSales = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
                         exportSalesLauncher.launch("sales-report-$dateStr.xlsx")
                     },
                     onExportDues = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
                         exportDuesLauncher.launch("dues-list-$dateStr.xlsx")
                     },
                     onDownloadTemplate = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
                         downloadTemplateLauncher.launch("products-import-template-$dateStr.xlsx")
                     }
                 )
@@ -4991,7 +5011,10 @@ fun SettingsScreen(
                         visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null)
+                                Icon(
+                                    if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                                )
                             }
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -5097,7 +5120,10 @@ fun SettingsScreen(
                         visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null)
+                                Icon(
+                                    if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                                )
                             }
                         },
                         modifier = Modifier.fillMaxWidth()

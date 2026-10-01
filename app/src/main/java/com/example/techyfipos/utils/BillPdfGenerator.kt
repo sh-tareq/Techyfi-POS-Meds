@@ -1473,14 +1473,7 @@ fun toBanglaDigits(str: String): String {
     return str.map { digits[it] ?: it }.joinToString("")
 }
 
-fun formatTakaBn(amount: Double): String {
-    val digits = mapOf(
-        '0' to '০', '1' to '১', '2' to '২', '3' to '৩', '4' to '৪',
-        '5' to '৫', '6' to '৬', '7' to '৭', '8' to '৮', '9' to '৯'
-    )
-    val en = formatTaka(amount)
-    return en.map { digits[it] ?: it }.joinToString("")
-}
+
 
 fun generateDueRepaymentJpeg(
     context: Context,
