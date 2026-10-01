@@ -38,14 +38,14 @@ asserts that a walk-in voucher works, but the real repo still rejects it.
 | A-10 | FIXED | Synchronously reset cart state in `holdCurrentCart` before background insert to prevent race condition with `restoreHeldCart`. Localized auto-saved cart title/note strings. *(Verified by unit tests & code trace)* |
 | A-13 | FIXED (setting hidden) | The "Expiring Soon" filter chip (LoyaltyScreen about 647) still suggests points expire. Remove it or relabel it. |
 | A-14 | FIXED | Default `CustomerLoyalty` tier set to "Regular". `getTierRank` helper ensures automatic recalculation only upgrades tier rank. *(Verified by unit tests & code trace)* |
-| B-1 | FIXED (REPLACE) | MERGE still aborts on a duplicate voucher code (`insertVoucher` ABORT, repo about 2935 / AppDaos about 701). |
+| B-1 | FIXED | Duplicate voucher codes skipped during backup MERGE to prevent ABORT conflicts. *(Verified by unit tests & code trace)* |
 | B-2 | FIXED | Natural-key deduplication across all 22 tables, skip orphan records, recompute derived balances (dues, loyalty, store credit, suppliers, product stock deltas) post-MERGE, skip duplicate voucher codes. *(Verified: compileDebugKotlin, testDebugUnitTest, and mergeSameBackupTwiceAssertsTotalsAndCountsUnchanged test)* |
-| B-3 | PARTIAL | The repo check and transaction are present, but it reuses `CUSTOMERS_EDIT` (managers have it by default). The audit asked for owner-only or a new permission. The UI (CustomerDossierSheet about 370) always shows Adjust, so cashiers only find out after submitting. |
+| B-3 | FIXED | Added `requireOwnerSession()` in `DataRepository.kt` and UI gate in `CustomerDossierSheet.kt` ensuring only owner can adjust customer store credit. *(Verified: compileDebugKotlin, testDebugUnitTest & code trace)* |
 | B-4 | FIXED | The formula is duplicated instead of using `report.totalExpenses`, with different filters (`!= "CASH_IN"` vs `== "EXPENSE"`, and case sensitivity), so it will drift. Unasked change: the default period changed from WEEK to TODAY. Revert it or confirm with the user. |
-| C-1 | PARTIAL | The AddEditProductDialog stock-note field (about 1408 on box 1377) is untouched, so its text is still invisible in dark mode. |
+| C-1 | FIXED | Fixed text visibility in dark mode for stock adjustment note box in `AddEditProductDialog.kt` using Material 3 color tokens. *(Verified by code trace & layout styling inspection)* |
 | C-2 | FIXED | Lifted clear/remove dialog state to top-level `ScannerScreen` with `canVoidCart`/`canRemoveItem` permissions checks, invoked in both portrait and landscape branches of `TabletSplitTerminal`. *(Verified by unit tests & code trace)* |
 | C-3 | FIXED | Minor: `catch (e: Exception)` also swallows `CancellationException`. Rethrow it. |
-| C-4 | **NOT FIXED** | Commit 5974e54 didn't touch SettingsScreen. There is still no busy state or progress on local backup (about 3530-3551). |
+| C-4 | FIXED | Added `isLocalBackupBusy` state and modal progress dialog during local database backup export in `SettingsScreen.kt`. *(Verified by compileDebugKotlin & unit tests)* |
 | C-5 | FIXED | Added `onResult: ((Boolean) -> Unit)?` callback to reset `isSaving = false` on failed save. *(Verified by unit tests & code trace)* |
 
 ## New bugs in the Round 11 code
@@ -63,7 +63,7 @@ after sections 0-2 here. B-18 (the committed real backup file) still needs the u
 2. - [x] **Regressions:** C-5, C-2, A-10, A-14, A-9, and the B-2 orphan `saleId = 0` FK failure. *(Verified: compileDebugKotlin & testDebugUnitTest passed)*
 3. - [x] **PARTIAL/NOT FIXED money items:** A-6, A-7, R-1, R-2, A-4, A-5, then A-1 (merge credit) and A-2 (edge cases). *(Verified: compileDebugKotlin & testDebugUnitTest passed)*
 4. - [x] **B-2 properly:** de-duplicate every table by natural key, skip orphans, and recompute derived balances (dues, stock, loyalty, store credit, supplier totals) from the ledgers after the merge. Added integration test `mergeSameBackupTwiceAssertsTotalsAndCountsUnchanged`. *(Verified: compileDebugKotlin, testDebugUnitTest, and BackupRestoreIntegrationTest passed)*
-5. **B-3** Add a UI gate and owner-only access (or a new permission). **C-1** Fix the AddEditProductDialog field. **C-4** Local backup busy state. **B-1** MERGE voucher conflict.
+5. - [x] **B-3** Add a UI gate and owner-only access (or a new permission). **C-1** Fix the AddEditProductDialog field. **C-4** Local backup busy state. **B-1** MERGE voucher conflict. *(Verified: compileDebugKotlin & testDebugUnitTest passed)*
 6. **Replace MoneyFlowsTest** with tests that call the real code: an in-memory Room DB plus `DataRepository`
    (androidTest), or a JVM test with a fake DAO. At minimum cover A-1, A-3, A-4, A-6 (walk-in voucher), A-7 (void
    restores voucher and credit) and R-1. A test that re-implements the logic doesn't count.

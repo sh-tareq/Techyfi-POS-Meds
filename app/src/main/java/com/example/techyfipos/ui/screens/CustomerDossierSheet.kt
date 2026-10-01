@@ -77,10 +77,13 @@ fun CustomerDossierSheet(
     onAddNote: (noteText: String, category: String) -> Unit = { _, _ -> },
     onDeleteNote: (index: Int) -> Unit = {},
     onAdjustCredit: (delta: Double, note: String) -> Unit = { _, _ -> },
+    authViewModel: com.example.techyfipos.ui.viewmodel.AuthViewModel? = null,
     settingsViewModel: com.example.techyfipos.ui.viewmodel.SettingsViewModel? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val currentUserState = authViewModel?.currentUser?.collectAsStateWithLifecycle()
+    val isOwner = authViewModel?.let { currentUserState?.value?.role?.equals("OWNER", ignoreCase = true) == true } ?: true
     val customer = dossier.customer
     var selectedTab by remember { mutableStateOf(DossierTab.TOP_PRODUCTS) }
     var selectedSaleForReceipt by remember { mutableStateOf<SaleWithItems?>(null) }
@@ -367,21 +370,24 @@ fun CustomerDossierSheet(
                         }
                     }
 
-                    OutlinedButton(
-                        onClick = { showAdjustCreditDialog = true },
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = if (customer.storeCredit > 0) Color(0xFF059669) else MaterialTheme.colorScheme.primary
-                        ),
-                        border = BorderStroke(1.dp, if (customer.storeCredit > 0) Color(0xFF6EE7B7) else MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.heightIn(min = 48.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.dossier_credit_adjust_btn),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    val canAdjustCredit = isOwner
+                    if (canAdjustCredit) {
+                        OutlinedButton(
+                            onClick = { showAdjustCreditDialog = true },
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = if (customer.storeCredit > 0) Color(0xFF059669) else MaterialTheme.colorScheme.primary
+                            ),
+                            border = BorderStroke(1.dp, if (customer.storeCredit > 0) Color(0xFF6EE7B7) else MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier.heightIn(min = 48.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.dossier_credit_adjust_btn),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }

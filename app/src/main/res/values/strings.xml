@@ -982,6 +982,8 @@
     <string name="settings_drive_setup_error_desc">Sign In Error Code 10 means Google Play Services requires your app\'s SHA-1 Certificate Fingerprint to be registered in Google Cloud Console / Firebase Console for Google Drive API.</string>
     <string name="settings_enable_bottom_qr">Enable Bottom QR Code</string>
     <string name="settings_export_backup_title">Export Backup</string>
+    <string name="settings_exporting_local_backup_title">Exporting Local Backup</string>
+    <string name="settings_exporting_local_backup_msg">Please wait while your database backup is being created and exported…</string>
     <string name="settings_facebook_qr_title">Facebook &amp; QR Code Links</string>
     <string name="settings_factory_reset_confirm_question">Are you sure you want to PERMANENTLY ERASE all app data?</string>
     <string name="settings_factory_reset_delete_list">This will permanently delete:\n• All Products &amp; Inventory\n• All Sales History &amp; Printed Receipts\n• All Customer Dues (বাকি) &amp; Records\n• Store Identity, Custom Logo &amp; Invoice Settings\n\n⚠️ THIS ACTION CANNOT BE UNDONE!</string>

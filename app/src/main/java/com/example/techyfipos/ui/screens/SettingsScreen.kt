@@ -3526,11 +3526,14 @@ fun SettingsScreen(
         }
     }
 
+    var isLocalBackupBusy by remember { mutableStateOf(false) }
+
     // Document Picker for Database Backup Export
     val backupLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
         if (uri != null) {
+            isLocalBackupBusy = true
             scope.launch(Dispatchers.IO) {
                 val ok = try {
                     context.contentResolver.openOutputStream(uri)?.use { output ->
@@ -3539,6 +3542,10 @@ fun SettingsScreen(
                 } catch (e: Exception) {
                     e.printStackTrace()
                     false
+                } finally {
+                    withContext(Dispatchers.Main) {
+                        isLocalBackupBusy = false
+                    }
                 }
                 withContext(Dispatchers.Main) {
                     if (ok) {
@@ -4208,6 +4215,38 @@ fun SettingsScreen(
 
     var showReplaceConfirmDialog by remember { mutableStateOf(false) }
     var isRestoringDatabase by remember { mutableStateOf(false) }
+
+    if (isLocalBackupBusy) {
+        Dialog(onDismissRequest = {}) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Column {
+                        Text(
+                            stringResource(R.string.settings_exporting_local_backup_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.settings_exporting_local_backup_msg),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     if (isRestoringDatabase) {
         Dialog(onDismissRequest = {}) {

@@ -1380,8 +1380,8 @@ fun AddEditProductDialog(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .background(Color(0xFFF1F5F9), RoundedCornerShape(10.dp))
-                                            .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(10.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
+                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
                                             .padding(8.dp),
                                         verticalArrangement = Arrangement.spacedBy(5.dp)
                                     ) {
@@ -1389,7 +1389,7 @@ fun AddEditProductDialog(
                                             stringResource(R.string.products_reason_for_stock_adjustment_label),
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF4F46E5),
+                                            color = MaterialTheme.colorScheme.primary,
                                             letterSpacing = 0.5.sp
                                         )
                                         Row(
@@ -1410,9 +1410,14 @@ fun AddEditProductDialog(
                                         OutlinedTextField(
                                             value = editStockNote,
                                             onValueChange = { editStockNote = it },
-                                            placeholder = { Text(stringResource(R.string.products_audit_note_hint), fontSize = 12.sp) },
+                                            placeholder = { Text(stringResource(R.string.products_audit_note_hint), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                            textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
                                             maxLines = 2,
                                             shape = RoundedCornerShape(8.dp),
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                                            ),
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
