@@ -552,7 +552,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val maxAllowedBillDiscount = payableBeforeLoyalty * maxAllowedBillPercent
         val maxPossibleDiscount = minOf(maxDiscountFromPoints, maxAllowedBillDiscount)
         val requestedDiscount = discount.takeIf(Double::isFinite)?.coerceIn(0.0, maxPossibleDiscount) ?: 0.0
-        val rawPoints = (requestedDiscount / ptCashVal).toInt()
+        val rawPoints = kotlin.math.round(requestedDiscount / ptCashVal).toInt()
         val pointsToRedeem = if (rawPoints >= settings.minRedeemPoints) rawPoints.coerceIn(0, availablePoints) else 0
         _loyaltyDiscount.value = pointsToRedeem * ptCashVal
     }
@@ -676,23 +676,88 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun getSplitPaymentsJson(): String? {
-        if (!isSplitPayment.value || splitPayments.value.isEmpty()) return null
-        val arr = org.json.JSONArray()
-        splitPayments.value.forEach { sp ->
-            if (sp.amount > 0.0) {
-                val obj = org.json.JSONObject().apply {
-                    put("method", sp.method)
-                    put("amount", sp.amount)
-                    if (!sp.walletPhone.isNullOrBlank()) put("walletPhone", sp.walletPhone)
-                    if (!sp.cardType.isNullOrBlank()) put("cardType", sp.cardType)
-                    if (!sp.cardLastFour.isNullOrBlank()) put("cardLastFour", sp.cardLastFour)
-                    if (!sp.referenceNote.isNullOrBlank()) put("referenceNote", sp.referenceNote)
+    fun getSplitPaymentsJson(): String? = buildAuthoritativeSplitJson()
+
+    fun buildAuthoritativeSplitJson(): String? {
+        if (!isSplitPayment.value && storeCreditApplied.value <= 0.0) return null
+
+        if (isSplitPayment.value && splitPayments.value.isNotEmpty()) {
+            val scInSplit = splitPayments.value.filter { it.method.equals("Store Credit", ignoreCase = true) }.sumOf { it.amount }
+            val effectiveSC = if (scInSplit > 0.0) scInSplit else storeCreditApplied.value.coerceAtMost(grandTotal.value)
+            val targetNonSC = (grandTotal.value - effectiveSC).coerceAtLeast(0.0)
+
+            val nonScCollected = splitPayments.value.filterNot { it.method.equals("Store Credit", ignoreCase = true) }.sumOf { it.amount }
+            val hasCashSplit = splitPayments.value.any { it.method.equals("Cash", ignoreCase = true) }
+            var remainingChangeToSubtract = if (hasCashSplit && nonScCollected > targetNonSC) (nonScCollected - targetNonSC) else 0.0
+
+            val array = JSONArray()
+            splitPayments.value.forEach { sp ->
+                if (sp.amount > 0.0) {
+                    val isCash = sp.method.equals("Cash", ignoreCase = true)
+                    val isStoreCredit = sp.method.equals("Store Credit", ignoreCase = true)
+                    var owedAmount = sp.amount
+                    var changeAmt = 0.0
+
+                    if (isCash && remainingChangeToSubtract > 0.0) {
+                        val sub = remainingChangeToSubtract.coerceAtMost(sp.amount)
+                        owedAmount = (sp.amount - sub).coerceAtLeast(0.0)
+                        changeAmt = sub
+                        remainingChangeToSubtract -= sub
+                    }
+
+                    if (owedAmount > 0.0 || isCash) {
+                        array.put(JSONObject().apply {
+                            put("method", sp.method)
+                            put("amount", owedAmount)
+                            if (isCash && changeAmt > 0.0) {
+                                put("tenderedAmount", sp.amount)
+                                put("changeAmount", changeAmt)
+                            }
+                            if (isStoreCredit && redeemedVoucher.value != null) {
+                                put("voucherCode", redeemedVoucher.value!!.code)
+                            }
+                            if (!sp.walletPhone.isNullOrBlank()) put("walletPhone", sp.walletPhone)
+                            if (!sp.cardType.isNullOrBlank()) put("cardType", sp.cardType)
+                            if (!sp.cardLastFour.isNullOrBlank()) put("cardLastFour", sp.cardLastFour)
+                            if (!sp.referenceNote.isNullOrBlank()) put("referenceNote", sp.referenceNote)
+                        })
+                    }
                 }
-                arr.put(obj)
             }
+            if (scInSplit == 0.0 && storeCreditApplied.value > 0.0) {
+                val scAmt = storeCreditApplied.value.coerceAtMost(grandTotal.value)
+                if (scAmt > 0.0) {
+                    array.put(JSONObject().apply {
+                        put("method", "Store Credit")
+                        put("amount", scAmt)
+                        redeemedVoucher.value?.code?.let { put("voucherCode", it) }
+                    })
+                }
+            }
+            return if (array.length() > 0) array.toString() else null
+        } else if (storeCreditApplied.value > 0.0 && paymentMethod.value != "Store Credit") {
+            val scAmount = storeCreditApplied.value.coerceAtMost(grandTotal.value)
+            val remainingAmt = (grandTotal.value - scAmount).coerceAtLeast(0.0)
+            val array = JSONArray()
+            if (scAmount > 0.0) {
+                array.put(JSONObject().apply {
+                    put("method", "Store Credit")
+                    put("amount", scAmount)
+                    redeemedVoucher.value?.code?.let { put("voucherCode", it) }
+                })
+            }
+            if (remainingAmt > 0.0) {
+                array.put(JSONObject().apply {
+                    put("method", paymentMethod.value)
+                    put("amount", remainingAmt)
+                    if (!walletPhone.value.isNullOrBlank()) put("walletPhone", walletPhone.value)
+                    if (!cardType.value.isNullOrBlank()) put("cardType", cardType.value)
+                    if (!cardLastFour.value.isNullOrBlank()) put("cardLastFour", cardLastFour.value)
+                })
+            }
+            return if (array.length() > 0) array.toString() else null
         }
-        return if (arr.length() > 0) arr.toString() else null
+        return null
     }
 
     // Held Carts
@@ -855,7 +920,10 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 val maxLoyaltyDiscount = ((_loyaltyCustomer.value?.pointsBalance ?: 0) * pointCashValue).coerceAtLeast(0.0)
                 _loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(maxLoyaltyDiscount)
                 val restoredVoucher = payload.voucherCode?.let { repository.getStoreCreditVoucher(it) }
-                val fallbackVoucher = if (restoredVoucher == null && !payload.voucherCode.isNullOrBlank() && payload.storeCreditApplied > 0.0) {
+                val validRestoredVoucher = restoredVoucher?.takeIf { v ->
+                    v.status == "ACTIVE" && (v.expiresAt == null || v.expiresAt == 0L || v.expiresAt >= System.currentTimeMillis()) && v.remainingBalance > 0.01
+                }
+                val fallbackVoucher = if (validRestoredVoucher == null && restoredVoucher == null && !payload.voucherCode.isNullOrBlank() && payload.storeCreditApplied > 0.0) {
                     StoreCreditVoucher(
                         code = payload.voucherCode,
                         initialAmount = payload.voucherOriginalBalance ?: payload.storeCreditApplied,
@@ -864,8 +932,10 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                         status = "ACTIVE"
                     )
                 } else null
-                _redeemedVoucher.value = restoredVoucher ?: fallbackVoucher
-                _storeCreditApplied.value = payload.storeCreditApplied
+                val finalVoucher = validRestoredVoucher ?: fallbackVoucher
+                _redeemedVoucher.value = finalVoucher
+                val maxVoucherBalance = finalVoucher?.remainingBalance ?: Double.MAX_VALUE
+                _storeCreditApplied.value = payload.storeCreditApplied.coerceAtMost(maxVoucherBalance)
                 persistCartSnapshot(restored)
                 if (unavailable == 0) repository.deleteHeldCart(heldCart.id) else {
                     val remainingPayload = HeldCartPayload(
@@ -1247,74 +1317,15 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             }
             val settings = taxSettings.value
             
-            var splitJson: String? = null
-            var methodToSave: String
-            if (isSplitPayment.value && splitPayments.value.isNotEmpty()) {
-                methodToSave = "Split"
-                val targetSplitTotal = (grandTotal.value - storeCreditApplied.value).coerceAtLeast(0.0)
-                val totalSplitCollected = splitPayments.value.sumOf { it.amount }
-                val hasCashSplit = splitPayments.value.any { it.method.equals("Cash", ignoreCase = true) }
-                val splitChangeDue = if (hasCashSplit && totalSplitCollected > targetSplitTotal) (totalSplitCollected - targetSplitTotal) else 0.0
-
-                val array = JSONArray()
-                splitPayments.value.forEach { sp ->
-                    if (sp.amount > 0.0) {
-                        val isCash = sp.method.equals("Cash", ignoreCase = true)
-                        val owedAmount = if (isCash && splitChangeDue > 0.0) {
-                            (sp.amount - splitChangeDue).coerceAtLeast(0.0)
-                        } else {
-                            sp.amount
-                        }
-                        if (owedAmount > 0.0 || isCash) {
-                            array.put(JSONObject().apply {
-                                put("method", sp.method)
-                                put("amount", owedAmount)
-                                if (isCash && splitChangeDue > 0.0) {
-                                    put("tenderedAmount", sp.amount)
-                                    put("changeAmount", splitChangeDue)
-                                }
-                                if (!sp.walletPhone.isNullOrBlank()) put("walletPhone", sp.walletPhone)
-                                if (!sp.cardType.isNullOrBlank()) put("cardType", sp.cardType)
-                                if (!sp.cardLastFour.isNullOrBlank()) put("cardLastFour", sp.cardLastFour)
-                                if (!sp.referenceNote.isNullOrBlank()) put("referenceNote", sp.referenceNote)
-                            })
-                        }
-                    }
-                }
-                if (storeCreditApplied.value > 0.0 && splitPayments.value.none { it.method.equals("Store Credit", ignoreCase = true) }) {
-                    val scAmt = storeCreditApplied.value.coerceAtMost(grandTotal.value)
-                    if (scAmt > 0.0) {
-                        array.put(JSONObject().apply {
-                            put("method", "Store Credit")
-                            put("amount", scAmt)
-                            redeemedVoucher.value?.code?.let { put("voucherCode", it) }
-                        })
-                    }
-                }
-                splitJson = if (array.length() > 0) array.toString() else null
-            } else if (storeCreditApplied.value > 0.0 && paymentMethod.value != "Store Credit") {
-                val scAmount = storeCreditApplied.value.coerceAtMost(grandTotal.value)
-                val remainingAmt = (grandTotal.value - scAmount).coerceAtLeast(0.0)
-                val array = JSONArray()
-                if (scAmount > 0.0) {
-                    array.put(JSONObject().apply {
-                        put("method", "Store Credit")
-                        put("amount", scAmount)
-                        redeemedVoucher.value?.code?.let { put("voucherCode", it) }
-                    })
-                }
-                if (remainingAmt > 0.0) {
-                    array.put(JSONObject().apply {
-                        put("method", paymentMethod.value)
-                        put("amount", remainingAmt)
-                        if (!walletPhone.value.isNullOrBlank()) put("walletPhone", walletPhone.value)
-                        if (!cardLastFour.value.isNullOrBlank()) put("cardLastFour", cardLastFour.value)
-                    })
-                }
-                splitJson = if (array.length() > 0) array.toString() else null
-                methodToSave = if (remainingAmt > 0.0) "Split" else "Store Credit"
+            val splitJson = buildAuthoritativeSplitJson()
+            val methodToSave = if (isSplitPayment.value) {
+                "Split"
+            } else if (storeCreditApplied.value > 0.0 && storeCreditApplied.value < grandTotal.value) {
+                "Split"
+            } else if (storeCreditApplied.value >= grandTotal.value) {
+                "Store Credit"
             } else {
-                methodToSave = paymentMethod.value
+                paymentMethod.value
             }
 
             val redeemedCustomer = loyaltyCustomer.value
@@ -1326,7 +1337,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             val appliedLoyaltyPoints = if (redeemedCustomer != null && loyaltyDiscount.value > 0.0) {
                 val loyaltySettings = repository.getLoyaltySettings()
                 val ptCashVal = loyaltySettings.pointCashValue.takeIf { it > 0.0 } ?: 1.0
-                val neededPoints = (loyaltyDiscount.value / ptCashVal).toInt()
+                val neededPoints = kotlin.math.round(loyaltyDiscount.value / ptCashVal).toInt()
                 neededPoints.coerceIn(0, redeemedCustomer.pointsBalance)
             } else {
                 0

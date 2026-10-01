@@ -1929,7 +1929,13 @@ private fun SaleDetailDialog(
             customerName = saleWithItems.sale.customerName ?: "",
             customerPhone = saleWithItems.sale.customerPhone ?: "",
             amountPaid = saleWithItems.sale.amountPaid,
-            changeAmount = (saleWithItems.sale.amountPaid - saleWithItems.sale.grandTotal).coerceAtLeast(0.0),
+            changeAmount = saleWithItems.sale.splitPaymentJson?.let { json ->
+                try {
+                    val array = org.json.JSONArray(json)
+                    val sum = (0 until array.length()).map { array.getJSONObject(it) }.sumOf { it.optDouble("changeAmount", 0.0) }
+                    if (sum > 0.0) sum else null
+                } catch (_: Exception) { null }
+            } ?: (saleWithItems.sale.amountPaid - saleWithItems.sale.grandTotal).coerceAtLeast(0.0),
             walletPhone = saleWithItems.sale.walletPhone ?: "",
             cardType = saleWithItems.sale.cardType ?: "",
             cardLastFour = saleWithItems.sale.cardLastFour ?: "",

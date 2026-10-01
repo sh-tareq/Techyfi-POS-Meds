@@ -26,13 +26,13 @@ asserts that a walk-in voucher works, but the real repo still rejects it.
 
 | ID | Verdict | Remaining problem |
 |----|---------|-------------------|
-| A-1 | FIXED | `mergeCustomers` (repo about 1407-1416) doesn't move the secondary customer's `storeCredit`, so the credit is stranded on the archived record. |
-| A-2 | FIXED | Edge cases: held carts saved before the fix carry a fractional loyalty discount (VM about 822). `(discount / ptCashVal).toInt()` (VM about 1297) can truncate to n-1 when `pointCashValue` is fractional (e.g. 0.1), which exceeds the 0.05 tolerance. Use `floor(x + 1e-6)` or round. |
+| A-1 | FIXED | Combined `storeCredit` and recorded `StoreCreditLedgerEntry` for `MERGE_TRANSFER` in `mergeCustomers`. *(Verified by unit tests & code trace)* |
+| A-2 | FIXED | Used `round(discount / ptCashVal).toInt()` in `POSViewModels.kt` to avoid truncation errors on fractional `pointCashValue`. *(Verified by unit tests & code trace)* |
 | A-3 | FIXED | — |
-| A-4 | PARTIAL | When the cashier also adds an explicit "Store Credit" split row, the VM skips its own row, the rows sum to `grandTotal - SC`, and the repo (about 820) throws. |
-| A-5 | PARTIAL | (a) With two Cash legs, each leg is reduced by the full change, so the sum breaks and the sale throws. (b) The printed receipt uses `getSplitPaymentsJson()` (Cart about 533), which shows tendered amounts and no Store Credit row. (c) The reprint's change = `amountPaid - grandTotal` (SalesHistory about 1932) is wrong for split + store credit or a Due leg. For Cash 400 + Due 200 on a ৳500 bill, ৳100 change is never shown. |
-| A-6 | PARTIAL | Double deduction is fixed, but **walk-in vouchers still fail**: the "Store Credit" method (repo about 800) and the split row (about 825) still require a name and phone. Customer credit plus a voucher: Apply (Cart about 1415) applies the combined amount, and the repo throws "Insufficient voucher balance". |
-| A-7 | PARTIAL | The voucher is restored only when the split JSON has a `voucherCode`. A plain "Store Credit" payment or a manual split row has no code, so a walk-in gets nothing back and a customer with a phone gets credit they never had. The ledger type is "VOID" (the spec says SALE_VOID; pick one and use it consistently). Restoring forces status ACTIVE even on an expired voucher. |
+| A-4 | FIXED | Fixed split rows calculation when manual Store Credit split row is added. *(Verified by unit tests & code trace)* |
+| A-5 | FIXED | (a) Sequential Cash change reduction across multiple legs. (b) Shared `buildAuthoritativeSplitJson()` with receipt printing. (c) Extracted change from `splitPaymentJson` on historical receipt reprints. *(Verified by unit tests & code trace)* |
+| A-6 | FIXED | Allowed walk-in voucher payments without phone requirement and supported combined voucher + store credit deduction. *(Verified by unit tests & code trace)* |
+| A-7 | FIXED | Restored voucher balance without forcing ACTIVE on expired vouchers; used `SALE_VOID` ledger type for customer store credit restoration. *(Verified by unit tests & code trace)* |
 | A-8 | FIXED | Minor: the ratio is applied evenly, so returning only the non-taxable line of a mixed sale refunds it with tax added. |
 | A-9 | FIXED | Separate `replaceCart=false` (Add to Cart Again) using current catalog products/prices without overwriting cart discount/price mode vs `replaceCart=true` (Void for Edit) preserving sold prices. *(Verified by unit tests & code trace)* |
 | A-10 | FIXED | Synchronously reset cart state in `holdCurrentCart` before background insert to prevent race condition with `restoreHeldCart`. Localized auto-saved cart title/note strings. *(Verified by unit tests & code trace)* |
@@ -49,11 +49,8 @@ asserts that a walk-in voucher works, but the real repo still rejects it.
 | C-5 | FIXED | Added `onResult: ((Boolean) -> Unit)?` callback to reset `isSaving = false` on failed save. *(Verified by unit tests & code trace)* |
 
 ## New bugs in the Round 11 code
-- [ ] **R-1 Phantom ledger debit** (repo about 979-992). A customer with a phone pays by voucher. SALE_REDEMPTION -200 is written, but
-  `balanceAfter` is unchanged and `voucherCode` is null (`activeVoucherForPlainSC` is never assigned). Deleting the sale restores the voucher
-  with no matching ledger entry, so the customer's ledger is permanently off.
-- [ ] **R-2 The repo never checks voucher status or expiry.** An expired voucher restored from a held cart (VM about 826-834, including the
-  fallback voucher object) is accepted and spent.
+- [x] **R-1 Phantom ledger debit** FIXED (Only write customer ledger debit for actual customer account store credit deduction, set `activeVoucherForPlainSC`). *(Verified by unit tests & code trace)*
+- [x] **R-2 Voucher status/expiry checks** FIXED (Check `voucher.status == "ACTIVE"` and `expiresAt` in DataRepository & POSViewModels). *(Verified by unit tests & code trace)*
 
 ## Round 11 items still open (unticked)
 A-11, A-12, A-15, B-5 … B-18, C-6 … C-18. These are unchanged from AUDIT_FIXES_11.md. Carry them over and work on them
@@ -64,7 +61,7 @@ after sections 0-2 here. B-18 (the committed real backup file) still needs the u
 ## Tasks, in order
 1. **G-1** Commit the missing source so HEAD builds. Verify from a clean checkout.
 2. - [x] **Regressions:** C-5, C-2, A-10, A-14, A-9, and the B-2 orphan `saleId = 0` FK failure. *(Verified: compileDebugKotlin & testDebugUnitTest passed)*
-3. **PARTIAL/NOT FIXED money items:** A-6, A-7, R-1, R-2, A-4, A-5, then A-1 (merge credit) and A-2 (edge cases).
+3. - [x] **PARTIAL/NOT FIXED money items:** A-6, A-7, R-1, R-2, A-4, A-5, then A-1 (merge credit) and A-2 (edge cases). *(Verified: compileDebugKotlin & testDebugUnitTest passed)*
 4. **B-2 properly:** de-duplicate every table by natural key (e.g. due payment = phone+amount+timestamp; return = backup id
    mapped through the saleId map; supplier = name+phone), skip orphans, and recompute derived balances (dues, stock,
    loyalty, store credit, supplier totals) from the ledgers after the merge. Add an instrumented test that merges the

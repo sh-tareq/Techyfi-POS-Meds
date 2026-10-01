@@ -742,4 +742,7 @@ interface StoreCreditLedgerDao {
 
     @Query("SELECT * FROM store_credit_ledger ORDER BY timestamp ASC")
     suspend fun getAllEntries(): List<StoreCreditLedgerEntry>
+
+    @Query("SELECT * FROM store_credit_ledger WHERE referenceInvoiceId = :saleId")
+    suspend fun getEntriesForInvoiceOnce(saleId: Long): List<StoreCreditLedgerEntry>
 }

@@ -596,24 +596,22 @@ class DataRepository(
                 val scApplied = sale.storeCreditApplied
                 if (scApplied > 0.0) {
                     var restoredVoucher = false
-                    if (!sale.splitPaymentJson.isNullOrBlank()) {
+                    val vCodeFromSale = sale.splitPaymentJson?.let { json ->
                         try {
-                            val array = JSONArray(sale.splitPaymentJson)
-                            for (i in 0 until array.length()) {
-                                val obj = array.getJSONObject(i)
-                                val vCode = obj.optString("voucherCode", "")
-                                val vAmt = obj.optDouble("amount", 0.0)
-                                if (vCode.isNotBlank() && vAmt > 0.0) {
-                                    val voucher = storeCreditVoucherDao.getVoucherByCode(vCode.trim().uppercase())
-                                    if (voucher != null) {
-                                        val restoredBal = voucher.remainingBalance + vAmt
-                                        storeCreditVoucherDao.updateVoucherBalance(voucher.code, restoredBal, "ACTIVE")
-                                        restoredVoucher = true
-                                    }
-                                }
+                            val array = JSONArray(json)
+                            (0 until array.length()).firstNotNullOfOrNull { i ->
+                                array.getJSONObject(i).optString("voucherCode", "").takeIf { it.isNotBlank() }
                             }
-                        } catch (e: Exception) {
-                            Log.w("DataRepository", "Error parsing splitPaymentJson for voucher restoration", e)
+                        } catch (_: Exception) { null }
+                    } ?: storeCreditLedgerDao.getEntriesForInvoiceOnce(saleId).firstNotNullOfOrNull { it.voucherCode?.takeIf { c -> c.isNotBlank() } }
+
+                    if (!vCodeFromSale.isNullOrBlank()) {
+                        val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
+                        if (voucher != null) {
+                            val restoredBal = voucher.remainingBalance + scApplied
+                            val isExpired = voucher.expiresAt != null && voucher.expiresAt > 0L && voucher.expiresAt < System.currentTimeMillis()
+                            storeCreditVoucherDao.updateVoucherBalance(voucher.code, restoredBal, if (isExpired) "EXPIRED" else "ACTIVE")
+                            restoredVoucher = true
                         }
                     }
                     if (!restoredVoucher && !phone.isNullOrBlank()) {
@@ -624,7 +622,7 @@ class DataRepository(
                                 customerPhone = normalizePhone(phone),
                                 deltaAmount = scApplied,
                                 balanceAfter = newBal,
-                                type = "VOID",
+                                type = "SALE_VOID",
                                 referenceInvoiceId = saleId,
                                 note = "Store credit restored from voided sale #$saleId",
                                 timestamp = System.currentTimeMillis()
@@ -797,8 +795,13 @@ class DataRepository(
                 "Due" -> require(customerName?.isNotBlank() == true && !normalizedCustomerPhone.isNullOrBlank()) {
                     "Customer name and phone are required for a Due sale"
                 }
-                "Store Credit" -> require(customerName?.isNotBlank() == true && !normalizedCustomerPhone.isNullOrBlank()) {
-                    "Customer name and phone are required for a Store Credit sale"
+                "Store Credit" -> {
+                    val hasVoucher = splitEntries?.any { !it.optString("voucherCode").isNullOrBlank() } == true
+                    if (!hasVoucher) {
+                        require(customerName?.isNotBlank() == true && !normalizedCustomerPhone.isNullOrBlank()) {
+                            "Customer name and phone are required for a Store Credit sale"
+                        }
+                    }
                 }
                 "bKash", "Nagad", "Rocket" -> require(!walletPhone.isNullOrBlank()) {
                     "A wallet number is required for $paymentMethod payments"
@@ -823,8 +826,11 @@ class DataRepository(
                                 }
                             }
                             "Store Credit" -> if (amount > 0.0) {
-                                require(customerName?.isNotBlank() == true && !normalizedCustomerPhone.isNullOrBlank()) {
-                                    "Customer name and phone are required for a Store Credit split row"
+                                val hasVoucherInRow = !entry.optString("voucherCode").isNullOrBlank()
+                                if (!hasVoucherInRow) {
+                                    require(customerName?.isNotBlank() == true && !normalizedCustomerPhone.isNullOrBlank()) {
+                                        "Customer name and phone are required for a Store Credit split row"
+                                    }
                                 }
                             }
                             "bKash", "Nagad", "Rocket" -> require(!entry.optString("walletPhone").isNullOrBlank()) {
@@ -878,6 +884,7 @@ class DataRepository(
                 }
             }
             var activeVoucherForPlainSC: StoreCreditVoucher? = null
+            var customerCreditToDeduct = 0.0
             if (storeCreditToUse > 0.0) {
                 val vCodeInSplit = splitEntries?.firstNotNullOfOrNull { it.optString("voucherCode", "").takeIf { c -> c.isNotBlank() } }
                 val targetVCode = vCodeInSplit ?: appliedVoucherCode
@@ -885,20 +892,38 @@ class DataRepository(
                     val cleanCode = targetVCode.trim().uppercase()
                     val voucher = storeCreditVoucherDao.getVoucherByCode(cleanCode)
                     require(voucher != null) { "Invalid store credit voucher code: $cleanCode" }
-                    require(voucher.remainingBalance >= storeCreditToUse - 0.01) {
-                        "Insufficient voucher balance (Available: ৳${voucher.remainingBalance})"
+                    require(voucher.status == "ACTIVE") { "Store credit voucher $cleanCode is not active (Status: ${voucher.status})" }
+                    if (voucher.expiresAt != null && voucher.expiresAt > 0L) {
+                        require(voucher.expiresAt >= System.currentTimeMillis()) { "Store credit voucher $cleanCode has expired" }
                     }
-                    val newBalance = (voucher.remainingBalance - storeCreditToUse).coerceAtLeast(0.0)
-                    val newStatus = if (newBalance < 0.01) "EXHAUSTED" else "ACTIVE"
-                    storeCreditVoucherDao.updateVoucherBalance(voucher.code, newBalance, newStatus)
+
+                    val voucherDeduct = storeCreditToUse.coerceAtMost(voucher.remainingBalance)
+                    customerCreditToDeduct = (storeCreditToUse - voucherDeduct).coerceAtLeast(0.0)
+
+                    if (voucherDeduct > 0.0) {
+                        val newBalance = (voucher.remainingBalance - voucherDeduct).coerceAtLeast(0.0)
+                        val newStatus = if (newBalance < 0.01) "EXHAUSTED" else "ACTIVE"
+                        storeCreditVoucherDao.updateVoucherBalance(voucher.code, newBalance, newStatus)
+                        activeVoucherForPlainSC = voucher
+                    }
+                    if (customerCreditToDeduct > 0.0) {
+                        require(!normalizedCustomerPhone.isNullOrBlank()) { "Customer phone number is required for store credit balance above voucher amount" }
+                        val currentCust = customerDao.getCustomerByPhone(normalizedCustomerPhone)
+                        val availableCredit = currentCust?.storeCredit ?: 0.0
+                        require(availableCredit >= customerCreditToDeduct - 0.01) {
+                            "Insufficient store credit balance (Available: ৳${availableCredit})"
+                        }
+                        customerDao.adjustCustomerStoreCredit(normalizedCustomerPhone, -customerCreditToDeduct, System.currentTimeMillis())
+                    }
                 } else {
+                    customerCreditToDeduct = storeCreditToUse
                     require(!normalizedCustomerPhone.isNullOrBlank()) { "Customer phone number is required for Store Credit payment" }
                     val currentCust = customerDao.getCustomerByPhone(normalizedCustomerPhone)
                     val availableCredit = currentCust?.storeCredit ?: 0.0
-                    require(availableCredit >= storeCreditToUse - 0.01) {
+                    require(availableCredit >= customerCreditToDeduct - 0.01) {
                         "Insufficient store credit balance (Available: ৳${availableCredit})"
                     }
-                    customerDao.adjustCustomerStoreCredit(normalizedCustomerPhone, -storeCreditToUse, System.currentTimeMillis())
+                    customerDao.adjustCustomerStoreCredit(normalizedCustomerPhone, -customerCreditToDeduct, System.currentTimeMillis())
                 }
             }
 
@@ -975,12 +1000,12 @@ class DataRepository(
                 throw IllegalStateException("Failed to record sale: unique constraint conflict", e)
             }
 
-            if (storeCreditToUse > 0.0 && !normalizedCustomerPhone.isNullOrBlank()) {
+            if (customerCreditToDeduct > 0.0 && !normalizedCustomerPhone.isNullOrBlank()) {
                 val updatedCust = customerDao.getCustomerByPhone(normalizedCustomerPhone)
                 storeCreditLedgerDao.insertEntry(
                     StoreCreditLedgerEntry(
                         customerPhone = normalizedCustomerPhone,
-                        deltaAmount = -storeCreditToUse,
+                        deltaAmount = -customerCreditToDeduct,
                         balanceAfter = updatedCust?.storeCredit ?: 0.0,
                         type = "SALE_REDEMPTION",
                         referenceInvoiceId = saleId,
@@ -1403,6 +1428,7 @@ class DataRepository(
             val combinedDue = master.totalDue + secondary.totalDue
             val combinedPoints = master.loyaltyPoints + secondary.loyaltyPoints
             val combinedLimit = maxOf(master.creditLimit, secondary.creditLimit)
+            val combinedStoreCredit = master.storeCredit + secondary.storeCredit
 
             val updatedMaster = master.copy(
                 notes = combinedNotes.ifBlank { null },
@@ -1411,9 +1437,23 @@ class DataRepository(
                 totalDue = combinedDue,
                 creditLimit = combinedLimit,
                 loyaltyPoints = combinedPoints,
+                storeCredit = combinedStoreCredit,
                 updatedAt = System.currentTimeMillis()
             )
             customerDao.upsertCustomer(updatedMaster)
+            if (secondary.storeCredit > 0.0) {
+                customerDao.adjustCustomerStoreCredit(secNorm, -secondary.storeCredit, System.currentTimeMillis())
+                storeCreditLedgerDao.insertEntry(
+                    StoreCreditLedgerEntry(
+                        customerPhone = masterNorm,
+                        deltaAmount = secondary.storeCredit,
+                        balanceAfter = combinedStoreCredit,
+                        type = "MERGE_TRANSFER",
+                        note = "Store credit merged from archived account $secNorm",
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            }
 
             // 5. Archive secondary customer
             customerDao.archiveCustomer(secNorm, System.currentTimeMillis())
