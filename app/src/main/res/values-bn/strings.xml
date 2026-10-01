@@ -2681,4 +2681,6 @@
     <string name="settings_restoring_database_progress">ডাটাবেজ ব্যাকআপ রিস্টোর করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন…</string>
     <string name="settings_confirm_replace_title">ডাটা প্রতিস্থাপনের নিশ্চিতকরণ</string>
     <string name="settings_confirm_replace_desc">আপনি কি নিশ্চিত যে বর্তমান সমস্ত ডাটা মুছে ব্যাকআপ ফাইল দিয়ে প্রতিস্থাপন করবেন? এই প্রক্রিয়াটি আর ফেরানো যাবে না।</string>
+    <string name="settings_exporting_local_backup_title">লোকাল ব্যাকআপ এক্সপোর্ট হচ্ছে</string>
+    <string name="settings_exporting_local_backup_msg">আপনার ডাটাবেস ব্যাকআপ তৈরি ও এক্সপোর্ট হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন…</string>
 </resources>
