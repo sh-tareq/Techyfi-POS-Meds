@@ -4055,26 +4055,28 @@ class DataRepository(
                     }
                 }
 
-                if (refundMethod.equals("Store Credit", ignoreCase = true) && !issueVoucher) {
+                val storeCreditRestoredSoFar = previousReturns.sumOf {
+                    (it.refundAmount - it.dueAdjustmentAmount - it.externalRefundAmount).coerceAtLeast(0.0)
+                }
+
+                val isStoreCreditRefund = refundMethod.equals("Store Credit", ignoreCase = true)
+                val (scToRestore, externalRefund) = if (isStoreCreditRefund && !issueVoucher) {
                     val excessCredit = (refundTotal - dueReduction).coerceAtLeast(0.0)
-                    if (excessCredit > 0.0) {
-                        customerDao.adjustCustomerStoreCredit(normalizePhone(phone), excessCredit, System.currentTimeMillis())
-                        val updated = customerDao.getCustomerByPhone(normalizePhone(phone))
-                        storeCreditLedgerDao.insertEntry(
-                            StoreCreditLedgerEntry(
-                                customerPhone = normalizePhone(phone),
-                                deltaAmount = excessCredit,
-                                balanceAfter = updated?.storeCredit ?: excessCredit,
-                                type = "RETURN_REFUND",
-                                referenceInvoiceId = saleId,
-                                note = "Return refund on invoice #$saleId"
-                            )
-                        )
-                    }
-                } else if (sale.storeCreditApplied > 0.0) {
-                    val storeCreditRestoredSoFar = previousReturns.sumOf { it.refundAmount }
-                    val remainingScToRestore = (sale.storeCreditApplied - storeCreditRestoredSoFar).coerceAtLeast(0.0)
-                    val scToRestore = minOf(refundTotal, remainingScToRestore)
+                    Pair(excessCredit, 0.0)
+                } else if (isStoreCreditRefund && issueVoucher) {
+                    Pair(0.0, 0.0)
+                } else {
+                    val app = com.example.techyfipos.utils.PaymentMath.calculateReturnRefundApportionment(
+                        refundTotal = refundTotal,
+                        saleStoreCreditApplied = sale.storeCreditApplied,
+                        storeCreditRestoredSoFar = storeCreditRestoredSoFar,
+                        dueReduction = dueReduction,
+                        refundMethod = refundMethod
+                    )
+                    Pair(app.storeCreditToRestore, app.externalRefundAmount)
+                }
+
+                if (isStoreCreditRefund && !issueVoucher) {
                     if (scToRestore > 0.0) {
                         customerDao.adjustCustomerStoreCredit(normalizePhone(phone), scToRestore, System.currentTimeMillis())
                         val updated = customerDao.getCustomerByPhone(normalizePhone(phone))
@@ -4083,6 +4085,51 @@ class DataRepository(
                                 customerPhone = normalizePhone(phone),
                                 deltaAmount = scToRestore,
                                 balanceAfter = updated?.storeCredit ?: scToRestore,
+                                type = "RETURN_REFUND",
+                                referenceInvoiceId = saleId,
+                                note = "Return refund on invoice #$saleId"
+                            )
+                        )
+                    }
+                } else if (scToRestore > 0.0) {
+                    val vCodeFromSale = sale.splitPaymentJson?.let { json ->
+                        try {
+                            val array = org.json.JSONArray(json)
+                            (0 until array.length()).firstNotNullOfOrNull { i ->
+                                array.getJSONObject(i).optString("voucherCode", "").takeIf { it.isNotBlank() }
+                            }
+                        } catch (_: Exception) { null }
+                    } ?: storeCreditLedgerDao.getEntriesForInvoiceOnce(saleId).firstNotNullOfOrNull { it.voucherCode?.takeIf { c -> c.isNotBlank() } }
+
+                    var voucherPortion = 0.0
+                    if (!vCodeFromSale.isNullOrBlank()) {
+                        val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
+                        if (voucher != null) {
+                            val maxRestoreToVoucher = (voucher.initialAmount - voucher.remainingBalance).coerceAtLeast(0.0)
+                            voucherPortion = minOf(scToRestore, maxRestoreToVoucher)
+                            if (voucherPortion > 0.0) {
+                                val restoredBal = voucher.remainingBalance + voucherPortion
+                                val isExpired = voucher.expiresAt != null && voucher.expiresAt > 0L && voucher.expiresAt < System.currentTimeMillis()
+                                val newStatus = when {
+                                    voucher.status == "CANCELLED" -> "CANCELLED"
+                                    isExpired || voucher.status == "EXPIRED" -> "EXPIRED"
+                                    restoredBal > 0.0 -> "ACTIVE"
+                                    else -> "EXHAUSTED"
+                                }
+                                storeCreditVoucherDao.updateVoucherBalance(voucher.code, restoredBal, newStatus)
+                            }
+                        }
+                    }
+
+                    val customerPortion = (scToRestore - voucherPortion).coerceAtLeast(0.0)
+                    if (customerPortion > 0.0 && !phone.isNullOrBlank()) {
+                        customerDao.adjustCustomerStoreCredit(normalizePhone(phone), customerPortion, System.currentTimeMillis())
+                        val updated = customerDao.getCustomerByPhone(normalizePhone(phone))
+                        storeCreditLedgerDao.insertEntry(
+                            StoreCreditLedgerEntry(
+                                customerPhone = normalizePhone(phone),
+                                deltaAmount = customerPortion,
+                                balanceAfter = updated?.storeCredit ?: customerPortion,
                                 type = "RETURN_REFUND",
                                 referenceInvoiceId = saleId,
                                 note = "Store credit restored for return on invoice #$saleId"
@@ -4137,12 +4184,29 @@ class DataRepository(
                     previousReturns.sumOf { it.dueAdjustmentAmount }).coerceAtLeast(0.0)
             ) else 0.0
 
+            val isStoreCreditRefundFinal = refundMethod.equals("Store Credit", ignoreCase = true)
+            val computedExternalRefund = if (isStoreCreditRefundFinal) {
+                0.0
+            } else {
+                val scRestoredTotal = previousReturns.sumOf {
+                    (it.refundAmount - it.dueAdjustmentAmount - it.externalRefundAmount).coerceAtLeast(0.0)
+                }
+                val app = com.example.techyfipos.utils.PaymentMath.calculateReturnRefundApportionment(
+                    refundTotal = refundTotal,
+                    saleStoreCreditApplied = sale.storeCreditApplied,
+                    storeCreditRestoredSoFar = scRestoredTotal,
+                    dueReduction = dueAdj,
+                    refundMethod = refundMethod
+                )
+                app.externalRefundAmount
+            }
+
             val returnRecord = Return(
                 saleId = saleId,
                 timestamp = System.currentTimeMillis(),
                 refundMethod = refundMethod,
                 refundAmount = refundTotal,
-                externalRefundAmount = (refundTotal - dueAdj).coerceAtLeast(0.0),
+                externalRefundAmount = computedExternalRefund,
                 dueAdjustmentAmount = dueAdj,
                 note = note?.trim()?.takeIf { it.isNotEmpty() },
                 performedByUserId = sessionUser?.id,
@@ -4170,10 +4234,11 @@ class DataRepository(
                     var inserted = false
                     for (attempt in 1..5) {
                         val code = "SC-${(1000..9999).random()}-${(1000..9999).random()}"
+                        val voucherAmount = (refundTotal - dueAdj).coerceAtLeast(0.0)
                         val voucherToInsert = StoreCreditVoucher(
                             code = code,
-                            initialAmount = refundTotal,
-                            remainingBalance = refundTotal,
+                            initialAmount = voucherAmount,
+                            remainingBalance = voucherAmount,
                             customerPhone = phone ?: walkinPhone?.trim()?.takeIf { it.isNotBlank() },
                             sourceReturnId = returnId,
                             sourceSaleId = saleId,

@@ -354,7 +354,12 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun setPaymentMethod(method: String) {
-        _paymentMethod.value = method
+        if (_paymentMethod.value != method) {
+            _paymentMethod.value = method
+            _walletPhone.value = ""
+            _cardLastFour.value = ""
+            _cardType.value = "Visa"
+        }
     }
 
     fun setCustomerName(name: String) {
@@ -1995,6 +2000,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             calculateDiscountValue(it.sale.subtotal, it.sale.discountAmount, it.sale.isPercentageDiscount)
         }
         val totalTax = list.sumOf { it.sale.taxAmount }
+        val isTaxInclusive = repository.invoiceSettingsDataFlow.first().taxInclusive
 
         // Reports are sale-cohort based: every return belonging to a sale in this range is applied,
         // even if the return happened later. This keeps the headline and every breakdown on the
@@ -2129,7 +2135,6 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
             var saleProfit = 0.0
             var saleItemsQty = 0.0
-            val isTaxInclusive = swi.sale.taxAmount > 0.0 && swi.sale.taxRate > 0.0
             for (item in swi.items) {
                 // The cost recorded at the moment of this exact sale, when available, so editing a
                 // product's current purchase price (or deleting it) later never changes what a past
@@ -2139,7 +2144,12 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
                     repository.getProductByBarcode(item.productBarcode)?.purchasePrice
                         ?: getFallbackCost(item.productBarcode, item.price)
                 }
-                val effectivePrice = if (isTaxInclusive) item.price / (1.0 + swi.sale.taxRate / 100.0) else item.price
+                val effectivePrice = com.example.techyfipos.utils.PaymentMath.calculateItemEffectivePrice(
+                    price = item.price,
+                    taxRate = swi.sale.taxRate,
+                    isTaxInclusive = isTaxInclusive,
+                    isTaxable = item.taxable
+                )
                 val itemProfit = (effectivePrice - purchase) * item.quantity
                 val itemRevenue = item.price * item.quantity
                 saleProfit += itemProfit

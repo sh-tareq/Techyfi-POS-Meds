@@ -55,12 +55,20 @@ object PaymentMath {
                             if (isStoreCredit && !redeemedVoucherCode.isNullOrBlank()) {
                                 put("voucherCode", redeemedVoucherCode)
                             }
-                            val resolvedWalletPhone = sp.walletPhone.takeIf { !it.isNullOrBlank() } ?: walletPhone
-                            val resolvedCardType = sp.cardType.takeIf { !it.isNullOrBlank() } ?: cardType
-                            val resolvedCardLastFour = sp.cardLastFour.takeIf { !it.isNullOrBlank() } ?: cardLastFour
-                            if (!resolvedWalletPhone.isNullOrBlank()) put("walletPhone", resolvedWalletPhone)
-                            if (!resolvedCardType.isNullOrBlank()) put("cardType", resolvedCardType)
-                            if (!resolvedCardLastFour.isNullOrBlank()) put("cardLastFour", resolvedCardLastFour)
+                            val isWallet = sp.method.equals("bKash", ignoreCase = true) ||
+                                sp.method.equals("Nagad", ignoreCase = true) ||
+                                sp.method.equals("Rocket", ignoreCase = true)
+                            val isCard = sp.method.equals("Card", ignoreCase = true) ||
+                                sp.method.equals("Visa", ignoreCase = true) ||
+                                sp.method.equals("Mastercard", ignoreCase = true) ||
+                                sp.method.equals("Amex", ignoreCase = true)
+                            if (isWallet && !sp.walletPhone.isNullOrBlank()) {
+                                put("walletPhone", sp.walletPhone)
+                            }
+                            if (isCard) {
+                                if (!sp.cardType.isNullOrBlank()) put("cardType", sp.cardType)
+                                if (!sp.cardLastFour.isNullOrBlank()) put("cardLastFour", sp.cardLastFour)
+                            }
                             if (!sp.referenceNote.isNullOrBlank()) put("referenceNote", sp.referenceNote)
                         })
                     }
@@ -127,5 +135,44 @@ object PaymentMath {
         }
 
         return 0.0
+    }
+
+    fun calculateItemEffectivePrice(
+        price: Double,
+        taxRate: Double,
+        isTaxInclusive: Boolean,
+        isTaxable: Boolean
+    ): Double {
+        return if (isTaxInclusive && isTaxable && taxRate > 0.0) {
+            price / (1.0 + taxRate / 100.0)
+        } else {
+            price
+        }
+    }
+
+    data class ReturnRefundApportionment(
+        val storeCreditToRestore: Double,
+        val externalRefundAmount: Double
+    )
+
+    fun calculateReturnRefundApportionment(
+        refundTotal: Double,
+        saleStoreCreditApplied: Double,
+        storeCreditRestoredSoFar: Double,
+        dueReduction: Double,
+        refundMethod: String
+    ): ReturnRefundApportionment {
+        val netAfterDue = (refundTotal - dueReduction).coerceAtLeast(0.0)
+        val remainingScToRestore = (saleStoreCreditApplied - storeCreditRestoredSoFar).coerceAtLeast(0.0)
+        val scToRestore = minOf(netAfterDue, remainingScToRestore)
+        val externalRefund = if (refundMethod.equals("Store Credit", ignoreCase = true)) {
+            0.0
+        } else {
+            (netAfterDue - scToRestore).coerceAtLeast(0.0)
+        }
+        return ReturnRefundApportionment(
+            storeCreditToRestore = scToRestore,
+            externalRefundAmount = externalRefund
+        )
     }
 }

@@ -7,6 +7,7 @@ import com.example.techyfipos.utils.PaymentMath
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -104,5 +105,94 @@ class MoneyFlowsTest {
     fun `X-1 system backup method exportBackupForSystem is distinct from permission gated exportBackup`() {
         val repoMethods = DataRepository::class.java.declaredMethods.map { it.name }
         assertTrue("exportBackupForSystem must exist on DataRepository", repoMethods.contains("exportBackupForSystem"))
+    }
+
+    @Test
+    fun `N-1 split row does not inherit global wallet or card details`() {
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = listOf(
+                SplitPaymentEntry("Cash", 100.0),
+                SplitPaymentEntry("Store Credit", 50.0)
+            ),
+            storeCreditApplied = 50.0,
+            grandTotal = 150.0,
+            paymentMethod = "Split",
+            walletPhone = "01711111111",
+            cardType = "Visa",
+            cardLastFour = "1234"
+        )
+        assertNotNull(splitJson)
+        val arr = JSONArray(splitJson!!)
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            assertFalse("Cash/SC split row must not have walletPhone", obj.has("walletPhone"))
+            assertFalse("Cash/SC split row must not have cardType", obj.has("cardType"))
+            assertFalse("Cash/SC split row must not have cardLastFour", obj.has("cardLastFour"))
+        }
+    }
+
+    @Test
+    fun `B-7 tax exclusive sale profit does not divide price by tax rate and non-taxable item price is never divided`() {
+        // Tax-exclusive shop: taxRate = 10%, price = 100, cost = 60
+        val taxRate = 10.0
+        val price = 100.0
+        val cost = 60.0
+
+        val exclusiveEffectivePrice = PaymentMath.calculateItemEffectivePrice(
+            price = price,
+            taxRate = taxRate,
+            isTaxInclusive = false,
+            isTaxable = true
+        )
+        val exclusiveProfit = exclusiveEffectivePrice - cost
+        assertEquals(100.0, exclusiveEffectivePrice, 0.001)
+        assertEquals(40.0, exclusiveProfit, 0.001)
+
+        // Non-taxable item in tax-inclusive shop: price should not be divided
+        val nonTaxableEffectivePrice = PaymentMath.calculateItemEffectivePrice(
+            price = price,
+            taxRate = taxRate,
+            isTaxInclusive = true,
+            isTaxable = false
+        )
+        assertEquals(100.0, nonTaxableEffectivePrice, 0.001)
+        assertEquals(40.0, nonTaxableEffectivePrice - cost, 0.001)
+
+        // Taxable item in tax-inclusive shop: price is divided by (1 + rate)
+        val inclusiveEffectivePrice = PaymentMath.calculateItemEffectivePrice(
+            price = price,
+            taxRate = taxRate,
+            isTaxInclusive = true,
+            isTaxable = true
+        )
+        assertEquals(100.0 / 1.10, inclusiveEffectivePrice, 0.001)
+    }
+
+    @Test
+    fun `M-10 return refund on sale with store credit restores credit and does not over-refund cash`() {
+        // ৳300 sale (100 SC + 200 cash), full return refunded in Cash
+        val apportionment = PaymentMath.calculateReturnRefundApportionment(
+            refundTotal = 300.0,
+            saleStoreCreditApplied = 100.0,
+            storeCreditRestoredSoFar = 0.0,
+            dueReduction = 0.0,
+            refundMethod = "Cash"
+        )
+        assertEquals("Store credit restored must be 100", 100.0, apportionment.storeCreditToRestore, 0.001)
+        assertEquals("External cash refund must be 200, not 300", 200.0, apportionment.externalRefundAmount, 0.001)
+        assertEquals("Total benefit to customer must equal refund total (300)", 300.0, apportionment.storeCreditToRestore + apportionment.externalRefundAmount, 0.001)
+
+        // Previous return had due reduction 50, but 0 store credit restored
+        val partialWithDueApportionment = PaymentMath.calculateReturnRefundApportionment(
+            refundTotal = 150.0,
+            saleStoreCreditApplied = 100.0,
+            storeCreditRestoredSoFar = 0.0, // previous return had dueReduction=50, scRestored=0
+            dueReduction = 50.0,
+            refundMethod = "Cash"
+        )
+        // net after due is 100. remaining SC is 100. So 100 SC restored, 0 cash refunded.
+        assertEquals(100.0, partialWithDueApportionment.storeCreditToRestore, 0.001)
+        assertEquals(0.0, partialWithDueApportionment.externalRefundAmount, 0.001)
     }
 }

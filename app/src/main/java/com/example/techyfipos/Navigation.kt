@@ -1151,6 +1151,7 @@ fun MainNavigation() {
                                     cartViewModel = cartViewModel,
                                     productsViewModel = productsViewModel,
                                     settingsViewModel = settingsViewModel,
+                                    authViewModel = authViewModel,
                                     isTablet = isTablet,
                                     isOwner = isOwner,
                                     isSupervisor = isSupervisor,
@@ -1310,6 +1311,7 @@ fun MainNavigation() {
                                     duesViewModel = duesViewModel,
                                     customerViewModel = customerViewModel,
                                     settingsViewModel = settingsViewModel,
+                                    authViewModel = authViewModel,
                                     isOwner = isOwner,
                                     isSupervisor = isSupervisor,
                                     activePermissions = activePermissions,
@@ -1385,6 +1387,7 @@ fun MainNavigation() {
                                     loyaltyViewModel = loyaltyViewModel,
                                     customerViewModel = customerViewModel,
                                     settingsViewModel = settingsViewModel,
+                                    authViewModel = authViewModel,
                                     onBack = { backStack.removeLastOrNull() },
                                     onStartSaleForCustomer = { customer ->
                                         cartViewModel.onCustomerPhoneChanged(customer.phone)
@@ -1407,6 +1410,7 @@ fun MainNavigation() {
                                 CustomersScreen(
                                     customerViewModel = customerViewModel,
                                     settingsViewModel = settingsViewModel,
+                                    authViewModel = authViewModel,
                                     onBack = { backStack.removeLastOrNull() },
                                     onStartSaleForCustomer = { customer ->
                                         cartViewModel.onCustomerPhoneChanged(customer.phone)

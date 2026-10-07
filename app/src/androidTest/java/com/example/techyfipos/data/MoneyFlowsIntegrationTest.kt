@@ -107,12 +107,11 @@ class MoneyFlowsIntegrationTest {
             isSplitPayment = true,
             splitPayments = listOf(
                 SplitPaymentEntry("Cash", 200.0),
-                SplitPaymentEntry("bKash", 300.0)
+                SplitPaymentEntry("bKash", 300.0, walletPhone = "01700000000")
             ),
             storeCreditApplied = 0.0,
             grandTotal = 500.0,
-            paymentMethod = "Split",
-            walletPhone = "01700000000"
+            paymentMethod = "Split"
         )
 
         val saleId = repository.completeSaleWithNotes(
@@ -372,5 +371,77 @@ class MoneyFlowsIntegrationTest {
         val ledgerEntries = database.storeCreditLedgerDao().getLedgerForCustomerOnce(custPhone)
         val redeemEntries = ledgerEntries.filter { it.type == "SALE_REDEMPTION" }
         assertTrue("No customer store credit redeem entries should be created for plain voucher redemption", redeemEntries.isEmpty())
+    }
+
+    @Test
+    fun testM10_returnWithCashRefundApportionsCreditAndCashWithoutOverRefunding() = runBlocking {
+        val custPhone = "01700000010"
+        repository.upsertCustomer(
+            Customer(
+                phone = custPhone,
+                name = "M10 Cust",
+                storeCredit = 100.0,
+                creditLimit = 1000.0
+            )
+        )
+        val prod = Product(
+            barcode = "BAR10",
+            name = "Item M10",
+            category = "General",
+            purchasePrice = 100.0,
+            sellingPrice = 300.0,
+            stockQty = 10.0,
+            reorderLevel = 1
+        )
+        database.productDao().insertProduct(prod)
+
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = listOf(
+                SplitPaymentEntry("Cash", 200.0),
+                SplitPaymentEntry("Store Credit", 100.0)
+            ),
+            storeCreditApplied = 100.0,
+            grandTotal = 300.0,
+            paymentMethod = "Split"
+        )
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 300.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 300.0,
+            paymentMethod = "Split",
+            customerName = "M10 Cust",
+            customerPhone = custPhone,
+            amountPaid = 200.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 100.0
+        )
+
+        val custAfterSale = repository.getCustomerByPhone(custPhone)
+        assertEquals(0.0, custAfterSale?.storeCredit ?: 0.0, 0.001)
+
+        repository.processReturn(
+            saleId = saleId,
+            lines = listOf(ReturnLine(barcode = "BAR10", quantity = 1.0, name = "Item M10", price = 300.0)),
+            refundMethod = "Cash",
+            note = "Return full",
+            restock = true
+        )
+
+        val custAfterReturn = repository.getCustomerByPhone(custPhone)
+        assertEquals(100.0, custAfterReturn?.storeCredit ?: 0.0, 0.001)
+
+        val returns = database.returnDao().getReturnsForSaleOnce(saleId)
+        assertEquals(1, returns.size)
+        val ret = returns.first()
+        assertEquals(300.0, ret.refundAmount, 0.001)
+        assertEquals(200.0, ret.externalRefundAmount, 0.001)
+        assertEquals(0.0, ret.dueAdjustmentAmount, 0.001)
     }
 }
