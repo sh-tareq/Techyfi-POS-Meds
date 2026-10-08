@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.techyfipos.R
 import com.example.techyfipos.data.db.SaleWithItems
@@ -54,7 +55,6 @@ import androidx.annotation.StringRes
 import com.example.techyfipos.ui.viewmodel.SettingsViewModel
 import com.example.techyfipos.utils.*
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.util.*
 
 private enum class HistoryReportPeriod(@get:StringRes val labelRes: Int) {
@@ -200,8 +200,6 @@ fun SalesHistoryScreen(
     }
 
     val currentLocale = LocalConfiguration.current.locales[0]
-    val dateFormat = remember(currentLocale) { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
-    val dayGroupFormatter = remember(currentLocale) { SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault()) }
     val dateFilteredSales = remember(salesWithItems, rangeStart, rangeEnd) {
         if (rangeStart == 0L && rangeEnd == Long.MAX_VALUE) {
             salesWithItems
@@ -272,8 +270,8 @@ fun SalesHistoryScreen(
     val dateRangeLabel = when (selectedPeriod) {
         HistoryReportPeriod.ALL_TIME -> stringResource(R.string.history_period_all_sales)
         else -> {
-            val startText = dateFormat.format(Date(rangeStart))
-            val endText = dateFormat.format(Date((rangeEnd - 1).coerceAtMost(now)))
+            val startText = DateFormatters.formatDate(rangeStart, currentLocale)
+            val endText = DateFormatters.formatDate((rangeEnd - 1).coerceAtMost(now), currentLocale)
             if (startText == endText) startText else "$startText – $endText"
         }
     }
@@ -336,11 +334,17 @@ fun SalesHistoryScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 900.dp)
+            ) {
             // 💎 Compact Unified Sticky Toolbar (~76dp total)
             Column(
                 modifier = Modifier
@@ -703,7 +707,7 @@ fun SalesHistoryScreen(
                     }
                 }
             } else {
-                val groupedSales = remember(filteredSales, dayGroupFormatter) { groupSalesByDay(filteredSales, dayGroupFormatter) }
+                val groupedSales = remember(filteredSales, currentLocale) { groupSalesByDay(filteredSales, currentLocale) }
 
                 LazyColumn(
                     modifier = Modifier
@@ -759,6 +763,7 @@ fun SalesHistoryScreen(
             }
         }
     }
+}
 
     if (selectedSaleDetail != null) {
         val sale = selectedSaleDetail!!
@@ -820,6 +825,7 @@ fun SalesHistoryScreen(
                     deleteReason = ""
                 }
             },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.sales_history_delete_invoice_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1096,8 +1102,8 @@ fun SalesHistoryScreen(
     }
 }
 
-private fun groupSalesByDay(sales: List<SaleWithItems>, formatter: SimpleDateFormat): Map<String, List<SaleWithItems>> {
-    return sales.groupBy { formatter.format(Date(it.sale.timestamp)) }
+private fun groupSalesByDay(sales: List<SaleWithItems>, locale: Locale = Locale.getDefault()): Map<String, List<SaleWithItems>> {
+    return sales.groupBy { DateFormatters.formatDayGroup(it.sale.timestamp, locale) }
 }
 
 @Composable
@@ -1292,7 +1298,7 @@ private fun HistoryRevenueSummaryCard(
                                         )
                                         Text(
                                             text = stringResource(R.string.history_est_margin_format, String.format(java.util.Locale.US, "%.1f", marginPercent)),
-                                            fontSize = 9.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = Color(0xFFC7D2FE)
                                         )
@@ -1471,9 +1477,8 @@ fun SaleCard(
     profitSummary: InvoiceProfitSummary? = null,
     onClick: () -> Unit
 ) {
-    val timeFormatter = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
     val saleTime = remember(saleWithItems.sale.timestamp) {
-        timeFormatter.format(Date(saleWithItems.sale.timestamp))
+        DateFormatters.formatTime(saleWithItems.sale.timestamp)
     }
 
     val hasReturns = returnSummary?.hasReturns == true
@@ -1516,7 +1521,7 @@ fun SaleCard(
 
                 if (isStealthMode) {
                     Text(
-                        text = "৳••••",
+                        text = "${formatMoney(0.0).take(1)}••••",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 15.sp,
@@ -1625,7 +1630,7 @@ fun SaleCard(
                     ) {
                         Text(
                             text = if (isWalkIn) "W" else customerName?.firstOrNull()?.uppercase() ?: "C",
-                            fontSize = 9.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isWalkIn) MaterialTheme.colorScheme.onSurfaceVariant
                             else MaterialTheme.colorScheme.onPrimaryContainer
@@ -1700,7 +1705,7 @@ fun SaleCard(
                                 val qStr = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
                                 Text(
                                     text = "x$qStr",
-                                    fontSize = 9.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -1775,7 +1780,7 @@ fun SaleCard(
                     if (hasReturns) {
                         Text(
                             text = stringResource(R.string.net_after_returns),
-                            fontSize = 9.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFF991B1B)
                         )
@@ -2036,6 +2041,7 @@ private fun SaleDetailDialog(
 
         AlertDialog(
             onDismissRequest = { showEditConfirm = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.cart_edit_sale_confirm_title)) },
             text = {
                 Column(

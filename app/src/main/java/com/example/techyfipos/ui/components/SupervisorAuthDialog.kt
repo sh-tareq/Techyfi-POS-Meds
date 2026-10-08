@@ -55,7 +55,10 @@ fun SupervisorAuthDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false
+        )
     ) {
         Card(
             shape = RoundedCornerShape(24.dp),
@@ -63,6 +66,7 @@ fun SupervisorAuthDialog(
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             modifier = Modifier
                 .fillMaxWidth(0.92f)
+                .widthIn(max = 440.dp)
                 .wrapContentHeight()
                 .padding(16.dp)
         ) {

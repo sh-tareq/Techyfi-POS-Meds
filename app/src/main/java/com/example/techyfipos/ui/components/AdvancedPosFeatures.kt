@@ -35,6 +35,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.R
 import com.example.techyfipos.data.db.*
 import com.example.techyfipos.ui.viewmodel.InventoryAlertsData
@@ -1199,6 +1200,7 @@ fun AddExpenseDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1689,6 +1691,7 @@ fun InwardStockDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Text(stringResource(R.string.supplier_receive_stock_title, supplier.companyName), fontWeight = FontWeight.Bold, fontSize = 16.sp)
         },

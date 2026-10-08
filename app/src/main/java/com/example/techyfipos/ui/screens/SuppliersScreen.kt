@@ -2,7 +2,7 @@ package com.example.techyfipos.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import java.text.SimpleDateFormat
+import com.example.techyfipos.utils.DateFormatters
 import java.util.Date
 import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -145,7 +146,6 @@ fun SuppliersScreen(
 
     var showAllInvoices by remember { mutableStateOf(false) }
     var showAllPayments by remember { mutableStateOf(false) }
-    val ledgerDateFormat = remember(Locale.getDefault()) { SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()) }
 
     val totalPurchased = remember(suppliers) { suppliers.sumOf { it.totalPurchased } }
     val totalDue = remember(suppliers) { suppliers.sumOf { it.totalDue } }
@@ -233,7 +233,7 @@ fun SuppliersScreen(
                     // Export Excel Button
                     IconButton(
                         onClick = {
-                            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                            val dateStr = DateFormatters.formatISO()
                             exportSuppliersExcelLauncher.launch("suppliers-$dateStr.xlsx")
                         },
                         modifier = Modifier.size(48.dp)
@@ -273,14 +273,20 @@ fun SuppliersScreen(
         },
         modifier = modifier
     ) { innerPadding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp)
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 900.dp)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp)
+            ) {
             // Master Supplier Portfolio Hero Card
             item {
                 Surface(
@@ -526,7 +532,7 @@ fun SuppliersScreen(
                                 ) {
                                     Text(
                                         text = "${suppliers.size}",
-                                        fontSize = 9.5.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = if (isAll) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
@@ -565,7 +571,7 @@ fun SuppliersScreen(
                                 ) {
                                     Text(
                                         text = "$dueCount",
-                                        fontSize = 9.5.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = if (isDue) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
@@ -604,7 +610,7 @@ fun SuppliersScreen(
                                 ) {
                                     Text(
                                         text = "$settledCount",
-                                        fontSize = 9.5.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = if (isSettled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
@@ -721,7 +727,7 @@ fun SuppliersScreen(
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text(supplierName, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                                Text(ledgerDateFormat.format(Date(invoice.timestamp)), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                                Text(DateFormatters.formatDateTime(invoice.timestamp), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
                             }
                             Text(
                                 stringResource(
@@ -767,7 +773,7 @@ fun SuppliersScreen(
                             Column {
                                 Text(supplierName, fontWeight = FontWeight.Bold)
                                 Text(payment.paymentMethod, fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(ledgerDateFormat.format(Date(payment.timestamp)), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                                Text(DateFormatters.formatDateTime(payment.timestamp), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
                                 payment.referenceNote?.takeIf { it.isNotBlank() }?.let { Text(it, fontSize = 11.sp) }
                             }
                             Text(formatTaka(payment.amountPaid), fontWeight = FontWeight.ExtraBold, color = Color(0xFF10B981))
@@ -787,6 +793,7 @@ fun SuppliersScreen(
             }
         }
     }
+}
 
     // Dialog: Delete Supplier Confirmation & Balance Check (D2, D3)
     if (supplierToDelete != null) {
@@ -794,6 +801,7 @@ fun SuppliersScreen(
         val hasBalance = kotlin.math.abs(s.totalDue) > 0.001
         AlertDialog(
             onDismissRequest = { supplierToDelete = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = {
                 Text(
                     text = if (hasBalance) stringResource(R.string.supplier_cannot_delete_title) else stringResource(R.string.confirm_delete),
@@ -848,6 +856,7 @@ fun SuppliersScreen(
 
         AlertDialog(
             onDismissRequest = { showAddSupplierDialog = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -952,6 +961,7 @@ fun SuppliersScreen(
 
         AlertDialog(
             onDismissRequest = { supplierToEdit = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -1089,6 +1099,7 @@ fun SuppliersScreen(
         }
         AlertDialog(
             onDismissRequest = { showSupplierPickerForInflow = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = {
                 Text(
                     text = stringResource(R.string.supplier_select_for_inflow_title),
@@ -1184,6 +1195,7 @@ fun SuppliersScreen(
 
         AlertDialog(
             onDismissRequest = { selectedSupplierForPayDue = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

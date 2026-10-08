@@ -53,6 +53,9 @@ object DateFormatters {
 
     fun formatDayOfWeek(timestamp: Long, locale: Locale = Locale.getDefault()): String =
         SimpleDateFormat("EEE", locale).format(Date(timestamp))
+
+    fun formatDayGroup(timestamp: Long, locale: Locale = Locale.getDefault()): String =
+        SimpleDateFormat("EEEE, dd MMMM yyyy", locale).format(Date(timestamp))
 }
 
 /**

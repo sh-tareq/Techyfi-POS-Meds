@@ -110,27 +110,34 @@ fun ManageUsersScreen(
                 Text(stringResource(R.string.users_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            LazyColumn(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentAlignment = Alignment.TopCenter
             ) {
-                items(users, key = { it.id }) { user ->
-                    StaffUserCard(
-                        user = user,
-                        onEdit = { userToEdit = user },
-                        onPermissions = { userForPermissions = user },
-                        onToggleActive = { isActive ->
-                            authViewModel.setStaffActive(user.id, isActive) { success ->
-                                if (!success) {
-                                    Toast.makeText(context, onlyOwnerMessage, Toast.LENGTH_SHORT).show()
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 800.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(users, key = { it.id }) { user ->
+                        StaffUserCard(
+                            user = user,
+                            onEdit = { userToEdit = user },
+                            onPermissions = { userForPermissions = user },
+                            onToggleActive = { isActive ->
+                                authViewModel.setStaffActive(user.id, isActive) { success ->
+                                    if (!success) {
+                                        Toast.makeText(context, onlyOwnerMessage, Toast.LENGTH_SHORT).show()
+                                    }
                                 }
-                            }
-                        },
-                        onDelete = { userToDelete = user }
-                    )
+                            },
+                            onDelete = { userToDelete = user }
+                        )
+                    }
                 }
             }
         }
@@ -174,6 +181,7 @@ fun ManageUsersScreen(
     userToDelete?.let { user ->
         AlertDialog(
             onDismissRequest = { userToDelete = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text(stringResource(R.string.users_remove_title, user.name)) },
             text = { Text(stringResource(R.string.users_remove_message)) },
@@ -719,7 +727,10 @@ private fun PermissionsMatrixDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false
+        )
     ) {
         Card(
             shape = RoundedCornerShape(24.dp),
@@ -727,6 +738,7 @@ private fun PermissionsMatrixDialog(
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             modifier = Modifier
                 .fillMaxWidth(0.95f)
+                .widthIn(max = 640.dp)
                 .fillMaxHeight(0.9f)
                 .padding(8.dp)
         ) {

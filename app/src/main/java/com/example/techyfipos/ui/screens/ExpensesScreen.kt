@@ -42,8 +42,8 @@ import com.example.techyfipos.ui.components.ExpenseItemRow
 import com.example.techyfipos.ui.components.Realistic3DExpenseReceiptIcon
 import com.example.techyfipos.ui.viewmodel.ExpenseViewModel
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.DateFormatters
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -174,7 +174,7 @@ fun ExpensesScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                            val dateStr = DateFormatters.formatISO()
                             exportExpensesLauncher.launch("expenses-$dateStr.xlsx")
                         }
                     ) {
@@ -214,14 +214,20 @@ fun ExpensesScreen(
         },
         modifier = modifier
     ) { innerPadding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(top = 10.dp, bottom = 100.dp)
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 900.dp)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(top = 10.dp, bottom = 100.dp)
+            ) {
             // 1. Pure Expense Analytics Hero Card
             item {
                 ExpenseAnalyticsHeroCard(
@@ -314,7 +320,7 @@ fun ExpensesScreen(
                                     ) {
                                         Text(
                                             text = "$count",
-                                            fontSize = 9.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
@@ -432,6 +438,7 @@ fun ExpensesScreen(
             }
         }
     }
+}
 
     if (showAddExpenseDialog) {
         AddExpenseDialog(
