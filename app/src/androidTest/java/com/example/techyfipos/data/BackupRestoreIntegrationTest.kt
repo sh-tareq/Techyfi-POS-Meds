@@ -621,13 +621,21 @@ class BackupRestoreIntegrationTest {
         val itemAfter = saleWithItemsAfter.items.single()
         assertEquals(false, itemAfter.taxable)
         backup.delete()
+        Unit
     }
 
     @Test
     fun mergeSameBackupTwiceAssertsTotalsAndCountsUnchanged() = runBlocking {
         val product = Product("PROD-100", "Merge Product", "Test", 50.0, 100.0, 10.0, 1)
         database.productDao().insertProduct(product)
-        database.customerDao().upsertCustomer(Customer(phone = "01999999999", name = "Merge Customer", totalDue = 0.0))
+        database.customerDao().upsertCustomer(Customer(phone = "01999999999", name = "Merge Customer", totalDue = 0.0, storeCredit = 50.0))
+        database.customerLoyaltyDao().upsertLoyalty(CustomerLoyalty(phone = "01999999999", name = "Merge Customer", pointsBalance = 25))
+        database.storeCreditLedgerDao().insertEntry(StoreCreditLedgerEntry(customerPhone = "01999999999", deltaAmount = 50.0, balanceAfter = 50.0, type = "MANUAL_ADJUST"))
+
+        val supplierId = database.supplierDao().upsertSupplier(Supplier(name = "Merge Supplier", companyName = "Merge Co", phone = "01888888888", totalPurchased = 200.0, totalDue = 150.0))
+        database.purchaseInvoiceDao().insertPurchaseInvoice(PurchaseInvoice(
+            supplierId = supplierId, invoiceNumber = "INV-MERGE-1", totalAmount = 200.0, paidAmount = 50.0, dueAmount = 150.0, itemsSummary = "Initial"
+        ))
 
         val saleId = repository.completeSaleWithNotes(
             subtotal = 100.0, discountAmount = 0.0, isPercentage = false, grandTotal = 100.0,
@@ -636,11 +644,15 @@ class BackupRestoreIntegrationTest {
             cartItemsWithNotes = listOf(Triple(product, 2.0, null)), taxRate = 0.0, taxAmount = 0.0
         )
 
-        // Pre-merge state
+        // Snapshot state before merge
+        val productCountPre = database.productDao().getAllProducts().first().size
+        val supplierDuePre = database.supplierDao().getSupplierById(supplierId)!!.totalDue
+        val stockPre = database.productDao().getProductByBarcodeCaseInsensitive("PROD-100")!!.stockQty
+        val duesPre = database.customerDueDao().getCustomerDueByPhone("01999999999")!!.outstandingAmount
+        val pointsPre = database.customerLoyaltyDao().getLoyaltyByPhone("01999999999")!!.pointsBalance
+        val creditPre = database.customerDao().getCustomerByPhone("01999999999")!!.storeCredit
         val salesCountPre = database.saleDao().getAllSalesOnce().size
         val dueChargesPre = database.customerDueDao().getAllDueChargesOnce().size
-        val customerDuePre = database.customerDao().getCustomerByPhone("01999999999")!!.totalDue
-        val stockPre = database.productDao().getProductByBarcode("PROD-100")!!.stockQty
 
         val backup = File(context.cacheDir, "merge-twice-test.json")
         assertEquals(true, repository.exportBackup(backup))
@@ -648,29 +660,46 @@ class BackupRestoreIntegrationTest {
         // First MERGE import
         assertEquals(true, repository.importBackup(backup, BackupImportMode.MERGE))
 
+        val productCount1 = database.productDao().getAllProducts().first().size
+        val supplierDue1 = database.supplierDao().getSupplierById(supplierId)!!.totalDue
+        val stock1 = database.productDao().getProductByBarcodeCaseInsensitive("PROD-100")!!.stockQty
+        val dues1 = database.customerDueDao().getCustomerDueByPhone("01999999999")!!.outstandingAmount
+        val points1 = database.customerLoyaltyDao().getLoyaltyByPhone("01999999999")!!.pointsBalance
+        val credit1 = database.customerDao().getCustomerByPhone("01999999999")!!.storeCredit
         val salesCount1 = database.saleDao().getAllSalesOnce().size
         val dueCharges1 = database.customerDueDao().getAllDueChargesOnce().size
-        val customerDue1 = database.customerDao().getCustomerByPhone("01999999999")!!.totalDue
-        val stock1 = database.productDao().getProductByBarcode("PROD-100")!!.stockQty
 
         // Second MERGE import (merging the exact same backup file again)
         assertEquals(true, repository.importBackup(backup, BackupImportMode.MERGE))
 
+        val productCount2 = database.productDao().getAllProducts().first().size
+        val supplierDue2 = database.supplierDao().getSupplierById(supplierId)!!.totalDue
+        val stock2 = database.productDao().getProductByBarcodeCaseInsensitive("PROD-100")!!.stockQty
+        val dues2 = database.customerDueDao().getCustomerDueByPhone("01999999999")!!.outstandingAmount
+        val points2 = database.customerLoyaltyDao().getLoyaltyByPhone("01999999999")!!.pointsBalance
+        val credit2 = database.customerDao().getCustomerByPhone("01999999999")!!.storeCredit
         val salesCount2 = database.saleDao().getAllSalesOnce().size
         val dueCharges2 = database.customerDueDao().getAllDueChargesOnce().size
-        val customerDue2 = database.customerDao().getCustomerByPhone("01999999999")!!.totalDue
-        val stock2 = database.productDao().getProductByBarcode("PROD-100")!!.stockQty
 
-        assertEquals(salesCountPre, salesCount1)
-        assertEquals(salesCount1, salesCount2)
-        assertEquals(dueChargesPre, dueCharges1)
-        assertEquals(dueCharges1, dueCharges2)
-        assertEquals(customerDuePre, customerDue1, 0.001)
-        assertEquals(customerDue1, customerDue2, 0.001)
+        assertEquals(productCountPre, productCount1)
+        assertEquals(productCountPre, productCount2)
+        assertEquals(supplierDuePre, supplierDue1, 0.001)
+        assertEquals(supplierDuePre, supplierDue2, 0.001)
         assertEquals(stockPre, stock1, 0.001)
-        assertEquals(stock1, stock2, 0.001)
+        assertEquals(stockPre, stock2, 0.001)
+        assertEquals(duesPre, dues1, 0.001)
+        assertEquals(duesPre, dues2, 0.001)
+        assertEquals(pointsPre, points1)
+        assertEquals(pointsPre, points2)
+        assertEquals(creditPre, credit1, 0.001)
+        assertEquals(creditPre, credit2, 0.001)
+        assertEquals(salesCountPre, salesCount1)
+        assertEquals(salesCountPre, salesCount2)
+        assertEquals(dueChargesPre, dueCharges1)
+        assertEquals(dueChargesPre, dueCharges2)
 
         backup.delete()
+        Unit
     }
 }
 

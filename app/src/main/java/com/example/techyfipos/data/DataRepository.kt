@@ -2519,6 +2519,12 @@ class DataRepository(
             database.withDriverTransaction {
               if (mode == BackupImportMode.REPLACE) clearBusinessTablesForRestore()
 
+              val newlyInsertedProductBarcodes = mutableSetOf<String>()
+              val newlyInsertedDuePhones = mutableSetOf<String>()
+              val newlyInsertedCustomerPhones = mutableSetOf<String>()
+              val newlyInsertedLoyaltyPhones = mutableSetOf<String>()
+              val newlyInsertedSupplierIds = mutableSetOf<Long>()
+
               val newlyInsertedSaleItems = mutableListOf<SaleItem>()
               val newlyInsertedReturnItems = mutableListOf<ReturnItem>()
               val newlyInsertedPurchaseItems = mutableListOf<PurchaseInvoiceItem>()
@@ -2529,9 +2535,12 @@ class DataRepository(
                 val productsArray = backupJson.getJSONArray("products")
                 for (i in 0 until productsArray.length()) {
                     val p = productsArray.getJSONObject(i)
+                    val rawBarcode = p.getString("barcode")
+                    val existing = productDao.getProductByBarcodeCaseInsensitive(rawBarcode)
+                    val canonicalBarcode = existing?.barcode ?: rawBarcode.lowercase()
                     val product = Product(
-                        barcode = p.getString("barcode").lowercase(),
-                        name = p.optString("name", p.getString("barcode")),
+                        barcode = canonicalBarcode,
+                        name = p.optString("name", rawBarcode),
                         category = p.optString("category", "Uncategorized"),
                         purchasePrice = p.optDouble("purchasePrice", 0.0),
                         sellingPrice = p.optDouble("sellingPrice", p.optDouble("price", 0.0)),
@@ -2547,15 +2556,17 @@ class DataRepository(
                         ,discountedPrice = p.optDouble("discountedPrice", 0.0)
                         ,createdAt = p.optLong("createdAt", p.optLong("created_at", System.currentTimeMillis()))
                     )
-                    val existing = productDao.getProductByBarcode(product.barcode)
                     if (existing != null) {
                         if (mode == BackupImportMode.MERGE) {
-                            productDao.updateProduct(product.copy(stockQty = existing.stockQty))
+                            productDao.updateProduct(product.copy(barcode = existing.barcode, stockQty = existing.stockQty))
                         } else {
-                            productDao.updateProduct(product)
+                            productDao.updateProduct(product.copy(barcode = existing.barcode))
                         }
                     } else {
                         productDao.insertProduct(product)
+                        if (mode == BackupImportMode.MERGE) {
+                            newlyInsertedProductBarcodes.add(product.barcode.lowercase())
+                        }
                     }
                 }
               }
@@ -2565,16 +2576,25 @@ class DataRepository(
                 val duesArray = backupJson.getJSONArray("dues")
                 for (i in 0 until duesArray.length()) {
                     val d = duesArray.getJSONObject(i)
+                    val phone = normalizePhone(d.getString("customerPhone"))
                     val due = CustomerDue(
-                        customerPhone = normalizePhone(d.getString("customerPhone")),
-                        customerName = d.optString("customerName", d.getString("customerPhone")),
+                        customerPhone = phone,
+                        customerName = d.optString("customerName", phone),
                         outstandingAmount = d.optDouble("outstandingAmount", d.optDouble("amount", 0.0)),
                         creditLimit = d.optDouble("creditLimit", 0.0),
                         createdAt = d.optLong("createdAt", d.optLong("updatedAt", System.currentTimeMillis())),
                         updatedAt = d.optLong("updatedAt", System.currentTimeMillis()),
                         isArchived = d.optBoolean("isArchived", false)
                     )
-                    customerDueDao.upsertCustomerDue(due)
+                    val existingDue = customerDueDao.getCustomerDueByPhone(phone)
+                    if (mode == BackupImportMode.MERGE) {
+                        if (existingDue == null) {
+                            customerDueDao.upsertCustomerDue(due)
+                            newlyInsertedDuePhones.add(phone)
+                        }
+                    } else {
+                        customerDueDao.upsertCustomerDue(due)
+                    }
                 }
               }
 
@@ -2603,6 +2623,10 @@ class DataRepository(
                     }
                     try {
                         customerDueDao.insertDuePayment(payment)
+                        if (mode == BackupImportMode.MERGE && phone !in newlyInsertedDuePhones) {
+                            customerDueDao.adjustOutstandingDue(phone, -amt, ts)
+                            customerDao.adjustCustomerTotalDue(phone, -amt, ts)
+                        }
                     } catch (e: android.database.sqlite.SQLiteConstraintException) {
                         if (mode != BackupImportMode.MERGE) throw IllegalStateException("Failed to restore due payment: duplicate record conflict", e)
                     } catch (e: androidx.sqlite.SQLiteException) {
@@ -2723,6 +2747,10 @@ class DataRepository(
                         if (isDuplicate) continue
                     }
                     customerDueDao.insertDueCharge(charge)
+                    if (mode == BackupImportMode.MERGE && phone !in newlyInsertedDuePhones) {
+                        customerDueDao.adjustOutstandingDue(phone, amt, ts)
+                        customerDao.adjustCustomerTotalDue(phone, amt, ts)
+                    }
                 }
               }
 
@@ -2884,7 +2912,10 @@ class DataRepository(
                         notes = value.optString("notes").takeIf { it.isNotBlank() },
                         updatedAt = value.optLong("updatedAt", System.currentTimeMillis())
                     ))
-                    if (mode == BackupImportMode.MERGE) supplierIdMap[backupSupplierId] = newSupplierId
+                    if (mode == BackupImportMode.MERGE) {
+                        supplierIdMap[backupSupplierId] = newSupplierId
+                        newlyInsertedSupplierIds.add(newSupplierId)
+                    }
                 }
               }
               val purchaseInvoiceIdMap = mutableMapOf<Long, Long>()
@@ -2918,7 +2949,13 @@ class DataRepository(
                         timestamp = ts,
                         note = value.optString("note").takeIf { it.isNotBlank() }
                   ))
-                    if (mode == BackupImportMode.MERGE) purchaseInvoiceIdMap[backupInvoiceId] = newInvoiceId
+                    if (mode == BackupImportMode.MERGE) {
+                        purchaseInvoiceIdMap[backupInvoiceId] = newInvoiceId
+                        if (resolvedSupplierId !in newlyInsertedSupplierIds) {
+                            val dueChange = value.optDouble("dueAmount", 0.0)
+                            supplierDao.updateSupplierBalances(resolvedSupplierId, purchaseAmount = totalAmt, dueChange = dueChange, timestamp = ts)
+                        }
+                    }
                 }
               }
 
@@ -2977,6 +3014,9 @@ class DataRepository(
                         timestamp = ts,
                         performedByName = value.optString("performedByName").takeIf { it.isNotBlank() }
                     ))
+                    if (mode == BackupImportMode.MERGE && resolvedSupplierId !in newlyInsertedSupplierIds) {
+                        supplierDao.recordSupplierPayment(resolvedSupplierId, amtPaid, ts)
+                    }
                 }
               }
 
@@ -3017,13 +3057,23 @@ class DataRepository(
                 val array = backupJson.getJSONArray("customerLoyalty")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
-                    customerLoyaltyDao.upsertLoyalty(CustomerLoyalty(
-                        phone = normalizePhone(value.getString("phone")), name = value.optString("name", "Customer"),
+                    val phone = normalizePhone(value.getString("phone"))
+                    val loyalty = CustomerLoyalty(
+                        phone = phone, name = value.optString("name", "Customer"),
                         pointsBalance = value.optInt("pointsBalance", 0), tier = value.optString("tier", "Regular"),
                         lifetimeSpent = value.optDouble("lifetimeSpent", 0.0),
                         updatedAt = value.optLong("updatedAt", System.currentTimeMillis()),
                         isActive = value.optBoolean("isActive", true)
-                    ))
+                    )
+                    val existingLoyalty = customerLoyaltyDao.getLoyaltyByPhone(phone)
+                    if (mode == BackupImportMode.MERGE) {
+                        if (existingLoyalty == null) {
+                            customerLoyaltyDao.upsertLoyalty(loyalty)
+                            newlyInsertedLoyaltyPhones.add(phone)
+                        }
+                    } else {
+                        customerLoyaltyDao.upsertLoyalty(loyalty)
+                    }
                 }
               }
 
@@ -3058,6 +3108,10 @@ class DataRepository(
                         timestamp = ts,
                         performedByName = value.optString("performedByName").takeIf { it.isNotBlank() }
                     ))
+                    if (mode == BackupImportMode.MERGE && phone !in newlyInsertedLoyaltyPhones) {
+                        customerLoyaltyDao.addPoints(phone, pts, value.optDouble("spendChange", 0.0), ts)
+                        customerDao.adjustCustomerLoyaltyPoints(phone, pts, ts)
+                    }
                 }
               }
               if (backupJson.has("registerShiftState")) {
@@ -3137,8 +3191,9 @@ class DataRepository(
                 val array = backupJson.getJSONArray("customers")
                 for (i in 0 until array.length()) {
                     val value = array.getJSONObject(i)
-                    customerDao.upsertCustomer(Customer(
-                        phone = normalizePhone(value.getString("phone")),
+                    val phone = normalizePhone(value.getString("phone"))
+                    val customer = Customer(
+                        phone = phone,
                         name = value.optString("name", "Customer"),
                         email = value.optString("email").takeIf { it.isNotBlank() },
                         address = value.optString("address").takeIf { it.isNotBlank() },
@@ -3156,7 +3211,16 @@ class DataRepository(
                         createdAt = value.optLong("createdAt", System.currentTimeMillis()),
                         updatedAt = value.optLong("updatedAt", System.currentTimeMillis()),
                         isArchived = value.optBoolean("isArchived", false)
-                    ))
+                    )
+                    val existingCustomer = customerDao.getCustomerByPhone(phone)
+                    if (mode == BackupImportMode.MERGE) {
+                        if (existingCustomer == null) {
+                            customerDao.upsertCustomer(customer)
+                            newlyInsertedCustomerPhones.add(phone)
+                        }
+                    } else {
+                        customerDao.upsertCustomer(customer)
+                    }
                 }
               }
 
@@ -3177,6 +3241,7 @@ class DataRepository(
                       } else backupSaleId
 
                       val backupReturnId = obj.optLong("sourceReturnId").takeIf { obj.has("sourceReturnId") && !obj.isNull("sourceReturnId") }
+                          ?: obj.optLong("returnId").takeIf { obj.has("returnId") && !obj.isNull("returnId") }
                       val resolvedReturnId = if (mode == BackupImportMode.MERGE && backupReturnId != null) {
                           returnIdMap[backupReturnId]
                       } else backupReturnId
@@ -3243,6 +3308,9 @@ class DataRepository(
                           note = noteText,
                           timestamp = ts
                       ))
+                      if (mode == BackupImportMode.MERGE && phone !in newlyInsertedCustomerPhones) {
+                          customerDao.adjustCustomerStoreCredit(phone, delta, ts)
+                      }
                   }
               }
 
@@ -3326,12 +3394,30 @@ class DataRepository(
               }
 
               if (mode == BackupImportMode.MERGE) {
-                  recomputeAllDerivedBalances(
-                      newlyInsertedSaleItems,
-                      newlyInsertedReturnItems,
-                      newlyInsertedPurchaseItems,
-                      newlyInsertedAdjustments
-                  )
+                  val barcodeDeltas = mutableMapOf<String, Double>()
+                  for (item in newlyInsertedPurchaseItems) {
+                      val code = item.productBarcode.lowercase()
+                      if (code !in newlyInsertedProductBarcodes) {
+                          barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) + item.quantity
+                      }
+                  }
+                  for (item in newlyInsertedSaleItems) {
+                      val code = item.productBarcode.lowercase()
+                      if (code !in newlyInsertedProductBarcodes) {
+                          barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) - item.quantity
+                      }
+                  }
+                  for (adj in newlyInsertedAdjustments) {
+                      val code = adj.productBarcode.lowercase()
+                      if (code !in newlyInsertedProductBarcodes) {
+                          barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) + adj.difference
+                      }
+                  }
+                  for ((barcode, delta) in barcodeDeltas) {
+                      if (kotlin.math.abs(delta) > 0.0001) {
+                          productDao.adjustStockQty(barcode, delta, allowNegative = true)
+                      }
+                  }
               }
             }
 
@@ -3401,145 +3487,7 @@ class DataRepository(
         }
     }
 
-    private suspend fun recomputeAllDerivedBalances(
-        newlyInsertedSaleItems: List<SaleItem>,
-        newlyInsertedReturnItems: List<ReturnItem>,
-        newlyInsertedPurchaseItems: List<PurchaseInvoiceItem>,
-        newlyInsertedAdjustments: List<InventoryAdjustment>
-    ) {
-        // 1. Recompute Customer Dues
-        val allCustomersInDb = customerDao.getAllCustomersOnce()
-        val allDueCharges = customerDueDao.getAllDueChargesOnce()
-        val allDuePayments = customerDueDao.getAllDuePaymentsOnce()
 
-        val customerPhones = (allCustomersInDb.map { normalizePhone(it.phone) } +
-                allDueCharges.map { normalizePhone(it.customerPhone) } +
-                allDuePayments.map { normalizePhone(it.customerPhone) }).filter { it.isNotBlank() }.toSet()
-
-        for (phone in customerPhones) {
-            val totalCharges = allDueCharges.filter { normalizePhone(it.customerPhone) == phone }.sumOf { it.amount }
-            val totalPayments = allDuePayments.filter { normalizePhone(it.customerPhone) == phone }.sumOf { it.amountPaid }
-            val computedDue = (totalCharges - totalPayments).coerceAtLeast(0.0)
-
-            val existingDue = customerDueDao.getCustomerDueByPhone(phone)
-            val customerName = existingDue?.customerName
-                ?: allCustomersInDb.firstOrNull { normalizePhone(it.phone) == phone }?.name
-                ?: phone
-            customerDueDao.upsertCustomerDue(
-                CustomerDue(
-                    customerPhone = phone,
-                    customerName = customerName,
-                    outstandingAmount = computedDue,
-                    creditLimit = existingDue?.creditLimit ?: 0.0,
-                    createdAt = existingDue?.createdAt ?: System.currentTimeMillis(),
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
-            val customer = customerDao.getCustomerByPhone(phone)
-            if (customer != null) {
-                customerDao.updateCustomerTotalDue(phone, computedDue, System.currentTimeMillis())
-            }
-        }
-
-        // 2. Recompute Customer Loyalty
-        val allLoyaltyInDb = customerLoyaltyDao.getAllIncludingInactive()
-        val allLoyaltyTxns = loyaltyTransactionDao.getAllOnce()
-        val loyaltyPhones = (allLoyaltyInDb.map { normalizePhone(it.phone) } +
-                allLoyaltyTxns.map { normalizePhone(it.customerPhone) }).filter { it.isNotBlank() }.toSet()
-
-        val loyaltySettings = getLoyaltySettings()
-        for (phone in loyaltyPhones) {
-            val txns = allLoyaltyTxns.filter { normalizePhone(it.customerPhone) == phone }
-            val pts = maxOf(0, txns.sumOf { it.pointsChange })
-            val spend = maxOf(0.0, txns.sumOf { it.spendChange })
-            val existing = customerLoyaltyDao.getLoyaltyByPhone(phone)
-            val name = existing?.name ?: allCustomersInDb.firstOrNull { normalizePhone(it.phone) == phone }?.name ?: "Customer"
-            val calculatedTier = when {
-                !loyaltySettings.isTiersEnabled -> existing?.tier ?: "Regular"
-                spend >= loyaltySettings.platinumSpendThreshold -> "Platinum"
-                spend >= loyaltySettings.goldSpendThreshold -> "Gold"
-                spend >= loyaltySettings.silverSpendThreshold -> "Silver"
-                else -> "Regular"
-            }
-            val finalTier = if (getTierRank(calculatedTier) > getTierRank(existing?.tier)) calculatedTier else (existing?.tier ?: calculatedTier)
-
-            customerLoyaltyDao.upsertLoyalty(
-                CustomerLoyalty(
-                    phone = phone,
-                    name = name,
-                    pointsBalance = pts,
-                    tier = finalTier,
-                    lifetimeSpent = spend,
-                    updatedAt = System.currentTimeMillis(),
-                    isActive = existing?.isActive ?: true
-                )
-            )
-            val customer = customerDao.getCustomerByPhone(phone)
-            if (customer != null) {
-                customerDao.updateCustomerLoyalty(phone, pts, finalTier, System.currentTimeMillis())
-            }
-        }
-
-        // 3. Recompute Store Credit
-        val allLedgerEntries = storeCreditLedgerDao.getAllEntries()
-        val scPhones = (allCustomersInDb.map { normalizePhone(it.phone) } +
-                allLedgerEntries.map { normalizePhone(it.customerPhone) }).filter { it.isNotBlank() }.toSet()
-
-        for (phone in scPhones) {
-            val totalCredit = maxOf(0.0, allLedgerEntries.filter { normalizePhone(it.customerPhone) == phone }.sumOf { it.deltaAmount })
-            val customer = customerDao.getCustomerByPhone(phone)
-            if (customer != null) {
-                customerDao.updateCustomerStoreCredit(phone, totalCredit, System.currentTimeMillis())
-            }
-        }
-
-        // 4. Recompute Supplier Totals
-        val allSuppliers = supplierDao.getAllSuppliersOnce()
-        val allInvoices = purchaseInvoiceDao.getAllInvoicesOnce()
-        val allSupplierPayments = supplierDao.getAllSupplierPaymentsOnce()
-
-        for (supplier in allSuppliers) {
-            val supplierInvoices = allInvoices.filter { it.supplierId == supplier.id }
-            val totalPurchased = supplierInvoices.sumOf { it.totalAmount }
-            val totalInvoicePaid = supplierInvoices.sumOf { it.paidAmount }
-            val totalDirectPayments = allSupplierPayments.filter { it.supplierId == supplier.id }.sumOf { it.amountPaid }
-            val totalPaid = totalInvoicePaid + totalDirectPayments
-            val totalDue = (totalPurchased - totalPaid).coerceAtLeast(0.0)
-
-            supplierDao.upsertSupplier(
-                supplier.copy(
-                    totalPurchased = totalPurchased,
-                    totalDue = totalDue,
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
-        }
-
-        // 5. Recompute Product Stock Delta from Newly Inserted Transactions
-        val barcodeDeltas = mutableMapOf<String, Double>()
-        for (item in newlyInsertedPurchaseItems) {
-            val code = item.productBarcode.lowercase()
-            barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) + item.quantity
-        }
-        for (item in newlyInsertedSaleItems) {
-            val code = item.productBarcode.lowercase()
-            barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) - item.quantity
-        }
-        for (item in newlyInsertedReturnItems) {
-            val code = item.productBarcode.lowercase()
-            barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) + item.quantity
-        }
-        for (adj in newlyInsertedAdjustments) {
-            val code = adj.productBarcode.lowercase()
-            barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) + adj.difference
-        }
-
-        for ((barcode, delta) in barcodeDeltas) {
-            if (kotlin.math.abs(delta) > 0.0001) {
-                productDao.adjustStockQty(barcode, delta, allowNegative = true)
-            }
-        }
-    }
 
     suspend fun upsertProducts(products: List<Product>, presentFields: Set<String> = emptySet()) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)

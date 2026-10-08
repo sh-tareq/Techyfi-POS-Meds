@@ -15,6 +15,9 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE barcode = :barcode LIMIT 1")
     suspend fun getProductByBarcode(barcode: String): Product?
 
+    @Query("SELECT * FROM products WHERE LOWER(barcode) = LOWER(:barcode) LIMIT 1")
+    suspend fun getProductByBarcodeCaseInsensitive(barcode: String): Product?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProduct(product: Product)
 
@@ -249,6 +252,9 @@ interface CustomerDueDao {
 
     @Query("UPDATE customer_dues SET isArchived = 1, updatedAt = :timestamp WHERE customerPhone = :phone")
     suspend fun archiveCustomerDue(phone: String, timestamp: Long): Int
+
+    @Query("UPDATE customer_dues SET outstandingAmount = MAX(0.0, outstandingAmount + :delta), updatedAt = :timestamp WHERE customerPhone = :phone")
+    suspend fun adjustOutstandingDue(phone: String, delta: Double, timestamp: Long): Int
 
     @Transaction
     suspend fun recordDuePayment(
@@ -700,6 +706,12 @@ interface CustomerDao {
 
     @Query("UPDATE customers SET storeCredit = MAX(0.0, storeCredit + :delta), updatedAt = :timestamp WHERE phone = :phone")
     suspend fun adjustCustomerStoreCredit(phone: String, delta: Double, timestamp: Long): Int
+
+    @Query("UPDATE customers SET totalDue = MAX(0.0, totalDue + :delta), updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun adjustCustomerTotalDue(phone: String, delta: Double, timestamp: Long): Int
+
+    @Query("UPDATE customers SET loyaltyPoints = MAX(0, loyaltyPoints + :delta), updatedAt = :timestamp WHERE phone = :phone")
+    suspend fun adjustCustomerLoyaltyPoints(phone: String, delta: Int, timestamp: Long): Int
 }
 
 @Dao
