@@ -1190,7 +1190,14 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         y += 30f
     }
 
-    drawKeyValue("Gross Sales", formatTaka(data.totalRevenue))
+    drawKeyValue("Gross Sales", formatTaka(data.grossSales))
+    if (data.totalRefunds > 0.0) {
+        drawKeyValue("Returns / Refunds", "-${formatTaka(data.totalRefunds)}")
+    }
+    drawKeyValue("Net Sales", formatTaka(data.totalRevenue))
+    if (data.totalTax > 0.0) {
+        drawKeyValue("Tax (VAT)", formatTaka(data.totalTax))
+    }
     drawKeyValue("Discounts Given", formatTaka(data.totalDiscount))
     drawKeyValue("Gross Margin", formatTaka(data.totalProfit))
     drawKeyValue("Expenses", formatTaka(data.totalExpenses))
@@ -1373,7 +1380,14 @@ fun generateXReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         y += 30f
     }
 
-    drawKeyValue("Gross Sales", formatTaka(data.totalRevenue))
+    drawKeyValue("Gross Sales", formatTaka(data.grossSales))
+    if (data.totalRefunds > 0.0) {
+        drawKeyValue("Returns / Refunds", "-${formatTaka(data.totalRefunds)}")
+    }
+    drawKeyValue("Net Sales", formatTaka(data.totalRevenue))
+    if (data.totalTax > 0.0) {
+        drawKeyValue("Tax (VAT)", formatTaka(data.totalTax))
+    }
     drawKeyValue("Discounts Given", formatTaka(data.totalDiscount))
     drawKeyValue("Gross Margin", formatTaka(data.totalProfit))
     drawKeyValue("Expenses", formatTaka(data.totalExpenses))

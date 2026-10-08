@@ -263,4 +263,118 @@ object PaymentMath {
         }
         return dueAddition
     }
+
+    data class SimpleSalePayment(
+        val saleId: Long,
+        val paymentMethod: String,
+        val grandTotal: Double,
+        val splitPaymentJson: String? = null
+    )
+
+    data class SimpleReturnPayment(
+        val saleId: Long,
+        val refundMethod: String,
+        val refundAmount: Double,
+        val externalRefundAmount: Double = refundAmount,
+        val dueAdjustmentAmount: Double = 0.0
+    )
+
+    fun aggregatePaymentBreakdown(
+        sales: List<SimpleSalePayment>,
+        returns: List<SimpleReturnPayment>,
+        salesById: Map<Long, SimpleSalePayment> = sales.associateBy { it.saleId }
+    ): Map<String, Double> {
+        val paymentTotals = mutableMapOf<String, Double>()
+
+        // 1. Accumulate sales: break down Split payments into their actual component methods
+        for (sale in sales) {
+            if (sale.paymentMethod.equals("Split", ignoreCase = true) && !sale.splitPaymentJson.isNullOrBlank()) {
+                try {
+                    val arr = JSONArray(sale.splitPaymentJson)
+                    var parsedAny = false
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        val m = obj.optString("method", "").ifBlank { "Other" }
+                        val amt = obj.optDouble("amount", 0.0)
+                        if (amt > 0.0) {
+                            paymentTotals[m] = (paymentTotals[m] ?: 0.0) + amt
+                            parsedAny = true
+                        }
+                    }
+                    if (!parsedAny) {
+                        paymentTotals["Split"] = (paymentTotals["Split"] ?: 0.0) + sale.grandTotal
+                    }
+                } catch (_: Exception) {
+                    paymentTotals["Split"] = (paymentTotals["Split"] ?: 0.0) + sale.grandTotal
+                }
+            } else {
+                val key = sale.paymentMethod.ifBlank { "Other" }
+                paymentTotals[key] = (paymentTotals[key] ?: 0.0) + sale.grandTotal
+            }
+        }
+
+        // 2. Deduct returns according to actual refund method, not original sale method
+        for (ret in returns) {
+            val originalSale = salesById[ret.saleId]
+            val rMethod = ret.refundMethod.trim()
+
+            // Deduct due reduction from Due
+            if (ret.dueAdjustmentAmount > 0.0) {
+                paymentTotals["Due"] = (paymentTotals["Due"] ?: 0.0) - ret.dueAdjustmentAmount
+            }
+
+            // Deduct external refund from the actual payment method
+            val extAmount = ret.externalRefundAmount
+            if (extAmount > 0.0) {
+                when {
+                    rMethod.equals("Store Credit", ignoreCase = true) || rMethod.equals("Store credit", ignoreCase = true) -> {
+                        paymentTotals["Store Credit"] = (paymentTotals["Store Credit"] ?: 0.0) - extAmount
+                    }
+                    rMethod.equals("Cash", ignoreCase = true) -> {
+                        paymentTotals["Cash"] = (paymentTotals["Cash"] ?: 0.0) - extAmount
+                    }
+                    rMethod.startsWith("MFS", ignoreCase = true) ||
+                    rMethod.startsWith("Card", ignoreCase = true) ||
+                    rMethod.startsWith("bKash", ignoreCase = true) ||
+                    rMethod.startsWith("Nagad", ignoreCase = true) ||
+                    rMethod.startsWith("Rocket", ignoreCase = true) -> {
+                        paymentTotals[rMethod] = (paymentTotals[rMethod] ?: 0.0) - extAmount
+                    }
+                    rMethod.equals("Original method", ignoreCase = true) -> {
+                        if (originalSale != null) {
+                            if (originalSale.paymentMethod.equals("Split", ignoreCase = true) && !originalSale.splitPaymentJson.isNullOrBlank()) {
+                                try {
+                                    val arr = JSONArray(originalSale.splitPaymentJson)
+                                    val splitTotal = (0 until arr.length()).sumOf { arr.getJSONObject(it).optDouble("amount", 0.0) }
+                                    if (splitTotal > 0.0) {
+                                        for (i in 0 until arr.length()) {
+                                            val obj = arr.getJSONObject(i)
+                                            val m = obj.optString("method", "").ifBlank { "Other" }
+                                            val amt = obj.optDouble("amount", 0.0)
+                                            val share = extAmount * (amt / splitTotal)
+                                            paymentTotals[m] = (paymentTotals[m] ?: 0.0) - share
+                                        }
+                                    } else {
+                                        paymentTotals["Cash"] = (paymentTotals["Cash"] ?: 0.0) - extAmount
+                                    }
+                                } catch (_: Exception) {
+                                    paymentTotals["Cash"] = (paymentTotals["Cash"] ?: 0.0) - extAmount
+                                }
+                            } else {
+                                val origKey = originalSale.paymentMethod.ifBlank { "Cash" }
+                                paymentTotals[origKey] = (paymentTotals[origKey] ?: 0.0) - extAmount
+                            }
+                        } else {
+                            paymentTotals["Cash"] = (paymentTotals["Cash"] ?: 0.0) - extAmount
+                        }
+                    }
+                    else -> {
+                        paymentTotals[rMethod] = (paymentTotals[rMethod] ?: 0.0) - extAmount
+                    }
+                }
+            }
+        }
+
+        return paymentTotals
+    }
 }

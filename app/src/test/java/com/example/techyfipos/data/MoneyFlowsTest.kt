@@ -352,4 +352,44 @@ class MoneyFlowsTest {
         )
         assertEquals(0.0, dueCash, 0.001)
     }
+
+    @Test
+    fun `B-5 Z-report payment breakdown splits split-payment sales into individual methods`() {
+        val splitJson = """[{"method":"Cash","amount":100.0},{"method":"bKash","amount":200.0}]"""
+        val sales = listOf(
+            PaymentMath.SimpleSalePayment(
+                saleId = 1L,
+                paymentMethod = "Split",
+                grandTotal = 300.0,
+                splitPaymentJson = splitJson
+            )
+        )
+        val breakdown = PaymentMath.aggregatePaymentBreakdown(sales, emptyList())
+        assertEquals("Split bucket must not exist in breakdown", 0.0, breakdown["Split"] ?: 0.0, 0.001)
+        assertEquals("Cash amount must be 100.0", 100.0, breakdown["Cash"] ?: 0.0, 0.001)
+        assertEquals("bKash amount must be 200.0", 200.0, breakdown["bKash"] ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun `B-5 Z-report return attribution deducts store credit refund from Store Credit not Cash`() {
+        val sales = listOf(
+            PaymentMath.SimpleSalePayment(
+                saleId = 10L,
+                paymentMethod = "Cash",
+                grandTotal = 500.0
+            )
+        )
+        val returns = listOf(
+            PaymentMath.SimpleReturnPayment(
+                saleId = 10L,
+                refundMethod = "Store Credit",
+                refundAmount = 200.0,
+                externalRefundAmount = 200.0,
+                dueAdjustmentAmount = 0.0
+            )
+        )
+        val breakdown = PaymentMath.aggregatePaymentBreakdown(sales, returns)
+        assertEquals("Cash must remain 500.0 since refund was given as Store Credit", 500.0, breakdown["Cash"] ?: 0.0, 0.001)
+        assertEquals("Store Credit must reflect deduction (-200.0)", -200.0, breakdown["Store Credit"] ?: 0.0, 0.001)
+    }
 }

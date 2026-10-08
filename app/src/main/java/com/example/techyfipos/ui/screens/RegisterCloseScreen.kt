@@ -2681,7 +2681,10 @@ fun ZReportDialog(
                             text = stringResource(R.string.report_period_fmt, rangeLabel) + "\n" +
                                 "Invoices: ${data.transactionCount} | Units: ${data.itemsSold}\n" +
                                 "--------------------------------\n" +
-                                "Gross Sales:      ${formatTaka(data.totalRevenue)}\n" +
+                                "Gross Sales:      ${formatTaka(data.grossSales)}\n" +
+                                (if (data.totalRefunds > 0.0) "Returns/Refunds: -${formatTaka(data.totalRefunds)}\n" else "") +
+                                "Net Sales:        ${formatTaka(data.totalRevenue)}\n" +
+                                (if (data.totalTax > 0.0) "Tax (VAT):        ${formatTaka(data.totalTax)}\n" else "") +
                                 "Gross Margin:     ${formatTaka(data.totalProfit)}\n" +
                                 "Discounts Given:  ${formatTaka(data.totalDiscount)}\n" +
                                 "Expenses:         ${formatTaka(data.totalExpenses)}\n" +
@@ -2940,7 +2943,10 @@ private fun buildReportCsv(data: SalesReportData, rangeLabel: String): String {
     fun csv(value: Any): String = "\"${value.toString().replace("\"", "\"\"")}\""
     return buildString {
         appendLine("Report period,${csv(rangeLabel)}")
+        appendLine("Gross sales,${data.grossSales}")
+        appendLine("Returns & refunds,${data.totalRefunds}")
         appendLine("Net sales,${data.totalRevenue}")
+        appendLine("Tax (VAT),${data.totalTax}")
         appendLine("Gross margin,${data.totalProfit}")
         appendLine("Discounts,${data.totalDiscount}")
         appendLine("Expenses,${data.totalExpenses}")

@@ -2008,21 +2008,15 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         // even if the return happened later. This keeps the headline and every breakdown on the
         // same basis and prevents a return for an older invoice making today's revenue negative.
         val salesByIdAll = salesWithItems.value.associateBy { it.sale.id }
-        val salesByIdInPeriod = list.associateBy { it.sale.id }
-        val returnsInPeriod = allReturns.value.filter { it.saleId in salesByIdInPeriod }
+        // Reports reconcile with register close: returns occurring within [startMillis, endMillis)
+        // are applied according to when they impacted the till and actual refund payment methods.
+        val returnsInPeriod = allReturns.value.filter { it.timestamp in startMillis until endMillis }
         val totalRefunds = returnsInPeriod.sumOf { it.refundAmount }
 
-        // Returns must reduce every breakdown they touched originally (product rankings, payment
-        // mix, item counts, tax, daily/hourly), not just the headline revenue/profit figures —
-        // otherwise a heavily-returned product still looks like a best-seller and the sub-totals
-        // stop adding up to the headline numbers. Each return is attributed back to the day/hour/
-        // payment-method bucket of the ORIGINAL sale (where the revenue was first counted), not the
-        // day the return happened.
         var refundedProfit = 0.0
         var refundedTax = 0.0
         val returnedQtyByBarcode = mutableMapOf<String, Double>()
         val returnedRevenueByBarcode = mutableMapOf<String, Double>()
-        val returnedAmountByPaymentMethod = mutableMapOf<String, Double>()
         val returnedByDay = mutableMapOf<Long, Pair<Double, Double>>() // dayStart -> (revenue, profit)
         val returnedByHour = mutableMapOf<Int, Triple<Double, Double, Double>>() // hour -> (revenue, profit, itemsSold)
         for (ret in returnsInPeriod) {
@@ -2037,18 +2031,14 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
                     ?: getFallbackCost(item.productBarcode, item.price)
                 returnedCost += purchase * item.quantity
             }
-            // Profit reversed is the net revenue actually reversed minus the returned inventory's
-            // cost. This correctly accounts for sale-level discounts and tax.
+            // Profit reversed is the net revenue actually reversed minus the returned inventory's cost.
             val retTaxPortion = if (originalSaleAll != null && originalSaleAll.sale.grandTotal > 0.0) {
                 ret.refundAmount / originalSaleAll.sale.grandTotal * originalSaleAll.sale.taxAmount
             } else 0.0
             val thisReturnProfit = (ret.refundAmount - retTaxPortion) - returnedCost
             refundedProfit += thisReturnProfit
+            refundedTax += retTaxPortion
 
-            // Only adjust the period's own breakdowns when the original sale is itself part of
-            // this period (and thus already contributing to these same maps) — otherwise there is
-            // no existing bucket to subtract from.
-            val originalSaleInPeriod = salesByIdInPeriod[ret.saleId] ?: continue
             val rawReturnedValue = itemsForThisReturn.sumOf { it.price * it.quantity }
             for (item in itemsForThisReturn) {
                 val rawItemValue = item.price * item.quantity
@@ -2058,12 +2048,8 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
                 returnedQtyByBarcode[item.productBarcode] = (returnedQtyByBarcode[item.productBarcode] ?: 0.0) + item.quantity
                 returnedRevenueByBarcode[item.productBarcode] = (returnedRevenueByBarcode[item.productBarcode] ?: 0.0) + itemRevenue
             }
-            val paymentKey = originalSaleInPeriod.sale.paymentMethod.ifBlank { "Other" }
-            returnedAmountByPaymentMethod[paymentKey] = (returnedAmountByPaymentMethod[paymentKey] ?: 0.0) + ret.refundAmount
-            if (originalSaleInPeriod.sale.grandTotal > 0.0) {
-                refundedTax += ret.refundAmount / originalSaleInPeriod.sale.grandTotal * originalSaleInPeriod.sale.taxAmount
-            }
-            val cal = java.util.Calendar.getInstance().apply { timeInMillis = originalSaleInPeriod.sale.timestamp }
+
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = ret.timestamp }
             val dayStart = (cal.clone() as java.util.Calendar).apply {
                 set(java.util.Calendar.HOUR_OF_DAY, 0)
                 set(java.util.Calendar.MINUTE, 0)
@@ -2085,7 +2071,6 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
 
         var profitSum = 0.0
         val productTotals = linkedMapOf<String, ProductReportData>()
-        val paymentTotals = linkedMapOf<String, PaymentReportData>()
         val dailyTotals = sortedMapOf<Long, DailyReportData>()
         val hourlyTotals = (0..23).associateWith { hour ->
             val hourLabel = when (hour) {
@@ -2124,6 +2109,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         val productCosts = mutableMapOf<String, Double>()
         var itemsSold = 0.0
 
+        val methodTxCounts = mutableMapOf<String, Int>()
         for (swi in list) {
             val cal = java.util.Calendar.getInstance().apply {
                 timeInMillis = swi.sale.timestamp
@@ -2138,10 +2124,6 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             var saleProfit = 0.0
             var saleItemsQty = 0.0
             for (item in swi.items) {
-                // The cost recorded at the moment of this exact sale, when available, so editing a
-                // product's current purchase price (or deleting it) later never changes what a past
-                // report shows. Older rows written before this field existed fall back to a live
-                // lookup / estimate, same as before.
                 val purchase = item.purchasePriceAtSale ?: productCosts.getOrPut(item.productBarcode) {
                     repository.getProductByBarcode(item.productBarcode)?.purchasePrice
                         ?: getFallbackCost(item.productBarcode, item.price)
@@ -2168,13 +2150,20 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             }
             profitSum += saleProfit
 
-            val paymentKey = swi.sale.paymentMethod.ifBlank { "Other" }
-            val existingPayment = paymentTotals[paymentKey]
-            paymentTotals[paymentKey] = PaymentReportData(
-                method = paymentKey,
-                transactionCount = (existingPayment?.transactionCount ?: 0) + 1,
-                amount = (existingPayment?.amount ?: 0.0) + swi.sale.grandTotal
-            )
+            if (swi.sale.paymentMethod.equals("Split", ignoreCase = true) && !swi.sale.splitPaymentJson.isNullOrBlank()) {
+                try {
+                    val arr = org.json.JSONArray(swi.sale.splitPaymentJson)
+                    for (i in 0 until arr.length()) {
+                        val m = arr.getJSONObject(i).optString("method", "").ifBlank { "Other" }
+                        methodTxCounts[m] = (methodTxCounts[m] ?: 0) + 1
+                    }
+                } catch (_: Exception) {
+                    methodTxCounts["Split"] = (methodTxCounts["Split"] ?: 0) + 1
+                }
+            } else {
+                val m = swi.sale.paymentMethod.ifBlank { "Other" }
+                methodTxCounts[m] = (methodTxCounts[m] ?: 0) + 1
+            }
 
             val existingDay = dailyTotals[dayStart]
             dailyTotals[dayStart] = DailyReportData(
@@ -2195,17 +2184,13 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             }
         }
 
-        // Apply the return adjustments computed above to every breakdown they touched originally.
+        // Apply return adjustments
         returnedQtyByBarcode.forEach { (barcode, qty) ->
             val existing = productTotals[barcode] ?: return@forEach
             productTotals[barcode] = existing.copy(
                 quantity = (existing.quantity - qty).coerceAtLeast(0.0),
                 revenue = (existing.revenue - (returnedRevenueByBarcode[barcode] ?: 0.0)).coerceAtLeast(0.0)
             )
-        }
-        returnedAmountByPaymentMethod.forEach { (method, amount) ->
-            val existing = paymentTotals[method] ?: return@forEach
-            paymentTotals[method] = existing.copy(amount = (existing.amount - amount).coerceAtLeast(0.0))
         }
         returnedByDay.forEach { (day, revenueProfit) ->
             val existing = dailyTotals[day] ?: return@forEach
@@ -2223,12 +2208,52 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             )
         }
 
+        // Aggregate payment breakdown with split breakout and actual refund method deductions
+        val simpleSales = list.map {
+            com.example.techyfipos.utils.PaymentMath.SimpleSalePayment(
+                saleId = it.sale.id,
+                paymentMethod = it.sale.paymentMethod,
+                grandTotal = it.sale.grandTotal,
+                splitPaymentJson = it.sale.splitPaymentJson
+            )
+        }
+        val simpleReturns = returnsInPeriod.map {
+            com.example.techyfipos.utils.PaymentMath.SimpleReturnPayment(
+                saleId = it.saleId,
+                refundMethod = it.refundMethod,
+                refundAmount = it.refundAmount,
+                externalRefundAmount = it.externalRefundAmount,
+                dueAdjustmentAmount = it.dueAdjustmentAmount
+            )
+        }
+        val aggregatedPayments = com.example.techyfipos.utils.PaymentMath.aggregatePaymentBreakdown(
+            sales = simpleSales,
+            returns = simpleReturns,
+            salesById = salesByIdAll.mapValues {
+                com.example.techyfipos.utils.PaymentMath.SimpleSalePayment(
+                    saleId = it.value.sale.id,
+                    paymentMethod = it.value.sale.paymentMethod,
+                    grandTotal = it.value.sale.grandTotal,
+                    splitPaymentJson = it.value.sale.splitPaymentJson
+                )
+            }
+        )
+        val paymentBreakdownList = aggregatedPayments.map { (method, amt) ->
+            PaymentReportData(
+                method = method,
+                transactionCount = methodTxCounts[method] ?: 0,
+                amount = amt
+            )
+        }
+
         val ptCashVal = repository.getLoyaltySettings().pointCashValue.takeIf { it > 0.0 } ?: 1.0
         val totalLoyaltyDiscount = list.sumOf { it.sale.loyaltyPointsRedeemed * ptCashVal }
         val grossMargin = profitSum - refundedProfit
+        val grossSalesVal = totalRevenue
+        val netSalesVal = (totalRevenue - totalRefunds).coerceAtLeast(0.0)
         SalesReportData(
             transactionCount = list.size,
-            totalRevenue = totalRevenue - totalRefunds,
+            totalRevenue = netSalesVal,
             totalDiscount = totalDiscount,
             totalTax = (totalTax - refundedTax).coerceAtLeast(0.0),
             grossProfit = grossMargin,
@@ -2238,9 +2263,10 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             totalRefunds = totalRefunds,
             itemsSold = (itemsSold - totalReturnedQty).coerceAtLeast(0.0),
             topProducts = productTotals.values.sortedByDescending { it.revenue },
-            paymentBreakdown = paymentTotals.values.sortedByDescending { it.amount },
+            paymentBreakdown = paymentBreakdownList.sortedByDescending { it.amount },
             dailyBreakdown = dailyTotals.values.toList(),
-            hourlyBreakdown = hourlyTotals.values.toList()
+            hourlyBreakdown = hourlyTotals.values.toList(),
+            grossSales = grossSalesVal
         )
     }
 
@@ -2327,7 +2353,8 @@ data class SalesReportData(
     val topProducts: List<ProductReportData> = emptyList(),
     val paymentBreakdown: List<PaymentReportData> = emptyList(),
     val dailyBreakdown: List<DailyReportData> = emptyList(),
-    val hourlyBreakdown: List<HourlyReportData> = emptyList()
+    val hourlyBreakdown: List<HourlyReportData> = emptyList(),
+    val grossSales: Double = totalRevenue + totalRefunds
 ) {
     val totalProfit: Double get() = grossProfit
 }
