@@ -24,6 +24,12 @@ object DateFormatters {
     fun formatTime(timestamp: Long, locale: Locale = Locale.getDefault()): String =
         SimpleDateFormat("hh:mm a", locale).format(Date(timestamp))
 
+    fun formatShortDateTime(timestamp: Long, locale: Locale = Locale.getDefault()): String =
+        SimpleDateFormat("dd MMM, hh:mm a", locale).format(Date(timestamp))
+
+    fun formatLongDateTime(timestamp: Long, locale: Locale = Locale.getDefault()): String =
+        SimpleDateFormat("dd MMMM yyyy, hh:mm a", locale).format(Date(timestamp))
+
     fun formatISO(timestamp: Long = System.currentTimeMillis()): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(timestamp))
 

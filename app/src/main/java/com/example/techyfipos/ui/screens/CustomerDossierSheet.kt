@@ -42,9 +42,10 @@ import com.example.techyfipos.ui.viewmodel.CustomerDossierData
 import com.example.techyfipos.ui.viewmodel.CustomerTimelineEvent
 import com.example.techyfipos.ui.viewmodel.CustomerTimelineEventType
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.DateFormatters
+import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.utils.openPhoneDialer
 import com.example.techyfipos.utils.openWhatsAppChat
-import java.text.SimpleDateFormat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.techyfipos.data.SettingsDataStore
 import java.util.Date
@@ -95,7 +96,6 @@ fun CustomerDossierSheet(
     val aov = remember(customer.lifetimeSpent, customer.totalOrders) {
         if (customer.totalOrders > 0) customer.lifetimeSpent / customer.totalOrders else 0.0
     }
-    val dtFormat = remember { SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -180,7 +180,7 @@ fun CustomerDossierSheet(
                             ) {
                                 Text(
                                     text = customer.tag,
-                                    fontSize = 9.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = when (customer.tag) {
                                         "VIP" -> Color(0xFF8B5CF6)
@@ -315,19 +315,19 @@ fun CustomerDossierSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(R.string.customer_kpi_lifetime_spend), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.customer_kpi_lifetime_spend), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(formatTaka(customer.lifetimeSpent), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(R.string.customer_kpi_orders), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.customer_kpi_orders), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("${customer.totalOrders}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(R.string.customer_kpi_aov), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.customer_kpi_aov), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(formatTaka(aov), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(R.string.customer_kpi_loyalty), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.customer_kpi_loyalty), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(stringResource(R.string.customer_pts_suffix, customer.loyaltyPoints), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE5A100))
                     }
                 }
@@ -505,7 +505,7 @@ fun CustomerDossierSheet(
                                                     horizontalArrangement = Arrangement.SpaceBetween
                                                 ) {
                                                     Text(event.title, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                                    Text(dtFormat.format(Date(event.timestamp)), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    Text(DateFormatters.formatDateTime(event.timestamp), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                                 Text(event.description, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
@@ -550,10 +550,10 @@ fun CustomerDossierSheet(
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                                     Text(stringResource(R.string.invoice_id_fmt, sale.id), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                                    Text(stringResource(R.string.customer_dossier_tap_to_view_receipt), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.primary)
+                                                    Text(stringResource(R.string.customer_dossier_tap_to_view_receipt), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                                                 }
                                                 Text(
-                                                    "${dtFormat.format(Date(sale.timestamp))} • ${sale.paymentMethod} • ${pluralStringResource(R.plurals.items_count, saleWithItems.items.size, saleWithItems.items.size)}",
+                                                    "${DateFormatters.formatDateTime(sale.timestamp)} • ${sale.paymentMethod} • ${pluralStringResource(R.plurals.items_count, saleWithItems.items.size, saleWithItems.items.size)}",
                                                     fontSize = 10.5.sp,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
@@ -616,7 +616,7 @@ fun CustomerDossierSheet(
                                                 FilterChip(
                                                     selected = selectedNoteCategory == catKey,
                                                     onClick = { selectedNoteCategory = catKey },
-                                                    label = { Text(stringResource(catLabelRes), fontSize = 9.5.sp) }
+                                                    label = { Text(stringResource(catLabelRes), fontSize = 11.sp) }
                                                 )
                                             }
                                         }
@@ -732,7 +732,7 @@ fun CustomerDossierSheet(
                                                         Column {
                                                             Text(stringResource(R.string.customer_payment_method, p.paymentMethod), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                                             Text(
-                                                                "${dtFormat.format(Date(p.timestamp))}${if (!p.referenceNote.isNullOrBlank()) " • ${p.referenceNote}" else ""}",
+                                                                "${DateFormatters.formatDateTime(p.timestamp)}${if (!p.referenceNote.isNullOrBlank()) " • ${p.referenceNote}" else ""}",
                                                                 fontSize = 10.sp,
                                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                                             )
@@ -785,7 +785,7 @@ fun CustomerDossierSheet(
                                                                 fontSize = 12.sp
                                                             )
                                                             Text(
-                                                                "${dtFormat.format(Date(c.timestamp))}${if (!c.note.isNullOrBlank()) " • ${c.note}" else ""}",
+                                                                "${DateFormatters.formatDateTime(c.timestamp)}${if (!c.note.isNullOrBlank()) " • ${c.note}" else ""}",
                                                                 fontSize = 10.sp,
                                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                                             )
@@ -850,7 +850,7 @@ fun CustomerDossierSheet(
                                                         ) {
                                                             Text(
                                                                 text = "#${entry.referenceInvoiceId}",
-                                                                fontSize = 9.5.sp,
+                                                                fontSize = 11.sp,
                                                                 fontWeight = FontWeight.Bold,
                                                                 color = Color(0xFF4F46E5),
                                                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
@@ -860,7 +860,7 @@ fun CustomerDossierSheet(
                                                 }
                                                 Text(
                                                     text = buildString {
-                                                        append(dtFormat.format(Date(entry.timestamp)))
+                                                        append(DateFormatters.formatDateTime(entry.timestamp))
                                                         if (!entry.note.isNullOrBlank()) {
                                                             append(" • ")
                                                             append(entry.note)
@@ -880,7 +880,7 @@ fun CustomerDossierSheet(
                                                 )
                                                 Text(
                                                     text = stringResource(R.string.dossier_balance_abbrev, formatTaka(entry.balanceAfter)),
-                                                    fontSize = 9.5.sp,
+                                                    fontSize = 11.sp,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
@@ -935,9 +935,11 @@ fun CustomerReceiptPreviewDialog(
     var is80mm by remember { mutableStateOf(true) }
     var isBangla by remember { mutableStateOf(false) }
     val sale = saleWithItems.sale
-    val dtFormat = remember { SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -1001,18 +1003,18 @@ fun CustomerReceiptPreviewDialog(
                             color = Color.DarkGray
                         )
                         Text(
-                            text = stringResource(R.string.invoice_num_with_date_fmt, sale.id, dtFormat.format(Date(sale.timestamp))),
-                            fontSize = 9.sp,
+                            text = stringResource(R.string.invoice_num_with_date_fmt, sale.id, DateFormatters.formatDateTime(sale.timestamp)),
+                            fontSize = 11.sp,
                             color = Color.DarkGray
                         )
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = Color.Gray)
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(stringResource(R.string.customer_ledger_name, customerName), fontSize = 9.5.sp, color = Color.Black, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.customer_ledger_name, customerName), fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.SemiBold)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(stringResource(R.string.customer_ledger_phone, customerPhone), fontSize = 9.sp, color = Color.DarkGray)
+                            Text(stringResource(R.string.customer_ledger_phone, customerPhone), fontSize = 11.sp, color = Color.DarkGray)
                         }
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = Color.Gray)
@@ -1025,7 +1027,7 @@ fun CustomerReceiptPreviewDialog(
                             ) {
                                 Text(
                                     text = "${item.quantity.toInt()}x ${item.productName}",
-                                    fontSize = 9.5.sp,
+                                    fontSize = 11.sp,
                                     color = Color.Black,
                                     modifier = Modifier.weight(1f),
                                     maxLines = 1,
@@ -1033,7 +1035,7 @@ fun CustomerReceiptPreviewDialog(
                                 )
                                 Text(
                                     text = formatTaka(item.price * item.quantity),
-                                    fontSize = 9.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
                                 )
@@ -1048,8 +1050,8 @@ fun CustomerReceiptPreviewDialog(
                         }
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(if (isBangla) "পরিশোধিত (${sale.paymentMethod}):" else "PAID (${sale.paymentMethod}):", fontSize = 9.5.sp, color = Color.DarkGray)
-                            Text(formatTaka(sale.amountPaid), fontSize = 9.5.sp, color = Color.Black)
+                            Text(if (isBangla) "পরিশোধিত (${sale.paymentMethod}):" else "PAID (${sale.paymentMethod}):", fontSize = 11.sp, color = Color.DarkGray)
+                            Text(formatTaka(sale.amountPaid), fontSize = 11.sp, color = Color.Black)
                         }
 
                         val dueOnSale = (sale.grandTotal - sale.amountPaid).coerceAtLeast(0.0)
@@ -1063,7 +1065,7 @@ fun CustomerReceiptPreviewDialog(
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = if (isBangla) "আমাদের সাথে কেনাকাটা করার জন্য ধন্যবাদ!" else "Thank you for shopping with us!",
-                            fontSize = 8.5.sp,
+                            fontSize = 10.5.sp,
                             color = Color.Gray,
                             textAlign = TextAlign.Center
                         )
@@ -1116,6 +1118,7 @@ fun AdjustStoreCreditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("🪙", fontSize = 22.sp)

@@ -102,7 +102,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.annotation.StringRes
 import com.example.techyfipos.utils.*
-import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -323,10 +322,9 @@ fun DuesScreen(
         allPayments.filter { it.timestamp in startOfDay(paymentStart)..endOfDay(paymentEnd) }
             .sortedByDescending { it.timestamp }
     }
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
     val dateRangeLabel = remember(paymentStart, paymentEnd) {
-        val start = dateFormat.format(Date(paymentStart))
-        val end = dateFormat.format(Date(paymentEnd))
+        val start = DateFormatters.formatDate(paymentStart)
+        val end = DateFormatters.formatDate(paymentEnd)
         if (start == end) start else "$start – $end"
     }
 
@@ -377,7 +375,7 @@ fun DuesScreen(
                                             containerColor = MaterialTheme.colorScheme.error,
                                             contentColor = MaterialTheme.colorScheme.onError
                                         ) {
-                                            Text("${scheduledReminders.size}", fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                                            Text("${scheduledReminders.size}", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
@@ -389,7 +387,7 @@ fun DuesScreen(
                         // 3. Export Comprehensive Dues to Excel (.xlsx)
                         IconButton(
                             onClick = {
-                                val cleanDate = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
+                                val cleanDate = DateFormatters.formatExportDateTime()
                                 exportDuesExcelLauncher.launch("dues-ledger-$cleanDate.xlsx")
                             },
                             modifier = Modifier.size(48.dp)
@@ -410,7 +408,7 @@ fun DuesScreen(
                                 Icon(
                                     Icons.Default.PersonAdd,
                                     contentDescription = stringResource(R.string.dues_add_due_button),
-                                    tint = Color.White,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -420,7 +418,7 @@ fun DuesScreen(
                         IconButton(
                             onClick = {
                                 selectedCustomer?.let { c ->
-                                    val cleanDate = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
+                                    val cleanDate = DateFormatters.formatExportDate()
                                     val cleanPhone = c.customerPhone.filter { it.isDigit() }
                                     exportCustomerStatementExcelLauncher.launch("statement-$cleanPhone-$cleanDate.xlsx")
                                 }
@@ -518,11 +516,17 @@ fun DuesScreen(
                 modifier = Modifier.fillMaxSize().padding(paddingValues)
             )
         } else {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(paddingValues),
+                contentAlignment = Alignment.TopCenter
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 900.dp)
+                ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -621,8 +625,8 @@ fun DuesScreen(
                                             DuePeriodFilter.THIS_WEEK -> stringResource(R.string.dues_period_this_week)
                                             DuePeriodFilter.THIS_MONTH -> stringResource(R.string.dues_period_this_month)
                                             DuePeriodFilter.CUSTOM -> {
-                                                val s = dateFormat.format(Date(customDueStart ?: now))
-                                                val e = dateFormat.format(Date(customDueEnd ?: now))
+                                                val s = DateFormatters.formatDate(customDueStart ?: now)
+                                                val e = DateFormatters.formatDate(customDueEnd ?: now)
                                                 if (s == e) s else "$s – $e"
                                             }
                                         },
@@ -888,17 +892,17 @@ fun DuesScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(horizontalAlignment = Alignment.Start) {
-                                    Text("< 7 Days", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF059669))
+                                    Text("< 7 Days", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF059669))
                                     Text(formatTaka(currentDueTotal), fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 Box(modifier = Modifier.width(1.dp).height(20.dp).background(MaterialTheme.colorScheme.outlineVariant))
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("7–30 Days", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                                    Text("7–30 Days", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
                                     Text(formatTaka(moderateDueTotal), fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 Box(modifier = Modifier.width(1.dp).height(20.dp).background(MaterialTheme.colorScheme.outlineVariant))
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("> 30d Overdue", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFDC2626))
+                                    Text("> 30d Overdue", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFDC2626))
                                     Text(formatTaka(overdueDueTotal), fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFDC2626))
                                 }
                             }
@@ -1099,6 +1103,7 @@ fun DuesScreen(
                         }
                     }
                 }
+            }
             }
         }
     }
@@ -1362,6 +1367,7 @@ fun DuesScreen(
         val (dueCustomer, existingCustomer) = collisionMergeCustomer!!
         AlertDialog(
             onDismissRequest = { collisionMergeCustomer = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("🔗", fontSize = 20.sp)
@@ -1427,6 +1433,7 @@ fun DuesScreen(
         val hasDues = c.outstandingAmount > 0.001
         AlertDialog(
             onDismissRequest = { customerToDelete = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = {
                 Text(
                     text = if (hasDues) stringResource(R.string.dues_cannot_delete_title) else stringResource(R.string.dues_delete_ledger_title),
@@ -1473,6 +1480,7 @@ fun DuesScreen(
         val payment = paymentToDelete!!
         AlertDialog(
             onDismissRequest = { paymentToDelete = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.dues_delete_payment_title), fontWeight = FontWeight.Bold) },
             text = {
                 Text(stringResource(R.string.dues_delete_payment_confirm, formatTaka(payment.amountPaid)))
@@ -1506,6 +1514,7 @@ fun DuesScreen(
         val charge = chargeToDelete!!
         AlertDialog(
             onDismissRequest = { chargeToDelete = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.dues_delete_charge_title), fontWeight = FontWeight.Bold) },
             text = {
                 Text(
@@ -1642,16 +1651,15 @@ private fun shareCustomerStatement(
         if (payments.isEmpty()) {
             appendLine("  No payments recorded yet.")
         } else {
-            val sdf = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
             payments.forEach { p ->
-                appendLine("  • ${sdf.format(Date(p.timestamp))}: +${formatTaka(p.amountPaid)} (${p.paymentMethod})")
+                appendLine("  • ${DateFormatters.formatDateTime(p.timestamp)}: +${formatTaka(p.amountPaid)} (${p.paymentMethod})")
                 p.referenceNote?.takeIf { it.isNotBlank() }?.let { ref ->
                     appendLine("    Ref: $ref")
                 }
             }
         }
         appendLine("--------------------------------")
-        appendLine("Generated: ${SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date())}")
+        appendLine("Generated: ${DateFormatters.formatDateTime(System.currentTimeMillis())}")
         appendLine("Thank you for your business!")
     }
     shareReceiptAsText(context, statement)
@@ -1791,8 +1799,7 @@ fun SendDueReminderDialog(
             DueReminderScheduler.SchedulePreset.IN_3_DAYS -> if (isAppBangla) "৩ দিন পর" else "In 3 Days"
             DueReminderScheduler.SchedulePreset.WEEKLY -> if (isAppBangla) "সাপ্তাহিক" else "Weekly"
             DueReminderScheduler.SchedulePreset.CUSTOM -> {
-                val sdf = SimpleDateFormat("dd MMM, hh:mm a", if (isAppBangla) Locale.forLanguageTag("bn") else Locale.ENGLISH)
-                sdf.format(Date(customTargetMillis))
+                DateFormatters.formatShortDateTime(customTargetMillis, if (isAppBangla) Locale.forLanguageTag("bn") else Locale.ENGLISH)
             }
         }
         Toast.makeText(
@@ -1829,6 +1836,8 @@ fun SendDueReminderDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .widthIn(max = 700.dp)
+                .align(Alignment.CenterHorizontally)
                 .navigationBarsPadding()
         ) {
             // 1. Header Row
@@ -2202,12 +2211,10 @@ fun SendDueReminderDialog(
                             // Custom Date & Time Picker Container
                             if (selectedPreset == DueReminderScheduler.SchedulePreset.CUSTOM) {
                                 val customDateStr = remember(customTargetMillis, isAppBangla) {
-                                    val sdf = SimpleDateFormat("dd MMM yyyy", if (isAppBangla) Locale.forLanguageTag("bn") else Locale.ENGLISH)
-                                    sdf.format(Date(customTargetMillis))
+                                    DateFormatters.formatDate(customTargetMillis, if (isAppBangla) Locale.forLanguageTag("bn") else Locale.ENGLISH)
                                 }
                                 val customTimeStr = remember(customTargetMillis, isAppBangla) {
-                                    val sdf = SimpleDateFormat("hh:mm a", if (isAppBangla) Locale.forLanguageTag("bn") else Locale.ENGLISH)
-                                    sdf.format(Date(customTargetMillis))
+                                    DateFormatters.formatTime(customTargetMillis, if (isAppBangla) Locale.forLanguageTag("bn") else Locale.ENGLISH)
                                 }
                                 val diffMillis = (customTargetMillis - System.currentTimeMillis()).coerceAtLeast(0)
                                 val diffHoursTotal = diffMillis / (3600 * 1000L)
@@ -2279,8 +2286,8 @@ fun SendDueReminderDialog(
                                                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                                                     Text(
                                                         text = if (isAppBangla) "তারিখ (Date)" else "DATE",
-                                                        fontSize = 8.5.sp,
-                                                        lineHeight = 10.sp,
+                                                        fontSize = 11.sp,
+                                                        lineHeight = 13.sp,
                                                         color = Color(0xFF0369A1),
                                                         fontWeight = FontWeight.SemiBold
                                                     )
@@ -2340,8 +2347,8 @@ fun SendDueReminderDialog(
                                                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                                                     Text(
                                                         text = if (isAppBangla) "সময় (Time)" else "TIME",
-                                                        fontSize = 8.5.sp,
-                                                        lineHeight = 10.sp,
+                                                        fontSize = 11.sp,
+                                                        lineHeight = 13.sp,
                                                         color = Color(0xFF0369A1),
                                                         fontWeight = FontWeight.SemiBold
                                                     )
@@ -2410,13 +2417,13 @@ fun SendDueReminderDialog(
                                         ) {
                                             Text(
                                                 text = if (isAppBangla) "⏰ নির্ধারিত শিডিউল:" else "⏰ Target Time:",
-                                                fontSize = 9.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = Color(0xFF0369A1)
                                             )
                                             Text(
                                                 text = "$customDateStr • $customTimeStr ($timeDiffText)",
-                                                fontSize = 9.5.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(0xFF0284C7)
                                             )
@@ -2440,7 +2447,7 @@ fun SendDueReminderDialog(
                                     )
                                     Text(
                                         text = stringResource(R.string.dues_auto_sms_whatsapp_prompt),
-                                        fontSize = 9.5.sp,
+                                        fontSize = 11.sp,
                                         color = Color(0xFF0284C7),
                                         fontWeight = FontWeight.SemiBold
                                     )
@@ -2605,13 +2612,17 @@ fun ManageDueTemplatesDialog(
 ) {
     var editableList by remember { mutableStateOf(templates.toMutableList()) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(18.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp,
             modifier = Modifier
                 .fillMaxWidth()
+                .widthIn(max = 600.dp)
                 .fillMaxHeight(0.85f)
                 .padding(4.dp)
         ) {
@@ -2709,7 +2720,7 @@ fun ManageDueTemplatesDialog(
                                             next[index] = tpl.copy(nameBn = newBn)
                                             editableList = next
                                         },
-                                        label = { Text(stringResource(R.string.dues_bangla_name_label), fontSize = 9.sp) },
+                                        label = { Text(stringResource(R.string.dues_bangla_name_label), fontSize = 11.sp) },
                                         textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                         modifier = Modifier.weight(1f),
                                         singleLine = true
@@ -2721,7 +2732,7 @@ fun ManageDueTemplatesDialog(
                                             next[index] = tpl.copy(nameEn = newEn)
                                             editableList = next
                                         },
-                                        label = { Text(stringResource(R.string.dues_english_name_label), fontSize = 9.sp) },
+                                        label = { Text(stringResource(R.string.dues_english_name_label), fontSize = 11.sp) },
                                         textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                         modifier = Modifier.weight(1f),
                                         singleLine = true
@@ -2735,8 +2746,8 @@ fun ManageDueTemplatesDialog(
                                         next[index] = tpl.copy(textBn = newText)
                                         editableList = next
                                     },
-                                    label = { Text(stringResource(R.string.dues_bangla_message_text_label), fontSize = 9.sp) },
-                                    textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 10.5.sp),
+                                    label = { Text(stringResource(R.string.dues_bangla_message_text_label), fontSize = 11.sp) },
+                                    textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                     modifier = Modifier.fillMaxWidth(),
                                     maxLines = 3
                                 )
@@ -2748,8 +2759,8 @@ fun ManageDueTemplatesDialog(
                                         next[index] = tpl.copy(textEn = newText)
                                         editableList = next
                                     },
-                                    label = { Text(stringResource(R.string.dues_english_message_text_label), fontSize = 9.sp) },
-                                    textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 10.5.sp),
+                                    label = { Text(stringResource(R.string.dues_english_message_text_label), fontSize = 11.sp) },
+                                    textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                     modifier = Modifier.fillMaxWidth(),
                                     maxLines = 3
                                 )
@@ -2868,8 +2879,6 @@ fun DuesAuditHistorySheet(
         filteredEntries.filter { it.type == DuesAuditType.RETURN_ADJUSTMENT }.sumOf { it.amount }
     }
 
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()) }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -2926,17 +2935,17 @@ fun DuesAuditHistorySheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(horizontalAlignment = Alignment.Start) {
-                    Text(stringResource(R.string.dues_total_repaid_label), fontSize = 9.5.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.dues_total_repaid_label), fontSize = 11.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
                     Text(formatTaka(totalRepaidInView), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF059669))
                 }
                 Box(modifier = Modifier.width(1.dp).height(24.dp).background(MaterialTheme.colorScheme.outlineVariant))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(stringResource(R.string.dues_credit_given), fontSize = 9.5.sp, color = Color(0xFFD97706), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.dues_credit_given), fontSize = 11.sp, color = Color(0xFFD97706), fontWeight = FontWeight.Bold)
                     Text(formatTaka(totalCreditInView), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFD97706))
                 }
                 Box(modifier = Modifier.width(1.dp).height(24.dp).background(MaterialTheme.colorScheme.outlineVariant))
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(stringResource(R.string.dues_return_settled), fontSize = 9.5.sp, color = Color(0xFF2563EB), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.dues_return_settled), fontSize = 11.sp, color = Color(0xFF2563EB), fontWeight = FontWeight.Bold)
                     Text(formatTaka(totalReturnsInView), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF2563EB))
                 }
             }
@@ -3006,7 +3015,7 @@ fun DuesAuditHistorySheet(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filteredEntries, key = { it.id }) { entry ->
-                        DuesAuditCard(entry = entry, dateFormat = dateFormat)
+                        DuesAuditCard(entry = entry)
                     }
                 }
             }
@@ -3016,8 +3025,7 @@ fun DuesAuditHistorySheet(
 
 @Composable
 fun DuesAuditCard(
-    entry: DuesAuditEntry,
-    dateFormat: SimpleDateFormat
+    entry: DuesAuditEntry
 ) {
     val (badgeBg, badgeFg, typeLabel) = when (entry.type) {
         DuesAuditType.REPAYMENT -> Triple(Color(0xFFECFDF5), Color(0xFF059669), "Repayment")
@@ -3103,8 +3111,8 @@ fun DuesAuditCard(
                 )
 
                 Text(
-                    text = dateFormat.format(Date(entry.timestamp)),
-                    fontSize = 10.sp,
+                    text = DateFormatters.formatDateTime(entry.timestamp),
+                    fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.outline
                 )
             }
@@ -3143,11 +3151,11 @@ fun DuesReminderHubSheet(
     var selectedTab by remember { mutableIntStateOf(0) }
     var showClearAllConfirm by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val dateFormat = remember { SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()) }
 
     if (showClearAllConfirm) {
         AlertDialog(
             onDismissRequest = { showClearAllConfirm = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.dues_clear_reminder_logs)) },
             text = { Text(stringResource(R.string.confirm_delete)) },
             confirmButton = {
@@ -3291,8 +3299,8 @@ fun DuesReminderHubSheet(
                                                 color = MaterialTheme.colorScheme.outline
                                             )
                                             Text(
-                                                stringResource(R.string.dues_fires_at_label, dateFormat.format(Date(reminder.fireAt))),
-                                                fontSize = 10.5.sp,
+                                                stringResource(R.string.dues_fires_at_label, DateFormatters.formatShortDateTime(reminder.fireAt)),
+                                                fontSize = 11.sp,
                                                 color = Color(0xFF0284C7),
                                                 fontWeight = FontWeight.SemiBold
                                             )
@@ -3400,7 +3408,7 @@ fun DuesReminderHubSheet(
                                             ) {
                                                 Text(
                                                     text = log.channel,
-                                                    fontSize = 9.sp,
+                                                    fontSize = 11.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = when (log.channel.uppercase()) {
                                                         "WHATSAPP" -> Color(0xFF15803D)
@@ -3413,14 +3421,14 @@ fun DuesReminderHubSheet(
                                             Text(log.customerName, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                         }
                                         Text(
-                                            "${log.customerPhone} • ${formatTaka(log.dueAmount)} • ${dateFormat.format(Date(log.timestamp))}",
-                                            fontSize = 10.5.sp,
+                                            "${log.customerPhone} • ${formatTaka(log.dueAmount)} • ${DateFormatters.formatShortDateTime(log.timestamp)}",
+                                            fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.outline
                                         )
                                         if (log.messageText.isNotBlank()) {
                                             Text(
                                                 log.messageText,
-                                                fontSize = 10.sp,
+                                                fontSize = 11.sp,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
@@ -3521,10 +3529,10 @@ private fun DuesFilterBottomSheet(
                 ) {
                     listOf(
                         "" to stringResource(R.string.dues_all_amounts_label),
-                        "500" to "≥ ৳500",
-                        "1000" to "≥ ৳1,000",
-                        "2000" to "≥ ৳2,000",
-                        "5000" to "≥ ৳5,000"
+                        "500" to "≥ ${formatMoney(500.0)}",
+                        "1000" to "≥ ${formatMoney(1000.0)}",
+                        "2000" to "≥ ${formatMoney(2000.0)}",
+                        "5000" to "≥ ${formatMoney(5000.0)}"
                     ).forEach { (presetVal, label) ->
                         val isSelected = draftMin == presetVal
                         FilterChip(
@@ -3554,7 +3562,7 @@ private fun DuesFilterBottomSheet(
                 onValueChange = { draftMin = it.filter { ch -> ch.isDigit() || ch == '.' } },
                 label = { Text(stringResource(R.string.dues_custom_minimum_due_label)) },
                 placeholder = { Text(stringResource(R.string.dues_example_1500_placeholder)) },
-                prefix = { Text("৳ ", fontWeight = FontWeight.Bold) },
+                prefix = { Text("${formatMoney(0.0).take(1)} ", fontWeight = FontWeight.Bold) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 shape = RoundedCornerShape(12.dp),
@@ -3749,7 +3757,7 @@ private fun DuesExecutiveSummaryCard(
                             ) {
                                 Text(
                                     text = stringResource(R.string.dues_collected_this_month_label),
-                                    fontSize = 8.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFFDA4AF)
                                 )
@@ -3799,15 +3807,15 @@ private fun DuesExecutiveSummaryCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(stringResource(R.string.dues_total_credit_label), fontSize = 8.5.sp, color = Color(0xFFFECDD3), fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.dues_total_credit_label), fontSize = 11.sp, color = Color(0xFFFECDD3), fontWeight = FontWeight.Bold)
                             Text(formatTaka(totalCredit), fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(stringResource(R.string.dues_total_repaid_label), fontSize = 8.5.sp, color = Color(0xFFFECDD3), fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.dues_total_repaid_label), fontSize = 11.sp, color = Color(0xFFFECDD3), fontWeight = FontWeight.Bold)
                             Text(formatTaka(totalEverCollected), fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(stringResource(R.string.dues_recovery_percent_label), fontSize = 8.5.sp, color = Color(0xFFFECDD3), fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.dues_recovery_percent_label), fontSize = 11.sp, color = Color(0xFFFECDD3), fontWeight = FontWeight.Bold)
                             Text("${String.format(Locale.US, "%.1f", recoveryRate)}%", fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF34D399))
                         }
                     }
@@ -3895,14 +3903,14 @@ fun CustomerDueRow(
                                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     Realistic3DOverdueAlertIcon(size = 10.dp)
-                                    Text(stringResource(R.string.dues_overdue_badge), fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
+                                    Text(stringResource(R.string.dues_overdue_badge), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
                                 }
                             }
                         }
                     }
 
                     val updated = remember(customer.updatedAt) {
-                        SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(customer.updatedAt))
+                        DateFormatters.formatShortDate(customer.updatedAt)
                     }
                     Text(
                         text = "📞 ${customer.customerPhone} • $updated",
@@ -3928,7 +3936,7 @@ fun CustomerDueRow(
                         ) {
                             Text(
                                 text = stringResource(R.string.dues_overdue_badge),
-                                fontSize = 9.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFEF4444),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -3937,7 +3945,7 @@ fun CustomerDueRow(
                     } else if (repaidAmount > 0) {
                         Text(
                             text = stringResource(R.string.dues_repaid_amount_label, formatTaka(repaidAmount)),
-                            fontSize = 9.5.sp,
+                            fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.outline
                         )
                     }
@@ -4074,13 +4082,16 @@ fun AddDueDialog(
     val isOverLimit = limitVal > 0.0 && totalUpdatedDue > limitVal
     val limitRatio = if (limitVal > 0.0) (totalUpdatedDue / limitVal).toFloat().coerceIn(0f, 1f) else 0f
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(26.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
             shadowElevation = 16.dp,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().widthIn(max = 560.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -4109,7 +4120,7 @@ fun AddDueDialog(
                             Text(
                                 text = "DIGITAL KHATA CREDIT",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 9.5.sp,
+                                fontSize = 11.sp,
                                 color = Color(0xFFD97706),
                                 letterSpacing = 0.4.sp
                             )
@@ -4158,7 +4169,7 @@ fun AddDueDialog(
                                 ) {
                                     Text(
                                         text = name.take(1).uppercase().ifBlank { "C" },
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onPrimary,
                                         fontWeight = FontWeight.Black,
                                         fontSize = 13.sp
                                     )
@@ -4173,7 +4184,7 @@ fun AddDueDialog(
                                     Text(
                                         text = phone,
                                         fontFamily = FontFamily.Monospace,
-                                        fontSize = 10.sp,
+                                        fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.outline
                                     )
                                 }
@@ -4181,7 +4192,7 @@ fun AddDueDialog(
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
                                     text = "CURRENT DUE",
-                                    fontSize = 8.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.outline,
                                     letterSpacing = 0.3.sp
@@ -4208,7 +4219,7 @@ fun AddDueDialog(
                         ) {
                             Text(
                                 text = "CUSTOMER NAME *",
-                                fontSize = 8.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.outline,
                                 letterSpacing = 0.3.sp
@@ -4267,7 +4278,7 @@ fun AddDueDialog(
                         ) {
                             Text(
                                 text = "PHONE NUMBER *",
-                                fontSize = 8.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.outline,
                                 letterSpacing = 0.3.sp
@@ -4295,7 +4306,7 @@ fun AddDueDialog(
                                     )
                                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                         if (phone.isEmpty()) {
-                                            Text(
+                                             Text(
                                                 text = "017...",
                                                 fontSize = 11.5.sp,
                                                 maxLines = 1,
@@ -4341,15 +4352,15 @@ fun AddDueDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "💰 DUE AMOUNT (৳) *",
-                                fontSize = 9.sp,
+                                text = "💰 DUE AMOUNT (${formatMoney(0.0).take(1)}) *",
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFFD97706),
                                 letterSpacing = 0.4.sp
                             )
                             Text(
                                 text = stringResource(R.string.dues_enter_or_tap_preset),
-                                fontSize = 8.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -4372,7 +4383,7 @@ fun AddDueDialog(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    text = "৳",
+                                    text = formatMoney(0.0).take(1),
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color(0xFFD97706)
@@ -4522,13 +4533,13 @@ fun AddDueDialog(
                             ) {
                                 Text(
                                     text = stringResource(R.string.dues_credit_limit_val_fmt, formatTaka(limitVal)),
-                                    fontSize = 9.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.outline
                                 )
                                 Text(
                                     text = if (isOverLimit) "Limit Exceeded!" else "${(totalUpdatedDue / limitVal * 100).toInt()}% Used",
-                                    fontSize = 9.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isOverLimit) Color(0xFFF43F5E) else if (limitRatio >= 0.8f) Color(0xFFF59E0B) else Color(0xFF10B981)
                                 )
@@ -4558,7 +4569,7 @@ fun AddDueDialog(
                     ) {
                         Text(
                             text = "NOTE / MEMO (OPT)",
-                            fontSize = 8.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.outline,
                             letterSpacing = 0.3.sp
@@ -4609,8 +4620,8 @@ fun AddDueDialog(
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text(
-                            text = "CREDIT LIMIT (৳)",
-                            fontSize = 8.5.sp,
+                            text = "CREDIT LIMIT (${formatMoney(0.0).take(1)})",
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.outline,
                             letterSpacing = 0.3.sp
@@ -4630,7 +4641,7 @@ fun AddDueDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Text("৳", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                                Text(formatMoney(0.0).take(1), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
                                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                     if (creditLimit.isEmpty()) {
                                         Text(
@@ -4722,7 +4733,7 @@ fun AddDueDialog(
                             if (isSaving) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(15.dp),
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onPrimary,
                                     strokeWidth = 2.dp
                                 )
                                 Spacer(Modifier.width(4.dp))
@@ -4730,7 +4741,7 @@ fun AddDueDialog(
                                 Icon(
                                     Icons.Default.CheckCircle,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(Modifier.width(4.dp))
@@ -4813,14 +4824,14 @@ private fun PaymentHistoryRow(
                     fontSize = 13.5.sp
                 )
                 Text(
-                    text = "${payment.paymentMethod} • ${SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date(payment.timestamp))}",
-                    fontSize = 10.5.sp,
+                    text = "${payment.paymentMethod} • ${DateFormatters.formatDateTime(payment.timestamp)}",
+                    fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.outline
                 )
                 payment.referenceNote?.takeIf { it.isNotBlank() }?.let { ref ->
                     Text(
                         text = stringResource(R.string.dues_ref_label, ref),
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -4872,13 +4883,18 @@ fun CustomerDueDetailsView(
     }
     var showSetCreditLimitDialog by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .widthIn(max = 760.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
         // Account Statement Hero Card (Midnight Indigo Gradient)
         Surface(
             shape = RoundedCornerShape(20.dp),
@@ -5211,12 +5227,12 @@ fun CustomerDueDetailsView(
                                                     fontSize = 12.sp
                                                 )
                                                 Text(
-                                                    text = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date(payment.timestamp)),
-                                                    fontSize = 10.sp,
+                                                    text = DateFormatters.formatDateTime(payment.timestamp),
+                                                    fontSize = 11.sp,
                                                     color = MaterialTheme.colorScheme.outline
                                                 )
                                                 payment.referenceNote?.takeIf { it.isNotBlank() }?.let { ref ->
-                                                    Text(stringResource(R.string.dues_ref_label, ref), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.primary)
+                                                    Text(stringResource(R.string.dues_ref_label, ref), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                                                 }
                                             }
                                         }
@@ -5292,12 +5308,12 @@ fun CustomerDueDetailsView(
                                                 fontSize = 12.sp
                                             )
                                             Text(
-                                                text = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date(charge.timestamp)),
-                                                fontSize = 10.sp,
+                                                text = DateFormatters.formatDateTime(charge.timestamp),
+                                                fontSize = 11.sp,
                                                 color = MaterialTheme.colorScheme.outline
                                             )
                                             charge.note?.takeIf { it.isNotBlank() }?.let { n ->
-                                                Text(stringResource(R.string.dues_ref_label, n), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.primary)
+                                                Text(stringResource(R.string.dues_ref_label, n), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                                             }
                                         }
                                     }
@@ -5356,6 +5372,7 @@ fun CustomerDueDetailsView(
             Text(stringResource(R.string.dues_back_to_dues_list_button), fontWeight = FontWeight.Bold)
         }
     }
+    }
 
     if (canMutate && showSetCreditLimitDialog) {
         SetCreditLimitDialog(
@@ -5396,6 +5413,7 @@ fun RecordPaymentDialog(
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
+            dismissOnClickOutside = false,
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = true
         )
@@ -5408,6 +5426,7 @@ fun RecordPaymentDialog(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
                 modifier = Modifier
                     .fillMaxWidth(0.95f)
+                    .widthIn(max = 560.dp)
                     .padding(vertical = 12.dp)
             ) {
                 Column(
@@ -5517,7 +5536,7 @@ fun RecordPaymentDialog(
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
                                     text = stringResource(R.string.dues_unpaid_balance_label),
-                                    fontSize = 9.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     letterSpacing = 0.5.sp,
                                     color = Color(0xFFE11D48)
@@ -5604,7 +5623,7 @@ fun RecordPaymentDialog(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = "৳",
+                                    text = formatMoney(0.0).take(1),
                                     fontWeight = FontWeight.ExtraBold,
                                     color = if (isOverpaid) Color(0xFFEF4444) else Color(0xFF059669),
                                     fontSize = 22.sp
@@ -5921,7 +5940,7 @@ fun RecordPaymentDialog(
                                         Spacer(Modifier.height(3.dp))
                                         Text(
                                             text = stringResource(ch.labelRes),
-                                            fontSize = 9.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
                                             color = if (isSelected) ch.brandColor else MaterialTheme.colorScheme.onSurface,
                                             maxLines = 1,
@@ -6138,14 +6157,14 @@ fun DueRepaymentReceiptDialog(
             if (isReceiptBangla) {
                 appendLine("★ ${storeName.ifBlank { "TECHYFI STORE" }} ★")
                 appendLine("--- টাকা জমার রশিদ • বাকি আদায় ---")
-                appendLine("তারিখ: ${SimpleDateFormat("dd MMMM yyyy, hh:mm a", Locale.forLanguageTag("bn-BD")).format(Date(data.timestamp))}")
+                appendLine("তারিখ: ${DateFormatters.formatLongDateTime(data.timestamp)}")
                 appendLine("ভাউচার নং: REC-${data.timestamp % 1000000}")
                 appendLine("কাস্টমার: ${data.customerName}")
                 appendLine("মোবাইল: ${data.customerPhone}")
                 data.referenceNote?.takeIf { it.isNotBlank() }?.let { appendLine("রেফারেন্স: $it") }
                 appendLine("আগের বাকি: ${formatTakaBn(data.amountPaid + data.remainingDue)}")
                 appendLine("আজকের জমা: ${formatTakaBn(data.amountPaid)} (${if (data.paymentMethod.equals("Cash", ignoreCase = true)) "নগদ" else data.paymentMethod})")
-                appendLine("অবশিষ্ট বাকি: ${if (isSettled) "৳ ০ (সম্পূর্ণ পরিশোধ ✓)" else formatTakaBn(data.remainingDue)}")
+                appendLine("অবশিষ্ট বাকি: ${if (isSettled) "${formatTakaBn(0.0)} (সম্পূর্ণ পরিশোধ ✓)" else formatTakaBn(data.remainingDue)}")
                 appendLine(if (isSettled) "✔ বাকি সম্পূর্ণ পরিশোধ হয়েছে" else "⏳ আংশিক জমা নেওয়া হলো")
                 if (settings.showDueReceiptCustomNotes && settings.dueReceiptCustomNotes.isNotBlank()) {
                     appendLine("নোট: ${settings.dueReceiptCustomNotes}")
@@ -6154,14 +6173,14 @@ fun DueRepaymentReceiptDialog(
             } else {
                 appendLine("★ ${storeName.ifBlank { "TECHYFI STORE" }} ★")
                 appendLine("--- MONEY RECEIPT / DUE PAYMENT ---")
-                appendLine("Date: ${SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US).format(Date(data.timestamp))}")
+                appendLine("Date: ${DateFormatters.formatDateTime(data.timestamp, Locale.US)}")
                 appendLine("Voucher #: REC-${data.timestamp % 1000000}")
                 appendLine("Customer: ${data.customerName}")
                 appendLine("Phone: ${data.customerPhone}")
                 data.referenceNote?.takeIf { it.isNotBlank() }?.let { appendLine("Ref: $it") }
                 appendLine("Previous Due: ${formatTaka(data.amountPaid + data.remainingDue)}")
                 appendLine("Amount Paid: ${formatTaka(data.amountPaid)} (${data.paymentMethod})")
-                appendLine("Remaining Due: ${if (isSettled) "৳0 (Fully Settled ✓)" else formatTaka(data.remainingDue)}")
+                appendLine("Remaining Due: ${if (isSettled) "${formatTaka(0.0)} (Fully Settled ✓)" else formatTaka(data.remainingDue)}")
                 appendLine(if (isSettled) "✔ PAID IN FULL & SETTLED" else "⏳ PARTIAL PAYMENT RECEIVED")
                 if (settings.showDueReceiptCustomNotes && settings.dueReceiptCustomNotes.isNotBlank()) {
                     appendLine("Note: ${settings.dueReceiptCustomNotes}")
@@ -6173,7 +6192,10 @@ fun DueRepaymentReceiptDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false
+        )
     ) {
         com.example.techyfipos.LocaleWrapper(language = if (isAppBangla) "bn" else "en") {
             Surface(
@@ -6183,6 +6205,7 @@ fun DueRepaymentReceiptDialog(
                 shadowElevation = 18.dp,
                 modifier = Modifier
                     .fillMaxWidth(0.92f)
+                    .widthIn(max = 560.dp)
                     .wrapContentHeight()
                     .padding(vertical = 12.dp)
             ) {
@@ -6215,7 +6238,7 @@ fun DueRepaymentReceiptDialog(
                                 Text(
                                     text = if (isAppBangla) "বাকি পরিশোধের ভাউচার" else "DUE REPAYMENT VOUCHER",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 8.5.sp,
+                                    fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                     letterSpacing = 0.4.sp
                                 )
@@ -6244,7 +6267,7 @@ fun DueRepaymentReceiptDialog(
                                     ) {
                                         Text(
                                             text = "EN",
-                                            fontSize = 10.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Black,
                                             color = if (!isReceiptBangla) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -6258,7 +6281,7 @@ fun DueRepaymentReceiptDialog(
                                     ) {
                                         Text(
                                             text = "বাং",
-                                            fontSize = 10.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Black,
                                             color = if (isReceiptBangla) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -6307,7 +6330,7 @@ fun DueRepaymentReceiptDialog(
                             ) {
                                 Text(
                                     text = if (isAppBangla) "আজকের জমা:" else "Repaid:",
-                                    fontSize = 10.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF047857)
                                 )
@@ -6328,7 +6351,7 @@ fun DueRepaymentReceiptDialog(
                                     } else {
                                         if (isAppBangla) "⏳ আংশিক জমা" else "⏳ PARTIAL"
                                     },
-                                    fontSize = 8.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color.White,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -6372,7 +6395,7 @@ fun DueRepaymentReceiptDialog(
                                     )
                                     Text(
                                         text = "THERMAL DISPENSER ACTIVE",
-                                        fontSize = 8.5.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF94A3B8),
                                         letterSpacing = 0.4.sp
@@ -6387,10 +6410,10 @@ fun DueRepaymentReceiptDialog(
                                     FilterChip(
                                         selected = selectedRollWidth == 80,
                                         onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             selectedRollWidth = 80
                                         },
-                                        label = { Text("80mm", fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+                                        label = { Text("80mm", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                                         colors = FilterChipDefaults.filterChipColors(
                                             selectedContainerColor = Color(0xFF059669),
                                             selectedLabelColor = Color.White,
@@ -6406,7 +6429,7 @@ fun DueRepaymentReceiptDialog(
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             selectedRollWidth = 58
                                         },
-                                        label = { Text("58mm", fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+                                        label = { Text("58mm", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                                         colors = FilterChipDefaults.filterChipColors(
                                             selectedContainerColor = Color(0xFF059669),
                                             selectedLabelColor = Color.White,
@@ -6433,13 +6456,13 @@ fun DueRepaymentReceiptDialog(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = "SCALE: ",
-                                        fontSize = 8.5.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF64748B)
                                     )
                                     Text(
                                         text = "${(zoomScale * 100).toInt()}%",
-                                        fontSize = 8.5.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = Color(0xFF10B981)
                                     )
@@ -6482,7 +6505,7 @@ fun DueRepaymentReceiptDialog(
                                         ) {
                                             Text(
                                                 text = if (zoomScale != 1f) "🔎 Reset 1x" else "🔍 Zoom 1.35x",
-                                                fontSize = 8.5.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(0xFFCBD5E1)
                                             )
@@ -6579,7 +6602,7 @@ fun DueRepaymentReceiptDialog(
                                 Realistic3DClipboardCopyIcon(size = 18.dp, copied = isCopied)
                                 Text(
                                     text = if (isAppBangla) "রসিদের SMS / WhatsApp টেক্সট" else "Receipt SMS / WhatsApp Text",
-                                    fontSize = 9.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -6614,7 +6637,7 @@ fun DueRepaymentReceiptDialog(
                                         )
                                         Text(
                                             text = if (isAppBangla) "শেয়ার" else "Share",
-                                            fontSize = 8.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = Color(0xFF0284C7)
                                         )
@@ -6648,7 +6671,7 @@ fun DueRepaymentReceiptDialog(
                                             } else {
                                                 if (isAppBangla) "কপি" else "Copy"
                                             },
-                                            fontSize = 8.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = if (isCopied) Color.White else Color(0xFF10B981)
                                         )
@@ -6844,6 +6867,7 @@ fun SetCreditLimitDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("💳", fontSize = 20.sp)
@@ -6863,7 +6887,7 @@ fun SetCreditLimitDialog(
                     onValueChange = { text = it.filter { ch -> ch.isDigit() || ch == '.' } },
                     label = { Text(stringResource(R.string.dues_credit_limit_label)) },
                     placeholder = { Text(stringResource(R.string.dues_no_limit_placeholder)) },
-                    prefix = { Text("৳ ") },
+                    prefix = { Text("${formatMoney(0.0).take(1)} ") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
@@ -6879,7 +6903,7 @@ fun SetCreditLimitDialog(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("৳$preset", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                            Text(formatMoney(preset.toDouble()), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -6919,6 +6943,7 @@ fun EditDueCustomerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("✏️", fontSize = 18.sp)
@@ -6957,7 +6982,7 @@ fun EditDueCustomerDialog(
                     value = creditLimitStr,
                     onValueChange = { creditLimitStr = it.filter { ch -> ch.isDigit() || ch == '.' } },
                     label = { Text(stringResource(R.string.dues_credit_limit_label)) },
-                    prefix = { Text("৳ ") },
+                    prefix = { Text("${formatMoney(0.0).take(1)} ") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
