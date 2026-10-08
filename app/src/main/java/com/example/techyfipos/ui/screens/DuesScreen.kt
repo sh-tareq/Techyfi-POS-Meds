@@ -1678,8 +1678,8 @@ enum class ReminderLanguage(val titleBn: String, val titleEn: String) {
 
 enum class DeliveryChannel(val titleBn: String, val titleEn: String, val id: String, val hintBn: String, val hintEn: String) {
     WHATSAPP("WhatsApp", "WhatsApp", "wa", "নির্ধারিত সময়ে WhatsApp পাঠানোর নোটিফিকেশন আসবে", "Triggers WhatsApp notification prompt"),
-    SMS("SMS", "SMS", "sms", "নির্ধারিত সময়ে ব্যাকগ্রাউন্ডে স্বয়ংক্রিয় SMS পাঠানো হবে", "Auto-dispatches SMS in background"),
-    BOTH("উভয় (Both)", "Both", "both", "স্বয়ংক্রিয় SMS + WhatsApp নোটিফিকেশন পাঠানো হবে", "Auto SMS + WhatsApp Prompt")
+    SMS("SMS", "SMS", "sms", "নির্ধারিত সময়ে SMS পাঠানোর নোটিফিকেশন আসবে", "Triggers SMS notification prompt"),
+    BOTH("উভয় (Both)", "Both", "both", "SMS ও WhatsApp নোটিফিকেশন প্রম্পট আসবে", "SMS & WhatsApp notification prompts")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -3491,7 +3491,6 @@ class DataRepository(
               }
 
               // Restore expense audit logs
-              val existingExpenseAuditLogsInDb = if (mode == BackupImportMode.MERGE) expenseDao.getAllExpensesOnce() else emptyList()
               val existingExpenseAuditLogsOnceInDb = if (mode == BackupImportMode.MERGE) expenseAuditLogDao.getAllAuditLogsOnce() else emptyList()
               backupJson.optJSONArray("expenseAuditLogs")?.let { arr ->
                   for (i in 0 until arr.length()) {
