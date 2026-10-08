@@ -27,7 +27,10 @@ internal fun buildBackwardCompatibleSale(
     loyaltyPhone: String? = null,
     loyaltyPointsRedeemed: Int = 0,
     storeCreditApplied: Double? = null,
-    isTaxInclusive: Boolean? = null
+    isTaxInclusive: Boolean? = null,
+    voucherCode: String? = null,
+    voucherAmount: Double? = null,
+    customerCreditAmount: Double? = null
 ): Sale {
     val restoredGrandTotal = (grandTotal ?: legacyTotal ?: 0.0).coerceAtLeast(0.0)
     val restoredDiscount = (discountAmount ?: 0.0).coerceAtLeast(0.0)
@@ -62,7 +65,10 @@ internal fun buildBackwardCompatibleSale(
         loyaltyPhone = loyaltyPhone?.trim()?.takeIf { it.isNotEmpty() && it != "null" },
         loyaltyPointsRedeemed = loyaltyPointsRedeemed.coerceAtLeast(0),
         storeCreditApplied = (storeCreditApplied ?: 0.0).coerceAtLeast(0.0),
-        isTaxInclusive = isTaxInclusive ?: false
+        isTaxInclusive = isTaxInclusive ?: false,
+        voucherCode = voucherCode?.trim()?.takeIf { it.isNotEmpty() && it != "null" },
+        voucherAmount = (voucherAmount ?: 0.0).coerceAtLeast(0.0),
+        customerCreditAmount = (customerCreditAmount ?: 0.0).coerceAtLeast(0.0)
     )
 }
 

@@ -584,7 +584,7 @@ class DataRepository(
 
                 val scApplied = sale.storeCreditApplied
                 if (scApplied > 0.0) {
-                    val vCodeFromSale = sale.splitPaymentJson?.let { json ->
+                    val vCodeFromSale = sale.voucherCode ?: sale.splitPaymentJson?.let { json ->
                         try {
                             val array = JSONArray(json)
                             (0 until array.length()).firstNotNullOfOrNull { i ->
@@ -611,13 +611,15 @@ class DataRepository(
                         val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
                         if (voucher != null && voucher.status != "CANCELLED") {
                             val maxRestoreToVoucher = (voucher.initialAmount - voucher.remainingBalance).coerceAtLeast(0.0)
-                            val voucherSpentInThisSale = voucherDeductionFromSplit ?: minOf(scApplied, maxRestoreToVoucher)
+                            val voucherSpentInThisSale = if (sale.voucherAmount > 0.0) sale.voucherAmount else voucherDeductionFromSplit ?: minOf(scApplied, maxRestoreToVoucher)
                             voucherPortion = minOf(scApplied, voucherSpentInThisSale, maxRestoreToVoucher)
 
                             val isExpired = voucher.expiresAt != null && voucher.expiresAt > 0L && voucher.expiresAt < System.currentTimeMillis()
                             if (isExpired || voucher.status == "EXPIRED") {
                                 if (!phone.isNullOrBlank()) {
                                     redirectedExpiredVoucherCredit = voucherPortion
+                                    voucherPortion = 0.0
+                                } else {
                                     voucherPortion = 0.0
                                 }
                             }
@@ -926,6 +928,8 @@ class DataRepository(
             }
             var activeVoucherForPlainSC: StoreCreditVoucher? = null
             var customerCreditToDeduct = 0.0
+            var finalVoucherCode: String? = null
+            var finalVoucherAmount = 0.0
             if (storeCreditToUse > 0.0) {
                 val vCodeInSplit = splitEntries?.firstNotNullOfOrNull { it.optString("voucherCode", "").takeIf { c -> c.isNotBlank() } }
                 val targetVCode = vCodeInSplit ?: appliedVoucherCode
@@ -949,6 +953,8 @@ class DataRepository(
                     customerCreditToDeduct = (storeCreditToUse - voucherDeduct).coerceAtLeast(0.0)
 
                     if (voucherDeduct > 0.0) {
+                        finalVoucherCode = cleanCode
+                        finalVoucherAmount = voucherDeduct
                         val newBalance = (voucher.remainingBalance - voucherDeduct).coerceAtLeast(0.0)
                         val newStatus = if (newBalance < 0.01) "EXHAUSTED" else "ACTIVE"
                         storeCreditVoucherDao.updateVoucherBalance(voucher.code, newBalance, newStatus)
@@ -1018,6 +1024,8 @@ class DataRepository(
                 }
 
             val timestamp = System.currentTimeMillis()
+            val finalCustomerCreditAmount = customerCreditToDeduct
+
             val sale = Sale(
                 timestamp = timestamp,
                 subtotal = subtotal,
@@ -1033,26 +1041,16 @@ class DataRepository(
                 cardLastFour = cardLastFour,
                 taxRate = taxRate,
                 taxAmount = taxAmount,
-                splitPaymentJson = if (paymentMethod.equals("Split", ignoreCase = true)) {
-                    splitPaymentJson
-                } else if (paymentMethod.equals("Store Credit", ignoreCase = true) && !splitPaymentJson.isNullOrBlank()) {
-                    try {
-                        val arr = JSONArray(splitPaymentJson)
-                        val hasScOrVoucher = (0 until arr.length()).any { i ->
-                            val obj = arr.getJSONObject(i)
-                            obj.optString("method").equals("Store Credit", ignoreCase = true) || obj.has("voucherCode")
-                        }
-                        if (hasScOrVoucher) splitPaymentJson else null
-                    } catch (_: Exception) { null }
-                } else {
-                    null
-                },
+                splitPaymentJson = if (paymentMethod.equals("Split", ignoreCase = true)) splitPaymentJson else null,
                 performedByUserId = sessionUser?.id,
                 performedByName = sessionUser?.name,
                 loyaltyPhone = normalizedLoyaltyPhone?.takeIf { loyaltyPointsToRedeem > 0 },
                 loyaltyPointsRedeemed = loyaltyPointsToRedeem,
                 storeCreditApplied = storeCreditToUse,
-                isTaxInclusive = isTaxInclusive
+                isTaxInclusive = isTaxInclusive,
+                voucherCode = finalVoucherCode,
+                voucherAmount = finalVoucherAmount,
+                customerCreditAmount = finalCustomerCreditAmount
             )
             val saleId = try {
                 saleDao.insertSale(sale)
@@ -2315,6 +2313,9 @@ class DataRepository(
                     put("loyaltyPointsRedeemed", swi.sale.loyaltyPointsRedeemed)
                     put("storeCreditApplied", swi.sale.storeCreditApplied)
                     put("isTaxInclusive", swi.sale.isTaxInclusive)
+                    put("voucherCode", swi.sale.voucherCode ?: JSONObject.NULL)
+                    put("voucherAmount", swi.sale.voucherAmount)
+                    put("customerCreditAmount", swi.sale.customerCreditAmount)
                 }
                 val itemsArray = JSONArray()
                 for (item in swi.items) {
@@ -2809,7 +2810,10 @@ class DataRepository(
                         loyaltyPhone = s.optString("loyaltyPhone"),
                         loyaltyPointsRedeemed = s.optInt("loyaltyPointsRedeemed", 0),
                         storeCreditApplied = s.optionalDouble("storeCreditApplied"),
-                        isTaxInclusive = s.optionalBoolean("isTaxInclusive")
+                        isTaxInclusive = s.optionalBoolean("isTaxInclusive"),
+                        voucherCode = if (s.has("voucherCode") && !s.isNull("voucherCode")) s.optString("voucherCode").takeIf { it.isNotBlank() } else null,
+                        voucherAmount = s.optionalDouble("voucherAmount"),
+                        customerCreditAmount = s.optionalDouble("customerCreditAmount")
                     )
                     val saleId = try {
                         saleDao.insertSale(sale)
@@ -4173,7 +4177,7 @@ class DataRepository(
             }
 
             if (scToRestore > 0.0) {
-                val vCodeFromSale = sale.splitPaymentJson?.let { json ->
+                val vCodeFromSale = sale.voucherCode ?: sale.splitPaymentJson?.let { json ->
                     try {
                         val array = org.json.JSONArray(json)
                         (0 until array.length()).firstNotNullOfOrNull { i ->
@@ -4206,7 +4210,7 @@ class DataRepository(
                     val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
                     if (voucher != null && voucher.status != "CANCELLED") {
                         val maxRestoreToVoucher = (voucher.initialAmount - voucher.remainingBalance).coerceAtLeast(0.0)
-                        val voucherSpentInThisSale = voucherDeductionFromSplit ?: minOf(sale.storeCreditApplied, maxRestoreToVoucher)
+                        val voucherSpentInThisSale = if (sale.voucherAmount > 0.0) sale.voucherAmount else voucherDeductionFromSplit ?: minOf(sale.storeCreditApplied, maxRestoreToVoucher)
                         val voucherRemainingToRestore = (voucherSpentInThisSale - voucherRestoredSoFar).coerceAtLeast(0.0)
                         voucherPortion = minOf(scToRestore, voucherRemainingToRestore, maxRestoreToVoucher)
 
@@ -4214,6 +4218,8 @@ class DataRepository(
                         if (isExpired || voucher.status == "EXPIRED") {
                             if (!phone.isNullOrBlank()) {
                                 redirectedExpiredVoucherCredit = voucherPortion
+                                voucherPortion = 0.0
+                            } else {
                                 voucherPortion = 0.0
                             }
                         }

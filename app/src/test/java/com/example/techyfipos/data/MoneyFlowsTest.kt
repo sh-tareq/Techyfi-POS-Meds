@@ -677,7 +677,21 @@ class MoneyFlowsTest {
             refunds = 100.0,
             expenses = 50.0
         )
-        // netCollections = 1000 + 300 - 100 - 50 - 200 = 950.0
-        assertEquals(950.0, daily.netCollections, 0.001)
+        // B-5b: revenue is already net of refunds, so netCollections must not subtract refunds a second time:
+        // netCollections = 1000 + 300 - 50 - 200 = 1050.0
+        assertEquals("netCollections must not double-subtract refunds", 1050.0, daily.netCollections, 0.001)
+    }
+
+    @Test
+    fun `B-5a local-day bucketing vs UTC division for dues and expenses at UTC+6`() {
+        val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Dhaka")).apply {
+            set(2026, java.util.Calendar.OCTOBER, 9, 2, 0, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val ts = cal.timeInMillis // 2:00 AM on Oct 9 in Dhaka (which is 8:00 PM on Oct 8 in UTC)
+        val localMidnight = com.example.techyfipos.utils.startOfDay(ts)
+        val utcDiv = (ts / 86400000L) * 86400000L
+        // Verify that UTC division is NOT equal to local midnight (it falls on previous UTC day)
+        org.junit.Assert.assertNotEquals("UTC division does not equal local midnight at UTC+6", localMidnight, utcDiv)
     }
 }

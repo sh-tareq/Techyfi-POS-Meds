@@ -2231,21 +2231,21 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             )
         }
         duePaymentsInPeriod.forEach { dp ->
-            val dayStart = (dp.timestamp / 86400000L) * 86400000L
+            val dayStart = com.example.techyfipos.utils.startOfDay(dp.timestamp)
             val existing = dailyTotals[dayStart]
             if (existing != null) {
                 dailyTotals[dayStart] = existing.copy(dueCollected = existing.dueCollected + dp.amountPaid)
             }
         }
         supplierPaymentsInPeriod.forEach { sp ->
-            val dayStart = (sp.timestamp / 86400000L) * 86400000L
+            val dayStart = com.example.techyfipos.utils.startOfDay(sp.timestamp)
             val existing = dailyTotals[dayStart]
             if (existing != null) {
                 dailyTotals[dayStart] = existing.copy(supplierPayments = existing.supplierPayments + sp.amount)
             }
         }
         expensesList.filter { it.type == "EXPENSE" && it.category != "Supplier Payment" }.forEach { exp ->
-            val dayStart = (exp.timestamp / 86400000L) * 86400000L
+            val dayStart = com.example.techyfipos.utils.startOfDay(exp.timestamp)
             val existing = dailyTotals[dayStart]
             if (existing != null) {
                 dailyTotals[dayStart] = existing.copy(expenses = existing.expenses + exp.amount)
@@ -2455,7 +2455,7 @@ data class DailyReportData(
     val refunds: Double = 0.0,
     val expenses: Double = 0.0
 ) {
-    val netCollections: Double get() = (revenue + dueCollected - refunds - expenses - supplierPayments)
+    val netCollections: Double get() = (revenue + dueCollected - expenses - supplierPayments)
 }
 
 enum class DuesAuditType {

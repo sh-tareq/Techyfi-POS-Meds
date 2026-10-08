@@ -1184,5 +1184,51 @@ class MoneyFlowsIntegrationTest {
         val cashAmount = breakdown["Cash"] ?: 0.0
         org.junit.Assert.assertEquals(300.0, cashAmount, 0.001)
     }
+
+    @Test
+    fun testM3_pureStoreCreditSaleWithVoucherRecordsColumnsOnSaleAndRestoresOnVoid() = runBlocking {
+        val prod = Product(barcode = "m3_pure_prod", name = "M3 Pure Item", category = "General", purchasePrice = 50.0, sellingPrice = 100.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+        val phone = "01700000078"
+        repository.upsertCustomer(Customer(phone = phone, name = "M3 Pure Cust", storeCredit = 40.0))
+
+        val voucher = StoreCreditVoucher(code = "VOUCH-M3-PURE", initialAmount = 100.0, remainingBalance = 60.0, status = "ACTIVE")
+        database.storeCreditVoucherDao().insertVoucher(voucher)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 100.0,
+            paymentMethod = "Store Credit",
+            customerName = "M3 Pure Cust",
+            customerPhone = phone,
+            amountPaid = 100.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            storeCreditApplied = 100.0,
+            appliedVoucherCode = "VOUCH-M3-PURE"
+        )
+
+        val sale = database.saleDao().getSaleWithItemsById(saleId)?.sale!!
+        assertEquals("VOUCH-M3-PURE", sale.voucherCode)
+        assertEquals(60.0, sale.voucherAmount, 0.001)
+        assertEquals(40.0, sale.customerCreditAmount, 0.001)
+        org.junit.Assert.assertNull("Pure Store Credit must have null splitPaymentJson (N-5)", sale.splitPaymentJson)
+
+        val voucherMid = database.storeCreditVoucherDao().getVoucherByCode("VOUCH-M3-PURE")!!
+        val custMid = repository.getCustomerByPhone(phone)!!
+        assertEquals(0.0, voucherMid.remainingBalance, 0.001)
+        assertEquals(0.0, custMid.storeCredit, 0.001)
+
+        repository.deleteSale(saleId)
+
+        val voucherAfter = database.storeCreditVoucherDao().getVoucherByCode("VOUCH-M3-PURE")!!
+        val custAfter = repository.getCustomerByPhone(phone)!!
+        assertEquals(60.0, voucherAfter.remainingBalance, 0.001)
+        assertEquals(40.0, custAfter.storeCredit, 0.001)
+    }
 }
 
