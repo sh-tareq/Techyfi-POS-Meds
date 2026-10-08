@@ -604,21 +604,44 @@ class DataRepository(
                         } catch (_: Exception) { null }
                     } ?: storeCreditLedgerDao.getEntriesForInvoiceOnce(saleId).firstNotNullOfOrNull { it.voucherCode?.takeIf { c -> c.isNotBlank() } }
 
+                    val voucherDeductionFromSplit = sale.splitPaymentJson?.let { json ->
+                        try {
+                            val array = JSONArray(json)
+                            (0 until array.length()).map { array.getJSONObject(it) }
+                                .filter { it.optString("voucherCode", "").isNotBlank() }
+                                .sumOf { it.optDouble("amount", 0.0) }
+                        } catch (_: Exception) { null }
+                    }?.takeIf { it > 0.0 }
+
                     var voucherPortion = 0.0
                     if (!vCodeFromSale.isNullOrBlank()) {
                         val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
-                        if (voucher != null) {
+                        if (voucher != null && voucher.status != "CANCELLED") {
                             val maxRestoreToVoucher = (voucher.initialAmount - voucher.remainingBalance).coerceAtLeast(0.0)
-                            voucherPortion = minOf(scApplied, maxRestoreToVoucher)
-                            val restoredBal = voucher.remainingBalance + voucherPortion
-                            val isExpired = voucher.expiresAt != null && voucher.expiresAt > 0L && voucher.expiresAt < System.currentTimeMillis()
-                            val newStatus = when {
-                                voucher.status == "CANCELLED" -> "CANCELLED"
-                                isExpired || voucher.status == "EXPIRED" -> "EXPIRED"
-                                restoredBal > 0.0 -> "ACTIVE"
-                                else -> "EXHAUSTED"
+                            val voucherSpentInThisSale = voucherDeductionFromSplit ?: minOf(scApplied, maxRestoreToVoucher)
+                            voucherPortion = minOf(scApplied, voucherSpentInThisSale, maxRestoreToVoucher)
+                            if (voucherPortion > 0.0) {
+                                val restoredBal = voucher.remainingBalance + voucherPortion
+                                val isExpired = voucher.expiresAt != null && voucher.expiresAt > 0L && voucher.expiresAt < System.currentTimeMillis()
+                                val newStatus = when {
+                                    isExpired || voucher.status == "EXPIRED" -> "EXPIRED"
+                                    restoredBal > 0.0 -> "ACTIVE"
+                                    else -> "EXHAUSTED"
+                                }
+                                storeCreditVoucherDao.updateVoucherBalance(voucher.code, restoredBal, newStatus)
+                                storeCreditLedgerDao.insertEntry(
+                                    StoreCreditLedgerEntry(
+                                        customerPhone = voucher.customerPhone?.takeIf { it.isNotBlank() } ?: normalizePhone(phone ?: "") ?: "VOUCHER",
+                                        deltaAmount = voucherPortion,
+                                        balanceAfter = restoredBal,
+                                        type = "VOUCHER_RESTORE",
+                                        referenceInvoiceId = saleId,
+                                        voucherCode = voucher.code,
+                                        note = "Voucher balance restored from voided sale #$saleId",
+                                        timestamp = System.currentTimeMillis()
+                                    )
+                                )
                             }
-                            storeCreditVoucherDao.updateVoucherBalance(voucher.code, restoredBal, newStatus)
                         }
                     }
 
@@ -906,7 +929,11 @@ class DataRepository(
                         require(voucher.expiresAt >= System.currentTimeMillis()) { "Store credit voucher $cleanCode has expired" }
                     }
 
-                    val voucherDeduct = storeCreditToUse.coerceAtMost(voucher.remainingBalance)
+                    val voucherDeductLimit = splitEntries?.filter {
+                        it.optString("voucherCode", "").equals(cleanCode, ignoreCase = true)
+                    }?.sumOf { it.optDouble("amount", 0.0) }?.takeIf { it > 0.0 } ?: storeCreditToUse
+
+                    val voucherDeduct = voucherDeductLimit.coerceAtMost(voucher.remainingBalance)
                     customerCreditToDeduct = (storeCreditToUse - voucherDeduct).coerceAtLeast(0.0)
 
                     if (voucherDeduct > 0.0) {
@@ -1342,8 +1369,9 @@ class DataRepository(
         database.withDriverTransaction {
             val timestamp = System.currentTimeMillis()
             val existing = customerDao.getCustomerByPhone(cleanPhone)
+            val currentDueLimit = customerDueDao.getCustomerDueByPhone(cleanPhone)?.creditLimit ?: 0.0
             val effectiveCreditLimit = if (!isSessionOwner()) {
-                existing?.creditLimit ?: 0.0
+                maxOf(existing?.creditLimit ?: 0.0, currentDueLimit)
             } else {
                 customer.creditLimit.coerceAtLeast(0.0)
             }
@@ -1392,9 +1420,14 @@ class DataRepository(
     }
 
     suspend fun mergeCustomers(masterPhone: String, secondaryPhone: String): Boolean = withContext(Dispatchers.IO) {
+        requirePermission(AppPermissions.CUSTOMERS_EDIT)
         val masterNorm = normalizePhone(masterPhone)
         val secNorm = normalizePhone(secondaryPhone)
         if (masterNorm == secNorm) return@withContext false
+
+        val masterExists = customerDao.getCustomerByPhone(masterNorm)
+        val secondaryExists = customerDao.getCustomerByPhone(secNorm)
+        if (masterExists == null || secondaryExists == null) return@withContext false
 
         database.withDriverTransaction {
             val master = customerDao.getCustomerByPhone(masterNorm) ?: return@withDriverTransaction
@@ -1410,7 +1443,7 @@ class DataRepository(
             if (secDue != null) {
                 val masterDue = customerDueDao.getCustomerDueByPhone(masterNorm)
                 val newDueAmount = (masterDue?.outstandingAmount ?: 0.0) + secDue.outstandingAmount
-                val newCreditLimit = maxOf(masterDue?.creditLimit ?: 0.0, secDue.creditLimit)
+                val newCreditLimit = if (!isSessionOwner()) (masterDue?.creditLimit ?: 0.0) else maxOf(masterDue?.creditLimit ?: 0.0, secDue.creditLimit)
                 customerDueDao.upsertCustomerDue(
                     (masterDue ?: CustomerDue(customerPhone = masterNorm, customerName = master.name, outstandingAmount = 0.0))
                         .copy(outstandingAmount = newDueAmount, creditLimit = newCreditLimit, updatedAt = System.currentTimeMillis())
@@ -1442,7 +1475,7 @@ class DataRepository(
             val combinedOrders = master.totalOrders + secondary.totalOrders
             val combinedDue = master.totalDue + secondary.totalDue
             val combinedPoints = master.loyaltyPoints + secondary.loyaltyPoints
-            val combinedLimit = maxOf(master.creditLimit, secondary.creditLimit)
+            val combinedLimit = if (!isSessionOwner()) master.creditLimit else maxOf(master.creditLimit, secondary.creditLimit)
             val combinedStoreCredit = master.storeCredit + secondary.storeCredit
 
             val updatedMaster = master.copy(
@@ -1503,22 +1536,27 @@ class DataRepository(
 
         if (oldNorm == newNorm) {
             val existing = customerDao.getCustomerByPhone(oldNorm)
+            val existingDue = customerDueDao.getCustomerDueByPhone(oldNorm)
+            val effectiveCreditLimit = if (!isSessionOwner()) {
+                maxOf(existing?.creditLimit ?: 0.0, existingDue?.creditLimit ?: 0.0)
+            } else {
+                creditLimit ?: existing?.creditLimit ?: existingDue?.creditLimit ?: 0.0
+            }
             if (existing != null) {
                 customerDao.upsertCustomer(
                     existing.copy(
                         name = newName?.ifBlank { null } ?: existing.name,
-                        creditLimit = creditLimit ?: existing.creditLimit,
+                        creditLimit = effectiveCreditLimit,
                         notes = notes ?: existing.notes,
                         updatedAt = System.currentTimeMillis()
                     )
                 )
             }
-            val existingDue = customerDueDao.getCustomerDueByPhone(oldNorm)
             if (existingDue != null) {
                 customerDueDao.upsertCustomerDue(
                     existingDue.copy(
                         customerName = newName?.ifBlank { null } ?: existingDue.customerName,
-                        creditLimit = creditLimit ?: existingDue.creditLimit,
+                        creditLimit = effectiveCreditLimit,
                         updatedAt = System.currentTimeMillis()
                     )
                 )
@@ -1542,7 +1580,11 @@ class DataRepository(
             val oldCustomer = customerDao.getCustomerByPhone(oldNorm)
             val oldDue = customerDueDao.getCustomerDueByPhone(oldNorm)
             val finalName = newName?.ifBlank { null } ?: oldCustomer?.name ?: oldDue?.customerName ?: "Customer"
-            val finalCreditLimit = creditLimit ?: oldCustomer?.creditLimit ?: oldDue?.creditLimit ?: 0.0
+            val finalCreditLimit = if (!isSessionOwner()) {
+                maxOf(oldCustomer?.creditLimit ?: 0.0, oldDue?.creditLimit ?: 0.0)
+            } else {
+                creditLimit ?: oldCustomer?.creditLimit ?: oldDue?.creditLimit ?: 0.0
+            }
             val finalNotes = notes ?: oldCustomer?.notes
 
             // 1. Insert new CustomerDue first so foreign key constraints on newNorm are satisfied
@@ -2615,6 +2657,10 @@ class DataRepository(
                         paymentMethod = p.optString("paymentMethod", "Cash"),
                         referenceNote = p.optString("referenceNote").takeIf { it.isNotBlank() }
                     )
+                    val existingDue = customerDueDao.getCustomerDueByPhone(phone)
+                    if (mode == BackupImportMode.MERGE && existingDue == null && phone !in newlyInsertedDuePhones) {
+                        continue
+                    }
                     if (mode == BackupImportMode.MERGE) {
                         val isDuplicate = existingDuePaymentsInDb.any {
                             it.customerPhone == phone && kotlin.math.abs(it.amountPaid - amt) < 0.01 && it.timestamp == ts
@@ -2628,8 +2674,6 @@ class DataRepository(
                             customerDao.adjustCustomerTotalDue(phone, -amt, ts)
                         }
                     } catch (e: android.database.sqlite.SQLiteConstraintException) {
-                        if (mode != BackupImportMode.MERGE) throw IllegalStateException("Failed to restore due payment: duplicate record conflict", e)
-                    } catch (e: androidx.sqlite.SQLiteException) {
                         if (mode != BackupImportMode.MERGE) throw IllegalStateException("Failed to restore due payment: duplicate record conflict", e)
                     }
                 }
@@ -2896,8 +2940,11 @@ class DataRepository(
                     val sPhone = value.optString("phone")
                     if (mode == BackupImportMode.MERGE) {
                         val duplicate = existingSuppliersInDb.firstOrNull {
-                            it.name.equals(sName, ignoreCase = true) &&
-                            (sPhone.isBlank() || normalizePhone(it.phone) == normalizePhone(sPhone))
+                            if (it.phone.isNotBlank() && sPhone.isNotBlank()) {
+                                normalizePhone(it.phone) == normalizePhone(sPhone) && it.name.equals(sName, ignoreCase = true)
+                            } else {
+                                it.name.equals(sName, ignoreCase = true) && it.phone.isBlank() && sPhone.isBlank()
+                            }
                         }
                         if (duplicate != null) {
                             supplierIdMap[backupSupplierId] = duplicate.id
@@ -2998,7 +3045,8 @@ class DataRepository(
                     val backupSupplierId = value.getLong("supplierId")
                     val amtPaid = value.optDouble("amountPaid", 0.0)
                     val ts = value.optLong("timestamp", System.currentTimeMillis())
-                    val resolvedSupplierId = if (mode == BackupImportMode.MERGE) supplierIdMap[backupSupplierId] ?: backupSupplierId else backupSupplierId
+                    val resolvedSupplierId = if (mode == BackupImportMode.MERGE) supplierIdMap[backupSupplierId] else backupSupplierId
+                    if (mode == BackupImportMode.MERGE && resolvedSupplierId == null) continue
                     if (mode == BackupImportMode.MERGE) {
                         val isDuplicate = existingSupplierPaymentsInDb.any {
                             it.supplierId == resolvedSupplierId && kotlin.math.abs(it.amountPaid - amtPaid) < 0.01 &&
@@ -3007,7 +3055,7 @@ class DataRepository(
                         if (isDuplicate) continue
                     }
                     supplierDao.insertSupplierPayment(SupplierPayment(
-                        id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), supplierId = resolvedSupplierId,
+                        id = if (mode == BackupImportMode.MERGE) 0L else value.optLong("id", 0L), supplierId = resolvedSupplierId!!,
                         amountPaid = amtPaid,
                         paymentMethod = value.optString("paymentMethod", "Cash"),
                         referenceNote = value.optString("referenceNote").takeIf { it.isNotBlank() },
@@ -3321,8 +3369,9 @@ class DataRepository(
                       val obj = arr.getJSONObject(i)
                       val backupSaleId = obj.optLong("saleId")
                       val resolvedSaleId = if (mode == BackupImportMode.MERGE) {
-                          saleIdMap[backupSaleId] ?: backupSaleId
+                          saleIdMap[backupSaleId]
                       } else backupSaleId
+                      if (mode == BackupImportMode.MERGE && resolvedSaleId == null) continue
                       val actionStr = obj.optString("action", "DELETED")
                       val ts = obj.optLong("timestamp", System.currentTimeMillis())
 
@@ -3342,7 +3391,7 @@ class DataRepository(
 
                       saleAuditLogDao.insertAuditLogIgnore(SaleAuditLog(
                           id = if (mode == BackupImportMode.MERGE) 0L else obj.optLong("id", 0L),
-                          saleId = resolvedSaleId,
+                          saleId = resolvedSaleId!!,
                           action = actionStr,
                           reason = reason,
                           grandTotal = obj.optDouble("grandTotal", 0.0),
@@ -3354,19 +3403,21 @@ class DataRepository(
               }
 
               // Restore expense audit logs
-              val existingExpenseAuditLogsInDb = if (mode == BackupImportMode.MERGE) expenseAuditLogDao.getAllAuditLogsOnce() else emptyList()
+              val existingExpenseAuditLogsInDb = if (mode == BackupImportMode.MERGE) expenseDao.getAllExpensesOnce() else emptyList()
+              val existingExpenseAuditLogsOnceInDb = if (mode == BackupImportMode.MERGE) expenseAuditLogDao.getAllAuditLogsOnce() else emptyList()
               backupJson.optJSONArray("expenseAuditLogs")?.let { arr ->
                   for (i in 0 until arr.length()) {
                       val obj = arr.getJSONObject(i)
                       val backupExpenseId = obj.optLong("expenseId")
                       val resolvedExpenseId = if (mode == BackupImportMode.MERGE) {
-                          expenseIdMap[backupExpenseId] ?: backupExpenseId
+                          expenseIdMap[backupExpenseId]
                       } else backupExpenseId
+                      if (mode == BackupImportMode.MERGE && resolvedExpenseId == null) continue
                       val actionStr = obj.optString("action", "DELETED")
                       val ts = obj.optLong("timestamp", System.currentTimeMillis())
 
                       if (mode == BackupImportMode.MERGE) {
-                          val isDuplicate = existingExpenseAuditLogsInDb.any {
+                          val isDuplicate = existingExpenseAuditLogsOnceInDb.any {
                               it.expenseId == resolvedExpenseId && it.timestamp == ts && it.action == actionStr
                           }
                           if (isDuplicate) continue
@@ -3381,7 +3432,7 @@ class DataRepository(
 
                       expenseAuditLogDao.insertAuditLogIgnore(ExpenseAuditLog(
                           id = if (mode == BackupImportMode.MERGE) 0L else obj.optLong("id", 0L),
-                          expenseId = resolvedExpenseId,
+                          expenseId = resolvedExpenseId!!,
                           action = actionStr,
                           reason = reason,
                           amount = obj.optDouble("amount", 0.0),
@@ -4049,22 +4100,43 @@ class DataRepository(
                         } catch (_: Exception) { null }
                     } ?: storeCreditLedgerDao.getEntriesForInvoiceOnce(saleId).firstNotNullOfOrNull { it.voucherCode?.takeIf { c -> c.isNotBlank() } }
 
+                    val voucherDeductionFromSplit = sale.splitPaymentJson?.let { json ->
+                        try {
+                            val array = org.json.JSONArray(json)
+                            (0 until array.length()).map { array.getJSONObject(it) }
+                                .filter { it.optString("voucherCode", "").isNotBlank() }
+                                .sumOf { it.optDouble("amount", 0.0) }
+                        } catch (_: Exception) { null }
+                    }?.takeIf { it > 0.0 }
+
                     var voucherPortion = 0.0
                     if (!vCodeFromSale.isNullOrBlank()) {
                         val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
-                        if (voucher != null) {
+                        if (voucher != null && voucher.status != "CANCELLED") {
                             val maxRestoreToVoucher = (voucher.initialAmount - voucher.remainingBalance).coerceAtLeast(0.0)
-                            voucherPortion = minOf(scToRestore, maxRestoreToVoucher)
+                            val voucherSpentInThisSale = voucherDeductionFromSplit ?: minOf(scToRestore, maxRestoreToVoucher)
+                            voucherPortion = minOf(scToRestore, voucherSpentInThisSale, maxRestoreToVoucher)
                             if (voucherPortion > 0.0) {
                                 val restoredBal = voucher.remainingBalance + voucherPortion
                                 val isExpired = voucher.expiresAt != null && voucher.expiresAt > 0L && voucher.expiresAt < System.currentTimeMillis()
                                 val newStatus = when {
-                                    voucher.status == "CANCELLED" -> "CANCELLED"
                                     isExpired || voucher.status == "EXPIRED" -> "EXPIRED"
                                     restoredBal > 0.0 -> "ACTIVE"
                                     else -> "EXHAUSTED"
                                 }
                                 storeCreditVoucherDao.updateVoucherBalance(voucher.code, restoredBal, newStatus)
+                                storeCreditLedgerDao.insertEntry(
+                                    StoreCreditLedgerEntry(
+                                        customerPhone = voucher.customerPhone?.takeIf { it.isNotBlank() } ?: normalizePhone(phone ?: "") ?: "VOUCHER",
+                                        deltaAmount = voucherPortion,
+                                        balanceAfter = restoredBal,
+                                        type = "VOUCHER_RESTORE",
+                                        referenceInvoiceId = saleId,
+                                        voucherCode = voucher.code,
+                                        note = "Voucher balance restored for return on invoice #$saleId",
+                                        timestamp = System.currentTimeMillis()
+                                    )
+                                )
                             }
                         }
                     }

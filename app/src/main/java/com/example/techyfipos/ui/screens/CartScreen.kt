@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import com.example.techyfipos.data.AppPermissions
 import com.example.techyfipos.utils.parseExpiryDateToMillis
 import com.example.techyfipos.utils.PaymentMath
+import com.example.techyfipos.utils.CartAuthHelper
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
 import com.example.techyfipos.ui.viewmodel.isSyntheticSaleBarcode
 import android.database.Cursor
@@ -695,22 +696,26 @@ fun CartScreen(
                         }
                         IconButton(
                             onClick = {
-                                if (canVoidCart) {
-                                    showVoidConfirmDialog = true
-                                } else if (authViewModel != null) {
-                                    pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_void_cart)
-                                    pendingSupervisorAction = {
-                                        scope.launch {
-                                            trashAnim.animateTo(-15f, tween(60))
-                                            trashAnim.animateTo(15f, tween(60))
-                                            trashAnim.animateTo(0f, tween(60))
+                                CartAuthHelper.handleVoidCartRequest(
+                                    context = context,
+                                    isOwner = isOwner,
+                                    isSupervisor = isSupervisor,
+                                    activePermissions = activePermissions,
+                                    authViewModel = authViewModel,
+                                    onAllowed = { showVoidConfirmDialog = true },
+                                    onRequestSupervisorAuth = { desc ->
+                                        pendingSupervisorDesc = desc
+                                        pendingSupervisorAction = {
+                                            scope.launch {
+                                                trashAnim.animateTo(-15f, tween(60))
+                                                trashAnim.animateTo(15f, tween(60))
+                                                trashAnim.animateTo(0f, tween(60))
+                                            }
+                                            cartViewModel.clearCart()
                                         }
-                                        cartViewModel.clearCart()
+                                        showSupervisorAuthDialog = true
                                     }
-                                    showSupervisorAuthDialog = true
-                                } else {
-                                    Toast.makeText(context, context.getString(R.string.permission_required_void_cart), Toast.LENGTH_SHORT).show()
-                                }
+                                )
                             }
                         ) {
                             Text(
@@ -943,15 +948,20 @@ fun CartScreen(
                                 )
                             },
                             onRemove = {
-                                if (canRemoveItem) {
-                                    cartViewModel.removeFromCart(item.product)
-                                } else if (authViewModel != null) {
-                                    pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_remove_item, item.product.name)
-                                    pendingSupervisorAction = { cartViewModel.removeFromCart(item.product) }
-                                    showSupervisorAuthDialog = true
-                                } else {
-                                    Toast.makeText(context, context.getString(R.string.permission_required_remove_item), Toast.LENGTH_SHORT).show()
-                                }
+                                CartAuthHelper.handleRemoveItemRequest(
+                                    context = context,
+                                    productName = item.product.name,
+                                    isOwner = isOwner,
+                                    isSupervisor = isSupervisor,
+                                    activePermissions = activePermissions,
+                                    authViewModel = authViewModel,
+                                    onAllowed = { cartViewModel.removeFromCart(item.product) },
+                                    onRequestSupervisorAuth = { desc ->
+                                        pendingSupervisorDesc = desc
+                                        pendingSupervisorAction = { cartViewModel.removeFromCart(item.product) }
+                                        showSupervisorAuthDialog = true
+                                    }
+                                )
                             },
                             onEditNote = { editingNoteBarcode = item.product.barcode }
                         )

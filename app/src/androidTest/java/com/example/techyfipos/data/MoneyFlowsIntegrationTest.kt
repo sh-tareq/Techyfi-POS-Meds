@@ -681,4 +681,167 @@ class MoneyFlowsIntegrationTest {
         val due = database.customerDueDao().getCustomerDueByPhone(custPhone)
         assertEquals(200.0, due?.outstandingAmount ?: 0.0, 0.001)
     }
+
+    @Test
+    fun testM3_deleteSale_restoresExactVoucherShare_notInitialMinusRemaining_andWritesLedgerRow() = runBlocking {
+        val custPhone = "01700000031"
+        repository.upsertCustomer(
+            Customer(phone = custPhone, name = "M3 Cust", storeCredit = 70.0, creditLimit = 500.0)
+        )
+        // Voucher V1: initial 100, was used 50 elsewhere, remaining 50.
+        // In this sale, customer uses 30 from voucher and 70 from personal store credit (total SC = 100).
+        val voucher = StoreCreditVoucher(
+            code = "VOUCH-M3",
+            initialAmount = 100.0,
+            remainingBalance = 50.0,
+            status = "ACTIVE"
+        )
+        database.storeCreditVoucherDao().insertVoucher(voucher)
+
+        val prod = Product(barcode = "BAR_M3", name = "M3 Item", category = "General", purchasePrice = 50.0, sellingPrice = 100.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        val splitJson = JSONArray().apply {
+            put(JSONObject().apply {
+                put("method", "Store Credit")
+                put("amount", 30.0)
+                put("voucherCode", "VOUCH-M3")
+            })
+            put(JSONObject().apply {
+                put("method", "Store Credit")
+                put("amount", 70.0)
+            })
+        }.toString()
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 100.0,
+            paymentMethod = "Store Credit",
+            customerName = "M3 Cust",
+            customerPhone = custPhone,
+            amountPaid = 100.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 100.0
+        )
+        assertTrue(saleId > 0)
+
+        // After sale: voucher has 20.0 remaining, customer has 0.0 SC.
+        val voucherAfterSale = database.storeCreditVoucherDao().getVoucherByCode("VOUCH-M3")
+        assertEquals(20.0, voucherAfterSale?.remainingBalance ?: 0.0, 0.001)
+        val custAfterSale = repository.getCustomerByPhone(custPhone)
+        assertEquals(0.0, custAfterSale?.storeCredit ?: 0.0, 0.001)
+
+        // Now void/delete the sale
+        repository.deleteSale(saleId)
+
+        // Exact restore: Voucher was used for 30 in this sale, so balance becomes 20 + 30 = 50.
+        // Customer was used for 70, so balance becomes 0 + 70 = 70.
+        val voucherAfterVoid = database.storeCreditVoucherDao().getVoucherByCode("VOUCH-M3")
+        val custAfterVoid = repository.getCustomerByPhone(custPhone)
+        val ledger = database.storeCreditLedgerDao().getAllEntries()
+
+        assertEquals("Voucher must only restore 30 (total 50), not 80 (total 100)", 50.0, voucherAfterVoid?.remainingBalance ?: 0.0, 0.001)
+        assertEquals("Customer must restore 70, not 20", 70.0, custAfterVoid?.storeCredit ?: 0.0, 0.001)
+        assertTrue("Voucher restore ledger row must be recorded", ledger.any { it.type == "VOUCHER_RESTORE" && it.voucherCode == "VOUCH-M3" })
+    }
+
+    @Test
+    fun testM3_deleteSale_cancelledVoucherDoesNotAbsorbRestoredBalance() = runBlocking {
+        val custPhone = "01700000032"
+        repository.upsertCustomer(
+            Customer(phone = custPhone, name = "M3 Cancelled Cust", storeCredit = 0.0, creditLimit = 500.0)
+        )
+        val voucher = StoreCreditVoucher(
+            code = "VOUCH-CANCELLED",
+            initialAmount = 100.0,
+            remainingBalance = 50.0,
+            status = "ACTIVE"
+        )
+        database.storeCreditVoucherDao().insertVoucher(voucher)
+
+        val prod = Product(barcode = "BAR_M3_2", name = "M3 Item 2", category = "General", purchasePrice = 50.0, sellingPrice = 50.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        val splitJson = JSONArray().apply {
+            put(JSONObject().apply {
+                put("method", "Store Credit")
+                put("amount", 50.0)
+                put("voucherCode", "VOUCH-CANCELLED")
+            })
+        }.toString()
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 50.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 50.0,
+            paymentMethod = "Store Credit",
+            customerName = "M3 Cancelled Cust",
+            customerPhone = custPhone,
+            amountPaid = 50.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 50.0
+        )
+        assertTrue(saleId > 0)
+
+        // Cancel the voucher while sale is active
+        database.storeCreditVoucherDao().updateVoucherBalance("VOUCH-CANCELLED", 0.0, "CANCELLED")
+
+        // Void the sale
+        repository.deleteSale(saleId)
+
+        val voucherAfterVoid = database.storeCreditVoucherDao().getVoucherByCode("VOUCH-CANCELLED")
+        val custAfterVoid = repository.getCustomerByPhone(custPhone)
+
+        // Cancelled voucher must NOT absorb balance
+        assertEquals("Cancelled voucher must not absorb restored balance", 0.0, voucherAfterVoid?.remainingBalance ?: 0.0, 0.001)
+        assertEquals("Customer must receive the credit since voucher was cancelled", 50.0, custAfterVoid?.storeCredit ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun testM14_nonOwnerCannotOverwriteDueCreditLimitOnCustomerEdit() = runBlocking {
+        val custPhone = "01700000033"
+        repository.upsertCustomer(
+            Customer(phone = custPhone, name = "M14 Cust", storeCredit = 0.0, creditLimit = 0.0)
+        )
+        // Suppose CustomerDue has a creditLimit set by owner
+        val due = database.customerDueDao().getCustomerDueByPhone(custPhone)
+        database.customerDueDao().upsertCustomerDue(
+            (due ?: CustomerDue(customerPhone = custPhone, customerName = "M14 Cust", outstandingAmount = 0.0))
+                .copy(creditLimit = 5000.0)
+        )
+
+        // Switch session to non-owner cashier with CUSTOMERS_EDIT permission
+        repository.setSessionUser(User(id = 2, name = "Cashier", pinHash = "p", role = "CASHIER", customPermissions = "[\"${AppPermissions.CUSTOMERS_EDIT}\"]"))
+
+        // Non-owner edits customer details (name change, creditLimit = 0.0 in DTO)
+        val existingCust = repository.getCustomerByPhone(custPhone)!!
+        repository.upsertCustomer(existingCust.copy(name = "M14 Cust Renamed", creditLimit = 0.0))
+
+        val dueAfterEdit = database.customerDueDao().getCustomerDueByPhone(custPhone)
+        assertEquals("CustomerDue creditLimit must be preserved at 5000.0", 5000.0, dueAfterEdit?.creditLimit ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun testX9_mergeCustomers_failsWhenCustomerMissing() = runBlocking {
+        val custPhone = "01700000034"
+        repository.upsertCustomer(
+            Customer(phone = custPhone, name = "Master Cust")
+        )
+        val missingPhone = "01700000099"
+
+        val result = repository.mergeCustomers(custPhone, missingPhone)
+        org.junit.Assert.assertFalse("mergeCustomers must return false when secondary customer is missing", result)
+    }
 }
+

@@ -3,6 +3,8 @@
 package com.example.techyfipos.ui.screens
 
 import com.example.techyfipos.ui.dialogs.*
+import com.example.techyfipos.ui.components.SupervisorAuthDialog
+import com.example.techyfipos.utils.CartAuthHelper
 import com.example.techyfipos.data.AppPermissions
 import android.Manifest
 import java.util.Locale
@@ -121,6 +123,7 @@ fun ScannerScreen(
     isTablet: Boolean = false,
     isOwner: Boolean = true,
     isSupervisor: Boolean = false,
+    activePermissions: Set<String> = emptySet(),
     canCheckStock: Boolean = isOwner,
     onNavigateToCart: () -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -130,7 +133,8 @@ fun ScannerScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val activePermissions by (authViewModel?.activePermissions ?: kotlinx.coroutines.flow.MutableStateFlow(emptySet())).collectAsStateWithLifecycle(initialValue = emptySet())
+    val authPermissions by (authViewModel?.activePermissions ?: kotlinx.coroutines.flow.MutableStateFlow(emptySet())).collectAsStateWithLifecycle(initialValue = emptySet())
+    val effectivePermissions = if (activePermissions.isNotEmpty()) activePermissions else authPermissions
     val invoiceSettingsData by settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
     val allowNegativeInventory = invoiceSettingsData?.allowNegativeInventory == true || isOwner || isSupervisor
 
@@ -154,24 +158,45 @@ fun ScannerScreen(
     var lastScannedProduct by remember { mutableStateOf<Product?>(null) }
     val latestScanningPaused by rememberUpdatedState(scanningPaused)
     
-    val canVoidCart = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_VOID_CART)
-    val canRemoveItem = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_VOID_CART)
+    var showSupervisorAuthDialog by remember { mutableStateOf(false) }
+    var pendingSupervisorAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var pendingSupervisorDesc by remember { mutableStateOf("") }
+
+    val canVoidCart = CartAuthHelper.canVoidCart(isOwner, isSupervisor, effectivePermissions)
+    val canRemoveItem = CartAuthHelper.canRemoveItem(isOwner, isSupervisor, effectivePermissions)
     var showClearCartConfirm by remember { mutableStateOf(false) }
     var itemToRemoveConfirm by remember { mutableStateOf<Product?>(null) }
 
     val handleClearCartRequest = {
-        if (canVoidCart) {
-            showClearCartConfirm = true
-        } else {
-            Toast.makeText(context, context.getString(R.string.permission_required_void_cart), Toast.LENGTH_SHORT).show()
-        }
+        CartAuthHelper.handleVoidCartRequest(
+            context = context,
+            isOwner = isOwner,
+            isSupervisor = isSupervisor,
+            activePermissions = effectivePermissions,
+            authViewModel = authViewModel,
+            onAllowed = { showClearCartConfirm = true },
+            onRequestSupervisorAuth = { desc ->
+                pendingSupervisorDesc = desc
+                pendingSupervisorAction = { showClearCartConfirm = true }
+                showSupervisorAuthDialog = true
+            }
+        )
     }
     val handleRemoveItemRequest: (Product) -> Unit = { product ->
-        if (canRemoveItem) {
-            itemToRemoveConfirm = product
-        } else {
-            Toast.makeText(context, context.getString(R.string.permission_required_remove_item), Toast.LENGTH_SHORT).show()
-        }
+        CartAuthHelper.handleRemoveItemRequest(
+            context = context,
+            productName = product.name,
+            isOwner = isOwner,
+            isSupervisor = isSupervisor,
+            activePermissions = effectivePermissions,
+            authViewModel = authViewModel,
+            onAllowed = { itemToRemoveConfirm = product },
+            onRequestSupervisorAuth = { desc ->
+                pendingSupervisorDesc = desc
+                pendingSupervisorAction = { itemToRemoveConfirm = product }
+                showSupervisorAuthDialog = true
+            }
+        )
     }
 
     // Snackbar states
@@ -587,6 +612,22 @@ fun ScannerScreen(
                         TextButton(onClick = { itemToRemoveConfirm = null }) {
                             Text(stringResource(R.string.cancel))
                         }
+                    }
+                )
+            }
+
+            if (showSupervisorAuthDialog && authViewModel != null) {
+                SupervisorAuthDialog(
+                    authViewModel = authViewModel,
+                    actionDescription = pendingSupervisorDesc,
+                    onAuthorized = {
+                        showSupervisorAuthDialog = false
+                        pendingSupervisorAction?.invoke()
+                        pendingSupervisorAction = null
+                    },
+                    onDismiss = {
+                        showSupervisorAuthDialog = false
+                        pendingSupervisorAction = null
                     }
                 )
             }

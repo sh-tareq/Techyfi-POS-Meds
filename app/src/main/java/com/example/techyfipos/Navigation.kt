@@ -1155,6 +1155,7 @@ fun MainNavigation() {
                                     isTablet = isTablet,
                                     isOwner = isOwner,
                                     isSupervisor = isSupervisor,
+                                    activePermissions = activePermissions,
                                     canCheckStock = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_ADD_EDIT),
                                     onNavigateToCart = { backStack.add(Cart) },
                                     onNavigateToSettings = { backStack.add(Settings) },
