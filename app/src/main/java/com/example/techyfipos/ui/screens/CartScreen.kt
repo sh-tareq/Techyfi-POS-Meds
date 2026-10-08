@@ -435,6 +435,7 @@ fun CartScreen(
     val heldCarts by cartViewModel.allHeldCarts.collectAsStateWithLifecycle()
     val heldCartCount by cartViewModel.heldCartCount.collectAsStateWithLifecycle()
     var showHeldCartsSheet by remember { mutableStateOf(false) }
+    var pendingResumeCart by remember { mutableStateOf<com.example.techyfipos.data.db.HeldCart?>(null) }
     var showHoldCartDialog by remember { mutableStateOf(false) }
     val heldCartHoldSuccessMessage = stringResource(R.string.held_cart_hold_success)
     val heldCartDefaultCustomer = stringResource(R.string.held_cart_default_customer)
@@ -1929,7 +1930,7 @@ fun CartScreen(
                                                     color = MaterialTheme.colorScheme.primary
                                                 )
                                             }
-                                            if (resolvedCustomer!!.tier.isNotBlank() && resolvedCustomer!!.tier != "Silver") {
+                                            if (resolvedCustomer!!.tier.isNotBlank() && !resolvedCustomer!!.tier.equals("Regular", ignoreCase = true)) {
                                                 Text(
                                                     stringResource(R.string.cart_badge_tier, resolvedCustomer!!.tier),
                                                     fontSize = 10.5.sp,
@@ -2662,10 +2663,88 @@ fun CartScreen(
 
     if (showEditConfirmForCompletedSale) {
         val saleToEdit = salesWithItemsForCompletedSale.find { it.sale.id == snapshot?.saleId }
+        val s = saleToEdit?.sale
+        val dueReversed = s?.let {
+            com.example.techyfipos.utils.PaymentMath.calculateDueAddition(
+                it.paymentMethod, it.grandTotal, it.amountPaid, it.splitPaymentJson
+            )
+        } ?: 0.0
+        val totalQty = saleToEdit?.items?.sumOf { it.quantity } ?: 0.0
+        val qtyStr = if (totalQty % 1.0 == 0.0) totalQty.toLong().toString() else String.format(java.util.Locale.US, "%.2f", totalQty).trimEnd('0').trimEnd('.')
+
         AlertDialog(
             onDismissRequest = { showEditConfirmForCompletedSale = false },
             title = { Text(stringResource(R.string.cart_edit_sale_confirm_title)) },
-            text = { Text(stringResource(R.string.cart_edit_sale_confirm_message)) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.cart_edit_sale_confirm_message),
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (s != null) {
+                        HorizontalDivider()
+                        Text(
+                            stringResource(R.string.cart_edit_sale_breakdown_title),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(stringResource(R.string.grand_total), fontSize = 12.sp)
+                            Text(formatTaka(s.grandTotal), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                        if (s.amountPaid > 0.0 || !s.paymentMethod.equals("Due", ignoreCase = true)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(stringResource(R.string.receipt_paid_label, s.paymentMethod), fontSize = 12.sp)
+                                Text(formatTaka(s.amountPaid), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                            }
+                        }
+                        if (s.storeCreditApplied > 0.0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(stringResource(R.string.store_credit), fontSize = 12.sp)
+                                Text("+${formatTaka(s.storeCreditApplied)}", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                            }
+                        }
+                        if (dueReversed > 0.0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(stringResource(R.string.receipt_due_balance_label), fontSize = 12.sp)
+                                Text("-${formatTaka(dueReversed)}", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                            }
+                        }
+                        if (s.loyaltyPointsRedeemed > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(stringResource(R.string.loyalty_points_amount), fontSize = 12.sp)
+                                Text("+${s.loyaltyPointsRedeemed} pts", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(stringResource(R.string.cart_edit_sale_restored_stock), fontSize = 12.sp)
+                            Text(stringResource(R.string.history_items_count, qtyStr), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                        }
+                    }
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = {
@@ -2824,18 +2903,55 @@ fun CartScreen(
         HeldCartsBottomSheet(
             heldCarts = heldCarts,
             onResume = { cart ->
-                cartViewModel.restoreHeldCart(cart) { result ->
-                    Toast.makeText(context,
-                        if (result.unavailableLines > 0) context.getString(R.string.held_cart_restored_partial_toast, result.unavailableLines)
-                        else heldCartRestoredToastTemplate.format(cart.title),
-                        if (result.unavailableLines > 0) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
-                    ).show()
+                if (cartItems.isNotEmpty()) {
+                    pendingResumeCart = cart
+                } else {
+                    cartViewModel.restoreHeldCart(cart) { result ->
+                        Toast.makeText(context,
+                            if (result.unavailableLines > 0) context.getString(R.string.held_cart_restored_partial_toast, result.unavailableLines)
+                            else heldCartRestoredToastTemplate.format(cart.title),
+                            if (result.unavailableLines > 0) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             },
             onDelete = { cartId ->
                 cartViewModel.deleteHeldCart(cartId)
             },
             onDismiss = { showHeldCartsSheet = false }
+        )
+    }
+
+    pendingResumeCart?.let { cartToResume ->
+        val heldCartRestoredToastTemplate = stringResource(R.string.held_cart_restored_toast)
+        AlertDialog(
+            onDismissRequest = { pendingResumeCart = null },
+            title = { Text(stringResource(R.string.held_cart_resume_confirm_title)) },
+            text = { Text(stringResource(R.string.held_cart_resume_confirm_message, cartToResume.title)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val cart = cartToResume
+                        pendingResumeCart = null
+                        showHeldCartsSheet = false
+                        cartViewModel.restoreHeldCart(cart) { result ->
+                            Toast.makeText(context,
+                                if (result.unavailableLines > 0) context.getString(R.string.held_cart_restored_partial_toast, result.unavailableLines)
+                                else heldCartRestoredToastTemplate.format(cart.title),
+                                if (result.unavailableLines > 0) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
+                ) {
+                    Text(stringResource(R.string.confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingResumeCart = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
         )
     }
 

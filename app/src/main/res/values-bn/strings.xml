@@ -181,7 +181,9 @@
     <string name="held_cart_fallback_title">কার্ট #%1$d</string>
     <string name="held_cart_auto_saved_title">স্বয়ংক্রিয় সংরক্ষিত কার্ট</string>
     <string name="held_cart_auto_saved_note">হোল্ড করা কার্ট পুনরুদ্ধারের আগে স্বয়ংক্রিয় সংরক্ষিত</string>
-    <string name="held_cart_unavailable_suffix"> · অনুপলব্ধ আইটেম</string>
+    <string name="held_cart_unavailable_suffix">" · অনুপলব্ধ আইটেম"</string>
+    <string name="held_cart_resume_confirm_title">বর্তমান কার্ট হোল্ড করে চালু করবেন?</string>
+    <string name="held_cart_resume_confirm_message">\'%s\' চালু করার আগে আপনার বর্তমান কার্টটি স্বয়ংক্রিয়ভাবে হোল্ড করা হবে। এগিয়ে যেতে চান?</string>
 
     <!-- Shared content descriptions -->
     <string name="cd_back">পেছনে যান</string>
@@ -803,7 +805,7 @@
     <string name="dues_apply_button">প্রয়োগ করুন</string>
     <string name="dues_select_start_date">শুরুর তারিখ নির্বাচন করুন</string>
     <string name="dues_select_end_date">শেষ তারিখ নির্বাচন করুন</string>
-    <string name="dues_reminder_permission_required_toast">এই তাগাদা শিডিউল করতে নোটিফিকেশন অথবা SMS অনুমতি প্রয়োজন</string>
+    <string name="dues_reminder_permission_required_toast">এই তাগাদা শিডিউল করতে নোটিফিকেশন অনুমতি প্রয়োজন</string>
     <string name="dues_char_count">%1$d অক্ষর</string>
     <string name="dues_workmanager_auto_engine_label">WorkManager অটো ইঞ্জিন</string>
     <string name="dues_share_button">শেয়ার</string>
@@ -1461,8 +1463,10 @@
     <string name="cart_add_to_cart_again_button">আবার কার্টে যোগ করুন</string>
     <string name="cart_edit_sale_button">সম্পাদনা</string>
     <string name="cart_edit_sale_confirm_title">এই বিক্রয় সম্পাদনা করবেন?</string>
-    <string name="cart_edit_sale_confirm_message">এটি মূল বিক্রয়টি বাতিল করবে (স্টক, বকেয়া ব্যালেন্স ও লয়্যালটি পয়েন্ট পুনরুদ্ধার করে) এবং এর পণ্যগুলো কার্টে পুনরায় লোড করবে, যাতে আপনি পরিবর্তন করে আবার চেকআউট করতে পারেন। নোট: ভাউচার, ব্যবহৃত পয়েন্ট এবং স্প্লিট পেমেন্ট সেটআপ নতুন কার্টে স্বয়ংক্রিয়ভাবে পুনরায় প্রয়োগ হবে না; চেকআউটের সময় আপনাকে সেগুলি পুনরায় প্রয়োগ করতে হবে।</string>
+    <string name="cart_edit_sale_confirm_message">এটি মূল বিক্রয়টি বাতিল করবে (স্টক পণ্য, স্টোর ক্রেডিট, বকেয়া ব্যালেন্স ও লয়্যালটি পয়েন্ট পুনরুদ্ধার করে) এবং এর পণ্যগুলো কার্টে পুনরায় লোড করবে, যাতে আপনি পরিবর্তন করে আবার চেকআউট করতে পারেন। নোট: ভাউচার, ব্যবহৃত পয়েন্ট এবং স্প্লিট পেমেন্ট সেটআপ নতুন কার্টে স্বয়ংক্রিয়ভাবে পুনরায় প্রয়োগ হবে না; চেকআউটের সময় আপনাকে সেগুলি পুনরায় প্রয়োগ করতে হবে।</string>
     <string name="cart_edit_sale_confirm_button">বাতিল করে সম্পাদনা করুন</string>
+    <string name="cart_edit_sale_breakdown_title">ফেরত ও পুনরুদ্ধারের বিবরণ</string>
+    <string name="cart_edit_sale_restored_stock">স্টকে ফেরত</string>
     <string name="cart_add_to_cart_again_skipped_toast">%1$d টি আইটেম পুনরায় যোগ করা যায়নি (পণ্য আর নেই)</string>
     <string name="lock_device_verification_cancelled">ডিভাইস যাচাইকরণ বাতিল করা হয়েছে।</string>
     <string name="lock_pin_reset_success">মালিকের পিন সফলভাবে রিসেট করা হয়েছে। নতুন পিন লিখুন।</string>
@@ -2349,7 +2353,7 @@
     <string name="due_reminder_channel_name">বকেয়া পেমেন্ট অনুস্মারক</string>
     <string name="due_reminder_channel_description">স্বয়ংক্রিয় বকেয়া সংগ্রহের সতর্কতা এবং হোয়াটসঅ্যাপ/এসএমএস ট্রিগার</string>
     <string name="due_reminder_notification_title">⏰ বকেয়া তাগিদ: %1$s (%2$s)</string>
-    <string name="due_reminder_sms_dispatched_body">✅ স্বয়ংক্রিয়ভাবে এসএমএস পাঠানো হয়েছে। হোয়াটসঅ্যাপে পাঠাতে ট্যাপ করুন।</string>
+    <string name="due_reminder_both_ready_body">নির্ধারিত তাগিদ প্রস্তুত। পাঠাতে \'SMS\' বা \'হোয়াটসঅ্যাপ\' ট্যাপ করুন।</string>
     <string name="due_reminder_sms_review_body">%1$s এর বকেয়া পরিশোধের তাগিদ। পর্যালোচনা করতে ট্যাপ করুন।</string>
     <string name="due_reminder_wa_ready_body">নির্ধারিত হোয়াটসঅ্যাপ তাগিদ প্রস্তুত। পাঠাতে \'হোয়াটসঅ্যাপ\' ট্যাপ করুন।</string>
     <string name="due_reminder_action_send_whatsapp">💬 হোয়াটসঅ্যাপ পাঠান</string>
@@ -2645,7 +2649,7 @@
     <string name="product_margin_fmt">মার্জিন %1$s%%</string>
     <string name="product_markup_fmt">মার্কআপ %1$s%%</string>
     <string name="dues_exact_alarm_engine">সঠিক অ্যালার্ম ইঞ্জিন</string>
-    <string name="dues_auto_sms_whatsapp_prompt">স্বয়ংক্রিয় এসএমএস + হোয়াটসঅ্যাপ প্রম্পট</string>
+    <string name="dues_auto_sms_whatsapp_prompt">এসএমএস ও হোয়াটসঅ্যাপ প্রম্পট</string>
     <string name="dues_enter_or_tap_preset">লিখুন বা প্রিসেটে ট্যাপ করুন</string>
     <string name="dues_credit_limit_val_fmt">ক্রেডিট লিমিট: %1$s</string>
     <string name="dues_no_limit">সীমা নেই</string>

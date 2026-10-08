@@ -181,7 +181,9 @@
     <string name="held_cart_fallback_title">Cart #%1$d</string>
     <string name="held_cart_auto_saved_title">Auto-saved cart</string>
     <string name="held_cart_auto_saved_note">Auto-saved before resuming held cart</string>
-    <string name="held_cart_unavailable_suffix"> · unavailable items</string>
+    <string name="held_cart_unavailable_suffix">" · unavailable items"</string>
+    <string name="held_cart_resume_confirm_title">Hold Active Cart &amp; Resume?</string>
+    <string name="held_cart_resume_confirm_message">Your active cart will be held automatically before resuming \'%s\'. Do you want to proceed?</string>
 
     <!-- Shared content descriptions -->
     <string name="cd_back">Back</string>
@@ -803,7 +805,7 @@
     <string name="dues_apply_button">Apply</string>
     <string name="dues_select_start_date">Select start date</string>
     <string name="dues_select_end_date">Select end date</string>
-    <string name="dues_reminder_permission_required_toast">Notification or SMS permission is required to schedule this reminder</string>
+    <string name="dues_reminder_permission_required_toast">Notification permission is required to schedule this reminder</string>
     <string name="dues_char_count">%1$d chars</string>
     <string name="dues_workmanager_auto_engine_label">WorkManager Auto Engine</string>
     <string name="dues_share_button">Share</string>
@@ -1465,8 +1467,10 @@
     <string name="cart_add_to_cart_again_button">Add to Cart Again</string>
     <string name="cart_edit_sale_button">Edit</string>
     <string name="cart_edit_sale_confirm_title">Edit This Sale?</string>
-    <string name="cart_edit_sale_confirm_message">This will void the original sale (restoring stock, due balance, and loyalty points) and reload its items into the cart so you can make changes and check out again. Note: vouchers, redeemed loyalty points, and split row setups will NOT be re-applied automatically to the new cart; you must re-apply them at checkout.</string>
+    <string name="cart_edit_sale_confirm_message">This will void the original sale (restoring stock items, store credit, due balance, and loyalty points) and reload its items into the cart so you can make changes and check out again. Note: vouchers, redeemed loyalty points, and split row setups will NOT be re-applied automatically to the new cart; you must re-apply them at checkout.</string>
     <string name="cart_edit_sale_confirm_button">Void &amp; Edit</string>
+    <string name="cart_edit_sale_breakdown_title">Refund &amp; Restoration Breakdown</string>
+    <string name="cart_edit_sale_restored_stock">Restored to Stock</string>
     <string name="cart_add_to_cart_again_skipped_toast">%1$d item(s) could not be re-added (product no longer exists)</string>
     <string name="lock_device_verification_cancelled">Device verification was cancelled.</string>
     <string name="lock_pin_reset_success">Owner PIN reset successfully. Enter the new PIN.</string>
@@ -2353,7 +2357,7 @@
     <string name="due_reminder_channel_name">Due Payment Reminders</string>
     <string name="due_reminder_channel_description">Automated due collection alerts and WhatsApp/SMS triggers</string>
     <string name="due_reminder_notification_title">⏰ Due Reminder: %1$s (%2$s)</string>
-    <string name="due_reminder_sms_dispatched_body">✅ SMS dispatched automatically. Tap to send via WhatsApp.</string>
+    <string name="due_reminder_both_ready_body">Scheduled reminder ready. Tap \'Send SMS\' or \'WhatsApp\' to send.</string>
     <string name="due_reminder_sms_review_body">Payment reminder due for %1$s. Tap to review.</string>
     <string name="due_reminder_wa_ready_body">Scheduled WhatsApp reminder ready. Tap \'WhatsApp\' to send.</string>
     <string name="due_reminder_action_send_whatsapp">💬 Send WhatsApp</string>
@@ -2645,7 +2649,7 @@
     <string name="product_margin_fmt">Margin %1$s%%</string>
     <string name="product_markup_fmt">Markup %1$s%%</string>
     <string name="dues_exact_alarm_engine">Exact Alarm Engine</string>
-    <string name="dues_auto_sms_whatsapp_prompt">Auto SMS + WhatsApp Prompt</string>
+    <string name="dues_auto_sms_whatsapp_prompt">SMS &amp; WhatsApp Reminder Prompt</string>
     <string name="dues_enter_or_tap_preset">Enter or Tap Preset</string>
     <string name="dues_credit_limit_val_fmt">Credit Limit: %1$s</string>
     <string name="dues_no_limit">No limit</string>

@@ -238,4 +238,29 @@ object PaymentMath {
             externalRefundAmount = externalRefund
         )
     }
+
+    fun calculateDueAddition(
+        paymentMethod: String,
+        grandTotal: Double,
+        amountPaid: Double,
+        splitPaymentJson: String?
+    ): Double {
+        var dueAddition = 0.0
+        if (paymentMethod.equals("Due", ignoreCase = true)) {
+            dueAddition = (grandTotal - amountPaid).coerceAtLeast(0.0)
+        } else if (paymentMethod.equals("Split", ignoreCase = true) && !splitPaymentJson.isNullOrBlank()) {
+            try {
+                val array = JSONArray(splitPaymentJson)
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    if (obj.optString("method", "").equals("Due", ignoreCase = true)) {
+                        dueAddition += obj.optDouble("amount", 0.0)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return dueAddition
+    }
 }

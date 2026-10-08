@@ -775,7 +775,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
 
         viewModelScope.launch(Dispatchers.IO) {
             repository.insertHeldCart(heldCart)
-            persistCartSnapshot(emptyList())
+            persistCartSnapshotSync(emptyList())
         }
     }
 
@@ -911,7 +911,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 _redeemedVoucher.value = finalVoucher
                 val maxVoucherBalance = finalVoucher?.remainingBalance ?: Double.MAX_VALUE
                 _storeCreditApplied.value = payload.storeCreditApplied.coerceAtMost(maxVoucherBalance)
-                persistCartSnapshot(restored)
+                persistCartSnapshotSync(restored)
                 if (unavailable == 0) repository.deleteHeldCart(heldCart.id) else {
                     val remainingPayload = HeldCartPayload(
                         items = remaining,
@@ -1104,24 +1104,28 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
+    private suspend fun persistCartSnapshotSync(items: List<CartItem>) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
+        try {
+            repository.saveCartSnapshot(encodeHeldCartPayload(HeldCartPayload(
+                items = items, customerName = customerName.value, customerPhone = customerPhone.value,
+                discountAmount = discountAmount.value, isPercentageDiscount = isPercentageDiscount.value,
+                priceMode = priceMode.value, paymentMethod = paymentMethod.value, walletPhone = walletPhone.value,
+                cardType = cardType.value, cardLastFour = cardLastFour.value, amountPaid = amountPaid.value,
+                isSplitPayment = isSplitPayment.value, splitPayments = splitPayments.value,
+                loyaltyPhone = loyaltyCustomer.value?.phone, loyaltyDiscount = loyaltyDiscount.value,
+                storeCreditApplied = storeCreditApplied.value, voucherCode = redeemedVoucher.value?.code,
+                voucherOriginalBalance = redeemedVoucher.value?.initialAmount,
+                voucherRemainingBalance = redeemedVoucher.value?.remainingBalance,
+                voucherCustomerPhone = redeemedVoucher.value?.customerPhone
+            )))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun persistCartSnapshot(items: List<CartItem>) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
-            try {
-                repository.saveCartSnapshot(encodeHeldCartPayload(HeldCartPayload(
-                    items = items, customerName = customerName.value, customerPhone = customerPhone.value,
-                    discountAmount = discountAmount.value, isPercentageDiscount = isPercentageDiscount.value,
-                    priceMode = priceMode.value, paymentMethod = paymentMethod.value, walletPhone = walletPhone.value,
-                    cardType = cardType.value, cardLastFour = cardLastFour.value, amountPaid = amountPaid.value,
-                    isSplitPayment = isSplitPayment.value, splitPayments = splitPayments.value,
-                    loyaltyPhone = loyaltyCustomer.value?.phone, loyaltyDiscount = loyaltyDiscount.value,
-                    storeCreditApplied = storeCreditApplied.value, voucherCode = redeemedVoucher.value?.code,
-                    voucherOriginalBalance = redeemedVoucher.value?.initialAmount,
-                    voucherRemainingBalance = redeemedVoucher.value?.remainingBalance,
-                    voucherCustomerPhone = redeemedVoucher.value?.customerPhone
-                )))
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            persistCartSnapshotSync(items)
         }
     }
 

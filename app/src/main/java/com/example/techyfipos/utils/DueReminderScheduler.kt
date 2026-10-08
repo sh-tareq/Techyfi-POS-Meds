@@ -469,6 +469,8 @@ object DueReminderScheduler {
         val title = context.getString(R.string.due_reminder_notification_title, customerName, formatTaka(dueAmount))
         val subtitle = if (channel == "sms") {
             context.getString(R.string.due_reminder_sms_review_body, customerName)
+        } else if (channel == "both") {
+            context.getString(R.string.due_reminder_both_ready_body)
         } else {
             context.getString(R.string.due_reminder_wa_ready_body)
         }

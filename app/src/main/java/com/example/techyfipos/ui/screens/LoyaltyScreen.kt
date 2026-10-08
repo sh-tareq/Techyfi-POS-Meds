@@ -1196,7 +1196,7 @@ private fun LoyaltyAddMemberDialog(
 ) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
-    var selectedTier by remember { mutableStateOf("Silver") }
+    var selectedTier by remember { mutableStateOf("Regular") }
 
     val duplicateMember = remember(phone) {
         loyaltyViewModel.findMemberByPhone(phone)

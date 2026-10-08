@@ -2027,10 +2027,84 @@ private fun SaleDetailDialog(
     }
 
     if (showEditConfirm) {
+        val s = saleWithItems.sale
+        val dueReversed = com.example.techyfipos.utils.PaymentMath.calculateDueAddition(
+            s.paymentMethod, s.grandTotal, s.amountPaid, s.splitPaymentJson
+        )
+        val totalQty = saleWithItems.items.sumOf { it.quantity }
+        val qtyStr = if (totalQty % 1.0 == 0.0) totalQty.toLong().toString() else String.format(Locale.US, "%.2f", totalQty).trimEnd('0').trimEnd('.')
+
         AlertDialog(
             onDismissRequest = { showEditConfirm = false },
             title = { Text(stringResource(R.string.cart_edit_sale_confirm_title)) },
-            text = { Text(stringResource(R.string.cart_edit_sale_confirm_message)) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.cart_edit_sale_confirm_message),
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    HorizontalDivider()
+                    Text(
+                        stringResource(R.string.cart_edit_sale_breakdown_title),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.grand_total), fontSize = 12.sp)
+                        Text(formatTaka(s.grandTotal), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                    if (s.amountPaid > 0.0 || !s.paymentMethod.equals("Due", ignoreCase = true)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(stringResource(R.string.receipt_paid_label, s.paymentMethod), fontSize = 12.sp)
+                            Text(formatTaka(s.amountPaid), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                        }
+                    }
+                    if (s.storeCreditApplied > 0.0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(stringResource(R.string.store_credit), fontSize = 12.sp)
+                            Text("+${formatTaka(s.storeCreditApplied)}", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                        }
+                    }
+                    if (dueReversed > 0.0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(stringResource(R.string.receipt_due_balance_label), fontSize = 12.sp)
+                            Text("-${formatTaka(dueReversed)}", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                        }
+                    }
+                    if (s.loyaltyPointsRedeemed > 0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(stringResource(R.string.loyalty_points_amount), fontSize = 12.sp)
+                            Text("+${s.loyaltyPointsRedeemed} pts", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.cart_edit_sale_restored_stock), fontSize = 12.sp)
+                        Text(stringResource(R.string.history_items_count, qtyStr), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                    }
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = {

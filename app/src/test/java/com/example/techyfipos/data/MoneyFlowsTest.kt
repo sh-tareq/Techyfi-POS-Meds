@@ -324,4 +324,32 @@ class MoneyFlowsTest {
         assertEquals(100.0, partialWithDueApportionment.storeCreditToRestore, 0.001)
         assertEquals(0.0, partialWithDueApportionment.externalRefundAmount, 0.001)
     }
+
+    @Test
+    fun `M-7 calculateDueAddition extracts due from plain due and split payment rows`() {
+        val duePlain = PaymentMath.calculateDueAddition(
+            paymentMethod = "Due",
+            grandTotal = 500.0,
+            amountPaid = 100.0,
+            splitPaymentJson = null
+        )
+        assertEquals(400.0, duePlain, 0.001)
+
+        val splitJson = """[{"method":"Cash","amount":150.0},{"method":"Due","amount":250.0}]"""
+        val dueSplit = PaymentMath.calculateDueAddition(
+            paymentMethod = "Split",
+            grandTotal = 400.0,
+            amountPaid = 150.0,
+            splitPaymentJson = splitJson
+        )
+        assertEquals(250.0, dueSplit, 0.001)
+
+        val dueCash = PaymentMath.calculateDueAddition(
+            paymentMethod = "Cash",
+            grandTotal = 200.0,
+            amountPaid = 200.0,
+            splitPaymentJson = null
+        )
+        assertEquals(0.0, dueCash, 0.001)
+    }
 }

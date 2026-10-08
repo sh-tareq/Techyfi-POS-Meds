@@ -470,23 +470,12 @@ class DataRepository(
         amountPaid: Double,
         splitPaymentJson: String?
     ): Double {
-        var dueAddition = 0.0
-        if (paymentMethod == "Due") {
-            dueAddition = (grandTotal - amountPaid).coerceAtLeast(0.0)
-        } else if (paymentMethod == "Split" && !splitPaymentJson.isNullOrBlank()) {
-            try {
-                val array = JSONArray(splitPaymentJson)
-                for (i in 0 until array.length()) {
-                    val obj = array.getJSONObject(i)
-                    if (obj.optString("method", "").equals("Due", ignoreCase = true)) {
-                        dueAddition += obj.optDouble("amount", 0.0)
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-        return dueAddition
+        return com.example.techyfipos.utils.PaymentMath.calculateDueAddition(
+            paymentMethod,
+            grandTotal,
+            amountPaid,
+            splitPaymentJson
+        )
     }
 
     private suspend fun reduceCustomerDue(phoneRaw: String, amount: Double) {

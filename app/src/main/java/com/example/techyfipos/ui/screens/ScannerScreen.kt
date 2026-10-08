@@ -267,6 +267,7 @@ fun ScannerScreen(
     val heldCarts by cartViewModel.allHeldCarts.collectAsStateWithLifecycle()
     val heldCartCount by cartViewModel.heldCartCount.collectAsStateWithLifecycle()
     var showHeldCartsSheet by remember { mutableStateOf(false) }
+    var pendingResumeCart by remember { mutableStateOf<com.example.techyfipos.data.db.HeldCart?>(null) }
 
     Box(modifier = modifier.fillMaxSize()) {
         if (isTablet) {
@@ -559,18 +560,54 @@ fun ScannerScreen(
                 com.example.techyfipos.ui.components.HeldCartsBottomSheet(
                     heldCarts = heldCarts,
                     onResume = { cart ->
-                        cartViewModel.restoreHeldCart(cart) { result ->
-                            Toast.makeText(context,
-                                if (result.unavailableLines > 0) context.getString(R.string.held_cart_restored_partial_toast, result.unavailableLines)
-                                else context.getString(R.string.held_cart_restored_toast, cart.title),
-                                if (result.unavailableLines > 0) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
-                            ).show()
+                        if (cartItems.isNotEmpty()) {
+                            pendingResumeCart = cart
+                        } else {
+                            cartViewModel.restoreHeldCart(cart) { result ->
+                                Toast.makeText(context,
+                                    if (result.unavailableLines > 0) context.getString(R.string.held_cart_restored_partial_toast, result.unavailableLines)
+                                    else context.getString(R.string.held_cart_restored_toast, cart.title),
+                                    if (result.unavailableLines > 0) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
                     },
                     onDelete = { cartId ->
                         cartViewModel.deleteHeldCart(cartId)
                     },
                     onDismiss = { showHeldCartsSheet = false }
+                )
+            }
+
+            pendingResumeCart?.let { cartToResume ->
+                AlertDialog(
+                    onDismissRequest = { pendingResumeCart = null },
+                    title = { Text(stringResource(R.string.held_cart_resume_confirm_title)) },
+                    text = { Text(stringResource(R.string.held_cart_resume_confirm_message, cartToResume.title)) },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                val cart = cartToResume
+                                pendingResumeCart = null
+                                showHeldCartsSheet = false
+                                cartViewModel.restoreHeldCart(cart) { result ->
+                                    Toast.makeText(context,
+                                        if (result.unavailableLines > 0) context.getString(R.string.held_cart_restored_partial_toast, result.unavailableLines)
+                                        else context.getString(R.string.held_cart_restored_toast, cart.title),
+                                        if (result.unavailableLines > 0) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
+                        ) {
+                            Text(stringResource(R.string.confirm))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingResumeCart = null }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
                 )
             }
 
