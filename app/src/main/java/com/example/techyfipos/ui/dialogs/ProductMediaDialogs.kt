@@ -50,7 +50,7 @@ fun ProductBarcodeScanDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
@@ -216,7 +216,7 @@ fun EnlargedImageDialog(
 ) {
     Dialog(
         onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
         Surface(
             modifier = Modifier

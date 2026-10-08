@@ -19,12 +19,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.R
 import com.example.techyfipos.data.db.InventoryAdjustment
 import com.example.techyfipos.data.db.Product
 import com.example.techyfipos.ui.screens.localizedAdjustmentReasonLabel
-import java.text.SimpleDateFormat
-import java.util.Date
+import com.example.techyfipos.utils.DateFormatters
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -219,7 +219,7 @@ fun StockAuditHistorySheet(
                                         )
                                     }
                                     val dateStr = remember(adj.timestamp) {
-                                        SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date(adj.timestamp))
+                                        DateFormatters.formatDateTime(adj.timestamp)
                                     }
                                     Text(dateStr, fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline)
                                 }
@@ -304,7 +304,10 @@ private fun ProductPickerForAdjustmentDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surface,

@@ -286,7 +286,7 @@ fun AddEditProductDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(22.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 16.dp,
             modifier = Modifier
                 .fillMaxWidth(0.96f)
@@ -348,8 +348,8 @@ fun AddEditProductDialog(
                     item {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFFAFAFA),
-                            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
@@ -359,25 +359,25 @@ fun AddEditProductDialog(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(stringResource(R.string.products_product_name_required_label), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1E293B))
+                                    Text(stringResource(R.string.products_product_name_required_label), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                                     BasicTextField(
                                         value = name,
                                         onValueChange = { name = it },
                                         textStyle = TextStyle(
                                             fontSize = 13.5.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFF1E293B)
+                                            color = MaterialTheme.colorScheme.onSurface
                                         ),
                                         singleLine = true,
-                                        cursorBrush = SolidColor(Color(0xFF4F46E5)),
+                                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                         modifier = Modifier.fillMaxWidth(),
                                         decorationBox = { innerTextField ->
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .height(42.dp)
-                                                    .background(Color.White, RoundedCornerShape(8.dp))
-                                                    .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(8.dp))
+                                                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
                                                     .padding(horizontal = 10.dp),
                                                 contentAlignment = Alignment.CenterStart
                                             ) {
@@ -391,7 +391,7 @@ fun AddEditProductDialog(
                                                             Text(
                                                                 text = stringResource(R.string.products_product_name_placeholder),
                                                                 fontSize = 13.sp,
-                                                                color = Color(0xFF94A3B8)
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                                             )
                                                         }
                                                         innerTextField()
@@ -402,7 +402,7 @@ fun AddEditProductDialog(
                                                                 imageVector = Icons.Default.Close,
                                                                 contentDescription = stringResource(R.string.products_clear_cd),
                                                                 modifier = Modifier.size(16.dp),
-                                                                tint = Color(0xFF64748B)
+                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                                                             )
                                                         }
                                                     }
@@ -418,8 +418,8 @@ fun AddEditProductDialog(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(stringResource(R.string.products_barcode_sku_optional_label), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1E293B))
-                                        Text(stringResource(R.string.products_auto_generated_hint), fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4F46E5))
+                                        Text(stringResource(R.string.products_barcode_sku_optional_label), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                                        Text(stringResource(R.string.products_auto_generated_hint), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                     }
                                     BasicTextField(
                                         value = barcode,
@@ -427,18 +427,18 @@ fun AddEditProductDialog(
                                         textStyle = TextStyle(
                                             fontSize = 13.5.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFF1E293B)
+                                            color = MaterialTheme.colorScheme.onSurface
                                         ),
                                         singleLine = true,
-                                        cursorBrush = SolidColor(Color(0xFF4F46E5)),
+                                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                         modifier = Modifier.fillMaxWidth(),
                                         decorationBox = { innerTextField ->
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .height(42.dp)
-                                                    .background(Color.White, RoundedCornerShape(8.dp))
-                                                    .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(8.dp))
+                                                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
                                                     .padding(horizontal = 10.dp),
                                                 contentAlignment = Alignment.CenterStart
                                             ) {
@@ -453,7 +453,7 @@ fun AddEditProductDialog(
                                                             Text(
                                                                 text = stringResource(R.string.products_barcode_placeholder),
                                                                 fontSize = 12.5.sp,
-                                                                color = Color(0xFF94A3B8),
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                                 maxLines = 1
                                                             )
                                                         }
@@ -511,8 +511,8 @@ fun AddEditProductDialog(
 
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color.White,
-                            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
@@ -536,13 +536,13 @@ fun AddEditProductDialog(
                                             text = stringResource(R.string.products_category_label),
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 13.sp,
-                                            color = Color(0xFF1E293B)
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
-                                        color = Color(0xFFEEF2FF),
-                                        border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
                                         modifier = Modifier.clickable { showCategoryManagerDialog = true }
                                     ) {
                                         Row(
@@ -555,7 +555,7 @@ fun AddEditProductDialog(
                                                 text = stringResource(R.string.products_manage_button),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF4F46E5)
+                                                color = MaterialTheme.colorScheme.primary
                                             )
                                         }
                                     }
@@ -575,10 +575,10 @@ fun AddEditProductDialog(
                                         textStyle = TextStyle(
                                             fontSize = 13.5.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFF1E293B)
+                                            color = MaterialTheme.colorScheme.onSurface
                                         ),
                                         singleLine = true,
-                                        cursorBrush = SolidColor(Color(0xFF4F46E5)),
+                                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .menuAnchor(),
@@ -587,10 +587,10 @@ fun AddEditProductDialog(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .height(42.dp)
-                                                    .background(Color.White, RoundedCornerShape(8.dp))
+                                                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
                                                     .border(
                                                         1.dp,
-                                                        if (categoryDropdownExpanded) Color(0xFF4F46E5) else Color(0xFFCBD5E1),
+                                                        if (categoryDropdownExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                                         RoundedCornerShape(8.dp)
                                                     )
                                                     .padding(horizontal = 10.dp),
@@ -607,7 +607,7 @@ fun AddEditProductDialog(
                                                             Text(
                                                                 text = stringResource(R.string.products_category_placeholder),
                                                                 fontSize = 13.sp,
-                                                                color = Color(0xFF94A3B8)
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                                             )
                                                         }
                                                         innerTextField()
@@ -615,7 +615,7 @@ fun AddEditProductDialog(
                                                     Icon(
                                                         imageVector = Icons.Default.ArrowDropDown,
                                                         contentDescription = stringResource(R.string.cd_expand_category),
-                                                        tint = Color(0xFF64748B),
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         modifier = Modifier.size(20.dp)
                                                     )
                                                 }
@@ -630,7 +630,7 @@ fun AddEditProductDialog(
                                     ExposedDropdownMenu(
                                         expanded = categoryDropdownExpanded,
                                         onDismissRequest = { categoryDropdownExpanded = false },
-                                        modifier = Modifier.background(Color.White)
+                                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                                     ) {
                                         if (filtered.isEmpty()) {
                                             DropdownMenuItem(
@@ -823,8 +823,8 @@ fun AddEditProductDialog(
                     item {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFF8FAFC),
-                            border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
@@ -847,20 +847,20 @@ fun AddEditProductDialog(
                                             stringResource(R.string.products_pricing_profit_intelligence),
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 11.sp,
-                                            color = Color(0xFF4338CA),
+                                            color = MaterialTheme.colorScheme.primary,
                                             letterSpacing = 0.5.sp
                                         )
                                     }
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
-                                        color = Color(0xFFE0E7FF)
+                                        color = MaterialTheme.colorScheme.primaryContainer
                                     ) {
                                         Text(
                                             stringResource(R.string.products_4tier_badge),
-                                            fontSize = 9.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF4338CA),
-                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
                                 }
@@ -873,7 +873,7 @@ fun AddEditProductDialog(
                                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(stringResource(R.string.products_quick_markup_label), fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6366F1))
+                                        Text(stringResource(R.string.products_quick_markup_label), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                         listOf(10, 20, 30, 50).forEach { pct ->
                                             Surface(
                                                 onClick = {
@@ -885,15 +885,15 @@ fun AddEditProductDialog(
                                                     }
                                                 },
                                                 shape = RoundedCornerShape(5.dp),
-                                                color = Color(0xFFEEF2FF),
-                                                border = BorderStroke(1.dp, Color(0xFFC7D2FE))
+                                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                                             ) {
                                                 Text(
                                                     "+$pct%",
-                                                    fontSize = 9.5.sp,
+                                                    fontSize = 11.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFF4338CA),
-                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                 )
                                             }
                                         }
@@ -915,7 +915,7 @@ fun AddEditProductDialog(
                                             textStyle = TextStyle(
                                                 fontSize = 13.5.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF1E293B)
+                                                color = MaterialTheme.colorScheme.onSurface
                                             ),
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                             singleLine = true,
@@ -926,13 +926,13 @@ fun AddEditProductDialog(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .height(42.dp)
-                                                        .background(Color.White, RoundedCornerShape(8.dp))
+                                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
                                                         .border(1.dp, Color(0xFFFECACA), RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 10.dp),
                                                     contentAlignment = Alignment.CenterStart
                                                 ) {
                                                     if (purchasePrice.isEmpty()) {
-                                                        Text("0.00", fontSize = 13.sp, color = Color(0xFF94A3B8))
+                                                        Text("0.00", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                     }
                                                     innerTextField()
                                                 }
@@ -956,7 +956,7 @@ fun AddEditProductDialog(
                                             textStyle = TextStyle(
                                                 fontSize = 13.5.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF1E293B)
+                                                color = MaterialTheme.colorScheme.onSurface
                                             ),
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                             singleLine = true,
@@ -967,13 +967,13 @@ fun AddEditProductDialog(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .height(42.dp)
-                                                        .background(Color.White, RoundedCornerShape(8.dp))
+                                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
                                                         .border(1.dp, Color(0xFFDDD6FE), RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 10.dp),
                                                     contentAlignment = Alignment.CenterStart
                                                 ) {
                                                     if (mrpPrice.isEmpty()) {
-                                                        Text("0.00", fontSize = 13.sp, color = Color(0xFF94A3B8))
+                                                        Text("0.00", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                     }
                                                     innerTextField()
                                                 }
@@ -997,7 +997,7 @@ fun AddEditProductDialog(
                                             textStyle = TextStyle(
                                                 fontSize = 13.5.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF1E293B)
+                                                color = MaterialTheme.colorScheme.onSurface
                                             ),
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                             singleLine = true,
@@ -1008,13 +1008,13 @@ fun AddEditProductDialog(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .height(42.dp)
-                                                        .background(Color.White, RoundedCornerShape(8.dp))
+                                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
                                                         .border(1.dp, Color(0xFFA7F3D0), RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 10.dp),
                                                     contentAlignment = Alignment.CenterStart
                                                 ) {
                                                     if (discountedPrice.isEmpty()) {
-                                                        Text("0.00", fontSize = 13.sp, color = Color(0xFF94A3B8))
+                                                        Text("0.00", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                     }
                                                     innerTextField()
                                                 }
@@ -1033,7 +1033,7 @@ fun AddEditProductDialog(
                                             textStyle = TextStyle(
                                                 fontSize = 13.5.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF1E293B)
+                                                color = MaterialTheme.colorScheme.onSurface
                                             ),
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                             singleLine = true,
@@ -1044,13 +1044,13 @@ fun AddEditProductDialog(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .height(42.dp)
-                                                        .background(Color.White, RoundedCornerShape(8.dp))
+                                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
                                                         .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 10.dp),
                                                     contentAlignment = Alignment.CenterStart
                                                 ) {
                                                     if (wholesalePrice.isEmpty()) {
-                                                        Text("0.00", fontSize = 13.sp, color = Color(0xFF94A3B8))
+                                                        Text("0.00", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                     }
                                                     innerTextField()
                                                 }
@@ -1163,8 +1163,8 @@ fun AddEditProductDialog(
 
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFFAFAFA),
-                            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
@@ -1187,7 +1187,7 @@ fun AddEditProductDialog(
                                             text = stringResource(R.string.products_stock_measurement_label),
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 13.sp,
-                                            color = Color(0xFF1E293B)
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
 
@@ -1197,7 +1197,7 @@ fun AddEditProductDialog(
                                     ) {
                                         Text(
                                             healthText,
-                                            fontSize = 9.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = healthColor,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -1219,7 +1219,7 @@ fun AddEditProductDialog(
                                             text = stringResource(R.string.stock_qty),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF1E293B)
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         BasicTextField(
                                             value = stockQty,
@@ -1232,24 +1232,24 @@ fun AddEditProductDialog(
                                             textStyle = TextStyle(
                                                 fontSize = 13.5.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF1E293B)
+                                                color = MaterialTheme.colorScheme.onSurface
                                             ),
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                             singleLine = true,
-                                            cursorBrush = SolidColor(Color(0xFF4F46E5)),
+                                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                             modifier = Modifier.fillMaxWidth(),
                                             decorationBox = { innerTextField ->
                                                 Box(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .height(42.dp)
-                                                        .background(Color.White, RoundedCornerShape(8.dp))
-                                                        .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(8.dp))
+                                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 10.dp),
                                                     contentAlignment = Alignment.CenterStart
                                                 ) {
                                                     if (stockQty.isEmpty()) {
-                                                        Text("0", fontSize = 13.5.sp, color = Color(0xFF94A3B8))
+                                                        Text("0", fontSize = 13.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                     }
                                                     innerTextField()
                                                 }
@@ -1266,7 +1266,7 @@ fun AddEditProductDialog(
                                             text = stringResource(R.string.products_min_alert_label),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF1E293B)
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         BasicTextField(
                                             value = reorderLevel,
@@ -1277,24 +1277,24 @@ fun AddEditProductDialog(
                                             textStyle = TextStyle(
                                                 fontSize = 13.5.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF1E293B)
+                                                color = MaterialTheme.colorScheme.onSurface
                                             ),
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                             singleLine = true,
-                                            cursorBrush = SolidColor(Color(0xFF4F46E5)),
+                                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                             modifier = Modifier.fillMaxWidth(),
                                             decorationBox = { innerTextField ->
                                                 Box(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .height(42.dp)
-                                                        .background(Color.White, RoundedCornerShape(8.dp))
-                                                        .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(8.dp))
+                                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 10.dp),
                                                     contentAlignment = Alignment.CenterStart
                                                 ) {
                                                     if (reorderLevel.isEmpty()) {
-                                                        Text("5", fontSize = 13.5.sp, color = Color(0xFF94A3B8))
+                                                        Text("5", fontSize = 13.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                     }
                                                     innerTextField()
                                                 }
@@ -1311,14 +1311,14 @@ fun AddEditProductDialog(
                                             text = stringResource(R.string.products_unit_label),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF1E293B)
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Box(modifier = Modifier.fillMaxWidth()) {
                                             Surface(
                                                 onClick = { showUnitDropdown = true },
                                                 shape = RoundedCornerShape(8.dp),
-                                                color = Color.White,
-                                                border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                                                color = MaterialTheme.colorScheme.surface,
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .height(42.dp)
@@ -1334,12 +1334,12 @@ fun AddEditProductDialog(
                                                         text = unit,
                                                         fontSize = 13.5.sp,
                                                         fontWeight = FontWeight.SemiBold,
-                                                        color = Color(0xFF1E293B)
+                                                        color = MaterialTheme.colorScheme.onSurface
                                                     )
                                                     Icon(
                                                         imageVector = Icons.Default.ArrowDropDown,
                                                         contentDescription = stringResource(R.string.cd_select_unit),
-                                                        tint = Color(0xFF64748B),
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         modifier = Modifier.size(20.dp)
                                                     )
                                                 }
@@ -1347,7 +1347,7 @@ fun AddEditProductDialog(
                                             DropdownMenu(
                                                 expanded = showUnitDropdown,
                                                 onDismissRequest = { showUnitDropdown = false },
-                                                modifier = Modifier.background(Color.White)
+                                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                                             ) {
                                                 unitOptions.forEach { u ->
                                                     val isSelected = unit == u
@@ -1539,9 +1539,9 @@ fun AddEditProductDialog(
                 }
 
                 Surface(
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 8.dp,
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -1556,7 +1556,7 @@ fun AddEditProductDialog(
                                 .weight(1f)
                                 .height(44.dp)
                         ) {
-                            Text(stringResource(R.string.products_cancel_action), fontWeight = FontWeight.Bold, color = Color(0xFF475569), fontSize = 12.5.sp)
+                            Text(stringResource(R.string.products_cancel_action), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.5.sp)
                         }
 
                         if (isEdit && onDelete != null) {
@@ -1608,7 +1608,7 @@ fun AddEditProductDialog(
                         ) {
                             Animated3DSaveIcon()
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.products_save_product_button), fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(stringResource(R.string.products_save_product_button), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                         }
                     }
                 }

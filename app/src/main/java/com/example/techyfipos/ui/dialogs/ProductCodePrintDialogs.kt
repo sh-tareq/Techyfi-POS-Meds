@@ -596,7 +596,7 @@ fun BatchProductCodePrintDialog(
 
     Dialog(
         onDismissRequest = { if (!isGenerating) onDismiss() },
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
         Surface(
             modifier = Modifier
@@ -1043,7 +1043,7 @@ fun ProductCodeImageDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
         Surface(
             modifier = Modifier

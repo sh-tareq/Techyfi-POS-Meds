@@ -93,13 +93,13 @@ fun ManageCategoriesDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 24.dp,
-            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             modifier = Modifier
                 .fillMaxWidth(0.94f)
                 .fillMaxHeight(0.88f)

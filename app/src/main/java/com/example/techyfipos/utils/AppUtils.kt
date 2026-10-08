@@ -21,8 +21,32 @@ object DateFormatters {
     fun formatDate(timestamp: Long, locale: Locale = Locale.getDefault()): String =
         SimpleDateFormat("dd MMM yyyy", locale).format(Date(timestamp))
 
-    fun formatISO(timestamp: Long): String =
+    fun formatTime(timestamp: Long, locale: Locale = Locale.getDefault()): String =
+        SimpleDateFormat("hh:mm a", locale).format(Date(timestamp))
+
+    fun formatISO(timestamp: Long = System.currentTimeMillis()): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(timestamp))
+
+    fun formatExportDate(timestamp: Long = System.currentTimeMillis()): String =
+        SimpleDateFormat("yyyyMMdd", Locale.US).format(Date(timestamp))
+
+    fun formatExportDateTime(timestamp: Long = System.currentTimeMillis()): String =
+        SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date(timestamp))
+
+    fun formatReportTimestamp(timestamp: Long, locale: Locale = Locale.getDefault()): String =
+        SimpleDateFormat("yyyy-MM-dd HH:mm", locale).format(Date(timestamp))
+
+    fun formatBackupDate(timestamp: Long, locale: Locale = Locale.getDefault()): String =
+        SimpleDateFormat("MMM d, yyyy • h:mm a", locale).format(Date(timestamp))
+
+    fun formatShortDate(timestamp: Long, locale: Locale = Locale.getDefault()): String =
+        SimpleDateFormat("dd MMM", locale).format(Date(timestamp))
+
+    fun formatDayMonth(timestamp: Long, locale: Locale = Locale.getDefault()): String =
+        SimpleDateFormat("EEE, dd MMM", locale).format(Date(timestamp))
+
+    fun formatDayOfWeek(timestamp: Long, locale: Locale = Locale.getDefault()): String =
+        SimpleDateFormat("EEE", locale).format(Date(timestamp))
 }
 
 /**
@@ -47,23 +71,28 @@ fun endOfDay(millis: Long = System.currentTimeMillis()): Long = Calendar.getInst
     set(Calendar.MILLISECOND, 999)
 }.timeInMillis
 
-fun formatTaka(amount: Double): String {
-    val isNegative = amount < 0.0
-    val absFormatted = MoneyUtils.formatBanglaGrouping(Math.abs(amount))
-    return if (isNegative) "-৳$absFormatted" else "৳$absFormatted"
-}
+fun isAppBangla(locale: Locale = Locale.getDefault()): Boolean =
+    locale.language.equals("bn", ignoreCase = true)
 
-fun formatMoney(amount: Double, isBangla: Boolean = false): String {
-    val en = formatTaka(amount)
-    if (!isBangla) return en
+fun toBanglaDigits(str: String): String {
     val digits = mapOf(
         '0' to '০', '1' to '১', '2' to '২', '3' to '৩', '4' to '৪',
         '5' to '৫', '6' to '৬', '7' to '৭', '8' to '৮', '9' to '৯'
     )
-    return en.map { digits[it] ?: it }.joinToString("")
+    return str.map { digits[it] ?: it }.joinToString("")
 }
 
-fun formatTakaBn(amount: Double): String = formatMoney(amount, isBangla = true)
+fun formatTaka(amount: Double, isBangla: Boolean = isAppBangla()): String {
+    val isNegative = amount < 0.0
+    val absFormatted = MoneyUtils.formatBanglaGrouping(Math.abs(amount))
+    val en = if (isNegative) "-৳$absFormatted" else "৳$absFormatted"
+    return if (isBangla) toBanglaDigits(en) else en
+}
+
+fun formatMoney(amount: Double, isBangla: Boolean = isAppBangla()): String =
+    formatTaka(amount, isBangla)
+
+fun formatTakaBn(amount: Double): String = formatTaka(amount, isBangla = true)
 
 /**
  * Checks whether a unit string represents a fractional/weighable quantity (e.g., Kg, Gram, Ltr, Mtr).

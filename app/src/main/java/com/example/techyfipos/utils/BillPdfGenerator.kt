@@ -1479,14 +1479,6 @@ fun generateXReportPdf(context: Context, data: SalesReportData, rangeLabel: Stri
     return outputFile
 }
 
-fun toBanglaDigits(str: String): String {
-    val digits = mapOf(
-        '0' to '০', '1' to '১', '2' to '২', '3' to '৩', '4' to '৪',
-        '5' to '৫', '6' to '৬', '7' to '৭', '8' to '৮', '9' to '৯'
-    )
-    return str.map { digits[it] ?: it }.joinToString("")
-}
-
 
 
 fun generateDueRepaymentJpeg(

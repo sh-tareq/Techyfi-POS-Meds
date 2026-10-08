@@ -100,7 +100,7 @@ fun AddCustomItemDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
         Surface(
             modifier = Modifier
@@ -1341,7 +1341,7 @@ fun ManageQuickSalePresetsDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
         Surface(
             modifier = Modifier
