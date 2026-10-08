@@ -41,7 +41,7 @@ class AppDatabaseMigrationTest {
         createDatabaseFromExportedSchema(context, name, 14).close()
 
         val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
@@ -72,7 +72,7 @@ class AppDatabaseMigrationTest {
         }
 
         val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
@@ -107,11 +107,7 @@ class AppDatabaseMigrationTest {
         }
 
         val restored = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(
-                MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
-                MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15,
-                MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19
-            )
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
@@ -138,7 +134,7 @@ class AppDatabaseMigrationTest {
             close()
         }
         val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(MIGRATION_17_18, MIGRATION_18_19)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
@@ -158,7 +154,7 @@ class AppDatabaseMigrationTest {
         val name = "migration-18-19-${System.currentTimeMillis()}.db"
         createDatabaseFromExportedSchema(context, name, 18).close()
         val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(MIGRATION_18_19)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
@@ -302,7 +298,7 @@ class AppDatabaseMigrationTest {
         val name = "migration-19-20-${System.currentTimeMillis()}.db"
         createDatabaseFromExportedSchema(context, name, 19).close()
         val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(MIGRATION_19_20)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
@@ -324,7 +320,7 @@ class AppDatabaseMigrationTest {
             close()
         }
         val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(MIGRATION_20_21)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
@@ -354,7 +350,7 @@ class AppDatabaseMigrationTest {
             close()
         }
         val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(MIGRATION_21_22)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
@@ -380,7 +376,7 @@ class AppDatabaseMigrationTest {
             close()
         }
         val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(MIGRATION_22_23)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()

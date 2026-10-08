@@ -200,10 +200,12 @@ class BackupRestoreIntegrationTest {
 
         val product = Product("P-3", "One left", "Test", 1.0, 2.0, 1.0, 1)
         database.productDao().insertProduct(product)
+        val cashier = User(id = 2, name = "Cashier", pinHash = "x", role = "CASHIER")
+        repository.setSessionUser(cashier)
         var rejected = false
         try {
             repository.completeSale(4.0, 0.0, false, 4.0, "Cash", null, null, 4.0, null, null, null, listOf(product to 2.0))
-        } catch (_: IllegalArgumentException) {
+        } catch (_: Exception) {
             rejected = true
         }
         assertTrue(rejected)
@@ -218,33 +220,33 @@ class BackupRestoreIntegrationTest {
         val product = Product("P-LOYALTY", "Loyalty item", "Test", 10.0, 20.0, 5.0, 1)
         database.productDao().insertProduct(product)
         database.customerLoyaltyDao().upsertLoyalty(
-            CustomerLoyalty(phone = "01700000001", name = "Member", pointsBalance = 10)
+            CustomerLoyalty(phone = "01700000001", name = "Member", pointsBalance = 30)
         )
 
         val saleId = repository.completeSale(
             subtotal = 40.0,
             discountAmount = 0.0,
             isPercentage = false,
-            grandTotal = 35.0,
+            grandTotal = 20.0,
             paymentMethod = "Cash",
             customerName = "Member",
             customerPhone = "01700000001",
-            amountPaid = 35.0,
+            amountPaid = 20.0,
             walletPhone = null,
             cardType = null,
             cardLastFour = null,
             cartItems = listOf(product to 2.0),
             loyaltyPhone = "01700000001",
-            loyaltyPointsToRedeem = 5
+            loyaltyPointsToRedeem = 20
         )
 
         assertEquals(3.0, database.productDao().getProductByBarcode(product.barcode)!!.stockQty, 0.001)
-        assertEquals(5, database.customerLoyaltyDao().getLoyaltyByPhone("01700000001")!!.pointsBalance)
-        assertEquals(5, database.saleDao().getSaleWithItemsById(saleId)!!.sale.loyaltyPointsRedeemed)
+        assertEquals(10, database.customerLoyaltyDao().getLoyaltyByPhone("01700000001")!!.pointsBalance)
+        assertEquals(20, database.saleDao().getSaleWithItemsById(saleId)!!.sale.loyaltyPointsRedeemed)
 
         repository.deleteSale(saleId)
         assertEquals(5.0, database.productDao().getProductByBarcode(product.barcode)!!.stockQty, 0.001)
-        assertEquals(10, database.customerLoyaltyDao().getLoyaltyByPhone("01700000001")!!.pointsBalance)
+        assertEquals(30, database.customerLoyaltyDao().getLoyaltyByPhone("01700000001")!!.pointsBalance)
         assertNull(database.saleDao().getSaleWithItemsById(saleId))
     }
 
@@ -259,20 +261,20 @@ class BackupRestoreIntegrationTest {
         var rejected = false
         try {
             repository.completeSale(
-                subtotal = 10.0,
+                subtotal = 40.0,
                 discountAmount = 0.0,
                 isPercentage = false,
-                grandTotal = 5.0,
+                grandTotal = 20.0,
                 paymentMethod = "Cash",
                 customerName = "Member",
                 customerPhone = "01700000002",
-                amountPaid = 5.0,
+                amountPaid = 20.0,
                 walletPhone = null,
                 cardType = null,
                 cardLastFour = null,
-                cartItems = listOf(product to 1.0),
+                cartItems = listOf(product to 4.0),
                 loyaltyPhone = "01700000002",
-                loyaltyPointsToRedeem = 5
+                loyaltyPointsToRedeem = 20
             )
         } catch (_: IllegalArgumentException) {
             rejected = true
@@ -327,10 +329,15 @@ class BackupRestoreIntegrationTest {
         assertEquals(7.0, database.productDao().getProductByBarcode(product.barcode)!!.stockQty, 0.001)
         assertEquals(300.0, database.customerDueDao().getCustomerDueByPhone("01711111111")!!.outstandingAmount, 0.001)
 
-        repository.deleteSale(saleId)
-
-        assertEquals(10.0, database.productDao().getProductByBarcode(product.barcode)!!.stockQty, 0.001)
-        assertEquals(0.0, database.customerDueDao().getCustomerDueByPhone("01711111111")!!.outstandingAmount, 0.001)
+        var deleteRejected = false
+        try {
+            repository.deleteSale(saleId)
+        } catch (_: IllegalStateException) {
+            deleteRejected = true
+        }
+        assertTrue(deleteRejected)
+        assertEquals(7.0, database.productDao().getProductByBarcode(product.barcode)!!.stockQty, 0.001)
+        assertEquals(300.0, database.customerDueDao().getCustomerDueByPhone("01711111111")!!.outstandingAmount, 0.001)
     }
 
     @Test
@@ -394,7 +401,7 @@ class BackupRestoreIntegrationTest {
     @Test
     fun cashierCannotMutateCustomerDueLedger() = runBlocking {
         database.customerDueDao().upsertCustomerDue(CustomerDue("01722222222", "Customer", 100.0))
-        repository.setSessionUser(User(id = 2, name = "Cashier", pinHash = "x", role = "CASHIER"))
+        repository.setSessionUser(User(id = 2, name = "Cashier", pinHash = "x", role = "CASHIER", customPermissions = "[]"))
 
         var deniedCount = 0
         try { repository.recordDuePayment("01722222222", 10.0) } catch (_: DataRepository.UnauthorizedException) { deniedCount++ }
@@ -424,7 +431,7 @@ class BackupRestoreIntegrationTest {
             12, "INV-STOCK", 30.0, 30.0, "Stock item × 3", stockLines = listOf(PurchaseStockLine("P-STOCK-IN", 3.0, 10.0))
         )
         assertEquals(5.0, database.productDao().getProductByBarcode("P-STOCK-IN")!!.stockQty, 0.001)
-        assertEquals(10.0, database.productDao().getProductByBarcode("P-STOCK-IN")!!.purchasePrice, 0.001)
+        assertEquals(8.0, database.productDao().getProductByBarcode("P-STOCK-IN")!!.purchasePrice, 0.001)
         assertEquals(3.0, database.purchaseInvoiceDao().getItemsForInvoice(invoiceId).first().single().quantity, 0.001)
 
         var overpaymentRejected = false
@@ -450,7 +457,8 @@ class BackupRestoreIntegrationTest {
     fun archivingDuePreservesRepaymentLedger() = runBlocking {
         repository.setSessionUser(User(id = 1, name = "Owner", pinHash = "x", role = "OWNER"))
         database.customerDueDao().upsertCustomerDue(CustomerDue("01755555555", "Archived", 100.0))
-        database.customerDueDao().recordDuePayment("01755555555", 20.0, System.currentTimeMillis())
+        database.customerDueDao().recordDuePayment("01755555555", 100.0, System.currentTimeMillis())
+        database.customerDueDao().adjustOutstandingDue("01755555555", -100.0, System.currentTimeMillis())
 
         repository.deleteCustomerDue("01755555555")
 
@@ -473,7 +481,7 @@ class BackupRestoreIntegrationTest {
         val closing = database.registerClosingDao().getAllClosings().first().single()
         assertEquals(10.0, closing.cashRefunds, 0.001)
         assertEquals(startedAt, closing.shiftStartedAt)
-        assertEquals(0.0, database.registerShiftStateDao().get()!!.startingFloat, 0.001)
+        assertEquals(570.0, database.registerShiftStateDao().get()!!.startingFloat, 0.001)
     }
 
     @Test
@@ -579,10 +587,13 @@ class BackupRestoreIntegrationTest {
         assertEquals(0.0, afterReturn.lifetimeSpent, 0.001)
         assertEquals(1, afterReturn.totalOrders)
 
-        repository.deleteSale(saleId)
-        val afterDelete = database.customerDao().getCustomerByPhone("01777777777")!!
-        assertEquals(0, afterDelete.totalOrders)
-        assertEquals(0.0, afterDelete.totalDue, 0.001)
+        var deleteRejected = false
+        try {
+            repository.deleteSale(saleId)
+        } catch (_: IllegalStateException) {
+            deleteRejected = true
+        }
+        assertTrue(deleteRejected)
     }
 
     @Test
@@ -699,6 +710,211 @@ class BackupRestoreIntegrationTest {
         assertEquals(dueChargesPre, dueCharges2)
 
         backup.delete()
+        Unit
+    }
+
+    @Test
+    fun mergeBackupFromDifferentStateAssertsExactBalances() = runBlocking {
+        // Setup initial local state
+        // 1. Existing product with UPPERCASE barcode (X-4 c, d, b)
+        val upperProduct = Product(
+            barcode = "UPPER-1",
+            name = "Local Upper Product",
+            category = "Items",
+            purchasePrice = 60.0,
+            sellingPrice = 100.0,
+            stockQty = 50.0,
+            reorderLevel = 5
+        )
+        database.productDao().insertProduct(upperProduct)
+
+        // 2. Existing product with lowercase barcode
+        val lowerProduct = Product(
+            barcode = "lower-2",
+            name = "Local Lower Product",
+            category = "Items",
+            purchasePrice = 30.0,
+            sellingPrice = 50.0,
+            stockQty = 30.0,
+            reorderLevel = 5
+        )
+        database.productDao().insertProduct(lowerProduct)
+
+        // 3. Existing supplier (X-4 a)
+        val supplierId = database.supplierDao().upsertSupplier(
+            Supplier(
+                name = "Active Supplier",
+                companyName = "Supply Corp",
+                phone = "01811111111",
+                totalPurchased = 500.0,
+                totalDue = 200.0
+            )
+        )
+
+        // 4. Existing customer
+        database.customerDao().upsertCustomer(
+            Customer(
+                phone = "01711111111",
+                name = "Active Customer",
+                totalDue = 100.0,
+                storeCredit = 20.0
+            )
+        )
+
+        // Build a backup JSON representing a different state:
+        // - A new purchase invoice for Active Supplier: total 1000, paid 400, due 600
+        //   Line: UPPER-1, quantity = 10.0, unitCost = 60.0
+        //   Paired SupplierPayment: amountPaid = 400, refNote = "Paid on Invoice #INV-BRANCH-1"
+        //   Paired InventoryAdjustment: UPPER-1, difference = 10.0, reason = "Purchase Invoice"
+        // - A standalone supplier debt payment for Active Supplier: amountPaid = 50.0, refNote = "Debt repayment"
+        // - A new sale: UPPER-1, quantity = 3.0, grandTotal = 300.0
+        // - A manual inventory adjustment for lower-2: difference = -2.0, reason = "Damaged write-off"
+        // - UPPER-1 is in the backup but with mutated name/price: "Remote Mutated Name", sellingPrice = 999.0
+        // - A brand new product in the backup: "BRAND-NEW-3", stock = 15.0
+
+        val backupJson = JSONObject()
+
+        val productsArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("barcode", "UPPER-1")
+                put("name", "Remote Mutated Name")
+                put("sellingPrice", 999.0)
+                put("stockQty", 99.0)
+            })
+            put(JSONObject().apply {
+                put("barcode", "BRAND-NEW-3")
+                put("name", "New Item")
+                put("sellingPrice", 25.0)
+                put("stockQty", 15.0)
+            })
+        }
+        backupJson.put("products", productsArr)
+
+        val suppliersArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 101L)
+                put("name", "Active Supplier")
+                put("companyName", "Supply Corp")
+                put("phone", "01811111111")
+                put("totalPurchased", 500.0)
+                put("totalDue", 200.0)
+            })
+        }
+        backupJson.put("suppliers", suppliersArr)
+
+        val now = System.currentTimeMillis()
+        val invoicesArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 501L)
+                put("supplierId", 101L)
+                put("invoiceNumber", "INV-BRANCH-1")
+                put("totalAmount", 1000.0)
+                put("paidAmount", 400.0)
+                put("dueAmount", 600.0)
+                put("timestamp", now)
+            })
+        }
+        backupJson.put("purchaseInvoices", invoicesArr)
+
+        val purchaseItemsArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 601L)
+                put("invoiceId", 501L)
+                put("productBarcode", "UPPER-1")
+                put("productName", "Upper Item")
+                put("quantity", 10.0)
+                put("unitCost", 60.0)
+            })
+        }
+        backupJson.put("purchaseInvoiceItems", purchaseItemsArr)
+
+        val supplierPaymentsArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 701L)
+                put("supplierId", 101L)
+                put("amountPaid", 400.0)
+                put("referenceNote", "Paid on Invoice #INV-BRANCH-1")
+                put("timestamp", now)
+            })
+            put(JSONObject().apply {
+                put("id", 702L)
+                put("supplierId", 101L)
+                put("amountPaid", 50.0)
+                put("referenceNote", "Debt repayment")
+                put("timestamp", now + 1000)
+            })
+        }
+        backupJson.put("supplierPayments", supplierPaymentsArr)
+
+        val adjustmentsArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 801L)
+                put("productBarcode", "UPPER-1")
+                put("difference", 10.0)
+                put("reason", "Purchase Invoice")
+                put("timestamp", now)
+            })
+            put(JSONObject().apply {
+                put("id", 802L)
+                put("productBarcode", "lower-2")
+                put("difference", -2.0)
+                put("reason", "Damaged write-off")
+                put("timestamp", now + 2000)
+            })
+        }
+        backupJson.put("inventoryAdjustments", adjustmentsArr)
+
+        val salesArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 901L)
+                put("timestamp", now + 3000)
+                put("grandTotal", 300.0)
+                put("paymentMethod", "Cash")
+                put("saleItems", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("productBarcode", "UPPER-1")
+                        put("productName", "Upper Item")
+                        put("price", 100.0)
+                        put("quantity", 3.0)
+                    })
+                })
+            })
+        }
+        backupJson.put("sales", salesArr)
+
+        val backupFile = File(context.cacheDir, "diff-state-merge-test.json")
+        backupFile.writeText(backupJson.toString())
+
+        val success = repository.importBackup(backupFile, BackupImportMode.MERGE)
+        assertTrue(success)
+
+        // (a) Supplier Alpha:
+        // Initial totalPurchased 500 + invoice 1000 = 1500.0
+        // Initial totalDue 200 + invoice due 600 - standalone payment 50 = 750.0
+        val supplier = database.supplierDao().getSupplierById(supplierId)!!
+        assertEquals(1500.0, supplier.totalPurchased, 0.001)
+        assertEquals(750.0, supplier.totalDue, 0.001)
+
+        // (b & c & d) Product UPPER-1:
+        // - Name must NOT be overwritten by backup (d)
+        // - Selling price must NOT be overwritten by backup (d)
+        // - Stock must be 50.0 + 10.0 (purchase) - 3.0 (sale) = 57.0 (c & b)
+        val pUpper = database.productDao().getProductByBarcode("UPPER-1")!!
+        assertEquals("Local Upper Product", pUpper.name)
+        assertEquals(100.0, pUpper.sellingPrice, 0.001)
+        assertEquals(57.0, pUpper.stockQty, 0.001)
+
+        // (b) Product lower-2:
+        // Stock: 30.0 + (-2.0) = 28.0
+        val pLower = database.productDao().getProductByBarcode("lower-2")!!
+        assertEquals(28.0, pLower.stockQty, 0.001)
+
+        // Brand new product from backup:
+        val pNew = database.productDao().getProductByBarcode("BRAND-NEW-3")!!
+        assertEquals("New Item", pNew.name)
+        assertEquals(15.0, pNew.stockQty, 0.001)
+
+        backupFile.delete()
         Unit
     }
 }

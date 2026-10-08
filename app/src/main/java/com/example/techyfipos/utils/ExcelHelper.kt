@@ -228,7 +228,7 @@ object ExcelHelper {
     }
 
     fun exportProducts(products: List<Product>, outputStream: OutputStream) {
-        val workbook = SXSSFWorkbook(100)
+        val workbook = XSSFWorkbook()
         try {
             val sheet = workbook.createSheet("Products")
 
@@ -278,7 +278,6 @@ object ExcelHelper {
 
             workbook.write(outputStream)
         } finally {
-            try { workbook.dispose() } catch (_: Exception) {}
             try { workbook.close() } catch (_: Exception) {}
             try { outputStream.close() } catch (_: Exception) {}
         }

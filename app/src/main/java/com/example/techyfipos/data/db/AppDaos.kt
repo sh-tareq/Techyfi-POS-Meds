@@ -11,8 +11,7 @@ interface ProductDao {
     @Query("SELECT * FROM products ORDER BY name ASC")
     suspend fun getAllProductsList(): List<Product>
 
-    // Repository contract: barcodes must be lowercased before passing to the DAO.
-    @Query("SELECT * FROM products WHERE barcode = :barcode LIMIT 1")
+    @Query("SELECT * FROM products WHERE LOWER(barcode) = LOWER(:barcode) LIMIT 1")
     suspend fun getProductByBarcode(barcode: String): Product?
 
     @Query("SELECT * FROM products WHERE LOWER(barcode) = LOWER(:barcode) LIMIT 1")
@@ -33,11 +32,11 @@ interface ProductDao {
             WHEN :allowNegative = 1 THEN (stockQty + :delta) 
             ELSE MAX(0.0, stockQty + :delta) 
         END 
-        WHERE barcode = :barcode
+        WHERE LOWER(barcode) = LOWER(:barcode)
     """)
     suspend fun adjustStockQty(barcode: String, delta: Double, allowNegative: Boolean = false)
 
-    @Query("UPDATE products SET stockQty = stockQty - :quantity WHERE barcode = :barcode AND stockQty >= :quantity")
+    @Query("UPDATE products SET stockQty = stockQty - :quantity WHERE LOWER(barcode) = LOWER(:barcode) AND stockQty >= :quantity")
     suspend fun decrementStockIfAvailable(barcode: String, quantity: Double): Int
 
     @Delete

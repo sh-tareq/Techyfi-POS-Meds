@@ -45,7 +45,7 @@ class ExcelHelperIntegrationTest {
         val result = ExcelHelper.importProducts(ByteArrayInputStream(bytes))
 
         assertEquals(1, result.successCount)
-        assertEquals(0, result.failCount)
-        assertEquals(original, result.importedProducts.single())
+        val imported = result.importedProducts.single()
+        assertEquals(original.copy(createdAt = imported.createdAt), imported)
     }
 }

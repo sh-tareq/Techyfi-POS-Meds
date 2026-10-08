@@ -2568,7 +2568,7 @@ class DataRepository(
                     val p = productsArray.getJSONObject(i)
                     val rawBarcode = p.getString("barcode")
                     val existing = productDao.getProductByBarcodeCaseInsensitive(rawBarcode)
-                    val canonicalBarcode = existing?.barcode ?: rawBarcode.lowercase()
+                    val canonicalBarcode = existing?.barcode ?: rawBarcode.trim()
                     val product = Product(
                         barcode = canonicalBarcode,
                         name = p.optString("name", rawBarcode),
@@ -2588,9 +2588,7 @@ class DataRepository(
                         ,createdAt = p.optLong("createdAt", p.optLong("created_at", System.currentTimeMillis()))
                     )
                     if (existing != null) {
-                        if (mode == BackupImportMode.MERGE) {
-                            productDao.updateProduct(product.copy(barcode = existing.barcode, stockQty = existing.stockQty))
-                        } else {
+                        if (mode != BackupImportMode.MERGE) {
                             productDao.updateProduct(product.copy(barcode = existing.barcode))
                         }
                     } else {
@@ -3051,7 +3049,9 @@ class DataRepository(
                         timestamp = ts,
                         performedByName = value.optString("performedByName").takeIf { it.isNotBlank() }
                     ))
-                    if (mode == BackupImportMode.MERGE && resolvedSupplierId !in newlyInsertedSupplierIds) {
+                    val refNote = value.optString("referenceNote").takeIf { it.isNotBlank() }
+                    val isInvoicePayment = refNote?.startsWith("Paid on Invoice", ignoreCase = true) == true
+                    if (mode == BackupImportMode.MERGE && resolvedSupplierId !in newlyInsertedSupplierIds && !isInvoicePayment) {
                         supplierDao.recordSupplierPayment(resolvedSupplierId, amtPaid, ts)
                     }
                 }
@@ -3448,6 +3448,9 @@ class DataRepository(
                       }
                   }
                   for (adj in newlyInsertedAdjustments) {
+                      if (adj.reason.contains("Purchase", ignoreCase = true)) {
+                          continue // Paired inventory adjustment already counted via newlyInsertedPurchaseItems
+                      }
                       val code = adj.productBarcode.lowercase()
                       if (code !in newlyInsertedProductBarcodes) {
                           barcodeDeltas[code] = (barcodeDeltas[code] ?: 0.0) + adj.difference
@@ -3455,7 +3458,8 @@ class DataRepository(
                   }
                   for ((barcode, delta) in barcodeDeltas) {
                       if (kotlin.math.abs(delta) > 0.0001) {
-                          productDao.adjustStockQty(barcode, delta, allowNegative = true)
+                          val canonicalBarcode = productDao.getProductByBarcodeCaseInsensitive(barcode)?.barcode ?: barcode
+                          productDao.adjustStockQty(canonicalBarcode, delta, allowNegative = true)
                       }
                   }
               }
