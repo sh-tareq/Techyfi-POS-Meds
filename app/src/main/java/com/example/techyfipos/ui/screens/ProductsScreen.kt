@@ -11,7 +11,7 @@ import android.provider.MediaStore
 import android.os.Build
 import androidx.compose.ui.graphics.ImageBitmap
 import java.io.File
-import java.text.SimpleDateFormat
+import com.example.techyfipos.utils.DateFormatters
 import java.util.Date
 import java.util.Locale
 import com.example.techyfipos.data.db.InventoryAdjustment
@@ -138,6 +138,7 @@ import com.example.techyfipos.utils.toEnglishDigits
 import com.example.techyfipos.utils.toBanglaDigits
 import com.example.techyfipos.utils.beepAndVibrate
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.formatMoney
 import com.example.techyfipos.utils.formatProductCodeLabelPriceString
 import com.example.techyfipos.utils.ProductCodeLabelSize
 import com.example.techyfipos.utils.ProductCodePriceTier
@@ -374,8 +375,6 @@ fun ProductsScreen(
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "cartPressScale"
     )
-
-    val exportExcelDateFormat = remember { SimpleDateFormat("yyyyMMdd", Locale.US) }
 
     fun requestEditProduct(product: Product) {
         if (canEdit) {
@@ -755,16 +754,16 @@ fun ProductsScreen(
                                             CircleShape
                                         )
                                         .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                                        .size(18.dp),
+                                        .size(20.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     val countText = if (allAlerts.totalCount > 99) "99+" else allAlerts.totalCount.toString()
                                     Text(
                                         text = countText,
-                                        fontSize = 9.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = Color.White,
-                                        lineHeight = 9.sp
+                                        lineHeight = 11.sp
                                     )
                                 }
                             }
@@ -835,7 +834,7 @@ fun ProductsScreen(
                                             Text(
                                                 text = targetCount,
                                                 color = Color.White,
-                                                fontSize = 9.5.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = FontWeight.Black,
                                                 textAlign = TextAlign.Center,
                                                 maxLines = 1,
@@ -922,7 +921,7 @@ fun ProductsScreen(
                                     leadingIcon = { Icon(Icons.Default.FileDownload, null, tint = MaterialTheme.colorScheme.primary) },
                                     onClick = {
                                         showExcelMenu = false
-                                        val cleanDate = exportExcelDateFormat.format(Date())
+                                        val cleanDate = DateFormatters.formatExportDate()
                                         exportExcelLauncher.launch("products-$cleanDate.xlsx")
                                     }
                                 )
@@ -937,8 +936,8 @@ fun ProductsScreen(
                                     if (!batchSelectMode) selectedBarcodes.clear()
                                 },
                                 shape = RoundedCornerShape(20.dp),
-                                color = if (batchSelectMode) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                border = BorderStroke(1.dp, if (batchSelectMode) Color(0xFF6EE7B7) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                                color = if (batchSelectMode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = BorderStroke(1.dp, if (batchSelectMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                                 modifier = Modifier.height(48.dp)
                             ) {
                                 Row(
@@ -948,7 +947,7 @@ fun ProductsScreen(
                                     Icon(
                                         imageVector = if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
                                         contentDescription = stringResource(R.string.products_batch_operations_cd),
-                                        tint = if (batchSelectMode) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface,
+                                        tint = if (batchSelectMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(Modifier.width(6.dp))
@@ -956,7 +955,7 @@ fun ProductsScreen(
                                         text = if (batchSelectMode) stringResource(R.string.products_exit_batch) else stringResource(R.string.products_batch_select),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (batchSelectMode) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface
+                                        color = if (batchSelectMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             }
@@ -1161,7 +1160,7 @@ fun ProductsScreen(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                     horizontalAlignment = Alignment.End
                                 ) {
-                                    Text(stringResource(R.string.products_margin_label), fontSize = 8.5.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.products_margin_label), fontSize = 11.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold)
                                     Text(
                                         String.format(Locale.US, "+%.1f%%", marginPct),
                                         fontSize = 11.sp,
@@ -1227,16 +1226,16 @@ fun ProductsScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column {
-                                    Text(stringResource(R.string.products_purchase_cost_label), fontSize = 8.5.sp, color = Color(0xFFA5B4FC), fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.products_purchase_cost_label), fontSize = 11.sp, color = Color(0xFFA5B4FC), fontWeight = FontWeight.Bold)
                                     Text(if (canViewCosts) formatTaka(totalPurchaseValue) else "••••••", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 }
                                 Column {
-                                    Text(stringResource(R.string.products_in_stock_units_label), fontSize = 8.5.sp, color = Color(0xFFA5B4FC), fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.products_in_stock_units_label), fontSize = 11.sp, color = Color(0xFFA5B4FC), fontWeight = FontWeight.Bold)
                                     val uStr = if (totalStockUnits % 1.0 == 0.0) totalStockUnits.toLong().toString() else String.format(Locale.US, "%.1f", totalStockUnits)
                                     Text(stringResource(R.string.products_units_pcs, uStr), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6EE7B7))
                                 }
                                 Column {
-                                    Text(stringResource(R.string.products_stock_alerts_label), fontSize = 8.5.sp, color = Color(0xFFA5B4FC), fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.products_stock_alerts_label), fontSize = 11.sp, color = Color(0xFFA5B4FC), fontWeight = FontWeight.Bold)
                                     Text(stringResource(R.string.products_low_out_summary, lowStockCount, outOfStockCount), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCD34D))
                                 }
                             }
@@ -1455,8 +1454,8 @@ fun ProductsScreen(
                 Surface(
                     onClick = { showFilters = true },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (hasActiveFilters) Color(0xFFEEF2FF) else MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, if (hasActiveFilters) Color(0xFF6366F1) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
+                    color = if (hasActiveFilters) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (hasActiveFilters) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier.size(48.dp)
                 ) {
@@ -1465,7 +1464,7 @@ fun ProductsScreen(
                             Icons.Default.Tune,
                             contentDescription = stringResource(R.string.products_filter_cd),
                             modifier = Modifier.size(20.dp),
-                            tint = if (hasActiveFilters) Color(0xFF4F46E5) else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (hasActiveFilters) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (hasActiveFilters) {
                             Box(
@@ -1495,8 +1494,8 @@ fun ProductsScreen(
                         Surface(
                             onClick = { viewModeName = ProductViewMode.GRID.name },
                             shape = RoundedCornerShape(8.dp),
-                            color = if (viewMode == ProductViewMode.GRID) Color(0xFFEEF2FF) else Color.Transparent,
-                            border = if (viewMode == ProductViewMode.GRID) BorderStroke(1.dp, Color(0xFFA5B4FC)) else null,
+                            color = if (viewMode == ProductViewMode.GRID) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                            border = if (viewMode == ProductViewMode.GRID) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)) else null,
                             modifier = Modifier.size(48.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -1504,15 +1503,15 @@ fun ProductsScreen(
                                     Icons.Default.GridView,
                                     contentDescription = stringResource(R.string.products_grid_view_cd),
                                     modifier = Modifier.size(19.dp),
-                                    tint = if (viewMode == ProductViewMode.GRID) Color(0xFF4F46E5) else MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = if (viewMode == ProductViewMode.GRID) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                         Surface(
                             onClick = { viewModeName = ProductViewMode.LIST.name },
                             shape = RoundedCornerShape(8.dp),
-                            color = if (viewMode == ProductViewMode.LIST) Color(0xFFEEF2FF) else Color.Transparent,
-                            border = if (viewMode == ProductViewMode.LIST) BorderStroke(1.dp, Color(0xFFA5B4FC)) else null,
+                            color = if (viewMode == ProductViewMode.LIST) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                            border = if (viewMode == ProductViewMode.LIST) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)) else null,
                             modifier = Modifier.size(48.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -1520,7 +1519,7 @@ fun ProductsScreen(
                                     Icons.AutoMirrored.Filled.ViewList,
                                     contentDescription = stringResource(R.string.products_list_view_cd),
                                     modifier = Modifier.size(20.dp),
-                                    tint = if (viewMode == ProductViewMode.LIST) Color(0xFF4F46E5) else MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = if (viewMode == ProductViewMode.LIST) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -1810,7 +1809,11 @@ fun ProductsScreen(
                             ProductSortOption.NAME_ASC -> ""
                         })
                         if (highMarginOnly) add(stringResource(R.string.products_filter_high_margin_chip))
-                        if (minimumPrice.isNotEmpty() || maximumPrice.isNotEmpty()) add("৳$minimumPrice-৳$maximumPrice")
+                        if (minimumPrice.isNotEmpty() || maximumPrice.isNotEmpty()) {
+                            val minStr = minimumPrice.toDoubleOrNull()?.let { formatMoney(it) } ?: minimumPrice
+                            val maxStr = maximumPrice.toDoubleOrNull()?.let { formatMoney(it) } ?: maximumPrice
+                            add("$minStr-$maxStr")
+                        }
                     }.joinToString(" • ")
 
                     Text(
