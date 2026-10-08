@@ -52,4 +52,17 @@ class AppUtilsDateTest {
         assertTrue(end > start)
         assertEquals(86400000L - 1L, end - start)
     }
+
+    @Test
+    fun testD2_banglaDueReceiptFormatsDateWithBengaliLocale() {
+        val cal = Calendar.getInstance().apply {
+            set(2026, Calendar.SEPTEMBER, 14, 15, 30, 0)
+        }
+        val bnFormatted = DateFormatters.formatLongDateTime(cal.timeInMillis, java.util.Locale.forLanguageTag("bn-BD"))
+        val enFormatted = DateFormatters.formatLongDateTime(cal.timeInMillis, java.util.Locale.US)
+
+        assertTrue(enFormatted.contains("September"))
+        // Bengali locale must not contain English month name "September"
+        assertTrue(!bnFormatted.contains("September"))
+    }
 }

@@ -257,7 +257,7 @@ fun ReturnItemsDialog(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
+                            color = MaterialTheme.colorScheme.secondaryContainer,
                             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             shadowElevation = 4.dp,
                             modifier = Modifier.size(42.dp)
@@ -429,7 +429,7 @@ fun ReturnItemsDialog(
                                                 trim = LineHeightStyle.Trim.None
                                             )
                                         ),
-                                        color = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                        color = if (isActive) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface,
                                         maxLines = 3,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f)
@@ -438,14 +438,14 @@ fun ReturnItemsDialog(
                                     if (isActive) {
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.primaryContainer,
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                                            color = MaterialTheme.colorScheme.secondaryContainer,
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f))
                                         ) {
                                             Text(
                                                 text = stringResource(R.string.return_dialog_return_qty_fmt, qtyStr),
                                                 fontSize = 10.5.sp,
                                                 fontWeight = FontWeight.ExtraBold,
-                                                color = MaterialTheme.colorScheme.primary,
+                                                color = MaterialTheme.colorScheme.secondary,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                             )
                                         }
@@ -553,7 +553,7 @@ fun ReturnItemsDialog(
                                                             fontSize = 13.sp,
                                                             fontWeight = FontWeight.ExtraBold,
                                                             textAlign = TextAlign.Center,
-                                                            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                            color = if (isActive) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
                                                         )
                                                     }
 
@@ -577,8 +577,8 @@ fun ReturnItemsDialog(
 
                                             Surface(
                                                 shape = RoundedCornerShape(6.dp),
-                                                color = if (qty == maxReturnable && maxReturnable > 0.0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-                                                border = androidx.compose.foundation.BorderStroke(1.dp, if (qty == maxReturnable && maxReturnable > 0.0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                                                color = if (qty == maxReturnable && maxReturnable > 0.0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondaryContainer,
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, if (qty == maxReturnable && maxReturnable > 0.0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant),
                                                 modifier = Modifier
                                                     .height(48.dp)
                                                     .clickable {
@@ -593,7 +593,7 @@ fun ReturnItemsDialog(
                                                         text = stringResource(R.string.common_all),
                                                         fontSize = 10.5.sp,
                                                         fontWeight = FontWeight.ExtraBold,
-                                                        color = if (qty == maxReturnable && maxReturnable > 0.0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                                                        color = if (qty == maxReturnable && maxReturnable > 0.0) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.secondary
                                                     )
                                                 }
                                             }
@@ -686,12 +686,12 @@ fun ReturnItemsDialog(
                                         text = if (isRestockEnabled) "Restock item(s) to shelf inventory" else "Mark as Damaged / Write-off",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.5.sp,
-                                        color = if (isRestockEnabled) Color(0xFF166534) else Color(0xFF9F1239)
+                                        color = if (isRestockEnabled) Color(0xFF166534) else MaterialTheme.colorScheme.onErrorContainer
                                     )
                                     Text(
                                         text = if (isRestockEnabled) "Will increment stock count automatically" else "Will NOT add defective item back into shelf stock",
                                         fontSize = 10.sp,
-                                        color = if (isRestockEnabled) Color(0xFF15803D) else Color(0xFFBE123C)
+                                        color = if (isRestockEnabled) Color(0xFF15803D) else MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
                                     )
                                 }
                             }
@@ -1084,8 +1084,8 @@ fun ReturnItemsDialog(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(stringResource(R.string.return_dialog_select_payment_gateway), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                        Text(selectedMfsChannel, fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                                        Text(stringResource(R.string.return_dialog_select_payment_gateway), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                        Text(selectedMfsChannel, fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.secondary)
                                     }
                                     Row(
                                         modifier = Modifier
@@ -1097,8 +1097,8 @@ fun ReturnItemsDialog(
                                             val isChanActive = selectedMfsChannel == channel
                                             Surface(
                                                 shape = RoundedCornerShape(6.dp),
-                                                color = if (isChanActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                                                border = androidx.compose.foundation.BorderStroke(1.dp, if (isChanActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                                                color = if (isChanActive) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surface,
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, if (isChanActive) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant),
                                                 modifier = Modifier.clickable { selectedMfsChannel = channel }
                                             ) {
                                                 Text(
@@ -1111,7 +1111,7 @@ fun ReturnItemsDialog(
                                                     },
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = if (isChanActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                                    color = if (isChanActive) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
                                                     modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                                                 )
                                             }
@@ -1162,14 +1162,14 @@ fun ReturnItemsDialog(
                                                 Surface(
                                                     onClick = { walkinMode = "REGISTER" },
                                                     shape = RoundedCornerShape(6.dp),
-                                                    color = if (isReg) Color(0xFF10B981) else Color.Transparent,
+                                                    color = if (isReg) MaterialTheme.colorScheme.secondary else Color.Transparent,
                                                     modifier = Modifier.weight(1f)
                                                 ) {
                                                     Text(
                                                         text = "👤 " + stringResource(R.string.store_credit_mode_register),
                                                         fontSize = 10.5.sp,
                                                         fontWeight = if (isReg) FontWeight.Bold else FontWeight.Normal,
-                                                        color = if (isReg) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                                        color = if (isReg) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
                                                         textAlign = TextAlign.Center,
                                                         modifier = Modifier.padding(vertical = 6.dp)
                                                     )
@@ -1180,14 +1180,14 @@ fun ReturnItemsDialog(
                                                 Surface(
                                                     onClick = { walkinMode = "VOUCHER" },
                                                     shape = RoundedCornerShape(6.dp),
-                                                    color = if (isVoucher) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                                    color = if (isVoucher) MaterialTheme.colorScheme.secondary else Color.Transparent,
                                                     modifier = Modifier.weight(1f)
                                                 ) {
                                                     Text(
                                                         text = "🎟️ " + stringResource(R.string.store_credit_mode_voucher),
                                                         fontSize = 10.5.sp,
                                                         fontWeight = if (isVoucher) FontWeight.Bold else FontWeight.Normal,
-                                                        color = if (isVoucher) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                                        color = if (isVoucher) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
                                                         textAlign = TextAlign.Center,
                                                         modifier = Modifier.padding(vertical = 6.dp)
                                                     )

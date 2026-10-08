@@ -663,18 +663,18 @@ fun AddEditProductDialog(
                                                                     item.nameEn,
                                                                     fontSize = 13.sp,
                                                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                                    color = if (isSelected) Color(0xFF4F46E5) else Color(0xFF0F172A)
+                                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                                                 )
                                                                 if (item.nameBn.isNotBlank() && item.nameBn != item.nameEn) {
                                                                     Text(
                                                                         "(${item.nameBn})",
                                                                         fontSize = 11.sp,
-                                                                        color = Color(0xFF64748B)
+                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                                                     )
                                                                 }
                                                             }
                                                             if (isSelected) {
-                                                                Text("✓", color = Color(0xFF4F46E5), fontWeight = FontWeight.Bold)
+                                                                Text("✓", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                                             }
                                                         }
                                                     },
@@ -718,8 +718,8 @@ fun AddEditProductDialog(
                     item {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFFAFAFA),
-                            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
@@ -777,8 +777,8 @@ fun AddEditProductDialog(
                                         Box(
                                             modifier = Modifier
                                                 .size(54.dp)
-                                                .background(Color.White, RoundedCornerShape(8.dp))
-                                                .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(8.dp)),
+                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
@@ -1070,10 +1070,22 @@ fun AddEditProductDialog(
                                     val markupPct = if (pCost > 0.0) (profitPerUnit / pCost) * 100.0 else 0.0
                                     val discountPct = if (pMrp > 0.0 && pDiscounted > 0.0 && pMrp > pDiscounted) ((pMrp - pDiscounted) / pMrp) * 100.0 else 0.0
 
+                                    val isDark = isSystemInDarkTheme()
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
-                                        color = if (profitPerUnit >= 0) Color(0xFFECFDF5) else Color(0xFFFFF1F2),
-                                        border = BorderStroke(1.dp, if (profitPerUnit >= 0) Color(0xFFA7F3D0) else Color(0xFFFECDD3)),
+                                        color = if (profitPerUnit >= 0) {
+                                            if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5)
+                                        } else {
+                                            MaterialTheme.colorScheme.errorContainer
+                                        },
+                                        border = BorderStroke(
+                                            1.dp,
+                                            if (profitPerUnit >= 0) {
+                                                if (isDark) Color(0xFF059669) else Color(0xFFA7F3D0)
+                                            } else {
+                                                MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
+                                            }
+                                        ),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Column(
@@ -1093,7 +1105,11 @@ fun AddEditProductDialog(
                                                         text = if (profitPerUnit >= 0) "Unit Profit: +৳${String.format(Locale.US, "%.2f", profitPerUnit)}" else "Loss per Unit: -৳${String.format(Locale.US, "%.2f", -profitPerUnit)}",
                                                         fontWeight = FontWeight.ExtraBold,
                                                         fontSize = 12.sp,
-                                                        color = if (profitPerUnit >= 0) Color(0xFF065F46) else Color(0xFF9F1239)
+                                                        color = if (profitPerUnit >= 0) {
+                                                            if (isDark) Color(0xFFA7F3D0) else Color(0xFF065F46)
+                                                        } else {
+                                                            MaterialTheme.colorScheme.onErrorContainer
+                                                        }
                                                     )
                                                 }
 
@@ -1155,10 +1171,23 @@ fun AddEditProductDialog(
 
                         val currentStockVal = stockQty.toDoubleOrNull() ?: 0.0
                         val currentMinAlert = reorderLevel.toDoubleOrNull() ?: 5.0
+                        val isDarkStock = isSystemInDarkTheme()
                         val (healthText, healthBg, healthColor) = when {
-                            currentStockVal <= 0.0 -> Triple(stringResource(R.string.out_of_stock), Color(0xFFFEF2F2), Color(0xFFDC2626))
-                            currentStockVal <= currentMinAlert -> Triple(stringResource(R.string.low_stock), Color(0xFFFFFBEB), Color(0xFFD97706))
-                            else -> Triple(stringResource(R.string.in_stock), Color(0xFFECFDF5), Color(0xFF059669))
+                            currentStockVal <= 0.0 -> Triple(
+                                stringResource(R.string.out_of_stock),
+                                if (isDarkStock) MaterialTheme.colorScheme.errorContainer else Color(0xFFFEF2F2),
+                                if (isDarkStock) MaterialTheme.colorScheme.onErrorContainer else Color(0xFFDC2626)
+                            )
+                            currentStockVal <= currentMinAlert -> Triple(
+                                stringResource(R.string.low_stock),
+                                if (isDarkStock) Color(0xFF78350F).copy(alpha = 0.4f) else Color(0xFFFFFBEB),
+                                if (isDarkStock) Color(0xFFFDE68A) else Color(0xFFD97706)
+                            )
+                            else -> Triple(
+                                stringResource(R.string.in_stock),
+                                if (isDarkStock) Color(0xFF064E3B).copy(alpha = 0.4f) else Color(0xFFECFDF5),
+                                if (isDarkStock) Color(0xFFA7F3D0) else Color(0xFF059669)
+                            )
                         }
 
                         Surface(
@@ -1357,7 +1386,7 @@ fun AddEditProductDialog(
                                                                 text = u,
                                                                 fontSize = 13.sp,
                                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                                color = if (isSelected) Color(0xFF4F46E5) else Color(0xFF334155)
+                                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                                             )
                                                         },
                                                         onClick = {
@@ -1427,10 +1456,11 @@ fun AddEditProductDialog(
                     }
 
                     item {
+                        val isDarkTracking = isSystemInDarkTheme()
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFFFFBEB),
-                            border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                            color = if (isDarkTracking) Color(0xFF78350F).copy(alpha = 0.35f) else Color(0xFFFFFBEB),
+                            border = BorderStroke(1.dp, if (isDarkTracking) Color(0xFFB45309) else Color(0xFFFDE68A)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
@@ -1448,7 +1478,7 @@ fun AddEditProductDialog(
                                         text = stringResource(R.string.products_date_tracking_section),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp,
-                                        color = Color(0xFF92400E)
+                                        color = if (isDarkTracking) Color(0xFFFDE68A) else Color(0xFF92400E)
                                     )
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,

@@ -6157,7 +6157,7 @@ fun DueRepaymentReceiptDialog(
             if (isReceiptBangla) {
                 appendLine("★ ${storeName.ifBlank { "TECHYFI STORE" }} ★")
                 appendLine("--- টাকা জমার রশিদ • বাকি আদায় ---")
-                appendLine("তারিখ: ${DateFormatters.formatLongDateTime(data.timestamp)}")
+                appendLine("তারিখ: ${DateFormatters.formatLongDateTime(data.timestamp, java.util.Locale.forLanguageTag("bn-BD"))}")
                 appendLine("ভাউচার নং: REC-${data.timestamp % 1000000}")
                 appendLine("কাস্টমার: ${data.customerName}")
                 appendLine("মোবাইল: ${data.customerPhone}")
