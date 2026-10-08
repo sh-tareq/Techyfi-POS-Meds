@@ -1132,5 +1132,57 @@ class MoneyFlowsIntegrationTest {
         org.junit.Assert.assertNotNull(swi)
         org.junit.Assert.assertTrue("Sale must store isTaxInclusive as true", swi!!.sale.isTaxInclusive)
     }
+
+    @Test
+    fun testB5_returnWithStoreCreditRefund_deductsFromStoreCreditInPaymentBreakdown() = runBlocking {
+        val prod = Product(barcode = "BAR_B5", name = "B5 Item", category = "General", purchasePrice = 100.0, sellingPrice = 300.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 300.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 300.0,
+            paymentMethod = "Cash",
+            customerName = null,
+            customerPhone = null,
+            amountPaid = 300.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null))
+        )
+
+        repository.processReturn(
+            saleId = saleId,
+            lines = listOf(ReturnLine(barcode = "BAR_B5", quantity = 1.0, name = "B5 Item", price = 300.0)),
+            refundMethod = "Store Credit",
+            note = "Return for SC",
+            restock = true
+        )
+
+        val sales = listOf(
+            PaymentMath.SimpleSalePayment(
+                saleId = saleId,
+                paymentMethod = "Cash",
+                grandTotal = 300.0,
+                amountPaid = 300.0
+            )
+        )
+        val returns = database.returnDao().getReturnsForSaleOnce(saleId).map {
+            PaymentMath.SimpleReturnPayment(
+                saleId = it.saleId,
+                refundMethod = it.refundMethod,
+                refundAmount = it.refundAmount,
+                externalRefundAmount = it.externalRefundAmount,
+                dueAdjustmentAmount = it.dueAdjustmentAmount
+            )
+        }
+        val breakdown = PaymentMath.aggregatePaymentBreakdown(sales, returns)
+        val scAmount = breakdown["Store Credit"] ?: 0.0
+        org.junit.Assert.assertEquals(-300.0, scAmount, 0.001)
+        val cashAmount = breakdown["Cash"] ?: 0.0
+        org.junit.Assert.assertEquals(300.0, cashAmount, 0.001)
+    }
 }
 

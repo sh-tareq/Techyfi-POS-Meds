@@ -1117,6 +1117,13 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     totalHeight += payments * 30f
     totalHeight += 40f // Single divider
 
+    // 4.5 Cash Reconciliation
+    if (data.hasCashReconciliation) {
+        totalHeight += 32f // CASH RECONCILIATION
+        totalHeight += 9 * 30f // items + divider + expected cash
+        totalHeight += 40f
+    }
+
     // 5. Top Products (if any)
     if (data.topProducts.isNotEmpty()) {
         totalHeight += 32f // TOP PRODUCTS:
@@ -1220,6 +1227,37 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         data.paymentBreakdown.forEach { p ->
             drawKeyValue("${p.method} (${p.transactionCount})", formatTaka(p.amount))
         }
+    }
+
+    // Cash Reconciliation
+    if (data.hasCashReconciliation) {
+        paint.textAlign = Paint.Align.LEFT
+        canvas.drawText(singleDivider, 24f, y, paint)
+        y += 35f
+
+        boldPaint.textSize = 21f
+        canvas.drawText("CASH RECONCILIATION", 24f, y, boldPaint)
+        y += 32f
+
+        paint.textSize = 20f
+        drawKeyValue("Starting Float", "+${formatTaka(data.startingFloat)}")
+        drawKeyValue("Cash Sales", "+${formatTaka(data.cashSales)}")
+        if (data.cashIn > 0.0) drawKeyValue("Cash-In", "+${formatTaka(data.cashIn)}")
+        if (data.dueCashCollected > 0.0) drawKeyValue("Due Collections", "+${formatTaka(data.dueCashCollected)}")
+        if (data.cashRefunds > 0.0) drawKeyValue("Cash Refunds", "-${formatTaka(data.cashRefunds)}")
+        if (data.cashOut > 0.0) drawKeyValue("Cash-Out (Expenses)", "-${formatTaka(data.cashOut)}")
+        if (data.supplierCashPaid > 0.0) drawKeyValue("Supplier Cash Paid", "-${formatTaka(data.supplierCashPaid)}")
+
+        paint.textAlign = Paint.Align.LEFT
+        canvas.drawText(singleDivider, 24f, y, paint)
+        y += 35f
+
+        boldPaint.textSize = 20f
+        paint.textAlign = Paint.Align.LEFT
+        canvas.drawText("Expected Cash in Till", 24f, y, boldPaint)
+        paint.textAlign = Paint.Align.RIGHT
+        canvas.drawText(formatTaka(data.expectedCash), width - 24f, y, boldPaint)
+        y += 32f
     }
 
     // Top Products

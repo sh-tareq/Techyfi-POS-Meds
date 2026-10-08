@@ -2693,4 +2693,12 @@
     <string name="settings_confirm_replace_desc">আপনি কি নিশ্চিত যে বর্তমান সমস্ত ডাটা মুছে ব্যাকআপ ফাইল দিয়ে প্রতিস্থাপন করবেন? এই প্রক্রিয়াটি আর ফেরানো যাবে না।</string>
     <string name="settings_exporting_local_backup_title">লোকাল ব্যাকআপ এক্সপোর্ট হচ্ছে</string>
     <string name="settings_exporting_local_backup_msg">আপনার ডাটাবেস ব্যাকআপ তৈরি ও এক্সপোর্ট হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন…</string>
+    <string name="returns_refunds">ফেরত / রিফান্ড</string>
+    <string name="net_sales">নিট বিক্রয়</string>
+    <string name="tax_vat">ভ্যাট / ট্যাক্স</string>
+    <string name="cash_reconciliation">নগদ সমন্বয় (Cash Recon)</string>
+    <string name="expected_cash_till">ড্রয়ারে প্রত্যাশিত নগদ</string>
+    <string name="points_clawback_label">অর্জিত পয়েন্ট বাতিল</string>
+    <string name="change_returned_label">ফেরত দেওয়া টাকা</string>
+    <string name="customer_credit_label">কাস্টমার স্টোর ক্রেডিট</string>
 </resources>

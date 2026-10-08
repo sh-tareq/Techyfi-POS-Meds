@@ -122,6 +122,33 @@ object PaymentMath {
                 // Single payment with NO store credit
                 val isCash = paymentMethod.equals("Cash", ignoreCase = true)
                 val isDue = paymentMethod.equals("Due", ignoreCase = true)
+                if (isDue && amountPaid > 0.0) {
+                    val cashPaid = minOf(amountPaid, grandTotal)
+                    val remainingDue = (grandTotal - cashPaid).coerceAtLeast(0.0)
+                    val array = JSONArray().apply {
+                        if (cashPaid > 0.0) {
+                            put(JSONObject().apply {
+                                put("method", "Cash")
+                                put("amount", cashPaid)
+                            })
+                        }
+                        if (remainingDue > 0.0) {
+                            put(JSONObject().apply {
+                                put("method", "Due")
+                                put("amount", remainingDue)
+                            })
+                        }
+                    }
+                    return PaymentBreakdown(
+                        paymentMethodToSave = "Split",
+                        splitPaymentJson = array.toString(),
+                        changeAmount = (amountPaid - grandTotal).coerceAtLeast(0.0),
+                        amountPaidToRecord = cashPaid,
+                        effectiveAmountPaid = cashPaid,
+                        dueAmount = remainingDue
+                    )
+                }
+
                 val change = if (isCash && amountPaid > grandTotal) amountPaid - grandTotal else 0.0
                 val due = if (isDue) (grandTotal - amountPaid).coerceAtLeast(0.0) else 0.0
                 val effPaid = if (isDue) 0.0 else if (isCash) amountPaid else grandTotal
@@ -443,7 +470,8 @@ object PaymentMath {
         val saleId: Long,
         val paymentMethod: String,
         val grandTotal: Double,
-        val splitPaymentJson: String? = null
+        val splitPaymentJson: String? = null,
+        val amountPaid: Double = 0.0
     )
 
     data class SimpleReturnPayment(
@@ -482,6 +510,11 @@ object PaymentMath {
                 } catch (_: Exception) {
                     paymentTotals["Split"] = (paymentTotals["Split"] ?: 0.0) + sale.grandTotal
                 }
+            } else if (sale.paymentMethod.equals("Due", ignoreCase = true) && sale.amountPaid > 0.0) {
+                val cashPart = minOf(sale.amountPaid, sale.grandTotal)
+                val duePart = (sale.grandTotal - cashPart).coerceAtLeast(0.0)
+                if (cashPart > 0.0) paymentTotals["Cash"] = (paymentTotals["Cash"] ?: 0.0) + cashPart
+                if (duePart > 0.0) paymentTotals["Due"] = (paymentTotals["Due"] ?: 0.0) + duePart
             } else {
                 val key = sale.paymentMethod.ifBlank { "Other" }
                 paymentTotals[key] = (paymentTotals[key] ?: 0.0) + sale.grandTotal
@@ -498,16 +531,19 @@ object PaymentMath {
                 paymentTotals["Due"] = (paymentTotals["Due"] ?: 0.0) - ret.dueAdjustmentAmount
             }
 
-            // Deduct external refund from the actual payment method
-            val extAmount = ret.externalRefundAmount
-            if (extAmount > 0.0) {
-                when {
-                    rMethod.equals("Store Credit", ignoreCase = true) || rMethod.equals("Store credit", ignoreCase = true) -> {
-                        paymentTotals["Store Credit"] = (paymentTotals["Store Credit"] ?: 0.0) - extAmount
-                    }
-                    rMethod.equals("Cash", ignoreCase = true) -> {
-                        paymentTotals["Cash"] = (paymentTotals["Cash"] ?: 0.0) - extAmount
-                    }
+            // Deduct store credit refund from Store Credit
+            if (rMethod.equals("Store Credit", ignoreCase = true) || rMethod.equals("Store credit", ignoreCase = true)) {
+                val scDeduct = if (ret.externalRefundAmount > 0.0) ret.externalRefundAmount else (ret.refundAmount - ret.dueAdjustmentAmount).coerceAtLeast(0.0)
+                if (scDeduct > 0.0) {
+                    paymentTotals["Store Credit"] = (paymentTotals["Store Credit"] ?: 0.0) - scDeduct
+                }
+            } else {
+                val extAmount = ret.externalRefundAmount
+                if (extAmount > 0.0) {
+                    when {
+                        rMethod.equals("Cash", ignoreCase = true) -> {
+                            paymentTotals["Cash"] = (paymentTotals["Cash"] ?: 0.0) - extAmount
+                        }
                     rMethod.startsWith("MFS", ignoreCase = true) ||
                     rMethod.startsWith("Card", ignoreCase = true) ||
                     rMethod.startsWith("bKash", ignoreCase = true) ||
@@ -549,6 +585,7 @@ object PaymentMath {
                 }
             }
         }
+    }
 
         return paymentTotals
     }

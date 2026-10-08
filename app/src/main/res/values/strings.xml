@@ -2691,6 +2691,14 @@
     <string name="settings_restoring_database_progress">Restoring database backup, please wait…</string>
     <string name="settings_confirm_replace_title">Confirm Data Overwrite</string>
     <string name="settings_confirm_replace_desc">Are you sure you want to permanently replace all existing database data with this backup? This action cannot be undone.</string>
+    <string name="returns_refunds">Returns / Refunds</string>
+    <string name="net_sales">Net Sales</string>
+    <string name="tax_vat">Tax (VAT)</string>
+    <string name="cash_reconciliation">CASH RECONCILIATION</string>
+    <string name="expected_cash_till">Expected Cash in Till</string>
+    <string name="points_clawback_label">Points Earned Clawback</string>
+    <string name="change_returned_label">Change Returned</string>
+    <string name="customer_credit_label">Customer Store Credit</string>
 </resources>
 
 

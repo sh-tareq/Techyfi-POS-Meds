@@ -2069,22 +2069,82 @@ private fun SaleDetailDialog(
                         Text(stringResource(R.string.grand_total), fontSize = 12.sp)
                         Text(formatTaka(s.grandTotal), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
-                    if (s.amountPaid > 0.0 || !s.paymentMethod.equals("Due", ignoreCase = true)) {
+                    val (voucherCode, voucherPortion, customerCreditPortion) = remember(s) {
+                        var vCode: String? = null
+                        var vAmt = 0.0
+                        var cAmt = 0.0
+                        s.splitPaymentJson?.let { json ->
+                            try {
+                                val arr = org.json.JSONArray(json)
+                                for (i in 0 until arr.length()) {
+                                    val obj = arr.getJSONObject(i)
+                                    val m = obj.optString("method", "")
+                                    if (m.equals("Store Credit", ignoreCase = true) || m.equals("Voucher", ignoreCase = true)) {
+                                        val code = obj.optString("voucherCode", "")
+                                        if (code.isNotBlank()) vCode = code
+                                        val vP = obj.optDouble("voucherAmount", 0.0)
+                                        val cP = obj.optDouble("customerCreditAmount", 0.0)
+                                        if (vP > 0.0 || cP > 0.0) {
+                                            vAmt += vP
+                                            cAmt += cP
+                                        } else if (code.isNotBlank()) {
+                                            vAmt += obj.optDouble("amount", 0.0)
+                                        } else {
+                                            cAmt += obj.optDouble("amount", 0.0)
+                                        }
+                                    }
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        if (vAmt == 0.0 && cAmt == 0.0 && s.storeCreditApplied > 0.0) {
+                            cAmt = s.storeCreditApplied
+                        }
+                        Triple(vCode, vAmt, cAmt)
+                    }
+
+                    val isCashSale = s.paymentMethod.equals("Cash", ignoreCase = true)
+                    val actualCashPaid = if (isCashSale && s.amountPaid > s.grandTotal) s.grandTotal else s.amountPaid
+                    val cashChange = if (isCashSale && s.amountPaid > s.grandTotal) s.amountPaid - s.grandTotal else 0.0
+                    val pointsEarnedClawback = remember(s) {
+                        if (!s.customerPhone.isNullOrBlank() && s.grandTotal > 0.0) {
+                            kotlin.math.floor(s.grandTotal / 100.0).toInt()
+                        } else 0
+                    }
+
+                    if (actualCashPaid > 0.0 || !s.paymentMethod.equals("Due", ignoreCase = true)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(stringResource(R.string.receipt_paid_label, s.paymentMethod), fontSize = 12.sp)
-                            Text(formatTaka(s.amountPaid), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                            Text(formatTaka(actualCashPaid), fontWeight = FontWeight.Medium, fontSize = 12.sp)
                         }
                     }
-                    if (s.storeCreditApplied > 0.0) {
+                    if (cashChange > 0.0) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(stringResource(R.string.store_credit), fontSize = 12.sp)
-                            Text("+${formatTaka(s.storeCreditApplied)}", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                            Text(stringResource(R.string.change_returned_label), fontSize = 12.sp)
+                            Text(formatTaka(cashChange), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                        }
+                    }
+                    if (voucherPortion > 0.0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Voucher (${voucherCode ?: "Voucher"})", fontSize = 12.sp)
+                            Text("+${formatTaka(voucherPortion)}", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                        }
+                    }
+                    if (customerCreditPortion > 0.0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(stringResource(R.string.customer_credit_label), fontSize = 12.sp)
+                            Text("+${formatTaka(customerCreditPortion)}", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
                         }
                     }
                     if (dueReversed > 0.0) {
@@ -2102,7 +2162,16 @@ private fun SaleDetailDialog(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(stringResource(R.string.loyalty_points_amount), fontSize = 12.sp)
-                            Text("+${s.loyaltyPointsRedeemed} pts", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                            Text("+${stringResource(R.string.customer_pts_suffix, s.loyaltyPointsRedeemed)} (${formatTaka(s.loyaltyPointsRedeemed.toDouble())})", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                        }
+                    }
+                    if (pointsEarnedClawback > 0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(stringResource(R.string.points_clawback_label), fontSize = 12.sp)
+                            Text("-${stringResource(R.string.customer_pts_suffix, pointsEarnedClawback)}", color = Color(0xFFDC2626), fontWeight = FontWeight.Medium, fontSize = 12.sp)
                         }
                     }
                     Row(

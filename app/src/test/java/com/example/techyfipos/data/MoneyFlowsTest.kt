@@ -627,4 +627,57 @@ class MoneyFlowsTest {
         )
         assertEquals(115.0, excPrice, 0.001)
     }
+
+    @Test
+    fun `B-5 PaymentMath aggregatePaymentBreakdown attributes partial cash on Due sale to Cash and Due`() {
+        val sales = listOf(
+            PaymentMath.SimpleSalePayment(
+                saleId = 1L,
+                paymentMethod = "Due",
+                grandTotal = 1000.0,
+                amountPaid = 300.0
+            )
+        )
+        val breakdown = PaymentMath.aggregatePaymentBreakdown(sales, returns = emptyList())
+        val cashAmount = breakdown["Cash"] ?: 0.0
+        val dueAmount = breakdown["Due"] ?: 0.0
+        assertEquals(300.0, cashAmount, 0.001)
+        assertEquals(700.0, dueAmount, 0.001)
+    }
+
+    @Test
+    fun `B-5 single-method Due with partial payment produces Split splitPaymentJson`() {
+        val breakdown = PaymentMath.calculatePaymentBreakdown(
+            grandTotal = 500.0,
+            paymentMethod = "Due",
+            amountPaid = 200.0,
+            isSplitPayment = false,
+            splitPayments = emptyList(),
+            storeCreditApplied = 0.0
+        )
+        assertEquals("Split", breakdown.paymentMethodToSave)
+        assertNotNull(breakdown.splitPaymentJson)
+        val arr = JSONArray(breakdown.splitPaymentJson!!)
+        assertEquals(2, arr.length())
+        val cashObj = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("method") == "Cash" }
+        val dueObj = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("method") == "Due" }
+        assertEquals(200.0, cashObj.getDouble("amount"), 0.001)
+        assertEquals(300.0, dueObj.getDouble("amount"), 0.001)
+    }
+
+    @Test
+    fun `M-14 DailyReportData correctly computes netCollections factoring due collected and supplier payments`() {
+        val daily = com.example.techyfipos.ui.viewmodel.DailyReportData(
+            timestamp = 1728470400000L,
+            revenue = 1000.0,
+            profit = 300.0,
+            transactionCount = 5,
+            dueCollected = 300.0,
+            supplierPayments = 200.0,
+            refunds = 100.0,
+            expenses = 50.0
+        )
+        // netCollections = 1000 + 300 - 100 - 50 - 200 = 950.0
+        assertEquals(950.0, daily.netCollections, 0.001)
+    }
 }

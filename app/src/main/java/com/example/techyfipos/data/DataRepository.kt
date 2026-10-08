@@ -4305,7 +4305,7 @@ class DataRepository(
             }
 
             val dueAdj = dueReduction
-            val computedExternalRefund = externalRefund
+            val computedExternalRefund = if (isStoreCreditRefund) (refundTotal - dueReduction).coerceAtLeast(0.0) else externalRefund
 
             val returnRecord = Return(
                 saleId = saleId,

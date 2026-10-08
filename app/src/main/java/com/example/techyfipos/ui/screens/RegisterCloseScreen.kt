@@ -255,8 +255,18 @@ fun RegisterCloseScreen(
 
     val rangeStart = shiftStart
     var report by remember { mutableStateOf<SalesReportData?>(null) }
-    LaunchedEffect(rangeStart, salesSnapshot) {
-        report = salesViewModel.buildReport(rangeStart, System.currentTimeMillis(), salesSnapshot)
+    LaunchedEffect(rangeStart, salesSnapshot, startingFloat, cashIn, cashOut, dueCashCollected, supplierCashPaid, cashRefunds, expectedCash, cashSales) {
+        val baseReport = salesViewModel.buildReport(rangeStart, System.currentTimeMillis(), salesSnapshot)
+        report = baseReport.copy(
+            startingFloat = startingFloat,
+            cashSales = cashSales,
+            cashIn = cashIn,
+            cashOut = cashOut,
+            dueCashCollected = dueCashCollected,
+            supplierCashPaid = supplierCashPaid,
+            cashRefunds = cashRefunds,
+            expectedCash = expectedCash
+        )
     }
     val dateFormat = remember { SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()) }
     val rangeLabel = remember(rangeStart) { "Shift: ${dateFormat.format(Date(rangeStart))}" }
@@ -2677,14 +2687,34 @@ fun ZReportDialog(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
+                        val returnsLabel = stringResource(R.string.returns_refunds)
+                        val netSalesLabel = stringResource(R.string.net_sales)
+                        val taxVatLabel = stringResource(R.string.tax_vat)
+                        val cashReconHeader = stringResource(R.string.cash_reconciliation)
+                        val expectedCashLabel = stringResource(R.string.expected_cash_till)
+
+                        val cashReconSection = if (data.hasCashReconciliation) {
+                            "\n--------------------------------\n" +
+                            "$cashReconHeader:\n" +
+                            "- Starting Float:      +${formatTaka(data.startingFloat)}\n" +
+                            "- Cash Sales:          +${formatTaka(data.cashSales)}\n" +
+                            (if (data.cashIn > 0.0) "- Cash-In:             +${formatTaka(data.cashIn)}\n" else "") +
+                            (if (data.dueCashCollected > 0.0) "- Due Collections:     +${formatTaka(data.dueCashCollected)}\n" else "") +
+                            (if (data.cashRefunds > 0.0) "- Cash Refunds:        -${formatTaka(data.cashRefunds)}\n" else "") +
+                            (if (data.cashOut > 0.0) "- Cash-Out (Expenses): -${formatTaka(data.cashOut)}\n" else "") +
+                            (if (data.supplierCashPaid > 0.0) "- Supplier Cash Paid:  -${formatTaka(data.supplierCashPaid)}\n" else "") +
+                            "--------------------------------\n" +
+                            "$expectedCashLabel: ${formatTaka(data.expectedCash)}"
+                        } else ""
+
                         Text(
                             text = stringResource(R.string.report_period_fmt, rangeLabel) + "\n" +
                                 "Invoices: ${data.transactionCount} | Units: ${data.itemsSold}\n" +
                                 "--------------------------------\n" +
                                 "Gross Sales:      ${formatTaka(data.grossSales)}\n" +
-                                (if (data.totalRefunds > 0.0) "Returns/Refunds: -${formatTaka(data.totalRefunds)}\n" else "") +
-                                "Net Sales:        ${formatTaka(data.totalRevenue)}\n" +
-                                (if (data.totalTax > 0.0) "Tax (VAT):        ${formatTaka(data.totalTax)}\n" else "") +
+                                (if (data.totalRefunds > 0.0) "$returnsLabel: -${formatTaka(data.totalRefunds)}\n" else "") +
+                                "$netSalesLabel:        ${formatTaka(data.totalRevenue)}\n" +
+                                (if (data.totalTax > 0.0) "$taxVatLabel:        ${formatTaka(data.totalTax)}\n" else "") +
                                 "Gross Margin:     ${formatTaka(data.totalProfit)}\n" +
                                 "Discounts Given:  ${formatTaka(data.totalDiscount)}\n" +
                                 "Expenses:         ${formatTaka(data.totalExpenses)}\n" +
@@ -2693,7 +2723,7 @@ fun ZReportDialog(
                                 "PAYMENTS:\n" +
                                 data.paymentBreakdown.joinToString("\n") {
                                     "- ${it.method.padEnd(12)}: ${formatTaka(it.amount)}"
-                                } + "\n================================\n$reportFooter",
+                                } + cashReconSection + "\n================================\n$reportFooter",
                             fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp,
                             color = Color.Black

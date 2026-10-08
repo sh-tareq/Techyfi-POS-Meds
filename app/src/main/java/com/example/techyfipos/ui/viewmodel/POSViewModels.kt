@@ -2022,9 +2022,12 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
     suspend fun buildReport(startMillis: Long, endMillis: Long, sourceList: List<SaleWithItems>? = null): SalesReportData = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val rawList = sourceList ?: salesWithItems.value
         val list = rawList.filter { it.sale.timestamp in startMillis until endMillis }
-        val totalExpenses = repository.getExpensesBetween(startMillis, endMillis).first()
+        val expensesList = repository.getExpensesBetween(startMillis, endMillis).first()
+        val totalExpenses = expensesList
             .filter { it.type == "EXPENSE" && it.category != "Supplier Payment" }
             .sumOf { it.amount }
+        val duePaymentsInPeriod = repository.allDuePayments.first().filter { it.timestamp in startMillis until endMillis }
+        val supplierPaymentsInPeriod = expensesList.filter { it.category == "Supplier Payment" }
         val totalRevenue = list.sumOf { it.sale.grandTotal }
         val totalDiscount = list.sumOf {
             calculateDiscountValue(it.sale.subtotal, it.sale.discountAmount, it.sale.isPercentageDiscount)
@@ -2223,8 +2226,30 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             val existing = dailyTotals[day] ?: return@forEach
             dailyTotals[day] = existing.copy(
                 revenue = (existing.revenue - revenueProfit.first).coerceAtLeast(0.0),
-                profit = existing.profit - revenueProfit.second
+                profit = existing.profit - revenueProfit.second,
+                refunds = existing.refunds + revenueProfit.first
             )
+        }
+        duePaymentsInPeriod.forEach { dp ->
+            val dayStart = (dp.timestamp / 86400000L) * 86400000L
+            val existing = dailyTotals[dayStart]
+            if (existing != null) {
+                dailyTotals[dayStart] = existing.copy(dueCollected = existing.dueCollected + dp.amountPaid)
+            }
+        }
+        supplierPaymentsInPeriod.forEach { sp ->
+            val dayStart = (sp.timestamp / 86400000L) * 86400000L
+            val existing = dailyTotals[dayStart]
+            if (existing != null) {
+                dailyTotals[dayStart] = existing.copy(supplierPayments = existing.supplierPayments + sp.amount)
+            }
+        }
+        expensesList.filter { it.type == "EXPENSE" && it.category != "Supplier Payment" }.forEach { exp ->
+            val dayStart = (exp.timestamp / 86400000L) * 86400000L
+            val existing = dailyTotals[dayStart]
+            if (existing != null) {
+                dailyTotals[dayStart] = existing.copy(expenses = existing.expenses + exp.amount)
+            }
         }
         returnedByHour.forEach { (hour, adjustment) ->
             val existing = hourlyTotals[hour] ?: return@forEach
@@ -2383,9 +2408,18 @@ data class SalesReportData(
     val paymentBreakdown: List<PaymentReportData> = emptyList(),
     val dailyBreakdown: List<DailyReportData> = emptyList(),
     val hourlyBreakdown: List<HourlyReportData> = emptyList(),
-    val grossSales: Double = totalRevenue + totalRefunds
+    val grossSales: Double = totalRevenue + totalRefunds,
+    val startingFloat: Double = 0.0,
+    val cashSales: Double = 0.0,
+    val cashIn: Double = 0.0,
+    val cashOut: Double = 0.0,
+    val dueCashCollected: Double = 0.0,
+    val supplierCashPaid: Double = 0.0,
+    val cashRefunds: Double = 0.0,
+    val expectedCash: Double = 0.0
 ) {
     val totalProfit: Double get() = grossProfit
+    val hasCashReconciliation: Boolean get() = startingFloat > 0.0 || cashIn > 0.0 || cashOut > 0.0 || dueCashCollected > 0.0 || supplierCashPaid > 0.0 || expectedCash > 0.0
 }
 
 data class HourlyReportData(
@@ -2415,8 +2449,14 @@ data class DailyReportData(
     val timestamp: Long,
     val revenue: Double,
     val profit: Double,
-    val transactionCount: Int
-)
+    val transactionCount: Int,
+    val dueCollected: Double = 0.0,
+    val supplierPayments: Double = 0.0,
+    val refunds: Double = 0.0,
+    val expenses: Double = 0.0
+) {
+    val netCollections: Double get() = (revenue + dueCollected - refunds - expenses - supplierPayments)
+}
 
 enum class DuesAuditType {
     REPAYMENT,
