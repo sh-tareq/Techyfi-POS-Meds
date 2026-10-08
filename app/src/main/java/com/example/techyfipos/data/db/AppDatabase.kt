@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.execSQL
 import kotlinx.coroutines.Dispatchers
 
-const val APP_DATABASE_VERSION = 35
+const val APP_DATABASE_VERSION = 36
 
 /**
  * Keeps every migration compatible with both Room database backends. Room calls
@@ -294,6 +294,13 @@ val MIGRATION_34_35 = sqlMigration(
     "CREATE INDEX IF NOT EXISTS `index_customers_phone` ON `customers` (`phone`)"
 )
 
+val MIGRATION_35_36 = sqlMigration(
+    35, 36,
+    "ALTER TABLE sales ADD COLUMN isTaxInclusive INTEGER NOT NULL DEFAULT 0",
+    "UPDATE customers SET loyaltyTier = 'Regular' WHERE loyaltyTier = 'Silver' AND (lifetimeSpent < 3000.0 OR lifetimeSpent IS NULL)",
+    "UPDATE customer_loyalty SET tier = 'Regular' WHERE tier = 'Silver' AND (lifetimeSpent < 3000.0 OR lifetimeSpent IS NULL)"
+)
+
 @Database(
     entities = [
         Product::class,
@@ -363,7 +370,7 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25,
             MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29,
             MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33,
-            MIGRATION_33_34, MIGRATION_34_35
+            MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36
         )
 
         fun getDatabase(context: Context): AppDatabase {

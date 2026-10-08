@@ -1112,28 +1112,35 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    private suspend fun persistCartSnapshotSync(items: List<CartItem>) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
-        try {
-            repository.saveCartSnapshot(encodeHeldCartPayload(HeldCartPayload(
-                items = items, customerName = customerName.value, customerPhone = customerPhone.value,
-                discountAmount = discountAmount.value, isPercentageDiscount = isPercentageDiscount.value,
-                priceMode = priceMode.value, paymentMethod = paymentMethod.value, walletPhone = walletPhone.value,
-                cardType = cardType.value, cardLastFour = cardLastFour.value, amountPaid = amountPaid.value,
-                isSplitPayment = isSplitPayment.value, splitPayments = splitPayments.value,
-                loyaltyPhone = loyaltyCustomer.value?.phone, loyaltyDiscount = loyaltyDiscount.value,
-                storeCreditApplied = storeCreditApplied.value, voucherCode = redeemedVoucher.value?.code,
-                voucherOriginalBalance = redeemedVoucher.value?.initialAmount,
-                voucherRemainingBalance = redeemedVoucher.value?.remainingBalance,
-                voucherCustomerPhone = redeemedVoucher.value?.customerPhone
-            )))
-        } catch (e: Exception) {
-            e.printStackTrace()
+    private val cartSnapshotMutex = kotlinx.coroutines.sync.Mutex()
+    private val cartSnapshotVersion = java.util.concurrent.atomic.AtomicLong(0L)
+
+    private suspend fun persistCartSnapshotSync(items: List<CartItem>, version: Long = cartSnapshotVersion.incrementAndGet()) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
+        cartSnapshotMutex.withLock {
+            if (version < cartSnapshotVersion.get()) return@withLock
+            try {
+                repository.saveCartSnapshot(encodeHeldCartPayload(HeldCartPayload(
+                    items = items, customerName = customerName.value, customerPhone = customerPhone.value,
+                    discountAmount = discountAmount.value, isPercentageDiscount = isPercentageDiscount.value,
+                    priceMode = priceMode.value, paymentMethod = paymentMethod.value, walletPhone = walletPhone.value,
+                    cardType = cardType.value, cardLastFour = cardLastFour.value, amountPaid = amountPaid.value,
+                    isSplitPayment = isSplitPayment.value, splitPayments = splitPayments.value,
+                    loyaltyPhone = loyaltyCustomer.value?.phone, loyaltyDiscount = loyaltyDiscount.value,
+                    storeCreditApplied = storeCreditApplied.value, voucherCode = redeemedVoucher.value?.code,
+                    voucherOriginalBalance = redeemedVoucher.value?.initialAmount,
+                    voucherRemainingBalance = redeemedVoucher.value?.remainingBalance,
+                    voucherCustomerPhone = redeemedVoucher.value?.customerPhone
+                )))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     private fun persistCartSnapshot(items: List<CartItem>) {
+        val version = cartSnapshotVersion.incrementAndGet()
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
-            persistCartSnapshotSync(items)
+            persistCartSnapshotSync(items, version)
         }
     }
 
@@ -1349,7 +1356,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 loyaltyPhone = redeemedCustomer?.phone,
                 loyaltyPointsToRedeem = appliedLoyaltyPoints,
                 storeCreditApplied = _storeCreditApplied.value,
-                appliedVoucherCode = redeemedVoucher.value?.code
+                appliedVoucherCode = redeemedVoucher.value?.code,
+                isTaxInclusive = settings.taxInclusive
             )
 
             clearCart()
@@ -1873,7 +1881,11 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun calculateInvoiceProfit(saleWithItems: SaleWithItems, returnSummary: SaleReturnSummary? = null): InvoiceProfitSummary {
         val sale = saleWithItems.sale
-        val grossRevenue = sale.subtotal
+        val grossRevenue = if (sale.isTaxInclusive && sale.taxAmount > 0.0) {
+            (sale.subtotal - sale.taxAmount).coerceAtLeast(0.0)
+        } else {
+            sale.subtotal
+        }
         val discount = calculateDiscountValue(sale.subtotal, sale.discountAmount, sale.isPercentageDiscount)
         val netRevBeforeRefund = (grossRevenue - discount).coerceAtLeast(0.0)
 
@@ -1882,7 +1894,13 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         val itemsProfitList = saleWithItems.items.map { item ->
             val liveCost = productMap[item.productBarcode]?.purchasePrice
             val cost = item.purchasePriceAtSale ?: liveCost ?: getFallbackCost(item.productBarcode, item.price)
-            val lineRev = item.price * item.quantity
+            val effectivePrice = com.example.techyfipos.utils.PaymentMath.calculateItemEffectivePrice(
+                price = item.price,
+                taxRate = sale.taxRate,
+                isTaxInclusive = sale.isTaxInclusive,
+                isTaxable = item.taxable
+            )
+            val lineRev = effectivePrice * item.quantity
             val lineC = cost * item.quantity
             val lineP = lineRev - lineC
             val lineMargin = if (lineRev > 0) (lineP / lineRev) * 100.0 else 0.0
@@ -1891,7 +1909,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
                 barcode = item.productBarcode,
                 name = item.productName,
                 quantity = item.quantity,
-                unitPrice = item.price,
+                unitPrice = effectivePrice,
                 unitCost = cost,
                 lineRevenue = lineRev,
                 lineCost = lineC,
@@ -1988,7 +2006,13 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
                 val purchase = item.purchasePriceAtSale
                     ?: fallbackProducts[item.productBarcode]
                     ?: getFallbackCost(item.productBarcode, item.price)
-                profitSum += (item.price - purchase) * item.quantity
+                val effectivePrice = com.example.techyfipos.utils.PaymentMath.calculateItemEffectivePrice(
+                    price = item.price,
+                    taxRate = swi.sale.taxRate,
+                    isTaxInclusive = swi.sale.isTaxInclusive,
+                    isTaxable = item.taxable
+                )
+                profitSum += (effectivePrice - purchase) * item.quantity
             }
         }
         profitSum
@@ -2006,7 +2030,6 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             calculateDiscountValue(it.sale.subtotal, it.sale.discountAmount, it.sale.isPercentageDiscount)
         }
         val totalTax = list.sumOf { it.sale.taxAmount }
-        val isTaxInclusive = repository.invoiceSettingsDataFlow.first().taxInclusive
 
         // Reports are sale-cohort based: every return belonging to a sale in this range is applied,
         // even if the return happened later. This keeps the headline and every breakdown on the
@@ -2135,7 +2158,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
                 val effectivePrice = com.example.techyfipos.utils.PaymentMath.calculateItemEffectivePrice(
                     price = item.price,
                     taxRate = swi.sale.taxRate,
-                    isTaxInclusive = isTaxInclusive,
+                    isTaxInclusive = swi.sale.isTaxInclusive,
                     isTaxable = item.taxable
                 )
                 val itemProfit = (effectivePrice - purchase) * item.quantity

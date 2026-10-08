@@ -12,10 +12,10 @@ object PaymentMath {
         grandTotal: Double,
         paymentMethod: String
     ): String {
-        return if (isSplitPayment) {
-            "Split"
-        } else if (storeCreditApplied >= grandTotal && grandTotal > 0.0) {
+        return if (!paymentMethod.equals("Split", ignoreCase = true) && storeCreditApplied >= grandTotal && grandTotal > 0.0) {
             "Store Credit"
+        } else if (isSplitPayment || paymentMethod.equals("Split", ignoreCase = true)) {
+            "Split"
         } else if (storeCreditApplied > 0.0 && storeCreditApplied < grandTotal) {
             "Split"
         } else {

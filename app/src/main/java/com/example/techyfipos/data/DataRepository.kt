@@ -750,7 +750,8 @@ class DataRepository(
         splitPaymentJson: String? = null,
         loyaltyPhone: String? = null,
         loyaltyPointsToRedeem: Int = 0,
-        storeCreditApplied: Double = 0.0
+        storeCreditApplied: Double = 0.0,
+        isTaxInclusive: Boolean = false
     ): Long = completeSaleWithNotes(
         subtotal = subtotal,
         discountAmount = discountAmount,
@@ -769,7 +770,8 @@ class DataRepository(
         splitPaymentJson = splitPaymentJson,
         loyaltyPhone = loyaltyPhone,
         loyaltyPointsToRedeem = loyaltyPointsToRedeem,
-        storeCreditApplied = storeCreditApplied
+        storeCreditApplied = storeCreditApplied,
+        isTaxInclusive = isTaxInclusive
     )
 
     suspend fun completeSaleWithNotes(
@@ -792,7 +794,8 @@ class DataRepository(
         loyaltyPointsToRedeem: Int = 0,
         storeCreditApplied: Double = 0.0,
         appliedVoucherCode: String? = null,
-        nonTaxableBarcodes: Set<String> = emptySet()
+        nonTaxableBarcodes: Set<String> = emptySet(),
+        isTaxInclusive: Boolean = false
     ): Long = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.SALES_SELL)
         if (discountAmount > 0.0) {
@@ -1048,7 +1051,8 @@ class DataRepository(
                 performedByName = sessionUser?.name,
                 loyaltyPhone = normalizedLoyaltyPhone?.takeIf { loyaltyPointsToRedeem > 0 },
                 loyaltyPointsRedeemed = loyaltyPointsToRedeem,
-                storeCreditApplied = storeCreditToUse
+                storeCreditApplied = storeCreditToUse,
+                isTaxInclusive = isTaxInclusive
             )
             val saleId = try {
                 saleDao.insertSale(sale)
@@ -1220,7 +1224,14 @@ class DataRepository(
         customerDao.observeCustomerByPhone(normalizePhone(phone))
 
     suspend fun getCustomerByPhone(phone: String): Customer? = withContext(Dispatchers.IO) {
-        customerDao.getCustomerByPhone(normalizePhone(phone))
+        val cleanPhone = normalizePhone(phone)
+        val customer = customerDao.getCustomerByPhone(cleanPhone) ?: return@withContext null
+        val dueLimit = customerDueDao.getCustomerDueByPhone(cleanPhone)?.creditLimit ?: 0.0
+        if (dueLimit > customer.creditLimit) {
+            customer.copy(creditLimit = dueLimit)
+        } else {
+            customer
+        }
     }
 
     fun searchCustomers(query: String): Flow<List<Customer>> =
@@ -1395,13 +1406,25 @@ class DataRepository(
             val effectiveCreditLimit = if (!isSessionOwner()) {
                 maxOf(existing?.creditLimit ?: 0.0, currentDueLimit)
             } else {
-                customer.creditLimit.coerceAtLeast(0.0)
+                if (customer.creditLimit > 0.0) customer.creditLimit
+                else maxOf(existing?.creditLimit ?: 0.0, currentDueLimit)
             }
             customerDao.upsertCustomer(customer.copy(phone = cleanPhone, creditLimit = effectiveCreditLimit, updatedAt = timestamp))
-            customerDueDao.getCustomerDueByPhone(cleanPhone)?.let { due ->
+            val existingDue = customerDueDao.getCustomerDueByPhone(cleanPhone)
+            if (existingDue != null) {
                 customerDueDao.upsertCustomerDue(
-                    due.copy(
-                        customerName = customer.name.trim().ifBlank { due.customerName },
+                    existingDue.copy(
+                        customerName = customer.name.trim().ifBlank { existingDue.customerName },
+                        creditLimit = effectiveCreditLimit,
+                        updatedAt = timestamp
+                    )
+                )
+            } else if (effectiveCreditLimit > 0.0 || customer.totalDue > 0.0) {
+                customerDueDao.upsertCustomerDue(
+                    CustomerDue(
+                        customerPhone = cleanPhone,
+                        customerName = customer.name.trim().ifBlank { "Customer" },
+                        outstandingAmount = customer.totalDue,
                         creditLimit = effectiveCreditLimit,
                         updatedAt = timestamp
                     )
@@ -1573,6 +1596,7 @@ class DataRepository(
         creditLimit: Double? = null,
         notes: String? = null
     ): CustomerPhoneUpdateResult = withContext(Dispatchers.IO) {
+        requirePermission(AppPermissions.CUSTOMERS_EDIT)
         val oldNorm = normalizePhone(oldPhone)
         val newNorm = normalizePhone(newPhone)
 
@@ -1806,14 +1830,21 @@ class DataRepository(
     suspend fun upsertCustomerDue(customerDue: CustomerDue) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.DUES_ADD_DUE)
         val cleanPhone = normalizePhone(customerDue.customerPhone)
-        customerDueDao.upsertCustomerDue(customerDue.copy(customerPhone = cleanPhone))
         val existingCust = customerDao.getCustomerByPhone(cleanPhone)
+        val existingDue = customerDueDao.getCustomerDueByPhone(cleanPhone)
+        val existingLimit = maxOf(existingCust?.creditLimit ?: 0.0, existingDue?.creditLimit ?: 0.0)
+        val effectiveLimit = if (!isSessionOwner()) {
+            existingLimit
+        } else {
+            customerDue.creditLimit
+        }
+        customerDueDao.upsertCustomerDue(customerDue.copy(customerPhone = cleanPhone, creditLimit = effectiveLimit))
         if (existingCust != null) {
             customerDao.upsertCustomer(
                 existingCust.copy(
                     name = if (customerDue.customerName.isNotBlank()) customerDue.customerName else existingCust.name,
                     totalDue = customerDue.outstandingAmount,
-                    creditLimit = customerDue.creditLimit,
+                    creditLimit = effectiveLimit,
                     updatedAt = System.currentTimeMillis()
                 )
             )
@@ -1823,7 +1854,7 @@ class DataRepository(
                     phone = cleanPhone,
                     name = customerDue.customerName,
                     totalDue = customerDue.outstandingAmount,
-                    creditLimit = customerDue.creditLimit,
+                    creditLimit = effectiveLimit,
                     tag = "Due Customer",
                     updatedAt = System.currentTimeMillis()
                 )
@@ -1848,7 +1879,12 @@ class DataRepository(
         val timestamp = System.currentTimeMillis()
         database.withDriverTransaction {
             val existing = customerDueDao.getCustomerDueByPhone(cleanPhone)
-            val effectiveLimit = creditLimit?.takeIf { it > 0.0 } ?: existing?.creditLimit ?: 0.0
+            val existingCust = customerDao.getCustomerByPhone(cleanPhone)
+            val effectiveLimit = if (isSessionOwner()) {
+                creditLimit?.takeIf { it >= 0.0 } ?: existing?.creditLimit ?: existingCust?.creditLimit ?: 0.0
+            } else {
+                maxOf(existing?.creditLimit ?: 0.0, existingCust?.creditLimit ?: 0.0)
+            }
             val existingDue = existing?.outstandingAmount ?: 0.0
             if (effectiveLimit > 0.0 && existingDue + amount > effectiveLimit + 0.001) {
                 require(isSessionManagerOrOwner() || consumeCreditLimitOverride(cleanPhone)) {
@@ -1858,13 +1894,13 @@ class DataRepository(
             val updated = existing?.copy(
                 customerName = cleanName.ifBlank { existing.customerName },
                 outstandingAmount = existing.outstandingAmount + amount,
-                creditLimit = creditLimit?.takeIf { it > 0.0 } ?: existing.creditLimit,
+                creditLimit = effectiveLimit,
                 updatedAt = timestamp
             ) ?: CustomerDue(
                 customerPhone = cleanPhone,
                 customerName = cleanName,
                 outstandingAmount = amount,
-                creditLimit = creditLimit?.coerceAtLeast(0.0) ?: 0.0,
+                creditLimit = effectiveLimit,
                 updatedAt = timestamp
             )
             customerDueDao.upsertCustomerDue(updated)
@@ -2278,6 +2314,7 @@ class DataRepository(
                     put("loyaltyPhone", swi.sale.loyaltyPhone ?: "")
                     put("loyaltyPointsRedeemed", swi.sale.loyaltyPointsRedeemed)
                     put("storeCreditApplied", swi.sale.storeCreditApplied)
+                    put("isTaxInclusive", swi.sale.isTaxInclusive)
                 }
                 val itemsArray = JSONArray()
                 for (item in swi.items) {
@@ -2771,7 +2808,8 @@ class DataRepository(
                         performedByName = s.optString("performedByName"),
                         loyaltyPhone = s.optString("loyaltyPhone"),
                         loyaltyPointsRedeemed = s.optInt("loyaltyPointsRedeemed", 0),
-                        storeCreditApplied = s.optionalDouble("storeCreditApplied")
+                        storeCreditApplied = s.optionalDouble("storeCreditApplied"),
+                        isTaxInclusive = s.optionalBoolean("isTaxInclusive")
                     )
                     val saleId = try {
                         saleDao.insertSale(sale)

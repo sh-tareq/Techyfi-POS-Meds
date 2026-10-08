@@ -597,4 +597,34 @@ class MoneyFlowsTest {
         )
         org.junit.Assert.assertNull("splitPaymentJson must be null for pure non-split Store Credit payment", bdFullSc.splitPaymentJson)
     }
+
+    @Test
+    fun `B-7 calculateItemEffectivePrice strips embedded tax when inclusive and preserves when exclusive`() {
+        // Tax inclusive: 115.0 with 15% tax rate -> effective base price is 100.0
+        val incPrice = PaymentMath.calculateItemEffectivePrice(
+            price = 115.0,
+            taxRate = 15.0,
+            isTaxInclusive = true,
+            isTaxable = true
+        )
+        assertEquals(100.0, incPrice, 0.001)
+
+        // Non-taxable item: effective price remains 115.0
+        val nonTaxablePrice = PaymentMath.calculateItemEffectivePrice(
+            price = 115.0,
+            taxRate = 15.0,
+            isTaxInclusive = true,
+            isTaxable = false
+        )
+        assertEquals(115.0, nonTaxablePrice, 0.001)
+
+        // Tax exclusive: effective price remains 115.0
+        val excPrice = PaymentMath.calculateItemEffectivePrice(
+            price = 115.0,
+            taxRate = 15.0,
+            isTaxInclusive = false,
+            isTaxable = true
+        )
+        assertEquals(115.0, excPrice, 0.001)
+    }
 }

@@ -1040,5 +1040,97 @@ class MoneyFlowsIntegrationTest {
         assertEquals("Voucher capped at 60 (initial spent was 60)", 60.0, voucherAfterRet2.remainingBalance, 0.001)
         assertEquals("Customer must receive remaining 20", 20.0, custAfterRet2.storeCredit, 0.001)
     }
+
+    @Test
+    fun testM14_nonOwnerWithDuesAddDueCannotOverwriteExistingCreditLimitInUpsertCustomerDue() = runBlocking {
+        val phone = "01700000080"
+        repository.upsertCustomer(Customer(phone = phone, name = "M14-2 Cust", creditLimit = 2000.0))
+        val due = database.customerDueDao().getCustomerDueByPhone(phone)
+        assertEquals(2000.0, due?.creditLimit ?: 0.0, 0.001)
+
+        // Non-owner cashier with DUES_ADD_DUE permission
+        repository.setSessionUser(User(id = 3, name = "Cashier 2", pinHash = "p", role = "CASHIER", customPermissions = "[\"${AppPermissions.DUES_ADD_DUE}\"]"))
+        // Tries to set creditLimit to 10000
+        repository.upsertCustomerDue(due!!.copy(creditLimit = 10000.0))
+
+        val dueAfter = database.customerDueDao().getCustomerDueByPhone(phone)
+        assertEquals("Non-owner must not be able to change credit limit to 10000", 2000.0, dueAfter?.creditLimit ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun testM14_nonOwnerWithDuesAddDueCannotSetCreditLimitInAddManualDueCharge() = runBlocking {
+        val phone = "01700000081"
+        repository.upsertCustomer(Customer(phone = phone, name = "M14-3 Cust", creditLimit = 1500.0))
+
+        // Non-owner cashier with DUES_ADD_DUE permission
+        repository.setSessionUser(User(id = 3, name = "Cashier 2", pinHash = "p", role = "CASHIER", customPermissions = "[\"${AppPermissions.DUES_ADD_DUE}\"]"))
+        repository.addManualDueCharge(phoneRaw = phone, customerName = "M14-3 Cust", amount = 100.0, creditLimit = 9999.0)
+
+        val dueAfter = database.customerDueDao().getCustomerDueByPhone(phone)
+        assertEquals("Non-owner must not be able to set credit limit to 9999", 1500.0, dueAfter?.creditLimit ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun testM14_ownerBulkTagAssignPreservesCustomerDueCreditLimitWhenCustomerRowHasZero() = runBlocking {
+        val phone = "01700000082"
+        // Customer has creditLimit 0 in Customer table, but 5000 in CustomerDue table
+        database.customerDao().upsertCustomer(Customer(phone = phone, name = "M14-4 Cust", creditLimit = 0.0))
+        database.customerDueDao().upsertCustomerDue(CustomerDue(customerPhone = phone, customerName = "M14-4 Cust", outstandingAmount = 0.0, creditLimit = 5000.0))
+
+        // Owner runs bulk tag assignment (fetches customer via getCustomerByPhone and calls upsertCustomer)
+        val cust = repository.getCustomerByPhone(phone)!!
+        repository.upsertCustomer(cust.copy(tag = "VIP"))
+
+        val dueAfter = database.customerDueDao().getCustomerDueByPhone(phone)
+        assertEquals("CustomerDue creditLimit must be preserved at 5000.0 after bulk tag assign", 5000.0, dueAfter?.creditLimit ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun testM14_migrateCustomerPhone_requiresCustomersEditPermission() = runBlocking {
+        val phone = "01700000083"
+        repository.upsertCustomer(Customer(phone = phone, name = "M14-5 Cust"))
+        // Switch to cashier without CUSTOMERS_EDIT
+        repository.setSessionUser(User(id = 4, name = "Restricted Cashier", pinHash = "p", role = "CASHIER", customPermissions = "[]"))
+        var thrown = false
+        try {
+            repository.migrateCustomerPhone(oldPhone = phone, newPhone = "01700000084")
+        } catch (e: com.example.techyfipos.data.DataRepository.UnauthorizedException) {
+            thrown = true
+        } catch (e: SecurityException) {
+            thrown = true
+        } catch (e: IllegalStateException) {
+            thrown = true
+        }
+        assertTrue("migrateCustomerPhone must require CUSTOMERS_EDIT permission", thrown)
+        Unit
+    }
+
+    @Test
+    fun testB7_saleStoresIsTaxInclusiveFlagCorrectly() = runBlocking {
+        val prod = Product(barcode = "BAR_B7", name = "B7 Item", category = "General", purchasePrice = 100.0, sellingPrice = 115.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 115.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 115.0,
+            paymentMethod = "Cash",
+            customerName = null,
+            customerPhone = null,
+            amountPaid = 115.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            taxRate = 15.0,
+            taxAmount = 15.0,
+            isTaxInclusive = true
+        )
+
+        val swi = database.saleDao().getSaleWithItemsById(saleId)
+        org.junit.Assert.assertNotNull(swi)
+        org.junit.Assert.assertTrue("Sale must store isTaxInclusive as true", swi!!.sale.isTaxInclusive)
+    }
 }
 

@@ -221,7 +221,8 @@ data class Sale(
     val performedByName: String? = null,
     val loyaltyPhone: String? = null,
     val loyaltyPointsRedeemed: Int = 0,
-    val storeCreditApplied: Double = 0.0
+    val storeCreditApplied: Double = 0.0,
+    val isTaxInclusive: Boolean = false
 )
 
 fun Sale.getFormattedPaymentMethod(): String {
