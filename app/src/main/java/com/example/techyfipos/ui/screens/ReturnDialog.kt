@@ -1370,10 +1370,13 @@ fun ReturnItemsDialog(
                     }
 
                     val isWalkinRegIncomplete = selectedSettlementDestination == "WALLET" && isWalkinCustomer && walkinMode == "REGISTER" && walkinRegPhone.trim().length < 6
-                    val isConfirmEnabled = hasSelection && !isWalkinRegIncomplete
+                    var isProcessing by remember { mutableStateOf(false) }
+                    val isConfirmEnabled = hasSelection && !isWalkinRegIncomplete && !isProcessing
 
                     Button(
                         onClick = {
+                            if (isProcessing) return@Button
+                            isProcessing = true
                             val lines = displayItems.mapNotNull { item ->
                                 val qty = quantities[item.productBarcode] ?: 0.0
                                 if (qty > 0.0) {
@@ -1400,8 +1403,8 @@ fun ReturnItemsDialog(
                                 }
                                 if (returnNote.isNotBlank()) {
                                     append(" - ")
-                                    append(returnNote.trim())
                                 }
+                                append(returnNote.trim())
                             }
 
                             val (finalWalkinPhone, finalWalkinName, finalIssueVoucher) = if (selectedSettlementDestination == "WALLET" && isWalkinCustomer) {
@@ -1419,7 +1422,7 @@ fun ReturnItemsDialog(
                         enabled = isConfirmEnabled,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF10B981)
+                            containerColor = MaterialTheme.colorScheme.primary
                         ),
                         modifier = Modifier
                             .weight(2f)

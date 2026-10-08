@@ -1186,6 +1186,29 @@ class MoneyFlowsIntegrationTest {
     }
 
     @Test
+    fun testR1_importBackupLowercasesProductBarcodes() = runBlocking {
+        val backupJson = JSONObject().apply {
+            put("products", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("barcode", "UPPER-BARCODE-R1")
+                    put("name", "Upper Item")
+                    put("price", 150.0)
+                    put("sellingPrice", 150.0)
+                    put("cost", 100.0)
+                    put("purchasePrice", 100.0)
+                    put("stock", 20.0)
+                    put("stockQty", 20.0)
+                })
+            })
+        }
+
+        importJsonBackup(backupJson, BackupImportMode.MERGE)
+        val prod = database.productDao().getProductByBarcode("upper-barcode-r1")
+        org.junit.Assert.assertNotNull("Product barcode must be lowercased upon backup import", prod)
+        assertEquals("upper-barcode-r1", prod!!.barcode)
+    }
+
+    @Test
     fun testM3_pureStoreCreditSaleWithVoucherRecordsColumnsOnSaleAndRestoresOnVoid() = runBlocking {
         val prod = Product(barcode = "m3_pure_prod", name = "M3 Pure Item", category = "General", purchasePrice = 50.0, sellingPrice = 100.0, stockQty = 10.0, reorderLevel = 1)
         database.productDao().insertProduct(prod)

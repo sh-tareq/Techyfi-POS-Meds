@@ -2662,8 +2662,8 @@ class DataRepository(
                 for (i in 0 until productsArray.length()) {
                     val p = productsArray.getJSONObject(i)
                     val rawBarcode = p.getString("barcode")
-                    val existing = productDao.getProductByBarcodeCaseInsensitive(rawBarcode)
-                    val canonicalBarcode = existing?.barcode ?: rawBarcode.trim()
+                    val canonicalBarcode = rawBarcode.trim().lowercase()
+                    val existing = productDao.getProductByBarcodeCaseInsensitive(canonicalBarcode)
                     val product = Product(
                         barcode = canonicalBarcode,
                         name = p.optString("name", rawBarcode),
@@ -2684,12 +2684,12 @@ class DataRepository(
                     )
                     if (existing != null) {
                         if (mode != BackupImportMode.MERGE) {
-                            productDao.updateProduct(product.copy(barcode = existing.barcode))
+                            productDao.updateProduct(product.copy(barcode = existing.barcode.lowercase()))
                         }
                     } else {
-                        productDao.insertProduct(product)
+                        productDao.insertProduct(product.copy(barcode = canonicalBarcode))
                         if (mode == BackupImportMode.MERGE) {
-                            newlyInsertedProductBarcodes.add(product.barcode.lowercase())
+                            newlyInsertedProductBarcodes.add(canonicalBarcode)
                         }
                     }
                 }
@@ -2829,7 +2829,7 @@ class DataRepository(
                         val itemObj = itemsArray.getJSONObject(j)
                         items.add(buildBackwardCompatibleSaleItem(
                             saleId = saleId,
-                            productBarcode = itemObj.optString("productBarcode", itemObj.optString("barcode")),
+                            productBarcode = itemObj.optString("productBarcode", itemObj.optString("barcode")).trim().lowercase(),
                             productName = itemObj.optString("productName", itemObj.optString("name")),
                             price = itemObj.optionalDouble("price") ?: itemObj.optionalDouble("sellingPrice"),
                             quantity = itemObj.optionalDouble("quantity") ?: itemObj.optionalDouble("qty"),
@@ -2940,7 +2940,7 @@ class DataRepository(
                     if (resolvedReturnId == null || resolvedReturnId == 0L) {
                         continue // Skip orphan return item whose parent return was skipped or missing
                     }
-                    val barcode = value.optString("productBarcode")
+                    val barcode = value.optString("productBarcode").trim().lowercase()
                     val price = value.optDouble("price", 0.0)
                     val qty = value.optDouble("quantity", 1.0)
                     if (mode == BackupImportMode.MERGE) {

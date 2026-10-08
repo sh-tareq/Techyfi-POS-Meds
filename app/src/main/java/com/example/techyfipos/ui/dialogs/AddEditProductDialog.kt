@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -1070,7 +1071,7 @@ fun AddEditProductDialog(
                                     val markupPct = if (pCost > 0.0) (profitPerUnit / pCost) * 100.0 else 0.0
                                     val discountPct = if (pMrp > 0.0 && pDiscounted > 0.0 && pMrp > pDiscounted) ((pMrp - pDiscounted) / pMrp) * 100.0 else 0.0
 
-                                    val isDark = isSystemInDarkTheme()
+                                    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
                                         color = if (profitPerUnit >= 0) {
@@ -1148,7 +1149,7 @@ fun AddEditProductDialog(
                                                     text = "⚠️ Alert: Selling price is lower than cost price!",
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFFBE123C)
+                                                    color = MaterialTheme.colorScheme.onErrorContainer
                                                 )
                                             } else if (discountPct > 0.0) {
                                                 Text(
@@ -1171,7 +1172,7 @@ fun AddEditProductDialog(
 
                         val currentStockVal = stockQty.toDoubleOrNull() ?: 0.0
                         val currentMinAlert = reorderLevel.toDoubleOrNull() ?: 5.0
-                        val isDarkStock = isSystemInDarkTheme()
+                        val isDarkStock = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         val (healthText, healthBg, healthColor) = when {
                             currentStockVal <= 0.0 -> Triple(
                                 stringResource(R.string.out_of_stock),
@@ -1456,7 +1457,7 @@ fun AddEditProductDialog(
                     }
 
                     item {
-                        val isDarkTracking = isSystemInDarkTheme()
+                        val isDarkTracking = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = if (isDarkTracking) Color(0xFF78350F).copy(alpha = 0.35f) else Color(0xFFFFFBEB),

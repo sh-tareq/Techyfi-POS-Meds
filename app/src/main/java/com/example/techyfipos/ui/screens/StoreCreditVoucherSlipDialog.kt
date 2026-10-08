@@ -155,7 +155,7 @@ fun StoreCreditVoucherSlipDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
         Surface(
             modifier = Modifier
@@ -726,6 +726,7 @@ fun StoreCreditVoucherSlipDialog(
     if (showShareOptionsSheet) {
         AlertDialog(
             onDismissRequest = { showShareOptionsSheet = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             icon = {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
