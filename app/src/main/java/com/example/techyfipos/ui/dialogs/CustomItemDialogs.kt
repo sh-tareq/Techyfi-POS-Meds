@@ -1685,6 +1685,7 @@ fun EditItemNoteDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Row(
                 modifier = Modifier.fillMaxWidth(),

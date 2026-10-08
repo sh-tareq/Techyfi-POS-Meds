@@ -26,6 +26,7 @@ import com.example.techyfipos.utils.toEnglishDigits
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import androidx.compose.ui.window.DialogProperties
 
 @Composable
 fun ManualQuantityDialog(
@@ -64,6 +65,7 @@ fun ManualQuantityDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         modifier = Modifier.imePadding(),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -238,6 +240,7 @@ fun CreditLimitWarningDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("⚠️", fontSize = 22.sp)
@@ -332,6 +335,7 @@ fun ConfirmDueSaleDialog(
     val totalDue = previousDue + newDueAmount
     AlertDialog(
         onDismissRequest = onCancel,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("🧾", fontSize = 20.sp)
@@ -404,6 +408,7 @@ fun CartItemDiscountDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Column {
                 Text(productName, fontWeight = FontWeight.Bold, fontSize = 16.sp)

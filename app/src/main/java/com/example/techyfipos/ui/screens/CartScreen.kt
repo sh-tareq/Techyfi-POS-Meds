@@ -106,6 +106,7 @@ import com.example.techyfipos.utils.generateBillJpeg
 import com.example.techyfipos.utils.copyPdfUriToClipboard
 import com.example.techyfipos.utils.copyImageUriToClipboard
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.formatMoney
 import com.example.techyfipos.utils.isFractionalUnit
 import com.example.techyfipos.utils.generateBillPdf
 import com.example.techyfipos.utils.getBillImageUri
@@ -670,6 +671,7 @@ fun CartScreen(
                         if (showVoidConfirmDialog) {
                             AlertDialog(
                                 onDismissRequest = { showVoidConfirmDialog = false },
+                                properties = DialogProperties(dismissOnClickOutside = false),
                                 title = { Text(stringResource(R.string.cart_clear_confirm_title)) },
                                 text = { Text(stringResource(R.string.cart_clear_confirm_message)) },
                                 confirmButton = {
@@ -773,11 +775,17 @@ fun CartScreen(
         }
 
         if (cartItems.isEmpty()) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(paddingValues),
+                contentAlignment = Alignment.TopCenter
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 700.dp)
+                ) {
                 CartScanUpdateBanner(scanUpdate = scanUpdate)
 
                 if (heldCartCount > 0) {
@@ -870,7 +878,7 @@ fun CartScreen(
                                                     ) {
                                                         Text(
                                                             text = stringResource(R.string.common_add_chip),
-                                                            fontSize = 9.5.sp,
+                                                            fontSize = 11.sp,
                                                             fontWeight = FontWeight.Bold,
                                                             color = Color(0xFF059669),
                                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -889,13 +897,20 @@ fun CartScreen(
                     }
                 }
             }
+        }
         } else if (!showCheckout) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(paddingValues),
+                contentAlignment = Alignment.TopCenter
             ) {
-                CartScanUpdateBanner(scanUpdate = scanUpdate)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 700.dp)
+                ) {
+                    CartScanUpdateBanner(scanUpdate = scanUpdate)
 
                 // Quick Actions Header Row (Custom Item & Held Carts)
                 Row(
@@ -1015,9 +1030,9 @@ fun CartScreen(
                                 shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(0xFFD97706),
-                                    contentColor = Color.White,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
                                     disabledContainerColor = Color(0xFFD97706).copy(alpha = 0.4f),
-                                    disabledContentColor = Color.White.copy(alpha = 0.7f)
+                                    disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
                                 )
                             ) {
                                 Text("⏸️", fontSize = 15.sp)
@@ -1036,9 +1051,9 @@ fun CartScreen(
                                 shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(0xFF10B981),
-                                    contentColor = Color.White,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
                                     disabledContainerColor = Color(0xFF10B981).copy(alpha = 0.4f),
-                                    disabledContentColor = Color.White.copy(alpha = 0.7f)
+                                    disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
                                 )
                             ) {
                                 Text("🛍️", fontSize = 15.sp)
@@ -1055,6 +1070,7 @@ fun CartScreen(
                     }
                 }
             }
+        }
         } else {
             Surface(
                 modifier = Modifier
@@ -1062,13 +1078,18 @@ fun CartScreen(
                     .padding(paddingValues),
                 color = MaterialTheme.colorScheme.surface
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .imePadding()
-                            .padding(16.dp)
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.TopCenter
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 700.dp)
+                            .verticalScroll(rememberScrollState())
+                            .imePadding()
+                            .padding(16.dp)
+                    ) {
                         Surface(
                             color = MaterialTheme.colorScheme.primaryContainer,
                             shape = RoundedCornerShape(12.dp),
@@ -1247,7 +1268,7 @@ fun CartScreen(
                                     }
                                 },
                                 label = { Text(stringResource(R.string.cart_discount_label), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.5.sp) },
-                                placeholder = { Text(if (isPercentageDiscount) "%" else "৳") },
+                                placeholder = { Text(if (isPercentageDiscount) "%" else formatMoney(0.0).take(1)) },
                                 trailingIcon = {
                                     Surface(
                                         onClick = { cartViewModel.toggleDiscountUnit() },
@@ -1263,7 +1284,7 @@ fun CartScreen(
                                             modifier = Modifier.fillMaxSize()
                                         ) {
                                             Text(
-                                                text = if (isPercentageDiscount) "%" else "৳",
+                                                text = if (isPercentageDiscount) "%" else formatMoney(0.0).take(1),
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 11.sp,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1445,7 +1466,7 @@ fun CartScreen(
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
                                         modifier = Modifier.heightIn(min = 48.dp)
                                     ) {
-                                        Text(stringResource(R.string.cart_apply_store_credit), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        Text(stringResource(R.string.cart_apply_store_credit), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                                     }
                                 }
                             }
@@ -1468,6 +1489,7 @@ fun CartScreen(
 
                             AlertDialog(
                                 onDismissRequest = { showVoucherRedeemDialog = false },
+                                properties = DialogProperties(dismissOnClickOutside = false),
                                 title = {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text("🎟️", fontSize = 22.sp)
@@ -2140,7 +2162,7 @@ fun CartScreen(
                                         cartViewModel.setAmountPaid(input.toDoubleOrNull() ?: 0.0)
                                     },
                                     label = { Text(stringResource(R.string.cart_cash_received_label), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.5.sp) },
-                                    leadingIcon = { Text("৳", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary) },
+                                    leadingIcon = { Text(formatMoney(0.0).take(1), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth()
@@ -2401,7 +2423,7 @@ fun CartScreen(
                                         ) {
                                             Text(
                                                 stringResource(R.string.cart_percent_off, pctStr),
-                                                color = Color.White,
+                                                color = MaterialTheme.colorScheme.onPrimary,
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 10.sp,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -2452,8 +2474,8 @@ fun CartScreen(
                                             leadingIcon = if (isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
                                             colors = FilterChipDefaults.filterChipColors(
                                                 selectedContainerColor = Color(0xFF16A34A),
-                                                selectedLabelColor = Color.White,
-                                                selectedLeadingIconColor = Color.White
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                                             ),
                                             modifier = Modifier.weight(1f)
                                         )
@@ -2467,8 +2489,8 @@ fun CartScreen(
                                             leadingIcon = if (!isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
                                             colors = FilterChipDefaults.filterChipColors(
                                                 selectedContainerColor = Color(0xFF16A34A),
-                                                selectedLabelColor = Color.White,
-                                                selectedLeadingIconColor = Color.White
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                                             ),
                                             modifier = Modifier.weight(1f)
                                         )
@@ -2634,6 +2656,7 @@ fun CartScreen(
                 }
             }
         }
+    }
     val snapshot = billSnapshot
     if (showReceiptDialog && snapshot != null) {
         val completedSale = salesWithItemsForCompletedSale.find { it.sale.id == snapshot.saleId }
@@ -2674,6 +2697,7 @@ fun CartScreen(
 
         AlertDialog(
             onDismissRequest = { showEditConfirmForCompletedSale = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.cart_edit_sale_confirm_title)) },
             text = {
                 Column(
@@ -2833,6 +2857,7 @@ fun CartScreen(
         )
         AlertDialog(
             onDismissRequest = { showHoldCartDialog = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("⏸️", fontSize = 22.sp)
@@ -2884,7 +2909,7 @@ fun CartScreen(
                         showHoldCartDialog = false
                         Toast.makeText(context, context.getString(R.string.held_cart_held_toast, finalTitle), Toast.LENGTH_SHORT).show()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706), contentColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706), contentColor = MaterialTheme.colorScheme.onPrimary),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(stringResource(R.string.held_cart_confirm_button), fontWeight = FontWeight.Bold)
@@ -2926,6 +2951,7 @@ fun CartScreen(
         val heldCartRestoredToastTemplate = stringResource(R.string.held_cart_restored_toast)
         AlertDialog(
             onDismissRequest = { pendingResumeCart = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.held_cart_resume_confirm_title)) },
             text = { Text(stringResource(R.string.held_cart_resume_confirm_message, cartToResume.title)) },
             confirmButton = {
@@ -3321,7 +3347,7 @@ fun CartItemRow(
                         },
                         shape = RoundedCornerShape(10.dp),
                         color = Color(0xFF10B981),
-                        contentColor = Color.White,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
