@@ -155,9 +155,9 @@ class MoneyFlowsTest {
             splitJson = splitJson,
             storeCreditApplied = 50.0
         )
-        // Auto SC (50) + split SC (50) = 100 SC. Remaining bill is 100.
-        // Cash tendered is 250, so change is 250 - 100 = 150.0.
-        assertEquals(150.0, change, 0.001)
+        // Bill is 200. Store credit is 50. Remaining bill is 150.
+        // Cash tendered is 250, so change is 250 - 150 = 100.0.
+        assertEquals(100.0, change, 0.001)
     }
 
     @Test
@@ -574,5 +574,27 @@ class MoneyFlowsTest {
         val breakdown = PaymentMath.aggregatePaymentBreakdown(sales, returns)
         assertEquals("Cash must remain 500.0 since refund was given as Store Credit", 500.0, breakdown["Cash"] ?: 0.0, 0.001)
         assertEquals("Store Credit must reflect deduction (-200.0)", -200.0, breakdown["Store Credit"] ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun `N-5 pure non-split payment method produces null splitPaymentJson`() {
+        // Pure Store Credit with storeCreditApplied = 0 and residual split rows in memory
+        val bdZeroSc = PaymentMath.calculatePaymentBreakdown(
+            grandTotal = 300.0,
+            storeCreditApplied = 0.0,
+            isSplitPayment = false,
+            splitPayments = listOf(SplitPaymentEntry("Cash", 300.0)),
+            paymentMethod = "Store Credit"
+        )
+        org.junit.Assert.assertNull("splitPaymentJson must be null for pure Store Credit", bdZeroSc.splitPaymentJson)
+
+        // Pure Store Credit with full store credit
+        val bdFullSc = PaymentMath.calculatePaymentBreakdown(
+            grandTotal = 300.0,
+            storeCreditApplied = 300.0,
+            isSplitPayment = false,
+            paymentMethod = "Store Credit"
+        )
+        org.junit.Assert.assertNull("splitPaymentJson must be null for pure non-split Store Credit payment", bdFullSc.splitPaymentJson)
     }
 }

@@ -839,9 +839,206 @@ class MoneyFlowsIntegrationTest {
             Customer(phone = custPhone, name = "Master Cust")
         )
         val missingPhone = "01700000099"
-
         val result = repository.mergeCustomers(custPhone, missingPhone)
         org.junit.Assert.assertFalse("mergeCustomers must return false when secondary customer is missing", result)
+    }
+
+    private suspend fun importJsonBackup(json: JSONObject, mode: BackupImportMode): Boolean {
+        val file = java.io.File.createTempFile("test_backup", ".json")
+        try {
+            file.writeText(json.toString())
+            return repository.importBackup(file, mode)
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun testN2_mergeBackupDoesNotAddVoucherRestoreLedgerDeltaToCustomerStoreCredit() = runBlocking {
+        val phone = "01700000070"
+        repository.upsertCustomer(Customer(phone = phone, name = "N2 Cust", storeCredit = 100.0))
+
+        val backupJson = JSONObject().apply {
+            put("storeCreditLedger", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("id", 101L)
+                    put("customerPhone", phone)
+                    put("deltaAmount", 50.0)
+                    put("balanceAfter", 50.0)
+                    put("type", "VOUCHER_RESTORE")
+                    put("voucherCode", "VOUCH-N2")
+                    put("timestamp", 1000L)
+                })
+            })
+        }
+
+        importJsonBackup(backupJson, BackupImportMode.MERGE)
+        val custAfter = repository.getCustomerByPhone(phone)!!
+        assertEquals("Customer store credit must not absorb voucher restore delta", 100.0, custAfter.storeCredit, 0.001)
+    }
+
+    @Test
+    fun testN3_mergeBackupUpdatesCustomerTotalDueWhenDueRowIsNewAndCustomerAlreadyExists() = runBlocking {
+        val phone = "01700000071"
+        repository.upsertCustomer(Customer(phone = phone, name = "N3 Cust", totalDue = 0.0))
+
+        val backupJson = JSONObject().apply {
+            put("dues", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("customerPhone", phone)
+                    put("customerName", "N3 Cust")
+                    put("outstandingAmount", 500.0)
+                    put("creditLimit", 1000.0)
+                })
+            })
+        }
+
+        importJsonBackup(backupJson, BackupImportMode.MERGE)
+        val custAfter = repository.getCustomerByPhone(phone)!!
+        assertEquals("Customer totalDue must be updated to 500.0 on merge", 500.0, custAfter.totalDue, 0.001)
+    }
+
+    @Test
+    fun testN4_mergeCustomers_succeedsForDueOnlyDebtorWithNoCustomerRow() = runBlocking {
+        val masterPhone = "01700000072"
+        val secPhone = "01700000073"
+        repository.upsertCustomer(Customer(phone = masterPhone, name = "Master", totalDue = 100.0))
+
+        // Create secondary due account ONLY in customer_dues (due-only debtor)
+        database.customerDueDao().upsertCustomerDue(
+            CustomerDue(customerPhone = secPhone, customerName = "Due Only Debtor", outstandingAmount = 250.0)
+        )
+
+        val ok = repository.mergeCustomers(masterPhone, secPhone)
+        assertTrue("mergeCustomers must succeed when secondary is a due-only debtor", ok)
+
+        val masterAfter = repository.getCustomerByPhone(masterPhone)!!
+        assertEquals("Combined due must be 350.0", 350.0, masterAfter.totalDue, 0.001)
+    }
+
+    @Test
+    fun testN5_pureStoreCreditSaleDoesNotPersistSplitPaymentJson() = runBlocking {
+        val prod = Product(barcode = "N5_PROD", name = "N5 Item", category = "General", purchasePrice = 50.0, sellingPrice = 300.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+        val phone = "01700000075"
+        repository.upsertCustomer(Customer(phone = phone, name = "N5 Cust", storeCredit = 500.0))
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 300.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 300.0,
+            paymentMethod = "Store Credit",
+            customerName = "N5 Cust",
+            customerPhone = phone,
+            amountPaid = 300.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            storeCreditApplied = 300.0
+        )
+
+        val savedSale = database.saleDao().getSaleWithItemsById(saleId)?.sale!!
+        assertEquals("Store Credit", savedSale.paymentMethod)
+        org.junit.Assert.assertNull("Non-split Store Credit sale must not save splitPaymentJson", savedSale.splitPaymentJson)
+    }
+
+    @Test
+    fun testM3_voidSaleApportionsVoucherAndCustomerPortionsCorrectly() = runBlocking {
+        val prod = Product(barcode = "M3_PROD", name = "M3 Item", category = "General", purchasePrice = 50.0, sellingPrice = 100.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+        val phone = "01700000076"
+        repository.upsertCustomer(Customer(phone = phone, name = "M3 Cust", storeCredit = 40.0))
+
+        // Create voucher with 100 initial, 60 remaining
+        val voucher = StoreCreditVoucher(code = "VOUCH-M3", initialAmount = 100.0, remainingBalance = 60.0, status = "ACTIVE")
+        database.storeCreditVoucherDao().insertVoucher(voucher)
+
+        // Split sale with 60 from voucher and 40 from customer
+        val splitJson = """[{"method":"Store Credit","amount":100.0,"voucherCode":"VOUCH-M3","voucherAmount":60.0,"customerCreditAmount":40.0}]"""
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 100.0,
+            paymentMethod = "Split",
+            customerName = "M3 Cust",
+            customerPhone = phone,
+            amountPaid = 100.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 100.0
+        )
+
+        // Void the sale
+        repository.deleteSale(saleId)
+
+        val voucherAfter = database.storeCreditVoucherDao().getVoucherByCode("VOUCH-M3")!!
+        val custAfter = repository.getCustomerByPhone(phone)!!
+        assertEquals("Voucher must be restored by 60.0 (back to 60.0)", 60.0, voucherAfter.remainingBalance, 0.001)
+        assertEquals("Customer must be restored by 40.0 (back to 40.0)", 40.0, custAfter.storeCredit, 0.001)
+    }
+
+    @Test
+    fun testM3_repeatedPartialReturnsTrackVoucherRestoredSoFar() = runBlocking {
+        val prod = Product(barcode = "M3_PROD2", name = "M3 Item 2", category = "General", purchasePrice = 50.0, sellingPrice = 100.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+        val phone = "01700000077"
+        repository.upsertCustomer(Customer(phone = phone, name = "M3 Cust 2", storeCredit = 40.0))
+
+        val voucher = StoreCreditVoucher(code = "VOUCH-M3-2", initialAmount = 100.0, remainingBalance = 60.0, status = "ACTIVE")
+        database.storeCreditVoucherDao().insertVoucher(voucher)
+
+        val splitJson = """[{"method":"Store Credit","amount":100.0,"voucherCode":"VOUCH-M3-2","voucherAmount":60.0,"customerCreditAmount":40.0}]"""
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 100.0,
+            paymentMethod = "Split",
+            customerName = "M3 Cust 2",
+            customerPhone = phone,
+            amountPaid = 100.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 100.0
+        )
+
+        // 1st partial return: 40 refund
+        repository.processReturn(
+            saleId = saleId,
+            lines = listOf(ReturnLine(barcode = "M3_PROD2", quantity = 0.4, name = "M3 Item 2", price = 100.0)),
+            refundMethod = "Store Credit",
+            note = "Return 1",
+            restock = true
+        )
+
+        val voucherAfterRet1 = database.storeCreditVoucherDao().getVoucherByCode("VOUCH-M3-2")!!
+        val custAfterRet1 = repository.getCustomerByPhone(phone)!!
+        assertEquals("Voucher restored by 40 (balance 40)", 40.0, voucherAfterRet1.remainingBalance, 0.001)
+        assertEquals("Customer credit still 0 (no customer portion yet)", 0.0, custAfterRet1.storeCredit, 0.001)
+
+        // 2nd partial return: 40 refund (total 80 returned). Remaining voucher portion was 20 (60 - 40).
+        // So voucher should only absorb 20 (balance 60), and customer gets 20!
+        repository.processReturn(
+            saleId = saleId,
+            lines = listOf(ReturnLine(barcode = "M3_PROD2", quantity = 0.4, name = "M3 Item 2", price = 100.0)),
+            refundMethod = "Store Credit",
+            note = "Return 2",
+            restock = true
+        )
+
+        val voucherAfterRet2 = database.storeCreditVoucherDao().getVoucherByCode("VOUCH-M3-2")!!
+        val custAfterRet2 = repository.getCustomerByPhone(phone)!!
+        assertEquals("Voucher capped at 60 (initial spent was 60)", 60.0, voucherAfterRet2.remainingBalance, 0.001)
+        assertEquals("Customer must receive remaining 20", 20.0, custAfterRet2.storeCredit, 0.001)
     }
 }
 

@@ -546,6 +546,15 @@ fun CartScreen(
         val snapshotTax = taxVal
         val snapshotGrandTotal = grandTotal
         val snapshotStoreCreditApplied = cartViewModel.storeCreditApplied.value
+        val snapshotRedeemedVoucher = cartViewModel.redeemedVoucher.value
+        val snapshotVoucherCode = snapshotRedeemedVoucher?.code
+        val snapshotVoucherAmount = if (snapshotRedeemedVoucher != null) {
+            snapshotStoreCreditApplied.coerceAtMost(snapshotRedeemedVoucher.remainingBalance)
+        } else null
+        val snapshotCustomerCreditAmount = if (snapshotVoucherAmount != null) {
+            (snapshotStoreCreditApplied - snapshotVoucherAmount).coerceAtLeast(0.0)
+        } else null
+
         val snapshotBreakdown = PaymentMath.calculatePaymentBreakdown(
             grandTotal = snapshotGrandTotal,
             storeCreditApplied = snapshotStoreCreditApplied,
@@ -553,10 +562,12 @@ fun CartScreen(
             splitPayments = splitPayments,
             paymentMethod = paymentMethod,
             amountPaid = snapshotAmountPaid,
-            redeemedVoucherCode = cartViewModel.redeemedVoucher.value?.code,
+            redeemedVoucherCode = snapshotVoucherCode,
             walletPhone = walletPhone,
             cardType = cardType,
-            cardLastFour = cardLastFour
+            cardLastFour = cardLastFour,
+            voucherAmount = snapshotVoucherAmount,
+            customerCreditAmount = snapshotCustomerCreditAmount
         )
         val snapshotSplitJson = snapshotBreakdown.splitPaymentJson
         val snapshotPaymentMethod = snapshotBreakdown.paymentMethodToSave
@@ -565,11 +576,6 @@ fun CartScreen(
         val snapshotCustomerPhone = customerPhone
         val snapshotHasDueInPayment = hasDueInPayment
         try {
-            val snapshotRedeemedVoucher = cartViewModel.redeemedVoucher.value
-            val snapshotVoucherCode = snapshotRedeemedVoucher?.code
-            val snapshotVoucherAmount = if (snapshotRedeemedVoucher != null) {
-                snapshotStoreCreditApplied.coerceAtMost(snapshotRedeemedVoucher.remainingBalance)
-            } else null
             val postSaleRemainingVoucherBalance = if (snapshotRedeemedVoucher != null && snapshotVoucherAmount != null) {
                 (snapshotRedeemedVoucher.remainingBalance - snapshotVoucherAmount).coerceAtLeast(0.0)
             } else null

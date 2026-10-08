@@ -12,10 +12,10 @@ object PaymentMath {
         grandTotal: Double,
         paymentMethod: String
     ): String {
-        return if (storeCreditApplied >= grandTotal && grandTotal > 0.0) {
-            "Store Credit"
-        } else if (isSplitPayment) {
+        return if (isSplitPayment) {
             "Split"
+        } else if (storeCreditApplied >= grandTotal && grandTotal > 0.0) {
+            "Store Credit"
         } else if (storeCreditApplied > 0.0 && storeCreditApplied < grandTotal) {
             "Split"
         } else {
@@ -42,24 +42,19 @@ object PaymentMath {
         redeemedVoucherCode: String? = null,
         walletPhone: String? = null,
         cardType: String? = null,
-        cardLastFour: String? = null
+        cardLastFour: String? = null,
+        voucherAmount: Double? = null,
+        customerCreditAmount: Double? = null
     ): PaymentBreakdown {
         if (!isSplitPayment) {
             val scAmount = if (storeCreditApplied > 0.0) storeCreditApplied.coerceAtMost(grandTotal) else 0.0
             val remainingAmt = (grandTotal - scAmount).coerceAtLeast(0.0)
 
             if (scAmount >= grandTotal && grandTotal > 0.0) {
-                // Fully covered by Store Credit
-                val array = JSONArray().apply {
-                    put(JSONObject().apply {
-                        put("method", "Store Credit")
-                        put("amount", grandTotal)
-                        if (!redeemedVoucherCode.isNullOrBlank()) put("voucherCode", redeemedVoucherCode)
-                    })
-                }
+                // Fully covered by Store Credit - pure non-split method saves null splitPaymentJson
                 return PaymentBreakdown(
                     paymentMethodToSave = "Store Credit",
-                    splitPaymentJson = array.toString(),
+                    splitPaymentJson = null,
                     changeAmount = 0.0,
                     amountPaidToRecord = grandTotal,
                     effectiveAmountPaid = grandTotal,
@@ -78,11 +73,18 @@ object PaymentMath {
                 val change = if (isCash && tendered > remainingAmt) tendered - remainingAmt else 0.0
                 val due = if (isDue) remainingAmt else 0.0
 
+                val vAmt = if (voucherAmount != null) voucherAmount.coerceAtMost(scAmount) else scAmount
+                val cAmt = if (customerCreditAmount != null) customerCreditAmount.coerceAtMost(scAmount - vAmt) else (scAmount - vAmt).coerceAtLeast(0.0)
+
                 val array = JSONArray()
                 array.put(JSONObject().apply {
                     put("method", "Store Credit")
                     put("amount", scAmount)
-                    if (!redeemedVoucherCode.isNullOrBlank()) put("voucherCode", redeemedVoucherCode)
+                    if (!redeemedVoucherCode.isNullOrBlank()) {
+                        put("voucherCode", redeemedVoucherCode)
+                        put("voucherAmount", vAmt)
+                        put("customerCreditAmount", cAmt)
+                    }
                 })
                 if (remainingAmt > 0.0) {
                     array.put(JSONObject().apply {
@@ -275,6 +277,10 @@ object PaymentMath {
                     }
                     if (isSc && !redeemedVoucherCode.isNullOrBlank()) {
                         put("voucherCode", redeemedVoucherCode)
+                        val vAmt = if (voucherAmount != null) voucherAmount.coerceAtMost(owedAmount) else owedAmount
+                        val cAmt = if (customerCreditAmount != null) customerCreditAmount.coerceAtMost(owedAmount - vAmt) else (owedAmount - vAmt).coerceAtLeast(0.0)
+                        put("voucherAmount", vAmt)
+                        put("customerCreditAmount", cAmt)
                     }
                     val isWallet = sp.method.equals("bKash", ignoreCase = true) ||
                         sp.method.equals("Nagad", ignoreCase = true) ||
@@ -300,7 +306,7 @@ object PaymentMath {
 
         return PaymentBreakdown(
             paymentMethodToSave = methodToSave,
-            splitPaymentJson = if (array.length() > 0) array.toString() else null,
+            splitPaymentJson = if (methodToSave.equals("Split", ignoreCase = true) && array.length() > 0) array.toString() else null,
             changeAmount = totalCashChange,
             amountPaidToRecord = amountPaidToRec,
             effectiveAmountPaid = effPaid,
@@ -318,7 +324,9 @@ object PaymentMath {
         redeemedVoucherCode: String? = null,
         walletPhone: String? = null,
         cardType: String? = null,
-        cardLastFour: String? = null
+        cardLastFour: String? = null,
+        voucherAmount: Double? = null,
+        customerCreditAmount: Double? = null
     ): String? {
         return calculatePaymentBreakdown(
             grandTotal = grandTotal,
@@ -330,7 +338,9 @@ object PaymentMath {
             redeemedVoucherCode = redeemedVoucherCode,
             walletPhone = walletPhone,
             cardType = cardType,
-            cardLastFour = cardLastFour
+            cardLastFour = cardLastFour,
+            voucherAmount = voucherAmount,
+            customerCreditAmount = customerCreditAmount
         ).splitPaymentJson
     }
 

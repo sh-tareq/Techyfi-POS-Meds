@@ -685,9 +685,13 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     fun getSplitPaymentsJson(): String? = buildAuthoritativeSplitJson()
 
     fun calculatePaymentBreakdown(): com.example.techyfipos.utils.PaymentMath.PaymentBreakdown {
+        val sc = storeCreditApplied.value
+        val vBal = redeemedVoucher.value?.remainingBalance ?: 0.0
+        val vAmt = if (redeemedVoucher.value != null) sc.coerceAtMost(vBal) else 0.0
+        val cAmt = (sc - vAmt).coerceAtLeast(0.0)
         return com.example.techyfipos.utils.PaymentMath.calculatePaymentBreakdown(
             grandTotal = grandTotal.value,
-            storeCreditApplied = storeCreditApplied.value,
+            storeCreditApplied = sc,
             isSplitPayment = isSplitPayment.value,
             splitPayments = splitPayments.value,
             paymentMethod = paymentMethod.value,
@@ -695,7 +699,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             redeemedVoucherCode = redeemedVoucher.value?.code,
             walletPhone = walletPhone.value,
             cardType = cardType.value,
-            cardLastFour = cardLastFour.value
+            cardLastFour = cardLastFour.value,
+            voucherAmount = vAmt,
+            customerCreditAmount = cAmt
         )
     }
 
