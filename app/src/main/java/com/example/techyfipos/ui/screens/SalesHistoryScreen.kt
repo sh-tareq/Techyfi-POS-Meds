@@ -127,6 +127,7 @@ fun SalesHistoryScreen(
     var isStealthMode by rememberSaveable { mutableStateOf(false) }
     var returnTarget by remember { mutableStateOf<SaleWithItems?>(null) }
     var returnAlreadyReturned by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
+    var returnStoreCreditRestoredSoFar by remember { mutableStateOf(0.0) }
     var issuedVoucherCode by remember { mutableStateOf<String?>(null) }
     var issuedVoucherAmount by remember { mutableStateOf(0.0) }
     var issuedVoucherEntity by remember { mutableStateOf<com.example.techyfipos.data.db.StoreCreditVoucher?>(null) }
@@ -781,6 +782,7 @@ fun SalesHistoryScreen(
                 selectedSaleDetail = null
                 scope.launch {
                     returnAlreadyReturned = salesViewModel.getReturnedQuantities(sale.sale.id)
+                    returnStoreCreditRestoredSoFar = salesViewModel.getStoreCreditRestoredSoFar(sale.sale.id)
                     returnTarget = sale
                 }
             },
@@ -881,6 +883,7 @@ fun SalesHistoryScreen(
         ReturnItemsDialog(
             saleWithItems = sale,
             alreadyReturned = returnAlreadyReturned,
+            storeCreditRestoredSoFar = returnStoreCreditRestoredSoFar,
             onDismiss = { returnTarget = null },
             onConfirm = { lines, refundMethod, note, restock, walkinPhone, walkinName, issueVoucher ->
                 salesViewModel.processReturn(

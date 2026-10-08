@@ -2285,7 +2285,11 @@ private fun TabletCartItemRow(
             isCustomItem = isCustomItem,
             unit = item.product.unit,
             onConfirm = { qty ->
-                onQuantityChange(qty)
+                if (qty <= 0.0) {
+                    onRemove()
+                } else {
+                    onQuantityChange(qty)
+                }
                 showQuantityDialog = false
             },
             onDismiss = { showQuantityDialog = false }
@@ -2350,14 +2354,20 @@ private fun TabletCartItemRow(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
-                            onClick = { onQuantityChange((item.quantity - 1.0).coerceAtLeast(0.0)) },
-                            modifier = Modifier.size(44.dp)
+                            onClick = {
+                                if (item.quantity <= 1.0) {
+                                    onRemove()
+                                } else {
+                                    onQuantityChange(item.quantity - 1.0)
+                                }
+                            },
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 Icons.Default.Remove,
                                 contentDescription = stringResource(R.string.cd_decrease),
                                 tint = TabletTerminalColors.TextSecondary,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
 
@@ -2383,13 +2393,13 @@ private fun TabletCartItemRow(
                                     onQuantityChange(item.quantity + 1.0)
                                 }
                             },
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 Icons.Default.Add,
                                 contentDescription = stringResource(R.string.cd_increase),
                                 tint = TabletTerminalColors.Emerald,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -2397,13 +2407,13 @@ private fun TabletCartItemRow(
 
                 IconButton(
                     onClick = onRemove,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         Icons.Default.DeleteOutline,
                         contentDescription = stringResource(R.string.cd_remove),
                         tint = TabletTerminalColors.Rose,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }

@@ -2293,6 +2293,8 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         return repository.getReturnedQuantities(saleId)
     }
 
+    suspend fun getStoreCreditRestoredSoFar(saleId: Long): Double = repository.getStoreCreditRestoredSoFar(saleId)
+
     suspend fun getVoucherByCode(code: String): StoreCreditVoucher? = repository.getStoreCreditVoucher(code)
     suspend fun getVoucherBySaleId(saleId: Long): StoreCreditVoucher? = repository.getStoreCreditVoucherBySaleId(saleId)
     suspend fun getVoucherByReturnId(returnId: Long): StoreCreditVoucher? = repository.getStoreCreditVoucherByReturnId(returnId)

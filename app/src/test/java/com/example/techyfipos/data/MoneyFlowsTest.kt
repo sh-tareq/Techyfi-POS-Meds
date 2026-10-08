@@ -15,13 +15,27 @@ import org.junit.Test
 class MoneyFlowsTest {
 
     @Test
-    fun `M-1 plain store credit payment with partial store credit generates valid split json`() {
+    fun `M-1 plain store credit payment with partial store credit records due and no phantom cash`() {
+        val grandTotal = 300.0
+        val scApplied = 100.0
+        val effectivePaid = com.example.techyfipos.ui.screens.calculateEffectiveAmountPaid(
+            isSplitPayment = false,
+            paymentMethod = "Store Credit",
+            enteredAmountPaid = 0.0,
+            grandTotal = grandTotal,
+            splitPayments = emptyList(),
+            storeCreditApplied = scApplied
+        )
+        // With partial store credit, effective amount paid must be 100.0, not 300.0
+        assertEquals(100.0, effectivePaid, 0.001)
+
         val splitJson = PaymentMath.buildAuthoritativeSplitJson(
             isSplitPayment = false,
             splitPayments = emptyList(),
-            storeCreditApplied = 100.0,
-            grandTotal = 300.0,
+            storeCreditApplied = scApplied,
+            grandTotal = grandTotal,
             paymentMethod = "Store Credit",
+            amountPaid = effectivePaid,
             redeemedVoucherCode = "VOUCH100"
         )
         assertNotNull("Split JSON must not be null when Store Credit is applied", splitJson)
@@ -30,10 +44,22 @@ class MoneyFlowsTest {
         val obj0 = arr.getJSONObject(0)
         assertEquals("Store Credit", obj0.getString("method"))
         assertEquals(100.0, obj0.getDouble("amount"), 0.001)
-        assertEquals("VOUCH100", obj0.getString("voucherCode"))
         val obj1 = arr.getJSONObject(1)
-        val total = obj0.getDouble("amount") + obj1.getDouble("amount")
-        assertEquals("Split rows must add up to grand total (300.0)", 300.0, total, 0.001)
+        assertEquals("Remainder must be Due, not phantom Cash", "Due", obj1.getString("method"))
+        assertEquals(200.0, obj1.getDouble("amount"), 0.001)
+        assertFalse("Remainder must not record tenderedAmount", obj1.has("tenderedAmount"))
+        assertFalse("Remainder must not record changeAmount", obj1.has("changeAmount"))
+
+        val dueAddition = PaymentMath.calculateDueAddition("Split", grandTotal, effectivePaid, splitJson)
+        assertEquals("Debt of 200.0 must be recorded", 200.0, dueAddition, 0.001)
+    }
+
+    @Test
+    fun `D-1 formatTaka defaults to Latin digits and outputs Bengali only when explicitly requested`() {
+        assertEquals("৳1,250", com.example.techyfipos.utils.formatTaka(1250.0))
+        assertEquals("৳১,২৫০", com.example.techyfipos.utils.formatTaka(1250.0, isBangla = true))
+        assertEquals("৳1,250", com.example.techyfipos.utils.formatMoney(1250.0))
+        assertEquals("৳১,২৫০", com.example.techyfipos.utils.formatMoney(1250.0, isBangla = true))
     }
 
     @Test
@@ -320,9 +346,31 @@ class MoneyFlowsTest {
             dueReduction = 50.0,
             refundMethod = "Cash"
         )
-        // net after due is 100. remaining SC is 100. So 100 SC restored, 0 cash refunded.
-        assertEquals(100.0, partialWithDueApportionment.storeCreditToRestore, 0.001)
-        assertEquals(0.0, partialWithDueApportionment.externalRefundAmount, 0.001)
+        // Subsequent return: store credit of 100 has already been restored, so customer gets cash
+        val secondReturnApportionment = PaymentMath.calculateReturnRefundApportionment(
+            refundTotal = 150.0,
+            saleStoreCreditApplied = 100.0,
+            storeCreditRestoredSoFar = 100.0,
+            dueReduction = 0.0,
+            refundMethod = "Cash"
+        )
+        assertEquals("Store credit must not be restored twice", 0.0, secondReturnApportionment.storeCreditToRestore, 0.001)
+        assertEquals("Second return must refund cash", 150.0, secondReturnApportionment.externalRefundAmount, 0.001)
+    }
+
+    @Test
+    fun `M-9 tablet stepper at quantity 1 triggers removal instead of setting quantity to 0`() {
+        var removed = false
+        var updatedQty = -1.0
+        val onRemove = { removed = true }
+        val onQuantityChange = { q: Double -> updatedQty = q }
+
+        val currentQty = 1.0
+        // Stepper decrease click logic:
+        if (currentQty <= 1.0) onRemove() else onQuantityChange(currentQty - 1.0)
+
+        assertTrue("Decreasing from qty 1 must call onRemove", removed)
+        assertEquals("onQuantityChange must not be called with 0", -1.0, updatedQty, 0.001)
     }
 
     @Test

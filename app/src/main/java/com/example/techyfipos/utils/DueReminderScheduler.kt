@@ -315,7 +315,9 @@ object DueReminderScheduler {
         val currentDue = liveDue?.outstandingAmount
         val dueAmount = currentDue ?: scheduledDueAmount
         val messageText = if (currentDue != null && currentDue != scheduledDueAmount) {
-            scheduledMessageText.replace(formatTaka(scheduledDueAmount), formatTaka(currentDue))
+            scheduledMessageText
+                .replace(formatTaka(scheduledDueAmount, isBangla = false), formatTaka(currentDue, isBangla = false))
+                .replace(formatTaka(scheduledDueAmount, isBangla = true), formatTaka(currentDue, isBangla = true))
         } else {
             scheduledMessageText
         }

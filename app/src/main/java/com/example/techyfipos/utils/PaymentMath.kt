@@ -35,7 +35,7 @@ object PaymentMath {
         cardType: String? = null,
         cardLastFour: String? = null
     ): String? {
-        if (!isSplitPayment && storeCreditApplied <= 0.0 && paymentMethod != "Store Credit") return null
+        if (!isSplitPayment && storeCreditApplied <= 0.0) return null
 
         val array = JSONArray()
 
@@ -123,7 +123,7 @@ object PaymentMath {
                     }
                 }
             }
-        } else if (storeCreditApplied > 0.0 || paymentMethod == "Store Credit") {
+        } else if (storeCreditApplied > 0.0) {
             val scAmount = storeCreditApplied.coerceAtMost(grandTotal)
             val remainingAmt = (grandTotal - scAmount).coerceAtLeast(0.0)
             if (scAmount > 0.0) {
@@ -135,7 +135,7 @@ object PaymentMath {
             }
             if (remainingAmt > 0.0) {
                 val remainderMethod = if (paymentMethod.equals("Store Credit", ignoreCase = true)) {
-                    if (amountPaid >= remainingAmt && amountPaid > 0.0) "Cash" else "Due"
+                    "Due"
                 } else {
                     paymentMethod
                 }

@@ -107,6 +107,7 @@ private val MFS_CHANNELS = listOf("Nagad", "bKash", "Rocket", "Card", "Bank")
 fun ReturnItemsDialog(
     saleWithItems: SaleWithItems,
     alreadyReturned: Map<String, Double>,
+    storeCreditRestoredSoFar: Double = 0.0,
     onDismiss: () -> Unit,
     onConfirm: (
         lines: List<ReturnLine>,
@@ -187,7 +188,21 @@ fun ReturnItemsDialog(
         refundTotal.coerceAtMost(remainingDue)
     } else 0.0
 
-    val externalRefund = (refundTotal - dueAdjustment).coerceAtLeast(0.0)
+    val refundMethodCandidate = when (selectedSettlementDestination) {
+        "WALLET" -> "Store Credit"
+        "MFS" -> selectedMfsChannel
+        else -> "Cash"
+    }
+
+    val returnApportionment = com.example.techyfipos.utils.PaymentMath.calculateReturnRefundApportionment(
+        refundTotal = refundTotal,
+        saleStoreCreditApplied = saleWithItems.sale.storeCreditApplied,
+        storeCreditRestoredSoFar = storeCreditRestoredSoFar,
+        dueReduction = dueAdjustment,
+        refundMethod = refundMethodCandidate
+    )
+    val storeCreditRestored = returnApportionment.storeCreditToRestore
+    val externalRefund = returnApportionment.externalRefundAmount
 
     val hasSelection = quantities.values.any { it > 0.0 }
 
@@ -1287,6 +1302,17 @@ fun ReturnItemsDialog(
                                 }
                             }
 
+                            if (storeCreditRestored > 0.0) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Store Credit Restored", fontSize = 11.5.sp, color = Color(0xFF60A5FA))
+                                    Text("+${formatTaka(storeCreditRestored)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF60A5FA))
+                                }
+                            }
+
                             HorizontalDivider(color = Color(0xFF334155), modifier = Modifier.padding(vertical = 4.dp))
 
                             Row(
@@ -1417,6 +1443,8 @@ fun ReturnItemsDialog(
                                 } else {
                                     "Add ${formatTaka(refundTotal)} to Store Credit"
                                 }
+                            } else if (storeCreditRestored > 0.0) {
+                                "Refund ${formatTaka(externalRefund)} + Restore ${formatTaka(storeCreditRestored)} Credit"
                             } else {
                                 "Process ${formatTaka(externalRefund)} Return"
                             },

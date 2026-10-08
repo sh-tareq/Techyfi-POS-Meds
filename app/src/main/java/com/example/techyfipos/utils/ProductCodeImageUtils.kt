@@ -384,8 +384,7 @@ fun formatProductCodeLabelPriceString(
     } else ""
 
     fun formatVal(amount: Double): String {
-        val base = formatTaka(amount)
-        return if (showBanglaDigits) toBanglaDigits(base) else base
+        return formatTaka(amount, isBangla = showBanglaDigits)
     }
 
     return when (tier) {

@@ -141,11 +141,13 @@ internal fun calculateEffectiveAmountPaid(
     paymentMethod: String,
     enteredAmountPaid: Double,
     grandTotal: Double,
-    splitPayments: List<SplitPaymentEntry>
+    splitPayments: List<SplitPaymentEntry>,
+    storeCreditApplied: Double = 0.0
 ): Double = when {
-    isSplitPayment -> splitPayments.filterNot { it.method == "Due" }.sumOf { it.amount }
-    paymentMethod == "Due" -> 0.0
-    paymentMethod == "Cash" -> enteredAmountPaid
+    isSplitPayment -> splitPayments.filterNot { it.method.equals("Due", ignoreCase = true) }.sumOf { it.amount }
+    paymentMethod.equals("Due", ignoreCase = true) -> 0.0
+    paymentMethod.equals("Cash", ignoreCase = true) -> enteredAmountPaid
+    paymentMethod.equals("Store Credit", ignoreCase = true) -> storeCreditApplied.coerceAtMost(grandTotal)
     else -> grandTotal
 }
 
@@ -2061,7 +2063,8 @@ fun CartScreen(
                             paymentMethod = paymentMethod,
                             enteredAmountPaid = amountPaid,
                             grandTotal = grandTotal,
-                            splitPayments = splitPayments
+                            splitPayments = splitPayments,
+                            storeCreditApplied = storeCreditApplied
                         )
                         val remainingAfterSC = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
                         val effectiveChangeAmt = (effectiveAmountPaid - remainingAfterSC).coerceAtLeast(0.0)
@@ -2824,7 +2827,8 @@ fun CartScreen(
                     paymentMethod = paymentMethod,
                     enteredAmountPaid = if (paymentMethod == "Cash") (receivedAmountText.toDoubleOrNull() ?: 0.0) else 0.0,
                     grandTotal = grandTotal,
-                    splitPayments = splitPayments
+                    splitPayments = splitPayments,
+                    storeCreditApplied = storeCreditApplied
                 )
                 val snapshotChange = PaymentMath.calculateChange(
                     grandTotal = grandTotal,

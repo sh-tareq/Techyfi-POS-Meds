@@ -91,14 +91,14 @@ fun toBanglaDigits(str: String): String {
     return str.map { digits[it] ?: it }.joinToString("")
 }
 
-fun formatTaka(amount: Double, isBangla: Boolean = isAppBangla()): String {
+fun formatTaka(amount: Double, isBangla: Boolean = false): String {
     val isNegative = amount < 0.0
     val absFormatted = MoneyUtils.formatBanglaGrouping(Math.abs(amount))
     val en = if (isNegative) "-৳$absFormatted" else "৳$absFormatted"
     return if (isBangla) toBanglaDigits(en) else en
 }
 
-fun formatMoney(amount: Double, isBangla: Boolean = isAppBangla()): String =
+fun formatMoney(amount: Double, isBangla: Boolean = false): String =
     formatTaka(amount, isBangla)
 
 fun formatTakaBn(amount: Double): String = formatTaka(amount, isBangla = true)
