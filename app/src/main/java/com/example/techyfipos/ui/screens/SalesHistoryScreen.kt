@@ -3,6 +3,7 @@ package com.example.techyfipos.ui.screens
 import com.example.techyfipos.ui.dialogs.*
 import com.example.techyfipos.data.AppPermissions
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
+import com.example.techyfipos.utils.PaymentMath
 import com.example.techyfipos.data.db.getFormattedPaymentMethod
 import com.example.techyfipos.ui.viewmodel.calculateDiscountValue
 import android.widget.Toast
@@ -1929,13 +1930,13 @@ private fun SaleDetailDialog(
             customerName = saleWithItems.sale.customerName ?: "",
             customerPhone = saleWithItems.sale.customerPhone ?: "",
             amountPaid = saleWithItems.sale.amountPaid,
-            changeAmount = saleWithItems.sale.splitPaymentJson?.let { json ->
-                try {
-                    val array = org.json.JSONArray(json)
-                    val sum = (0 until array.length()).map { array.getJSONObject(it) }.sumOf { it.optDouble("changeAmount", 0.0) }
-                    if (sum > 0.0) sum else null
-                } catch (_: Exception) { null }
-            } ?: (saleWithItems.sale.amountPaid - saleWithItems.sale.grandTotal).coerceAtLeast(0.0),
+            changeAmount = PaymentMath.calculateChange(
+                grandTotal = saleWithItems.sale.grandTotal,
+                amountPaid = saleWithItems.sale.amountPaid,
+                paymentMethod = saleWithItems.sale.paymentMethod,
+                splitJson = saleWithItems.sale.splitPaymentJson,
+                storeCreditApplied = appliedSc ?: 0.0
+            ),
             walletPhone = saleWithItems.sale.walletPhone ?: "",
             cardType = saleWithItems.sale.cardType ?: "",
             cardLastFour = saleWithItems.sale.cardLastFour ?: "",

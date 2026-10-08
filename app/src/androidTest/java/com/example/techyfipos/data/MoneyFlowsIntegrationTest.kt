@@ -444,4 +444,241 @@ class MoneyFlowsIntegrationTest {
         assertEquals(200.0, ret.externalRefundAmount, 0.001)
         assertEquals(0.0, ret.dueAdjustmentAmount, 0.001)
     }
+
+    @Test
+    fun testM1_plainStoreCreditWithPartialCreditAndRemainderRowSucceedsInRepo() = runBlocking {
+        val custPhone = "01700000020"
+        repository.upsertCustomer(
+            Customer(phone = custPhone, name = "M1 Cust", storeCredit = 100.0, creditLimit = 1000.0)
+        )
+        val prod = Product(barcode = "BAR_M1", name = "M1 Item", category = "General", purchasePrice = 100.0, sellingPrice = 300.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = false,
+            splitPayments = emptyList(),
+            storeCreditApplied = 100.0,
+            grandTotal = 300.0,
+            paymentMethod = "Store Credit",
+            amountPaid = 0.0
+        )
+        val methodToSave = PaymentMath.resolveMethodToSave(
+            isSplitPayment = false,
+            storeCreditApplied = 100.0,
+            grandTotal = 300.0,
+            paymentMethod = "Store Credit"
+        )
+        assertEquals("Split", methodToSave)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 300.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 300.0,
+            paymentMethod = methodToSave,
+            customerName = "M1 Cust",
+            customerPhone = custPhone,
+            amountPaid = 0.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 100.0
+        )
+        assertTrue(saleId > 0)
+        val cust = repository.getCustomerByPhone(custPhone)
+        assertEquals(0.0, cust?.storeCredit ?: 0.0, 0.001)
+        val due = database.customerDueDao().getCustomerDueByPhone(custPhone)
+        assertEquals(200.0, due?.outstandingAmount ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun testM5_scenario1_explicitScSplitRowPlusAutoCreditSucceedsInRepo() = runBlocking {
+        val custPhone = "01700000021"
+        repository.upsertCustomer(
+            Customer(phone = custPhone, name = "M5-1 Cust", storeCredit = 150.0, creditLimit = 1000.0)
+        )
+        val prod = Product(barcode = "BAR_M5_1", name = "M5-1 Item", category = "General", purchasePrice = 100.0, sellingPrice = 300.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = listOf(
+                SplitPaymentEntry("Cash", 150.0),
+                SplitPaymentEntry("Store Credit", 50.0)
+            ),
+            storeCreditApplied = 100.0,
+            grandTotal = 300.0,
+            paymentMethod = "Split"
+        )
+        val methodToSave = PaymentMath.resolveMethodToSave(
+            isSplitPayment = true,
+            storeCreditApplied = 100.0,
+            grandTotal = 300.0,
+            paymentMethod = "Split"
+        )
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 300.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 300.0,
+            paymentMethod = methodToSave,
+            customerName = "M5-1 Cust",
+            customerPhone = custPhone,
+            amountPaid = 150.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 100.0
+        )
+        assertTrue(saleId > 0)
+    }
+
+    @Test
+    fun testM5_scenario2_cash250PlusSc50On200TotalSucceedsInRepoWithChange() = runBlocking {
+        val custPhone = "01700000022"
+        repository.upsertCustomer(
+            Customer(phone = custPhone, name = "M5-2 Cust", storeCredit = 50.0, creditLimit = 1000.0)
+        )
+        val prod = Product(barcode = "BAR_M5_2", name = "M5-2 Item", category = "General", purchasePrice = 100.0, sellingPrice = 200.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = false,
+            splitPayments = emptyList(),
+            storeCreditApplied = 50.0,
+            grandTotal = 200.0,
+            paymentMethod = "Cash",
+            amountPaid = 250.0
+        )
+        val change = PaymentMath.calculateChange(
+            grandTotal = 200.0,
+            amountPaid = 250.0,
+            paymentMethod = "Cash",
+            splitJson = splitJson,
+            storeCreditApplied = 50.0
+        )
+        assertEquals(100.0, change, 0.001)
+
+        val methodToSave = PaymentMath.resolveMethodToSave(
+            isSplitPayment = false,
+            storeCreditApplied = 50.0,
+            grandTotal = 200.0,
+            paymentMethod = "Cash"
+        )
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 200.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 200.0,
+            paymentMethod = methodToSave,
+            customerName = "M5-2 Cust",
+            customerPhone = custPhone,
+            amountPaid = 250.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 50.0
+        )
+        assertTrue(saleId > 0)
+    }
+
+    @Test
+    fun testM5_scenario3_card250PlusCash10On200TotalBalancesAndSucceedsInRepo() = runBlocking {
+        val prod = Product(barcode = "BAR_M5_3", name = "M5-3 Item", category = "General", purchasePrice = 100.0, sellingPrice = 200.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = listOf(
+                SplitPaymentEntry("Card", 250.0, cardLastFour = "4321"),
+                SplitPaymentEntry("Cash", 10.0)
+            ),
+            storeCreditApplied = 0.0,
+            grandTotal = 200.0,
+            paymentMethod = "Split"
+        )
+        val methodToSave = PaymentMath.resolveMethodToSave(
+            isSplitPayment = true,
+            storeCreditApplied = 0.0,
+            grandTotal = 200.0,
+            paymentMethod = "Split"
+        )
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 200.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 200.0,
+            paymentMethod = methodToSave,
+            customerName = null,
+            customerPhone = null,
+            amountPaid = 10.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = "4321",
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 0.0
+        )
+        assertTrue(saleId > 0)
+    }
+
+    @Test
+    fun testM6_cash200AndDue200On300TotalComputes100ChangeAndSucceedsInRepo() = runBlocking {
+        val custPhone = "01700000023"
+        repository.upsertCustomer(
+            Customer(phone = custPhone, name = "M6 Cust", storeCredit = 0.0, creditLimit = 1000.0)
+        )
+        val prod = Product(barcode = "BAR_M6", name = "M6 Item", category = "General", purchasePrice = 100.0, sellingPrice = 300.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = listOf(
+                SplitPaymentEntry("Cash", 200.0),
+                SplitPaymentEntry("Due", 200.0)
+            ),
+            storeCreditApplied = 0.0,
+            grandTotal = 300.0,
+            paymentMethod = "Split"
+        )
+        val change = PaymentMath.calculateChange(
+            grandTotal = 300.0,
+            amountPaid = 200.0,
+            paymentMethod = "Split",
+            splitJson = splitJson
+        )
+        assertEquals(100.0, change, 0.001)
+
+        val methodToSave = PaymentMath.resolveMethodToSave(
+            isSplitPayment = true,
+            storeCreditApplied = 0.0,
+            grandTotal = 300.0,
+            paymentMethod = "Split"
+        )
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 300.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 300.0,
+            paymentMethod = methodToSave,
+            customerName = "M6 Cust",
+            customerPhone = custPhone,
+            amountPaid = 200.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            splitPaymentJson = splitJson,
+            storeCreditApplied = 0.0
+        )
+        assertTrue(saleId > 0)
+        val due = database.customerDueDao().getCustomerDueByPhone(custPhone)
+        assertEquals(200.0, due?.outstandingAmount ?: 0.0, 0.001)
+    }
 }

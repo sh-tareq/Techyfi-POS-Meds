@@ -6,12 +6,30 @@ import org.json.JSONObject
 
 object PaymentMath {
 
+    fun resolveMethodToSave(
+        isSplitPayment: Boolean,
+        storeCreditApplied: Double,
+        grandTotal: Double,
+        paymentMethod: String
+    ): String {
+        return if (storeCreditApplied >= grandTotal && grandTotal > 0.0) {
+            "Store Credit"
+        } else if (isSplitPayment) {
+            "Split"
+        } else if (storeCreditApplied > 0.0 && storeCreditApplied < grandTotal) {
+            "Split"
+        } else {
+            paymentMethod
+        }
+    }
+
     fun buildAuthoritativeSplitJson(
         isSplitPayment: Boolean,
         splitPayments: List<SplitPaymentEntry>,
         storeCreditApplied: Double,
         grandTotal: Double,
         paymentMethod: String,
+        amountPaid: Double = 0.0,
         redeemedVoucherCode: String? = null,
         walletPhone: String? = null,
         cardType: String? = null,
@@ -23,12 +41,35 @@ object PaymentMath {
 
         if (isSplitPayment && splitPayments.isNotEmpty()) {
             val scInSplit = splitPayments.filter { it.method.equals("Store Credit", ignoreCase = true) }.sumOf { it.amount }
-            val effectiveSC = if (scInSplit > 0.0) scInSplit else storeCreditApplied.coerceAtMost(grandTotal)
-            val targetNonSC = (grandTotal - effectiveSC).coerceAtLeast(0.0)
+            val nonCashSum = splitPayments.filterNot { it.method.equals("Cash", ignoreCase = true) }.sumOf { it.amount }
+            val cashCollected = splitPayments.filter { it.method.equals("Cash", ignoreCase = true) }.sumOf { it.amount }
 
-            val nonScCollected = splitPayments.filterNot { it.method.equals("Store Credit", ignoreCase = true) }.sumOf { it.amount }
-            val hasCashSplit = splitPayments.any { it.method.equals("Cash", ignoreCase = true) }
-            var remainingChangeToSubtract = if (hasCashSplit && nonScCollected > targetNonSC) (nonScCollected - targetNonSC) else 0.0
+            // Determine if auto SC is needed (e.g. split builder target was grandTotal - storeCreditApplied)
+            // or if splitPayments already covers the full grand total.
+            val splitEffectiveTotal = nonCashSum + minOf(cashCollected, grandTotal)
+            val neededForGrandTotal = (grandTotal - splitEffectiveTotal).coerceAtLeast(0.0)
+            val autoScAmount = if (storeCreditApplied > 0.0 && neededForGrandTotal > 0.0) {
+                storeCreditApplied.coerceAtMost(neededForGrandTotal)
+            } else 0.0
+
+            if (autoScAmount > 0.0) {
+                array.put(JSONObject().apply {
+                    put("method", "Store Credit")
+                    put("amount", autoScAmount)
+                    if (!redeemedVoucherCode.isNullOrBlank()) put("voucherCode", redeemedVoucherCode)
+                })
+            }
+
+            val targetForSplit = (grandTotal - autoScAmount).coerceAtLeast(0.0)
+
+            val maxAllowedNonCash = if (nonCashSum > targetForSplit) {
+                (targetForSplit - minOf(cashCollected, targetForSplit)).coerceAtLeast(0.0)
+            } else {
+                nonCashSum
+            }
+
+            var nonCashBudgetRemaining = maxAllowedNonCash
+            var cashNeeded = (targetForSplit - maxAllowedNonCash).coerceAtLeast(0.0)
 
             splitPayments.forEach { sp ->
                 if (sp.amount > 0.0) {
@@ -37,14 +78,22 @@ object PaymentMath {
                     var owedAmount = sp.amount
                     var changeAmt = 0.0
 
-                    if (isCash && remainingChangeToSubtract > 0.0) {
-                        val sub = remainingChangeToSubtract.coerceAtMost(sp.amount)
-                        owedAmount = (sp.amount - sub).coerceAtLeast(0.0)
-                        changeAmt = sub
-                        remainingChangeToSubtract -= sub
+                    if (isCash) {
+                        if (cashCollected > cashNeeded) {
+                            val sub = (cashCollected - cashNeeded).coerceAtMost(sp.amount)
+                            owedAmount = (sp.amount - sub).coerceAtLeast(0.0)
+                            changeAmt = sub
+                            cashNeeded = 0.0
+                        }
+                    } else {
+                        if (nonCashSum > targetForSplit && nonCashBudgetRemaining >= 0.0) {
+                            val allocated = minOf(sp.amount, nonCashBudgetRemaining)
+                            owedAmount = allocated
+                            nonCashBudgetRemaining -= allocated
+                        }
                     }
 
-                    if (owedAmount > 0.0 || isCash) {
+                    if (owedAmount > 0.0 || (isCash && changeAmt > 0.0)) {
                         array.put(JSONObject().apply {
                             put("method", sp.method)
                             put("amount", owedAmount)
@@ -74,16 +123,6 @@ object PaymentMath {
                     }
                 }
             }
-            if (scInSplit == 0.0 && storeCreditApplied > 0.0) {
-                val scAmt = storeCreditApplied.coerceAtMost(grandTotal)
-                if (scAmt > 0.0) {
-                    array.put(JSONObject().apply {
-                        put("method", "Store Credit")
-                        put("amount", scAmt)
-                        if (!redeemedVoucherCode.isNullOrBlank()) put("voucherCode", redeemedVoucherCode)
-                    })
-                }
-            }
         } else if (storeCreditApplied > 0.0 || paymentMethod == "Store Credit") {
             val scAmount = storeCreditApplied.coerceAtMost(grandTotal)
             val remainingAmt = (grandTotal - scAmount).coerceAtLeast(0.0)
@@ -94,13 +133,35 @@ object PaymentMath {
                     if (!redeemedVoucherCode.isNullOrBlank()) put("voucherCode", redeemedVoucherCode)
                 })
             }
-            if (remainingAmt > 0.0 && paymentMethod != "Store Credit") {
+            if (remainingAmt > 0.0) {
+                val remainderMethod = if (paymentMethod.equals("Store Credit", ignoreCase = true)) {
+                    if (amountPaid >= remainingAmt && amountPaid > 0.0) "Cash" else "Due"
+                } else {
+                    paymentMethod
+                }
+                val isCash = remainderMethod.equals("Cash", ignoreCase = true)
+                val tendered = if (isCash && amountPaid > 0.0) amountPaid else remainingAmt
+                val change = if (isCash && tendered > remainingAmt) tendered - remainingAmt else 0.0
+
                 array.put(JSONObject().apply {
-                    put("method", paymentMethod)
+                    put("method", remainderMethod)
                     put("amount", remainingAmt)
-                    if (!walletPhone.isNullOrBlank()) put("walletPhone", walletPhone)
-                    if (!cardType.isNullOrBlank()) put("cardType", cardType)
-                    if (!cardLastFour.isNullOrBlank()) put("cardLastFour", cardLastFour)
+                    if (isCash && change > 0.0) {
+                        put("tenderedAmount", tendered)
+                        put("changeAmount", change)
+                    }
+                    val isWallet = remainderMethod.equals("bKash", ignoreCase = true) ||
+                        remainderMethod.equals("Nagad", ignoreCase = true) ||
+                        remainderMethod.equals("Rocket", ignoreCase = true)
+                    val isCard = remainderMethod.equals("Card", ignoreCase = true) ||
+                        remainderMethod.equals("Visa", ignoreCase = true) ||
+                        remainderMethod.equals("Mastercard", ignoreCase = true) ||
+                        remainderMethod.equals("Amex", ignoreCase = true)
+                    if (isWallet && !walletPhone.isNullOrBlank()) put("walletPhone", walletPhone)
+                    if (isCard) {
+                        if (!cardType.isNullOrBlank()) put("cardType", cardType)
+                        if (!cardLastFour.isNullOrBlank()) put("cardLastFour", cardLastFour)
+                    }
                 })
             }
         }
@@ -119,13 +180,15 @@ object PaymentMath {
             try {
                 val arr = JSONArray(splitJson)
                 var changeFromCash = 0.0
+                var foundChangeKey = false
                 for (i in 0 until arr.length()) {
                     val obj = arr.getJSONObject(i)
                     if (obj.has("changeAmount")) {
                         changeFromCash += obj.optDouble("changeAmount", 0.0)
+                        foundChangeKey = true
                     }
                 }
-                if (changeFromCash > 0.0) return changeFromCash
+                if (foundChangeKey) return changeFromCash
             } catch (_: Exception) {}
         }
 

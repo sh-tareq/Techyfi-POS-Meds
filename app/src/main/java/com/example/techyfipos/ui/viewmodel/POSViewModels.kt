@@ -691,6 +691,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             storeCreditApplied = storeCreditApplied.value,
             grandTotal = grandTotal.value,
             paymentMethod = paymentMethod.value,
+            amountPaid = amountPaid.value,
             redeemedVoucherCode = redeemedVoucher.value?.code,
             walletPhone = walletPhone.value,
             cardType = cardType.value,
@@ -1293,15 +1294,12 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             val settings = taxSettings.value
             
             val splitJson = buildAuthoritativeSplitJson()
-            val methodToSave = if (isSplitPayment.value) {
-                "Split"
-            } else if (storeCreditApplied.value > 0.0 && storeCreditApplied.value < grandTotal.value) {
-                "Split"
-            } else if (storeCreditApplied.value >= grandTotal.value) {
-                "Store Credit"
-            } else {
-                paymentMethod.value
-            }
+            val methodToSave = com.example.techyfipos.utils.PaymentMath.resolveMethodToSave(
+                isSplitPayment = isSplitPayment.value,
+                storeCreditApplied = storeCreditApplied.value,
+                grandTotal = grandTotal.value,
+                paymentMethod = paymentMethod.value
+            )
 
             val redeemedCustomer = loyaltyCustomer.value
             val payableBeforeLoyalty = if (settings.taxEnabled && !settings.taxInclusive) {

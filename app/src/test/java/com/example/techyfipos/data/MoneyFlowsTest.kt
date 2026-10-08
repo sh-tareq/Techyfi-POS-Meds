@@ -26,11 +26,50 @@ class MoneyFlowsTest {
         )
         assertNotNull("Split JSON must not be null when Store Credit is applied", splitJson)
         val arr = JSONArray(splitJson!!)
-        assertEquals(1, arr.length())
-        val obj = arr.getJSONObject(0)
-        assertEquals("Store Credit", obj.getString("method"))
-        assertEquals(100.0, obj.getDouble("amount"), 0.001)
-        assertEquals("VOUCH100", obj.getString("voucherCode"))
+        assertEquals("Partial store credit must have 2 rows (SC and remainder)", 2, arr.length())
+        val obj0 = arr.getJSONObject(0)
+        assertEquals("Store Credit", obj0.getString("method"))
+        assertEquals(100.0, obj0.getDouble("amount"), 0.001)
+        assertEquals("VOUCH100", obj0.getString("voucherCode"))
+        val obj1 = arr.getJSONObject(1)
+        val total = obj0.getDouble("amount") + obj1.getDouble("amount")
+        assertEquals("Split rows must add up to grand total (300.0)", 300.0, total, 0.001)
+    }
+
+    @Test
+    fun `M-5 scenario 1 explicit SC split row plus auto credit balances to grand total`() {
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = listOf(
+                SplitPaymentEntry("Cash", 150.0),
+                SplitPaymentEntry("Store Credit", 50.0)
+            ),
+            storeCreditApplied = 100.0,
+            grandTotal = 300.0,
+            paymentMethod = "Split"
+        )
+        assertNotNull(splitJson)
+        val arr = JSONArray(splitJson!!)
+        val totalAmount = (0 until arr.length()).sumOf { arr.getJSONObject(it).getDouble("amount") }
+        assertEquals("Rows must sum to grand total (300.0)", 300.0, totalAmount, 0.001)
+    }
+
+    @Test
+    fun `M-5 scenario 3 Card overpayment with Cash balances to grand total`() {
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = listOf(
+                SplitPaymentEntry("Card", 250.0, cardLastFour = "1234"),
+                SplitPaymentEntry("Cash", 10.0)
+            ),
+            storeCreditApplied = 0.0,
+            grandTotal = 200.0,
+            paymentMethod = "Split"
+        )
+        assertNotNull(splitJson)
+        val arr = JSONArray(splitJson!!)
+        val totalAmount = (0 until arr.length()).sumOf { arr.getJSONObject(it).getDouble("amount") }
+        assertEquals("Rows must balance to grand total (200.0)", 200.0, totalAmount, 0.001)
     }
 
     @Test
@@ -91,6 +130,96 @@ class MoneyFlowsTest {
             storeCreditApplied = 50.0
         )
         assertEquals(100.0, change, 0.001)
+    }
+
+    @Test
+    fun `M-5 scenario 2 plain cash with store credit records change in JSON and calculateChange`() {
+        // Non-split sale: total 200, store credit 50 applied, cash tendered 250
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = false,
+            splitPayments = emptyList(),
+            storeCreditApplied = 50.0,
+            grandTotal = 200.0,
+            paymentMethod = "Cash",
+            amountPaid = 250.0
+        )
+        assertNotNull(splitJson)
+        val arr = JSONArray(splitJson!!)
+        assertEquals(2, arr.length())
+        val cashObj = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("method") == "Cash" }
+        assertEquals(150.0, cashObj.getDouble("amount"), 0.001)
+        assertEquals(250.0, cashObj.getDouble("tenderedAmount"), 0.001)
+        assertEquals(100.0, cashObj.getDouble("changeAmount"), 0.001)
+
+        val change = PaymentMath.calculateChange(
+            grandTotal = 200.0,
+            amountPaid = 250.0,
+            paymentMethod = "Cash",
+            splitJson = splitJson,
+            storeCreditApplied = 50.0
+        )
+        assertEquals("Calculated change must be 100.0", 100.0, change, 0.001)
+    }
+
+    @Test
+    fun `M-6 scenario 1 Cash 200 and Due 200 on 300 total computes 100 change in JSON and calculateChange`() {
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = listOf(
+                SplitPaymentEntry("Cash", 200.0),
+                SplitPaymentEntry("Due", 200.0)
+            ),
+            storeCreditApplied = 0.0,
+            grandTotal = 300.0,
+            paymentMethod = "Split"
+        )
+        assertNotNull(splitJson)
+        val arr = JSONArray(splitJson!!)
+        val cashObj = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("method") == "Cash" }
+        val dueObj = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("method") == "Due" }
+
+        assertEquals(100.0, cashObj.getDouble("amount"), 0.001)
+        assertEquals(200.0, cashObj.getDouble("tenderedAmount"), 0.001)
+        assertEquals(100.0, cashObj.getDouble("changeAmount"), 0.001)
+        assertEquals(200.0, dueObj.getDouble("amount"), 0.001)
+
+        val change = PaymentMath.calculateChange(
+            grandTotal = 300.0,
+            amountPaid = 200.0,
+            paymentMethod = "Split",
+            splitJson = splitJson
+        )
+        assertEquals("Change must be 100.0", 100.0, change, 0.001)
+    }
+
+    @Test
+    fun `M-6 scenario 2 resolveMethodToSave returns Store Credit when SC covers total and Split when partial`() {
+        // When store credit covers grand total
+        val methodFull = PaymentMath.resolveMethodToSave(
+            isSplitPayment = true,
+            storeCreditApplied = 300.0,
+            grandTotal = 300.0,
+            paymentMethod = "Cash"
+        )
+        assertEquals("Store Credit", methodFull)
+
+        // When partial store credit is applied
+        val methodPartial = PaymentMath.resolveMethodToSave(
+            isSplitPayment = false,
+            storeCreditApplied = 100.0,
+            grandTotal = 300.0,
+            paymentMethod = "Cash"
+        )
+        assertEquals("Split", methodPartial)
+
+        // When standard Cash sale with no store credit
+        val methodRegular = PaymentMath.resolveMethodToSave(
+            isSplitPayment = false,
+            storeCreditApplied = 0.0,
+            grandTotal = 300.0,
+            paymentMethod = "Cash"
+        )
+        assertEquals("Cash", methodRegular)
     }
 
     @Test
