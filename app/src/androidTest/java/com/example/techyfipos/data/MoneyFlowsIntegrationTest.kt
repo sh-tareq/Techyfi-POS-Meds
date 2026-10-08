@@ -629,7 +629,7 @@ class MoneyFlowsIntegrationTest {
     }
 
     @Test
-    fun testM6_cash200AndDue200On300TotalComputes100ChangeAndSucceedsInRepo() = runBlocking {
+    fun testM6_cash200AndDue200On300TotalComputes0ChangeAndRecords100DueInRepo() = runBlocking {
         val custPhone = "01700000023"
         repository.upsertCustomer(
             Customer(phone = custPhone, name = "M6 Cust", storeCredit = 0.0, creditLimit = 1000.0)
@@ -653,7 +653,7 @@ class MoneyFlowsIntegrationTest {
             paymentMethod = "Split",
             splitJson = splitJson
         )
-        assertEquals(100.0, change, 0.001)
+        assertEquals(0.0, change, 0.001)
 
         val methodToSave = PaymentMath.resolveMethodToSave(
             isSplitPayment = true,
@@ -679,7 +679,7 @@ class MoneyFlowsIntegrationTest {
         )
         assertTrue(saleId > 0)
         val due = database.customerDueDao().getCustomerDueByPhone(custPhone)
-        assertEquals(200.0, due?.outstandingAmount ?: 0.0, 0.001)
+        assertEquals(100.0, due?.outstandingAmount ?: 0.0, 0.001)
     }
 
     @Test

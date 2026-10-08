@@ -684,12 +684,12 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun getSplitPaymentsJson(): String? = buildAuthoritativeSplitJson()
 
-    fun buildAuthoritativeSplitJson(): String? {
-        return com.example.techyfipos.utils.PaymentMath.buildAuthoritativeSplitJson(
+    fun calculatePaymentBreakdown(): com.example.techyfipos.utils.PaymentMath.PaymentBreakdown {
+        return com.example.techyfipos.utils.PaymentMath.calculatePaymentBreakdown(
+            grandTotal = grandTotal.value,
+            storeCreditApplied = storeCreditApplied.value,
             isSplitPayment = isSplitPayment.value,
             splitPayments = splitPayments.value,
-            storeCreditApplied = storeCreditApplied.value,
-            grandTotal = grandTotal.value,
             paymentMethod = paymentMethod.value,
             amountPaid = amountPaid.value,
             redeemedVoucherCode = redeemedVoucher.value?.code,
@@ -698,6 +698,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             cardLastFour = cardLastFour.value
         )
     }
+
+    fun buildAuthoritativeSplitJson(): String? = calculatePaymentBreakdown().splitPaymentJson
 
     // Held Carts
     val allHeldCarts: StateFlow<List<HeldCart>> = repository.allHeldCarts
@@ -1297,13 +1299,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             }
             val settings = taxSettings.value
             
-            val splitJson = buildAuthoritativeSplitJson()
-            val methodToSave = com.example.techyfipos.utils.PaymentMath.resolveMethodToSave(
-                isSplitPayment = isSplitPayment.value,
-                storeCreditApplied = storeCreditApplied.value,
-                grandTotal = grandTotal.value,
-                paymentMethod = paymentMethod.value
-            )
+            val breakdown = calculatePaymentBreakdown()
+            val splitJson = breakdown.splitPaymentJson
+            val methodToSave = breakdown.paymentMethodToSave
 
             val redeemedCustomer = loyaltyCustomer.value
             val payableBeforeLoyalty = if (settings.taxEnabled && !settings.taxInclusive) {
@@ -1333,7 +1331,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 paymentMethod = methodToSave,
                 customerName = customerName.value.takeIf { it.isNotBlank() },
                 customerPhone = customerPhone.value.takeIf { it.isNotBlank() },
-                amountPaid = if (isSplitPayment.value && splitPayments.value.isNotEmpty()) splitPayments.value.filterNot { it.method.equals("Due", ignoreCase = true) }.sumOf { it.amount } else amountPaid.value,
+                amountPaid = breakdown.amountPaidToRecord,
                 walletPhone = walletPhone.value.takeIf { it.isNotBlank() },
                 cardType = cardType.value.takeIf { paymentMethod.value == "Card" },
                 cardLastFour = cardLastFour.value.takeIf { it.isNotBlank() },

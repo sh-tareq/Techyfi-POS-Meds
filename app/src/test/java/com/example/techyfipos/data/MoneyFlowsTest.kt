@@ -155,7 +155,9 @@ class MoneyFlowsTest {
             splitJson = splitJson,
             storeCreditApplied = 50.0
         )
-        assertEquals(100.0, change, 0.001)
+        // Auto SC (50) + split SC (50) = 100 SC. Remaining bill is 100.
+        // Cash tendered is 250, so change is 250 - 100 = 150.0.
+        assertEquals(150.0, change, 0.001)
     }
 
     @Test
@@ -188,34 +190,167 @@ class MoneyFlowsTest {
     }
 
     @Test
-    fun `M-6 scenario 1 Cash 200 and Due 200 on 300 total computes 100 change in JSON and calculateChange`() {
+    fun `M-6 Cash 200 and Due 200 on 300 total computes 0 change and records 100 Due debt`() {
+        val grandTotal = 300.0
+        val splitPayments = listOf(
+            SplitPaymentEntry("Cash", 200.0),
+            SplitPaymentEntry("Due", 200.0)
+        )
+        val effectivePaid = com.example.techyfipos.ui.screens.calculateEffectiveAmountPaid(
+            isSplitPayment = true,
+            paymentMethod = "Split",
+            enteredAmountPaid = 0.0,
+            grandTotal = grandTotal,
+            splitPayments = splitPayments,
+            storeCreditApplied = 0.0
+        )
         val splitJson = PaymentMath.buildAuthoritativeSplitJson(
             isSplitPayment = true,
-            splitPayments = listOf(
-                SplitPaymentEntry("Cash", 200.0),
-                SplitPaymentEntry("Due", 200.0)
-            ),
+            splitPayments = splitPayments,
             storeCreditApplied = 0.0,
-            grandTotal = 300.0,
-            paymentMethod = "Split"
+            grandTotal = grandTotal,
+            paymentMethod = "Split",
+            amountPaid = effectivePaid
         )
         assertNotNull(splitJson)
         val arr = JSONArray(splitJson!!)
         val cashObj = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("method") == "Cash" }
         val dueObj = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("method") == "Due" }
 
-        assertEquals(100.0, cashObj.getDouble("amount"), 0.001)
-        assertEquals(200.0, cashObj.getDouble("tenderedAmount"), 0.001)
-        assertEquals(100.0, cashObj.getDouble("changeAmount"), 0.001)
-        assertEquals(200.0, dueObj.getDouble("amount"), 0.001)
+        // Customer actually gave 200 cash for a 300 purchase; remaining debt is 100, NOT 200!
+        assertEquals("Cash applied must be 200.0", 200.0, cashObj.getDouble("amount"), 0.001)
+        assertEquals("Due debt recorded must be 100.0, not over-recorded by 100", 100.0, dueObj.getDouble("amount"), 0.001)
 
         val change = PaymentMath.calculateChange(
-            grandTotal = 300.0,
-            amountPaid = 200.0,
+            grandTotal = grandTotal,
+            amountPaid = effectivePaid,
             paymentMethod = "Split",
             splitJson = splitJson
         )
-        assertEquals("Change must be 100.0", 100.0, change, 0.001)
+        assertEquals("Change must be 0.0, Due does not create cash change", 0.0, change, 0.001)
+
+        val dueAddition = PaymentMath.calculateDueAddition("Split", grandTotal, effectivePaid, splitJson)
+        assertEquals("Recorded due addition must be 100.0", 100.0, dueAddition, 0.001)
+    }
+
+    @Test
+    fun `N-1 multiple Cash split rows Cash 100 and Cash 100 on 150 computes 50 change and rows sum to 150`() {
+        val grandTotal = 150.0
+        val splitPayments = listOf(
+            SplitPaymentEntry("Cash", 100.0),
+            SplitPaymentEntry("Cash", 100.0)
+        )
+        val effectivePaid = com.example.techyfipos.ui.screens.calculateEffectiveAmountPaid(
+            isSplitPayment = true,
+            paymentMethod = "Split",
+            enteredAmountPaid = 0.0,
+            grandTotal = grandTotal,
+            splitPayments = splitPayments,
+            storeCreditApplied = 0.0
+        )
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = splitPayments,
+            storeCreditApplied = 0.0,
+            grandTotal = grandTotal,
+            paymentMethod = "Split",
+            amountPaid = effectivePaid
+        )
+        assertNotNull(splitJson)
+        val arr = JSONArray(splitJson!!)
+        val totalApplied = (0 until arr.length()).sumOf { arr.getJSONObject(it).getDouble("amount") }
+        assertEquals("Rows must sum to grand total (150.0) without double subtracting change", 150.0, totalApplied, 0.001)
+
+        val change = PaymentMath.calculateChange(
+            grandTotal = grandTotal,
+            amountPaid = effectivePaid,
+            paymentMethod = "Split",
+            splitJson = splitJson
+        )
+        assertEquals("Change must be 50.0", 50.0, change, 0.001)
+    }
+
+    @Test
+    fun `M-5 Cash 250 and SC 50 on 300 total with auto SC 100 preserves auto SC and computes 100 change`() {
+        val grandTotal = 300.0
+        val autoSc = 100.0
+        val splitPayments = listOf(
+            SplitPaymentEntry("Cash", 250.0),
+            SplitPaymentEntry("Store Credit", 50.0)
+        )
+        val effectivePaid = com.example.techyfipos.ui.screens.calculateEffectiveAmountPaid(
+            isSplitPayment = true,
+            paymentMethod = "Split",
+            enteredAmountPaid = 0.0,
+            grandTotal = grandTotal,
+            splitPayments = splitPayments,
+            storeCreditApplied = autoSc
+        )
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = splitPayments,
+            storeCreditApplied = autoSc,
+            grandTotal = grandTotal,
+            paymentMethod = "Split",
+            amountPaid = effectivePaid
+        )
+        assertNotNull(splitJson)
+        val arr = JSONArray(splitJson!!)
+        val totalApplied = (0 until arr.length()).sumOf { arr.getJSONObject(it).getDouble("amount") }
+        assertEquals("Rows must sum to grand total (300.0)", 300.0, totalApplied, 0.001)
+
+        val scRows = (0 until arr.length()).map { arr.getJSONObject(it) }.filter { it.getString("method") == "Store Credit" }
+        val totalScApplied = scRows.sumOf { it.getDouble("amount") }
+        assertEquals("Auto SC (100) + split SC (50) must total 150.0 store credit", 150.0, totalScApplied, 0.001)
+
+        val change = PaymentMath.calculateChange(
+            grandTotal = grandTotal,
+            amountPaid = effectivePaid,
+            paymentMethod = "Split",
+            splitJson = splitJson,
+            storeCreditApplied = autoSc
+        )
+        assertEquals("Change must be 100.0 (Cash 250 tendered for remaining 150)", 100.0, change, 0.001)
+    }
+
+    @Test
+    fun `M-5 Card 250 and Cash 10 on 200 total records Card 200 and 10 cash change not Card 190 and 60 change`() {
+        val grandTotal = 200.0
+        val splitPayments = listOf(
+            SplitPaymentEntry("Card", 250.0, cardLastFour = "1234"),
+            SplitPaymentEntry("Cash", 10.0)
+        )
+        val effectivePaid = com.example.techyfipos.ui.screens.calculateEffectiveAmountPaid(
+            isSplitPayment = true,
+            paymentMethod = "Split",
+            enteredAmountPaid = 0.0,
+            grandTotal = grandTotal,
+            splitPayments = splitPayments,
+            storeCreditApplied = 0.0
+        )
+        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
+            isSplitPayment = true,
+            splitPayments = splitPayments,
+            storeCreditApplied = 0.0,
+            grandTotal = grandTotal,
+            paymentMethod = "Split",
+            amountPaid = effectivePaid
+        )
+        assertNotNull(splitJson)
+        val arr = JSONArray(splitJson!!)
+        val totalApplied = (0 until arr.length()).sumOf { arr.getJSONObject(it).getDouble("amount") }
+        assertEquals("Rows must balance to grand total (200.0)", 200.0, totalApplied, 0.001)
+
+        val cardObj = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("method") == "Card" }
+        assertEquals("Card applied must be 200.0, not reduced to 190.0", 200.0, cardObj.getDouble("amount"), 0.001)
+
+        val change = PaymentMath.calculateChange(
+            grandTotal = grandTotal,
+            amountPaid = effectivePaid,
+            paymentMethod = "Split",
+            splitJson = splitJson
+        )
+        assertEquals("Change must be 10.0 (cash returned), not 60.0", 10.0, change, 0.001)
     }
 
     @Test
