@@ -1373,5 +1373,114 @@ class MoneyFlowsIntegrationTest {
         assertEquals(100.0, freshVoucher.remainingBalance, 0.001)
         assertEquals("ACTIVE", freshVoucher.status)
     }
-}
 
+
+    @Test
+    fun testN5_expiredVoucherWithCustomerPhone_voidCreditsCustomerExactlyOnce() = runBlocking {
+        // Sale 80 = expired voucher 30 + customer credit 50. Voiding must give the customer 80 back, not 110.
+        val custPhone = "01700000051"
+        repository.upsertCustomer(Customer(phone = custPhone, name = "Expired Double", storeCredit = 50.0))
+        val vCode = "V-EXP-N5-PHONE"
+        database.storeCreditVoucherDao().insertVoucher(
+            StoreCreditVoucher(
+                code = vCode,
+                initialAmount = 30.0,
+                remainingBalance = 30.0,
+                customerPhone = null,
+                expiresAt = System.currentTimeMillis() + 50000L,
+                status = "ACTIVE"
+            )
+        )
+        val prod = Product(
+            barcode = "p-n5-phone",
+            name = "Item N5 Phone",
+            category = "General",
+            purchasePrice = 30.0,
+            sellingPrice = 80.0,
+            stockQty = 10.0,
+            reorderLevel = 1
+        )
+        database.productDao().insertProduct(prod)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 80.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 80.0,
+            paymentMethod = "Store Credit",
+            customerName = "Expired Double",
+            customerPhone = custPhone,
+            amountPaid = 80.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            storeCreditApplied = 80.0,
+            appliedVoucherCode = vCode
+        )
+        assertEquals(0.0, repository.getCustomerByPhone(custPhone)!!.storeCredit, 0.001)
+
+        database.storeCreditVoucherDao().updateVoucherBalance(vCode, 0.0, "EXPIRED")
+        repository.deleteSale(saleId)
+
+        assertEquals(
+            "Customer must get back exactly the 80 of store credit used (voucher share redirected once)",
+            80.0, repository.getCustomerByPhone(custPhone)!!.storeCredit, 0.001
+        )
+        assertEquals(0.0, database.storeCreditVoucherDao().getVoucherByCode(vCode)!!.remainingBalance, 0.001)
+    }
+
+    @Test
+    fun testN5_expiredVoucherOwnedByCustomerOnWalkInSale_voidCreditsVoucherOwner() = runBlocking {
+        // Walk-in sale (no phone) paid by a voucher that belongs to a known customer. Once the voucher has
+        // expired, voiding must credit the voucher owner instead of dropping the share.
+        val ownerPhone = "01700000052"
+        repository.upsertCustomer(Customer(phone = ownerPhone, name = "Voucher Owner", storeCredit = 0.0))
+        val vCode = "V-EXP-N5-OWNER"
+        database.storeCreditVoucherDao().insertVoucher(
+            StoreCreditVoucher(
+                code = vCode,
+                initialAmount = 100.0,
+                remainingBalance = 100.0,
+                customerPhone = ownerPhone,
+                expiresAt = System.currentTimeMillis() + 50000L,
+                status = "ACTIVE"
+            )
+        )
+        val prod = Product(
+            barcode = "p-n5-owner",
+            name = "Item N5 Owner",
+            category = "General",
+            purchasePrice = 30.0,
+            sellingPrice = 100.0,
+            stockQty = 10.0,
+            reorderLevel = 1
+        )
+        database.productDao().insertProduct(prod)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 100.0,
+            paymentMethod = "Store Credit",
+            customerName = "Walk-in",
+            customerPhone = null,
+            amountPaid = 100.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            storeCreditApplied = 100.0,
+            appliedVoucherCode = vCode
+        )
+
+        database.storeCreditVoucherDao().updateVoucherBalance(vCode, 0.0, "EXPIRED")
+        repository.deleteSale(saleId)
+
+        assertEquals(
+            "Expired voucher share must be credited to the voucher owner, not lost",
+            100.0, repository.getCustomerByPhone(ownerPhone)!!.storeCredit, 0.001
+        )
+    }
+}

@@ -610,7 +610,7 @@ class DataRepository(
                     }?.takeIf { it > 0.0 }
 
                     var voucherPortion = 0.0
-                    var redirectedExpiredVoucherCredit = 0.0
+                    var redirectTargetPhone: String? = null
                     if (!vCodeFromSale.isNullOrBlank()) {
                         val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
                         if (voucher != null && voucher.status != "CANCELLED") {
@@ -627,7 +627,7 @@ class DataRepository(
                                 ).firstOrNull()
 
                                 if (!targetCustPhone.isNullOrBlank()) {
-                                    redirectedExpiredVoucherCredit = voucherPortion
+                                    redirectTargetPhone = targetCustPhone
                                     voucherPortion = 0.0
                                 } else {
                                     // Walk-in sale with no phone on sale or voucher (N-5):
@@ -695,13 +695,16 @@ class DataRepository(
                         }
                     }
 
-                    val customerPortion = (scApplied - voucherPortion + redirectedExpiredVoucherCredit).coerceAtLeast(0.0)
-                    if (customerPortion > 0.0 && !phone.isNullOrBlank()) {
-                        customerDao.adjustCustomerStoreCredit(phone, customerPortion, System.currentTimeMillis())
-                        val newBal = (customerDao.getCustomerByPhone(normalizePhone(phone))?.storeCredit ?: 0.0)
+                    // voucherPortion is already 0 when an expired voucher's share was redirected, so the
+                    // redirected share is included here exactly once (N-5: it used to be added a second time).
+                    val customerPortion = (scApplied - voucherPortion).coerceAtLeast(0.0)
+                    val creditPhone = phone?.takeIf { it.isNotBlank() } ?: redirectTargetPhone
+                    if (customerPortion > 0.0 && !creditPhone.isNullOrBlank()) {
+                        customerDao.adjustCustomerStoreCredit(normalizePhone(creditPhone), customerPortion, System.currentTimeMillis())
+                        val newBal = (customerDao.getCustomerByPhone(normalizePhone(creditPhone))?.storeCredit ?: 0.0)
                         storeCreditLedgerDao.insertEntry(
                             StoreCreditLedgerEntry(
-                                customerPhone = normalizePhone(phone),
+                                customerPhone = normalizePhone(creditPhone),
                                 deltaAmount = customerPortion,
                                 balanceAfter = newBal,
                                 type = "SALE_VOID",
@@ -4250,7 +4253,7 @@ class DataRepository(
                         .sumOf { it.deltaAmount }
                 } else 0.0
 
-                var redirectedExpiredVoucherCredit = 0.0
+                var redirectTargetPhone: String? = null
                 if (!vCodeFromSale.isNullOrBlank()) {
                     val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
                     if (voucher != null && voucher.status != "CANCELLED") {
@@ -4269,7 +4272,7 @@ class DataRepository(
                             ).firstOrNull()
 
                             if (!targetCustPhone.isNullOrBlank()) {
-                                redirectedExpiredVoucherCredit = voucherPortion
+                                redirectTargetPhone = targetCustPhone
                                 voucherPortion = 0.0
                             } else {
                                 // Walk-in return, voucher had no customer phone (N-5):
@@ -4339,13 +4342,19 @@ class DataRepository(
                     }
                 }
 
-                val customerPortion = (scToRestore - voucherPortion + redirectedExpiredVoucherCredit).coerceAtLeast(0.0)
-                if (customerPortion > 0.0 && !phone.isNullOrBlank()) {
-                    customerDao.adjustCustomerStoreCredit(normalizePhone(phone), customerPortion, System.currentTimeMillis())
-                    val updated = customerDao.getCustomerByPhone(normalizePhone(phone))
+                // voucherPortion is already 0 when an expired voucher's share was redirected, so the
+                // redirected share is included here exactly once (N-5: it used to be added a second time).
+                val customerPortion = (scToRestore - voucherPortion).coerceAtLeast(0.0)
+                // For a Store Credit refund with no sale phone, the walk-in / new-voucher block below already
+                // credits the remainder, so only fall back to the redirect target for other refund methods.
+                val creditPhone = phone?.takeIf { it.isNotBlank() }
+                    ?: redirectTargetPhone.takeIf { !isStoreCreditRefund }
+                if (customerPortion > 0.0 && !creditPhone.isNullOrBlank()) {
+                    customerDao.adjustCustomerStoreCredit(normalizePhone(creditPhone), customerPortion, System.currentTimeMillis())
+                    val updated = customerDao.getCustomerByPhone(normalizePhone(creditPhone))
                     storeCreditLedgerDao.insertEntry(
                         StoreCreditLedgerEntry(
-                            customerPhone = normalizePhone(phone),
+                            customerPhone = normalizePhone(creditPhone),
                             deltaAmount = customerPortion,
                             balanceAfter = updated?.storeCredit ?: customerPortion,
                             type = "RETURN_REFUND",

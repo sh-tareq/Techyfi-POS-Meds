@@ -2471,13 +2471,15 @@ fun CloseRegisterReconciliationDialog(
 // SUB-COMPONENTS & HELPERS
 // =============================================================================
 
+// Only used on the shift-math card, which is dark (0xFF0F172A) in both themes, so the text stays light
+// instead of following onSurface / onSurfaceVariant (which are dark in light mode).
 @Composable
-private fun SummaryRow(label: String, value: String, color: Color = MaterialTheme.colorScheme.onSurface) {
+private fun SummaryRow(label: String, value: String, color: Color = Color.White) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, fontSize = 11.5.sp, color = Color(0xFFCBD5E1))
         Text(value, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = color)
     }
 }
