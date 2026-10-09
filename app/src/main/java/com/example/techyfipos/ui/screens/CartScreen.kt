@@ -136,21 +136,6 @@ private data class CartScanUpdate(
 )
 
 
-internal fun calculateEffectiveAmountPaid(
-    isSplitPayment: Boolean,
-    paymentMethod: String,
-    enteredAmountPaid: Double,
-    grandTotal: Double,
-    splitPayments: List<SplitPaymentEntry>,
-    storeCreditApplied: Double = 0.0
-): Double = when {
-    isSplitPayment -> splitPayments.filterNot { it.method.equals("Due", ignoreCase = true) }.sumOf { it.amount }
-    paymentMethod.equals("Due", ignoreCase = true) -> 0.0
-    paymentMethod.equals("Cash", ignoreCase = true) -> enteredAmountPaid
-    paymentMethod.equals("Store Credit", ignoreCase = true) -> storeCreditApplied.coerceAtMost(grandTotal)
-    else -> grandTotal
-}
-
 internal fun sanitizeDiscountInput(rawValue: String): String {
     var hasDecimalSeparator = false
     val sanitized = buildString {

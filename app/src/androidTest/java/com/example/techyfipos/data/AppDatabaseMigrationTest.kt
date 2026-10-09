@@ -427,4 +427,143 @@ class AppDatabaseMigrationTest {
             context.deleteDatabase(name)
         }
     }
+
+    @Test
+    fun migration33To34CreatesCustomerNameIndex() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val name = "migration-33-34-${System.currentTimeMillis()}.db"
+        createDatabaseFromExportedSchema(context, name, 33).apply {
+            execSQL("INSERT INTO customers (phone, name, tag, creditLimit, totalOrders, lifetimeSpent, totalDue, loyaltyPoints, loyaltyTier, createdAt, updatedAt, isArchived, storeCredit) VALUES ('01710000001', 'Test Customer 33', 'VIP', 1000.0, 1, 500.0, 0.0, 10, 'Regular', 1000, 1000, 0, 0.0)")
+            close()
+        }
+
+        val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build()
+        try {
+            val customer = migrated.customerDao().getCustomerByPhone("01710000001")
+            assertTrue(customer != null)
+            assertEquals("Test Customer 33", customer?.name)
+        } finally {
+            migrated.close()
+            assertTrue("index_customers_name must exist", indexExists(context, name, "index_customers_name"))
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun migration34To35AddsTaxableDefaultAndCustomerIndices() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val name = "migration-34-35-${System.currentTimeMillis()}.db"
+        createDatabaseFromExportedSchema(context, name, 34).apply {
+            execSQL("INSERT INTO customers (phone, name, tag, creditLimit, totalOrders, lifetimeSpent, totalDue, loyaltyPoints, loyaltyTier, createdAt, updatedAt, isArchived, storeCredit) VALUES ('01710000002', 'Test Customer 34', 'Wholesale', 2000.0, 2, 800.0, 0.0, 20, 'Regular', 2000, 2000, 0, 0.0)")
+            execSQL("INSERT INTO sales (id, timestamp, subtotal, discountAmount, isPercentageDiscount, grandTotal, paymentMethod, customerName, customerPhone, amountPaid, taxRate, taxAmount, loyaltyPointsRedeemed, storeCreditApplied) VALUES (101, 2000, 100.0, 0.0, 0, 100.0, 'Cash', 'Test Customer 34', '01710000002', 100.0, 0.0, 0.0, 0, 0.0)")
+            execSQL("INSERT INTO sale_items (id, saleId, productBarcode, productName, price, quantity) VALUES (1, 101, 'p-34', 'Item 34', 100.0, 1.0)")
+            close()
+        }
+
+        val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build()
+        try {
+            val items = migrated.saleDao().getItemsForSale(101)
+            assertEquals(1, items.size)
+            assertEquals(true, items.single().taxable)
+        } finally {
+            migrated.close()
+            assertTrue("index_customers_tag must exist", indexExists(context, name, "index_customers_tag"))
+            assertTrue("index_customers_phone must exist", indexExists(context, name, "index_customers_phone"))
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun migration35To36AddsIsTaxInclusiveAndUpdatesSilverTier() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val name = "migration-35-36-${System.currentTimeMillis()}.db"
+        createDatabaseFromExportedSchema(context, name, 35).apply {
+            execSQL("INSERT INTO sales (id, timestamp, subtotal, discountAmount, isPercentageDiscount, grandTotal, paymentMethod, customerName, customerPhone, amountPaid, taxRate, taxAmount, loyaltyPointsRedeemed, storeCreditApplied) VALUES (201, 3000, 200.0, 0.0, 0, 200.0, 'Cash', 'C1', '01710000003', 200.0, 0.0, 0.0, 0, 0.0)")
+            execSQL("INSERT INTO customers (phone, name, tag, creditLimit, totalOrders, lifetimeSpent, totalDue, loyaltyPoints, loyaltyTier, createdAt, updatedAt, isArchived, storeCredit) VALUES ('01710000003', 'Low Spend Silver', 'General', 1000.0, 1, 1500.0, 0.0, 5, 'Silver', 3000, 3000, 0, 0.0)")
+            execSQL("INSERT INTO customers (phone, name, tag, creditLimit, totalOrders, lifetimeSpent, totalDue, loyaltyPoints, loyaltyTier, createdAt, updatedAt, isArchived, storeCredit) VALUES ('01710000004', 'High Spend Silver', 'General', 1000.0, 1, 5000.0, 0.0, 5, 'Silver', 3000, 3000, 0, 0.0)")
+            execSQL("INSERT INTO customer_loyalty (phone, name, pointsBalance, tier, lifetimeSpent, updatedAt, isActive) VALUES ('01710000003', 'Low Spend Silver', 5, 'Silver', 1500.0, 3000, 1)")
+            execSQL("INSERT INTO customer_loyalty (phone, name, pointsBalance, tier, lifetimeSpent, updatedAt, isActive) VALUES ('01710000004', 'High Spend Silver', 5, 'Silver', 5000.0, 3000, 1)")
+            close()
+        }
+
+        val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build()
+        try {
+            val sale = migrated.saleDao().getSaleWithItemsById(201)?.sale
+            assertTrue(sale != null)
+            assertEquals(false, sale?.isTaxInclusive)
+
+            val c1 = migrated.customerDao().getCustomerByPhone("01710000003")
+            val c2 = migrated.customerDao().getCustomerByPhone("01710000004")
+            assertEquals("Regular", c1?.loyaltyTier)
+            assertEquals("Silver", c2?.loyaltyTier)
+
+            val l1 = migrated.customerLoyaltyDao().getLoyaltyByPhone("01710000003")
+            val l2 = migrated.customerLoyaltyDao().getLoyaltyByPhone("01710000004")
+            assertEquals("Regular", l1?.tier)
+            assertEquals("Silver", l2?.tier)
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
+    fun migration36To37AddsVoucherColumnsAndLowercasesRelatedTables() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val name = "migration-36-37-${System.currentTimeMillis()}.db"
+        createDatabaseFromExportedSchema(context, name, 36).apply {
+            execSQL("INSERT INTO products (barcode, name, category, purchasePrice, sellingPrice, stockQty, reorderLevel, unit, wholesalePrice, mrpPrice, discountedPrice, created_at) VALUES ('UPPER-1', 'Upper Item', 'General', 10.0, 20.0, 5.0, 1, 'Pcs', 0.0, 0.0, 0.0, 1000)")
+            execSQL("INSERT INTO sales (id, timestamp, subtotal, discountAmount, isPercentageDiscount, grandTotal, paymentMethod, amountPaid, taxRate, taxAmount, loyaltyPointsRedeemed, storeCreditApplied, isTaxInclusive) VALUES (301, 1000, 20.0, 0.0, 0, 20.0, 'Cash', 20.0, 0.0, 0.0, 0, 0.0, 0)")
+            execSQL("INSERT INTO sale_items (id, saleId, productBarcode, productName, price, quantity, taxable) VALUES (1, 301, 'UPPER-1', 'Upper Item', 20.0, 1.0, 0)")
+            close()
+        }
+
+        val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build()
+        try {
+            val sale = migrated.saleDao().getSaleWithItemsById(301)?.sale
+            assertTrue(sale != null)
+            assertEquals(null, sale?.voucherCode)
+            assertEquals(0.0, sale?.voucherAmount ?: -1.0, 0.001)
+            assertEquals(0.0, sale?.customerCreditAmount ?: -1.0, 0.001)
+
+            val items = migrated.saleDao().getItemsForSale(301)
+            assertEquals("upper-1", items.single().productBarcode)
+
+            val product = migrated.productDao().getProductByBarcode("upper-1")
+            assertTrue("Product barcode must be lowercased", product != null)
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    private fun indexExists(context: android.content.Context, dbName: String, indexName: String): Boolean {
+        val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+            context.getDatabasePath(dbName).path,
+            null,
+            android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+        )
+        return db.use {
+            val cursor = it.rawQuery("SELECT count(*) FROM sqlite_master WHERE type = 'index' AND name = ?", arrayOf(indexName))
+            cursor.use { c ->
+                c.moveToFirst() && c.getInt(0) > 0
+            }
+        }
+    }
 }
