@@ -37,10 +37,11 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.techyfipos.R
+import androidx.compose.ui.graphics.luminance
 import com.example.techyfipos.ui.viewmodel.SaleReturnSummary
 import com.example.techyfipos.utils.BillData
+import com.example.techyfipos.utils.DateFormatters
 import com.example.techyfipos.utils.formatTaka
-import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
@@ -56,7 +57,7 @@ fun OwnerProfitAnalyticsContent(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
-    val dateFormatter = remember { SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()) }
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
     // Calculate line profits and metrics
     val itemsWithProfit = remember(bill, returnSummary) {
@@ -164,8 +165,10 @@ fun OwnerProfitAnalyticsContent(
         // B. Return & Refund Audit Card (Rendered if invoice processed returns)
         if (hasReturns) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
-                border = BorderStroke(1.5.dp, Color(0xFFFECACA)),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f) else Color(0xFFFEF2F2)
+                ),
+                border = BorderStroke(1.5.dp, if (isDark) MaterialTheme.colorScheme.error.copy(alpha = 0.4f) else Color(0xFFFECACA)),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -189,7 +192,7 @@ fun OwnerProfitAnalyticsContent(
                                 text = stringResource(R.string.invoice_return_audit_title),
                                 fontSize = 13.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFFB91C1C)
+                                color = if (isDark) MaterialTheme.colorScheme.error else Color(0xFFB91C1C)
                             )
                         }
                         Surface(
@@ -217,35 +220,35 @@ fun OwnerProfitAnalyticsContent(
                             Text(
                                 text = stringResource(R.string.invoice_return_by_label),
                                 fontSize = 10.sp,
-                                color = Color(0xFF7F1D1D)
+                                color = if (isDark) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF7F1D1D)
                             )
                             Text(
                                 text = returnSummary?.performedByName?.takeIf { it.isNotBlank() } ?: "Staff",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF450A0A)
+                                color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF450A0A)
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 text = stringResource(R.string.invoice_return_refund_method),
                                 fontSize = 10.sp,
-                                color = Color(0xFF7F1D1D)
+                                color = if (isDark) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF7F1D1D)
                             )
                             Text(
                                 text = returnSummary?.refundMethod ?: "Refunded",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF450A0A)
+                                color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF450A0A)
                             )
                         }
                     }
 
                     if (returnSummary?.latestReturnTimestamp != null) {
                         Text(
-                            text = "${stringResource(R.string.invoice_return_date_label)}: ${dateFormatter.format(Date(returnSummary.latestReturnTimestamp))}",
+                            text = "${stringResource(R.string.invoice_return_date_label)}: ${DateFormatters.formatDateTime(returnSummary.latestReturnTimestamp)}",
                             fontSize = 10.5.sp,
-                            color = Color(0xFF991B1B)
+                            color = if (isDark) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF991B1B)
                         )
                     }
 
@@ -255,7 +258,10 @@ fun OwnerProfitAnalyticsContent(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color.White.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                                .background(
+                                    if (isDark) MaterialTheme.colorScheme.surface.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.7f),
+                                    RoundedCornerShape(8.dp)
+                                )
                                 .padding(8.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
@@ -263,7 +269,7 @@ fun OwnerProfitAnalyticsContent(
                                 text = stringResource(R.string.invoice_return_items_list_label),
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF991B1B)
+                                color = if (isDark) MaterialTheme.colorScheme.error else Color(0xFF991B1B)
                             )
                             retItems.forEach { rItem ->
                                 Row(
@@ -276,13 +282,13 @@ fun OwnerProfitAnalyticsContent(
                                         text = "${rItem.productName} (x$qStr)",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF1E293B)
+                                        color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF1E293B)
                                     )
                                     Text(
                                         text = "-${formatTaka(rItem.price * rItem.quantity)}",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFB91C1C)
+                                        color = if (isDark) MaterialTheme.colorScheme.error else Color(0xFFB91C1C)
                                     )
                                 }
                             }
@@ -293,7 +299,10 @@ fun OwnerProfitAnalyticsContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFFEE2E2), RoundedCornerShape(8.dp))
+                            .background(
+                                if (isDark) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f) else Color(0xFFFEE2E2),
+                                RoundedCornerShape(8.dp)
+                            )
                             .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -301,30 +310,30 @@ fun OwnerProfitAnalyticsContent(
                         Column {
                             Text(
                                 text = stringResource(R.string.invoice_original_profit_label),
-                                fontSize = 9.5.sp,
-                                color = Color(0xFF991B1B)
+                                fontSize = 10.sp,
+                                color = if (isDark) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF991B1B)
                             )
                             Text(
                                 text = formatTaka(originalProfit),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 textDecoration = TextDecoration.LineThrough,
-                                color = Color(0xFF991B1B)
+                                color = if (isDark) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF991B1B)
                             )
                         }
-                        Text("➔", fontSize = 14.sp, color = Color(0xFFB91C1C), fontWeight = FontWeight.Bold)
+                        Text("➔", fontSize = 14.sp, color = if (isDark) MaterialTheme.colorScheme.error else Color(0xFFB91C1C), fontWeight = FontWeight.Bold)
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 text = stringResource(R.string.invoice_net_adjusted_profit_label),
-                                fontSize = 9.5.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF065F46)
+                                color = if (isDark) Color(0xFF34D399) else Color(0xFF065F46)
                             )
                             Text(
                                 text = "+${formatTaka(netProfit)}",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF047857)
+                                color = if (isDark) Color(0xFF10B981) else Color(0xFF047857)
                             )
                         }
                     }
@@ -494,10 +503,10 @@ fun OwnerProfitAnalyticsContent(
 
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = if (isTopContributor) Color(0xFFFFFBEB) else MaterialTheme.colorScheme.surface,
+                    color = if (isTopContributor) (if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFFFFBEB)) else MaterialTheme.colorScheme.surface,
                     border = BorderStroke(
                         if (isTopContributor) 1.5.dp else 1.dp,
-                        if (isTopContributor) Color(0xFFFDE68A) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        if (isTopContributor) (if (isDark) Color(0xFFD97706) else Color(0xFFFDE68A)) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -527,8 +536,8 @@ fun OwnerProfitAnalyticsContent(
                                 if (isTopContributor) {
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
-                                        color = Color(0xFFFEF3C7),
-                                        border = BorderStroke(0.6.dp, Color(0xFFF59E0B))
+                                        color = if (isDark) MaterialTheme.colorScheme.secondaryContainer else Color(0xFFFEF3C7),
+                                        border = BorderStroke(0.6.dp, if (isDark) MaterialTheme.colorScheme.secondary else Color(0xFFF59E0B))
                                     ) {
                                         Row(
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
@@ -538,9 +547,9 @@ fun OwnerProfitAnalyticsContent(
                                             Realistic3DTopContributorStarIcon(size = 10.dp)
                                             Text(
                                                 text = stringResource(R.string.invoice_top_contributor_label),
-                                                fontSize = 9.sp,
+                                                fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF92400E)
+                                                color = if (isDark) MaterialTheme.colorScheme.onSecondaryContainer else Color(0xFF92400E)
                                             )
                                         }
                                     }
@@ -593,10 +602,14 @@ private fun KpiMetricCard(
     valueColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val effectiveBg = if (isDark) MaterialTheme.colorScheme.surfaceVariant else containerColor
+    val effectiveBorder = if (isDark) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f) else borderColor
+
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = containerColor,
-        border = BorderStroke(1.dp, borderColor),
+        color = effectiveBg,
+        border = BorderStroke(1.dp, effectiveBorder),
         modifier = modifier
     ) {
         Column(
@@ -624,7 +637,7 @@ private fun KpiMetricCard(
             )
             Text(
                 text = sub,
-                fontSize = 9.5.sp,
+                fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.outline
             )
         }
