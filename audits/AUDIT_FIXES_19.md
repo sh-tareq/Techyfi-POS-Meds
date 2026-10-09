@@ -34,11 +34,17 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   - Tests: the updated `MoneyFlowsTest` cases (about 198-306) now assert the inflated value. Replace them with one that runs the **two-step production flow**
     (panel breakdown → snapshot breakdown) and asserts that the change is 50, the recorded cash is 200, and underpayment (150) is rejected.
 
-## Still open (carried over; not attempted this round)
-**HIGH/Tests:** T-3 (merge with shared history, returns, voids, mixed barcode case; assert dues, points, credit), T-4 (vouchers across several sales, walk-in, expired: partly covered by N-1/N-5).
+- [x] **T-3** merge with shared history, returns, voids, mixed barcode case; assert dues, points, credit (Fixed in `1be319c`, test: `testT3_mergeSharedHistoryReturnsVoidsMixedBarcodeCase_assertsDuesPointsCredit` in `BackupRestoreIntegrationTest`).
+- [x] **T-4** vouchers across several sales, walk-in, expired (Fixed in `1be319c`, tests: `testT4_voucherUsedAcrossMultipleSales_voidRestoresEachSalePortion`, `testT4_walkInFullyVoucherPaidSale_voidRestoresVoucherBalance`, `testT4_walkInFullyVoucherPaidSale_partialAndFullReturnsRestoreVoucherBalance` in `MoneyFlowsIntegrationTest`).
 
-**Money:** N-4 (legacy pre-v37 voucher attribution), N-6 (`"VOUCHER"` phone on ledger rows: 4 places), N-7 ("Cash" return on a voucher-paid sale), M-10 (wallet refund vs. dialog),
-M-1/R-4 (due-confirm and credit-limit use the raw Due row; SC-method partial skips them), M-5/R-5 (receipt vs. reprint "Paid"; card over-tender absorbed), B-7 (backfill `isTaxInclusive` for old sales;
+- [x] **N-4** legacy pre-v37 voucher attribution (Fixed in `20ea146`, test: `testN4_legacyPreV37Sale_voidAccuratelyAttributesVoucherAndCustomerCredit` in `MoneyFlowsIntegrationTest`).
+- [x] **N-6** `"VOUCHER"` phone on ledger rows (Fixed in `20ea146`, test: `migration37To38AllowsNullableCustomerPhoneAndCleansVoucherFallback` in `AppDatabaseMigrationTest`).
+- [x] **N-7** "Cash" return on a voucher-paid sale (Fixed in `20ea146`, test: `testM10_registeredCustomerCashReturn_asStoreCredit_addsCreditToCustomerAndLogsLedger` in `MoneyFlowsIntegrationTest`).
+- [x] **M-10** wallet refund vs. dialog (Fixed in `20ea146`, test: `testM10_registeredCustomerCashReturn_asStoreCredit_addsCreditToCustomerAndLogsLedger` in `MoneyFlowsIntegrationTest`).
+- [x] **M-1/R-4** due-confirm and credit-limit use the raw Due row; SC-method partial skips them (Fixed in `20ea146`, test: `testM1_R4_partialStoreCreditCheckout_dueAmountReflectedInBreakdown` in `MoneyFlowsIntegrationTest`).
+
+**Remaining Money Items:**
+M-5/R-5 (receipt vs. reprint "Paid"; card over-tender absorbed), B-7 (backfill `isTaxInclusive` for old sales;
 Excel profit includes tax), X-8 (tier recompute with the configured thresholds), X-4a/b (supplier payment pairing by note text; voided-sale adjustments inflate stock on merge), M-14 (owner can't
 clear a limit to 0), M-7 (loyalty Taka 1:1; clawback display), R-6 (revert XSSF; `LOWER()` in `getProductByBarcode` defeats the PK index).
 
