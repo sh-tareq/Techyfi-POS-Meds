@@ -534,6 +534,7 @@ fun LockScreen(
     if (showPinRecoveryDialog) {
         AlertDialog(
             onDismissRequest = { showPinRecoveryDialog = false },
+            properties = androidx.compose.ui.window.DialogProperties(dismissOnClickOutside = false),
             icon = { Icon(Icons.Default.VerifiedUser, contentDescription = null) },
             title = { Text(stringResource(R.string.lock_reset_owner_pin)) },
             text = {
