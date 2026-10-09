@@ -46,7 +46,8 @@ import com.example.techyfipos.ui.viewmodel.LoyaltyViewModel
 import com.example.techyfipos.utils.LoyaltyProgramSettings
 import com.example.techyfipos.utils.LoyaltySettingsHelper
 import com.example.techyfipos.utils.formatTaka
-import java.text.SimpleDateFormat
+import androidx.compose.ui.window.DialogProperties
+import com.example.techyfipos.utils.DateFormatters
 import java.util.*
 import kotlinx.coroutines.launch
 import com.example.techyfipos.TechyfiPOSApplication
@@ -289,6 +290,7 @@ fun LoyaltyScreen(
     memberToDelete?.let { member ->
         AlertDialog(
             onDismissRequest = { memberToDelete = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.loyalty_delete_confirm_title), fontWeight = FontWeight.Bold) },
             text = { Text(stringResource(R.string.loyalty_delete_confirm_message, member.name)) },
             confirmButton = {
@@ -940,7 +942,7 @@ private fun TierBadgeCapsule(tier: String) {
     ) {
         Text(
             text = tier.uppercase(),
-            fontSize = 9.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.ExtraBold,
             color = fg,
             maxLines = 1,
@@ -976,6 +978,7 @@ private fun LoyaltyQuickRedeemDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Realistic3DLoyaltyStarIcon(modifier = Modifier.size(24.dp))
@@ -1112,6 +1115,7 @@ private fun LoyaltyAdjustPointsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = { Text(stringResource(R.string.loyalty_adjust_points), fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1204,6 +1208,7 @@ private fun LoyaltyAddMemberDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = { Text(stringResource(R.string.loyalty_add_member), fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1336,6 +1341,7 @@ private fun LoyaltySettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Realistic3DSettingsGearIcon(modifier = Modifier.size(24.dp))
@@ -1587,8 +1593,6 @@ private fun LoyaltyAuditLedgerSheet(
     onCall: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()) }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
@@ -1872,7 +1876,7 @@ private fun LoyaltyAuditLedgerSheet(
                                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                         Text(tx.reason.ifBlank { tx.type }, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
                                         Text(
-                                            dateFormat.format(Date(tx.timestamp)),
+                                            DateFormatters.formatDateTime(tx.timestamp),
                                             fontSize = 10.5.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
