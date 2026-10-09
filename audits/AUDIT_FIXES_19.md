@@ -58,8 +58,9 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 - [x] **D-6** theme contrast pairs under 4.5:1: primary/onPrimary 5.33:1, error/onError 4.77:1, tertiary/onTertiary 7.70:1, dark onSurfaceVariant 5.06:1 (Fixed in `76df20b`, test: `testD6_U1_lightThemeContrast_tokensMeetWcag` in `ThemeTokensTest`).
 - [x] **U-1** Checkout button in light mode updated to theme primary/onPrimary token with 5.33:1 contrast >= 4.5:1 WCAG AA (Fixed in `76df20b`, test: `testD6_U1_lightThemeContrast_tokensMeetWcag` in `ThemeTokensTest`).
 
-**Remaining Design & UX:**
-U-2 (deletes without confirmation); U-3 (45 IconButtons under 48dp); U-4 (white islands). About 2,390 `Color(0x` remain.
+- [x] **U-2** Confirmation dialogs added for held cart delete, customer note delete, and reminder log delete; note-delete toast updated to `customer_note_deleted` (Fixed in `f8ef58e`, test: `testU2_customerNoteDeletionAndConfirmationStrings` in `MoneyFlowsIntegrationTest`).
+- [x] **U-3** IconButtons enlarged to >= 48dp across DuesScreen (14 buttons), AdvancedPosFeatures (6 buttons), ReturnDialog (5 buttons), ScannerScreen (6 buttons), and CustomerDossierSheet (Fixed in `f8ef58e`).
+- [x] **U-4** Dark mode white islands eliminated in DuesScreen (date/time pickers & nudges), ReceiptSummaryDialog (financial overview ribbon & badges), and ScannerScreen (mfg/exp date badges) using theme tokens with WCAG AA contrast (Fixed in `f8ef58e`, test: `testU4_darkModeSurfaces_contrastAndThemeTokensValid` in `ThemeTokensTest`).
 
 ---
 
