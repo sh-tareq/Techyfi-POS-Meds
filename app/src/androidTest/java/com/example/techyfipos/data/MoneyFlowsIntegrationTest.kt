@@ -1253,5 +1253,125 @@ class MoneyFlowsIntegrationTest {
         assertEquals(60.0, voucherAfter.remainingBalance, 0.001)
         assertEquals(40.0, custAfter.storeCredit, 0.001)
     }
+
+    @Test
+    fun testN1_walkInVoucherReturn_voucherShareGoesBackToVoucherOnly() = runBlocking {
+        val vCode = "V-WALK-N1"
+        database.storeCreditVoucherDao().insertVoucher(
+            StoreCreditVoucher(
+                code = vCode,
+                initialAmount = 100.0,
+                remainingBalance = 100.0,
+                customerPhone = null,
+                status = "ACTIVE"
+            )
+        )
+
+        val prod = Product(
+            barcode = "P-N1-WALK",
+            name = "Item N1",
+            category = "General",
+            purchasePrice = 40.0,
+            sellingPrice = 100.0,
+            stockQty = 10.0,
+            reorderLevel = 1
+        )
+        database.productDao().insertProduct(prod)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 100.0,
+            paymentMethod = "Store Credit",
+            customerName = "Walk-in",
+            customerPhone = null,
+            amountPaid = 100.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            storeCreditApplied = 100.0,
+            appliedVoucherCode = vCode
+        )
+
+        val vUsed = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        assertEquals(0.0, vUsed.remainingBalance, 0.001)
+
+        val walkinPhone = "01799998888"
+        repository.processReturn(
+            saleId = saleId,
+            lines = listOf(ReturnLine(barcode = "P-N1-WALK", quantity = 1.0, name = "Item N1", price = 100.0)),
+            refundMethod = "Store Credit",
+            note = "Return N1 test",
+            restock = true,
+            walkinPhone = walkinPhone,
+            walkinName = "Walkin Registered",
+            issueVoucher = false
+        )
+
+        val vRestored = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        assertEquals(100.0, vRestored.remainingBalance, 0.001)
+
+        // N-1: The walk-in customer must NOT get an extra 100 credit. Voucher share goes to voucher only.
+        val walkinCust = repository.getCustomerByPhone(walkinPhone)
+        assertEquals(0.0, walkinCust?.storeCredit ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun testN5_expiredVoucherOnWalkInSale_replacesWithFreshVoucherOnVoid() = runBlocking {
+        val vCode = "V-EXP-N5"
+        database.storeCreditVoucherDao().insertVoucher(
+            StoreCreditVoucher(
+                code = vCode,
+                initialAmount = 100.0,
+                remainingBalance = 100.0,
+                customerPhone = null,
+                expiresAt = System.currentTimeMillis() + 50000L,
+                status = "ACTIVE"
+            )
+        )
+
+        val prod = Product(
+            barcode = "P-N5-EXP",
+            name = "Item N5",
+            category = "General",
+            purchasePrice = 30.0,
+            sellingPrice = 100.0,
+            stockQty = 10.0,
+            reorderLevel = 1
+        )
+        database.productDao().insertProduct(prod)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 100.0,
+            paymentMethod = "Store Credit",
+            customerName = "Walk-in Exp",
+            customerPhone = null,
+            amountPaid = 100.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            storeCreditApplied = 100.0,
+            appliedVoucherCode = vCode
+        )
+
+        // Voucher expires after sale but before void:
+        database.storeCreditVoucherDao().updateVoucherBalance(vCode, 0.0, "EXPIRED")
+
+        repository.deleteSale(saleId)
+
+        // N-5: Expired voucher share on walk-in sale must NOT be lost on void.
+        // It must issue a fresh active voucher replacement.
+        val allVouchers = database.storeCreditVoucherDao().getAllVouchersOnce().filter { it.code != vCode }
+        assertTrue("A fresh replacement voucher must be issued for expired walk-in voucher", allVouchers.isNotEmpty())
+        val freshVoucher = allVouchers.first()
+        assertEquals(100.0, freshVoucher.remainingBalance, 0.001)
+        assertEquals("ACTIVE", freshVoucher.status)
+    }
 }
 

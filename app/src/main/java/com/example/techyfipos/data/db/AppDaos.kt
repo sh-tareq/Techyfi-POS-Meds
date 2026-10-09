@@ -766,6 +766,9 @@ interface StoreCreditVoucherDao {
     @Query("UPDATE store_credit_vouchers SET remainingBalance = :remainingBalance, status = :status WHERE code = :code")
     suspend fun updateVoucherBalance(code: String, remainingBalance: Double, status: String): Int
 
+    @Query("UPDATE store_credit_vouchers SET status = 'CANCELLED' WHERE code = :code")
+    suspend fun cancelVoucher(code: String): Int
+
     @Query("SELECT * FROM store_credit_vouchers ORDER BY issuedAt DESC")
     fun getAllVouchers(): Flow<List<StoreCreditVoucher>>
 

@@ -393,4 +393,38 @@ class AppDatabaseMigrationTest {
             context.deleteDatabase(name)
         }
     }
+
+    @Test
+    fun testN3_migration36To37_mergesCollidingBarcodeProducts() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val name = "migration-36-37-n3-${System.currentTimeMillis()}.db"
+        createDatabaseFromExportedSchema(context, name, 36).apply {
+            // Insert two products with colliding barcodes: "COLLIDE-1" and "collide-1"
+            execSQL("INSERT INTO products (barcode, name, category, purchasePrice, sellingPrice, stockQty, reorderLevel, unit, wholesalePrice, mrpPrice, discountedPrice, created_at) VALUES ('COLLIDE-1', 'Old Upper Item', 'General', 10.0, 20.0, 8.0, 1, 'Pcs', 0.0, 0.0, 0.0, 1000)")
+            execSQL("INSERT INTO products (barcode, name, category, purchasePrice, sellingPrice, stockQty, reorderLevel, unit, wholesalePrice, mrpPrice, discountedPrice, created_at) VALUES ('collide-1', 'New Lower Item', 'General', 15.0, 25.0, 4.0, 1, 'Pcs', 0.0, 0.0, 0.0, 2000)")
+            close()
+        }
+
+        val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build()
+        try {
+            val product = migrated.productDao().getProductByBarcode("collide-1")
+            assertTrue("Collided product must exist with lowercase barcode", product != null)
+            assertEquals("collide-1", product?.barcode)
+            // N-3: Stock must be summed (8 + 4 = 12), not overwritten/deleted!
+            assertEquals(12.0, product?.stockQty ?: 0.0, 0.001)
+            // Newest name and prices preserved
+            assertEquals("New Lower Item", product?.name)
+            assertEquals(25.0, product?.sellingPrice ?: 0.0, 0.001)
+
+            val adjustments = migrated.inventoryAdjustmentDao().getAllAdjustments().first()
+            assertTrue("An inventory adjustment must be logged for merged stock", adjustments.any { it.productBarcode == "collide-1" })
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
 }

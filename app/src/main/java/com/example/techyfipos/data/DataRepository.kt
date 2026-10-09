@@ -175,6 +175,10 @@ class DataRepository(
         actualDeduction
     }
 
+    suspend fun cancelVoucher(code: String): Boolean = withContext(Dispatchers.IO) {
+        storeCreditVoucherDao.cancelVoucher(code.trim().uppercase()) > 0
+    }
+
     val allScheduledDueReminders: Flow<List<ScheduledDueReminder>> = scheduledDueReminderDao.getAll()
 
     val allDueReminderLogs: Flow<List<DueReminderLog>> = dueReminderLogDao.getAllLogs()
@@ -616,10 +620,48 @@ class DataRepository(
 
                             val isExpired = voucher.expiresAt != null && voucher.expiresAt > 0L && voucher.expiresAt < System.currentTimeMillis()
                             if (isExpired || voucher.status == "EXPIRED") {
-                                if (!phone.isNullOrBlank()) {
+                                val targetCustPhone = listOfNotNull(
+                                    sale.customerPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) },
+                                    phone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) },
+                                    voucher.customerPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) }
+                                ).firstOrNull()
+
+                                if (!targetCustPhone.isNullOrBlank()) {
                                     redirectedExpiredVoucherCredit = voucherPortion
                                     voucherPortion = 0.0
                                 } else {
+                                    // Walk-in sale with no phone on sale or voucher (N-5):
+                                    // Issue a fresh replacement voucher so the share is not lost
+                                    for (attempt in 1..5) {
+                                        val code = "SC-${(1000..9999).random()}-${(1000..9999).random()}"
+                                        val fresh = StoreCreditVoucher(
+                                            code = code,
+                                            initialAmount = voucherPortion,
+                                            remainingBalance = voucherPortion,
+                                            customerPhone = null,
+                                            sourceSaleId = saleId,
+                                            issuedAt = System.currentTimeMillis(),
+                                            expiresAt = System.currentTimeMillis() + (90L * 24 * 3600 * 1000),
+                                            status = "ACTIVE",
+                                            notes = "Fresh replacement for expired voucher ${voucher.code} from void of sale #$saleId"
+                                        )
+                                        try {
+                                            storeCreditVoucherDao.insertVoucher(fresh)
+                                            storeCreditLedgerDao.insertEntry(
+                                                StoreCreditLedgerEntry(
+                                                    customerPhone = "VOUCHER",
+                                                    deltaAmount = voucherPortion,
+                                                    balanceAfter = voucherPortion,
+                                                    type = "VOUCHER_RESTORE",
+                                                    referenceInvoiceId = saleId,
+                                                    voucherCode = fresh.code,
+                                                    note = "Issued fresh voucher ${fresh.code} replacing expired ${voucher.code} on void of sale #$saleId",
+                                                    timestamp = System.currentTimeMillis()
+                                                )
+                                            )
+                                            break
+                                        } catch (_: Exception) {}
+                                    }
                                     voucherPortion = 0.0
                                 }
                             }
@@ -4176,8 +4218,12 @@ class DataRepository(
                 Pair(app.storeCreditToRestore, app.externalRefundAmount)
             }
 
+            var vCodeFromSale: String? = null
+            var voucherPortion = 0.0
+            var replacementFreshVoucher: StoreCreditVoucher? = null
+
             if (scToRestore > 0.0) {
-                val vCodeFromSale = sale.voucherCode ?: sale.splitPaymentJson?.let { json ->
+                vCodeFromSale = sale.voucherCode ?: sale.splitPaymentJson?.let { json ->
                     try {
                         val array = org.json.JSONArray(json)
                         (0 until array.length()).firstNotNullOfOrNull { i ->
@@ -4204,7 +4250,6 @@ class DataRepository(
                         .sumOf { it.deltaAmount }
                 } else 0.0
 
-                var voucherPortion = 0.0
                 var redirectedExpiredVoucherCredit = 0.0
                 if (!vCodeFromSale.isNullOrBlank()) {
                     val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
@@ -4216,10 +4261,51 @@ class DataRepository(
 
                         val isExpired = voucher.expiresAt != null && voucher.expiresAt > 0L && voucher.expiresAt < System.currentTimeMillis()
                         if (isExpired || voucher.status == "EXPIRED") {
-                            if (!phone.isNullOrBlank()) {
+                            val targetCustPhone = listOfNotNull(
+                                sale.customerPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) },
+                                phone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) },
+                                voucher.customerPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) },
+                                walkinPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) }
+                            ).firstOrNull()
+
+                            if (!targetCustPhone.isNullOrBlank()) {
                                 redirectedExpiredVoucherCredit = voucherPortion
                                 voucherPortion = 0.0
                             } else {
+                                // Walk-in return, voucher had no customer phone (N-5):
+                                // Issue a fresh replacement voucher so the share is not lost
+                                for (attempt in 1..5) {
+                                    val code = "SC-${(1000..9999).random()}-${(1000..9999).random()}"
+                                    val fresh = StoreCreditVoucher(
+                                        code = code,
+                                        initialAmount = voucherPortion,
+                                        remainingBalance = voucherPortion,
+                                        customerPhone = null,
+                                        sourceReturnId = null,
+                                        sourceSaleId = saleId,
+                                        issuedAt = System.currentTimeMillis(),
+                                        expiresAt = System.currentTimeMillis() + (90L * 24 * 3600 * 1000),
+                                        status = "ACTIVE",
+                                        notes = "Fresh replacement for expired voucher ${voucher.code} on return of sale #$saleId"
+                                    )
+                                    try {
+                                        storeCreditVoucherDao.insertVoucher(fresh)
+                                        storeCreditLedgerDao.insertEntry(
+                                            StoreCreditLedgerEntry(
+                                                customerPhone = "VOUCHER",
+                                                deltaAmount = voucherPortion,
+                                                balanceAfter = voucherPortion,
+                                                type = "VOUCHER_RESTORE",
+                                                referenceInvoiceId = saleId,
+                                                voucherCode = fresh.code,
+                                                note = "Issued fresh voucher ${fresh.code} replacing expired ${voucher.code} on return of sale #$saleId",
+                                                timestamp = System.currentTimeMillis()
+                                            )
+                                        )
+                                        replacementFreshVoucher = fresh
+                                        break
+                                    } catch (_: Exception) {}
+                                }
                                 voucherPortion = 0.0
                             }
                         }
@@ -4338,66 +4424,73 @@ class DataRepository(
                 }
             )
 
-            var generatedVoucherCode: String? = null
-            var generatedVoucher: StoreCreditVoucher? = null
+            var generatedVoucherCode: String? = replacementFreshVoucher?.code ?: if (voucherPortion > 0.0) vCodeFromSale else null
+            var generatedVoucher: StoreCreditVoucher? = replacementFreshVoucher
             if (refundMethod.equals("Store Credit", ignoreCase = true)) {
-                if (issueVoucher || (phone.isNullOrBlank() && walkinPhone.isNullOrBlank())) {
-                    var inserted = false
-                    for (attempt in 1..5) {
-                        val code = "SC-${(1000..9999).random()}-${(1000..9999).random()}"
-                        val voucherAmount = (refundTotal - dueAdj).coerceAtLeast(0.0)
-                        val voucherToInsert = StoreCreditVoucher(
-                            code = code,
-                            initialAmount = voucherAmount,
-                            remainingBalance = voucherAmount,
-                            customerPhone = phone ?: walkinPhone?.trim()?.takeIf { it.isNotBlank() },
-                            sourceReturnId = returnId,
-                            sourceSaleId = saleId,
-                            issuedAt = System.currentTimeMillis(),
-                            expiresAt = System.currentTimeMillis() + (90L * 24 * 3600 * 1000),
-                            status = "ACTIVE",
-                            notes = "Return voucher on invoice #$saleId"
-                        )
-                        try {
-                            storeCreditVoucherDao.insertVoucher(voucherToInsert)
-                            generatedVoucherCode = code
-                            generatedVoucher = voucherToInsert
-                            inserted = true
-                            break
-                        } catch (_: android.database.sqlite.SQLiteConstraintException) {
-                        } catch (_: androidx.sqlite.SQLiteException) {
-                        }
-                    }
-                    if (!inserted) {
-                        throw IllegalStateException("Failed to generate unique voucher code after 5 attempts")
-                    }
-                } else if (phone.isNullOrBlank() && !walkinPhone.isNullOrBlank()) {
-                    // Walk-in customer registered with phone
-                    val normWalkin = normalizePhone(walkinPhone)
-                    var cust = customerDao.getCustomerByPhone(normWalkin)
-                    if (cust == null) {
-                        cust = Customer(
-                            phone = normWalkin,
-                            name = walkinName?.trim()?.ifBlank { "Customer ${normWalkin.takeLast(4)}" } ?: "Customer ${normWalkin.takeLast(4)}",
-                            storeCredit = 0.0
-                        )
-                        customerDao.upsertCustomer(cust)
-                    }
-                    val excessCredit = (refundTotal - dueAdj).coerceAtLeast(0.0)
-                    if (excessCredit > 0.0) {
-                        customerDao.adjustCustomerStoreCredit(normWalkin, excessCredit, System.currentTimeMillis())
-                        val updatedCust = customerDao.getCustomerByPhone(normWalkin)
-                        storeCreditLedgerDao.insertEntry(
-                            StoreCreditLedgerEntry(
-                                customerPhone = normWalkin,
-                                deltaAmount = excessCredit,
-                                balanceAfter = updatedCust?.storeCredit ?: excessCredit,
-                                type = "RETURN_REFUND",
-                                referenceInvoiceId = saleId,
-                                note = "Return refund for walk-in on invoice #$saleId"
+                // N-1: The voucher share goes back to the voucher only.
+                // The walk-in or new-voucher credit must be (refundTotal - dueAdj) - voucherShareRestored.
+                val totalVoucherRestoredOrReplaced = voucherPortion + (replacementFreshVoucher?.initialAmount ?: 0.0)
+                val remainingRefundToCredit = (refundTotal - dueAdj - totalVoucherRestoredOrReplaced).coerceAtLeast(0.0)
+
+                if (remainingRefundToCredit > 0.0) {
+                    if (issueVoucher || (phone.isNullOrBlank() && walkinPhone.isNullOrBlank())) {
+                        var inserted = false
+                        for (attempt in 1..5) {
+                            val code = "SC-${(1000..9999).random()}-${(1000..9999).random()}"
+                            val voucherAmount = remainingRefundToCredit
+                            val voucherToInsert = StoreCreditVoucher(
+                                code = code,
+                                initialAmount = voucherAmount,
+                                remainingBalance = voucherAmount,
+                                customerPhone = phone ?: walkinPhone?.trim()?.takeIf { it.isNotBlank() },
+                                sourceReturnId = returnId,
+                                sourceSaleId = saleId,
+                                issuedAt = System.currentTimeMillis(),
+                                expiresAt = System.currentTimeMillis() + (90L * 24 * 3600 * 1000),
+                                status = "ACTIVE",
+                                notes = "Return voucher on invoice #$saleId"
                             )
-                        )
-                        syncCustomerProfileFromLedgers(normWalkin)
+                            try {
+                                storeCreditVoucherDao.insertVoucher(voucherToInsert)
+                                generatedVoucherCode = code
+                                generatedVoucher = voucherToInsert
+                                inserted = true
+                                break
+                            } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                            } catch (_: androidx.sqlite.SQLiteException) {
+                            }
+                        }
+                        if (!inserted) {
+                            throw IllegalStateException("Failed to generate unique voucher code after 5 attempts")
+                        }
+                    } else if (phone.isNullOrBlank() && !walkinPhone.isNullOrBlank()) {
+                        // Walk-in customer registered with phone
+                        val normWalkin = normalizePhone(walkinPhone)
+                        var cust = customerDao.getCustomerByPhone(normWalkin)
+                        if (cust == null) {
+                            cust = Customer(
+                                phone = normWalkin,
+                                name = walkinName?.trim()?.ifBlank { "Customer ${normWalkin.takeLast(4)}" } ?: "Customer ${normWalkin.takeLast(4)}",
+                                storeCredit = 0.0
+                            )
+                            customerDao.upsertCustomer(cust)
+                        }
+                        val excessCredit = remainingRefundToCredit
+                        if (excessCredit > 0.0) {
+                            customerDao.adjustCustomerStoreCredit(normWalkin, excessCredit, System.currentTimeMillis())
+                            val updatedCust = customerDao.getCustomerByPhone(normWalkin)
+                            storeCreditLedgerDao.insertEntry(
+                                StoreCreditLedgerEntry(
+                                    customerPhone = normWalkin,
+                                    deltaAmount = excessCredit,
+                                    balanceAfter = updatedCust?.storeCredit ?: excessCredit,
+                                    type = "RETURN_REFUND",
+                                    referenceInvoiceId = saleId,
+                                    note = "Return refund for walk-in on invoice #$saleId"
+                                )
+                            )
+                            syncCustomerProfileFromLedgers(normWalkin)
+                        }
                     }
                 }
             }
@@ -4827,8 +4920,9 @@ class DataRepository(
     }
 
     private fun jsonContainsBarcode(json: String, barcode: String): Boolean = try {
+        val target = barcode.trim()
         fun contains(value: Any?): Boolean = when (value) {
-            is JSONObject -> value.optString("barcode") == barcode || value.keys().asSequence().any { contains(value.opt(it)) }
+            is JSONObject -> value.optString("barcode").trim().equals(target, ignoreCase = true) || value.keys().asSequence().any { contains(value.opt(it)) }
             is JSONArray -> (0 until value.length()).any { contains(value.opt(it)) }
             else -> false
         }

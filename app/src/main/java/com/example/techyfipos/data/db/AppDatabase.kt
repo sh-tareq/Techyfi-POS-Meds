@@ -301,17 +301,173 @@ val MIGRATION_35_36 = sqlMigration(
     "UPDATE customer_loyalty SET tier = 'Regular' WHERE tier = 'Silver' AND (lifetimeSpent < 3000.0 OR lifetimeSpent IS NULL)"
 )
 
-val MIGRATION_36_37 = sqlMigration(
-    36, 37,
-    "ALTER TABLE sales ADD COLUMN voucherCode TEXT DEFAULT NULL",
-    "ALTER TABLE sales ADD COLUMN voucherAmount REAL NOT NULL DEFAULT 0.0",
-    "ALTER TABLE sales ADD COLUMN customerCreditAmount REAL NOT NULL DEFAULT 0.0",
-    "UPDATE OR REPLACE products SET barcode = LOWER(TRIM(barcode)) WHERE barcode != LOWER(TRIM(barcode))",
-    "UPDATE sale_items SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))",
-    "UPDATE return_items SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))",
-    "UPDATE purchase_invoice_items SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))",
-    "UPDATE inventory_adjustments SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))"
+private data class MigrationProductRow(
+    val barcode: String,
+    val name: String,
+    val category: String,
+    val purchasePrice: Double,
+    val sellingPrice: Double,
+    val stockQty: Double,
+    val reorderLevel: Int,
+    val unit: String,
+    val wholesalePrice: Double,
+    val mrpPrice: Double,
+    val discountedPrice: Double,
+    val createdAt: Long
 )
+
+val MIGRATION_36_37 = object : Migration(36, 37) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE sales ADD COLUMN voucherCode TEXT DEFAULT NULL")
+        db.execSQL("ALTER TABLE sales ADD COLUMN voucherAmount REAL NOT NULL DEFAULT 0.0")
+        db.execSQL("ALTER TABLE sales ADD COLUMN customerCreditAmount REAL NOT NULL DEFAULT 0.0")
+
+        // N-3: Merge duplicate-case products before lowercasing barcodes
+        val duplicateBarcodes = mutableListOf<String>()
+        val dupCursor = db.query("SELECT LOWER(TRIM(barcode)) as canon, COUNT(*) as cnt FROM products GROUP BY LOWER(TRIM(barcode)) HAVING cnt > 1")
+        while (dupCursor.moveToNext()) {
+            val canon = dupCursor.getString(0)
+            if (!canon.isNullOrBlank()) {
+                duplicateBarcodes.add(canon)
+            }
+        }
+        dupCursor.close()
+
+        for (canon in duplicateBarcodes) {
+            val rows = mutableListOf<MigrationProductRow>()
+            val itemCursor = db.query(
+                "SELECT barcode, name, category, purchasePrice, sellingPrice, stockQty, reorderLevel, unit, wholesalePrice, mrpPrice, discountedPrice, created_at FROM products WHERE LOWER(TRIM(barcode)) = ? ORDER BY created_at DESC",
+                arrayOf(canon)
+            )
+            while (itemCursor.moveToNext()) {
+                rows.add(
+                    MigrationProductRow(
+                        barcode = itemCursor.getString(0),
+                        name = itemCursor.getString(1),
+                        category = itemCursor.getString(2),
+                        purchasePrice = itemCursor.getDouble(3),
+                        sellingPrice = itemCursor.getDouble(4),
+                        stockQty = itemCursor.getDouble(5),
+                        reorderLevel = itemCursor.getInt(6),
+                        unit = itemCursor.getString(7),
+                        wholesalePrice = itemCursor.getDouble(8),
+                        mrpPrice = itemCursor.getDouble(9),
+                        discountedPrice = itemCursor.getDouble(10),
+                        createdAt = itemCursor.getLong(11)
+                    )
+                )
+            }
+            itemCursor.close()
+
+            if (rows.size > 1) {
+                val survivor = rows.first() // newest row
+                val totalStock = rows.sumOf { it.stockQty }
+                val olderRows = rows.drop(1)
+
+                // Delete older colliding rows
+                for (old in olderRows) {
+                    db.execSQL("DELETE FROM products WHERE barcode = ?", arrayOf(old.barcode))
+                }
+
+                // Update survivor's stock
+                if (totalStock != survivor.stockQty) {
+                    db.execSQL("UPDATE products SET stockQty = ? WHERE barcode = ?", arrayOf(totalStock, survivor.barcode))
+                    db.execSQL(
+                        "INSERT INTO inventory_adjustments (productBarcode, productName, previousStock, newStock, difference, reason, note, timestamp, cashierName) VALUES (?, ?, ?, ?, ?, 'Discrepancy', 'Auto-merged case-variant products during migration', ?, 'System')",
+                        arrayOf(canon, survivor.name, survivor.stockQty, totalStock, totalStock - survivor.stockQty, System.currentTimeMillis())
+                    )
+                }
+            }
+        }
+
+        db.execSQL("UPDATE products SET barcode = LOWER(TRIM(barcode)) WHERE barcode != LOWER(TRIM(barcode))")
+        db.execSQL("UPDATE sale_items SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))")
+        db.execSQL("UPDATE return_items SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))")
+        db.execSQL("UPDATE purchase_invoice_items SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))")
+        db.execSQL("UPDATE inventory_adjustments SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))")
+    }
+
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE sales ADD COLUMN voucherCode TEXT DEFAULT NULL")
+        connection.execSQL("ALTER TABLE sales ADD COLUMN voucherAmount REAL NOT NULL DEFAULT 0.0")
+        connection.execSQL("ALTER TABLE sales ADD COLUMN customerCreditAmount REAL NOT NULL DEFAULT 0.0")
+
+        val duplicateBarcodes = mutableListOf<String>()
+        connection.prepare("SELECT LOWER(TRIM(barcode)) as canon, COUNT(*) as cnt FROM products GROUP BY LOWER(TRIM(barcode)) HAVING cnt > 1").use { dupStmt ->
+            while (dupStmt.step()) {
+                val canon = dupStmt.getText(0)
+                if (canon.isNotBlank()) {
+                    duplicateBarcodes.add(canon)
+                }
+            }
+        }
+
+        for (canon in duplicateBarcodes) {
+            val rows = mutableListOf<MigrationProductRow>()
+            connection.prepare(
+                "SELECT barcode, name, category, purchasePrice, sellingPrice, stockQty, reorderLevel, unit, wholesalePrice, mrpPrice, discountedPrice, created_at FROM products WHERE LOWER(TRIM(barcode)) = ? ORDER BY created_at DESC"
+            ).use { itemStmt ->
+                itemStmt.bindText(1, canon)
+                while (itemStmt.step()) {
+                    rows.add(
+                        MigrationProductRow(
+                            barcode = itemStmt.getText(0),
+                            name = itemStmt.getText(1),
+                            category = itemStmt.getText(2),
+                            purchasePrice = itemStmt.getDouble(3),
+                            sellingPrice = itemStmt.getDouble(4),
+                            stockQty = itemStmt.getDouble(5),
+                            reorderLevel = itemStmt.getInt(6),
+                            unit = itemStmt.getText(7),
+                            wholesalePrice = itemStmt.getDouble(8),
+                            mrpPrice = itemStmt.getDouble(9),
+                            discountedPrice = itemStmt.getDouble(10),
+                            createdAt = itemStmt.getLong(11)
+                        )
+                    )
+                }
+            }
+
+            if (rows.size > 1) {
+                val survivor = rows.first()
+                val totalStock = rows.sumOf { it.stockQty }
+                val olderRows = rows.drop(1)
+
+                for (old in olderRows) {
+                    connection.prepare("DELETE FROM products WHERE barcode = ?").use { delStmt ->
+                        delStmt.bindText(1, old.barcode)
+                        delStmt.step()
+                    }
+                }
+
+                if (totalStock != survivor.stockQty) {
+                    connection.prepare("UPDATE products SET stockQty = ? WHERE barcode = ?").use { updStmt ->
+                        updStmt.bindDouble(1, totalStock)
+                        updStmt.bindText(2, survivor.barcode)
+                        updStmt.step()
+                    }
+                    connection.prepare(
+                        "INSERT INTO inventory_adjustments (productBarcode, productName, previousStock, newStock, difference, reason, note, timestamp, cashierName) VALUES (?, ?, ?, ?, ?, 'Discrepancy', 'Auto-merged case-variant products during migration', ?, 'System')"
+                    ).use { insStmt ->
+                        insStmt.bindText(1, canon)
+                        insStmt.bindText(2, survivor.name)
+                        insStmt.bindDouble(3, survivor.stockQty)
+                        insStmt.bindDouble(4, totalStock)
+                        insStmt.bindDouble(5, totalStock - survivor.stockQty)
+                        insStmt.bindLong(6, System.currentTimeMillis())
+                        insStmt.step()
+                    }
+                }
+            }
+        }
+
+        connection.execSQL("UPDATE products SET barcode = LOWER(TRIM(barcode)) WHERE barcode != LOWER(TRIM(barcode))")
+        connection.execSQL("UPDATE sale_items SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))")
+        connection.execSQL("UPDATE return_items SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))")
+        connection.execSQL("UPDATE purchase_invoice_items SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))")
+        connection.execSQL("UPDATE inventory_adjustments SET productBarcode = LOWER(TRIM(productBarcode)) WHERE productBarcode != LOWER(TRIM(productBarcode))")
+    }
+}
 
 @Database(
     entities = [
