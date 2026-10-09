@@ -54,10 +54,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.techyfipos.R
 import com.example.techyfipos.data.db.RegisterClosing
+import com.example.techyfipos.utils.DateFormatters
+import com.example.techyfipos.utils.formatMoney
 import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.components.Realistic3DCashVaultRegisterIcon
 import com.example.techyfipos.ui.components.Realistic3DClipboardDuesIcon
@@ -82,7 +85,6 @@ import com.example.techyfipos.utils.printBillJpeg
 import com.example.techyfipos.utils.saveBillJpegToDownloads
 import kotlinx.coroutines.launch
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -268,8 +270,7 @@ fun RegisterCloseScreen(
             expectedCash = expectedCash
         )
     }
-    val dateFormat = remember { SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()) }
-    val rangeLabel = remember(rangeStart) { "Shift: ${dateFormat.format(Date(rangeStart))}" }
+    val rangeLabel = remember(rangeStart) { "Shift: ${DateFormatters.formatShortDateTime(rangeStart)}" }
     var selectedHistoricalClosing by remember { mutableStateOf<RegisterClosing?>(null) }
 
     val successMessage = stringResource(R.string.register_close_success_message)
@@ -546,9 +547,9 @@ fun RegisterCloseScreen(
                                         Column {
                                             Text(
                                                 text = stringResource(R.string.day_close_float_in_label),
-                                                fontSize = 9.5.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF94A3B8)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                             Text(
                                                 text = "+${formatTaka(cashIn)}",
@@ -575,9 +576,9 @@ fun RegisterCloseScreen(
                                         Column {
                                             Text(
                                                 text = stringResource(R.string.day_close_cash_out_label),
-                                                fontSize = 9.5.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF94A3B8)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                             Text(
                                                 text = "-${formatTaka(cashOut)}",
@@ -669,7 +670,7 @@ fun RegisterCloseScreen(
                             )
                             Text(
                                 text = stringResource(R.string.day_close_tool_count_notes_sub),
-                                fontSize = 9.5.sp,
+                                fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFB45309)
                             )
@@ -868,7 +869,7 @@ fun RegisterCloseScreen(
                             ) {
                                 Text(
                                     text = "Audited",
-                                    fontSize = 9.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF34D399),
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -876,7 +877,7 @@ fun RegisterCloseScreen(
                             }
                         }
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = Color(0xFF334155))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                         SummaryRow(stringResource(R.string.day_close_math_starting_float), formatTaka(startingFloat))
                         SummaryRow(stringResource(R.string.day_close_math_cash_sales), "+${formatTaka(cashSales)}", color = Color(0xFF34D399))
@@ -892,7 +893,7 @@ fun RegisterCloseScreen(
                             SummaryRow(stringResource(R.string.day_close_math_refunds), "−${formatTaka(cashRefunds)}", color = Color(0xFFFB7185))
                         }
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = Color(0xFF334155))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1295,7 +1296,10 @@ fun DenominationCounterDialog(
     val currentTotal = if (mode == DenomCounterMode.DETAILED) detailedSum.toDouble() else quickTotalVal
     val variance = currentTotal - expectedCash
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -1576,7 +1580,7 @@ fun DenominationCounterDialog(
                                         directTotalInput = input.filter { it.isDigit() || it == '.' }
                                     },
                                     leadingIcon = {
-                                        Text("৳", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color(0xFF059669))
+                                        Text(formatMoney(0.0).take(1), fontSize = 22.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
                                     },
                                     placeholder = { Text("0", fontSize = 22.sp, fontWeight = FontWeight.Bold) },
                                     singleLine = true,
@@ -1607,7 +1611,7 @@ fun DenominationCounterDialog(
                                             modifier = Modifier.weight(1f)
                                         ) {
                                             Text(
-                                                text = "+৳$preset",
+                                                text = "+${formatTaka(preset.toDouble())}",
                                                 fontSize = 10.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 textAlign = TextAlign.Center,
@@ -1752,7 +1756,7 @@ fun DenominationCounterDialog(
                                                     )
                                                     Text(
                                                         text = stringResource(R.string.denom_breakdown_sub),
-                                                        fontSize = 9.5.sp,
+                                                        fontSize = 11.sp,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                                     )
                                                 }
@@ -1764,7 +1768,7 @@ fun DenominationCounterDialog(
                                             ) {
                                                 Text(
                                                     text = if (isQuickBreakdownExpanded) stringResource(R.string.denom_breakdown_shown) else stringResource(R.string.denom_breakdown_hidden),
-                                                    fontSize = 9.sp,
+                                                    fontSize = 11.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -1970,7 +1974,10 @@ fun AddCashFloatDialog(
     var amountText by remember { mutableStateOf("500") }
     var reasonText by remember { mutableStateOf("Drawer change float top-up") }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -2003,7 +2010,7 @@ fun AddCashFloatDialog(
                     value = amountText,
                     onValueChange = { input -> amountText = input.filter { it.isDigit() || it == '.' } },
                     label = { Text(stringResource(R.string.register_close_amount_label)) },
-                    leadingIcon = { Text("৳", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                    leadingIcon = { Text(formatMoney(0.0).take(1), fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(12.dp),
@@ -2023,7 +2030,7 @@ fun AddCashFloatDialog(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "+৳$preset",
+                                text = "+${formatTaka(preset.toDouble())}",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
@@ -2081,7 +2088,10 @@ fun SafeDropDialog(
     val amount = amountText.toDoubleOrNull() ?: 0.0
     val isOverAmount = amount > currentDrawerCash
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -2121,7 +2131,7 @@ fun SafeDropDialog(
                     value = amountText,
                     onValueChange = { input -> amountText = input.filter { it.isDigit() || it == '.' } },
                     label = { Text(stringResource(R.string.day_close_safe_drop_amount)) },
-                    leadingIcon = { Text("৳", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                    leadingIcon = { Text(formatMoney(0.0).take(1), fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     singleLine = true,
                     isError = isOverAmount,
                     supportingText = if (isOverAmount) {
@@ -2145,7 +2155,7 @@ fun SafeDropDialog(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "৳$preset",
+                                text = formatTaka(preset.toDouble()),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
@@ -2199,7 +2209,10 @@ fun EditStartingFloatDialog(
 ) {
     var floatText by remember { mutableStateOf(currentFloat.toInt().toString()) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(18.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -2275,7 +2288,10 @@ fun CloseRegisterReconciliationDialog(
     val actualCash = actualCashText.toDoubleOrNull() ?: 0.0
     val variance = actualCash - expectedCash
 
-    Dialog(onDismissRequest = { if (!isSubmitting) onDismiss() }) {
+    Dialog(
+        onDismissRequest = { if (!isSubmitting) onDismiss() },
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(22.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -2312,7 +2328,7 @@ fun CloseRegisterReconciliationDialog(
                 // Expected Cash Tile
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFF0F172A),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -2321,11 +2337,11 @@ fun CloseRegisterReconciliationDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(stringResource(R.string.register_close_system_expected_cash), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
-                            Text(formatTaka(expectedCash), fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color(0xFF34D399))
+                            Text(stringResource(R.string.register_close_system_expected_cash), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(formatTaka(expectedCash), fontSize = 18.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
                         }
                         TextButton(onClick = onOpenDenominationCounter) {
-                            Text("🧮 Count Notes", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF38BDF8))
+                            Text("🧮 Count Notes", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -2335,7 +2351,7 @@ fun CloseRegisterReconciliationDialog(
                     value = actualCashText,
                     onValueChange = { input -> actualCashText = input.filter { it.isDigit() || it == '.' } },
                     label = { Text(stringResource(R.string.register_close_actual_counted_cash)) },
-                    leadingIcon = { Text("৳", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                    leadingIcon = { Text(formatMoney(0.0).take(1), fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(12.dp),
@@ -2456,12 +2472,12 @@ fun CloseRegisterReconciliationDialog(
 // =============================================================================
 
 @Composable
-private fun SummaryRow(label: String, value: String, color: Color = Color.White) {
+private fun SummaryRow(label: String, value: String, color: Color = MaterialTheme.colorScheme.onSurface) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, fontSize = 11.5.sp, color = Color(0xFFCBD5E1))
+        Text(label, fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = color)
     }
 }
@@ -2469,7 +2485,7 @@ private fun SummaryRow(label: String, value: String, color: Color = Color.White)
 @Composable
 private fun RegisterClosingRow(closing: RegisterClosing, onClick: () -> Unit = {}) {
     val dateLabel = remember(closing.timestamp) {
-        SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date(closing.timestamp))
+        DateFormatters.formatDateTime(closing.timestamp)
     }
     Surface(
         onClick = onClick,
@@ -2524,9 +2540,12 @@ private fun HistoricalClosingDetailDialog(
     onDismiss: () -> Unit
 ) {
     val dateLabel = remember(closing.timestamp) {
-        SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date(closing.timestamp))
+        DateFormatters.formatDateTime(closing.timestamp)
     }
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -2627,7 +2646,10 @@ fun ZReportDialog(
     val reportHeader = if (isInterimX) "TECHYFI POS - MID-SHIFT READING (X-REPORT)\n(INTERIM TOTALS - NO SHIFT RESET)" else "TECHYFI POS - DAILY CLOSING (Z-REPORT)"
     val reportFooter = if (isInterimX) "*** END OF X-REPORT (INTERIM) ***" else "*** END OF Z-REPORT (AUDIT FINAL) ***"
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -2791,7 +2813,10 @@ fun ShareZReportFormatDialog(
 ) {
     var selectedFormat by remember { mutableStateOf(ZReportFormat.JPEG) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
