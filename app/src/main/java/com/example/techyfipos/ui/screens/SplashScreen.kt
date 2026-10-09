@@ -234,7 +234,7 @@ private fun TechyfiSplashLogo(
         Text(
             text = "POWERING YOUR DIGITAL LIFESTYLE",
             color = Color(0xFF94A3B8),
-            fontSize = if (isTablet) 10.5.sp else 8.sp,
+            fontSize = if (isTablet) 11.sp else 10.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = if (isTablet) 1.5.sp else 1.1.sp,
             maxLines = 1,
