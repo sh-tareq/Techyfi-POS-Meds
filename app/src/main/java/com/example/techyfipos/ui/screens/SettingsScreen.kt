@@ -75,7 +75,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.compose.foundation.lazy.LazyColumn
@@ -83,6 +82,8 @@ import androidx.compose.foundation.lazy.items
 import com.example.techyfipos.utils.GoogleDriveHelper
 import com.example.techyfipos.utils.SigningCertificateHelper
 import com.example.techyfipos.utils.formatTaka
+import androidx.compose.ui.window.DialogProperties
+import com.example.techyfipos.utils.DateFormatters
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 
 private enum class SettingsPage {
@@ -207,11 +208,11 @@ private fun SettingsMasterCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text(stringResource(R.string.settings_label_printer_engine), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC7D2FE))
+                        Text(stringResource(R.string.settings_label_printer_engine), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC7D2FE))
                         Text("${paperRollWidthMm}mm ${stringResource(R.string.settings_printer_type_thermal)}", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF34D399))
                     }
                     Column {
-                        Text(stringResource(R.string.settings_label_data_backup), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC7D2FE))
+                        Text(stringResource(R.string.settings_label_data_backup), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC7D2FE))
                         Text(
                             text = if (driveConnected) stringResource(R.string.settings_value_local_drive_ready) else stringResource(R.string.settings_value_local_only),
                             fontSize = 12.sp,
@@ -220,7 +221,7 @@ private fun SettingsMasterCard(
                         )
                     }
                     Column {
-                        Text(stringResource(R.string.settings_label_display_mode), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC7D2FE))
+                        Text(stringResource(R.string.settings_label_display_mode), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC7D2FE))
                         Text(
                             text = if (stockCheckEnabled) stringResource(R.string.settings_value_stock_check_on) else stringResource(R.string.settings_value_stock_check_off),
                             fontSize = 12.sp,
@@ -880,6 +881,7 @@ private fun BluetoothPrinterPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = { Text(stringResource(R.string.settings_dialog_select_bt_printer_title)) },
         text = {
             Column {
@@ -2394,7 +2396,7 @@ private fun OptimizedBackupSettings(
                     ) {
                         Text(
                             text = if (driveConnection != null) stringResource(R.string.settings_status_connected_dot) else stringResource(R.string.settings_status_not_connected_dot),
-                            fontSize = 9.sp,
+                            fontSize = 10.5.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = if (driveConnection != null) Color(0xFF34D399) else Color(0xFFF87171),
                             maxLines = 1,
@@ -2418,9 +2420,9 @@ private fun OptimizedBackupSettings(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text(stringResource(R.string.settings_label_last_cloud_backup), fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                            Text(stringResource(R.string.settings_label_last_cloud_backup), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
                             val lastBackupStr = if (lastDriveBackupTimestamp > 0L) {
-                                SimpleDateFormat("MMM d • h:mm a", Locale.getDefault()).format(Date(lastDriveBackupTimestamp))
+                                DateFormatters.formatShortDateTime(lastDriveBackupTimestamp)
                             } else {
                                 stringResource(R.string.settings_no_backup_yet)
                             }
@@ -2428,12 +2430,12 @@ private fun OptimizedBackupSettings(
                         }
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(stringResource(R.string.settings_label_integrity), fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                            Text(stringResource(R.string.settings_label_integrity), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
                             Text(stringResource(R.string.settings_value_100_verified), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF34D399))
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(stringResource(R.string.settings_label_security), fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                            Text(stringResource(R.string.settings_label_security), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
                             Text(stringResource(R.string.settings_value_aes256_armed), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
                         }
                     }
@@ -2641,7 +2643,7 @@ private fun OptimizedBackupSettings(
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = stringResource(R.string.settings_label_backup_frequency),
-                            fontSize = 9.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -2677,7 +2679,7 @@ private fun OptimizedBackupSettings(
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = stringResource(R.string.settings_label_network_constraint),
-                            fontSize = 9.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -2713,7 +2715,7 @@ private fun OptimizedBackupSettings(
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = stringResource(R.string.settings_label_retention_limit),
-                            fontSize = 9.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -2782,7 +2784,7 @@ private fun OptimizedBackupSettings(
                             Realistic3DLocalVaultDiskIcon(size = 34.dp)
                             Column {
                                 Text(stringResource(R.string.settings_export_backup_title), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                Text(stringResource(R.string.settings_save_local_json), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.settings_save_local_json), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -2803,7 +2805,7 @@ private fun OptimizedBackupSettings(
                             Realistic3DRestoreRewindIcon(size = 34.dp)
                             Column {
                                 Text(stringResource(R.string.settings_restore_file_title), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                Text(stringResource(R.string.settings_load_local_json), fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.settings_load_local_json), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -2872,7 +2874,7 @@ private fun OptimizedBackupSettings(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         val lastBackup = if (lastLocalBackupTimestamp > 0L) {
-                            SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(Date(lastLocalBackupTimestamp))
+                            DateFormatters.formatShortDateTime(lastLocalBackupTimestamp)
                         } else null
                         Text(
                             text = if (localAutoBackupEnabled) {
@@ -2897,7 +2899,7 @@ private fun OptimizedBackupSettings(
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = stringResource(R.string.settings_label_local_frequency),
-                            fontSize = 9.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -3099,6 +3101,7 @@ private fun CrashLogsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = { Text(stringResource(R.string.settings_crash_logs_title_fmt, files.size)) },
         text = {
             if (files.isEmpty()) {
@@ -3160,6 +3163,7 @@ private fun CrashLogsDialog(
                 if (showConfirmClear) {
                     AlertDialog(
                         onDismissRequest = { showConfirmClear = false },
+                        properties = DialogProperties(dismissOnClickOutside = false),
                         title = { Text(stringResource(R.string.confirm)) },
                         text = { Text(stringResource(R.string.settings_confirm_clear_crash_logs_msg)) },
                         confirmButton = {
@@ -4124,7 +4128,7 @@ fun SettingsScreen(
                     driveNetworkPolicy = driveNetworkPolicy,
                     isBackingUpToDrive = isBackingUpToDrive,
                     onLocalBackup = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                        val dateStr = DateFormatters.formatISO()
                         backupLauncher.launch("techyfi-pos-backup-$dateStr.json")
                     },
                     onLocalRestore = {
@@ -4135,7 +4139,7 @@ fun SettingsScreen(
                         }
                     },
                     onExportEncryptedBackup = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                        val dateStr = DateFormatters.formatISO()
                         exportEncryptedBackupLauncher.launch("techyfi-pos-encrypted-$dateStr.posenc")
                     },
                     onImportEncryptedBackup = {
@@ -4206,22 +4210,22 @@ fun SettingsScreen(
                 )
                 SettingsPage.TRANSFER -> OptimizedTransferSettings(
                     onExportProducts = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                        val dateStr = DateFormatters.formatISO()
                         exportProductsLauncher.launch("products-export-$dateStr.xlsx")
                     },
                     onImportProducts = {
                         importProductsLauncher.launch(arrayOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     },
                     onExportSales = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                        val dateStr = DateFormatters.formatISO()
                         exportSalesLauncher.launch("sales-report-$dateStr.xlsx")
                     },
                     onExportDues = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                        val dateStr = DateFormatters.formatISO()
                         exportDuesLauncher.launch("dues-list-$dateStr.xlsx")
                     },
                     onDownloadTemplate = {
-                        val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                        val dateStr = DateFormatters.formatISO()
                         downloadTemplateLauncher.launch("products-import-template-$dateStr.xlsx")
                     }
                 )
@@ -4237,7 +4241,10 @@ fun SettingsScreen(
     var isRestoringDatabase by remember { mutableStateOf(false) }
 
     if (isLocalBackupBusy) {
-        Dialog(onDismissRequest = {}) {
+        Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(dismissOnClickOutside = false)
+        ) {
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surface,
@@ -4269,7 +4276,10 @@ fun SettingsScreen(
     }
 
     if (isRestoringDatabase) {
-        Dialog(onDismissRequest = {}) {
+        Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(dismissOnClickOutside = false)
+        ) {
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surface,
@@ -4295,6 +4305,7 @@ fun SettingsScreen(
         if (showReplaceConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { showReplaceConfirmDialog = false },
+                properties = DialogProperties(dismissOnClickOutside = false),
                 icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                 title = { Text(stringResource(R.string.settings_confirm_replace_title)) },
                 text = { Text(stringResource(R.string.settings_confirm_replace_desc)) },
@@ -4341,6 +4352,7 @@ fun SettingsScreen(
         } else {
             AlertDialog(
                 onDismissRequest = { pendingRestoreUri = null },
+                properties = DialogProperties(dismissOnClickOutside = false),
                 icon = { Icon(Icons.Default.Restore, contentDescription = null) },
                 title = { Text(stringResource(R.string.settings_dialog_restore_mode_title)) },
                 text = {
@@ -4404,6 +4416,7 @@ fun SettingsScreen(
     if (showDriveBackupsDialog) {
         AlertDialog(
             onDismissRequest = { showDriveBackupsDialog = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -4448,8 +4461,7 @@ fun SettingsScreen(
                     ) {
                         items(driveBackups) { backup ->
                             val isAuto = backup.name.contains("auto", ignoreCase = true)
-                            val format = SimpleDateFormat("MMM d, yyyy • h:mm a", Locale.getDefault())
-                            val dateStr = if (backup.createdTime > 0L) format.format(Date(backup.createdTime)) else backup.name
+                            val dateStr = if (backup.createdTime > 0L) DateFormatters.formatBackupDate(backup.createdTime) else backup.name
                             val sizeStr = if (backup.size >= 1024 * 1024) "%.1f MB".format(backup.size / (1024.0 * 1024.0)) else "${(backup.size / 1024.0).toInt()} KB"
 
                             Card(
@@ -4484,7 +4496,7 @@ fun SettingsScreen(
                                             ) {
                                                 Text(
                                                     text = if (isAuto) stringResource(R.string.settings_label_auto) else stringResource(R.string.settings_label_manual),
-                                                    fontSize = 9.sp,
+                                                    fontSize = 10.5.sp,
                                                     fontWeight = FontWeight.ExtraBold,
                                                     color = if (isAuto) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
                                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
@@ -4530,8 +4542,7 @@ fun SettingsScreen(
     if (showRestoreConfirmDialog != null) {
         val backup = showRestoreConfirmDialog!!
         val meta = inspectedBackupMetadata
-        val format = SimpleDateFormat("MMM d, yyyy • h:mm a", Locale.getDefault())
-        val dateStr = if (backup.createdTime > 0L) format.format(Date(backup.createdTime)) else backup.name
+        val dateStr = if (backup.createdTime > 0L) DateFormatters.formatBackupDate(backup.createdTime) else backup.name
         val sizeStr = if (backup.size >= 1024 * 1024) "%.1f MB".format(backup.size / (1024.0 * 1024.0)) else "${(backup.size / 1024.0).toInt()} KB"
 
         AlertDialog(
@@ -4541,6 +4552,7 @@ fun SettingsScreen(
                     inspectedBackupMetadata = null
                 }
             },
+            properties = DialogProperties(dismissOnClickOutside = false),
             icon = {
                 Icon(
                     imageVector = Icons.Default.Warning,
@@ -4655,6 +4667,7 @@ fun SettingsScreen(
     if (showGoogleConfigDialog) {
         AlertDialog(
             onDismissRequest = { showGoogleConfigDialog = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.settings_dialog_drive_setup_title), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
@@ -4700,6 +4713,7 @@ fun SettingsScreen(
     if (showAddBlockDialog) {
         AlertDialog(
             onDismissRequest = { showAddBlockDialog = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(if (editingBlockId != null) stringResource(R.string.settings_dialog_edit_info_block_title) else stringResource(R.string.settings_dialog_add_info_block_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -4763,6 +4777,7 @@ fun SettingsScreen(
                 resetAcknowledged = false
                 showResetConfirmDialog = false
             },
+            properties = DialogProperties(dismissOnClickOutside = false),
             icon = {
                 Icon(
                     Icons.Default.Warning,
@@ -4844,6 +4859,7 @@ fun SettingsScreen(
     if (isCheckingDuplicateLedgers) {
         AlertDialog(
             onDismissRequest = {},
+            properties = DialogProperties(dismissOnClickOutside = false),
             text = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -4857,6 +4873,7 @@ fun SettingsScreen(
     duplicateLedgerGroups?.let { groups ->
         AlertDialog(
             onDismissRequest = { duplicateLedgerGroups = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             icon = {
                 Icon(
                     Icons.Default.Warning,
@@ -4939,6 +4956,7 @@ fun SettingsScreen(
     importFailureDetails?.let { failures ->
         AlertDialog(
             onDismissRequest = { importFailureDetails = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             icon = {
                 Icon(
                     Icons.Default.ErrorOutline,
@@ -4994,6 +5012,7 @@ fun SettingsScreen(
                     pendingEncryptedExportUri = null
                 }
             },
+            properties = DialogProperties(dismissOnClickOutside = false),
             icon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
             title = { Text(stringResource(R.string.settings_set_backup_password), fontWeight = FontWeight.Bold) },
             text = {
@@ -5103,6 +5122,7 @@ fun SettingsScreen(
                     pendingEncryptedImportUri = null
                 }
             },
+            properties = DialogProperties(dismissOnClickOutside = false),
             icon = { Icon(Icons.Default.Key, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
             title = { Text(stringResource(R.string.settings_decrypt_backup_file), fontWeight = FontWeight.Bold) },
             text = {
