@@ -176,6 +176,7 @@ class DataRepository(
     }
 
     suspend fun cancelVoucher(code: String): Boolean = withContext(Dispatchers.IO) {
+        requireOwnerSession()
         storeCreditVoucherDao.cancelVoucher(code.trim().uppercase()) > 0
     }
 
@@ -632,6 +633,7 @@ class DataRepository(
                                 } else {
                                     // Walk-in sale with no phone on sale or voucher (N-5):
                                     // Issue a fresh replacement voucher so the share is not lost
+                                    var inserted = false
                                     for (attempt in 1..5) {
                                         val code = "SC-${(1000..9999).random()}-${(1000..9999).random()}"
                                         val fresh = StoreCreditVoucher(
@@ -659,8 +661,14 @@ class DataRepository(
                                                     timestamp = System.currentTimeMillis()
                                                 )
                                             )
+                                            inserted = true
                                             break
-                                        } catch (_: Exception) {}
+                                        } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                                        } catch (_: androidx.sqlite.SQLiteException) {
+                                        }
+                                    }
+                                    if (!inserted) {
+                                        throw IllegalStateException("Failed to generate unique voucher code for expired replacement on void of sale #$saleId")
                                     }
                                     voucherPortion = 0.0
                                 }
@@ -4277,6 +4285,7 @@ class DataRepository(
                             } else {
                                 // Walk-in return, voucher had no customer phone (N-5):
                                 // Issue a fresh replacement voucher so the share is not lost
+                                var inserted = false
                                 for (attempt in 1..5) {
                                     val code = "SC-${(1000..9999).random()}-${(1000..9999).random()}"
                                     val fresh = StoreCreditVoucher(
@@ -4306,8 +4315,14 @@ class DataRepository(
                                             )
                                         )
                                         replacementFreshVoucher = fresh
+                                        inserted = true
                                         break
-                                    } catch (_: Exception) {}
+                                    } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                                    } catch (_: androidx.sqlite.SQLiteException) {
+                                    }
+                                }
+                                if (!inserted) {
+                                    throw IllegalStateException("Failed to generate unique voucher code for expired replacement on return of sale #$saleId")
                                 }
                                 voucherPortion = 0.0
                             }
@@ -4421,6 +4436,9 @@ class DataRepository(
                 }
             )
             val returnId = returnDao.insertReturn(returnRecord)
+            if (replacementFreshVoucher != null) {
+                storeCreditVoucherDao.updateVoucherSourceReturnId(replacementFreshVoucher.code, returnId)
+            }
             returnDao.insertReturnItems(
                 sanitizedLines.map { line ->
                     ReturnItem(
