@@ -43,10 +43,14 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 - [x] **M-10** wallet refund vs. dialog (Fixed in `20ea146`, test: `testM10_registeredCustomerCashReturn_asStoreCredit_addsCreditToCustomerAndLogsLedger` in `MoneyFlowsIntegrationTest`).
 - [x] **M-1/R-4** due-confirm and credit-limit use the raw Due row; SC-method partial skips them (Fixed in `20ea146`, test: `testM1_R4_partialStoreCreditCheckout_dueAmountReflectedInBreakdown` in `MoneyFlowsIntegrationTest`).
 
+- [x] **M-5/R-5** receipt vs. reprint "Paid" and card over-tender (Fixed in `b542a94`, tests: `testM5_receiptSnapshotAmountPaidMatchesReprintPaid`, `testM5_scenario3_cardOverTenderIsRejectedAndValidElectronicPlusCashSucceeds` in `MoneyFlowsIntegrationTest`, `M-5 Card over-tender is rejected, and valid electronic plus cash split returns correct cash change` in `MoneyFlowsTest`).
+- [x] **B-7** backfill `isTaxInclusive` for old sales, Excel and refund profit tax stripping (Fixed in `b542a94`, test: `testB7_taxInclusiveSaleProfitExcludesTaxAndBackfillUpdatesOldSales` in `MoneyFlowsIntegrationTest`).
+- [x] **X-8** tier recompute with configured thresholds (Fixed in `b542a94`, test: `testX8_recomputeLoyaltyTiersEvaluatesConfiguredThresholds` in `MoneyFlowsIntegrationTest`).
+- [x] **X-4a/b** supplier payment invoice pairing and skip voided-sale adjustment inflation on merge (Fixed in `b542a94`, tests: `testX4_supplierPaymentWithInvoiceNoteReducesDueAndVoidAdjustmentSkippedOnMerge` in `MoneyFlowsIntegrationTest`, `testT3_mergeSharedHistoryReturnsVoidsMixedBarcodeCase_assertsDuesPointsCredit` in `BackupRestoreIntegrationTest`).
+- [x] **M-14** owner clearing limit to 0 & preserve limit on upsert due (Fixed in `b542a94`, test: `testM14_ownerCanClearCreditLimitToZeroAndUpsertDuePreservesExistingLimit` in `MoneyFlowsIntegrationTest`).
+
 **Remaining Money Items:**
-M-5/R-5 (receipt vs. reprint "Paid"; card over-tender absorbed), B-7 (backfill `isTaxInclusive` for old sales;
-Excel profit includes tax), X-8 (tier recompute with the configured thresholds), X-4a/b (supplier payment pairing by note text; voided-sale adjustments inflate stock on merge), M-14 (owner can't
-clear a limit to 0), M-7 (loyalty Taka 1:1; clawback display), R-6 (revert XSSF; `LOWER()` in `getProductByBarcode` defeats the PK index).
+M-7 (loyalty Taka 1:1; clawback display), R-6 (revert XSSF; `LOWER()` in `getProductByBarcode` defeats the PK index).
 
 **Language:** D-1/L-2: 0 of about 347 `formatTaka(` calls in ui pass the app language; add a single app-language source. L-1: about 149 multi-word English literals in ui, plus the X/Z report generators and repo exception text in toasts.
 
