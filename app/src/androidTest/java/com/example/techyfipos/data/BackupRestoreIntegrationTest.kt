@@ -917,5 +917,256 @@ class BackupRestoreIntegrationTest {
         backupFile.delete()
         Unit
     }
+
+    @Test
+    fun testT3_mergeSharedHistoryReturnsVoidsMixedBarcodeCase_assertsDuesPointsCredit() = runBlocking {
+        // 1. Existing product with mixed/upper barcode
+        val product = Product(
+            barcode = "mix-case-1",
+            name = "Mix Product",
+            category = "Items",
+            purchasePrice = 40.0,
+            sellingPrice = 100.0,
+            stockQty = 50.0,
+            reorderLevel = 5
+        )
+        database.productDao().insertProduct(product)
+
+        // 2. Existing customer with due, loyalty points, and store credit
+        val custPhone = "01711111111"
+        database.customerDao().upsertCustomer(
+            Customer(
+                phone = custPhone,
+                name = "Customer T3",
+                totalDue = 500.0,
+                loyaltyPoints = 50,
+                storeCredit = 100.0
+            )
+        )
+        database.customerDueDao().upsertCustomerDue(
+            CustomerDue(
+                customerPhone = custPhone,
+                customerName = "Customer T3",
+                outstandingAmount = 500.0
+            )
+        )
+        database.customerLoyaltyDao().upsertLoyalty(
+            CustomerLoyalty(
+                phone = custPhone,
+                name = "Customer T3",
+                pointsBalance = 50
+            )
+        )
+
+        // 3. Existing shared sale (Sale 101) in local DB
+        val localSaleTimestamp = 1_700_000_000_000L
+        val localSaleId = database.saleDao().insertSale(
+            Sale(
+                id = 101L,
+                timestamp = localSaleTimestamp,
+                subtotal = 200.0,
+                discountAmount = 0.0,
+                isPercentageDiscount = false,
+                grandTotal = 200.0,
+                paymentMethod = "Cash",
+                customerPhone = custPhone,
+                customerName = "Customer T3",
+                amountPaid = 200.0
+            )
+        )
+        database.saleDao().insertSaleItems(
+            listOf(
+                SaleItem(
+                    saleId = localSaleId,
+                    productBarcode = "mix-case-1",
+                    productName = "Mix Product",
+                    price = 100.0,
+                    quantity = 2.0
+                )
+            )
+        )
+
+        // 4. Build remote backup representing another terminal with:
+        //    - Duplicate/shared Sale 101 (must not be re-inserted or double-counted)
+        //    - New remote Sale 202: 1x "MIX-CASE-1" (100.0), DueCharge 100.0
+        //    - Return for Sale 101 (refund 100.0 for 1x "mix-case-1")
+        //    - Void adjustment (InventoryAdjustment diff = 5.0, reason = "Sale Void")
+        //    - Due payment of 150.0 for Customer T3
+        //    - Loyalty transaction of +25 points for Customer T3
+        //    - Store credit ledger entry of +50.0 for Customer T3
+        val backupJson = JSONObject()
+        val now = 1_700_100_000_000L
+
+        // Products in backup (mixed barcode case: "MIX-CASE-1")
+        val productsArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("barcode", "MIX-CASE-1")
+                put("name", "Mix Product")
+                put("sellingPrice", 100.0)
+                put("stockQty", 99.0) // Must not overwrite local stock
+            })
+        }
+        backupJson.put("products", productsArr)
+
+        // Sales in backup
+        val salesArr = JSONArray().apply {
+            // Shared Sale 101 (exact same timestamp, total, and customer phone)
+            put(JSONObject().apply {
+                put("id", 101L)
+                put("timestamp", localSaleTimestamp)
+                put("grandTotal", 200.0)
+                put("paymentMethod", "Cash")
+                put("customerPhone", custPhone)
+                put("saleItems", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("productBarcode", "MIX-CASE-1")
+                        put("productName", "Mix Product")
+                        put("price", 100.0)
+                        put("quantity", 2.0)
+                    })
+                })
+            })
+            // New remote Sale 202
+            put(JSONObject().apply {
+                put("id", 202L)
+                put("timestamp", now + 1000L)
+                put("grandTotal", 100.0)
+                put("paymentMethod", "Due")
+                put("customerPhone", custPhone)
+                put("saleItems", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("productBarcode", "MIX-CASE-1")
+                        put("productName", "Mix Product")
+                        put("price", 100.0)
+                        put("quantity", 1.0)
+                    })
+                })
+            })
+        }
+        backupJson.put("sales", salesArr)
+
+        // Due charge for Sale 202 (+100.0 due)
+        val dueChargesArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 501L)
+                put("customerPhone", custPhone)
+                put("amount", 100.0)
+                put("saleId", 202L)
+                put("timestamp", now + 1000L)
+            })
+        }
+        backupJson.put("dueCharges", dueChargesArr)
+
+        // Due payment for customer (-150.0 due)
+        val duePaymentsArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 601L)
+                put("customerPhone", custPhone)
+                put("amountPaid", 150.0)
+                put("timestamp", now + 2000L)
+            })
+        }
+        backupJson.put("duePayments", duePaymentsArr)
+
+        // Loyalty transaction (+25 points)
+        val loyaltyTxnsArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 701L)
+                put("customerPhone", custPhone)
+                put("pointsChange", 25)
+                put("spendChange", 250.0)
+                put("type", "EARNED")
+                put("timestamp", now + 3000L)
+            })
+        }
+        backupJson.put("loyaltyTransactions", loyaltyTxnsArr)
+
+        // Returns: 1 return on Sale 101
+        val returnsArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 801L)
+                put("saleId", 101L)
+                put("refundAmount", 100.0)
+                put("refundMethod", "Cash")
+                put("timestamp", now + 4000L)
+            })
+        }
+        backupJson.put("returns", returnsArr)
+
+        val returnItemsArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 851L)
+                put("returnId", 801L)
+                put("productBarcode", "MIX-CASE-1")
+                put("quantity", 1.0)
+                put("refundPrice", 100.0)
+            })
+        }
+        backupJson.put("returnItems", returnItemsArr)
+
+        // Inventory adjustment for voided sale (difference = +5.0)
+        val adjustmentsArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 901L)
+                put("productBarcode", "MIX-CASE-1")
+                put("difference", 5.0)
+                put("reason", "Sale Void")
+                put("timestamp", now + 5000L)
+            })
+        }
+        backupJson.put("inventoryAdjustments", adjustmentsArr)
+
+        // Store credit ledger (+50.0)
+        val creditLedgerArr = JSONArray().apply {
+            put(JSONObject().apply {
+                put("id", 951L)
+                put("customerPhone", custPhone)
+                put("deltaAmount", 50.0)
+                put("type", "RETURN_REFUND")
+                put("referenceInvoiceId", 101L)
+                put("timestamp", now + 6000L)
+            })
+        }
+        backupJson.put("storeCreditLedger", creditLedgerArr)
+
+        val backupFile = File(context.cacheDir, "test-t3-merge.json")
+        backupFile.writeText(backupJson.toString())
+
+        val success = repository.importBackup(backupFile, BackupImportMode.MERGE)
+        assertTrue("Merge import must succeed", success)
+
+        // Assert 1: Dues (initial 500.0 + new charge 100.0 - payment 150.0 = 450.0)
+        val customer = database.customerDao().getCustomerByPhone(custPhone)!!
+        val customerDue = database.customerDueDao().getCustomerDueByPhone(custPhone)!!
+        assertEquals("Customer totalDue must be 450.0 after merge", 450.0, customer.totalDue, 0.001)
+        assertEquals("CustomerDue outstandingAmount must be 450.0 after merge", 450.0, customerDue.outstandingAmount, 0.001)
+
+        // Assert 2: Points (initial 50 + 25 = 75)
+        val loyalty = database.customerLoyaltyDao().getLoyaltyByPhone(custPhone)!!
+        assertEquals("Customer loyaltyPoints must be 75 after merge", 75, customer.loyaltyPoints)
+        assertEquals("CustomerLoyalty pointsBalance must be 75 after merge", 75, loyalty.pointsBalance)
+
+        // Assert 3: Store Credit (initial 100.0 + 50.0 = 150.0)
+        assertEquals("Customer storeCredit must be 150.0 after merge", 150.0, customer.storeCredit, 0.001)
+
+        // Assert 4: Shared history (Sale 101 not duplicated, Sale 202 added -> exactly 2 sales)
+        val allSales = database.saleDao().getAllSalesOnce()
+        assertEquals("Shared history must not duplicate Sale 101; exactly 2 sales must exist", 2, allSales.size)
+
+        // Assert 5: Returns (return linked to local Sale 101)
+        val allReturns = database.returnDao().getAllReturnsOnce()
+        assertEquals("Return must be imported and linked to Sale 101", 1, allReturns.size)
+        assertEquals(localSaleId, allReturns.first().saleId)
+
+        // Assert 6: Mixed barcode case and stock (no duplicate product created, barcode case-insensitive)
+        val allProducts = database.productDao().getAllProductsList()
+        assertEquals("Mixed case product barcode must not create duplicate product", 1, allProducts.size)
+        val mergedProd = database.productDao().getProductByBarcode("mix-case-1")!!
+        // Stock delta: initial 50.0 - 1.0 (Sale 202) + 5.0 (Void adjustment) = 54.0
+        assertEquals("Product stock must be accurately merged (50 - 1 + 5 = 54.0)", 54.0, mergedProd.stockQty, 0.001)
+
+        backupFile.delete()
+        Unit
+    }
 }
 

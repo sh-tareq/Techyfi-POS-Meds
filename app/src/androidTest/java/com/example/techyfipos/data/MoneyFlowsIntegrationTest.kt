@@ -1483,4 +1483,188 @@ class MoneyFlowsIntegrationTest {
             100.0, repository.getCustomerByPhone(ownerPhone)!!.storeCredit, 0.001
         )
     }
+
+    @Test
+    fun testT4_voucherUsedAcrossMultipleSales_voidRestoresEachSalePortion() = runBlocking {
+        val prod = Product(
+            barcode = "p-t4-multi",
+            name = "Item T4 Multi",
+            category = "General",
+            purchasePrice = 30.0,
+            sellingPrice = 100.0,
+            stockQty = 10.0,
+            reorderLevel = 1
+        )
+        database.productDao().insertProduct(prod)
+
+        val vCode = "VOUCH-T4-MULTI"
+        val voucher = StoreCreditVoucher(
+            code = vCode,
+            initialAmount = 150.0,
+            remainingBalance = 150.0,
+            status = "ACTIVE"
+        )
+        database.storeCreditVoucherDao().insertVoucher(voucher)
+
+        // Sale 1 uses 60.0 of voucher
+        val sale1Id = repository.completeSaleWithNotes(
+            subtotal = 60.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 60.0,
+            paymentMethod = "Store Credit",
+            customerName = "Walk-in 1",
+            customerPhone = null,
+            amountPaid = 60.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 0.6, null)),
+            storeCreditApplied = 60.0,
+            appliedVoucherCode = vCode
+        )
+        val vAfterSale1 = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        assertEquals(90.0, vAfterSale1.remainingBalance, 0.001)
+
+        // Sale 2 uses 50.0 of voucher
+        val sale2Id = repository.completeSaleWithNotes(
+            subtotal = 50.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 50.0,
+            paymentMethod = "Store Credit",
+            customerName = "Walk-in 2",
+            customerPhone = null,
+            amountPaid = 50.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 0.5, null)),
+            storeCreditApplied = 50.0,
+            appliedVoucherCode = vCode
+        )
+        val vAfterSale2 = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        assertEquals(40.0, vAfterSale2.remainingBalance, 0.001)
+
+        // Void Sale 2: voucher restored by 50.0 (40 + 50 = 90.0)
+        repository.deleteSale(sale2Id)
+        val vAfterVoid2 = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        assertEquals(90.0, vAfterVoid2.remainingBalance, 0.001)
+
+        // Void Sale 1: voucher restored by 60.0 (90 + 60 = 150.0)
+        repository.deleteSale(sale1Id)
+        val vAfterVoid1 = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        assertEquals(150.0, vAfterVoid1.remainingBalance, 0.001)
+    }
+
+    @Test
+    fun testT4_walkInFullyVoucherPaidSale_voidRestoresVoucherBalance() = runBlocking {
+        val prod = Product(
+            barcode = "p-t4-void",
+            name = "Item T4 Void",
+            category = "General",
+            purchasePrice = 30.0,
+            sellingPrice = 100.0,
+            stockQty = 10.0,
+            reorderLevel = 1
+        )
+        database.productDao().insertProduct(prod)
+
+        val vCode = "VOUCH-T4-VOID"
+        val voucher = StoreCreditVoucher(
+            code = vCode,
+            initialAmount = 100.0,
+            remainingBalance = 100.0,
+            status = "ACTIVE"
+        )
+        database.storeCreditVoucherDao().insertVoucher(voucher)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 100.0,
+            paymentMethod = "Store Credit",
+            customerName = "Walk-in",
+            customerPhone = null,
+            amountPaid = 100.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            storeCreditApplied = 100.0,
+            appliedVoucherCode = vCode
+        )
+        val vAfterSale = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        assertEquals(0.0, vAfterSale.remainingBalance, 0.001)
+
+        // Void the walk-in sale: full voucher balance (100.0) is restored
+        repository.deleteSale(saleId)
+        val vAfterVoid = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        assertEquals(100.0, vAfterVoid.remainingBalance, 0.001)
+    }
+
+    @Test
+    fun testT4_walkInFullyVoucherPaidSale_partialAndFullReturnsRestoreVoucherBalance() = runBlocking {
+        val prod = Product(
+            barcode = "p-t4-ret",
+            name = "Item T4 Return",
+            category = "General",
+            purchasePrice = 30.0,
+            sellingPrice = 100.0,
+            stockQty = 10.0,
+            reorderLevel = 1
+        )
+        database.productDao().insertProduct(prod)
+
+        val vCode = "VOUCH-T4-RET"
+        val voucher = StoreCreditVoucher(
+            code = vCode,
+            initialAmount = 100.0,
+            remainingBalance = 100.0,
+            status = "ACTIVE"
+        )
+        database.storeCreditVoucherDao().insertVoucher(voucher)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 100.0,
+            paymentMethod = "Store Credit",
+            customerName = "Walk-in",
+            customerPhone = null,
+            amountPaid = 100.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            storeCreditApplied = 100.0,
+            appliedVoucherCode = vCode
+        )
+        val vAfterSale = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        assertEquals(0.0, vAfterSale.remainingBalance, 0.001)
+
+        // 1st partial return: 40.0 -> voucher restored by 40.0
+        repository.processReturn(
+            saleId = saleId,
+            lines = listOf(ReturnLine(barcode = "p-t4-ret", quantity = 0.4, name = "Item T4 Return", price = 100.0)),
+            refundMethod = "Store Credit",
+            note = "1st Return",
+            restock = true
+        )
+        val vAfterRet1 = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        assertEquals(40.0, vAfterRet1.remainingBalance, 0.001)
+
+        // 2nd partial return: 60.0 -> remaining 60.0 restored to voucher (back to 100.0)
+        repository.processReturn(
+            saleId = saleId,
+            lines = listOf(ReturnLine(barcode = "p-t4-ret", quantity = 0.6, name = "Item T4 Return", price = 100.0)),
+            refundMethod = "Store Credit",
+            note = "2nd Return",
+            restock = true
+        )
+        val vAfterRet2 = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        assertEquals(100.0, vAfterRet2.remainingBalance, 0.001)
+    }
 }
