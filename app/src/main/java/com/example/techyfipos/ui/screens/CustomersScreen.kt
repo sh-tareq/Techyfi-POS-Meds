@@ -48,6 +48,7 @@ import com.example.techyfipos.ui.viewmodel.CustomerSortOption
 import com.example.techyfipos.ui.viewmodel.CustomerViewModel
 import com.example.techyfipos.ui.viewmodel.DuplicateCustomerPair
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.utils.DateFormatters
 import com.example.techyfipos.utils.openPhoneDialer
@@ -1646,7 +1647,7 @@ suspend fun exportCustomerCsv(context: Context, customers: List<Customer>) = wit
     } catch (e: Exception) {
         e.printStackTrace()
         withContext(Dispatchers.Main) {
-            Toast.makeText(context, context.getString(R.string.customer_export_failed, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.customer_export_failed, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
         }
     }
 }

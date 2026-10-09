@@ -42,6 +42,7 @@ import com.example.techyfipos.ui.components.ExpenseItemRow
 import com.example.techyfipos.ui.components.Realistic3DExpenseReceiptIcon
 import com.example.techyfipos.ui.viewmodel.ExpenseViewModel
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 import com.example.techyfipos.utils.DateFormatters
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -109,7 +110,7 @@ fun ExpensesScreen(
                         }
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, e.localizedMessage ?: "Export failed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "${context.getString(R.string.excel_export_failed)}: ${getLocalizedRepositoryErrorMessage(context, e)}", Toast.LENGTH_SHORT).show()
                 }
             }
         }

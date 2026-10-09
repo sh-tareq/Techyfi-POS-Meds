@@ -87,6 +87,7 @@ import com.example.techyfipos.utils.DueReminderScheduler
 import com.example.techyfipos.utils.convertToMonochromeThresholdBitmap
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.formatTakaBn
+import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 import com.example.techyfipos.utils.generateDueRepaymentJpeg
 import com.example.techyfipos.utils.generateQrBitmap
 import com.example.techyfipos.utils.openPaymentReminder
@@ -183,7 +184,7 @@ fun DuesScreen(
                         }
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, "$duesExportFailedPrefix ${e.localizedMessage.orEmpty()}".trim(), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "$duesExportFailedPrefix ${getLocalizedRepositoryErrorMessage(context, e)}".trim(), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -204,7 +205,7 @@ fun DuesScreen(
                         }
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, "$duesExportFailedPrefix ${e.localizedMessage.orEmpty()}".trim(), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "$duesExportFailedPrefix ${getLocalizedRepositoryErrorMessage(context, e)}".trim(), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -4145,7 +4146,7 @@ fun AddDueDialog(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "DIGITAL KHATA CREDIT",
+                                text = stringResource(R.string.dues_digital_khata_subtitle),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp,
                                 color = Color(0xFFD97706),
@@ -4218,7 +4219,7 @@ fun AddDueDialog(
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text = "CURRENT DUE",
+                                    text = stringResource(R.string.dues_current_due_label),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.outline,
@@ -4245,7 +4246,7 @@ fun AddDueDialog(
                             verticalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
                             Text(
-                                text = "CUSTOMER NAME *",
+                                text = stringResource(R.string.dues_customer_name_label),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.outline,
@@ -4275,7 +4276,7 @@ fun AddDueDialog(
                                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                         if (name.isEmpty()) {
                                             Text(
-                                                text = "e.g. Rahim",
+                                                text = stringResource(R.string.dues_customer_name_hint),
                                                 fontSize = 11.5.sp,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
@@ -4304,7 +4305,7 @@ fun AddDueDialog(
                             verticalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
                             Text(
-                                text = "PHONE NUMBER *",
+                                text = stringResource(R.string.dues_phone_number_label),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.outline,
@@ -4379,7 +4380,7 @@ fun AddDueDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "💰 DUE AMOUNT (${formatMoney(0.0).take(1)}) *",
+                                text = stringResource(R.string.dues_due_amount_header, formatMoney(0.0).take(1)),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFFD97706),
@@ -4502,7 +4503,7 @@ fun AddDueDialog(
                                 modifier = Modifier.weight(0.9f)
                             ) {
                                 Text(
-                                    text = "Clear",
+                                    text = stringResource(R.string.cd_clear),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFFF43F5E),
@@ -4565,7 +4566,7 @@ fun AddDueDialog(
                                     color = MaterialTheme.colorScheme.outline
                                 )
                                 Text(
-                                    text = if (isOverLimit) "Limit Exceeded!" else "${(totalUpdatedDue / limitVal * 100).toInt()}% Used",
+                                    text = if (isOverLimit) stringResource(R.string.dues_limit_exceeded) else stringResource(R.string.dues_limit_pct_used, (totalUpdatedDue / limitVal * 100).toInt()),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isOverLimit) Color(0xFFF43F5E) else if (limitRatio >= 0.8f) Color(0xFFF59E0B) else Color(0xFF10B981)
@@ -4595,7 +4596,7 @@ fun AddDueDialog(
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text(
-                            text = "NOTE / MEMO (OPT)",
+                            text = stringResource(R.string.dues_note_memo_label),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.outline,
@@ -4620,7 +4621,7 @@ fun AddDueDialog(
                                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                     if (note.isEmpty()) {
                                         Text(
-                                            text = "e.g. Memo #104",
+                                            text = stringResource(R.string.dues_memo_hint),
                                             fontSize = 11.5.sp,
                                             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
                                         )
@@ -4647,7 +4648,7 @@ fun AddDueDialog(
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text(
-                            text = "CREDIT LIMIT (${formatMoney(0.0).take(1)})",
+                            text = stringResource(R.string.dues_credit_limit_header, formatMoney(0.0).take(1)),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.outline,

@@ -468,7 +468,7 @@ object DueReminderScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
-        val title = context.getString(R.string.due_reminder_notification_title, customerName, formatTaka(dueAmount))
+        val title = context.getString(R.string.due_reminder_notification_title, customerName, formatTaka(dueAmount, isBangla = false))
         val subtitle = if (channel == "sms") {
             context.getString(R.string.due_reminder_sms_review_body, customerName)
         } else if (channel == "both") {

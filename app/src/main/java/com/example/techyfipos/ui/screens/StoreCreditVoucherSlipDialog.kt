@@ -628,7 +628,7 @@ fun StoreCreditVoucherSlipDialog(
                                         )
                                     } catch (e: Exception) {
                                         android.util.Log.e("StoreCreditVoucher", "Print voucher failed", e)
-                                        Toast.makeText(context, context.getString(R.string.store_credit_print_failed_fmt, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.store_credit_print_failed_fmt, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                                     } finally {
                                         isPrinting = false
                                     }

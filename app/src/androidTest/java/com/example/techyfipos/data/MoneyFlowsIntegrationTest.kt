@@ -2110,4 +2110,82 @@ class MoneyFlowsIntegrationTest {
         assertTrue(confirmCartTitle.isNotBlank())
         assertTrue(confirmLogTitle.isNotBlank())
     }
+
+    @Test
+    fun testD1_L2_appLanguageSingleSourceFormatTakaAndDateFormatters() {
+        try {
+            com.example.techyfipos.utils.setAppLanguage("bn")
+            assertTrue(com.example.techyfipos.utils.isAppBangla())
+            assertEquals("৳১,৫০০", com.example.techyfipos.utils.formatTaka(1500.0))
+            assertEquals("৳১,৫০০", com.example.techyfipos.utils.formatMoney(1500.0))
+            assertEquals("৳1,500", com.example.techyfipos.utils.formatTaka(1500.0, isBangla = false))
+            assertEquals("৳1,500", com.example.techyfipos.utils.formatMoney(1500.0, isBangla = false))
+            assertEquals("bn", com.example.techyfipos.utils.DateFormatters.getAppLocale().language)
+
+            val cal = java.util.Calendar.getInstance().apply {
+                set(2026, java.util.Calendar.SEPTEMBER, 14, 15, 30, 0)
+            }
+            // Export methods enforce Locale.US and Latin digits
+            val exportDate = com.example.techyfipos.utils.DateFormatters.formatExportDate(cal.timeInMillis)
+            assertTrue(exportDate.contains("2026"))
+            assertEquals("2026-09-14", com.example.techyfipos.utils.DateFormatters.formatISO(cal.timeInMillis))
+
+            com.example.techyfipos.utils.setAppLanguage("en")
+            assertTrue(!com.example.techyfipos.utils.isAppBangla())
+            assertEquals("৳1,500", com.example.techyfipos.utils.formatTaka(1500.0))
+            assertEquals("৳1,500", com.example.techyfipos.utils.formatMoney(1500.0))
+            assertEquals("en", com.example.techyfipos.utils.DateFormatters.getAppLocale().language)
+        } finally {
+            com.example.techyfipos.utils.setAppLanguage("en")
+        }
+    }
+
+    @Test
+    fun testL1_repositoryErrorLocalizationAndReportGenerators() {
+        // 1. Verify getLocalizedRepositoryErrorMessage mapping
+        val ownerErr = com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(
+            context,
+            IllegalStateException("Owner privileges required to clear credit limit")
+        )
+        assertEquals(context.getString(com.example.techyfipos.R.string.error_unauthorized_owner), ownerErr)
+
+        val stockErr = com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(
+            context,
+            IllegalStateException("Insufficient stock for item barcode 123")
+        )
+        assertEquals(context.getString(com.example.techyfipos.R.string.error_insufficient_stock), stockErr)
+
+        val voucherErr = com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(
+            context,
+            IllegalStateException("Voucher not found in registry")
+        )
+        assertEquals(context.getString(com.example.techyfipos.R.string.error_voucher_not_found), voucherErr)
+
+        val duesErr = com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(
+            context,
+            IllegalStateException("Cannot delete or archive customer with outstanding dues")
+        )
+        assertEquals(context.getString(com.example.techyfipos.R.string.error_customer_has_dues), duesErr)
+
+        // 2. Verify X and Z report generators in Bangla
+        val dummyReport = com.example.techyfipos.ui.viewmodel.SalesReportData(
+            transactionCount = 3,
+            totalRevenue = 1250.0,
+            totalDiscount = 50.0,
+            grossProfit = 350.0
+        )
+        val xReport = com.example.techyfipos.utils.generateXReportJpeg(context, dummyReport, "Today", isBangla = true)
+        assertTrue("X Report file should exist and have content", xReport.exists() && xReport.length() > 0)
+        xReport.delete()
+
+        val zReport = com.example.techyfipos.utils.generateZReportJpeg(context, dummyReport, "Today", isBangla = true)
+        assertTrue("Z Report file should exist and have content", zReport.exists() && zReport.length() > 0)
+        zReport.delete()
+
+        // 3. Verify newly added string resources exist and are non-empty
+        assertTrue(context.getString(com.example.techyfipos.R.string.return_customer_refund_payout).isNotBlank())
+        assertTrue(context.getString(com.example.techyfipos.R.string.lock_screen_owner_setup_title).isNotBlank())
+        assertTrue(context.getString(com.example.techyfipos.R.string.dues_digital_khata_subtitle).isNotBlank())
+        assertTrue(context.getString(com.example.techyfipos.R.string.register_close_sales_by_method).isNotBlank())
+    }
 }

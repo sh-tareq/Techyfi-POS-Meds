@@ -139,6 +139,7 @@ import com.example.techyfipos.utils.toBanglaDigits
 import com.example.techyfipos.utils.beepAndVibrate
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.formatMoney
+import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 import com.example.techyfipos.utils.formatProductCodeLabelPriceString
 import com.example.techyfipos.utils.ProductCodeLabelSize
 import com.example.techyfipos.utils.ProductCodePriceTier
@@ -324,7 +325,7 @@ fun ProductsScreen(
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("ProductsScreen", "Excel export failed", e)
-                    Toast.makeText(context, context.getString(R.string.products_export_error, e.localizedMessage ?: "Unknown error"), Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.products_export_error, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -2955,7 +2956,7 @@ fun ProductsScreen(
                         batchSelectMode = false
                         showBulkPriceDialog = false
                     } catch (e: Exception) {
-                        Toast.makeText(context, context.getString(R.string.products_bulk_price_failed, e.localizedMessage ?: ""), Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.products_bulk_price_failed, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -2980,7 +2981,7 @@ fun ProductsScreen(
                         batchSelectMode = false
                         showBulkCategoryDialog = false
                     } catch (e: Exception) {
-                        Toast.makeText(context, context.getString(R.string.products_bulk_category_failed, e.localizedMessage ?: ""), Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.products_bulk_category_failed, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -3001,7 +3002,7 @@ fun ProductsScreen(
                         batchSelectMode = false
                         showBulkDeleteDialog = false
                     } catch (e: Exception) {
-                        Toast.makeText(context, context.getString(R.string.products_bulk_delete_failed, e.localizedMessage ?: ""), Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.products_bulk_delete_failed, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_LONG).show()
                     }
                 }
             }

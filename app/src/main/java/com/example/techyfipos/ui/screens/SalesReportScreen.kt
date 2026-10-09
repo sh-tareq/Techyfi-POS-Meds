@@ -42,6 +42,7 @@ import com.example.techyfipos.ui.viewmodel.ExpenseViewModel
 import com.example.techyfipos.ui.viewmodel.SupplierViewModel
 import com.example.techyfipos.data.db.Supplier
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 import com.example.techyfipos.utils.startOfDay
 import com.example.techyfipos.utils.endOfDay
 import com.example.techyfipos.utils.toBanglaDigits
@@ -221,7 +222,7 @@ fun SalesReportScreen(
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("SalesReportScreen", "Excel export failed", e)
-                    Toast.makeText(context, context.getString(R.string.sales_report_export_general_error, e.localizedMessage ?: "Unknown error"), Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.sales_report_export_general_error, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_LONG).show()
                 }
             }
         }

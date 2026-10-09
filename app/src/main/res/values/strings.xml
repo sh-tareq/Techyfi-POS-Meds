@@ -2710,6 +2710,70 @@
     <string name="confirm_delete_customer_note_message">Are you sure you want to delete this note?</string>
     <string name="confirm_delete_reminder_log_title">Delete Reminder Log</string>
     <string name="confirm_delete_reminder_log_message">Are you sure you want to delete this reminder log?</string>
+
+    <!-- L-1 & ReturnDialog / LockScreen / Dues / RegisterClose strings -->
+    <string name="return_reason_damaged_box">Damaged box</string>
+    <string name="return_reason_wrong_size">Wrong size</string>
+    <string name="return_reason_defective_unit">Defective unit</string>
+    <string name="return_reason_changed_mind">Changed mind</string>
+    <string name="return_reason_color_mismatch">Color mismatch</string>
+    <string name="return_select_quantities_header">1. SELECT RETURN QUANTITIES</string>
+    <string name="return_will_restock">Will increment stock count automatically</string>
+    <string name="return_will_not_restock">Will NOT add defective item back into shelf stock</string>
+    <string name="return_active_register">Active Register</string>
+    <string name="return_physical_cash_desc">Physical cash will be handed over to customer from till drawer.</string>
+    <string name="return_customer_wallet">Customer Wallet</string>
+    <string name="return_store_credit_restored">Store Credit Restored</string>
+    <string name="return_excess_store_credit">Excess Store Credit</string>
+    <string name="return_excess_cash_payout">Excess Cash Payout</string>
+    <string name="return_net_store_credit">Net Store Credit</string>
+    <string name="return_net_cash_payout">Net Cash Payout</string>
+    <string name="return_store_credit_refund">Store Credit Refund</string>
+    <string name="return_store_credit_payout">Store Credit Payout</string>
+    <string name="return_customer_refund_payout">Customer Refund Payout</string>
+    <string name="return_due_debt_clearing">Due Debt Clearing</string>
+    <string name="return_store_credit">Store Credit</string>
+    <string name="return_enter_customer_mobile">Enter Customer Mobile</string>
+
+    <string name="lock_screen_owner_setup_title">🔐 Owner Account Setup</string>
+    <string name="lock_screen_confirm_pin_title">🔄 Confirm Security PIN</string>
+    <string name="lock_screen_choose_pin_desc">Choose a 4-digit master PIN</string>
+    <string name="lock_screen_reenter_pin_desc">Re-enter the 4-digit PIN to confirm</string>
+
+    <string name="dues_digital_khata_subtitle">DIGITAL KHATA CREDIT</string>
+    <string name="dues_current_due_label">CURRENT DUE</string>
+    <string name="dues_customer_name_hint">e.g. Rahim</string>
+    <string name="dues_due_amount_header">💰 DUE AMOUNT (%1$s) *</string>
+    <string name="dues_limit_exceeded">Limit Exceeded!</string>
+    <string name="dues_limit_pct_used">%1$d%% Used</string>
+    <string name="dues_note_memo_label">NOTE / MEMO (OPT)</string>
+    <string name="dues_memo_hint">e.g. Memo #104</string>
+    <string name="dues_credit_limit_header">CREDIT LIMIT (%1$s)</string>
+
+    <string name="register_close_sales_by_method">💳 Sales By Payment Method</string>
+    <string name="register_close_shift_clean">Shift Clean / No Transactions</string>
+    <string name="register_close_no_transactions_hint">✨ Active shift has no new transactions. Set float or make a sale to open a new shift.</string>
+    <string name="denom_counter_subtitle">BDT Denomination Counter</string>
+
+    <string name="error_unauthorized_owner">Owner privileges required for this action</string>
+    <string name="error_unauthorized_supervisor">Supervisor privileges required for this action</string>
+    <string name="error_unauthorized_permission">Permission required for this action</string>
+    <string name="error_insufficient_stock">Insufficient stock available</string>
+    <string name="error_voucher_not_found">Voucher not found</string>
+    <string name="error_voucher_expired">Voucher has expired</string>
+    <string name="error_cannot_delete_sale_has_returns">Cannot delete sale because it has active returns</string>
+    <string name="error_customer_has_dues">Cannot delete customer with outstanding dues</string>
+    <string name="error_supplier_has_dues">Cannot delete supplier with active due balance</string>
+    <string name="error_owner_exists">An owner account already exists</string>
+    <string name="error_pin_in_use">PIN already in use by another user</string>
+    <string name="error_cannot_delete_last_owner">The last owner account cannot be deleted</string>
+    <string name="error_cannot_change_role_last_owner">The only owner account cannot be changed to another role</string>
+    <string name="error_cannot_deactivate_last_owner">The only owner account cannot be deactivated</string>
+    <string name="error_product_not_found">Product no longer exists</string>
+    <string name="error_sale_not_found">Sale not found</string>
+    <string name="error_supplier_not_found">Supplier not found</string>
+    <string name="error_duplicate_record">Failed to save: duplicate record conflict</string>
+    <string name="error_generic">An error occurred</string>
 </resources>
 
 

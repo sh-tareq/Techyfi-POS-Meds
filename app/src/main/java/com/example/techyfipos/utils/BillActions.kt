@@ -837,7 +837,7 @@ fun shareStoreCreditVoucherSlip(
         type = "image/jpeg"
         putExtra(Intent.EXTRA_STREAM, uri)
         putExtra(Intent.EXTRA_SUBJECT, "Store Credit Voucher $voucherCode")
-        putExtra(Intent.EXTRA_TEXT, "Store Credit Voucher: $voucherCode\nAmount: ${formatTaka(voucherAmount)}")
+        putExtra(Intent.EXTRA_TEXT, "Store Credit Voucher: $voucherCode\nAmount: ${formatTaka(voucherAmount, isBangla = false)}")
         clipData = ClipData.newUri(context.contentResolver, "Voucher Slip", uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

@@ -60,14 +60,17 @@ class MainActivity : ComponentActivity() {
     setContent {
       val settingsDataStore = remember { SettingsDataStore(applicationContext) }
       val themeMode by settingsDataStore.themeModeFlow.collectAsState(initial = "SYSTEM")
+      val appLanguage by settingsDataStore.languageFlow.collectAsState(initial = "en")
       val isDark = when (themeMode) {
         "LIGHT" -> false
         "DARK" -> true
         else -> isSystemInDarkTheme()
       }
-      TechyfiPOSTheme(darkTheme = isDark) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-          MainNavigation()
+      androidx.compose.runtime.CompositionLocalProvider(com.example.techyfipos.utils.LocalAppLanguage provides appLanguage) {
+        TechyfiPOSTheme(darkTheme = isDark) {
+          Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            MainNavigation()
+          }
         }
       }
     }

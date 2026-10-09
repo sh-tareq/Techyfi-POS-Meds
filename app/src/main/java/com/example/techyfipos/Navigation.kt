@@ -265,6 +265,7 @@ fun LocaleWrapper(language: String, content: @Composable () -> Unit) {
     }
 
     val locals = buildList {
+        add(com.example.techyfipos.utils.LocalAppLanguage provides language)
         add(LocalContext provides localizedContext)
         add(androidx.compose.ui.platform.LocalConfiguration provides config)
         if (registryOwner != null) {
@@ -274,6 +275,10 @@ fun LocaleWrapper(language: String, content: @Composable () -> Unit) {
             add(androidx.activity.compose.LocalActivity provides activity)
         }
     }.toTypedArray()
+
+    androidx.compose.runtime.SideEffect {
+        com.example.techyfipos.utils.setAppLanguage(language)
+    }
 
     CompositionLocalProvider(*locals) {
         content()

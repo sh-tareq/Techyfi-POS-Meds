@@ -331,7 +331,7 @@ fun LockScreen(
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
                             ) {
                                 Text(
-                                    text = if (!awaitingConfirm) "🔐 Owner Account Setup" else "🔄 Confirm Security PIN",
+                                    text = if (!awaitingConfirm) stringResource(R.string.lock_screen_owner_setup_title) else stringResource(R.string.lock_screen_confirm_pin_title),
                                     color = Color(0xFF93C5FD),
                                     fontSize = if (isCompactHeight) 11.sp else 12.sp,
                                     fontWeight = FontWeight.Bold,
@@ -395,7 +395,7 @@ fun LockScreen(
 
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                text = if (!awaitingConfirm) "Choose a 4-digit master PIN" else "Re-enter the 4-digit PIN to confirm",
+                                text = if (!awaitingConfirm) stringResource(R.string.lock_screen_choose_pin_desc) else stringResource(R.string.lock_screen_reenter_pin_desc),
                                 color = Color(0xFF94A3B8),
                                 fontSize = if (isCompactHeight) 11.sp else 12.sp,
                                 fontWeight = FontWeight.Medium

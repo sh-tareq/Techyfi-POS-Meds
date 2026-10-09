@@ -107,6 +107,7 @@ import com.example.techyfipos.utils.copyPdfUriToClipboard
 import com.example.techyfipos.utils.copyImageUriToClipboard
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.formatMoney
+import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 import com.example.techyfipos.utils.isFractionalUnit
 import com.example.techyfipos.utils.generateBillPdf
 import com.example.techyfipos.utils.getBillImageUri
@@ -622,7 +623,7 @@ fun CartScreen(
             ))
         } catch (e: Exception) {
             android.util.Log.e("CartScreen", "Error completing sale", e)
-            Toast.makeText(context, context.getString(R.string.cart_sale_error_toast, e.localizedMessage ?: ""), Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.cart_sale_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_LONG).show()
         } finally {
             cartViewModel.setCompletingSale(false)
         }
@@ -1113,7 +1114,7 @@ fun CartScreen(
                                     Spacer(Modifier.width(6.dp))
                                     val unitCount = cartItems.sumOf { it.quantity }
                                     val rawUnitStr = if (unitCount % 1.0 == 0.0) unitCount.toLong().toString() else String.format(Locale.US, "%.2f", unitCount).trimEnd('0').trimEnd('.')
-                                    val unitCountStr = if (Locale.getDefault().language == "bn") com.example.techyfipos.utils.toBanglaDigits(rawUnitStr) else rawUnitStr
+                                    val unitCountStr = if (com.example.techyfipos.utils.isAppBangla()) com.example.techyfipos.utils.toBanglaDigits(rawUnitStr) else rawUnitStr
                                     val productWordStr = if (cartItems.size == 1) stringResource(R.string.cart_product_singular) else stringResource(R.string.cart_product_plural)
                                     val unitWordStr = if (unitCount == 1.0) stringResource(R.string.cart_unit_singular) else stringResource(R.string.cart_unit_plural)
                                     Text(
@@ -1165,7 +1166,7 @@ fun CartScreen(
                         }
 
                         if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) {
-                            val isBn = Locale.getDefault().language == "bn"
+                            val isBn = com.example.techyfipos.utils.isAppBangla()
                             val totalSavings = saleModeMrpSavings + discountVal
                             val pct = if (mrpSubtotal > 0.0) Math.round((totalSavings / mrpSubtotal) * 100).toInt() else 0
                             val pctStr = if (isBn) com.example.techyfipos.utils.toBanglaDigits(pct.toString()) else "$pct"
@@ -2387,7 +2388,7 @@ fun CartScreen(
                         if (priceMode == PriceMode.DISCOUNTED && saleModeMrpSavings > 0.0) {
                             val totalSavings = saleModeMrpSavings + discountVal
                             val pct = if (mrpSubtotal > 0.0) Math.round((totalSavings / mrpSubtotal) * 100).toInt() else 0
-                            val isBn = Locale.getDefault().language == "bn"
+                            val isBn = com.example.techyfipos.utils.isAppBangla()
                             val pctStr = if (isBn) com.example.techyfipos.utils.toBanglaDigits(pct.toString()) else "$pct"
                             val isItemWise = invoiceSettingsData.showItemWiseMrpDiscount
 
@@ -3362,7 +3363,7 @@ fun CartItemRow(
                             modifier = Modifier.padding(horizontal = 8.dp)
                         ) {
                             val rawDisplayQty = if (item.quantity % 1.0 == 0.0) item.quantity.toLong().toString() else String.format(Locale.US, "%.2f", item.quantity).trimEnd('0').trimEnd('.')
-                            val displayQty = if (Locale.getDefault().language == "bn") com.example.techyfipos.utils.toBanglaDigits(rawDisplayQty) else rawDisplayQty
+                            val displayQty = if (com.example.techyfipos.utils.isAppBangla()) com.example.techyfipos.utils.toBanglaDigits(rawDisplayQty) else rawDisplayQty
                             Text(
                                 text = displayQty,
                                 fontWeight = FontWeight.Bold,

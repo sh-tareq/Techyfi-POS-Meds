@@ -1084,7 +1084,7 @@ fun getBillImageUri(context: Context, file: File): Uri =
 
 fun getBillPdfUri(context: Context, file: File): Uri = getBillImageUri(context, file)
 
-fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: String): File {
+fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: String, isBangla: Boolean = com.example.techyfipos.utils.isAppBangla()): File {
     val width = 576
     val doubleDivider = "=========================================="
     val singleDivider = "------------------------------------------"
@@ -1161,7 +1161,7 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     y += 35f
 
     boldPaint.textSize = 22f
-    canvas.drawText("DAILY CLOSING Z-REPORT", width / 2f, y, boldPaint)
+    canvas.drawText(if (isBangla) "দৈনিক ক্লোজিং (জেড-রিপোর্ট)" else "DAILY CLOSING Z-REPORT", width / 2f, y, boldPaint)
     y += 35f
 
     paint.textSize = 20f
@@ -1171,12 +1171,12 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
 
     // Meta
     paint.textAlign = Paint.Align.LEFT
-    canvas.drawText("Period    : $rangeLabel", 24f, y, paint)
+    canvas.drawText(if (isBangla) "সময়কাল   : $rangeLabel" else "Period    : $rangeLabel", 24f, y, paint)
     y += 30f
-    val generatedDate = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date())
-    canvas.drawText("Generated : $generatedDate", 24f, y, paint)
+    val generatedDate = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US).format(Date())
+    canvas.drawText(if (isBangla) "প্রস্তুত  : $generatedDate" else "Generated : $generatedDate", 24f, y, paint)
     y += 30f
-    canvas.drawText("Invoices  : ${data.transactionCount} | Units Sold: ${data.itemsSold}", 24f, y, paint)
+    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: ${data.itemsSold}" else "Invoices  : ${data.transactionCount} | Units Sold: ${data.itemsSold}", 24f, y, paint)
     y += 35f
 
     canvas.drawText(singleDivider, 24f, y, paint)
@@ -1185,7 +1185,7 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     // Financials
     boldPaint.textAlign = Paint.Align.LEFT
     boldPaint.textSize = 21f
-    canvas.drawText("FINANCIAL SUMMARY", 24f, y, boldPaint)
+    canvas.drawText(if (isBangla) "আর্থিক বিবরণী" else "FINANCIAL SUMMARY", 24f, y, boldPaint)
     y += 32f
 
     paint.textSize = 20f
@@ -1197,18 +1197,18 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         y += 30f
     }
 
-    drawKeyValue("Gross Sales", formatTaka(data.grossSales))
+    drawKeyValue(if (isBangla) "মোট বিক্রয়" else "Gross Sales", formatTaka(data.grossSales, isBangla = isBangla))
     if (data.totalRefunds > 0.0) {
-        drawKeyValue("Returns / Refunds", "-${formatTaka(data.totalRefunds)}")
+        drawKeyValue(if (isBangla) "ফেরত / রিফান্ড" else "Returns / Refunds", "-${formatTaka(data.totalRefunds, isBangla = isBangla)}")
     }
-    drawKeyValue("Net Sales", formatTaka(data.totalRevenue))
+    drawKeyValue(if (isBangla) "নীট বিক্রয়" else "Net Sales", formatTaka(data.totalRevenue, isBangla = isBangla))
     if (data.totalTax > 0.0) {
-        drawKeyValue("Tax (VAT)", formatTaka(data.totalTax))
+        drawKeyValue(if (isBangla) "কর / ভ্যাট" else "Tax (VAT)", formatTaka(data.totalTax, isBangla = isBangla))
     }
-    drawKeyValue("Discounts Given", formatTaka(data.totalDiscount))
-    drawKeyValue("Gross Margin", formatTaka(data.totalProfit))
-    drawKeyValue("Expenses", formatTaka(data.totalExpenses))
-    drawKeyValue("Net Profit", formatTaka(data.netProfit))
+    drawKeyValue(if (isBangla) "প্রদত্ত ছাড়" else "Discounts Given", formatTaka(data.totalDiscount, isBangla = isBangla))
+    drawKeyValue(if (isBangla) "মোট লাভ" else "Gross Margin", formatTaka(data.totalProfit, isBangla = isBangla))
+    drawKeyValue(if (isBangla) "খরচ" else "Expenses", formatTaka(data.totalExpenses, isBangla = isBangla))
+    drawKeyValue(if (isBangla) "নীট লাভ" else "Net Profit", formatTaka(data.netProfit, isBangla = isBangla))
 
     paint.textAlign = Paint.Align.LEFT
     canvas.drawText(singleDivider, 24f, y, paint)
@@ -1216,16 +1216,16 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
 
     // Payments
     boldPaint.textSize = 21f
-    canvas.drawText("PAYMENT BREAKDOWN", 24f, y, boldPaint)
+    canvas.drawText(if (isBangla) "মূল্য পরিশোধ বিবরণী" else "PAYMENT BREAKDOWN", 24f, y, boldPaint)
     y += 32f
 
     if (data.paymentBreakdown.isEmpty()) {
         paint.textAlign = Paint.Align.LEFT
-        canvas.drawText("No payments recorded", 24f, y, paint)
+        canvas.drawText(if (isBangla) "কোনো মূল্য পরিশোধ নেই" else "No payments recorded", 24f, y, paint)
         y += 30f
     } else {
         data.paymentBreakdown.forEach { p ->
-            drawKeyValue("${p.method} (${p.transactionCount})", formatTaka(p.amount))
+            drawKeyValue("${p.method} (${p.transactionCount})", formatTaka(p.amount, isBangla = isBangla))
         }
     }
 
@@ -1236,17 +1236,17 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         y += 35f
 
         boldPaint.textSize = 21f
-        canvas.drawText("CASH RECONCILIATION", 24f, y, boldPaint)
+        canvas.drawText(if (isBangla) "ক্যাশ সমন্বয়" else "CASH RECONCILIATION", 24f, y, boldPaint)
         y += 32f
 
         paint.textSize = 20f
-        drawKeyValue("Starting Float", "+${formatTaka(data.startingFloat)}")
-        drawKeyValue("Cash Sales", "+${formatTaka(data.cashSales)}")
-        if (data.cashIn > 0.0) drawKeyValue("Cash-In", "+${formatTaka(data.cashIn)}")
-        if (data.dueCashCollected > 0.0) drawKeyValue("Due Collections", "+${formatTaka(data.dueCashCollected)}")
-        if (data.cashRefunds > 0.0) drawKeyValue("Cash Refunds", "-${formatTaka(data.cashRefunds)}")
-        if (data.cashOut > 0.0) drawKeyValue("Cash-Out (Expenses)", "-${formatTaka(data.cashOut)}")
-        if (data.supplierCashPaid > 0.0) drawKeyValue("Supplier Cash Paid", "-${formatTaka(data.supplierCashPaid)}")
+        drawKeyValue(if (isBangla) "শুরুর ক্যাশ ফ্লোট" else "Starting Float", "+${formatTaka(data.startingFloat, isBangla = isBangla)}")
+        drawKeyValue(if (isBangla) "ক্যাশ বিক্রয়" else "Cash Sales", "+${formatTaka(data.cashSales, isBangla = isBangla)}")
+        if (data.cashIn > 0.0) drawKeyValue(if (isBangla) "ক্যাশ-ইন" else "Cash-In", "+${formatTaka(data.cashIn, isBangla = isBangla)}")
+        if (data.dueCashCollected > 0.0) drawKeyValue(if (isBangla) "বকেয়া আদায়" else "Due Collections", "+${formatTaka(data.dueCashCollected, isBangla = isBangla)}")
+        if (data.cashRefunds > 0.0) drawKeyValue(if (isBangla) "ক্যাশ রিফান্ড" else "Cash Refunds", "-${formatTaka(data.cashRefunds, isBangla = isBangla)}")
+        if (data.cashOut > 0.0) drawKeyValue(if (isBangla) "ক্যাশ-আউট (খরচ)" else "Cash-Out (Expenses)", "-${formatTaka(data.cashOut, isBangla = isBangla)}")
+        if (data.supplierCashPaid > 0.0) drawKeyValue(if (isBangla) "সাপ্লায়ার ক্যাশ প্রদান" else "Supplier Cash Paid", "-${formatTaka(data.supplierCashPaid, isBangla = isBangla)}")
 
         paint.textAlign = Paint.Align.LEFT
         canvas.drawText(singleDivider, 24f, y, paint)
@@ -1254,9 +1254,9 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
 
         boldPaint.textSize = 20f
         paint.textAlign = Paint.Align.LEFT
-        canvas.drawText("Expected Cash in Till", 24f, y, boldPaint)
+        canvas.drawText(if (isBangla) "ক্যাশ ড্রয়ারে প্রত্যাশিত টাকা" else "Expected Cash in Till", 24f, y, boldPaint)
         paint.textAlign = Paint.Align.RIGHT
-        canvas.drawText(formatTaka(data.expectedCash), width - 24f, y, boldPaint)
+        canvas.drawText(formatTaka(data.expectedCash, isBangla = isBangla), width - 24f, y, boldPaint)
         y += 32f
     }
 
@@ -1267,13 +1267,13 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         y += 35f
 
         boldPaint.textSize = 21f
-        canvas.drawText("TOP SELLING PRODUCTS", 24f, y, boldPaint)
+        canvas.drawText(if (isBangla) "শীর্ষ বিক্রিত পণ্যসমূহ" else "TOP SELLING PRODUCTS", 24f, y, boldPaint)
         y += 32f
 
         data.topProducts.take(8).forEach { prod ->
             val name = if (prod.name.length > 20) prod.name.take(18) + ".." else prod.name
             val qStr = if (prod.quantity % 1.0 == 0.0) prod.quantity.toLong().toString() else String.format(Locale.US, "%.2f", prod.quantity).trimEnd('0').trimEnd('.')
-            drawKeyValue("${qStr}x $name", formatTaka(prod.revenue))
+            drawKeyValue("${qStr}x $name", formatTaka(prod.revenue, isBangla = isBangla))
         }
     }
 
@@ -1283,7 +1283,7 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
 
     boldPaint.textAlign = Paint.Align.CENTER
     boldPaint.textSize = 20f
-    canvas.drawText("*** END OF Z-REPORT ***", width / 2f, y, boldPaint)
+    canvas.drawText(if (isBangla) "*** জেড-রিপোর্ট সমাপ্ত ***" else "*** END OF Z-REPORT ***", width / 2f, y, boldPaint)
     y += 30f
 
     paint.textAlign = Paint.Align.CENTER
@@ -1299,8 +1299,13 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     return file
 }
 
-fun generateZReportPdf(context: Context, data: SalesReportData, rangeLabel: String): File {
-    val imageFile = generateZReportJpeg(context, data, rangeLabel)
+fun generateZReportPdf(
+    context: Context,
+    data: SalesReportData,
+    rangeLabel: String,
+    isBangla: Boolean = com.example.techyfipos.utils.isAppBangla()
+): File {
+    val imageFile = generateZReportJpeg(context, data, rangeLabel, isBangla = isBangla)
     val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
         ?: throw IllegalStateException("Unable to render Z-Report image for PDF")
     val pageWidthPoints = (80f / 25.4f * 72f).toInt().coerceAtLeast(1)
@@ -1329,7 +1334,12 @@ fun generateZReportPdf(context: Context, data: SalesReportData, rangeLabel: Stri
     return outputFile
 }
 
-fun generateXReportJpeg(context: Context, data: SalesReportData, rangeLabel: String): File {
+fun generateXReportJpeg(
+    context: Context,
+    data: SalesReportData,
+    rangeLabel: String,
+    isBangla: Boolean = com.example.techyfipos.utils.isAppBangla()
+): File {
     val width = 576
     val doubleDivider = "=========================================="
     val singleDivider = "------------------------------------------"
@@ -1384,7 +1394,7 @@ fun generateXReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     y += 35f
 
     boldPaint.textSize = 22f
-    canvas.drawText("MID-SHIFT X-REPORT (INTERIM)", width / 2f, y, boldPaint)
+    canvas.drawText(if (isBangla) "মিড-শিফট এক্স-রিপোর্ট (সাময়িক)" else "MID-SHIFT X-REPORT (INTERIM)", width / 2f, y, boldPaint)
     y += 35f
 
     paint.textSize = 20f
@@ -1393,12 +1403,12 @@ fun generateXReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     y += 35f
 
     paint.textAlign = Paint.Align.LEFT
-    canvas.drawText("Period    : $rangeLabel", 24f, y, paint)
+    canvas.drawText(if (isBangla) "সময়কাল   : $rangeLabel" else "Period    : $rangeLabel", 24f, y, paint)
     y += 30f
-    val generatedDate = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date())
-    canvas.drawText("Generated : $generatedDate", 24f, y, paint)
+    val generatedDate = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US).format(Date())
+    canvas.drawText(if (isBangla) "প্রস্তুত  : $generatedDate" else "Generated : $generatedDate", 24f, y, paint)
     y += 30f
-    canvas.drawText("Invoices  : ${data.transactionCount} | Units Sold: ${data.itemsSold}", 24f, y, paint)
+    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: ${data.itemsSold}" else "Invoices  : ${data.transactionCount} | Units Sold: ${data.itemsSold}", 24f, y, paint)
     y += 35f
 
     canvas.drawText(singleDivider, 24f, y, paint)
@@ -1406,7 +1416,7 @@ fun generateXReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
 
     boldPaint.textAlign = Paint.Align.LEFT
     boldPaint.textSize = 21f
-    canvas.drawText("CURRENT TILL SUMMARY (INTERIM)", 24f, y, boldPaint)
+    canvas.drawText(if (isBangla) "বর্তমান ক্যাশ সামারি (সাময়িক)" else "CURRENT TILL SUMMARY (INTERIM)", 24f, y, boldPaint)
     y += 32f
 
     paint.textSize = 20f
@@ -1418,34 +1428,34 @@ fun generateXReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         y += 30f
     }
 
-    drawKeyValue("Gross Sales", formatTaka(data.grossSales))
+    drawKeyValue(if (isBangla) "মোট বিক্রয়" else "Gross Sales", formatTaka(data.grossSales, isBangla = isBangla))
     if (data.totalRefunds > 0.0) {
-        drawKeyValue("Returns / Refunds", "-${formatTaka(data.totalRefunds)}")
+        drawKeyValue(if (isBangla) "ফেরত / রিফান্ড" else "Returns / Refunds", "-${formatTaka(data.totalRefunds, isBangla = isBangla)}")
     }
-    drawKeyValue("Net Sales", formatTaka(data.totalRevenue))
+    drawKeyValue(if (isBangla) "নীট বিক্রয়" else "Net Sales", formatTaka(data.totalRevenue, isBangla = isBangla))
     if (data.totalTax > 0.0) {
-        drawKeyValue("Tax (VAT)", formatTaka(data.totalTax))
+        drawKeyValue(if (isBangla) "কর / ভ্যাট" else "Tax (VAT)", formatTaka(data.totalTax, isBangla = isBangla))
     }
-    drawKeyValue("Discounts Given", formatTaka(data.totalDiscount))
-    drawKeyValue("Gross Margin", formatTaka(data.totalProfit))
-    drawKeyValue("Expenses", formatTaka(data.totalExpenses))
-    drawKeyValue("Net Profit", formatTaka(data.netProfit))
+    drawKeyValue(if (isBangla) "প্রদত্ত ছাড়" else "Discounts Given", formatTaka(data.totalDiscount, isBangla = isBangla))
+    drawKeyValue(if (isBangla) "মোট লাভ" else "Gross Margin", formatTaka(data.totalProfit, isBangla = isBangla))
+    drawKeyValue(if (isBangla) "খরচ" else "Expenses", formatTaka(data.totalExpenses, isBangla = isBangla))
+    drawKeyValue(if (isBangla) "নীট লাভ" else "Net Profit", formatTaka(data.netProfit, isBangla = isBangla))
 
     paint.textAlign = Paint.Align.LEFT
     canvas.drawText(singleDivider, 24f, y, paint)
     y += 35f
 
     boldPaint.textSize = 21f
-    canvas.drawText("PAYMENT BREAKDOWN", 24f, y, boldPaint)
+    canvas.drawText(if (isBangla) "মূল্য পরিশোধ বিবরণী" else "PAYMENT BREAKDOWN", 24f, y, boldPaint)
     y += 32f
 
     if (data.paymentBreakdown.isEmpty()) {
         paint.textAlign = Paint.Align.LEFT
-        canvas.drawText("No payments recorded", 24f, y, paint)
+        canvas.drawText(if (isBangla) "কোনো মূল্য পরিশোধ নেই" else "No payments recorded", 24f, y, paint)
         y += 30f
     } else {
         data.paymentBreakdown.forEach { p ->
-            drawKeyValue("${p.method} (${p.transactionCount})", formatTaka(p.amount))
+            drawKeyValue("${p.method} (${p.transactionCount})", formatTaka(p.amount, isBangla = isBangla))
         }
     }
 
@@ -1455,13 +1465,13 @@ fun generateXReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         y += 35f
 
         boldPaint.textSize = 21f
-        canvas.drawText("TOP SELLING PRODUCTS", 24f, y, boldPaint)
+        canvas.drawText(if (isBangla) "শীর্ষ বিক্রিত পণ্যসমূহ" else "TOP SELLING PRODUCTS", 24f, y, boldPaint)
         y += 32f
 
         data.topProducts.take(8).forEach { prod ->
             val name = if (prod.name.length > 20) prod.name.take(18) + ".." else prod.name
             val qStr = if (prod.quantity % 1.0 == 0.0) prod.quantity.toLong().toString() else String.format(Locale.US, "%.2f", prod.quantity).trimEnd('0').trimEnd('.')
-            drawKeyValue("${qStr}x $name", formatTaka(prod.revenue))
+            drawKeyValue("${qStr}x $name", formatTaka(prod.revenue, isBangla = isBangla))
         }
     }
 
@@ -1471,7 +1481,7 @@ fun generateXReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
 
     boldPaint.textAlign = Paint.Align.CENTER
     boldPaint.textSize = 20f
-    canvas.drawText("*** INTERIM READING (DOES NOT CLOSE DAY) ***", width / 2f, y, boldPaint)
+    canvas.drawText(if (isBangla) "*** সাময়িক রিডিং (দিন বন্ধ হবে না) ***" else "*** INTERIM READING (DOES NOT CLOSE DAY) ***", width / 2f, y, boldPaint)
     y += 30f
 
     paint.textAlign = Paint.Align.CENTER
@@ -1487,8 +1497,13 @@ fun generateXReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     return file
 }
 
-fun generateXReportPdf(context: Context, data: SalesReportData, rangeLabel: String): File {
-    val imageFile = generateXReportJpeg(context, data, rangeLabel)
+fun generateXReportPdf(
+    context: Context,
+    data: SalesReportData,
+    rangeLabel: String,
+    isBangla: Boolean = com.example.techyfipos.utils.isAppBangla()
+): File {
+    val imageFile = generateXReportJpeg(context, data, rangeLabel, isBangla = isBangla)
     val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
         ?: throw IllegalStateException("Unable to render X-Report image for PDF")
     val pageWidthPoints = (80f / 25.4f * 72f).toInt().coerceAtLeast(1)

@@ -2712,4 +2712,68 @@
     <string name="confirm_delete_customer_note_message">আপনি কি নিশ্চিতভাবে এই নোটটি মুছে ফেলতে চান?</string>
     <string name="confirm_delete_reminder_log_title">রিমাইন্ডার লগ মুছুন</string>
     <string name="confirm_delete_reminder_log_message">আপনি কি নিশ্চিতভাবে এই রিমাইন্ডার লগটি মুছে ফেলতে চান?</string>
+
+    <!-- L-1 & ReturnDialog / LockScreen / Dues / RegisterClose strings -->
+    <string name="return_reason_damaged_box">ক্ষতিগ্রস্ত বক্স</string>
+    <string name="return_reason_wrong_size">ভুল সাইজ</string>
+    <string name="return_reason_defective_unit">ত্রুটিযুক্ত পণ্য</string>
+    <string name="return_reason_changed_mind">পছন্দ পরিবর্তন</string>
+    <string name="return_reason_color_mismatch">ভুল কালার</string>
+    <string name="return_select_quantities_header">১. ফেরত পণ্যের পরিমাণ নির্ধারণ</string>
+    <string name="return_will_restock">স্বয়ংক্রিয়ভাবে স্টকের পরিমাণ বৃদ্ধি পাবে</string>
+    <string name="return_will_not_restock">ত্রুটিযুক্ত পণ্য স্টকে ফেরত যোগ হবে না</string>
+    <string name="return_active_register">সক্রিয় ক্যাশ রেজিস্টার</string>
+    <string name="return_physical_cash_desc">ক্যাশ ড্রয়ার থেকে গ্রাহককে নগদ টাকা প্রদান করা হবে।</string>
+    <string name="return_customer_wallet">কাস্টমার ওয়ালেট</string>
+    <string name="return_store_credit_restored">স্টোর ক্রেডিট ফেরত দেওয়া হয়েছে</string>
+    <string name="return_excess_store_credit">অতিরিক্ত স্টোর ক্রেডিট</string>
+    <string name="return_excess_cash_payout">অতিরিক্ত নগদ পরিশোধ</string>
+    <string name="return_net_store_credit">নিট স্টোর ক্রেডিট</string>
+    <string name="return_net_cash_payout">নিট নগদ পরিশোধ</string>
+    <string name="return_store_credit_refund">স্টোর ক্রেডিট রিফান্ড</string>
+    <string name="return_store_credit_payout">স্টোর ক্রেডিট পরিশোধ</string>
+    <string name="return_customer_refund_payout">কাস্টমার রিফান্ড পরিশোধ</string>
+    <string name="return_due_debt_clearing">বকেয়া ঋণ সমন্বয়</string>
+    <string name="return_store_credit">স্টোর ক্রেডিট</string>
+    <string name="return_enter_customer_mobile">গ্রাহকের মোবাইল নম্বর দিন</string>
+
+    <string name="lock_screen_owner_setup_title">🔐 মালিক অ্যাকাউন্ট সেটআপ</string>
+    <string name="lock_screen_confirm_pin_title">🔄 সিকিউরিটি পিন নিশ্চিত করুন</string>
+    <string name="lock_screen_choose_pin_desc">একটি ৪-সংখ্যার মাস্টার পিন নির্বাচন করুন</string>
+    <string name="lock_screen_reenter_pin_desc">নিশ্চিত করতে পুনরায় ৪-সংখ্যার পিন দিন</string>
+
+    <string name="dues_digital_khata_subtitle">ডিজিটাল খাতা ক্রেডিট</string>
+    <string name="dues_current_due_label">বর্তমান বকেয়া</string>
+    <string name="dues_customer_name_hint">যেমনঃ রহিম</string>
+    <string name="dues_due_amount_header">💰 বকেয়া টাকার পরিমাণ (%1$s) *</string>
+    <string name="dues_limit_exceeded">লিমিট অতিক্রম করেছে!</string>
+    <string name="dues_limit_pct_used">%1$d%% ব্যবহৃত</string>
+    <string name="dues_note_memo_label">নোট / মেমো (ঐচ্ছিক)</string>
+    <string name="dues_memo_hint">যেমনঃ মেমো #১০৪</string>
+    <string name="dues_credit_limit_header">ক্রেডিট লিমিট (%1$s)</string>
+
+    <string name="register_close_sales_by_method">💳 মাধ্যম অনুযায়ী বিক্রয়</string>
+    <string name="register_close_shift_clean">শিফট খালি / কোনো লেনদেন হয়নি</string>
+    <string name="register_close_no_transactions_hint">✨ বর্তমান শিফটে কোনো লেনদেন নেই। শুরু করতে ক্যাশ ফ্লোট যোগ করুন বা বিক্রি করুন।</string>
+    <string name="denom_counter_subtitle">নোট ও টাকার গণনা</string>
+
+    <string name="error_unauthorized_owner">এই কাজের জন্য মালিকের অনুমতি প্রয়োজন</string>
+    <string name="error_unauthorized_supervisor">এই কাজের জন্য সুপারভাইজার বা মালিকের অনুমতি প্রয়োজন</string>
+    <string name="error_unauthorized_permission">এই কাজের জন্য নির্দিষ্ট অনুমতি প্রয়োজন</string>
+    <string name="error_insufficient_stock">পণ্যের পর্যাপ্ত স্টক নেই</string>
+    <string name="error_voucher_not_found">ভাউচার পাওয়া যায়নি</string>
+    <string name="error_voucher_expired">ভাউচারের মেয়াদ উত্তীর্ণ হয়েছে</string>
+    <string name="error_cannot_delete_sale_has_returns">এই বিক্রয়ে সক্রিয় ফেরত থাকায় এটি মুছে ফেলা যাবে না</string>
+    <string name="error_customer_has_dues">বকেয়া থাকা অবস্থায় গ্রাহক মুছে ফেলা যাবে না</string>
+    <string name="error_supplier_has_dues">বকেয়া থাকা অবস্থায় সাপ্লায়ার মুছে ফেলা যাবে না</string>
+    <string name="error_owner_exists">ইতিমধ্যে একজন মালিকের অ্যাকাউন্ট রয়েছে</string>
+    <string name="error_pin_in_use">এই পিনটি ইতিমধ্যে অন্য ব্যবহারকারীর অধীনে রয়েছে</string>
+    <string name="error_cannot_delete_last_owner">সর্বশেষ মালিকের অ্যাকাউন্ট মুছে ফেলা যাবে না</string>
+    <string name="error_cannot_change_role_last_owner">একমাত্র মালিকের অ্যাকাউন্টের ভূমিকা পরিবর্তন করা যাবে না</string>
+    <string name="error_cannot_deactivate_last_owner">একমাত্র মালিকের অ্যাকাউন্ট নিষ্ক্রিয় করা যাবে না</string>
+    <string name="error_product_not_found">পণ্যটি আর খুঁজে পাওয়া যায়নি</string>
+    <string name="error_sale_not_found">বিক্রয় রেকর্ডটি পাওয়া যায়নি</string>
+    <string name="error_supplier_not_found">সাপ্লায়ার পাওয়া যায়নি</string>
+    <string name="error_duplicate_record">সংরক্ষণ করা যায়নি: ডুপ্লিকেট তথ্যের দ্বন্দ্ব</string>
+    <string name="error_generic">একটি সমস্যা দেখা দিয়েছে</string>
 </resources>

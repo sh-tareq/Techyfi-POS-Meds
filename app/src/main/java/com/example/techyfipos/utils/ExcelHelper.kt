@@ -450,7 +450,7 @@ object ExcelHelper {
                 sheet.setColumnWidth(i, 20 * 256)
             }
 
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
             var rowIdx = 1
             var totalSalesSum = 0.0
             var totalProfitSum = 0.0
@@ -581,7 +581,7 @@ object ExcelHelper {
     ) {
         val workbook = SXSSFWorkbook(100)
         try {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
 
         val headerFont = workbook.createFont().apply {
             bold = true
@@ -808,7 +808,7 @@ object ExcelHelper {
             val name = s.customerName ?: (custNameMap[s.customerPhone ?: ""] ?: (s.customerPhone ?: "Walk-in"))
 
             row.createCell(0).setCellValue((index + 1).toDouble())
-            row.createCell(1).setCellValue(String.format("#INV-%05d", s.id))
+            row.createCell(1).setCellValue(String.format(Locale.US, "#INV-%05d", s.id))
             row.createCell(2).setCellValue(dateFormat.format(Date(s.timestamp)))
             row.createCell(3).setCellValue(name)
             row.createCell(4).setCellValue(s.customerPhone ?: "")
@@ -928,7 +928,7 @@ object ExcelHelper {
     ) {
         val workbook = SXSSFWorkbook(100)
         try {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
 
         val titleFont = workbook.createFont().apply {
             bold = true
@@ -1045,7 +1045,7 @@ object ExcelHelper {
             for (s in custSales.sortedByDescending { it.timestamp }) {
                 val r = sheet.createRow(rowIdx++)
                 val due = if (s.paymentMethod.equals("Due", ignoreCase = true)) s.grandTotal else (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
-                r.createCell(0).setCellValue(String.format("#INV-%05d", s.id))
+                r.createCell(0).setCellValue(String.format(Locale.US, "#INV-%05d", s.id))
                 r.createCell(1).setCellValue(dateFormat.format(Date(s.timestamp)))
                 val cG = r.createCell(2); cG.setCellValue(s.grandTotal); cG.cellStyle = currencyStyle
                 val cP = r.createCell(3); cP.setCellValue(s.amountPaid); cP.cellStyle = currencyStyle
@@ -1104,7 +1104,7 @@ object ExcelHelper {
         val workbook = SXSSFWorkbook(100)
         try {
             val sheet = workbook.createSheet("Customers Directory")
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
 
         val headerFont = workbook.createFont().apply {
             bold = true
@@ -1196,7 +1196,7 @@ object ExcelHelper {
         val workbook = SXSSFWorkbook(100)
         try {
             val sheet = workbook.createSheet("Suppliers Directory")
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
 
             val headerFont = workbook.createFont().apply {
                 bold = true
@@ -1277,7 +1277,7 @@ object ExcelHelper {
         val workbook = SXSSFWorkbook(100)
         try {
             val sheet = workbook.createSheet("Expenses & Cash In")
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
 
         val headerFont = workbook.createFont().apply {
             bold = true
@@ -1461,7 +1461,7 @@ object ExcelHelper {
                 cell.cellStyle = headerStyle
                 dailySheet.setColumnWidth(i, 20 * 256)
             }
-            val dFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+            val dFormat = SimpleDateFormat("dd MMM yyyy", Locale.US)
             var dRowIdx = 1
             for (d in report.dailyBreakdown) {
                 val r = dailySheet.createRow(dRowIdx++)

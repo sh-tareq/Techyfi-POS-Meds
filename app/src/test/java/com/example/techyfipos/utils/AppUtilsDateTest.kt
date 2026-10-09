@@ -54,15 +54,32 @@ class AppUtilsDateTest {
     }
 
     @Test
-    fun testD2_banglaDueReceiptFormatsDateWithBengaliLocale() {
-        val cal = Calendar.getInstance().apply {
-            set(2026, Calendar.SEPTEMBER, 14, 15, 30, 0)
-        }
-        val bnFormatted = DateFormatters.formatLongDateTime(cal.timeInMillis, java.util.Locale.forLanguageTag("bn-BD"))
-        val enFormatted = DateFormatters.formatLongDateTime(cal.timeInMillis, java.util.Locale.US)
+    fun testD1_L2_appLanguageSingleSourceFormatTakaAndDateFormatters() {
+        try {
+            setAppLanguage("bn")
+            assertTrue(isAppBangla())
+            assertEquals("৳১,৫০০", formatTaka(1500.0))
+            assertEquals("৳১,৫০০", formatMoney(1500.0))
+            assertEquals("৳1,500", formatTaka(1500.0, isBangla = false))
+            assertEquals("৳1,500", formatMoney(1500.0, isBangla = false))
+            assertEquals("bn", DateFormatters.getAppLocale().language)
 
-        assertTrue(enFormatted.contains("September"))
-        // Bengali locale must not contain English month name "September"
-        assertTrue(!bnFormatted.contains("September"))
+            val cal = Calendar.getInstance().apply {
+                set(2026, Calendar.SEPTEMBER, 14, 15, 30, 0)
+            }
+            // Export date must always use Locale.US even when app is in Bangla
+            val exportDate = DateFormatters.formatExportDate(cal.timeInMillis)
+            assertTrue(exportDate.contains("2026"))
+            assertEquals("2026-09-14", DateFormatters.formatISO(cal.timeInMillis))
+
+            setAppLanguage("en")
+            assertTrue(!isAppBangla())
+            assertEquals("৳1,500", formatTaka(1500.0))
+            assertEquals("৳1,500", formatMoney(1500.0))
+            assertEquals("en", DateFormatters.getAppLocale().language)
+        } finally {
+            setAppLanguage("en")
+        }
     }
 }
+

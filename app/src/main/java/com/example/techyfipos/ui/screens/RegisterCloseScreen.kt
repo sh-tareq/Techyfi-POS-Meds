@@ -77,6 +77,7 @@ import com.example.techyfipos.ui.viewmodel.cashRefundAmount
 import com.example.techyfipos.ui.viewmodel.splitCashAndDigitalAmounts
 import com.example.techyfipos.utils.findActivity
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 import com.example.techyfipos.utils.generateXReportJpeg
 import com.example.techyfipos.utils.generateXReportPdf
 import com.example.techyfipos.utils.generateZReportJpeg
@@ -765,7 +766,7 @@ fun RegisterCloseScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "💳 Sales By Payment Method",
+                                text = stringResource(R.string.register_close_sales_by_method),
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -937,7 +938,7 @@ fun RegisterCloseScreen(
                         Text("🔒", fontSize = 16.sp)
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = if (canCloseRegister) stringResource(R.string.day_close_end_shift_btn) else "Shift Clean / No Transactions",
+                            text = if (canCloseRegister) stringResource(R.string.day_close_end_shift_btn) else stringResource(R.string.register_close_shift_clean),
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 13.5.sp,
                             color = if (canCloseRegister) Color.White else Color.LightGray
@@ -946,7 +947,7 @@ fun RegisterCloseScreen(
                     if (!canCloseRegister) {
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "✨ Active shift has no new transactions. Set float or make a sale to open a new shift.",
+                            text = stringResource(R.string.register_close_no_transactions_hint),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.outline,
                             modifier = Modifier
@@ -1150,7 +1151,7 @@ fun RegisterCloseScreen(
                     val jpegFile = generateXReportJpeg(context, r, rangeLabel)
                     printBillJpeg(context, jpegFile, "X-Report - $rangeLabel")
                 } catch (e: Exception) {
-                    Toast.makeText(context, context.getString(R.string.toast_print_error_fmt, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.toast_print_error_fmt, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                 }
             },
             onSave = {
@@ -1163,7 +1164,7 @@ fun RegisterCloseScreen(
                         Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                 }
             },
             onShare = {
@@ -1196,7 +1197,7 @@ fun RegisterCloseScreen(
                     val jpegFile = generateZReportJpeg(context, r, rangeLabel)
                     printBillJpeg(context, jpegFile, "Z-Report - $rangeLabel")
                 } catch (e: Exception) {
-                    Toast.makeText(context, context.getString(R.string.z_report_print_error_toast, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.z_report_print_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                 }
             },
             onSave = {
@@ -1209,7 +1210,7 @@ fun RegisterCloseScreen(
                         Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                 }
             },
             onShare = {
@@ -1334,7 +1335,7 @@ fun DenominationCounterDialog(
                                 maxLines = 1
                             )
                             Text(
-                                text = "BDT Denomination Counter",
+                                text = stringResource(R.string.denom_counter_subtitle),
                                 fontSize = 10.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -2644,9 +2645,10 @@ fun ZReportDialog(
     onSave: () -> Unit,
     onShare: () -> Unit
 ) {
-    val reportTitle = if (isInterimX) "Mid-Shift X-Report (Interim)" else "Daily Closing Z-Report"
-    val reportHeader = if (isInterimX) "TECHYFI POS - MID-SHIFT READING (X-REPORT)\n(INTERIM TOTALS - NO SHIFT RESET)" else "TECHYFI POS - DAILY CLOSING (Z-REPORT)"
-    val reportFooter = if (isInterimX) "*** END OF X-REPORT (INTERIM) ***" else "*** END OF Z-REPORT (AUDIT FINAL) ***"
+    val isBn = com.example.techyfipos.utils.isAppBangla()
+    val reportTitle = if (isBn) (if (isInterimX) "মিড-শিফট এক্স-রিপোর্ট" else "দৈনিক সমাপনী জেড-রিপোর্ট") else (if (isInterimX) "Mid-Shift X-Report (Interim)" else "Daily Closing Z-Report")
+    val reportHeader = if (isBn) (if (isInterimX) "টেকিফাই পিওএস - মিড-শিফট রিডিং (এক্স-রিপোর্ট)\n(অন্তর্বর্তী হিসাব - শিফট চালু থাকবে)" else "টেকিফাই পিওএস - দৈনিক ক্লোজিং (জেড-রিপোর্ট)") else (if (isInterimX) "TECHYFI POS - MID-SHIFT READING (X-REPORT)\n(INTERIM TOTALS - NO SHIFT RESET)" else "TECHYFI POS - DAILY CLOSING (Z-REPORT)")
+    val reportFooter = if (isBn) (if (isInterimX) "*** এক্স-রিপোর্ট সমাপ্ত ***" else "*** জেড-রিপোর্ট সমাপ্ত (চূড়ান্ত নিরীক্ষা) ***") else (if (isInterimX) "*** END OF X-REPORT (INTERIM) ***" else "*** END OF Z-REPORT (AUDIT FINAL) ***")
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -2716,35 +2718,49 @@ fun ZReportDialog(
                         val taxVatLabel = stringResource(R.string.tax_vat)
                         val cashReconHeader = stringResource(R.string.cash_reconciliation)
                         val expectedCashLabel = stringResource(R.string.expected_cash_till)
+                        val grossSalesLabel = if (isBn) "মোট বিক্রয়" else "Gross Sales"
+                        val grossMarginLabel = if (isBn) "মোট লাভ" else "Gross Margin"
+                        val discountsLabel = if (isBn) "প্রদত্ত ছাড়" else "Discounts Given"
+                        val expensesLabel = if (isBn) "খরচ" else "Expenses"
+                        val netProfitLabel = if (isBn) "নীট লাভ (আনুমানিক)" else "Net Profit (est)"
+                        val paymentsHeader = if (isBn) "মূল্য পরিশোধ:" else "PAYMENTS:"
+                        val startFloatLabel = if (isBn) "শুরুর ক্যাশ ফ্লোট" else "Starting Float"
+                        val cashSalesLabel = if (isBn) "ক্যাশ বিক্রয়" else "Cash Sales"
+                        val cashInLabel = if (isBn) "ক্যাশ-ইন" else "Cash-In"
+                        val dueCollLabel = if (isBn) "বকেয়া আদায়" else "Due Collections"
+                        val cashRefundLabel = if (isBn) "ক্যাশ রিফান্ড" else "Cash Refunds"
+                        val cashOutLabel = if (isBn) "ক্যাশ-আউট (খরচ)" else "Cash-Out (Expenses)"
+                        val suppCashLabel = if (isBn) "সাপ্লায়ার ক্যাশ প্রদান" else "Supplier Cash Paid"
 
                         val cashReconSection = if (data.hasCashReconciliation) {
                             "\n--------------------------------\n" +
                             "$cashReconHeader:\n" +
-                            "- Starting Float:      +${formatTaka(data.startingFloat)}\n" +
-                            "- Cash Sales:          +${formatTaka(data.cashSales)}\n" +
-                            (if (data.cashIn > 0.0) "- Cash-In:             +${formatTaka(data.cashIn)}\n" else "") +
-                            (if (data.dueCashCollected > 0.0) "- Due Collections:     +${formatTaka(data.dueCashCollected)}\n" else "") +
-                            (if (data.cashRefunds > 0.0) "- Cash Refunds:        -${formatTaka(data.cashRefunds)}\n" else "") +
-                            (if (data.cashOut > 0.0) "- Cash-Out (Expenses): -${formatTaka(data.cashOut)}\n" else "") +
-                            (if (data.supplierCashPaid > 0.0) "- Supplier Cash Paid:  -${formatTaka(data.supplierCashPaid)}\n" else "") +
+                            "- $startFloatLabel:      +${formatTaka(data.startingFloat)}\n" +
+                            "- $cashSalesLabel:          +${formatTaka(data.cashSales)}\n" +
+                            (if (data.cashIn > 0.0) "- $cashInLabel:             +${formatTaka(data.cashIn)}\n" else "") +
+                            (if (data.dueCashCollected > 0.0) "- $dueCollLabel:     +${formatTaka(data.dueCashCollected)}\n" else "") +
+                            (if (data.cashRefunds > 0.0) "- $cashRefundLabel:        -${formatTaka(data.cashRefunds)}\n" else "") +
+                            (if (data.cashOut > 0.0) "- $cashOutLabel: -${formatTaka(data.cashOut)}\n" else "") +
+                            (if (data.supplierCashPaid > 0.0) "- $suppCashLabel:  -${formatTaka(data.supplierCashPaid)}\n" else "") +
                             "--------------------------------\n" +
                             "$expectedCashLabel: ${formatTaka(data.expectedCash)}"
                         } else ""
 
+                        val invoicesUnitsLabel = if (isBn) "চালান: ${data.transactionCount} | পণ্য বিক্রয়: ${data.itemsSold}" else "Invoices: ${data.transactionCount} | Units: ${data.itemsSold}"
                         Text(
                             text = stringResource(R.string.report_period_fmt, rangeLabel) + "\n" +
-                                "Invoices: ${data.transactionCount} | Units: ${data.itemsSold}\n" +
+                                "$invoicesUnitsLabel\n" +
                                 "--------------------------------\n" +
-                                "Gross Sales:      ${formatTaka(data.grossSales)}\n" +
+                                "$grossSalesLabel:      ${formatTaka(data.grossSales)}\n" +
                                 (if (data.totalRefunds > 0.0) "$returnsLabel: -${formatTaka(data.totalRefunds)}\n" else "") +
                                 "$netSalesLabel:        ${formatTaka(data.totalRevenue)}\n" +
                                 (if (data.totalTax > 0.0) "$taxVatLabel:        ${formatTaka(data.totalTax)}\n" else "") +
-                                "Gross Margin:     ${formatTaka(data.totalProfit)}\n" +
-                                "Discounts Given:  ${formatTaka(data.totalDiscount)}\n" +
-                                "Expenses:         ${formatTaka(data.totalExpenses)}\n" +
-                                "Net Profit (est): ${formatTaka(data.netProfit)}\n" +
+                                "$grossMarginLabel:     ${formatTaka(data.totalProfit)}\n" +
+                                "$discountsLabel:  ${formatTaka(data.totalDiscount)}\n" +
+                                "$expensesLabel:         ${formatTaka(data.totalExpenses)}\n" +
+                                "$netProfitLabel: ${formatTaka(data.netProfit)}\n" +
                                 "--------------------------------\n" +
-                                "PAYMENTS:\n" +
+                                "$paymentsHeader\n" +
                                 data.paymentBreakdown.joinToString("\n") {
                                     "- ${it.method.padEnd(12)}: ${formatTaka(it.amount)}"
                                 } + cashReconSection + "\n================================\n$reportFooter",
@@ -2992,7 +3008,7 @@ private fun shareReport(context: android.content.Context, r: SalesReportData, ra
         }
     } catch (e: Exception) {
         e.printStackTrace()
-        Toast.makeText(context, context.getString(R.string.toast_failed_to_share_fmt, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.toast_failed_to_share_fmt, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
     }
 }
 

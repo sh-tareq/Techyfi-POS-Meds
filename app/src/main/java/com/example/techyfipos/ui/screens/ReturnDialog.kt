@@ -363,7 +363,7 @@ fun ReturnItemsDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "1. SELECT RETURN QUANTITIES",
+                            text = stringResource(R.string.return_select_quantities_header),
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.primary,
@@ -697,7 +697,7 @@ fun ReturnItemsDialog(
                                         color = if (isRestockEnabled) Color(0xFF166534) else MaterialTheme.colorScheme.onErrorContainer
                                     )
                                     Text(
-                                        text = if (isRestockEnabled) "Will increment stock count automatically" else "Will NOT add defective item back into shelf stock",
+                                        text = if (isRestockEnabled) stringResource(R.string.return_will_restock) else stringResource(R.string.return_will_not_restock),
                                         fontSize = 10.sp,
                                         color = if (isRestockEnabled) Color(0xFF15803D) else MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
                                     )
@@ -962,7 +962,7 @@ fun ReturnItemsDialog(
                                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0))
                                         ) {
                                             Text(
-                                                "Active Register",
+                                                stringResource(R.string.return_active_register),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.ExtraBold,
                                                 color = Color(0xFF059669),
@@ -976,7 +976,7 @@ fun ReturnItemsDialog(
                                         } else if (storeCreditRestored > 0.0) {
                                             "${formatTaka(storeCreditRestored)} will be restored to Store Credit / Voucher. ${formatTaka(externalRefund)} physical cash will be handed over to customer from till drawer."
                                         } else {
-                                            "Physical cash will be handed over to customer from till drawer."
+                                            stringResource(R.string.return_physical_cash_desc)
                                         },
                                         fontSize = 10.5.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1264,7 +1264,7 @@ fun ReturnItemsDialog(
                                                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A))
                                             ) {
                                                 Text(
-                                                    "Customer Wallet",
+                                                    stringResource(R.string.return_customer_wallet),
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.ExtraBold,
                                                     color = Color(0xFFD97706),
@@ -1322,7 +1322,7 @@ fun ReturnItemsDialog(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Store Credit Restored", fontSize = 11.5.sp, color = Color(0xFF60A5FA))
+                                    Text(stringResource(R.string.return_store_credit_restored), fontSize = 11.5.sp, color = Color(0xFF60A5FA))
                                     Text("+${formatTaka(storeCreditRestored)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF60A5FA))
                                 }
                             }
@@ -1337,21 +1337,21 @@ fun ReturnItemsDialog(
                                 Text(
                                     text = if (dueAdjustment > 0.0 && externalRefund > 0.0) {
                                         when (selectedSettlementDestination) {
-                                            "WALLET" -> "Excess Store Credit"
+                                            "WALLET" -> stringResource(R.string.return_excess_store_credit)
                                             "MFS" -> "Excess ($selectedMfsChannel)"
-                                            else -> "Excess Cash Payout"
+                                            else -> stringResource(R.string.return_excess_cash_payout)
                                         }
                                     } else if (dueAdjustment > 0.0 && externalRefund == 0.0) {
-                                        if (selectedSettlementDestination == "WALLET" && storeCreditRestored > 0.0) "Net Store Credit"
-                                        else "Net Cash Payout"
+                                        if (selectedSettlementDestination == "WALLET" && storeCreditRestored > 0.0) stringResource(R.string.return_net_store_credit)
+                                        else stringResource(R.string.return_net_cash_payout)
                                     } else if (externalRefund == 0.0 && storeCreditRestored > 0.0) {
-                                        if (selectedSettlementDestination == "WALLET") "Store Credit Refund"
-                                        else "Store Credit / Voucher Restored"
+                                        if (selectedSettlementDestination == "WALLET") stringResource(R.string.return_store_credit_refund)
+                                        else stringResource(R.string.return_store_credit_restored)
                                     } else {
                                         when (selectedSettlementDestination) {
-                                            "WALLET" -> "Store Credit Payout"
+                                            "WALLET" -> stringResource(R.string.return_store_credit_payout)
                                             "MFS" -> "Digital / MFS Payout"
-                                            else -> "Customer Refund Payout"
+                                            else -> stringResource(R.string.return_customer_refund_payout)
                                         }
                                     },
                                     fontSize = 13.sp,
@@ -1450,7 +1450,7 @@ fun ReturnItemsDialog(
                     ) {
                         Text(
                             text = if (!hasSelection) {
-                                "Select Items to Return"
+                                stringResource(R.string.return_select_items)
                             } else if (externalRefund == 0.0 && dueAdjustment > 0.0) {
                                 "Clear ${formatTaka(dueAdjustment)} Customer Debt"
                             } else if (dueAdjustment > 0.0 && externalRefund > 0.0) {
@@ -1458,7 +1458,7 @@ fun ReturnItemsDialog(
                             } else if (selectedSettlementDestination == "WALLET") {
                                 if (isWalkinCustomer) {
                                     if (walkinMode == "REGISTER") {
-                                        if (walkinRegPhone.trim().length < 6) "Enter Customer Mobile"
+                                        if (walkinRegPhone.trim().length < 6) stringResource(R.string.return_enter_customer_mobile)
                                         else "Register & Credit ${formatTaka(refundTotal)}"
                                     } else {
                                         "Issue ${formatTaka(refundTotal)} Credit Voucher"

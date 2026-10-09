@@ -58,6 +58,7 @@ import com.example.techyfipos.ui.components.Realistic3DCargoInflowTruckIcon
 import com.example.techyfipos.ui.components.Realistic3DSupplierDueShieldIcon
 import com.example.techyfipos.ui.components.Realistic3DInwardInvoiceIcon
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 import com.example.techyfipos.ui.viewmodel.SupplierViewModel
 
 private enum class SupplierDueFilter {
@@ -138,7 +139,7 @@ fun SuppliersScreen(
                         }
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, context.getString(R.string.supplier_export_failed, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.supplier_export_failed, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                 }
             }
         }
