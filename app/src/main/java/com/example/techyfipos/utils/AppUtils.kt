@@ -56,6 +56,13 @@ object DateFormatters {
 
     fun formatDayGroup(timestamp: Long, locale: Locale = Locale.getDefault()): String =
         SimpleDateFormat("EEEE, dd MMMM yyyy", locale).format(Date(timestamp))
+
+    fun formatHourAmPm(hour: Int, locale: Locale = Locale.getDefault()): String {
+        val cal = Calendar.getInstance()
+        cal.set(Calendar.HOUR_OF_DAY, hour)
+        cal.set(Calendar.MINUTE, 0)
+        return SimpleDateFormat("ha", locale).format(cal.time)
+    }
 }
 
 /**
