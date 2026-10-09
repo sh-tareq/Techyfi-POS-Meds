@@ -48,6 +48,8 @@ import com.example.techyfipos.ui.viewmodel.CustomerSortOption
 import com.example.techyfipos.ui.viewmodel.CustomerViewModel
 import com.example.techyfipos.ui.viewmodel.DuplicateCustomerPair
 import com.example.techyfipos.utils.formatTaka
+import androidx.compose.ui.window.DialogProperties
+import com.example.techyfipos.utils.DateFormatters
 import com.example.techyfipos.utils.openPhoneDialer
 import com.example.techyfipos.utils.openWhatsAppChat
 import kotlinx.coroutines.Dispatchers
@@ -237,7 +239,7 @@ fun CustomersScreen(
                                     leadingIcon = { Icon(Icons.Default.TableChart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
                                     onClick = {
                                         showExportMenu = false
-                                        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                                        val dateStr = DateFormatters.formatISO()
                                         exportCustomersExcelLauncher.launch("customers-$dateStr.xlsx")
                                     }
                                 )
@@ -350,7 +352,7 @@ fun CustomersScreen(
                                     leadingIcon = { Text("📊", fontSize = 16.sp) },
                                     onClick = {
                                         showPhoneMoreMenu = false
-                                        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                                        val dateStr = DateFormatters.formatISO()
                                         exportCustomersExcelLauncher.launch("customers-$dateStr.xlsx")
                                     }
                                 )
@@ -1008,7 +1010,7 @@ fun CustomerDataTable(
                             ) {
                                 Text(
                                     text = getLocalizedCustomerTag(customer.tag),
-                                    fontSize = 9.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = when (customer.tag) {
                                         "VIP" -> Color(0xFF8B5CF6)
@@ -1033,17 +1035,17 @@ fun CustomerDataTable(
                                 Text(
                                     text = stringResource(R.string.customers_table_due_label, formatTaka(customer.totalDue)),
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 9.5.sp,
+                                    fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.error
                                 )
                             } else {
-                                Text(stringResource(R.string.customers_table_zero_due), fontSize = 9.5.sp, color = Color(0xFF00875A))
+                                Text(stringResource(R.string.customers_table_zero_due), fontSize = 11.sp, color = Color(0xFF00875A))
                             }
                             if (customer.storeCredit > 0) {
                                 Text(
                                     text = "🪙 ${formatTaka(customer.storeCredit)}",
                                     fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 9.5.sp,
+                                    fontSize = 11.sp,
                                     color = Color(0xFF059669)
                                 )
                             }
@@ -1052,7 +1054,7 @@ fun CustomerDataTable(
                         // Orders
                         Column(modifier = Modifier.weight(1f)) {
                             Text(stringResource(R.string.customers_table_orders_count, customer.totalOrders), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
-                            Text(stringResource(R.string.customers_table_loyalty_points, customer.loyaltyPoints), fontSize = 9.5.sp, color = Color(0xFFE5A100))
+                            Text(stringResource(R.string.customers_table_loyalty_points, customer.loyaltyPoints), fontSize = 11.sp, color = Color(0xFFE5A100))
                         }
 
                         // Action Shortcuts
@@ -1108,7 +1110,7 @@ fun KpiMetricCard(
         ) {
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
             Column {
-                Text(title, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
+                Text(title, fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
                 Text(value, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = color)
             }
         }
@@ -1194,7 +1196,7 @@ fun CustomerCard(
                                 ) {
                                     Text(
                                         text = stringResource(R.string.customer_badge_due, formatTaka(customer.totalDue)),
-                                        fontSize = 9.sp,
+                                        fontSize = 10.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onErrorContainer,
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
@@ -1208,7 +1210,7 @@ fun CustomerCard(
                                 ) {
                                     Text(
                                         text = "🪙 ${formatTaka(customer.storeCredit)}",
-                                        fontSize = 9.sp,
+                                        fontSize = 10.5.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = Color(0xFF065F46),
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
@@ -1298,6 +1300,7 @@ fun CustomerMergeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("🔗", fontSize = 20.sp)
@@ -1412,6 +1415,7 @@ fun BulkAssignTagDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Text(stringResource(R.string.customer_bulk_tag_dialog_title), fontWeight = FontWeight.Bold, fontSize = 15.sp)
         },
@@ -1465,6 +1469,7 @@ fun CustomerAddEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Text(
                 text = if (customer == null) stringResource(R.string.customer_add_title) else stringResource(R.string.customer_edit_title),
@@ -1576,6 +1581,7 @@ fun CustomerAddEditDialog(
     if (showDueBlockedDialog && customer != null) {
         AlertDialog(
             onDismissRequest = { showDueBlockedDialog = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.customer_cannot_delete_title), fontWeight = FontWeight.Bold) },
             text = { Text(stringResource(R.string.customer_cannot_delete_due_desc, customer.name, formatTaka(customer.totalDue))) },
             confirmButton = {
@@ -1589,6 +1595,7 @@ fun CustomerAddEditDialog(
     if (showDeleteConfirmDialog && customer != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             title = { Text(stringResource(R.string.confirm_delete), fontWeight = FontWeight.Bold) },
             text = { Text(stringResource(R.string.customer_delete_confirm_desc, customer.name)) },
             confirmButton = {
