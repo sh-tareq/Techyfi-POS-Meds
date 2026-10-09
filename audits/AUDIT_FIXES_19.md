@@ -54,7 +54,12 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 **Language:** D-1/L-2: 0 of about 347 `formatTaka(` calls in ui pass the app language; add a single app-language source. L-1: about 149 multi-word English literals in ui, plus the X/Z report generators and repo exception text in toasts.
 
-**Design:** D-5, D-6 contrast pairs; U-1 (Checkout button 2.54:1 in light); U-2 (deletes without confirmation); U-3 (45 IconButtons under 48dp); U-4 (white islands). About 2,390 `Color(0x` remain.
+- [x] **D-5** secondary and container contrast in dark mode (ElectricIndigoLight on secondaryContainer 4.75:1, on surface 5.08:1) and ReturnDialog tokens (Fixed in `76df20b`, test: `testD5_darkThemeContrast_primaryAndSecondaryMeetWcag` in `ThemeTokensTest`).
+- [x] **D-6** theme contrast pairs under 4.5:1: primary/onPrimary 5.33:1, error/onError 4.77:1, tertiary/onTertiary 7.70:1, dark onSurfaceVariant 5.06:1 (Fixed in `76df20b`, test: `testD6_U1_lightThemeContrast_tokensMeetWcag` in `ThemeTokensTest`).
+- [x] **U-1** Checkout button in light mode updated to theme primary/onPrimary token with 5.33:1 contrast >= 4.5:1 WCAG AA (Fixed in `76df20b`, test: `testD6_U1_lightThemeContrast_tokensMeetWcag` in `ThemeTokensTest`).
+
+**Remaining Design & UX:**
+U-2 (deletes without confirmation); U-3 (45 IconButtons under 48dp); U-4 (white islands). About 2,390 `Color(0x` remain.
 
 ---
 
