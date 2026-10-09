@@ -49,8 +49,8 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 - [x] **X-4a/b** supplier payment invoice pairing and skip voided-sale adjustment inflation on merge (Fixed in `b542a94`, tests: `testX4_supplierPaymentWithInvoiceNoteReducesDueAndVoidAdjustmentSkippedOnMerge` in `MoneyFlowsIntegrationTest`, `testT3_mergeSharedHistoryReturnsVoidsMixedBarcodeCase_assertsDuesPointsCredit` in `BackupRestoreIntegrationTest`).
 - [x] **M-14** owner clearing limit to 0 & preserve limit on upsert due (Fixed in `b542a94`, test: `testM14_ownerCanClearCreditLimitToZeroAndUpsertDuePreservesExistingLimit` in `MoneyFlowsIntegrationTest`).
 
-**Remaining Money Items:**
-M-7 (loyalty Taka 1:1; clawback display), R-6 (revert XSSF; `LOWER()` in `getProductByBarcode` defeats the PK index).
+- [x] **M-7** loyalty Taka 1:1 evaluated with configured rate, clawback display decoupled & attributed to loyaltyPhone, voucher label localized (Fixed in `e3a1b9f`, test: `testM7_loyaltyClawbackAndCashValueEvaluation` in `MoneyFlowsIntegrationTest`).
+- [x] **R-6** direct PK index lookup on barcode (`barcode = :barcode OR barcode = LOWER(:barcode)`) without LOWER-table scan, Android-safe Excel export (Fixed in `e3a1b9f`, test: `testR6_productLookupByBarcodeUsesDirectPkAndExcelExportSafe` in `MoneyFlowsIntegrationTest`).
 
 **Language:** D-1/L-2: 0 of about 347 `formatTaka(` calls in ui pass the app language; add a single app-language source. L-1: about 149 multi-word English literals in ui, plus the X/Z report generators and repo exception text in toasts.
 
