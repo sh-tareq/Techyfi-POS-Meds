@@ -2633,6 +2633,7 @@ fun ProductsScreen(
         val deleteFailedMessage = stringResource(R.string.products_delete_failed)
         AlertDialog(
             onDismissRequest = { productToDelete = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
             icon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text(stringResource(R.string.products_delete_product_title)) },
             text = {
@@ -3028,6 +3029,7 @@ fun BulkPriceAdjustmentDialog(
 
         AlertDialog(
             onDismissRequest = { showConfirmDialog = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
             icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
             title = { Text(stringResource(R.string.bulk_price_confirm_title)) },
             text = {
@@ -3057,6 +3059,7 @@ fun BulkPriceAdjustmentDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Text(stringResource(R.string.bulk_price_dialog_title), fontWeight = FontWeight.Bold, fontSize = 18.sp)
         },
@@ -3150,6 +3153,7 @@ fun BulkCategoryReassignmentDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Text(stringResource(R.string.bulk_category_dialog_title), fontWeight = FontWeight.Bold, fontSize = 18.sp)
         },
@@ -3225,6 +3229,7 @@ fun BulkDeleteConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = {
             Text(stringResource(R.string.bulk_delete_dialog_title, selectedCount), fontWeight = FontWeight.Bold, fontSize = 18.sp)
         },
@@ -3262,6 +3267,7 @@ fun StockCheckNotFoundDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnClickOutside = false),
         icon = {
             Box(
                 modifier = Modifier
@@ -3370,7 +3376,7 @@ private fun HardwareStockCheckDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
         modifier = Modifier
             .fillMaxWidth(0.94f)
             .padding(vertical = 16.dp),
