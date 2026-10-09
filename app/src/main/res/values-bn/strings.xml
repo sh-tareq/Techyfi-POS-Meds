@@ -604,6 +604,7 @@
     <string name="cart_default_tax_label">ভ্যাট</string>
     <string name="cart_reason_due_details_required">বকেয়ার জন্য গ্রাহকের নাম ও ফোন নম্বর প্রয়োজন</string>
     <string name="cart_reason_split_total_mismatch">মোট স্প্লিট পেমেন্ট সর্বমোট পরিমাণের সমান হতে হবে</string>
+    <string name="cart_reason_split_non_cash_overtender">কার্ড বা ডিজিটাল ওয়ালেট পরিশোধ বিলের পরিমাণের চেয়ে বেশি হতে পারে না</string>
     <string name="cart_reason_split_details_required">প্রতিটি স্প্লিট সারির জন্য ওয়ালেট নম্বর বা কার্ডের সংখ্যা লিখুন</string>
     <string name="cart_reason_wallet_number_required">১১ সংখ্যার %1$s মোবাইল নম্বর লিখুন</string>
     <string name="cart_reason_card_digits_required">কার্ডের শেষ ৪ সংখ্যা লিখুন</string>

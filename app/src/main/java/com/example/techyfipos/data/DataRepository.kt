@@ -1474,8 +1474,7 @@ class DataRepository(
             val effectiveCreditLimit = if (!isSessionOwner()) {
                 maxOf(existing?.creditLimit ?: 0.0, currentDueLimit)
             } else {
-                if (customer.creditLimit > 0.0) customer.creditLimit
-                else maxOf(existing?.creditLimit ?: 0.0, currentDueLimit)
+                customer.creditLimit.coerceAtLeast(0.0)
             }
             customerDao.upsertCustomer(customer.copy(phone = cleanPhone, creditLimit = effectiveCreditLimit, updatedAt = timestamp))
             val existingDue = customerDueDao.getCustomerDueByPhone(cleanPhone)
@@ -1901,7 +1900,7 @@ class DataRepository(
         val existingCust = customerDao.getCustomerByPhone(cleanPhone)
         val existingDue = customerDueDao.getCustomerDueByPhone(cleanPhone)
         val existingLimit = maxOf(existingCust?.creditLimit ?: 0.0, existingDue?.creditLimit ?: 0.0)
-        val effectiveLimit = if (!isSessionOwner()) {
+        val effectiveLimit = if (!isSessionOwner() || customerDue.creditLimit == 0.0) {
             existingLimit
         } else {
             customerDue.creditLimit
@@ -2170,6 +2169,56 @@ class DataRepository(
             if (untouched) customerDueDao.deleteCustomerDue(phone)
         }
         prefs.edit().putBoolean("legacy_demo_dues_cleanup_v1", true).apply()
+    }
+
+    suspend fun backfillLegacyTaxInclusiveIfConfigured(): Int = withContext(Dispatchers.IO) {
+        val isTaxInclusive = settingsDataStore.invoiceSettingsDataFlow.first().taxInclusive
+        if (isTaxInclusive) {
+            saleDao.backfillTaxInclusiveForLegacySales()
+        } else {
+            0
+        }
+    }
+
+    suspend fun recomputeCustomerLoyaltyTiersWithConfiguredThresholds(): Int = withContext(Dispatchers.IO) {
+        val loyaltySettings = getLoyaltySettings()
+        if (!loyaltySettings.isTiersEnabled) return@withContext 0
+
+        val plat = loyaltySettings.platinumSpendThreshold
+        val gold = loyaltySettings.goldSpendThreshold
+        val silver = loyaltySettings.silverSpendThreshold
+
+        var updatedCount = 0
+        database.withDriverTransaction {
+            val loyalties = customerLoyaltyDao.getAllIncludingInactive()
+            for (loyalty in loyalties) {
+                val correctTier = when {
+                    loyalty.lifetimeSpent >= plat -> "Platinum"
+                    loyalty.lifetimeSpent >= gold -> "Gold"
+                    loyalty.lifetimeSpent >= silver -> "Silver"
+                    else -> "Regular"
+                }
+                if (loyalty.tier != correctTier) {
+                    customerLoyaltyDao.upsertLoyalty(loyalty.copy(tier = correctTier, updatedAt = System.currentTimeMillis()))
+                    updatedCount++
+                }
+            }
+
+            val customers = customerDao.getAllCustomersOnce()
+            for (customer in customers) {
+                val correctTier = when {
+                    customer.lifetimeSpent >= plat -> "Platinum"
+                    customer.lifetimeSpent >= gold -> "Gold"
+                    customer.lifetimeSpent >= silver -> "Silver"
+                    else -> "Regular"
+                }
+                if (customer.loyaltyTier != correctTier) {
+                    customerDao.upsertCustomer(customer.copy(loyaltyTier = correctTier, updatedAt = System.currentTimeMillis()))
+                    updatedCount++
+                }
+            }
+        }
+        updatedCount
     }
 
     // Settings
@@ -2709,6 +2758,7 @@ class DataRepository(
         try {
             val jsonText = inputFile.readText()
             val backupJson = JSONObject(jsonText)
+            val currentShopTaxInclusive = settingsDataStore.invoiceSettingsDataFlow.first().taxInclusive
 
             if (mode == BackupImportMode.REPLACE) createPortableRestoreSnapshot()
 
@@ -2720,6 +2770,7 @@ class DataRepository(
               val newlyInsertedCustomerPhones = mutableSetOf<String>()
               val newlyInsertedLoyaltyPhones = mutableSetOf<String>()
               val newlyInsertedSupplierIds = mutableSetOf<Long>()
+              val newlyInsertedInvoiceNumbersBySupplier = mutableMapOf<Long, MutableSet<String>>()
 
               val newlyInsertedSaleItems = mutableListOf<SaleItem>()
               val newlyInsertedReturnItems = mutableListOf<ReturnItem>()
@@ -2880,7 +2931,7 @@ class DataRepository(
                         loyaltyPhone = s.optString("loyaltyPhone"),
                         loyaltyPointsRedeemed = s.optInt("loyaltyPointsRedeemed", 0),
                         storeCreditApplied = s.optionalDouble("storeCreditApplied"),
-                        isTaxInclusive = s.optionalBoolean("isTaxInclusive"),
+                        isTaxInclusive = if (s.has("isTaxInclusive")) s.optionalBoolean("isTaxInclusive") else currentShopTaxInclusive,
                         voucherCode = if (s.has("voucherCode") && !s.isNull("voucherCode")) s.optString("voucherCode").takeIf { it.isNotBlank() } else null,
                         voucherAmount = s.optionalDouble("voucherAmount"),
                         customerCreditAmount = s.optionalDouble("customerCreditAmount")
@@ -3158,6 +3209,9 @@ class DataRepository(
                   ))
                     if (mode == BackupImportMode.MERGE) {
                         purchaseInvoiceIdMap[backupInvoiceId] = newInvoiceId
+                        if (invNum.isNotBlank() && resolvedSupplierId != null) {
+                            newlyInsertedInvoiceNumbersBySupplier.getOrPut(resolvedSupplierId) { mutableSetOf() }.add(invNum)
+                        }
                         if (resolvedSupplierId !in newlyInsertedSupplierIds) {
                             val dueChange = value.optDouble("dueAmount", 0.0)
                             supplierDao.updateSupplierBalances(resolvedSupplierId, purchaseAmount = totalAmt, dueChange = dueChange, timestamp = ts)
@@ -3223,8 +3277,13 @@ class DataRepository(
                         performedByName = value.optString("performedByName").takeIf { it.isNotBlank() }
                     ))
                     val refNote = value.optString("referenceNote").takeIf { it.isNotBlank() }
-                    val isInvoicePayment = refNote?.startsWith("Paid on Invoice", ignoreCase = true) == true
-                    if (mode == BackupImportMode.MERGE && resolvedSupplierId !in newlyInsertedSupplierIds && !isInvoicePayment) {
+                    val matchedRestoredInvoice = if (refNote != null && refNote.contains("Paid on Invoice", ignoreCase = true)) {
+                        val candidateInvoices = newlyInsertedInvoiceNumbersBySupplier[resolvedSupplierId].orEmpty()
+                        candidateInvoices.any { inv -> refNote.contains(inv, ignoreCase = true) }
+                    } else {
+                        false
+                    }
+                    if (mode == BackupImportMode.MERGE && resolvedSupplierId !in newlyInsertedSupplierIds && !matchedRestoredInvoice) {
                         supplierDao.recordSupplierPayment(resolvedSupplierId, amtPaid, ts)
                     }
                 }
@@ -3620,8 +3679,11 @@ class DataRepository(
                       }
                   }
                   for (adj in newlyInsertedAdjustments) {
-                      if (adj.reason.contains("Purchase", ignoreCase = true)) {
-                          continue // Paired inventory adjustment already counted via newlyInsertedPurchaseItems
+                      if (adj.reason.contains("Purchase", ignoreCase = true) ||
+                          adj.reason.contains("Sale Cancelled", ignoreCase = true) ||
+                          adj.reason.contains("Sale Void", ignoreCase = true) ||
+                          adj.reason.contains("Cancelled/Deleted", ignoreCase = true)) {
+                          continue // Paired inventory adjustment already counted via newlyInsertedPurchaseItems or void cancellation delta
                       }
                       val code = adj.productBarcode.lowercase()
                       if (code !in newlyInsertedProductBarcodes) {
@@ -4776,9 +4838,12 @@ class DataRepository(
         require(amountPaid.isFinite() && amountPaid > 0.0) { "Payment must be greater than zero" }
         database.withDriverTransaction {
             val timestamp = System.currentTimeMillis()
-            require(supplierDao.recordSupplierPayment(supplierId, amountPaid, timestamp) == 1) {
+            val supplier = supplierDao.getSupplierById(supplierId)
+                ?: throw IllegalArgumentException("Supplier not found")
+            require(supplier.totalDue >= amountPaid - 0.001) {
                 "Payment exceeds the outstanding supplier balance"
             }
+            supplierDao.recordSupplierPayment(supplierId, amountPaid, timestamp)
             val paymentId = supplierDao.insertSupplierPayment(
                 SupplierPayment(
                     supplierId = supplierId,

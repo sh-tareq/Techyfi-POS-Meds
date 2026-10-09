@@ -589,15 +589,30 @@ class MoneyFlowsIntegrationTest {
     }
 
     @Test
-    fun testM5_scenario3_card250PlusCash10On200TotalBalancesAndSucceedsInRepo() = runBlocking {
+    fun testM5_scenario3_cardOverTenderIsRejectedAndValidElectronicPlusCashSucceeds() = runBlocking {
         val prod = Product(barcode = "BAR_M5_3", name = "M5-3 Item", category = "General", purchasePrice = 100.0, sellingPrice = 200.0, stockQty = 10.0, reorderLevel = 1)
         database.productDao().insertProduct(prod)
 
+        // Card over-tender is rejected
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            PaymentMath.buildAuthoritativeSplitJson(
+                isSplitPayment = true,
+                splitPayments = listOf(
+                    SplitPaymentEntry("Card", 250.0, cardLastFour = "4321"),
+                    SplitPaymentEntry("Cash", 10.0)
+                ),
+                storeCreditApplied = 0.0,
+                grandTotal = 200.0,
+                paymentMethod = "Split"
+            )
+        }
+
+        // Valid split: Card 150 + Cash 50
         val splitJson = PaymentMath.buildAuthoritativeSplitJson(
             isSplitPayment = true,
             splitPayments = listOf(
-                SplitPaymentEntry("Card", 250.0, cardLastFour = "4321"),
-                SplitPaymentEntry("Cash", 10.0)
+                SplitPaymentEntry("Card", 150.0, cardLastFour = "4321"),
+                SplitPaymentEntry("Cash", 50.0)
             ),
             storeCreditApplied = 0.0,
             grandTotal = 200.0,
@@ -617,7 +632,7 @@ class MoneyFlowsIntegrationTest {
             paymentMethod = methodToSave,
             customerName = null,
             customerPhone = null,
-            amountPaid = 10.0,
+            amountPaid = 200.0,
             walletPhone = null,
             cardType = null,
             cardLastFour = "4321",
@@ -1789,5 +1804,213 @@ class MoneyFlowsIntegrationTest {
         assertEquals("paymentMethodToSave must be Split", "Split", breakdown.paymentMethodToSave)
         assertTrue("splitPaymentJson must not be null", !breakdown.splitPaymentJson.isNullOrBlank())
         assertTrue("splitPaymentJson contains Due", breakdown.splitPaymentJson!!.contains("\"Due\""))
+    }
+
+    @Test
+    fun testM5_receiptSnapshotAmountPaidMatchesReprintPaid() = runBlocking {
+        val prod = Product(barcode = "p-m5-match", name = "M5 Item", category = "General", purchasePrice = 100.0, sellingPrice = 400.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        repository.upsertCustomer(
+            Customer(phone = "01799999955", name = "M5 Cust", storeCredit = 100.0)
+        )
+
+        val grandTotal = 400.0
+        val autoSc = 100.0
+        val splitEntries = listOf(SplitPaymentEntry("Cash", 300.0))
+        val breakdown = PaymentMath.calculatePaymentBreakdown(
+            grandTotal = grandTotal,
+            paymentMethod = "Split",
+            storeCreditApplied = autoSc,
+            splitPayments = splitEntries
+        )
+
+        // Snapshot uses breakdown.amountPaidToRecord
+        val snapshotAmountPaid = breakdown.amountPaidToRecord
+        assertEquals("Snapshot amountPaid must be 400.0 (Cash 300 + SC 100)", 400.0, snapshotAmountPaid, 0.001)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = grandTotal,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = grandTotal,
+            paymentMethod = breakdown.paymentMethodToSave,
+            customerName = "M5 Cust",
+            customerPhone = "01799999955",
+            amountPaid = breakdown.amountPaidToRecord,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            splitPaymentJson = breakdown.splitPaymentJson,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null)),
+            storeCreditApplied = autoSc
+        )
+
+        val savedSale = database.saleDao().getSaleWithItemsById(saleId)!!.sale
+        assertEquals("Saved Sale.amountPaid must be 400.0", 400.0, savedSale.amountPaid, 0.001)
+        assertEquals("Reprint and snapshot amountPaid must match exactly", snapshotAmountPaid, savedSale.amountPaid, 0.001)
+    }
+
+    @Test
+    fun testB7_taxInclusiveSaleProfitExcludesTaxAndBackfillUpdatesOldSales() = runBlocking {
+        val prod = Product(barcode = "p-b7-tax", name = "B7 Item", category = "General", purchasePrice = 100.0, sellingPrice = 230.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        // Insert legacy sale with isTaxInclusive = false and taxAmount = 30.0
+        val legacySaleId = database.saleDao().insertSale(
+            Sale(
+                timestamp = System.currentTimeMillis(),
+                subtotal = 200.0,
+                discountAmount = 0.0,
+                isPercentageDiscount = false,
+                grandTotal = 230.0,
+                paymentMethod = "Cash",
+                amountPaid = 230.0,
+                taxRate = 15.0,
+                taxAmount = 30.0,
+                isTaxInclusive = false
+            )
+        )
+
+        // Set shop tax inclusive to true
+        SettingsDataStore(context).saveInvoiceSettingsData(
+            com.example.techyfipos.data.InvoiceSettingsData(
+                taxEnabled = true,
+                taxInclusive = true,
+                taxRate = 15.0
+            )
+        )
+
+        val backfilled = repository.backfillLegacyTaxInclusiveIfConfigured()
+        assertTrue("At least 1 legacy sale should be backfilled", backfilled >= 1)
+
+        val updatedSale = database.saleDao().getSaleWithItemsById(legacySaleId)!!.sale
+        assertTrue("Legacy sale isTaxInclusive must now be true", updatedSale.isTaxInclusive)
+    }
+
+    @Test
+    fun testX8_recomputeLoyaltyTiersEvaluatesConfiguredThresholds() = runBlocking {
+        // Configure Silver threshold to 2000.0
+        val customSettings = com.example.techyfipos.utils.LoyaltyProgramSettings(
+            isTiersEnabled = true,
+            silverSpendThreshold = 2000.0,
+            goldSpendThreshold = 5000.0,
+            platinumSpendThreshold = 10000.0
+        )
+        repository.updateLoyaltySettings(customSettings)
+
+        val phone = "01788888888"
+        // Customer demoted to Regular despite 2500 lifetime spend
+        database.customerLoyaltyDao().upsertLoyalty(
+            CustomerLoyalty(phone = phone, name = "X8 Cust", pointsBalance = 25, tier = "Regular", lifetimeSpent = 2500.0)
+        )
+        database.customerDao().upsertCustomer(
+            Customer(phone = phone, name = "X8 Cust", loyaltyTier = "Regular", lifetimeSpent = 2500.0)
+        )
+
+        val updatedCount = repository.recomputeCustomerLoyaltyTiersWithConfiguredThresholds()
+        assertTrue("Must update customer tiers", updatedCount >= 1)
+
+        val loyaltyAfter = database.customerLoyaltyDao().getLoyaltyByPhone(phone)!!
+        assertEquals("Customer loyalty tier must be recomputed to Silver with 2000 threshold", "Silver", loyaltyAfter.tier)
+
+        val custAfter = database.customerDao().getCustomerByPhone(phone)!!
+        assertEquals("Customer entity tier must be recomputed to Silver", "Silver", custAfter.loyaltyTier)
+    }
+
+    @Test
+    fun testX4_supplierPaymentWithInvoiceNoteReducesDueAndVoidAdjustmentSkippedOnMerge() = runBlocking {
+        val supplierId = database.supplierDao().upsertSupplier(
+            com.example.techyfipos.data.db.Supplier(name = "X4 Supplier", companyName = "X4 Co", phone = "01999887766", totalPurchased = 1000.0, totalDue = 500.0)
+        )
+        val prodBarcode = "p-x4-void"
+        database.productDao().insertProduct(
+            Product(barcode = prodBarcode, name = "X4 Product", category = "General", purchasePrice = 50.0, sellingPrice = 100.0, stockQty = 50.0, reorderLevel = 1)
+        )
+
+        // Create backup JSON with:
+        // (a) Standalone supplier payment referencing an invoice note not restored in this backup
+        // (b) Voided-sale cancellation inventory adjustment
+        val backupJson = JSONObject().apply {
+            put("suppliers", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("id", supplierId)
+                    put("name", "X4 Supplier")
+                    put("phone", "01999887766")
+                    put("totalPurchased", 1000.0)
+                    put("totalDue", 500.0)
+                })
+            })
+            put("supplierPayments", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("id", 9999L)
+                    put("supplierId", supplierId)
+                    put("amountPaid", 200.0)
+                    put("paymentMethod", "Cash")
+                    put("referenceNote", "Paid on Invoice #OLD-UNRESTORED-INV")
+                    put("timestamp", 123456789L)
+                })
+            })
+            put("inventoryAdjustments", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("id", 8888L)
+                    put("productBarcode", prodBarcode)
+                    put("difference", 10.0)
+                    put("reason", "Sale Cancelled/Deleted #INV-999")
+                    put("timestamp", 123456789L)
+                })
+            })
+        }
+
+        val tempFile = java.io.File(context.cacheDir, "test_x4_backup.json")
+        tempFile.writeText(backupJson.toString())
+
+        repository.setSessionUser(com.example.techyfipos.data.db.User(id = 1L, name = "Owner", pinHash = "x", role = "OWNER"))
+        val success = repository.importBackup(tempFile, BackupImportMode.MERGE)
+        assertTrue("Merge must succeed", success)
+
+        // (a) Supplier due must be reduced by 200.0 (from 500.0 to 300.0)
+        val supplierAfter = database.supplierDao().getSupplierById(supplierId)!!
+        assertEquals("Supplier totalDue must be reduced by 200.0", 300.0, supplierAfter.totalDue, 0.001)
+
+        // (b) Stock of p-x4-void must NOT be inflated by +10.0 (should remain 50.0)
+        val prodAfter = database.productDao().getProductByBarcode(prodBarcode)!!
+        assertEquals("Stock must not be inflated by voided sale adjustment", 50.0, prodAfter.stockQty, 0.001)
+    }
+
+    @Test
+    fun testM14_ownerCanClearCreditLimitToZeroAndUpsertDuePreservesExistingLimit() = runBlocking {
+        repository.setSessionUser(com.example.techyfipos.data.db.User(id = 1L, name = "Owner", pinHash = "x", role = "OWNER"))
+
+        val phone = "01755555555"
+        repository.upsertCustomer(
+            Customer(phone = phone, name = "M14 Customer", creditLimit = 5000.0)
+        )
+        val cust1 = repository.getCustomerByPhone(phone)!!
+        assertEquals(5000.0, cust1.creditLimit, 0.001)
+
+        // 1. Owner can explicitly clear credit limit to 0
+        repository.upsertCustomer(
+            cust1.copy(creditLimit = 0.0)
+        )
+        val custCleared = repository.getCustomerByPhone(phone)!!
+        assertEquals("Owner must be able to clear credit limit to 0.0", 0.0, custCleared.creditLimit, 0.001)
+
+        // 2. Set limit back to 3000.0
+        repository.upsertCustomer(
+            custCleared.copy(creditLimit = 3000.0)
+        )
+
+        // 3. Adding a due with customerDue.creditLimit = 0.0 must NOT overwrite the customer's 3000.0 limit
+        repository.upsertCustomerDue(
+            com.example.techyfipos.data.db.CustomerDue(
+                customerPhone = phone,
+                customerName = "M14 Customer",
+                outstandingAmount = 500.0,
+                creditLimit = 0.0
+            )
+        )
+        val custAfterDue = repository.getCustomerByPhone(phone)!!
+        assertEquals("upsertCustomerDue with 0.0 limit must preserve existing 3000.0 limit", 3000.0, custAfterDue.creditLimit, 0.001)
     }
 }

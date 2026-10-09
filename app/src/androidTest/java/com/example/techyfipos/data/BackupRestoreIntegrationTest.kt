@@ -1162,8 +1162,8 @@ class BackupRestoreIntegrationTest {
         val allProducts = database.productDao().getAllProductsList()
         assertEquals("Mixed case product barcode must not create duplicate product", 1, allProducts.size)
         val mergedProd = database.productDao().getProductByBarcode("mix-case-1")!!
-        // Stock delta: initial 50.0 - 1.0 (Sale 202) + 5.0 (Void adjustment) = 54.0
-        assertEquals("Product stock must be accurately merged (50 - 1 + 5 = 54.0)", 54.0, mergedProd.stockQty, 0.001)
+        // Stock delta: initial 50.0 - 1.0 (Sale 202) = 49.0 (void adjustment skipped per X-4b)
+        assertEquals("Product stock must be accurately merged without void inflation (50 - 1 = 49.0)", 49.0, mergedProd.stockQty, 0.001)
 
         backupFile.delete()
         Unit

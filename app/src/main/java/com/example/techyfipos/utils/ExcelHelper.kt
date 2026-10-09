@@ -482,7 +482,13 @@ object ExcelHelper {
                                 ?: com.example.techyfipos.ui.viewmodel.fallbackPurchasePrice(returned.productBarcode, returned.price)
                             cost * returned.quantity
                         }
-                    val profit = (swi.sale.grandTotal - purchaseCost) - (returnedAmount - returnedCost)
+                    val netTax = if (swi.sale.isTaxInclusive && swi.sale.taxAmount > 0.0) swi.sale.taxAmount else 0.0
+                    val netGrandTotal = (swi.sale.grandTotal - netTax).coerceAtLeast(0.0)
+                    val returnedTax = if (swi.sale.isTaxInclusive && swi.sale.grandTotal > 0.0 && netTax > 0.0) {
+                        returnedAmount * (netTax / swi.sale.grandTotal)
+                    } else 0.0
+                    val netReturnedAmount = (returnedAmount - returnedTax).coerceAtLeast(0.0)
+                    val profit = (netGrandTotal - purchaseCost) - (netReturnedAmount - returnedCost)
                     val netTotal = (swi.sale.grandTotal - returnedAmount).coerceAtLeast(0.0)
                     
                     row.createCell(0).setCellValue(saleDate)

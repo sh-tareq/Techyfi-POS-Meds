@@ -1933,7 +1933,11 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             returnCogsReversal += unitCost * retItem.quantity
         }
 
-        val netRev = (netRevBeforeRefund - refundAmount).coerceAtLeast(0.0)
+        val refundTaxRatio = if (sale.isTaxInclusive && sale.grandTotal > 0.0 && sale.taxAmount > 0.0) {
+            (grossRevenue / sale.grandTotal)
+        } else 1.0
+        val effectiveRefundRevenue = refundAmount * refundTaxRatio
+        val netRev = (netRevBeforeRefund - effectiveRefundRevenue).coerceAtLeast(0.0)
         val netCogs = (totalGrossCogs - returnCogsReversal).coerceAtLeast(0.0)
         val netProfit = netRev - netCogs
         val netMargin = if (netRev > 0) (netProfit / netRev) * 100.0 else 0.0
@@ -4272,6 +4276,7 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
             LoyaltySettingsHelper.saveSettings(repository.appContext, settings)
             _programSettings.value = settings
             repository.updateLoyaltySettings(settings)
+            repository.recomputeCustomerLoyaltyTiersWithConfiguredThresholds()
         }
     }
 

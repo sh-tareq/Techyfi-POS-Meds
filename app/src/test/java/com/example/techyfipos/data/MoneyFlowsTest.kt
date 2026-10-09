@@ -9,6 +9,7 @@ import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -73,21 +74,19 @@ class MoneyFlowsTest {
     }
 
     @Test
-    fun `M-5 scenario 3 Card overpayment with Cash balances to grand total`() {
-        val splitJson = PaymentMath.buildAuthoritativeSplitJson(
-            isSplitPayment = true,
-            splitPayments = listOf(
-                SplitPaymentEntry("Card", 250.0, cardLastFour = "1234"),
-                SplitPaymentEntry("Cash", 10.0)
-            ),
-            storeCreditApplied = 0.0,
-            grandTotal = 200.0,
-            paymentMethod = "Split"
-        )
-        assertNotNull(splitJson)
-        val arr = JSONArray(splitJson!!)
-        val totalAmount = (0 until arr.length()).sumOf { arr.getJSONObject(it).getDouble("amount") }
-        assertEquals("Rows must balance to grand total (200.0)", 200.0, totalAmount, 0.001)
+    fun `M-5 scenario 3 Card overpayment with Cash is rejected`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            PaymentMath.buildAuthoritativeSplitJson(
+                isSplitPayment = true,
+                splitPayments = listOf(
+                    SplitPaymentEntry("Card", 250.0, cardLastFour = "1234"),
+                    SplitPaymentEntry("Cash", 10.0)
+                ),
+                storeCreditApplied = 0.0,
+                grandTotal = 200.0,
+                paymentMethod = "Split"
+            )
+        }
     }
 
     @Test
@@ -310,36 +309,41 @@ class MoneyFlowsTest {
     }
 
     @Test
-    fun `M-5 Card 250 and Cash 10 on 200 total records Card 200 and 10 cash change not Card 190 and 60 change`() {
+    fun `M-5 Card over-tender is rejected, and valid electronic plus cash split returns correct cash change`() {
         val grandTotal = 200.0
-        val splitPayments = listOf(
+        val overTenderEntries = listOf(
             SplitPaymentEntry("Card", 250.0, cardLastFour = "1234"),
             SplitPaymentEntry("Cash", 10.0)
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            PaymentMath.calculatePaymentBreakdown(
+                grandTotal = grandTotal,
+                isSplitPayment = true,
+                paymentMethod = "Split",
+                splitPayments = overTenderEntries,
+                storeCreditApplied = 0.0
+            )
+        }
+
+        // Valid split: Card 150 + Cash 100 on 200 total -> Card 150, Cash 50 applied, 50 cash change
+        val validEntries = listOf(
+            SplitPaymentEntry("Card", 150.0, cardLastFour = "1234"),
+            SplitPaymentEntry("Cash", 100.0)
         )
         val breakdown = PaymentMath.calculatePaymentBreakdown(
             grandTotal = grandTotal,
             isSplitPayment = true,
             paymentMethod = "Split",
-            splitPayments = splitPayments,
+            splitPayments = validEntries,
             storeCreditApplied = 0.0
         )
-        val effectivePaid = breakdown.effectiveAmountPaid
-        val splitJson = breakdown.splitPaymentJson
-        assertNotNull(splitJson)
-        val arr = JSONArray(splitJson!!)
-        val totalApplied = (0 until arr.length()).sumOf { arr.getJSONObject(it).getDouble("amount") }
-        assertEquals("Rows must balance to grand total (200.0)", 200.0, totalApplied, 0.001)
-
+        val arr = JSONArray(breakdown.splitPaymentJson!!)
+        assertEquals("Total applied must balance to grand total 200.0", 200.0, (0 until arr.length()).sumOf { arr.getJSONObject(it).getDouble("amount") }, 0.001)
         val cardObj = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("method") == "Card" }
-        assertEquals("Card applied must be 200.0, not reduced to 190.0", 200.0, cardObj.getDouble("amount"), 0.001)
-
-        val change = PaymentMath.calculateChange(
-            grandTotal = grandTotal,
-            amountPaid = effectivePaid,
-            paymentMethod = "Split",
-            splitJson = splitJson
-        )
-        assertEquals("Change must be 10.0 (cash returned), not 60.0", 10.0, change, 0.001)
+        assertEquals(150.0, cardObj.getDouble("amount"), 0.001)
+        val cashObj = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("method") == "Cash" }
+        assertEquals(50.0, cashObj.getDouble("amount"), 0.001)
+        assertEquals(50.0, breakdown.changeAmount, 0.001)
     }
 
     @Test

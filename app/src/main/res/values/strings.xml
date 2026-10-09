@@ -604,6 +604,7 @@
     <string name="cart_default_tax_label">VAT</string>
     <string name="cart_reason_due_details_required">Customer name and phone are required for Due</string>
     <string name="cart_reason_split_total_mismatch">Total split payment must equal the grand total</string>
+    <string name="cart_reason_split_non_cash_overtender">Card and digital wallet payments cannot exceed the bill amount</string>
     <string name="cart_reason_split_details_required">Enter the wallet number or card digits for each split row</string>
     <string name="cart_reason_wallet_number_required">Enter the 11-digit %1$s mobile number</string>
     <string name="cart_reason_card_digits_required">Enter the card\'s last 4 digits</string>

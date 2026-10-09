@@ -145,6 +145,9 @@ interface SaleDao {
         LIMIT :limit
     """)
     suspend fun getTopProductsForCustomer(phone: String, limit: Int = 25): List<CustomerProductPurchaseSummary>
+
+    @Query("UPDATE sales SET isTaxInclusive = 1 WHERE isTaxInclusive = 0 AND (taxAmount > 0.0 OR taxRate > 0.0)")
+    suspend fun backfillTaxInclusiveForLegacySales(): Int
 }
 
 @Dao
@@ -448,7 +451,7 @@ interface ExpenseDao {
      @Query("UPDATE suppliers SET totalPurchased = totalPurchased + :purchaseAmount, totalDue = totalDue + :dueChange, updatedAt = :timestamp WHERE id = :supplierId")
      suspend fun updateSupplierBalances(supplierId: Long, purchaseAmount: Double, dueChange: Double, timestamp: Long): Int
  
-     @Query("UPDATE suppliers SET totalDue = totalDue - :amountPaid, updatedAt = :timestamp WHERE id = :supplierId AND :amountPaid > 0.0 AND totalDue >= :amountPaid")
+     @Query("UPDATE suppliers SET totalDue = MAX(0.0, totalDue - :amountPaid), updatedAt = :timestamp WHERE id = :supplierId AND :amountPaid > 0.0")
      suspend fun recordSupplierPayment(supplierId: Long, amountPaid: Double, timestamp: Long): Int
  
      @Insert(onConflict = OnConflictStrategy.ABORT)

@@ -2509,8 +2509,10 @@ fun CartScreen(
                         val isStoreCreditValid = isSplitPayment || paymentMethod != "Store Credit" || remainingToPay == 0.0 || (((resolvedCustomer?.storeCredit ?: 0.0) + (redeemedVoucher?.remainingBalance ?: 0.0)) >= grandTotal)
                         val expectedSplitTotal = if (storeCreditApplied > 0.0) remainingToPay else grandTotal
                         val hasCashInSplit = isSplitPayment && splitPayments.any { it.method == "Cash" }
+                        val nonCashSplitTotal = if (isSplitPayment) splitPayments.filterNot { it.method == "Cash" }.sumOf { it.amount } else 0.0
                         val splitCollected = splitPayments.sumOf { it.amount }
-                        val isSplitValid = !isSplitPayment || (splitPayments.isNotEmpty() && (
+                        val isNonCashWithinBounds = !isSplitPayment || nonCashSplitTotal <= expectedSplitTotal + 0.001
+                        val isSplitValid = !isSplitPayment || (splitPayments.isNotEmpty() && isNonCashWithinBounds && (
                             kotlin.math.abs(splitCollected - expectedSplitTotal) < 0.01 ||
                             (hasCashInSplit && splitCollected >= expectedSplitTotal)
                         ))
@@ -2530,6 +2532,7 @@ fun CartScreen(
                             val reason = when {
                                 !isTotalValid -> stringResource(R.string.cart_reason_total_zero)
                                 !isDueValid -> stringResource(R.string.cart_reason_due_details_required)
+                                isSplitPayment && !isNonCashWithinBounds -> stringResource(R.string.cart_reason_split_non_cash_overtender)
                                 isSplitPayment && !isSplitValid -> stringResource(R.string.cart_reason_split_total_mismatch)
                                 isSplitPayment && !isSplitDetailsValid -> stringResource(R.string.cart_reason_split_details_required)
                                 !isWalletValid -> stringResource(R.string.cart_reason_wallet_number_required, paymentMethod)
@@ -2553,7 +2556,7 @@ fun CartScreen(
                                     android.widget.Toast.makeText(context, context.getString(R.string.cart_reason_cash_insufficient), android.widget.Toast.LENGTH_SHORT).show()
                                 } else {
                                     cartViewModel.setCompletingSale(true)
-                                    val snapshotAmountPaid = if (paymentMethod == "Cash" && !isSplitPayment) currentRawCash else currentPaymentBreakdown.effectiveAmountPaid
+                                    val snapshotAmountPaid = if (paymentMethod == "Cash" && !isSplitPayment) currentRawCash else currentPaymentBreakdown.amountPaidToRecord
                                     val snapshotChange = currentPaymentBreakdown.changeAmount
                                     scope.launch {
                                         doCompleteSale(snapshotAmountPaid, snapshotChange)
@@ -2871,7 +2874,7 @@ fun CartScreen(
                     android.widget.Toast.makeText(context, context.getString(R.string.cart_reason_cash_insufficient), android.widget.Toast.LENGTH_SHORT).show()
                 } else if (!isCompletingSale && grandTotal > 0.0) {
                     cartViewModel.setCompletingSale(true)
-                    val snapshotAmountPaid = if (paymentMethod == "Cash" && !isSplitPayment) currentRawCash else currentPaymentBreakdown.effectiveAmountPaid
+                    val snapshotAmountPaid = if (paymentMethod == "Cash" && !isSplitPayment) currentRawCash else currentPaymentBreakdown.amountPaidToRecord
                     val snapshotChange = currentPaymentBreakdown.changeAmount
                     scope.launch {
                         doCompleteSale(snapshotAmountPaid, snapshotChange)

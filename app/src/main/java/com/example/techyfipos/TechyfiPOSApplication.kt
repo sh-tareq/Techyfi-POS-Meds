@@ -24,7 +24,11 @@ class TechyfiPOSApplication : Application() {
         val database = AppDatabase.getDatabase(this)
         val settingsDataStore = SettingsDataStore(this)
         repository = DataRepository(this, database, settingsDataStore)
-        applicationScope.launch { repository.removeLegacyDemoDuesIfUntouched() }
+        applicationScope.launch {
+            repository.removeLegacyDemoDuesIfUntouched()
+            repository.backfillLegacyTaxInclusiveIfConfigured()
+            repository.recomputeCustomerLoyaltyTiersWithConfiguredThresholds()
+        }
 
         // Ensure periodic work exists.
         AutoBackupScheduler.scheduleAllAutoBackups(this)

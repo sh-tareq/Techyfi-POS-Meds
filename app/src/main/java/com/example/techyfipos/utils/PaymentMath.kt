@@ -202,6 +202,9 @@ object PaymentMath {
             it.method.equals("Store Credit", ignoreCase = true)
         }
         val electronicSum = electronicEntries.sumOf { it.amount }
+        require(electronicSum <= remainingAfterSc + 0.001) {
+            "Over-tender is not permitted on electronic or card payments"
+        }
         val effectiveElectronic = minOf(electronicSum, remainingAfterSc)
 
         var elecBudgetRemaining = effectiveElectronic
