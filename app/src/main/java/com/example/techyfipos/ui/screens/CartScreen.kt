@@ -2499,10 +2499,11 @@ fun CartScreen(
 
                         // Checkout trigger validation
                         val remainingToPay = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+                        val rawCashReceived = if (paymentMethod == "Cash") (receivedAmountText.toDoubleOrNull() ?: 0.0) else 0.0
                         val isDueValid = (!hasDueInPayment) || (customerName.isNotBlank() && customerPhone.isNotBlank())
                         val isWalletValid = isSplitPayment || paymentMethod !in listOf("bKash", "Nagad", "Rocket") || walletPhone.length == 11
                         val isCardValid = isSplitPayment || paymentMethod != "Card" || cardLastFour.length == 4
-                        val isCashValid = isSplitPayment || paymentMethod != "Cash" || remainingToPay == 0.0 || (effectiveAmountPaid >= remainingToPay && effectiveAmountPaid > 0.0)
+                        val isCashValid = isSplitPayment || paymentMethod != "Cash" || remainingToPay == 0.0 || (rawCashReceived >= remainingToPay && rawCashReceived > 0.0)
                         val isStoreCreditValid = isSplitPayment || paymentMethod != "Store Credit" || remainingToPay == 0.0 || (((resolvedCustomer?.storeCredit ?: 0.0) + (redeemedVoucher?.remainingBalance ?: 0.0)) >= grandTotal)
                         val expectedSplitTotal = if (storeCreditApplied > 0.0) remainingToPay else grandTotal
                         val hasCashInSplit = isSplitPayment && splitPayments.any { it.method == "Cash" }
@@ -2543,14 +2544,15 @@ fun CartScreen(
 
                         val executeSaleAction = {
                             if (!isCompletingSale && grandTotal > 0.0) {
-                                cartViewModel.setCompletingSale(true)
-                                val snapshotAmountPaid = currentPaymentBreakdown.effectiveAmountPaid
-                                val snapshotChange = currentPaymentBreakdown.changeAmount
-                                val snapshotPaymentMethod = currentPaymentBreakdown.paymentMethodToSave
-                                if (snapshotPaymentMethod == "Cash" && remainingToPay > 0.0 && snapshotAmountPaid < remainingToPay) {
+                                val currentRawCash = if (paymentMethod == "Cash") (receivedAmountText.toDoubleOrNull() ?: 0.0) else 0.0
+                                val currentRemaining = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+                                if (paymentMethod == "Cash" && !isSplitPayment && currentRemaining > 0.0 && currentRawCash < currentRemaining) {
                                     cartViewModel.setCompletingSale(false)
                                     android.widget.Toast.makeText(context, context.getString(R.string.cart_reason_cash_insufficient), android.widget.Toast.LENGTH_SHORT).show()
                                 } else {
+                                    cartViewModel.setCompletingSale(true)
+                                    val snapshotAmountPaid = if (paymentMethod == "Cash" && !isSplitPayment) currentRawCash else currentPaymentBreakdown.effectiveAmountPaid
+                                    val snapshotChange = currentPaymentBreakdown.changeAmount
                                     scope.launch {
                                         doCompleteSale(snapshotAmountPaid, snapshotChange)
                                     }
@@ -2865,14 +2867,14 @@ fun CartScreen(
             onAuthorize = {
                 showCreditLimitWarningDialog = false
                 exceededCustomerDue = null
-                val snapshotAmountPaid = currentPaymentBreakdown.effectiveAmountPaid
-                val snapshotChange = currentPaymentBreakdown.changeAmount
-                val snapshotPaymentMethod = currentPaymentBreakdown.paymentMethodToSave
+                val currentRawCash = if (paymentMethod == "Cash") (receivedAmountText.toDoubleOrNull() ?: 0.0) else 0.0
                 val triggerRemainingToPay = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
-                if (snapshotPaymentMethod == "Cash" && triggerRemainingToPay > 0.0 && snapshotAmountPaid < triggerRemainingToPay) {
+                if (paymentMethod == "Cash" && !isSplitPayment && triggerRemainingToPay > 0.0 && currentRawCash < triggerRemainingToPay) {
                     android.widget.Toast.makeText(context, context.getString(R.string.cart_reason_cash_insufficient), android.widget.Toast.LENGTH_SHORT).show()
                 } else if (!isCompletingSale && grandTotal > 0.0) {
                     cartViewModel.setCompletingSale(true)
+                    val snapshotAmountPaid = if (paymentMethod == "Cash" && !isSplitPayment) currentRawCash else currentPaymentBreakdown.effectiveAmountPaid
+                    val snapshotChange = currentPaymentBreakdown.changeAmount
                     scope.launch {
                         doCompleteSale(snapshotAmountPaid, snapshotChange)
                     }

@@ -260,33 +260,53 @@ class MoneyFlowsTest {
     }
 
     @Test
-    fun `M-5 Cash 250 and SC 50 on 300 total with auto SC 100 preserves auto SC and computes 100 change`() {
+    fun `R19-1 partial store credit plus Cash two-step flow computes change 50 records cash 200 and rejects underpayment 150`() {
         val grandTotal = 300.0
-        val autoSc = 100.0
-        val splitPayments = listOf(
-            SplitPaymentEntry("Cash", 250.0),
-            SplitPaymentEntry("Store Credit", 50.0)
-        )
-        val breakdown = PaymentMath.calculatePaymentBreakdown(
+        val storeCreditApplied = 100.0
+        val remainingToPay = grandTotal - storeCreditApplied // 200.0
+
+        // 1. Panel breakdown with underpayment (150 cash against 200 remaining)
+        val underpayBreakdown = PaymentMath.calculatePaymentBreakdown(
             grandTotal = grandTotal,
-            isSplitPayment = true,
-            paymentMethod = "Split",
-            splitPayments = splitPayments,
-            storeCreditApplied = autoSc
+            storeCreditApplied = storeCreditApplied,
+            isSplitPayment = false,
+            paymentMethod = "Cash",
+            amountPaid = 150.0
         )
-        val effectivePaid = breakdown.effectiveAmountPaid
-        val splitJson = breakdown.splitPaymentJson
+        // Cash tendered must not be inflated with store credit (must be 150.0, not 250.0)
+        assertEquals("Panel effectiveAmountPaid on underpay must equal cash tendered alone", 150.0, underpayBreakdown.effectiveAmountPaid, 0.001)
+        val isUnderpayValid = underpayBreakdown.effectiveAmountPaid >= remainingToPay
+        assertFalse("Underpaying with 150 cash against 200 remaining must be rejected", isUnderpayValid)
+
+        // 2. Panel breakdown with 250 cash tendered (50 change)
+        val panelBreakdown = PaymentMath.calculatePaymentBreakdown(
+            grandTotal = grandTotal,
+            storeCreditApplied = storeCreditApplied,
+            isSplitPayment = false,
+            paymentMethod = "Cash",
+            amountPaid = 250.0
+        )
+        assertEquals("Panel change must be 50.0", 50.0, panelBreakdown.changeAmount, 0.001)
+        assertEquals("Panel effectiveAmountPaid must equal raw cash tendered", 250.0, panelBreakdown.effectiveAmountPaid, 0.001)
+
+        // 3. Snapshot breakdown must receive raw cash tendered (250.0), NOT inflated effectiveAmountPaid
+        val snapshotAmountPaid = panelBreakdown.effectiveAmountPaid
+        val snapshotBreakdown = PaymentMath.calculatePaymentBreakdown(
+            grandTotal = grandTotal,
+            storeCreditApplied = storeCreditApplied,
+            isSplitPayment = false,
+            paymentMethod = "Cash",
+            amountPaid = snapshotAmountPaid
+        )
+        assertEquals("Snapshot change must be 50.0, not inflated 150.0", 50.0, snapshotBreakdown.changeAmount, 0.001)
+
+        val splitJson = snapshotBreakdown.splitPaymentJson
         assertNotNull(splitJson)
         val arr = JSONArray(splitJson!!)
-        val totalApplied = (0 until arr.length()).sumOf { arr.getJSONObject(it).getDouble("amount") }
-        assertEquals("Rows must sum to grand total (300.0)", 300.0, totalApplied, 0.001)
-
-        val scRows = (0 until arr.length()).map { arr.getJSONObject(it) }.filter { it.getString("method") == "Store Credit" }
-        val totalScApplied = scRows.sumOf { it.getDouble("amount") }
-        assertEquals("Auto SC (100) + split SC (50) must total 150.0 store credit", 150.0, totalScApplied, 0.001)
-
-        val change = breakdown.changeAmount
-        assertEquals("Change must be 100.0 (Cash 250 tendered for remaining 150)", 100.0, change, 0.001)
+        val cashObj = (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("method") == "Cash" }
+        assertEquals("Recorded cash row amount must be 200.0", 200.0, cashObj.getDouble("amount"), 0.001)
+        assertEquals("Recorded cash tenderedAmount must be 250.0", 250.0, cashObj.getDouble("tenderedAmount"), 0.001)
+        assertEquals("Recorded cash changeAmount must be 50.0", 50.0, cashObj.getDouble("changeAmount"), 0.001)
     }
 
     @Test
