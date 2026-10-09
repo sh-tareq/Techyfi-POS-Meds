@@ -388,8 +388,11 @@ class DataRepository(
                 productDao.updateProduct(normalizedProduct)
             } else {
                 val oldProduct = productDao.getProductByBarcode(cleanOldBarcode)
+                    ?: productDao.getProductByBarcodeCaseInsensitive(cleanOldBarcode)
                     ?: throw IllegalArgumentException("Product no longer exists")
-                require(productDao.getProductByBarcode(normalizedProduct.barcode) == null) {
+                val existingTarget = productDao.getProductByBarcode(normalizedProduct.barcode)
+                    ?: productDao.getProductByBarcodeCaseInsensitive(normalizedProduct.barcode)
+                require(existingTarget == null) {
                     "Product barcode already exists"
                 }
                 productDao.deleteProduct(oldProduct)
@@ -554,23 +557,28 @@ class DataRepository(
                     val dueAlreadyReconciled = returnDao.getReturnsForSaleOnce(saleId)
                         .sumOf { it.dueAdjustmentAmount }
                     reduceCustomerDue(phone, (dueForSale - dueAlreadyReconciled).coerceAtLeast(0.0))
+                }
 
+                val loyaltyEarnTarget = saleWithItems.sale.loyaltyPhone?.takeIf { it.isNotBlank() } ?: phone
+                if (!loyaltyEarnTarget.isNullOrBlank() && saleWithItems.sale.grandTotal > 0.0) {
                     val alreadyRefunded = returnDao.getRefundTotalForSale(saleId)
                     val remainingSpend = (saleWithItems.sale.grandTotal - alreadyRefunded).coerceAtLeast(0.0)
                     val takaPerPt = getLoyaltySettings().takaPerPoint.takeIf { it > 0.0 } ?: LOYALTY_TAKA_PER_POINT
                     val reversedPoints = floor(remainingSpend / takaPerPt).toInt()
-                    customerLoyaltyDao.reverseEarnedPoints(
-                        normalizePhone(phone),
-                        reversedPoints,
-                        remainingSpend,
-                        System.currentTimeMillis()
-                    )
-                    loyaltyTransactionDao.insert(LoyaltyTransaction(
-                        customerPhone = normalizePhone(phone), pointsChange = -reversedPoints,
-                        spendChange = -remainingSpend, type = "SALE_VOID",
-                        reason = "Invoice #$saleId deleted", saleId = saleId,
-                        performedByName = sessionUser?.name
-                    ))
+                    if (reversedPoints > 0) {
+                        customerLoyaltyDao.reverseEarnedPoints(
+                            normalizePhone(loyaltyEarnTarget),
+                            reversedPoints,
+                            remainingSpend,
+                            System.currentTimeMillis()
+                        )
+                        loyaltyTransactionDao.insert(LoyaltyTransaction(
+                            customerPhone = normalizePhone(loyaltyEarnTarget), pointsChange = -reversedPoints,
+                            spendChange = -remainingSpend, type = "SALE_VOID",
+                            reason = "Invoice #$saleId deleted", saleId = saleId,
+                            performedByName = sessionUser?.name
+                        ))
+                    }
                 }
                 val loyaltyPhone = saleWithItems.sale.loyaltyPhone
                 val loyaltyPoints = saleWithItems.sale.loyaltyPointsRedeemed
@@ -1114,7 +1122,7 @@ class DataRepository(
                 splitPaymentJson = if (paymentMethod.equals("Split", ignoreCase = true)) splitPaymentJson else null,
                 performedByUserId = sessionUser?.id,
                 performedByName = sessionUser?.name,
-                loyaltyPhone = normalizedLoyaltyPhone?.takeIf { loyaltyPointsToRedeem > 0 },
+                loyaltyPhone = normalizedLoyaltyPhone,
                 loyaltyPointsRedeemed = loyaltyPointsToRedeem,
                 storeCreditApplied = storeCreditToUse,
                 isTaxInclusive = isTaxInclusive,
@@ -1215,20 +1223,21 @@ class DataRepository(
             // Automatic loyalty enrollment and earning: any customer who leaves a phone number
             // at checkout accrues points, rather than only being able to redeem an existing
             // balance that nothing else in the app ever populates.
-            if (!normalizedCustomerPhone.isNullOrBlank() && grandTotal > 0.0) {
+            val loyaltyEarnTarget = normalizedLoyaltyPhone?.takeIf { it.isNotBlank() } ?: normalizedCustomerPhone
+            if (!loyaltyEarnTarget.isNullOrBlank() && grandTotal > 0.0) {
                 val loyaltySettings = getLoyaltySettings()
                 val takaPerPt = loyaltySettings.takaPerPoint.takeIf { it > 0.0 } ?: LOYALTY_TAKA_PER_POINT
                 val earnedPoints = floor(grandTotal / takaPerPt).toInt()
-                if (customerLoyaltyDao.getLoyaltyByPhone(normalizedCustomerPhone) == null) {
+                if (customerLoyaltyDao.getLoyaltyByPhone(loyaltyEarnTarget) == null) {
                     customerLoyaltyDao.upsertLoyalty(
                         CustomerLoyalty(
-                            phone = normalizedCustomerPhone,
+                            phone = loyaltyEarnTarget,
                             name = customerName?.takeIf { it.isNotBlank() } ?: "Customer"
                         )
                     )
                 }
-                customerLoyaltyDao.addPoints(normalizedCustomerPhone, earnedPoints, grandTotal, timestamp)
-                val updatedLoyalty = customerLoyaltyDao.getLoyaltyByPhone(normalizedCustomerPhone)
+                customerLoyaltyDao.addPoints(loyaltyEarnTarget, earnedPoints, grandTotal, timestamp)
+                val updatedLoyalty = customerLoyaltyDao.getLoyaltyByPhone(loyaltyEarnTarget)
                 if (updatedLoyalty != null && loyaltySettings.isTiersEnabled) {
                     val newTier = when {
                         updatedLoyalty.lifetimeSpent >= loyaltySettings.platinumSpendThreshold -> "Platinum"
@@ -1241,7 +1250,7 @@ class DataRepository(
                     }
                 }
                 loyaltyTransactionDao.insert(LoyaltyTransaction(
-                    customerPhone = normalizedCustomerPhone, pointsChange = earnedPoints,
+                    customerPhone = loyaltyEarnTarget, pointsChange = earnedPoints,
                     spendChange = grandTotal, type = "SALE_EARN", reason = "Earned on invoice #$saleId",
                     saleId = saleId, timestamp = timestamp, performedByName = sessionUser?.name
                 ))

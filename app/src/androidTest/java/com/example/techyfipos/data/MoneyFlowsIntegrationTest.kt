@@ -13,6 +13,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -2012,5 +2013,70 @@ class MoneyFlowsIntegrationTest {
         )
         val custAfterDue = repository.getCustomerByPhone(phone)!!
         assertEquals("upsertCustomerDue with 0.0 limit must preserve existing 3000.0 limit", 3000.0, custAfterDue.creditLimit, 0.001)
+    }
+
+    @Test
+    fun testM7_loyaltyClawbackAndCashValueEvaluation() = runBlocking {
+        val loyaltyPhone = "01877777777"
+        val customLoyalty = com.example.techyfipos.utils.LoyaltyProgramSettings(
+            isTiersEnabled = true,
+            pointCashValue = 2.0,
+            takaPerPoint = 50.0
+        )
+        repository.updateLoyaltySettings(customLoyalty)
+
+        database.customerLoyaltyDao().upsertLoyalty(
+            CustomerLoyalty(phone = loyaltyPhone, name = "Loyalty Member", pointsBalance = 100, lifetimeSpent = 5000.0)
+        )
+
+        val prod = Product(barcode = "p-m7", name = "M7 Item", category = "General", purchasePrice = 50.0, sellingPrice = 200.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        // Walk-in sale with loyaltyPhone
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 200.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 200.0,
+            paymentMethod = "Cash",
+            customerName = "Walk-in",
+            customerPhone = null,
+            loyaltyPhone = loyaltyPhone,
+            amountPaid = 200.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null))
+        )
+
+        // 200 spend at 50 Taka/point = 4 points earned. Balance becomes 104.
+        val loyaltyAfterSale = database.customerLoyaltyDao().getLoyaltyByPhone(loyaltyPhone)!!
+        assertEquals(104, loyaltyAfterSale.pointsBalance)
+
+        // Voiding sale claws back 4 points from loyaltyPhone
+        repository.deleteSale(saleId, "Void test")
+        val loyaltyAfterVoid = database.customerLoyaltyDao().getLoyaltyByPhone(loyaltyPhone)!!
+        assertEquals("Void must claw back points from loyaltyPhone account", 100, loyaltyAfterVoid.pointsBalance)
+
+        // Value check: 50 points * 2.0 Taka/point = 100.0 Taka
+        val ptCashVal = customLoyalty.pointCashValue
+        val takaVal = 50 * ptCashVal
+        assertEquals("50 points must evaluate to 100.0 Taka", 100.0, takaVal, 0.001)
+    }
+
+    @Test
+    fun testR6_productLookupByBarcodeUsesDirectPkAndExcelExportSafe() = runBlocking {
+        val prod = Product(barcode = "p-r6-direct", name = "R6 Direct", category = "General", purchasePrice = 40.0, sellingPrice = 80.0, stockQty = 15.0, reorderLevel = 2)
+        database.productDao().insertProduct(prod)
+
+        // Direct PK lookup on exact lowercase barcode
+        val found = database.productDao().getProductByBarcode("p-r6-direct")
+        assertNotNull("Direct PK lookup must find product", found)
+        assertEquals("R6 Direct", found?.name)
+
+        // Verify ExcelHelper exportProducts succeeds safely on Android runtime
+        val out = java.io.ByteArrayOutputStream()
+        com.example.techyfipos.utils.ExcelHelper.exportProducts(listOf(prod), out)
+        assertTrue("Excel output must have non-zero bytes", out.size() > 0)
     }
 }

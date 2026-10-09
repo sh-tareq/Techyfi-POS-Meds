@@ -2105,9 +2105,15 @@ private fun SaleDetailDialog(
                     val isCashSale = s.paymentMethod.equals("Cash", ignoreCase = true)
                     val actualCashPaid = if (isCashSale && s.amountPaid > s.grandTotal) s.grandTotal else s.amountPaid
                     val cashChange = if (isCashSale && s.amountPaid > s.grandTotal) s.amountPaid - s.grandTotal else 0.0
-                    val pointsEarnedClawback = remember(s) {
-                        if (!s.customerPhone.isNullOrBlank() && s.grandTotal > 0.0) {
-                            kotlin.math.floor(s.grandTotal / 100.0).toInt()
+                    val loyaltySettings = remember { com.example.techyfipos.utils.LoyaltySettingsHelper.getSettings(context) }
+                    val ptCashVal = loyaltySettings.pointCashValue.takeIf { it > 0.0 } ?: 1.0
+                    val takaPerPt = loyaltySettings.takaPerPoint.takeIf { it > 0.0 } ?: 100.0
+                    val loyaltyTargetPhone = s.loyaltyPhone?.takeIf { it.isNotBlank() } ?: s.customerPhone
+                    val pointsEarnedClawback = remember(s, takaPerPt, loyaltyTargetPhone) {
+                        if (!loyaltyTargetPhone.isNullOrBlank() && s.grandTotal > 0.0) {
+                            val alreadyRefunded = currentReturnSummary?.totalRefundAmount ?: 0.0
+                            val remainingSpend = (s.grandTotal - alreadyRefunded).coerceAtLeast(0.0)
+                            kotlin.math.floor(remainingSpend / takaPerPt).toInt()
                         } else 0
                     }
 
@@ -2134,7 +2140,7 @@ private fun SaleDetailDialog(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Voucher (${voucherCode ?: "Voucher"})", fontSize = 12.sp)
+                            Text(stringResource(R.string.voucher_code_label_fmt, voucherCode ?: stringResource(R.string.voucher_plain_label)), fontSize = 12.sp)
                             Text("+${formatTaka(voucherPortion)}", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
                         }
                     }
@@ -2162,7 +2168,7 @@ private fun SaleDetailDialog(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(stringResource(R.string.loyalty_points_amount), fontSize = 12.sp)
-                            Text("+${stringResource(R.string.customer_pts_suffix, s.loyaltyPointsRedeemed)} (${formatTaka(s.loyaltyPointsRedeemed.toDouble())})", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                            Text("+${stringResource(R.string.customer_pts_suffix, s.loyaltyPointsRedeemed)} (${formatTaka(s.loyaltyPointsRedeemed * ptCashVal)})", color = Color(0xFF16A34A), fontWeight = FontWeight.Medium, fontSize = 12.sp)
                         }
                     }
                     if (pointsEarnedClawback > 0) {

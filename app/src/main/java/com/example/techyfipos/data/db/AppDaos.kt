@@ -11,7 +11,7 @@ interface ProductDao {
     @Query("SELECT * FROM products ORDER BY name ASC")
     suspend fun getAllProductsList(): List<Product>
 
-    @Query("SELECT * FROM products WHERE LOWER(barcode) = LOWER(:barcode) LIMIT 1")
+    @Query("SELECT * FROM products WHERE barcode = :barcode OR barcode = LOWER(:barcode) LIMIT 1")
     suspend fun getProductByBarcode(barcode: String): Product?
 
     @Query("SELECT * FROM products WHERE LOWER(barcode) = LOWER(:barcode) LIMIT 1")

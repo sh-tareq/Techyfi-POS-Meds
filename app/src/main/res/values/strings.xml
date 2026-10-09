@@ -1998,6 +1998,8 @@
     <string name="store_credit_remaining_label">Remaining Store Credit</string>
     <string name="voucher_applied_label">Voucher Applied</string>
     <string name="voucher_rem_bal_label">Voucher Remaining Balance</string>
+    <string name="voucher_code_label_fmt">Voucher (%1$s)</string>
+    <string name="voucher_plain_label">Voucher</string>
     <string name="store_credit_voucher_print_compact">Print Voucher</string>
     <string name="store_credit_voucher_share_compact">Share Slip</string>
     <string name="store_credit_view_mode_slip">Slip</string>
