@@ -2079,4 +2079,35 @@ class MoneyFlowsIntegrationTest {
         com.example.techyfipos.utils.ExcelHelper.exportProducts(listOf(prod), out)
         assertTrue("Excel output must have non-zero bytes", out.size() > 0)
     }
+
+    @Test
+    fun testU2_customerNoteDeletionAndConfirmationStrings() = runBlocking {
+        val custPhone = "01788889999"
+        val initialNotes = "Note 1\u001ENote 2\u001ENote 3"
+        repository.upsertCustomer(
+            Customer(
+                phone = custPhone,
+                name = "Note Test Customer",
+                notes = initialNotes
+            )
+        )
+
+        // Delete note at index 1 ("Note 2")
+        val customer = database.customerDao().getCustomerByPhone(custPhone)!!
+        val noteEntries = customer.notes?.split("\u001E")?.toMutableList() ?: mutableListOf()
+        noteEntries.removeAt(1)
+        val updatedNotes = noteEntries.joinToString("\u001E")
+        repository.upsertCustomer(customer.copy(notes = updatedNotes))
+
+        val updatedCustomer = database.customerDao().getCustomerByPhone(custPhone)!!
+        assertEquals("Note 1\u001ENote 3", updatedCustomer.notes)
+
+        // Verify U-2 string resources exist and are non-empty
+        val noteDeletedStr = context.getString(com.example.techyfipos.R.string.customer_note_deleted)
+        val confirmCartTitle = context.getString(com.example.techyfipos.R.string.confirm_delete_held_cart_title)
+        val confirmLogTitle = context.getString(com.example.techyfipos.R.string.confirm_delete_reminder_log_title)
+        assertTrue(noteDeletedStr.isNotBlank())
+        assertTrue(confirmCartTitle.isNotBlank())
+        assertTrue(confirmLogTitle.isNotBlank())
+    }
 }

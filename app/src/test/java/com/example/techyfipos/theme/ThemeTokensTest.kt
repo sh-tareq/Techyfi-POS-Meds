@@ -98,4 +98,27 @@ class ThemeTokensTest {
             darkSurfaceVariantOnHighest >= 4.5
         )
     }
+
+    @Test
+    fun testU4_darkModeSurfaces_contrastAndThemeTokensValid() {
+        // Dark mode surfaceVariant and errorContainer contrast checks (U-4 dark mode badges & surfaces)
+        val errorContainerContrast = calculateContrast(DarkColorScheme.onErrorContainer, DarkColorScheme.errorContainer)
+        assertTrue(
+            "Dark onErrorContainer on errorContainer should be >= 4.5:1 but was $errorContainerContrast",
+            errorContainerContrast >= 4.5
+        )
+
+        val onSurfaceVariantContrast = calculateContrast(DarkColorScheme.onSurfaceVariant, DarkColorScheme.surfaceVariant)
+        assertTrue(
+            "Dark onSurfaceVariant on surfaceVariant should be >= 4.5:1 but was $onSurfaceVariantContrast",
+            onSurfaceVariantContrast >= 4.5
+        )
+
+        val onSurfaceContrast = calculateContrast(DarkColorScheme.onSurface, DarkColorScheme.surface)
+        assertTrue(
+            "Dark onSurface on surface should be >= 4.5:1 but was $onSurfaceContrast",
+            onSurfaceContrast >= 4.5
+        )
+    }
 }
+

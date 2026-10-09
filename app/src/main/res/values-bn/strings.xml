@@ -2705,4 +2705,11 @@
     <string name="points_clawback_label">অর্জিত পয়েন্ট বাতিল</string>
     <string name="change_returned_label">ফেরত দেওয়া টাকা</string>
     <string name="customer_credit_label">কাস্টমার স্টোর ক্রেডিট</string>
+    <string name="customer_note_deleted">কাস্টমার নোটটি সফলভাবে মুছে ফেলা হয়েছে</string>
+    <string name="confirm_delete_held_cart_title">হোল্ড কার্ট মুছুন</string>
+    <string name="confirm_delete_held_cart_message">আপনি কি নিশ্চিতভাবে এই হোল্ড কার্টটি মুছে ফেলতে চান?</string>
+    <string name="confirm_delete_customer_note_title">কাস্টমার নোট মুছুন</string>
+    <string name="confirm_delete_customer_note_message">আপনি কি নিশ্চিতভাবে এই নোটটি মুছে ফেলতে চান?</string>
+    <string name="confirm_delete_reminder_log_title">রিমাইন্ডার লগ মুছুন</string>
+    <string name="confirm_delete_reminder_log_message">আপনি কি নিশ্চিতভাবে এই রিমাইন্ডার লগটি মুছে ফেলতে চান?</string>
 </resources>

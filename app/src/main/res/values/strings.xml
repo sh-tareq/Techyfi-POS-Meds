@@ -2703,6 +2703,13 @@
     <string name="points_clawback_label">Points Earned Clawback</string>
     <string name="change_returned_label">Change Returned</string>
     <string name="customer_credit_label">Customer Store Credit</string>
+    <string name="customer_note_deleted">Customer note deleted successfully</string>
+    <string name="confirm_delete_held_cart_title">Delete Held Cart</string>
+    <string name="confirm_delete_held_cart_message">Are you sure you want to delete this held cart?</string>
+    <string name="confirm_delete_customer_note_title">Delete Customer Note</string>
+    <string name="confirm_delete_customer_note_message">Are you sure you want to delete this note?</string>
+    <string name="confirm_delete_reminder_log_title">Delete Reminder Log</string>
+    <string name="confirm_delete_reminder_log_message">Are you sure you want to delete this reminder log?</string>
 </resources>
 
 

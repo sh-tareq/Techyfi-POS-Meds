@@ -92,9 +92,36 @@ fun CustomerDossierSheet(
 
     var newNoteText by remember { mutableStateOf("") }
     var selectedNoteCategory by remember { mutableStateOf("General") }
+    var noteIndexToDelete by remember { mutableStateOf<Int?>(null) }
 
     val aov = remember(customer.lifetimeSpent, customer.totalOrders) {
         if (customer.totalOrders > 0) customer.lifetimeSpent / customer.totalOrders else 0.0
+    }
+
+    if (noteIndexToDelete != null) {
+        val targetIndex = noteIndexToDelete!!
+        AlertDialog(
+            onDismissRequest = { noteIndexToDelete = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
+            title = { Text(stringResource(R.string.confirm_delete_customer_note_title)) },
+            text = { Text(stringResource(R.string.confirm_delete_customer_note_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteNote(targetIndex)
+                        noteIndexToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { noteIndexToDelete = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 
     ModalBottomSheet(
@@ -664,14 +691,14 @@ fun CustomerDossierSheet(
                                                 modifier = Modifier.weight(1f)
                                             )
                                             IconButton(
-                                                onClick = { onDeleteNote(index) },
-                                                modifier = Modifier.size(36.dp)
+                                                onClick = { noteIndexToDelete = index },
+                                                modifier = Modifier.size(48.dp)
                                             ) {
                                                 Icon(
                                                     Icons.Default.DeleteOutline,
                                                     contentDescription = stringResource(R.string.delete),
                                                     tint = MaterialTheme.colorScheme.error,
-                                                    modifier = Modifier.size(16.dp)
+                                                    modifier = Modifier.size(20.dp)
                                                 )
                                             }
                                         }

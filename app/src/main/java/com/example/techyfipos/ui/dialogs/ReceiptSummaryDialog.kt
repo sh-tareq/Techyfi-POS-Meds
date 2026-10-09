@@ -428,9 +428,9 @@ fun ReceiptSummaryDialog(
                 } else {
                     // 2. Part 1: Quick Financial Metrics Ribbon (Photorealistic 3D Animated Icons)
                     Surface(
-                        color = Color(0xFFE8F8F5),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                         shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.dp, Color(0xFFD1FAE5)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 14.dp, vertical = 2.dp)
@@ -453,13 +453,13 @@ fun ReceiptSummaryDialog(
                                         text = stringResource(R.string.total),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFF64748B)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
                                         text = formatTaka(bill.grandTotal),
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = Color(0xFF059669)
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -475,13 +475,13 @@ fun ReceiptSummaryDialog(
                                         text = stringResource(R.string.payment_method),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFF64748B)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
                                         text = bill.paymentMethod.ifBlank { "Cash" },
                                         fontSize = 12.5.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF0F172A)
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             }
@@ -493,13 +493,13 @@ fun ReceiptSummaryDialog(
                                         text = stringResource(R.string.change),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFF64748B)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
                                         text = formatTaka(bill.changeAmount),
                                         fontSize = 12.5.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF0284C7)
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             } else if (remainingDue > 0.0) {
@@ -508,7 +508,7 @@ fun ReceiptSummaryDialog(
                                         text = stringResource(R.string.due),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFF64748B)
+                                        color = MaterialTheme.colorScheme.error
                                     )
                                     Text(
                                         text = formatTaka(remainingDue),
@@ -521,8 +521,8 @@ fun ReceiptSummaryDialog(
 
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = if (remainingDue > 0.0) MaterialTheme.colorScheme.errorContainer else Color(0xFFDCFCE7),
-                                border = BorderStroke(1.dp, if (remainingDue > 0.0) MaterialTheme.colorScheme.error.copy(alpha = 0.3f) else Color(0xFF86EFAC)),
+                                color = if (remainingDue > 0.0) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                border = BorderStroke(1.dp, if (remainingDue > 0.0) MaterialTheme.colorScheme.error.copy(alpha = 0.3f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
                                 shadowElevation = 1.dp
                             ) {
                                 Row(
@@ -537,7 +537,7 @@ fun ReceiptSummaryDialog(
                                         text = if (remainingDue > 0.0) "DUE" else "PAID",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = if (remainingDue > 0.0) MaterialTheme.colorScheme.error else Color(0xFF15803D)
+                                        color = if (remainingDue > 0.0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }

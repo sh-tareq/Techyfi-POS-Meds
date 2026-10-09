@@ -224,6 +224,34 @@ fun HeldCartsBottomSheet(
     onDelete: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var cartToDelete by remember { mutableStateOf<HeldCart?>(null) }
+
+    if (cartToDelete != null) {
+        val target = cartToDelete!!
+        AlertDialog(
+            onDismissRequest = { cartToDelete = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
+            title = { Text(stringResource(R.string.confirm_delete_held_cart_title)) },
+            text = { Text(stringResource(R.string.confirm_delete_held_cart_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDelete(target.id)
+                        cartToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { cartToDelete = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -289,7 +317,7 @@ fun HeldCartsBottomSheet(
                                 onResume(cart)
                                 onDismiss()
                             },
-                            onDelete = { onDelete(cart.id) }
+                            onDelete = { cartToDelete = cart }
                         )
                     }
                 }
@@ -369,16 +397,16 @@ private fun HeldCartCard(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(
                     onClick = onDelete,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.DeleteOutline,
                         contentDescription = stringResource(R.string.held_cart_delete_content_description),
                         tint = Color(0xFFE11D48),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
                 Button(
@@ -536,12 +564,12 @@ fun SplitPaymentBuilder(
                             updated.removeAt(index)
                             onEntriesChanged(updated)
                         },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Surface(
                             shape = CircleShape,
-                            color = Color(0xFFF1F5F9),
-                            modifier = Modifier.size(28.dp)
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.size(32.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(Icons.Default.Close, null, tint = Color(0xFF64748B), modifier = Modifier.size(15.dp))
@@ -1420,21 +1448,21 @@ fun ExpenseItemRow(
                     color = if (isCashIn) Color(0xFF059669) else Color(0xFFE11D48)
                 )
                 if (onEdit != null) {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
                         Icon(
                             Icons.Default.Edit,
                             contentDescription = stringResource(R.string.expense_edit_title),
                             tint = Color.Gray.copy(alpha = 0.7f),
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
-                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(28.dp)) {
+                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(48.dp)) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = stringResource(R.string.delete),
                         tint = Color.Gray.copy(alpha = 0.6f),
-                        modifier = Modifier.size(15.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -1623,12 +1651,12 @@ fun SupplierCard(
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                         ),
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = stringResource(R.string.supplier_edit_title),
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -1649,7 +1677,7 @@ fun SupplierCard(
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                         ),
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Phone,

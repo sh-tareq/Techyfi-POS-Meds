@@ -1246,7 +1246,7 @@ private fun TabletSplitTerminal(
                                     shape = RoundedCornerShape(8.dp),
                                     color = TabletTerminalColors.CardBg,
                                     border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
-                                    modifier = Modifier.size(44.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(Icons.Default.Restore, contentDescription = stringResource(R.string.tablet_cart_hold), tint = TabletTerminalColors.Amber, modifier = Modifier.size(16.dp))
@@ -1734,13 +1734,13 @@ private fun TabletTopToolbar(
                 if (searchQuery.isNotEmpty()) {
                     IconButton(
                         onClick = { onSearchQueryChange("") },
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = stringResource(R.string.clear_search),
                             tint = TabletTerminalColors.TextTertiary,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -2075,7 +2075,7 @@ private fun TabletCameraPipView(
             ) {
                 FilledIconButton(
                     onClick = onTorchToggle,
-                    modifier = Modifier.size(44.dp),
+                    modifier = Modifier.size(48.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = if (torchEnabled) Color(0xFFFFD54F) else Color.DarkGray
                     )
@@ -2085,7 +2085,7 @@ private fun TabletCameraPipView(
 
                 FilledIconButton(
                     onClick = onScanningPausedToggle,
-                    modifier = Modifier.size(44.dp),
+                    modifier = Modifier.size(48.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = if (scanningPaused) Color(0xFFEF5350) else Color.DarkGray
                     )
@@ -3551,28 +3551,28 @@ fun StockCheckBottomSheet(
                         ) {
                             if (!mfgDate.isNullOrBlank()) {
                                 Surface(
-                                    color = Color(0xFFE2E8F0),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
                                     shape = RoundedCornerShape(6.dp)
                                 ) {
                                     Text(
                                         "$mfgTypeLabel: $mfgDate",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF334155),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
                             }
                             if (!expDate.isNullOrBlank()) {
                                 Surface(
-                                    color = Color(0xFFFEE2E2),
+                                    color = MaterialTheme.colorScheme.errorContainer,
                                     shape = RoundedCornerShape(6.dp)
                                 ) {
                                     Text(
                                         "EXP: $expDate",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFDC2626),
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
@@ -3631,7 +3631,7 @@ fun StockCheckBottomSheet(
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = Color(0xFF64748B)
                         ),
-                        modifier = Modifier.size(44.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease_stock), tint = Color.White)
                     }
@@ -3663,7 +3663,7 @@ fun StockCheckBottomSheet(
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = Color(0xFF059669)
                         ),
-                        modifier = Modifier.size(44.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase_stock), tint = Color.White)
                     }

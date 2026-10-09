@@ -425,7 +425,7 @@ fun LoyaltyScreen(
                 customerViewModel.deleteCustomerNote(
                     phone = dossierData!!.customer.phone,
                     noteIndex = index,
-                    onSuccess = { Toast.makeText(context, context.getString(R.string.delete), Toast.LENGTH_SHORT).show() },
+                    onSuccess = { Toast.makeText(context, context.getString(R.string.customer_note_deleted), Toast.LENGTH_SHORT).show() },
                     onError = { err -> Toast.makeText(context, err, Toast.LENGTH_SHORT).show() }
                 )
             },

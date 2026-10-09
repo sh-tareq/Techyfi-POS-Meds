@@ -861,9 +861,9 @@ fun ReturnItemsDialog(
                                         voiceLauncher.launch(intent)
                                     } catch (_: Exception) {}
                                 },
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(48.dp)
                             ) {
-                                Text("🎙️", fontSize = 13.sp)
+                                Text("🎙️", fontSize = 16.sp)
                             }
                         }
                     }
@@ -1783,12 +1783,12 @@ fun ManageAuditPresetsDialog(
                                             }
                                             editingIndex = null
                                         },
-                                        modifier = Modifier.size(28.dp)
-                                    ) { Text("💾", fontSize = 12.sp) }
+                                        modifier = Modifier.size(48.dp)
+                                    ) { Text("💾", fontSize = 14.sp) }
                                     IconButton(
                                         onClick = { editingIndex = null },
-                                        modifier = Modifier.size(28.dp)
-                                    ) { Text("✕", fontSize = 12.sp) }
+                                        modifier = Modifier.size(48.dp)
+                                    ) { Text("✕", fontSize = 14.sp) }
                                 }
                             } else {
                                 Row(
@@ -1811,15 +1811,15 @@ fun ManageAuditPresetsDialog(
                                             editingIndex = index
                                             editingText = preset.text
                                         },
-                                        modifier = Modifier.size(28.dp)
-                                    ) { Text("✏️", fontSize = 12.sp) }
+                                        modifier = Modifier.size(48.dp)
+                                    ) { Text("✏️", fontSize = 14.sp) }
 
                                     IconButton(
                                         onClick = {
                                             presetsList = presetsList.filterIndexed { i, _ -> i != index }
                                         },
-                                        modifier = Modifier.size(28.dp)
-                                    ) { Text("🗑️", fontSize = 12.sp) }
+                                        modifier = Modifier.size(48.dp)
+                                    ) { Text("🗑️", fontSize = 14.sp) }
                                 }
                             }
                         }
