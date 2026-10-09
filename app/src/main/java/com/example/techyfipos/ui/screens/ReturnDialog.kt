@@ -453,7 +453,7 @@ fun ReturnItemsDialog(
                                                 text = stringResource(R.string.return_dialog_return_qty_fmt, qtyStr),
                                                 fontSize = 10.5.sp,
                                                 fontWeight = FontWeight.ExtraBold,
-                                                color = MaterialTheme.colorScheme.secondary,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                             )
                                         }
@@ -601,7 +601,7 @@ fun ReturnItemsDialog(
                                                         text = stringResource(R.string.common_all),
                                                         fontSize = 10.5.sp,
                                                         fontWeight = FontWeight.ExtraBold,
-                                                        color = if (qty == maxReturnable && maxReturnable > 0.0) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.secondary
+                                                        color = if (qty == maxReturnable && maxReturnable > 0.0) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSecondaryContainer
                                                     )
                                                 }
                                             }
@@ -1079,14 +1079,14 @@ fun ReturnItemsDialog(
                                                 text = stringResource(R.string.return_dialog_due_deduct_notice),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF9F1239),
+                                                color = MaterialTheme.colorScheme.error,
                                                 lineHeight = 15.sp
                                             )
                                             Text(
                                                 text = stringResource(R.string.return_dialog_drawer_untouched_notice),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Medium,
-                                                color = Color(0xFFBE123C),
+                                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.9f),
                                                 lineHeight = 14.sp
                                             )
                                         }

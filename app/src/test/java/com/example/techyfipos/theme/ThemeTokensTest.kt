@@ -52,5 +52,50 @@ class ThemeTokensTest {
             "Dark secondary contrast should be >= 4.5:1 but was $darkSecondaryContrast",
             darkSecondaryContrast >= 4.5
         )
+
+        // D-5: Secondary text on secondaryContainer in dark mode
+        val darkSecondaryOnContainer = calculateContrast(DarkColorScheme.secondary, DarkColorScheme.secondaryContainer)
+        assertTrue(
+            "Dark secondary on secondaryContainer should be >= 4.5:1 but was $darkSecondaryOnContainer",
+            darkSecondaryOnContainer >= 4.5
+        )
+
+        // D-5: Secondary text on dark surface
+        val darkSecondaryOnSurface = calculateContrast(DarkColorScheme.secondary, DarkColorScheme.surface)
+        assertTrue(
+            "Dark secondary on surface should be >= 4.5:1 but was $darkSecondaryOnSurface",
+            darkSecondaryOnSurface >= 4.5
+        )
+    }
+
+    @Test
+    fun testD6_U1_lightThemeContrast_tokensMeetWcag() {
+        // U-1: Light primary checkout button contrast (was 2.54:1 on #10B981)
+        val lightPrimaryContrast = calculateContrast(LightColorScheme.primary, LightColorScheme.onPrimary)
+        assertTrue(
+            "Light primary contrast (U-1) should be >= 4.5:1 but was $lightPrimaryContrast",
+            lightPrimaryContrast >= 4.5
+        )
+
+        // D-6: Light error on onError
+        val lightErrorContrast = calculateContrast(LightColorScheme.error, LightColorScheme.onError)
+        assertTrue(
+            "Light error contrast should be >= 4.5:1 but was $lightErrorContrast",
+            lightErrorContrast >= 4.5
+        )
+
+        // D-6: Light tertiary on onTertiary
+        val lightTertiaryContrast = calculateContrast(LightColorScheme.tertiary, LightColorScheme.onTertiary)
+        assertTrue(
+            "Light tertiary contrast should be >= 4.5:1 but was $lightTertiaryContrast",
+            lightTertiaryContrast >= 4.5
+        )
+
+        // D-6: Dark onSurfaceVariant on surfaceContainerHighest
+        val darkSurfaceVariantOnHighest = calculateContrast(DarkColorScheme.onSurfaceVariant, DarkColorScheme.surfaceContainerHighest)
+        assertTrue(
+            "Dark onSurfaceVariant on surfaceContainerHighest should be >= 4.5:1 but was $darkSurfaceVariantOnHighest",
+            darkSurfaceVariantOnHighest >= 4.5
+        )
     }
 }

@@ -1058,9 +1058,9 @@ fun CartScreen(
                                 contentPadding = PaddingValues(horizontal = 8.dp),
                                 shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF10B981),
+                                    containerColor = MaterialTheme.colorScheme.primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    disabledContainerColor = Color(0xFF10B981).copy(alpha = 0.4f),
+                                    disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
                                     disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
                                 )
                             ) {
@@ -3388,7 +3388,7 @@ fun CartItemRow(
                             }
                         },
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFF10B981),
+                        color = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(48.dp)
                     ) {

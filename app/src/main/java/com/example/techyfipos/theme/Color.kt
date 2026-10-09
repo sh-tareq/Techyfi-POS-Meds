@@ -4,9 +4,12 @@ import androidx.compose.ui.graphics.Color
 
 val EmeraldPrimary = Color(0xFF10B981)
 val EmeraldSecondary = Color(0xFF059669)
+val EmeraldDark = Color(0xFF047857)
 val ElectricIndigo = Color(0xFF4F46E5)
+val ElectricIndigoLight = Color(0xFFA5B4FC)
 val AmberWarning = Color(0xFFF59E0B)
 val CrimsonDanger = Color(0xFFEF4444)
+val CrimsonDark = Color(0xFFDC2626)
 val SapphireInfo = Color(0xFF3B82F6)
 
 // Legacy alias mappings for backwards compatibility across existing screen references
