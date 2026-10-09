@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.execSQL
 import kotlinx.coroutines.Dispatchers
 
-const val APP_DATABASE_VERSION = 37
+const val APP_DATABASE_VERSION = 38
 
 /**
  * Keeps every migration compatible with both Room database backends. Room calls
@@ -469,6 +469,16 @@ val MIGRATION_36_37 = object : Migration(36, 37) {
     }
 }
 
+val MIGRATION_37_38 = sqlMigration(
+    37, 38,
+    "CREATE TABLE IF NOT EXISTS `store_credit_ledger_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `customerPhone` TEXT, `deltaAmount` REAL NOT NULL, `balanceAfter` REAL NOT NULL, `type` TEXT NOT NULL, `referenceInvoiceId` INTEGER, `voucherCode` TEXT, `note` TEXT, `timestamp` INTEGER NOT NULL)",
+    "INSERT INTO `store_credit_ledger_new` (`id`, `customerPhone`, `deltaAmount`, `balanceAfter`, `type`, `referenceInvoiceId`, `voucherCode`, `note`, `timestamp`) SELECT `id`, CASE WHEN `customerPhone` = 'VOUCHER' OR `customerPhone` = '' THEN NULL ELSE `customerPhone` END, `deltaAmount`, `balanceAfter`, `type`, `referenceInvoiceId`, `voucherCode`, `note`, `timestamp` FROM `store_credit_ledger`",
+    "DROP TABLE `store_credit_ledger`",
+    "ALTER TABLE `store_credit_ledger_new` RENAME TO `store_credit_ledger`",
+    "CREATE INDEX IF NOT EXISTS `index_store_credit_ledger_customerPhone` ON `store_credit_ledger` (`customerPhone`)",
+    "CREATE INDEX IF NOT EXISTS `index_store_credit_ledger_timestamp` ON `store_credit_ledger` (`timestamp`)"
+)
+
 @Database(
     entities = [
         Product::class,
@@ -538,7 +548,8 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25,
             MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29,
             MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33,
-            MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37
+            MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37,
+            MIGRATION_37_38
         )
 
         fun getDatabase(context: Context): AppDatabase {

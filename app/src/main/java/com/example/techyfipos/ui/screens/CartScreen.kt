@@ -505,7 +505,9 @@ fun CartScreen(
             receivedAmountText = if (amountPaid == 0.0) "" else if (amountPaid % 1.0 == 0.0) amountPaid.toLong().toString() else amountPaid.toString()
         }
     }
-    val hasDueInPayment = (isSplitPayment && splitPayments.any { it.method == "Due" && it.amount > 0 }) || (!isSplitPayment && paymentMethod == "Due")
+    val hasDueInPayment = currentPaymentBreakdown.dueAmount > 0.0 ||
+        (isSplitPayment && splitPayments.any { it.method == "Due" && it.amount > 0 }) ||
+        (!isSplitPayment && paymentMethod == "Due")
 
     suspend fun doCompleteSale(snapshotAmountPaid: Double, snapshotChange: Double) {
         val lineItems = cartItems.map { item ->
@@ -2563,11 +2565,7 @@ fun CartScreen(
                         Button(
                             onClick = {
                                 if (!isCompletingSale) {
-                                    val newDue = if (isSplitPayment) {
-                                        splitPayments.firstOrNull { it.method == "Due" }?.amount ?: 0.0
-                                    } else if (paymentMethod == "Due") {
-                                        (grandTotal - storeCreditApplied - effectiveAmountPaid).coerceAtLeast(0.0)
-                                    } else 0.0
+                                    val newDue = currentPaymentBreakdown.dueAmount
 
                                     val proceedWithSale = {
                                         if (hasDueInPayment && customerPhone.isNotBlank()) {

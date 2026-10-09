@@ -2397,6 +2397,7 @@
     <string name="dossier_credit_supervisor_adjustment">⚖️ Supervisor Adjustment</string>
     <string name="dossier_credit_sale_void">🚫 Void Restoration</string>
     <string name="dossier_credit_merge_transfer">🔀 Merge Transfer</string>
+    <string name="dossier_credit_voucher_restore">🎟️ Voucher Restored</string>
     <string name="customer_share_receipt_chooser">Share Receipt</string>
     <string name="store_credit_adjust_note_placeholder">e.g. Returned item compensation, promotion, correction</string>
     <string name="store_credit_deduct_exceeds_current">Deduction cannot exceed current credit (%1$s)</string>

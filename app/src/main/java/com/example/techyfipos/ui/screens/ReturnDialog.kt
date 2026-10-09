@@ -201,8 +201,16 @@ fun ReturnItemsDialog(
         dueReduction = dueAdjustment,
         refundMethod = refundMethodCandidate
     )
-    val storeCreditRestored = returnApportionment.storeCreditToRestore
-    val externalRefund = returnApportionment.externalRefundAmount
+    val storeCreditRestored = if (selectedSettlementDestination == "WALLET") {
+        (refundTotal - dueAdjustment).coerceAtLeast(0.0)
+    } else {
+        returnApportionment.storeCreditToRestore
+    }
+    val externalRefund = if (selectedSettlementDestination == "WALLET") {
+        0.0
+    } else {
+        returnApportionment.externalRefundAmount
+    }
 
     val hasSelection = quantities.values.any { it > 0.0 }
 
@@ -963,7 +971,13 @@ fun ReturnItemsDialog(
                                         }
                                     }
                                     Text(
-                                        "Physical cash will be handed over to customer from till drawer.",
+                                        if (externalRefund == 0.0 && storeCreditRestored > 0.0) {
+                                            "Original sale was paid with Store Credit / Voucher. The refund of ${formatTaka(storeCreditRestored)} will be restored to Store Credit / Voucher; no cash will be paid out."
+                                        } else if (storeCreditRestored > 0.0) {
+                                            "${formatTaka(storeCreditRestored)} will be restored to Store Credit / Voucher. ${formatTaka(externalRefund)} physical cash will be handed over to customer from till drawer."
+                                        } else {
+                                            "Physical cash will be handed over to customer from till drawer."
+                                        },
                                         fontSize = 10.5.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         lineHeight = 15.sp
@@ -1328,7 +1342,11 @@ fun ReturnItemsDialog(
                                             else -> "Excess Cash Payout"
                                         }
                                     } else if (dueAdjustment > 0.0 && externalRefund == 0.0) {
-                                        "Net Cash Payout"
+                                        if (selectedSettlementDestination == "WALLET" && storeCreditRestored > 0.0) "Net Store Credit"
+                                        else "Net Cash Payout"
+                                    } else if (externalRefund == 0.0 && storeCreditRestored > 0.0) {
+                                        if (selectedSettlementDestination == "WALLET") "Store Credit Refund"
+                                        else "Store Credit / Voucher Restored"
                                     } else {
                                         when (selectedSettlementDestination) {
                                             "WALLET" -> "Store Credit Payout"
@@ -1341,7 +1359,7 @@ fun ReturnItemsDialog(
                                     color = Color.White
                                 )
                                 Text(
-                                    text = formatTaka(externalRefund),
+                                    text = formatTaka(if (externalRefund == 0.0 && storeCreditRestored > 0.0) storeCreditRestored else externalRefund),
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFF34D399)
@@ -1386,6 +1404,8 @@ fun ReturnItemsDialog(
 
                             val refundMethodStr = if (externalRefund == 0.0 && dueAdjustment > 0.0) {
                                 "Due Debt Clearing"
+                            } else if (externalRefund == 0.0 && storeCreditRestored > 0.0) {
+                                "Store Credit"
                             } else {
                                 when (selectedSettlementDestination) {
                                     "CASH" -> "Cash"
@@ -1447,7 +1467,11 @@ fun ReturnItemsDialog(
                                     "Add ${formatTaka(refundTotal)} to Store Credit"
                                 }
                             } else if (storeCreditRestored > 0.0) {
-                                "Refund ${formatTaka(externalRefund)} + Restore ${formatTaka(storeCreditRestored)} Credit"
+                                if (externalRefund == 0.0) {
+                                    "Restore ${formatTaka(storeCreditRestored)} Store Credit"
+                                } else {
+                                    "Refund ${formatTaka(externalRefund)} + Restore ${formatTaka(storeCreditRestored)} Credit"
+                                }
                             } else {
                                 "Process ${formatTaka(externalRefund)} Return"
                             },

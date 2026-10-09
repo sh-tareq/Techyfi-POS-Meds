@@ -1667,4 +1667,127 @@ class MoneyFlowsIntegrationTest {
         val vAfterRet2 = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
         assertEquals(100.0, vAfterRet2.remainingBalance, 0.001)
     }
+
+    @Test
+    fun testN4_legacyPreV37Sale_voidAccuratelyAttributesVoucherAndCustomerCredit() = runBlocking {
+        val phone = "01788888801"
+        repository.upsertCustomer(Customer(phone = phone, name = "Legacy N4 Cust", storeCredit = 0.0))
+        val vCode = "SC-N4-LEGACY"
+        database.storeCreditVoucherDao().insertVoucher(
+            StoreCreditVoucher(
+                code = vCode,
+                initialAmount = 100.0,
+                remainingBalance = 70.0, // 30 spent
+                customerPhone = null,
+                status = "ACTIVE"
+            )
+        )
+
+        val prod = Product(barcode = "p-n4", name = "N4 Item", category = "General", purchasePrice = 40.0, sellingPrice = 80.0, stockQty = 10.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        // Simulate legacy sale: voucherAmount=0.0 and customerCreditAmount=0.0 in DB
+        val saleId = database.saleDao().insertSale(
+            Sale(
+                id = 9401,
+                timestamp = System.currentTimeMillis(),
+                subtotal = 80.0,
+                discountAmount = 0.0,
+                isPercentageDiscount = false,
+                grandTotal = 80.0,
+                paymentMethod = "Store Credit",
+                customerName = "Legacy N4 Cust",
+                customerPhone = phone,
+                amountPaid = 80.0,
+                storeCreditApplied = 80.0,
+                voucherCode = vCode,
+                voucherAmount = 0.0, // legacy pre-v37: unpopulated
+                customerCreditAmount = 0.0 // legacy pre-v37: unpopulated
+            )
+        )
+        // Legacy sale logged a customer credit redemption of 50.0
+        database.storeCreditLedgerDao().insertEntry(
+            StoreCreditLedgerEntry(
+                customerPhone = phone,
+                deltaAmount = -50.0,
+                balanceAfter = 0.0,
+                type = "SALE_REDEMPTION",
+                referenceInvoiceId = saleId,
+                voucherCode = vCode,
+                note = "Redeemed at sale #$saleId"
+            )
+        )
+
+        // Void the legacy sale
+        repository.deleteSale(saleId)
+
+        val voucherAfterVoid = database.storeCreditVoucherDao().getVoucherByCode(vCode)!!
+        val customerAfterVoid = repository.getCustomerByPhone(phone)!!
+
+        assertEquals("Voucher spent was 30 (80 applied - 50 customer credit), so voucher restored to 100", 100.0, voucherAfterVoid.remainingBalance, 0.001)
+        assertEquals("Customer credit must be restored by 50", 50.0, customerAfterVoid.storeCredit, 0.001)
+    }
+
+    @Test
+    fun testM10_registeredCustomerCashReturn_asStoreCredit_addsCreditToCustomerAndLogsLedger() = runBlocking {
+        val phone = "01788888802"
+        repository.upsertCustomer(Customer(phone = phone, name = "M10 Return Cust", storeCredit = 10.0))
+        val prod = Product(barcode = "p-m10", name = "M10 Item", category = "General", purchasePrice = 50.0, sellingPrice = 100.0, stockQty = 5.0, reorderLevel = 1)
+        database.productDao().insertProduct(prod)
+
+        val saleId = repository.completeSaleWithNotes(
+            subtotal = 100.0,
+            discountAmount = 0.0,
+            isPercentage = false,
+            grandTotal = 100.0,
+            customerName = "M10 Return Cust",
+            customerPhone = phone,
+            paymentMethod = "Cash",
+            amountPaid = 100.0,
+            walletPhone = null,
+            cardType = null,
+            cardLastFour = null,
+            cartItemsWithNotes = listOf(Triple(prod, 1.0, null))
+        )
+
+        // Process return with refundMethod = "Store Credit"
+        val result = repository.processReturn(
+            saleId = saleId,
+            lines = listOf(ReturnLine(barcode = "p-m10", quantity = 1.0, name = "M10 Item", price = 100.0)),
+            refundMethod = "Store Credit",
+            note = "Customer opted for store credit",
+            restock = true
+        )
+
+        val custAfter = repository.getCustomerByPhone(phone)!!
+        assertEquals("Customer store credit should increase by 100 (from 10 to 110)", 110.0, custAfter.storeCredit, 0.001)
+
+        val ledgerEntries = database.storeCreditLedgerDao().getEntriesForInvoiceOnce(saleId)
+        val refundEntry = ledgerEntries.firstOrNull { it.type == "RETURN_REFUND" }
+        assertTrue("Must log RETURN_REFUND ledger entry for customer", refundEntry != null)
+        assertEquals(100.0, refundEntry?.deltaAmount ?: 0.0, 0.001)
+        assertEquals(phone, refundEntry?.customerPhone)
+
+        val retRecord = database.returnDao().getReturnsForSaleOnce(saleId).first()
+        assertEquals("externalRefundAmount must be 0 for Store Credit refund", 0.0, retRecord.externalRefundAmount, 0.001)
+        assertEquals("refundMethod must be Store Credit", "Store Credit", retRecord.refundMethod)
+    }
+
+    @Test
+    fun testM1_R4_partialStoreCreditCheckout_dueAmountReflectedInBreakdown() = runBlocking {
+        val grandTotal = 300.0
+        val scApplied = 100.0
+        val breakdown = com.example.techyfipos.utils.PaymentMath.calculatePaymentBreakdown(
+            grandTotal = grandTotal,
+            paymentMethod = "Store Credit",
+            amountPaid = 0.0,
+            storeCreditApplied = scApplied,
+            splitPayments = emptyList()
+        )
+
+        assertEquals("Remaining 200 on partial Store Credit must be dueAmount", 200.0, breakdown.dueAmount, 0.001)
+        assertEquals("paymentMethodToSave must be Split", "Split", breakdown.paymentMethodToSave)
+        assertTrue("splitPaymentJson must not be null", !breakdown.splitPaymentJson.isNullOrBlank())
+        assertTrue("splitPaymentJson contains Due", breakdown.splitPaymentJson!!.contains("\"Due\""))
+    }
 }

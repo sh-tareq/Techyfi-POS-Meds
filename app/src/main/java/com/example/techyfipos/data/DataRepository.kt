@@ -616,7 +616,23 @@ class DataRepository(
                         val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
                         if (voucher != null && voucher.status != "CANCELLED") {
                             val maxRestoreToVoucher = (voucher.initialAmount - voucher.remainingBalance).coerceAtLeast(0.0)
-                            val voucherSpentInThisSale = if (sale.voucherAmount > 0.0) sale.voucherAmount else voucherDeductionFromSplit ?: minOf(scApplied, maxRestoreToVoucher)
+                            val voucherSpentInThisSale = if (sale.voucherAmount > 0.0) {
+                                sale.voucherAmount
+                            } else if (voucherDeductionFromSplit != null) {
+                                voucherDeductionFromSplit
+                            } else {
+                                val ledgerEntriesForSale = storeCreditLedgerDao.getEntriesForInvoiceOnce(saleId)
+                                val custCreditFromLedger = ledgerEntriesForSale
+                                    .filter { it.customerPhone != null && (it.type == "SALE_REDEMPTION" || it.deltaAmount < 0.0) }
+                                    .sumOf { kotlin.math.abs(it.deltaAmount) }
+                                if (custCreditFromLedger > 0.0) {
+                                    (scApplied - custCreditFromLedger).coerceAtLeast(0.0)
+                                } else if (!sale.customerPhone.isNullOrBlank() || !phone.isNullOrBlank()) {
+                                    0.0 // Prefer customer credit when ambiguous on legacy pre-v37 sales
+                                } else {
+                                    minOf(scApplied, maxRestoreToVoucher)
+                                }
+                            }
                             voucherPortion = minOf(scApplied, voucherSpentInThisSale, maxRestoreToVoucher)
 
                             val isExpired = voucher.expiresAt != null && voucher.expiresAt > 0L && voucher.expiresAt < System.currentTimeMillis()
@@ -651,7 +667,7 @@ class DataRepository(
                                             storeCreditVoucherDao.insertVoucher(fresh)
                                             storeCreditLedgerDao.insertEntry(
                                                 StoreCreditLedgerEntry(
-                                                    customerPhone = "VOUCHER",
+                                                    customerPhone = null,
                                                     deltaAmount = voucherPortion,
                                                     balanceAfter = voucherPortion,
                                                     type = "VOUCHER_RESTORE",
@@ -686,12 +702,13 @@ class DataRepository(
                                     sale.customerPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) },
                                     phone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) },
                                     voucher.customerPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) }
-                                ).firstOrNull() ?: "VOUCHER"
+                                ).firstOrNull()
+                                val custBalAfter = targetPhone?.let { customerDao.getCustomerByPhone(it)?.storeCredit } ?: restoredBal
                                 storeCreditLedgerDao.insertEntry(
                                     StoreCreditLedgerEntry(
                                         customerPhone = targetPhone,
                                         deltaAmount = voucherPortion,
-                                        balanceAfter = restoredBal,
+                                        balanceAfter = custBalAfter,
                                         type = "VOUCHER_RESTORE",
                                         referenceInvoiceId = saleId,
                                         voucherCode = voucher.code,
@@ -2628,7 +2645,7 @@ class DataRepository(
                 scLedger.forEach { e ->
                     put(JSONObject().apply {
                         put("id", e.id)
-                        put("customerPhone", e.customerPhone)
+                        put("customerPhone", e.customerPhone ?: JSONObject.NULL)
                         put("deltaAmount", e.deltaAmount)
                         put("balanceAfter", e.balanceAfter)
                         put("type", e.type)
@@ -3462,7 +3479,7 @@ class DataRepository(
                   for (i in 0 until arr.length()) {
                       val obj = arr.getJSONObject(i)
                       val delta = if (obj.has("deltaAmount")) obj.optDouble("deltaAmount", 0.0) else obj.optDouble("amount", 0.0)
-                      val phone = normalizePhone(obj.getString("customerPhone"))
+                      val phone = if (obj.isNull("customerPhone") || obj.optString("customerPhone") == "VOUCHER" || obj.optString("customerPhone").isBlank()) null else normalizePhone(obj.getString("customerPhone"))
                       val typeStr = obj.optString("type", "MANUAL_ADJUST")
                       val backupSaleId = when {
                           obj.has("referenceInvoiceId") && !obj.isNull("referenceInvoiceId") -> obj.optLong("referenceInvoiceId")
@@ -3501,7 +3518,7 @@ class DataRepository(
                           note = noteText,
                           timestamp = ts
                       ))
-                      if (mode == BackupImportMode.MERGE && phone !in newlyInsertedCustomerPhones && typeStr != "VOUCHER_RESTORE") {
+                      if (mode == BackupImportMode.MERGE && phone != null && phone !in newlyInsertedCustomerPhones && typeStr != "VOUCHER_RESTORE") {
                           customerDao.adjustCustomerStoreCredit(phone, delta, ts)
                       }
                   }
@@ -4266,7 +4283,23 @@ class DataRepository(
                     val voucher = storeCreditVoucherDao.getVoucherByCode(vCodeFromSale.trim().uppercase())
                     if (voucher != null && voucher.status != "CANCELLED") {
                         val maxRestoreToVoucher = (voucher.initialAmount - voucher.remainingBalance).coerceAtLeast(0.0)
-                        val voucherSpentInThisSale = if (sale.voucherAmount > 0.0) sale.voucherAmount else voucherDeductionFromSplit ?: minOf(sale.storeCreditApplied, maxRestoreToVoucher)
+                        val voucherSpentInThisSale = if (sale.voucherAmount > 0.0) {
+                            sale.voucherAmount
+                        } else if (voucherDeductionFromSplit != null) {
+                            voucherDeductionFromSplit
+                        } else {
+                            val ledgerEntriesForSale = storeCreditLedgerDao.getEntriesForInvoiceOnce(saleId)
+                            val custCreditFromLedger = ledgerEntriesForSale
+                                .filter { it.customerPhone != null && (it.type == "SALE_REDEMPTION" || it.deltaAmount < 0.0) }
+                                .sumOf { kotlin.math.abs(it.deltaAmount) }
+                            if (custCreditFromLedger > 0.0) {
+                                (sale.storeCreditApplied - custCreditFromLedger).coerceAtLeast(0.0)
+                            } else if (!sale.customerPhone.isNullOrBlank() || !phone.isNullOrBlank()) {
+                                0.0 // Prefer customer credit when ambiguous on legacy pre-v37 sales
+                            } else {
+                                minOf(sale.storeCreditApplied, maxRestoreToVoucher)
+                            }
+                        }
                         val voucherRemainingToRestore = (voucherSpentInThisSale - voucherRestoredSoFar).coerceAtLeast(0.0)
                         voucherPortion = minOf(scToRestore, voucherRemainingToRestore, maxRestoreToVoucher)
 
@@ -4304,7 +4337,7 @@ class DataRepository(
                                         storeCreditVoucherDao.insertVoucher(fresh)
                                         storeCreditLedgerDao.insertEntry(
                                             StoreCreditLedgerEntry(
-                                                customerPhone = "VOUCHER",
+                                                customerPhone = null,
                                                 deltaAmount = voucherPortion,
                                                 balanceAfter = voucherPortion,
                                                 type = "VOUCHER_RESTORE",
@@ -4340,12 +4373,13 @@ class DataRepository(
                                 sale.customerPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) },
                                 phone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) },
                                 voucher.customerPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) }
-                            ).firstOrNull() ?: "VOUCHER"
+                            ).firstOrNull()
+                            val custBalAfter = targetPhone?.let { customerDao.getCustomerByPhone(it)?.storeCredit } ?: restoredBal
                             storeCreditLedgerDao.insertEntry(
                                 StoreCreditLedgerEntry(
                                     customerPhone = targetPhone,
                                     deltaAmount = voucherPortion,
-                                    balanceAfter = restoredBal,
+                                    balanceAfter = custBalAfter,
                                     type = "VOUCHER_RESTORE",
                                     referenceInvoiceId = saleId,
                                     voucherCode = voucher.code,
@@ -4420,7 +4454,7 @@ class DataRepository(
             }
 
             val dueAdj = dueReduction
-            val computedExternalRefund = if (isStoreCreditRefund) (refundTotal - dueReduction).coerceAtLeast(0.0) else externalRefund
+            val computedExternalRefund = if (isStoreCreditRefund) 0.0 else externalRefund
 
             val returnRecord = Return(
                 saleId = saleId,

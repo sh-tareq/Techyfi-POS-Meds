@@ -553,6 +553,37 @@ class AppDatabaseMigrationTest {
         }
     }
 
+    @Test
+    fun migration37To38AllowsNullableCustomerPhoneAndCleansVoucherFallback() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val name = "migration-37-38-${System.currentTimeMillis()}.db"
+        createDatabaseFromExportedSchema(context, name, 37).apply {
+            execSQL("INSERT INTO store_credit_ledger (id, customerPhone, deltaAmount, balanceAfter, type, referenceInvoiceId, voucherCode, note, timestamp) VALUES (1, 'VOUCHER', 50.0, 50.0, 'VOUCHER_RESTORE', 101, 'SC-1234', 'Voucher restore', 1000)")
+            execSQL("INSERT INTO store_credit_ledger (id, customerPhone, deltaAmount, balanceAfter, type, referenceInvoiceId, voucherCode, note, timestamp) VALUES (2, '01711111111', 100.0, 100.0, 'RETURN_REFUND', 102, NULL, 'Return refund', 2000)")
+            close()
+        }
+
+        val migrated = Room.databaseBuilder(context, AppDatabase::class.java, name)
+            .addMigrations(*AppDatabase.ALL_MIGRATIONS)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build()
+        try {
+            val entries = migrated.storeCreditLedgerDao().getAllEntries()
+            assertEquals(2, entries.size)
+            val voucherEntry = entries.first { it.id == 1L }
+            assertEquals(null, voucherEntry.customerPhone)
+            assertEquals(50.0, voucherEntry.deltaAmount, 0.001)
+
+            val custEntry = entries.first { it.id == 2L }
+            assertEquals("01711111111", custEntry.customerPhone)
+            assertEquals(100.0, custEntry.deltaAmount, 0.001)
+        } finally {
+            migrated.close()
+            context.deleteDatabase(name)
+        }
+    }
+
     private fun indexExists(context: android.content.Context, dbName: String, indexName: String): Boolean {
         val db = android.database.sqlite.SQLiteDatabase.openDatabase(
             context.getDatabasePath(dbName).path,

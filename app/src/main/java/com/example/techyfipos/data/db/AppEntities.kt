@@ -585,7 +585,7 @@ data class StoreCreditVoucher(
 )
 data class StoreCreditLedgerEntry(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val customerPhone: String,
+    val customerPhone: String? = null,
     val deltaAmount: Double, // positive for additions (refund/adjustment), negative for redemptions
     val balanceAfter: Double,
     val type: String, // "RETURN_REFUND", "SALE_REDEMPTION", "MANUAL_ADJUST", "VOID"
