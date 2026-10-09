@@ -1,63 +1,58 @@
 package com.example.techyfipos.ui.screens
 
 import com.example.techyfipos.data.db.SplitPaymentEntry
+import com.example.techyfipos.utils.PaymentMath
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class DueSaleAmountTest {
     @Test
     fun dueSaleTreatsGrandTotalAsNewDueNotAmountPaid() {
-        val paid = calculateEffectiveAmountPaid(
-            isSplitPayment = false,
-            paymentMethod = "Due",
-            enteredAmountPaid = 0.0,
+        val breakdown = PaymentMath.calculatePaymentBreakdown(
             grandTotal = 850.0,
-            splitPayments = emptyList()
+            paymentMethod = "Due",
+            amountPaid = 0.0
         )
 
-        assertEquals(0.0, paid, 0.001)
-        assertEquals(850.0, 850.0 - paid, 0.001)
+        assertEquals(0.0, breakdown.effectiveAmountPaid, 0.001)
+        assertEquals(850.0, breakdown.dueAmount, 0.001)
     }
 
     @Test
     fun splitSaleExcludesDuePortionFromAmountPaid() {
-        val paid = calculateEffectiveAmountPaid(
-            isSplitPayment = true,
-            paymentMethod = "Split",
-            enteredAmountPaid = 0.0,
+        val breakdown = PaymentMath.calculatePaymentBreakdown(
             grandTotal = 1_000.0,
+            isSplitPayment = true,
             splitPayments = listOf(
                 SplitPaymentEntry(method = "Cash", amount = 600.0),
                 SplitPaymentEntry(method = "Due", amount = 400.0)
             )
         )
 
-        assertEquals(600.0, paid, 0.001)
+        assertEquals(600.0, breakdown.effectiveAmountPaid, 0.001)
+        assertEquals(400.0, breakdown.dueAmount, 0.001)
     }
 
     @Test
     fun cashSaleZeroTenderReturnsZeroAndDoesNotDefaultToGrandTotal() {
-        val paid = calculateEffectiveAmountPaid(
-            isSplitPayment = false,
-            paymentMethod = "Cash",
-            enteredAmountPaid = 0.0,
+        val breakdown = PaymentMath.calculatePaymentBreakdown(
             grandTotal = 500.0,
-            splitPayments = emptyList()
+            paymentMethod = "Cash",
+            amountPaid = 0.0
         )
 
-        assertEquals(0.0, paid, 0.001)
+        assertEquals(0.0, breakdown.effectiveAmountPaid, 0.001)
     }
 
     @Test
     fun cashSaleWithExplicitTenderReturnsExactEnteredAmount() {
-        val paid = calculateEffectiveAmountPaid(
-            isSplitPayment = false,
-            paymentMethod = "Cash",
-            enteredAmountPaid = 1000.0,
+        val breakdown = PaymentMath.calculatePaymentBreakdown(
             grandTotal = 850.0,
-            splitPayments = emptyList()
+            paymentMethod = "Cash",
+            amountPaid = 1000.0
         )
 
-        assertEquals(1000.0, paid, 0.001)
+        assertEquals(1000.0, breakdown.effectiveAmountPaid, 0.001)
+        assertEquals(150.0, breakdown.changeAmount, 0.001)
     }
 }

@@ -109,7 +109,7 @@ object PaymentMath {
                     })
                 }
 
-                val effPaid = if (isDue) 0.0 else if (isCash) tendered else grandTotal
+                val effPaid = if (isDue) scAmount else if (isCash) (scAmount + tendered) else grandTotal
                 return PaymentBreakdown(
                     paymentMethodToSave = "Split",
                     splitPaymentJson = array.toString(),
