@@ -79,6 +79,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.ui.components.*
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -582,6 +583,7 @@ fun ScannerScreen(
             pendingResumeCart?.let { cartToResume ->
                 AlertDialog(
                     onDismissRequest = { pendingResumeCart = null },
+                    properties = DialogProperties(dismissOnClickOutside = false),
                     title = { Text(stringResource(R.string.held_cart_resume_confirm_title)) },
                     text = { Text(stringResource(R.string.held_cart_resume_confirm_message, cartToResume.title)) },
                     confirmButton = {
@@ -598,7 +600,7 @@ fun ScannerScreen(
                                     ).show()
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Text(stringResource(R.string.confirm))
                         }
@@ -614,6 +616,7 @@ fun ScannerScreen(
             if (showClearCartConfirm) {
                 AlertDialog(
                     onDismissRequest = { showClearCartConfirm = false },
+                    properties = DialogProperties(dismissOnClickOutside = false),
                     title = { Text(stringResource(R.string.clear_cart_dialog_title)) },
                     text = { Text(stringResource(R.string.clear_cart_dialog_message)) },
                     confirmButton = {
@@ -635,6 +638,7 @@ fun ScannerScreen(
             itemToRemoveConfirm?.let { product ->
                 AlertDialog(
                     onDismissRequest = { itemToRemoveConfirm = null },
+                    properties = DialogProperties(dismissOnClickOutside = false),
                     title = { Text(stringResource(R.string.remove_item_confirm_title)) },
                     text = { Text(stringResource(R.string.remove_item_confirm_message_fmt, product.name)) },
                     confirmButton = {
@@ -905,7 +909,7 @@ private fun TabletCartCapsuleButton(
                         Text(
                             text = targetCount,
                             color = Color.White,
-                            fontSize = 9.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
                             textAlign = TextAlign.Center,
                             maxLines = 1,
@@ -2218,7 +2222,7 @@ private fun TabletProductGridCard(
                         Spacer(modifier = Modifier.height(1.dp))
                         Text(
                             text = product.barcode,
-                            fontSize = 9.sp,
+                            fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
                             color = TabletTerminalColors.TextTertiary,
                             maxLines = 1,
@@ -2511,7 +2515,7 @@ private fun SellHeader(
                                     Text(
                                         text = badgeStr,
                                         color = Color.White,
-                                        fontSize = 9.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
                                         softWrap = false
@@ -2747,7 +2751,7 @@ private fun LastScannedItemCard(
             }
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.scanner_last_scanned), color = MaterialTheme.colorScheme.primary, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .7.sp)
+                Text(stringResource(R.string.scanner_last_scanned), color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .7.sp)
                 Text(
                     product.name,
                     fontSize = 13.5.sp,
