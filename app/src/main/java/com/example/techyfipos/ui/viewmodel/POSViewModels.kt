@@ -765,13 +765,23 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             note = note?.takeIf { it.isNotBlank() }
         )
 
+        val prevItems = items
+        val prevDiscount = _discountAmount.value
+        val prevIsPercentage = _isPercentageDiscount.value
+        val prevPriceMode = priceMode.value
+        val prevCustomerName = curCustomerName
+        val prevCustomerPhone = curCustomerPhone
+
         _cartItems.value = emptyList()
         _discountAmount.value = 0.0
         _isPercentageDiscount.value = false
+        _paymentMethod.value = "Cash"
         _customerName.value = ""
         _customerPhone.value = ""
         _walletPhone.value = ""
+        _cardType.value = "Visa"
         _cardLastFour.value = ""
+        _manualCashierName.value = null
         _amountPaid.value = 0.0
         _isSplitPayment.value = false
         _splitPayments.value = emptyList()
@@ -780,10 +790,27 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _loyaltyCustomer.value = null
         _storeCreditApplied.value = 0.0
         _redeemedVoucher.value = null
+        _resolvedCustomer.value = null
+        _customerSuggestions.value = emptyList()
+        _isAutoFilledName.value = false
 
         viewModelScope.launch(Dispatchers.IO) {
-            repository.insertHeldCart(heldCart)
-            persistCartSnapshotSync(emptyList())
+            try {
+                repository.insertHeldCart(heldCart)
+                persistCartSnapshotSync(emptyList())
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (_cartItems.value.isEmpty()) {
+                    _cartItems.value = prevItems
+                    _discountAmount.value = prevDiscount
+                    _isPercentageDiscount.value = prevIsPercentage
+                    _priceMode.value = prevPriceMode
+                    _customerName.value = prevCustomerName
+                    _customerPhone.value = prevCustomerPhone
+                    persistCartSnapshotSync(prevItems)
+                }
+                com.example.techyfipos.utils.RepositoryErrorBus.report(e)
+            }
         }
     }
 
