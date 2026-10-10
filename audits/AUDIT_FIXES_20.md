@@ -233,7 +233,7 @@ Suggested shape (one small new file plus a collector):
   - Loyalty "Points expiry (days)" is saved (`LoyaltyScreen.kt` about 1339, 1469) but unused; EXPIRING_SOON is hard-coded to 90 days (VM about 4340). Fix: use it, or hide the field.
   - Dead fields: `driveBackupTime`, `websiteUrl`, `directBluetoothPrintEnabled`, `directBluetoothPrinterAddress`, `decimalQuantitiesEnabled`. Fix: wire up or remove.
 
-- [ ] **R20-40 MED Reported. Missing features worth building.**
+- [x] **R20-40 MED Reported. Missing features worth building.** (Fixed in `f3bf87d`).
   - Per-item cart discount: `CartItemDiscountDialog` (`ui/dialogs/CartItemDialogs.kt` about 389) is never called and `CartItem` has no line discount. Build it end to end or delete the dead code.
   - Supplier ledger: `getSupplierPayments`, `getInvoicesForSupplier`, `getPurchaseItemsForInvoice` (repo about 4715, 4887, 4891) are unused; no way to void a supplier payment or invoice. Add a supplier detail sheet and an owner-only void.
   - Batch label printing ignores the selected products (`ProductsScreen.kt` about 2911 passes `allProductsList`); "by stock" count ignores the 500 cap (`ProductCodePrintDialogs.kt` about 592).
@@ -243,18 +243,18 @@ Suggested shape (one small new file plus a collector):
   - Stock audit history never shows who made the change, and most rows have an empty `cashierName` (VM about 1678, 1707; `ProductsScreen.kt` about 2793). Set it from `sessionUser` in the repo and display it.
   - Expense edit writes no audit log (repo about 4657) and fails silently (`ExpensesScreen.kt` about 472-484).
 
-- [ ] **R20-41 MED Reported. Due reminders.**
+- [x] **R20-41 MED Reported. Due reminders.** (Fixed in `f3bf87d`).
   - `utils/DueReminderScheduler.kt` about 327-390 logs "NOTIFIED" and deletes one-shot rows even when the notification was blocked. Fix: log "FAILED" and keep or reschedule.
   - Reminder Hub "Send now" (`DuesScreen.kt` about 1230-1234) always opens WhatsApp, cancels weekly series, and uses the stale amount. Fix: honour `reminder.channel`, refresh the amount, only cancel one-shots.
   - Notification WhatsApp link keeps a raw "+" (about 432-436). Use digits only, as `BillActions` does.
 
-- [ ] **R20-42 MED Reported. Bluetooth.**
+- [x] **R20-42 MED Reported. Bluetooth.** (Fixed in `f3bf87d`).
   - `printer/BluetoothPrinterTransport.kt` about 92-94: if `insecureSocket.connect()` throws, `socket` is still null, so `finally` never closes it. Fix: close the insecure socket in its own catch and rethrow.
   - Bluetooth permission is only requested in the device picker (SettingsScreen about 1369); printing shows a toast and does nothing if it was revoked. Fix: request on `NoPermission` or link to app settings.
 
-- [ ] **R20-43 MED Reported. "Delete" and "Edit sale" are offered on invoices with returns and always fail with a generic message.** `ReceiptSummaryDialog.kt` about 853, 885; `SalesHistoryScreen.kt` about 852-862, 2197-2206; repo about 504. Fix: hide them when `returnSummary?.hasReturns == true`, or show `getLocalizedRepositoryErrorMessage`.
+- [x] **R20-43 MED Reported. "Delete" and "Edit sale" are offered on invoices with returns and always fail with a generic message.** (Fixed in `f3bf87d`). `ReceiptSummaryDialog.kt` about 853, 885; `SalesHistoryScreen.kt` about 852-862, 2197-2206; repo about 504. Fix: hide them when `returnSummary?.hasReturns == true`, or show `getLocalizedRepositoryErrorMessage`.
 
-- [ ] **R20-44 MED Reported. Voucher slip prints cancelled, expired or used vouchers as valid.** `ui/screens/StoreCreditVoucherSlipDialog.kt` about 455-462. Fix: show a status badge and disable print/share when not ACTIVE or past expiry.
+- [x] **R20-44 MED Reported. Voucher slip prints cancelled, expired or used vouchers as valid.** (Fixed in `f3bf87d`). `ui/screens/StoreCreditVoucherSlipDialog.kt` about 455-462. Fix: show a status badge and disable print/share when not ACTIVE or past expiry.
 
 ---
 
