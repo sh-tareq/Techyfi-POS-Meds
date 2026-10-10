@@ -453,6 +453,7 @@ fun CartScreen(
         cardLastFour = cardLastFour
     )
     var discountInput by rememberSaveable { mutableStateOf(editableAmount(discountAmount)) }
+    var supervisorApprovedDiscount by rememberSaveable { mutableStateOf(false) }
     var scanUpdate by remember { mutableStateOf<CartScanUpdate?>(null) }
     var notFoundBarcode by remember { mutableStateOf<String?>(null) }
     var showCustomItemDialog by remember { mutableStateOf(false) }
@@ -498,6 +499,26 @@ fun CartScreen(
         val displayedAmount = discountInput.toDoubleOrNull() ?: 0.0
         if (discountAmount != displayedAmount) {
             discountInput = editableAmount(discountAmount)
+        }
+    }
+
+    LaunchedEffect(subtotal, isPercentageDiscount, maxDiscountAllowed) {
+        if (discountAmount > 0.0) {
+            if (subtotal <= 0.0) {
+                cartViewModel.setDiscountAmount(0.0)
+                discountInput = ""
+            } else if (discountAmount > subtotal && !isPercentageDiscount) {
+                cartViewModel.setDiscountAmount(subtotal)
+                discountInput = editableAmount(subtotal)
+            } else if (!isPercentageDiscount && !supervisorApprovedDiscount) {
+                val pctEquiv = (discountAmount / subtotal) * 100.0
+                if (pctEquiv > maxDiscountAllowed) {
+                    val clamped = (subtotal * (maxDiscountAllowed / 100.0)).coerceAtLeast(0.0)
+                    val clampedRounded = (kotlin.math.round(clamped * 100.0)) / 100.0
+                    cartViewModel.setDiscountAmount(clampedRounded)
+                    discountInput = editableAmount(clampedRounded)
+                }
+            }
         }
     }
 
@@ -1009,7 +1030,7 @@ fun CartScreen(
                         // Total Cart Value Summary Card (Subtotal & Estimated Total)
                         CartTotalSummaryCard(
                             subtotal = subtotal,
-                            discountAmount = discountAmount,
+                            discountAmount = discountVal,
                             grandTotal = grandTotal
                         )
 
@@ -1257,6 +1278,7 @@ fun CartScreen(
                             OutlinedTextField(
                                 value = discountInput,
                                 onValueChange = { newValue ->
+                                    supervisorApprovedDiscount = false
                                     val sanitized = sanitizeDiscountInput(newValue)
                                     val parsed = sanitized.toDoubleOrNull() ?: 0.0
                                     val pctEquiv = if (isPercentageDiscount) parsed else if (subtotal > 0.0) (parsed / subtotal) * 100.0 else 0.0
@@ -1265,6 +1287,7 @@ fun CartScreen(
                                             val discountFormatted = if (isPercentageDiscount) "$sanitized%" else formatTaka(parsed)
                                             pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_discount, discountFormatted, maxDiscountAllowed.toInt())
                                             pendingSupervisorAction = {
+                                                supervisorApprovedDiscount = true
                                                 discountInput = sanitized
                                                 cartViewModel.setDiscountAmount(parsed)
                                             }
@@ -1281,7 +1304,12 @@ fun CartScreen(
                                 placeholder = { Text(if (isPercentageDiscount) "%" else formatMoney(0.0).take(1)) },
                                 trailingIcon = {
                                     Surface(
-                                        onClick = { cartViewModel.toggleDiscountUnit() },
+                                        onClick = {
+                                            supervisorApprovedDiscount = false
+                                            discountInput = ""
+                                            cartViewModel.setDiscountAmount(0.0)
+                                            cartViewModel.toggleDiscountUnit()
+                                        },
                                         color = MaterialTheme.colorScheme.primaryContainer,
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier
@@ -2076,7 +2104,7 @@ fun CartScreen(
                                     .padding(8.dp)
                             ) {
                                 // Smart Cash Tender Chips Row
-                                val exactAmt = grandTotal
+                                val exactAmt = remainingAfterSC
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()

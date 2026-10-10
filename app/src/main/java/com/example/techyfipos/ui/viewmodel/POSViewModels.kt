@@ -1281,6 +1281,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
 
 
     fun toggleDiscountUnit() {
+        _discountAmount.value = 0.0
         _isPercentageDiscount.value = !_isPercentageDiscount.value
     }
 

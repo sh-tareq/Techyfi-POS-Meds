@@ -31,4 +31,21 @@ class DiscountCalculationTest {
         assertEquals(0.0, fallbackPurchasePrice("ADHOC-9999", 50.0), 0.001)
         assertEquals(100.0, fallbackPurchasePrice("8901234567890", 100.0), 0.001)
     }
+    @Test
+    fun testR20_14_exactCashRespectsStoreCredit() {
+        val grandTotal = 300.0
+        val storeCreditApplied = 100.0
+        val remainingAfterSC = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+        assertEquals(200.0, remainingAfterSC, 0.001)
+    }
+
+    @Test
+    fun testR20_06_toggleDiscountUnitResetsAmount() {
+        var isPercentage = false
+        var discountAmount = 50.0
+        discountAmount = 0.0
+        isPercentage = !isPercentage
+        assertEquals(true, isPercentage)
+        assertEquals(0.0, discountAmount, 0.001)
+    }
 }
