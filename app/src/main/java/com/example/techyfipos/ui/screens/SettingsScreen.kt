@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import com.example.techyfipos.BuildConfig
 import com.example.techyfipos.data.DataRepository
+import com.example.techyfipos.printer.isSamePrinter
 import com.example.techyfipos.ui.components.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -319,6 +320,7 @@ private fun OptimizedSettingsHome(
     var showPrinterPicker by remember { mutableStateOf(false) }
     var showReceiptPrinterPicker by remember { mutableStateOf(false) }
     var showLabelPrinterPicker by remember { mutableStateOf(false) }
+    var printerConflictDialogMessage by remember { mutableStateOf<String?>(null) }
 
     // 💎 Settings Master Executive Card
     SettingsMasterCard(
@@ -946,6 +948,15 @@ private fun OptimizedSettingsHome(
                         Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     }
                 }
+
+                if (isSamePrinter(currentSettings.labelPrinterAddress, currentSettings.resolvedReceiptPrinterAddress())) {
+                    Text(
+                        text = stringResource(R.string.settings_label_printer_same_as_receipt_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
 
             // Label gap field (mm)
@@ -1151,7 +1162,11 @@ private fun OptimizedSettingsHome(
         BluetoothPrinterPickerDialog(
             currentAddress = currentSettings.directBluetoothPrinterAddress,
             onSelected = { address ->
-                onUpdateSettings(currentSettings.copy(directBluetoothPrinterAddress = address))
+                if (isSamePrinter(address, currentSettings.labelPrinterAddress)) {
+                    printerConflictDialogMessage = context.getString(R.string.settings_receipt_picker_same_as_label_dialog)
+                } else {
+                    onUpdateSettings(currentSettings.copy(directBluetoothPrinterAddress = address))
+                }
                 showReceiptPrinterPicker = false
             },
             onDismiss = { showReceiptPrinterPicker = false }
@@ -1162,10 +1177,32 @@ private fun OptimizedSettingsHome(
         BluetoothPrinterPickerDialog(
             currentAddress = currentSettings.labelPrinterAddress,
             onSelected = { address ->
-                onUpdateSettings(currentSettings.copy(labelPrinterAddress = address))
+                if (isSamePrinter(address, currentSettings.resolvedReceiptPrinterAddress())) {
+                    printerConflictDialogMessage = context.getString(R.string.settings_label_picker_same_as_receipt_dialog)
+                } else {
+                    onUpdateSettings(currentSettings.copy(labelPrinterAddress = address))
+                }
                 showLabelPrinterPicker = false
             },
             onDismiss = { showLabelPrinterPicker = false }
+        )
+    }
+
+    printerConflictDialogMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { printerConflictDialogMessage = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.settings_printer_conflict_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { printerConflictDialogMessage = null }) {
+                    Text(stringResource(R.string.ok), fontWeight = FontWeight.Bold)
+                }
+            }
         )
     }
     Card(

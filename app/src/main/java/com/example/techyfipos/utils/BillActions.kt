@@ -5,6 +5,7 @@ import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.printer.DirectPrintResult
 import com.example.techyfipos.printer.EscPosPrinterDriver
 import com.example.techyfipos.printer.TsplLabelPrinterDriver
+import com.example.techyfipos.printer.isSamePrinter
 import com.example.techyfipos.printer.sendToBluetoothPrinter
 
 import android.annotation.SuppressLint
@@ -885,6 +886,17 @@ suspend fun printLabelImages(
         return withContext(Dispatchers.Main) {
             printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
         }
+    }
+
+    if (isSamePrinter(settings.labelPrinterAddress, settings.resolvedReceiptPrinterAddress())) {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.direct_print_error_label_same_as_receipt),
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        return false
     }
 
     if (address.isBlank()) {

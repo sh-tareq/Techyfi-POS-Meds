@@ -639,6 +639,10 @@ mindmap
             Direct Bluetooth TSPL driver (Deli E886BW support at 203 DPI)
             Label gap adjustment (mm) and darkness slider (0-15)
             Test label button with real-time feedback
+            Printer conflict warning banner if set to the same device as receipt printer
+          Printer conflict prevention
+            Validation dialog blocks assigning the same Bluetooth printer to both receipt and label roles
+            Direct print dispatch guard prevents TSPL garbage output on ESC/POS receipt printers
           Deferred slider persistence: local Compose state during drag and save on onValueChangeFinished
           Cash drawer kick
             Option for Same as receipt printer or custom address
@@ -2681,9 +2685,14 @@ mindmap
     - Thread safety: Wrapped all `printBillJpeg` and `printPdfDocument` invocations in `withContext(Dispatchers.Main)` inside `printReceiptImage` and `printLabelImages`.
     - Rasterization offload: Wrapped bitmap scaling, luminance conversion, and ESC/POS payload generation inside `withContext(Dispatchers.Default)` in `EscPosPrinterDriver.printReceiptDirect`.
     - Socket leak prevention: Safely closed the initial secure Bluetooth socket upon `connect()` failure before creating and connecting the insecure fallback socket in `BluetoothPrinterTransport.kt`.
+  - **Printer Conflict Prevention & Garbage Output Guard**:
+    - Pure helper `isSamePrinter(a: String, b: String): Boolean`: trims MAC addresses, compares ignoring case, and safely returns false if either address is blank or empty.
+    - Settings picker validation: prevents selecting the configured receipt printer as the label printer (or vice versa), displaying an explanatory AlertDialog with OK confirmation.
+    - Warning indicator: renders a persistent red error caption beneath the Label Printer device selector when both roles are configured to the same Bluetooth device.
+    - Direct print dispatch guard: in `BillActions.printLabelImages()`, intercepts `BLUETOOTH` and `AUTO` dispatch if `isSamePrinter(settings.labelPrinterAddress, settings.resolvedReceiptPrinterAddress())`, showing an informative Toast on `Dispatchers.Main` ("Label printer is set to the receipt printer. Change it in Settings > Printers.") and returning `false`, eliminating TSPL command garbage output on ESC/POS receipt printers while preserving Android Print Service `SYSTEM` mode.
   - **R8 Minification & Deliverable**:
     - `Techyfi-POS-Final-V10-10-2026.apk` (36 MB, versionCode 220945, versionName "2.6.69-V10-10-2026") - R8 minified release build with dead-code stripping and resource optimization.
-    - Unit tests: 102/102 passing (`testDebugUnitTest`).
+    - Unit tests: 107/107 passing (`testDebugUnitTest`).
 
 ## Maintenance note
 

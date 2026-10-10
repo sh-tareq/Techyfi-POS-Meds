@@ -23,6 +23,18 @@ sealed class DirectPrintResult {
     data class Failed(val message: String) : DirectPrintResult()
 }
 
+/**
+ * Compares two printer Bluetooth MAC addresses.
+ * Returns true if both trimmed addresses match ignoring case.
+ * Returns false if either address is blank.
+ */
+fun isSamePrinter(a: String, b: String): Boolean {
+    val trimmedA = a.trim()
+    val trimmedB = b.trim()
+    if (trimmedA.isBlank() || trimmedB.isBlank()) return false
+    return trimmedA.equals(trimmedB, ignoreCase = true)
+}
+
 private const val TAG = "BtPrinterTransport"
 private const val SPP_UUID = "00001101-0000-1000-8000-00805F9B34FB"
 private const val CHUNK_SIZE = 512

@@ -5,6 +5,8 @@ import com.example.techyfipos.utils.RoutingDecision
 import com.example.techyfipos.utils.decidePrintRouting
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PrinterRoutingAndDriverTest {
@@ -154,5 +156,40 @@ class PrinterRoutingAndDriverTest {
         }
         val loaded = InvoiceSettingsData.fromJson(jsonObject.toString())
         assertEquals(8, loaded.receiptDarkness)
+    }
+
+    // 6. Tests for isSamePrinter()
+    @Test
+    fun `isSamePrinter returns true when addresses match exactly`() {
+        assertTrue(isSamePrinter("00:11:22:33:44:55", "00:11:22:33:44:55"))
+    }
+
+    @Test
+    fun `isSamePrinter returns true when addresses differ only in case`() {
+        assertTrue(isSamePrinter("aa:bb:cc:dd:ee:ff", "AA:BB:CC:DD:EE:FF"))
+        assertTrue(isSamePrinter("00:1A:2B:3C:4D:5E", "00:1a:2b:3c:4d:5e"))
+    }
+
+    @Test
+    fun `isSamePrinter returns true when addresses have leading or trailing whitespace`() {
+        assertTrue(isSamePrinter("  AA:BB:CC:DD:EE:FF  ", "aa:bb:cc:dd:ee:ff"))
+        assertTrue(isSamePrinter("\tAA:BB:CC:DD:EE:FF\n", "AA:BB:CC:DD:EE:FF"))
+    }
+
+    @Test
+    fun `isSamePrinter returns false when addresses are different`() {
+        assertFalse(isSamePrinter("AA:BB:CC:DD:EE:01", "AA:BB:CC:DD:EE:02"))
+        assertFalse(isSamePrinter("00:11:22:33:44:55", "11:22:33:44:55:66"))
+    }
+
+    @Test
+    fun `isSamePrinter returns false when either address is empty, blank, or whitespace only`() {
+        assertFalse(isSamePrinter("", "AA:BB:CC:DD:EE:FF"))
+        assertFalse(isSamePrinter("AA:BB:CC:DD:EE:FF", ""))
+        assertFalse(isSamePrinter("", ""))
+        assertFalse(isSamePrinter("   ", "   "))
+        assertFalse(isSamePrinter("   ", "AA:BB:CC:DD:EE:FF"))
+        assertFalse(isSamePrinter("AA:BB:CC:DD:EE:FF", "   "))
+        assertFalse(isSamePrinter("\t \n ", "\t \n "))
     }
 }
