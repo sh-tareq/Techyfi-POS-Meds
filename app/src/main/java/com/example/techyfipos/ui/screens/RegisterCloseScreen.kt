@@ -153,6 +153,7 @@ fun RegisterCloseScreen(
     expenseViewModel: ExpenseViewModel,
     salesViewModel: SalesViewModel,
     settingsViewModel: SettingsViewModel? = null,
+    canViewZReport: Boolean = true,
     onBack: () -> Unit,
     onNavigateToExpenses: () -> Unit = {},
     isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
@@ -339,28 +340,30 @@ fun RegisterCloseScreen(
                         }
 
                         // Shift Closing Z-Report Action
-                        Surface(
-                            onClick = { showPnlZReportDialog = true },
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFF1E1B4B),
-                            border = BorderStroke(1.dp, Color(0x55C7D2FE)),
-                            shadowElevation = 3.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(
-                                    horizontal = if (showFullReportLabel) 9.dp else 7.dp,
-                                    vertical = if (showFullReportLabel) 6.dp else 5.dp
-                                ),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(if (showFullReportLabel) 5.dp else 3.dp)
+                        if (canViewZReport) {
+                            Surface(
+                                onClick = { showPnlZReportDialog = true },
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF1E1B4B),
+                                border = BorderStroke(1.dp, Color(0x55C7D2FE)),
+                                shadowElevation = 3.dp
                             ) {
-                                Realistic3DRegisterAuditZReportIcon(size = if (showFullReportLabel) 16.dp else 14.dp)
-                                Text(
-                                    text = if (showFullReportLabel) "Z-Report" else "Z",
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
+                                Row(
+                                    modifier = Modifier.padding(
+                                        horizontal = if (showFullReportLabel) 9.dp else 7.dp,
+                                        vertical = if (showFullReportLabel) 6.dp else 5.dp
+                                    ),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(if (showFullReportLabel) 5.dp else 3.dp)
+                                ) {
+                                    Realistic3DRegisterAuditZReportIcon(size = if (showFullReportLabel) 16.dp else 14.dp)
+                                    Text(
+                                        text = if (showFullReportLabel) "Z-Report" else "Z",
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
                             }
                         }
                     }

@@ -143,6 +143,8 @@ fun SalesReportScreen(
     expenseViewModel: ExpenseViewModel? = null,
     supplierViewModel: SupplierViewModel? = null,
     isTablet: Boolean,
+    canViewPnl: Boolean = true,
+    canExport: Boolean = true,
     onNavigateToExpenses: (() -> Unit)? = null,
     onNavigateToSuppliers: (() -> Unit)? = null,
     onBack: () -> Unit,
@@ -250,21 +252,23 @@ fun SalesReportScreen(
                     }
                 },
                 actions = {
-                    val hasTransactions = report != null && report!!.transactionCount > 0
-                    IconButton(
-                        onClick = {
-                            if (hasTransactions) {
-                                val cleanDate = DateFormatters.formatExportDate(rangeStart)
-                                exportReportLauncher.launch("sales-report-$cleanDate.xlsx")
-                            }
-                        },
-                        enabled = hasTransactions
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FileDownload,
-                            contentDescription = stringResource(R.string.sales_report_export_excel),
-                            tint = if (hasTransactions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                        )
+                    if (canExport) {
+                        val hasTransactions = report != null && report!!.transactionCount > 0
+                        IconButton(
+                            onClick = {
+                                if (hasTransactions) {
+                                    val cleanDate = DateFormatters.formatExportDate(rangeStart)
+                                    exportReportLauncher.launch("sales-report-$cleanDate.xlsx")
+                                }
+                            },
+                            enabled = hasTransactions
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FileDownload,
+                                contentDescription = stringResource(R.string.sales_report_export_excel),
+                                tint = if (hasTransactions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
+                        }
                     }
                 }
             )
@@ -392,6 +396,7 @@ fun SalesReportScreen(
                     data = data,
                     previous = previousReport,
                     periodExpenseTotal = periodExpenseTotal,
+                    canViewPnl = canViewPnl,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -449,16 +454,17 @@ fun SalesReportScreen(
                 when (selectedTab) {
                     ReportTab.OVERVIEW -> OverviewPanel(
                         data = data,
-                        metric = trendMetric,
+                        metric = if (canViewPnl) trendMetric else TrendMetric.SALES,
                         periodExpenseTotal = periodExpenseTotal,
                         totalSupplierDue = totalSupplierDue,
                         hasExpenseFeature = expenseViewModel != null,
                         hasSupplierFeature = supplierViewModel != null,
+                        canViewPnl = canViewPnl,
                         onNavigateToExpenses = onNavigateToExpenses,
                         onNavigateToSuppliers = onNavigateToSuppliers,
-                        onMetricChange = { trendMetric = it }
+                        onMetricChange = { if (canViewPnl) trendMetric = it }
                     )
-                    ReportTab.HOURLY -> HourlyPanel(data)
+                    ReportTab.HOURLY -> HourlyPanel(data, canViewPnl = canViewPnl)
                     ReportTab.PRODUCTS -> ProductsPanel(data)
                     ReportTab.PAYMENTS -> PaymentsPanel(data)
                 }
@@ -536,6 +542,7 @@ private fun ReportExecutiveSummaryCard(
     data: SalesReportData,
     previous: SalesReportData?,
     periodExpenseTotal: Double = 0.0,
+    canViewPnl: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var showProfitMode by remember { mutableStateOf(false) }
@@ -589,30 +596,32 @@ private fun ReportExecutiveSummaryCard(
                         )
                     }
 
-                    // Interactive Switch Pill
-                    Surface(
-                        onClick = { showProfitMode = !showProfitMode },
-                        shape = RoundedCornerShape(20.dp),
-                        color = Color.White.copy(alpha = 0.16f),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    if (canViewPnl) {
+                        // Interactive Switch Pill
+                        Surface(
+                            onClick = { showProfitMode = !showProfitMode },
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color.White.copy(alpha = 0.16f),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
                         ) {
-                            Text(
-                                text = if (showProfitMode) stringResource(R.string.sales_report_gross_sales) else stringResource(R.string.sales_report_net_margin),
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Icon(
-                                imageVector = Icons.Default.SwapVert,
-                                contentDescription = stringResource(R.string.products_switch_valuation_cd),
-                                tint = Color(0xFFC7D2FE),
-                                modifier = Modifier.size(13.dp)
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = if (showProfitMode) stringResource(R.string.sales_report_gross_sales) else stringResource(R.string.sales_report_net_margin),
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.SwapVert,
+                                    contentDescription = stringResource(R.string.products_switch_valuation_cd),
+                                    tint = Color(0xFFC7D2FE),
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -642,27 +651,29 @@ private fun ReportExecutiveSummaryCard(
                         )
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color.Black.copy(alpha = 0.28f),
-                        border = BorderStroke(1.dp, Color(0x40A5B4FC))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            horizontalAlignment = Alignment.End
+                    if (canViewPnl) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color.Black.copy(alpha = 0.28f),
+                            border = BorderStroke(1.dp, Color(0x40A5B4FC))
                         ) {
-                            Text(
-                                text = "${if (effectiveNetProfit >= 0) "+" else ""}${formatTaka(effectiveNetProfit)}",
-                                fontSize = 12.5.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF34D399)
-                            )
-                            Text(
-                                text = "${stringResource(R.string.sales_report_profit_margin)} (${String.format(Locale.US, "%.1f", marginPercent)}%)",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFC7D2FE)
-                            )
+                            Column(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                horizontalAlignment = Alignment.End
+                            ) {
+                                Text(
+                                    text = "${if (effectiveNetProfit >= 0) "+" else ""}${formatTaka(effectiveNetProfit)}",
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFF34D399)
+                                )
+                                Text(
+                                    text = "${stringResource(R.string.sales_report_profit_margin)} (${String.format(Locale.US, "%.1f", marginPercent)}%)",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFC7D2FE)
+                                )
+                            }
                         }
                     }
                 }
@@ -701,34 +712,36 @@ private fun ReportExecutiveSummaryCard(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                if (canViewPnl) {
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                HorizontalDivider(
-                    color = Color.White.copy(alpha = 0.15f),
-                    thickness = 0.8.dp
-                )
+                    HorizontalDivider(
+                        color = Color.White.copy(alpha = 0.15f),
+                        thickness = 0.8.dp
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Net Profit Breakdown
-                Text(
-                    text = stringResource(R.string.sales_report_net_profit_metric).uppercase(),
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 0.6.sp,
-                    color = Color(0xFFC7D2FE)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                NetProfitBreakdownRow(stringResource(R.string.sales_report_gross_profit), data.grossProfit, isTotal = false)
-                NetProfitBreakdownRow(stringResource(R.string.sales_report_discounts_given), -data.totalDiscount, isTotal = false)
-                if (data.totalLoyaltyDiscount > 0.0) {
-                    NetProfitBreakdownRow(stringResource(R.string.sales_report_loyalty_points_redeemed), -data.totalLoyaltyDiscount, isTotal = false)
+                    // Net Profit Breakdown
+                    Text(
+                        text = stringResource(R.string.sales_report_net_profit_metric).uppercase(),
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.6.sp,
+                        color = Color(0xFFC7D2FE)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    NetProfitBreakdownRow(stringResource(R.string.sales_report_gross_profit), data.grossProfit, isTotal = false)
+                    NetProfitBreakdownRow(stringResource(R.string.sales_report_discounts_given), -data.totalDiscount, isTotal = false)
+                    if (data.totalLoyaltyDiscount > 0.0) {
+                        NetProfitBreakdownRow(stringResource(R.string.sales_report_loyalty_points_redeemed), -data.totalLoyaltyDiscount, isTotal = false)
+                    }
+                    NetProfitBreakdownRow(stringResource(R.string.sales_report_total_expenses), -periodExpenseTotal, isTotal = false)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.15f), thickness = 0.8.dp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    NetProfitBreakdownRow(stringResource(R.string.sales_report_net_profit), effectiveNetProfit, isTotal = true)
                 }
-                NetProfitBreakdownRow(stringResource(R.string.sales_report_total_expenses), -periodExpenseTotal, isTotal = false)
-                Spacer(modifier = Modifier.height(6.dp))
-                HorizontalDivider(color = Color.White.copy(alpha = 0.15f), thickness = 0.8.dp)
-                Spacer(modifier = Modifier.height(6.dp))
-                NetProfitBreakdownRow(stringResource(R.string.sales_report_net_profit), effectiveNetProfit, isTotal = true)
             }
         }
     }
@@ -863,6 +876,7 @@ private fun OverviewPanel(
     totalSupplierDue: Double = 0.0,
     hasExpenseFeature: Boolean = false,
     hasSupplierFeature: Boolean = false,
+    canViewPnl: Boolean = true,
     onNavigateToExpenses: (() -> Unit)? = null,
     onNavigateToSuppliers: (() -> Unit)? = null,
     onMetricChange: (TrendMetric) -> Unit
@@ -932,27 +946,29 @@ private fun OverviewPanel(
                             }
                         }
 
-                        // 2. Net Operating Profit
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (netOperatingProfit >= 0) Color(0xFFF0FDF4) else Color(0xFFFEF2F2),
-                            border = BorderStroke(1.dp, if (netOperatingProfit >= 0) Color(0xFFBBF7D0) else Color(0xFFFECACA)),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Column(Modifier.padding(10.dp)) {
-                                Text(
-                                    text = stringResource(R.string.sales_report_operating_profit),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (netOperatingProfit >= 0) Color(0xFF166534) else Color(0xFF991B1B)
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = formatTaka(netOperatingProfit),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = if (netOperatingProfit >= 0) Color(0xFF16A34A) else Color(0xFFDC2626)
-                                )
+                        if (canViewPnl) {
+                            // 2. Net Operating Profit
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (netOperatingProfit >= 0) Color(0xFFF0FDF4) else Color(0xFFFEF2F2),
+                                border = BorderStroke(1.dp, if (netOperatingProfit >= 0) Color(0xFFBBF7D0) else Color(0xFFFECACA)),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(Modifier.padding(10.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.sales_report_operating_profit),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (netOperatingProfit >= 0) Color(0xFF166534) else Color(0xFF991B1B)
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = formatTaka(netOperatingProfit),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = if (netOperatingProfit >= 0) Color(0xFF16A34A) else Color(0xFFDC2626)
+                                    )
+                                }
                             }
                         }
 
@@ -1057,36 +1073,38 @@ private fun OverviewPanel(
                     }
                 }
 
-                // Metric Mode (Sales Volume vs Net Profit)
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                if (canViewPnl) {
+                    // Metric Mode (Sales Volume vs Net Profit)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
-                        TrendMetric.entries.forEach { item ->
-                            val isSelected = metric == item
-                            Surface(
-                                onClick = { onMetricChange(item) },
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
-                                shadowElevation = if (isSelected) 1.dp else 0.dp
-                            ) {
-                                Text(
-                                    text = when (item) {
-                                        TrendMetric.SALES -> stringResource(R.string.sales_report_sales_volume)
-                                        TrendMetric.PROFIT -> stringResource(R.string.sales_report_net_profit_metric)
-                                    },
-                                    fontSize = 11.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
-                                )
+                        Row(
+                            modifier = Modifier.padding(2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            TrendMetric.entries.forEach { item ->
+                                val isSelected = metric == item
+                                Surface(
+                                    onClick = { onMetricChange(item) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
+                                    shadowElevation = if (isSelected) 1.dp else 0.dp
+                                ) {
+                                    Text(
+                                        text = when (item) {
+                                            TrendMetric.SALES -> stringResource(R.string.sales_report_sales_volume)
+                                            TrendMetric.PROFIT -> stringResource(R.string.sales_report_net_profit_metric)
+                                        },
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -1301,7 +1319,7 @@ private fun HourlyTrendChart(points: List<HourlyReportData>, metric: TrendMetric
 }
 
 @Composable
-private fun HourlyPanel(data: SalesReportData) {
+private fun HourlyPanel(data: SalesReportData, canViewPnl: Boolean = true) {
     var metric by remember { mutableStateOf(TrendMetric.SALES) }
     var showOnlyActiveHours by remember { mutableStateOf(true) }
 
@@ -1439,33 +1457,35 @@ private fun HourlyPanel(data: SalesReportData) {
                         Text(stringResource(R.string.sales_report_24h_timeline_analysis), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
                     }
 
-                    // Metric Switcher
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                    ) {
-                        Row(modifier = Modifier.padding(2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                            TrendMetric.entries.forEach { item ->
-                                val isSelected = metric == item
-                                Surface(
-                                    onClick = { metric = item },
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
-                                    shadowElevation = if (isSelected) 1.dp else 0.dp
-                                ) {
-                                    Text(
-                                        text = when (item) {
-                                            TrendMetric.SALES -> stringResource(R.string.sales_report_sales_volume)
-                                            TrendMetric.PROFIT -> stringResource(R.string.sales_report_net_profit_metric)
-                                        },
-                                        fontSize = 10.5.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                                        maxLines = 1,
-                                        softWrap = false,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
+                    if (canViewPnl) {
+                        // Metric Switcher
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        ) {
+                            Row(modifier = Modifier.padding(2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                TrendMetric.entries.forEach { item ->
+                                    val isSelected = metric == item
+                                    Surface(
+                                        onClick = { metric = item },
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
+                                        shadowElevation = if (isSelected) 1.dp else 0.dp
+                                    ) {
+                                        Text(
+                                            text = when (item) {
+                                                TrendMetric.SALES -> stringResource(R.string.sales_report_sales_volume)
+                                                TrendMetric.PROFIT -> stringResource(R.string.sales_report_net_profit_metric)
+                                            },
+                                            fontSize = 10.5.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

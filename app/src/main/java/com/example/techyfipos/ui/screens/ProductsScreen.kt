@@ -586,7 +586,7 @@ fun ProductsScreen(
 
     // Prefill launch check
     LaunchedEffect(prefilledBarcode) {
-        if (!prefilledBarcode.isNullOrBlank()) {
+        if (!prefilledBarcode.isNullOrBlank() && canEdit) {
             showAddDialog = true
         }
     }
@@ -2015,7 +2015,13 @@ fun ProductsScreen(
                                             }
                                         }
                                     },
-                                    onAdjustStock = { stockCheckProduct = product },
+                                    onAdjustStock = {
+                                        if (canAdjustStock) {
+                                            stockCheckProduct = product
+                                        } else {
+                                            android.widget.Toast.makeText(context, context.getString(R.string.perm_inventory_adjust_stock_desc), android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
                                     onEdit = { requestEditProduct(product) },
                                     onGenerateCode = {
                                         if (canPrintLabels) {
@@ -2068,7 +2074,13 @@ fun ProductsScreen(
                                             }
                                         }
                                     },
-                                    onAdjustStock = { stockCheckProduct = product },
+                                    onAdjustStock = {
+                                        if (canAdjustStock) {
+                                            stockCheckProduct = product
+                                        } else {
+                                            android.widget.Toast.makeText(context, context.getString(R.string.perm_inventory_adjust_stock_desc), android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
                                     onEdit = { requestEditProduct(product) },
                                     onGenerateCode = {
                                         if (canPrintLabels) {
@@ -2682,6 +2694,7 @@ fun ProductsScreen(
         AddEditProductDialog(
             existingBarcodes = allProductsList.map { it.barcode }.toSet(),
             initialBarcode = toEnglishDigits(scannedNewBarcodeForDialog ?: prefilledBarcode ?: ""),
+            canAdjustStock = canAdjustStock,
             onDismiss = {
                 showAddDialog = false
                 scannedNewBarcodeForDialog = null
@@ -2751,6 +2764,7 @@ fun ProductsScreen(
         val prod = selectedProductForEdit!!
         AddEditProductDialog(
             isEdit = true,
+            canAdjustStock = canAdjustStock,
             existingBarcodes = allProductsList.map { it.barcode }.toSet(),
             initialBarcode = toEnglishDigits(scannedNewBarcodeForDialog ?: prod.barcode),
             initialName = prod.name,
@@ -2865,6 +2879,10 @@ fun ProductsScreen(
                 selectedProductForEdit = prod
             },
             onQuickAddStock = { prod, addedQty ->
+                if (!canAdjustStock) {
+                    Toast.makeText(context, context.getString(R.string.perm_inventory_adjust_stock_desc), Toast.LENGTH_SHORT).show()
+                    return@InventoryAlertsCenterBottomSheet
+                }
                 val prevStock = prod.stockQty
                 val newStock = prevStock + addedQty
                 productsViewModel.updateProductWithAdjustment(
@@ -2873,9 +2891,16 @@ fun ProductsScreen(
                     newStock = newStock,
                     difference = addedQty.toDouble(),
                     reason = "Restock",
-                    note = context.getString(R.string.products_quick_restock_note)
+                    note = context.getString(R.string.products_quick_restock_note),
+                    onResult = { result ->
+                        if (result.isSuccess) {
+                            Toast.makeText(context, context.getString(R.string.products_added_stock_toast, addedQty, prod.name), Toast.LENGTH_SHORT).show()
+                        } else {
+                            val msg = result.exceptionOrNull()?.message ?: context.getString(R.string.error_generic)
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 )
-                Toast.makeText(context, context.getString(R.string.products_added_stock_toast, addedQty, prod.name), Toast.LENGTH_SHORT).show()
             },
             onDismiss = { showInventoryAlertsModal = false }
         )
@@ -2890,10 +2915,16 @@ fun ProductsScreen(
                 stockCheckProduct = null
             },
             onSave = { newQuantity, reason, note ->
+                if (!canAdjustStock) {
+                    Toast.makeText(context, context.getString(R.string.perm_inventory_adjust_stock_desc), Toast.LENGTH_SHORT).show()
+                    stockCheckProduct = null
+                    return@HardwareStockCheckDialog
+                }
                 val prevStock = product.stockQty
                 val newStock = newQuantity.coerceAtLeast(0.0)
                 val diff = newStock - prevStock
                 val updated = product.copy(stockQty = newStock)
+                stockCheckProduct = null
                 if (kotlin.math.abs(diff) > 0.0001) {
                     productsViewModel.updateProductWithAdjustment(
                         updatedProduct = updated,
@@ -2901,23 +2932,35 @@ fun ProductsScreen(
                         newStock = newStock,
                         difference = diff,
                         reason = reason,
-                        note = note
+                        note = note,
+                        onResult = { result ->
+                            if (result.isSuccess) {
+                                val sStr = if (updated.stockQty % 1.0 == 0.0) updated.stockQty.toLong().toString() else String.format(Locale.US, "%.2f", updated.stockQty).trimEnd('0').trimEnd('.')
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.products_stock_saved_toast, product.name, sStr, product.unit),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = context.getString(R.string.products_stock_saved_snackbar, product.name, sStr, product.unit),
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+                            } else {
+                                val msg = result.exceptionOrNull()?.message ?: context.getString(R.string.error_generic)
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     )
                 } else {
                     productsViewModel.updateProduct(updated)
-                }
-                stockCheckProduct = null
-                val sStr = if (updated.stockQty % 1.0 == 0.0) updated.stockQty.toLong().toString() else String.format(Locale.US, "%.2f", updated.stockQty).trimEnd('0').trimEnd('.')
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.products_stock_saved_toast, product.name, sStr, product.unit),
-                    Toast.LENGTH_SHORT
-                ).show()
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = context.getString(R.string.products_stock_saved_snackbar, product.name, sStr, product.unit),
-                        duration = SnackbarDuration.Short
-                    )
+                    val sStr = if (updated.stockQty % 1.0 == 0.0) updated.stockQty.toLong().toString() else String.format(Locale.US, "%.2f", updated.stockQty).trimEnd('0').trimEnd('.')
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.products_stock_saved_toast, product.name, sStr, product.unit),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         )
@@ -2928,11 +2971,13 @@ fun ProductsScreen(
         StockCheckNotFoundDialog(
             barcode = englishBarcode,
             onDismiss = { stockNotFoundBarcode = null },
-            onAddNow = {
-                scannedNewBarcodeForDialog = englishBarcode
-                showAddDialog = true
-                stockNotFoundBarcode = null
-            }
+            onAddNow = if (canEdit) {
+                {
+                    scannedNewBarcodeForDialog = englishBarcode
+                    showAddDialog = true
+                    stockNotFoundBarcode = null
+                }
+            } else null
         )
     }
 
@@ -3302,7 +3347,7 @@ fun BulkDeleteConfirmationDialog(
 fun StockCheckNotFoundDialog(
     barcode: String,
     onDismiss: () -> Unit,
-    onAddNow: () -> Unit
+    onAddNow: (() -> Unit)? = null
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -3370,17 +3415,19 @@ fun StockCheckNotFoundDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = onAddNow,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.products_add_product_now), fontWeight = FontWeight.Bold)
+            if (onAddNow != null) {
+                Button(
+                    onClick = onAddNow,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.products_add_product_now), fontWeight = FontWeight.Bold)
+                }
             }
         },
         dismissButton = {

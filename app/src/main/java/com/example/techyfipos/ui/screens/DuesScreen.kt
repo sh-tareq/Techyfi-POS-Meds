@@ -145,8 +145,10 @@ fun DuesScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val canSendReminders = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_SEND_REMINDERS)
-    val canOverrideLimit = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_OVERRIDE_LIMIT)
+    val canSendReminders = isOwner || activePermissions.contains(AppPermissions.DUES_SEND_REMINDERS)
+    val canOverrideLimit = isOwner || activePermissions.contains(AppPermissions.DUES_OVERRIDE_LIMIT)
+    val canCollect = isOwner || activePermissions.contains(AppPermissions.DUES_COLLECT_PAYMENT)
+    val canAddDue = isOwner || activePermissions.contains(AppPermissions.DUES_ADD_DUE)
     val reminderPermissionRequiredToast = stringResource(R.string.dues_reminder_permission_required_toast)
     val storeName by (settingsViewModel?.shopName ?: flowOf("")).collectAsStateWithLifecycle("")
     val storeAddress by (settingsViewModel?.shopAddress ?: flowOf("")).collectAsStateWithLifecycle("")
@@ -396,8 +398,8 @@ fun DuesScreen(
                             Realistic3DExcelSpreadsheetIcon(size = 24.dp)
                         }
 
-                        // 4. + Add Due (Compact filled icon button for owner)
-                        if (isOwner) {
+                        // 4. + Add Due (Compact filled icon button for owner or staff with DUES_ADD_DUE)
+                        if (canAddDue) {
                             FilledIconButton(
                                 onClick = { showAddDueDialog = true },
                                 shape = RoundedCornerShape(9.dp),
@@ -463,6 +465,8 @@ fun DuesScreen(
                 payments = selectedPayments,
                 charges = selectedCharges,
                 canMutate = isOwner,
+                canCollect = canCollect,
+                canAddDue = canAddDue,
                 onClose = { duesViewModel.selectCustomer(null) },
                 onRecordPaymentClick = { paymentCustomer = selectedCustomer },
                 onAddDueClick = { showAddDueForCustomer = selectedCustomer },
@@ -951,7 +955,7 @@ fun DuesScreen(
                                                 fontSize = 13.5.sp,
                                                 textAlign = TextAlign.Center
                                             )
-                                            if (isOwner && searchQuery.isBlank() && selectedTab == DuesTab.OUTSTANDING) {
+                                            if (canAddDue && searchQuery.isBlank() && selectedTab == DuesTab.OUTSTANDING) {
                                                 Button(
                                                     onClick = { showAddDueDialog = true },
                                                     shape = RoundedCornerShape(10.dp),
@@ -975,7 +979,7 @@ fun DuesScreen(
                                         customer = customer,
                                         repaidAmount = repaid,
                                         isOverdue = isOverdue,
-                                        canCollect = isOwner,
+                                        canCollect = canCollect,
                                         canDelete = isOwner,
                                         onClick = { duesViewModel.selectCustomer(customer) },
                                         onCollect = { paymentCustomer = customer },
@@ -1046,7 +1050,7 @@ fun DuesScreen(
                                                 fontSize = 13.5.sp,
                                                 textAlign = TextAlign.Center
                                             )
-                                            if (isOwner && searchQuery.isBlank() && selectedTab == DuesTab.OUTSTANDING) {
+                                            if (canAddDue && searchQuery.isBlank() && selectedTab == DuesTab.OUTSTANDING) {
                                                 Button(
                                                     onClick = { showAddDueDialog = true },
                                                     shape = RoundedCornerShape(10.dp),
@@ -1070,7 +1074,7 @@ fun DuesScreen(
                                         customer = customer,
                                         repaidAmount = repaid,
                                         isOverdue = isOverdue,
-                                        canCollect = isOwner,
+                                        canCollect = canCollect,
                                         canDelete = isOwner,
                                         onClick = { duesViewModel.selectCustomer(customer) },
                                         onCollect = { paymentCustomer = customer },
@@ -4890,6 +4894,8 @@ fun CustomerDueDetailsView(
     payments: List<DuePayment>,
     charges: List<com.example.techyfipos.data.db.DueCharge> = emptyList(),
     canMutate: Boolean = true,
+    canCollect: Boolean = canMutate,
+    canAddDue: Boolean = canMutate,
     onClose: () -> Unit,
     onRecordPaymentClick: () -> Unit,
     onAddDueClick: () -> Unit,
@@ -5035,7 +5041,7 @@ fun CustomerDueDetailsView(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (canMutate) Button(
+            if (canCollect) Button(
                 onClick = onRecordPaymentClick,
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
@@ -5047,7 +5053,7 @@ fun CustomerDueDetailsView(
                 Text(stringResource(R.string.dues_collect_button), fontWeight = FontWeight.Bold, fontSize = 11.5.sp, maxLines = 1)
             }
 
-            if (canMutate) Button(
+            if (canAddDue) Button(
                 onClick = onAddDueClick,
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),

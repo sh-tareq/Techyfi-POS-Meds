@@ -379,41 +379,44 @@ fun MainNavigation() {
                 MainActivity.pendingNavigationDestination.value = null
                 val targetKey = when (dest.lowercase().trim()) {
                     "dues" -> {
-                        val canViewDues = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_VIEW)
+                        val canViewDues = isOwner || activePermissions.contains(AppPermissions.DUES_VIEW)
                         if (canViewDues) Dues else Scanner
                     }
                     "customers" -> {
-                        val canCustomers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
+                        val canCustomers = isOwner || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
                         if (canCustomers) Customers else Scanner
                     }
                     "sales_history", "saleshistory", "sales" -> SalesHistory
-                    "products" -> Products
+                    "products" -> {
+                        val canViewInventory = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
+                        if (canViewInventory) Products else Scanner
+                    }
                     "expenses" -> {
-                        val canExpense = isOwner || isSupervisor || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
+                        val canExpense = isOwner || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
                         if (canExpense) Expenses else Scanner
                     }
                     "suppliers" -> {
-                        val canSuppliers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
+                        val canSuppliers = isOwner || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
                         if (canSuppliers) Suppliers else Scanner
                     }
                     "reports", "sales_report", "salesreport" -> {
-                        val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
+                        val canReport = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
                         if (canReport) SalesReport else Scanner
                     }
                     "settings" -> {
-                        val canSettings = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+                        val canSettings = isOwner || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
                         if (canSettings) Settings else Scanner
                     }
                     "register_close", "registerclose" -> {
-                        val canClose = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
+                        val canClose = isOwner || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
                         if (canClose) RegisterClose else Scanner
                     }
                     "loyalty" -> {
-                        val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
+                        val canLoyalty = isOwner || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
                         if (canLoyalty) Loyalty else Scanner
                     }
                     "manage_users", "users", "staff" -> {
-                        if (isOwner) ManageUsers else Scanner
+                        if (isOwner || activePermissions.contains(AppPermissions.SYSTEM_MANAGE_STAFF)) ManageUsers else Scanner
                     }
                     else -> null
                 }
@@ -459,7 +462,7 @@ fun MainNavigation() {
                                 while (backStack.size > 1) { backStack.removeLastOrNull() }
                             },
                             Triple(Nav3DType.PRODUCTS, currentKey == Products, stringResource(R.string.products)) to {
-                                val canViewInventory = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
+                                val canViewInventory = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
                                 if (canViewInventory) {
                                     while (backStack.size > 1) { backStack.removeLastOrNull() }
                                     if (backStack.lastOrNull() != Products) { backStack.add(Products) }
@@ -472,7 +475,7 @@ fun MainNavigation() {
                                 if (backStack.lastOrNull() != SalesHistory) { backStack.add(SalesHistory) }
                             },
                             Triple(Nav3DType.DUES, currentKey == Dues, stringResource(R.string.dues_list)) to {
-                                val canViewDues = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_VIEW)
+                                val canViewDues = isOwner || activePermissions.contains(AppPermissions.DUES_VIEW)
                                 if (canViewDues) {
                                     while (backStack.size > 1) { backStack.removeLastOrNull() }
                                     if (backStack.lastOrNull() != Dues) { backStack.add(Dues) }
@@ -526,7 +529,7 @@ fun MainNavigation() {
                     onDismiss = { showMoreHubSheet = false },
                     onNavigateToReport = {
                         showMoreHubSheet = false
-                        val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
+                        val canReport = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
                         if (canReport) {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != SalesReport) { backStack.add(SalesReport) }
@@ -536,7 +539,7 @@ fun MainNavigation() {
                     },
                     onNavigateToExpenses = {
                         showMoreHubSheet = false
-                        val canExpense = isOwner || isSupervisor || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
+                        val canExpense = isOwner || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
                         if (canExpense) {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
@@ -546,7 +549,7 @@ fun MainNavigation() {
                     },
                     onNavigateToSuppliers = {
                         showMoreHubSheet = false
-                        val canSuppliers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
+                        val canSuppliers = isOwner || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
                         if (canSuppliers) {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != Suppliers) { backStack.add(Suppliers) }
@@ -556,7 +559,7 @@ fun MainNavigation() {
                     },
                     onNavigateToSettings = {
                         showMoreHubSheet = false
-                        val canSettings = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+                        val canSettings = isOwner || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
                         if (canSettings) {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != Settings) { backStack.add(Settings) }
@@ -566,7 +569,7 @@ fun MainNavigation() {
                     },
                     onNavigateToRegisterClose = {
                         showMoreHubSheet = false
-                        val canClose = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
+                        val canClose = isOwner || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
                         if (canClose) {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != RegisterClose) { backStack.add(RegisterClose) }
@@ -576,7 +579,7 @@ fun MainNavigation() {
                     },
                     onNavigateToLoyalty = {
                         showMoreHubSheet = false
-                        val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
+                        val canLoyalty = isOwner || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
                         if (canLoyalty) {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != Loyalty) { backStack.add(Loyalty) }
@@ -586,7 +589,7 @@ fun MainNavigation() {
                     },
                     onNavigateToCustomers = {
                         showMoreHubSheet = false
-                        val canCustomers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
+                        val canCustomers = isOwner || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
                         if (canCustomers) {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != Customers) { backStack.add(Customers) }
@@ -756,7 +759,7 @@ fun MainNavigation() {
                                         while (backStack.size > 1) { backStack.removeLastOrNull() }
                                     },
                                     Triple(Nav3DType.PRODUCTS, currentKey == Products, stringResource(R.string.products)) to {
-                                        val canViewInventory = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
+                                        val canViewInventory = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
                                         if (canViewInventory) {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != Products) { backStack.add(Products) }
@@ -769,7 +772,7 @@ fun MainNavigation() {
                                         if (backStack.lastOrNull() != SalesHistory) { backStack.add(SalesHistory) }
                                     },
                                     Triple(Nav3DType.DUES, currentKey == Dues, stringResource(R.string.dues_list)) to {
-                                        val canViewDues = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_VIEW)
+                                        val canViewDues = isOwner || activePermissions.contains(AppPermissions.DUES_VIEW)
                                         if (canViewDues) {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != Dues) { backStack.add(Dues) }
@@ -778,7 +781,7 @@ fun MainNavigation() {
                                         }
                                     },
                                     Triple(Nav3DType.EXPENSES, currentKey == Expenses, stringResource(R.string.expenses)) to {
-                                        val canExpense = isOwner || isSupervisor || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
+                                        val canExpense = isOwner || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
                                         if (canExpense) {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
@@ -787,7 +790,7 @@ fun MainNavigation() {
                                         }
                                     },
                                     Triple(Nav3DType.REPORT, currentKey == SalesReport, stringResource(R.string.sales_report_section)) to {
-                                        val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
+                                        val canReport = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
                                         if (canReport) {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != SalesReport) { backStack.add(SalesReport) }
@@ -796,7 +799,7 @@ fun MainNavigation() {
                                         }
                                     },
                                     Triple(Nav3DType.SETTINGS, currentKey == Settings, stringResource(R.string.settings)) to {
-                                        val canSettings = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+                                        val canSettings = isOwner || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
                                         if (canSettings) {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != Settings) { backStack.add(Settings) }
@@ -1096,41 +1099,44 @@ fun MainNavigation() {
                                         MainActivity.pendingNavigationDestination.value = null
                                         val targetKey = when (dest?.lowercase()?.trim()) {
                                             "dues" -> {
-                                                val canViewDues = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_VIEW)
+                                                val canViewDues = isOwner || activePermissions.contains(AppPermissions.DUES_VIEW)
                                                 if (canViewDues) Dues else Scanner
                                             }
                                             "customers" -> {
-                                                val canCustomers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
+                                                val canCustomers = isOwner || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
                                                 if (canCustomers) Customers else Scanner
                                             }
                                             "sales_history", "saleshistory", "sales" -> SalesHistory
-                                            "products" -> Products
+                                            "products" -> {
+                                                val canViewInventory = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
+                                                if (canViewInventory) Products else Scanner
+                                            }
                                             "expenses" -> {
-                                                val canExpense = isOwner || isSupervisor || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
+                                                val canExpense = isOwner || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
                                                 if (canExpense) Expenses else Scanner
                                             }
                                             "suppliers" -> {
-                                                val canSuppliers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
+                                                val canSuppliers = isOwner || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
                                                 if (canSuppliers) Suppliers else Scanner
                                             }
                                             "reports", "sales_report", "salesreport" -> {
-                                                val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
+                                                val canReport = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
                                                 if (canReport) SalesReport else Scanner
                                             }
                                             "settings" -> {
-                                                val canSettings = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+                                                val canSettings = isOwner || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
                                                 if (canSettings) Settings else Scanner
                                             }
                                             "register_close", "registerclose" -> {
-                                                val canClose = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
+                                                val canClose = isOwner || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
                                                 if (canClose) RegisterClose else Scanner
                                             }
                                             "loyalty" -> {
-                                                val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
+                                                val canLoyalty = isOwner || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
                                                 if (canLoyalty) Loyalty else Scanner
                                             }
                                             "manage_users", "users", "staff" -> {
-                                                if (isOwner) ManageUsers else Scanner
+                                                if (isOwner || activePermissions.contains(AppPermissions.SYSTEM_MANAGE_STAFF)) ManageUsers else Scanner
                                             }
                                             else -> null
                                         }
@@ -1144,7 +1150,8 @@ fun MainNavigation() {
                                 )
                             }
                             entry<ManageUsers> {
-                                val canManageStaff = isOwner
+                                val canManageStaff = isOwner || activePermissions.contains(AppPermissions.SYSTEM_MANAGE_STAFF)
+                                val canEditPermissions = isOwner || activePermissions.contains(AppPermissions.SYSTEM_PERMISSIONS)
                                 if (!canManageStaff) {
                                     android.widget.Toast.makeText(context, context.getString(R.string.user_management_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                     backStack.removeLastOrNull()
@@ -1155,6 +1162,8 @@ fun MainNavigation() {
                                     onBack = { backStack.removeLastOrNull() },
                                     isTablet = isTablet,
                                     isOwner = isOwner,
+                                    canManageStaff = canManageStaff,
+                                    canEditPermissions = canEditPermissions,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
@@ -1169,12 +1178,17 @@ fun MainNavigation() {
                                     isOwner = isOwner,
                                     isSupervisor = isSupervisor,
                                     activePermissions = activePermissions,
-                                    canCheckStock = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_ADD_EDIT),
+                                    canCheckStock = isOwner || activePermissions.contains(AppPermissions.INVENTORY_ADD_EDIT),
                                     onNavigateToCart = { backStack.add(Cart) },
                                     onNavigateToSettings = { backStack.add(Settings) },
                                     onNavigateToProducts = { barcode ->
-                                        prefilledBarcodeForProductScreen = barcode
-                                        backStack.add(Products)
+                                        val canViewInventory = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
+                                        if (canViewInventory) {
+                                            prefilledBarcodeForProductScreen = barcode
+                                            backStack.add(Products)
+                                        } else {
+                                            android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                     },
                                     modifier = Modifier.padding(contentPadding)
                                 )
@@ -1190,14 +1204,25 @@ fun MainNavigation() {
                                     activePermissions = activePermissions,
                                     onBack = { backStack.removeLastOrNull() },
                                     onNavigateToProducts = { barcode ->
-                                        prefilledBarcodeForProductScreen = barcode
-                                        backStack.add(Products)
+                                        val canViewInventory = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
+                                        if (canViewInventory) {
+                                            prefilledBarcodeForProductScreen = barcode
+                                            backStack.add(Products)
+                                        } else {
+                                            android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                     },
                                     isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
                                 )
                             }
                             entry<Products> {
+                                val canViewInventory = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
+                                if (!canViewInventory) {
+                                    android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                    backStack.removeLastOrNull()
+                                    return@entry
+                                }
                                 val code = prefilledBarcodeForProductScreen
                                 DisposableEffect(Unit) {
                                     onDispose { prefilledBarcodeForProductScreen = null }
@@ -1207,11 +1232,11 @@ fun MainNavigation() {
                                     cartViewModel = cartViewModel,
                                     prefilledBarcode = code,
                                     isOwner = isOwner,
-                                    canViewCosts = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_VIEW_COSTS),
-                                    canEdit = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_ADD_EDIT),
-                                    canDelete = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_DELETE),
-                                    canAdjustStock = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_ADJUST_STOCK),
-                                    canPrintLabels = isOwner || isSupervisor || activePermissions.contains(AppPermissions.INVENTORY_PRINT_LABELS),
+                                    canViewCosts = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW_COSTS),
+                                    canEdit = isOwner || activePermissions.contains(AppPermissions.INVENTORY_ADD_EDIT),
+                                    canDelete = isOwner || activePermissions.contains(AppPermissions.INVENTORY_DELETE),
+                                    canAdjustStock = isOwner || activePermissions.contains(AppPermissions.INVENTORY_ADJUST_STOCK),
+                                    canPrintLabels = isOwner || activePermissions.contains(AppPermissions.INVENTORY_PRINT_LABELS),
                                     onBack = { backStack.removeLastOrNull() },
                                     onNavigateToCart = { backStack.add(Cart) },
                                     isTablet = isTablet,
@@ -1229,7 +1254,7 @@ fun MainNavigation() {
                                     activePermissions = activePermissions,
                                     onBack = { backStack.removeLastOrNull() },
                                     onNavigateToReport = {
-                                        val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
+                                        val canReport = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
                                         if (canReport) {
                                             if (backStack.lastOrNull() != SalesReport) {
                                                 backStack.add(SalesReport)
@@ -1244,7 +1269,7 @@ fun MainNavigation() {
                                 )
                             }
                             entry<SalesReport> {
-                                val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
+                                val canReport = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
                                 if (!canReport) {
                                     android.widget.Toast.makeText(context, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
                                     backStack.removeLastOrNull()
@@ -1255,8 +1280,10 @@ fun MainNavigation() {
                                     expenseViewModel = expenseViewModel,
                                     supplierViewModel = supplierViewModel,
                                     isTablet = isTablet,
+                                    canViewPnl = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL),
+                                    canExport = isOwner || activePermissions.contains(AppPermissions.REPORTS_EXPORT_EXCEL),
                                     onNavigateToExpenses = {
-                                        val canExpense = isOwner || isSupervisor || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
+                                        val canExpense = isOwner || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
                                         if (canExpense) {
                                             if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
                                         } else {
@@ -1264,7 +1291,7 @@ fun MainNavigation() {
                                         }
                                     },
                                     onNavigateToSuppliers = {
-                                        val canSuppliers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
+                                        val canSuppliers = isOwner || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
                                         if (canSuppliers) {
                                             if (backStack.lastOrNull() != Suppliers) { backStack.add(Suppliers) }
                                         } else {
@@ -1276,7 +1303,7 @@ fun MainNavigation() {
                                 )
                             }
                             entry<Expenses> {
-                                val canExpense = isOwner || isSupervisor || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
+                                val canExpense = isOwner || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
                                 if (!canExpense) {
                                     android.widget.Toast.makeText(context, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
                                     backStack.removeLastOrNull()
@@ -1286,7 +1313,7 @@ fun MainNavigation() {
                                     expenseViewModel = expenseViewModel,
                                     onBack = { backStack.removeLastOrNull() },
                                     onNavigateToDayStartClose = {
-                                        if (isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)) {
+                                        if (isOwner || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)) {
                                             if (backStack.lastOrNull() != RegisterClose) { backStack.add(RegisterClose) }
                                         } else {
                                             android.widget.Toast.makeText(context, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
@@ -1297,7 +1324,7 @@ fun MainNavigation() {
                                 )
                             }
                             entry<Suppliers> {
-                                val canSuppliers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
+                                val canSuppliers = isOwner || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
                                 if (!canSuppliers) {
                                     android.widget.Toast.makeText(context, ownerOnlySuppliersText, android.widget.Toast.LENGTH_SHORT).show()
                                     backStack.removeLastOrNull()
@@ -1315,7 +1342,7 @@ fun MainNavigation() {
                                 )
                             }
                             entry<Dues> {
-                                val canViewDues = isOwner || isSupervisor || activePermissions.contains(AppPermissions.DUES_VIEW)
+                                val canViewDues = isOwner || activePermissions.contains(AppPermissions.DUES_VIEW)
                                 if (!canViewDues) {
                                     android.widget.Toast.makeText(context, ownerOnlyDuesText, android.widget.Toast.LENGTH_SHORT).show()
                                     backStack.removeLastOrNull()
@@ -1342,7 +1369,7 @@ fun MainNavigation() {
                                 )
                             }
                             entry<Settings> {
-                                val canSettings = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+                                val canSettings = isOwner || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
                                 if (!canSettings) {
                                     android.widget.Toast.makeText(context, ownerOnlySettingsText, android.widget.Toast.LENGTH_SHORT).show()
                                     backStack.removeLastOrNull()
@@ -1355,7 +1382,7 @@ fun MainNavigation() {
                                     onExpensesClick = { backStack.add(Expenses) },
                                     onSuppliersClick = { backStack.add(Suppliers) },
                                     onManageUsersClick = {
-                                        val canManageStaff = isOwner
+                                        val canManageStaff = isOwner || activePermissions.contains(AppPermissions.SYSTEM_MANAGE_STAFF)
                                         if (canManageStaff) {
                                             backStack.add(ManageUsers)
                                         } else {
@@ -1372,7 +1399,7 @@ fun MainNavigation() {
                                 )
                             }
                             entry<RegisterClose> {
-                                val canClose = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
+                                val canClose = isOwner || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
                                 if (!canClose) {
                                     android.widget.Toast.makeText(context, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
                                     backStack.removeLastOrNull()
@@ -1383,6 +1410,7 @@ fun MainNavigation() {
                                     expenseViewModel = expenseViewModel,
                                     salesViewModel = salesViewModel,
                                     settingsViewModel = settingsViewModel,
+                                    canViewZReport = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_Z_REPORT),
                                     onBack = { backStack.removeLastOrNull() },
                                     onNavigateToExpenses = {
                                         if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
@@ -1392,7 +1420,7 @@ fun MainNavigation() {
                                 )
                             }
                             entry<Loyalty> {
-                                val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
+                                val canLoyalty = isOwner || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
                                 if (!canLoyalty) {
                                     android.widget.Toast.makeText(context, ownerOnlyLoyaltyText, android.widget.Toast.LENGTH_SHORT).show()
                                     backStack.removeLastOrNull()
@@ -1416,7 +1444,7 @@ fun MainNavigation() {
                                 )
                             }
                             entry<Customers> {
-                                val canCustomers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
+                                val canCustomers = isOwner || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
                                 if (!canCustomers) {
                                     android.widget.Toast.makeText(context, ownerOnlyCustomersText, android.widget.Toast.LENGTH_SHORT).show()
                                     backStack.removeLastOrNull()
@@ -1597,13 +1625,13 @@ private fun MoreOperationsHubContent(
     var selectedCategory by remember { mutableStateOf(OperationCategory.ALL) }
     var isGridView by rememberSaveable { mutableStateOf(isTablet) }
 
-    val canCloseRegister = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
-    val canExpense = isOwner || isSupervisor || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
-    val canReport = isOwner || isSupervisor || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
-    val canSuppliers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
-    val canLoyalty = isOwner || isSupervisor || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
-    val canCustomers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
-    val canSettings = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
+    val canCloseRegister = isOwner || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
+    val canExpense = isOwner || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
+    val canReport = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
+    val canSuppliers = isOwner || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
+    val canLoyalty = isOwner || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
+    val canCustomers = isOwner || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
+    val canSettings = isOwner || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
 
     val operationsList = buildList {
         add(

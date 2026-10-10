@@ -46,9 +46,11 @@ fun ManageUsersScreen(
     onBack: () -> Unit,
     isTablet: Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600,
     isOwner: Boolean = false,
+    canManageStaff: Boolean = isOwner,
+    canEditPermissions: Boolean = isOwner,
     modifier: Modifier = Modifier
 ) {
-    if (!isOwner) {
+    if (!canManageStaff) {
         androidx.compose.runtime.LaunchedEffect(Unit) {
             onBack()
         }
@@ -94,7 +96,7 @@ fun ManageUsersScreen(
             )
         },
         floatingActionButton = {
-            if (isOwner) {
+            if (canManageStaff) {
                 ExtendedFloatingActionButton(
                     onClick = { showAddDialog = true },
                     icon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
@@ -126,6 +128,7 @@ fun ManageUsersScreen(
                     items(users, key = { it.id }) { user ->
                         StaffUserCard(
                             user = user,
+                            canEditPermissions = canEditPermissions,
                             onEdit = { userToEdit = user },
                             onPermissions = { userForPermissions = user },
                             onToggleActive = { isActive ->
@@ -208,6 +211,7 @@ fun ManageUsersScreen(
 @Composable
 private fun StaffUserCard(
     user: User,
+    canEditPermissions: Boolean = true,
     onEdit: () -> Unit,
     onPermissions: () -> Unit,
     onToggleActive: (Boolean) -> Unit,
@@ -342,22 +346,26 @@ private fun StaffUserCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Permissions Button
-                OutlinedButton(
-                    onClick = onPermissions,
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Tune,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.users_permissions_button),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
-                    )
+                if (canEditPermissions) {
+                    OutlinedButton(
+                        onClick = onPermissions,
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.users_permissions_button),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(1.dp))
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -646,7 +654,7 @@ private fun EditStaffDialog(
                         pin = editPin.takeIf { it.isNotBlank() },
                         oldPin = editOldPin.takeIf { it.isNotBlank() },
                         role = editRole,
-                        customPermissions = AppPermissions.deserializePermissions(user.customPermissions),
+                        customPermissions = if (editRole != user.role) null else AppPermissions.deserializePermissions(user.customPermissions),
                         isActive = editActive,
                         maxDiscount = disc
                     ) { success, err ->

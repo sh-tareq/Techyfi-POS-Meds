@@ -295,14 +295,14 @@ fun CartScreen(
     var pendingSupervisorDesc by remember { mutableStateOf("") }
 
     val userDiscountLimit by remember(authViewModel) { authViewModel?.maxDiscountPercent ?: kotlinx.coroutines.flow.MutableStateFlow(10.0) }.collectAsStateWithLifecycle(initialValue = 10.0)
-    val canVoidCart = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_VOID_CART)
-    val canRemoveItem = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_VOID_CART)
-    val canApplyDiscount = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_APPLY_DISCOUNT)
-    val canSell = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_SELL)
-    val canHoldCart = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_HOLD_CART)
-    val canChangePriceTier = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_PRICE_TIER)
+    val canVoidCart = isOwner || activePermissions.contains(AppPermissions.SALES_VOID_CART)
+    val canRemoveItem = isOwner || activePermissions.contains(AppPermissions.SALES_VOID_CART)
+    val canApplyDiscount = isOwner || activePermissions.contains(AppPermissions.SALES_APPLY_DISCOUNT)
+    val canSell = isOwner || activePermissions.contains(AppPermissions.SALES_SELL)
+    val canHoldCart = isOwner || activePermissions.contains(AppPermissions.SALES_HOLD_CART)
+    val canChangePriceTier = isOwner || activePermissions.contains(AppPermissions.SALES_PRICE_TIER)
     val canEditShopSettings = isOwner || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
-    val maxDiscountAllowed: Double = if (isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_HIGH_DISCOUNT)) 100.0 else userDiscountLimit
+    val maxDiscountAllowed: Double = if (isOwner || activePermissions.contains(AppPermissions.SALES_HIGH_DISCOUNT)) 100.0 else userDiscountLimit
     val isCompletingSale by cartViewModel.isCompletingSale.collectAsStateWithLifecycle()
 
     val shopName by settingsViewModel.shopName.collectAsStateWithLifecycle()
@@ -989,11 +989,28 @@ fun CartScreen(
                             unitPrice = cartViewModel.effectivePriceFor(item),
                             allowNegativeInventory = invoiceSettingsData.allowNegativeInventory || isOwner || isSupervisor,
                             onQuantityChanged = { qty ->
-                                cartViewModel.setQuantity(
-                                    product = item.product,
-                                    newQty = qty,
-                                    allowNegative = invoiceSettingsData.allowNegativeInventory || isOwner || isSupervisor
-                                )
+                                if (qty <= 0.0) {
+                                    CartAuthHelper.handleRemoveItemRequest(
+                                        context = context,
+                                        productName = item.product.name,
+                                        isOwner = isOwner,
+                                        isSupervisor = isSupervisor,
+                                        activePermissions = activePermissions,
+                                        authViewModel = authViewModel,
+                                        onAllowed = { cartViewModel.removeFromCart(item.product) },
+                                        onRequestSupervisorAuth = { desc ->
+                                            pendingSupervisorDesc = desc
+                                            pendingSupervisorAction = { cartViewModel.removeFromCart(item.product) }
+                                            showSupervisorAuthDialog = true
+                                        }
+                                    )
+                                } else {
+                                    cartViewModel.setQuantity(
+                                        product = item.product,
+                                        newQty = qty,
+                                        allowNegative = invoiceSettingsData.allowNegativeInventory || isOwner || isSupervisor
+                                    )
+                                }
                             },
                             onRemove = {
                                 CartAuthHelper.handleRemoveItemRequest(
@@ -1291,6 +1308,8 @@ fun CartScreen(
                                                 supervisorApprovedDiscount = true
                                                 discountInput = sanitized
                                                 cartViewModel.setDiscountAmount(parsed)
+                                                val maxDiscountTaka = if (isPercentageDiscount) (subtotal * parsed / 100.0) else parsed
+                                                cartViewModel.grantDiscountOverride(maxDiscountTaka, cartViewModel.computeCartHash())
                                             }
                                             showSupervisorAuthDialog = true
                                         } else {
@@ -2897,7 +2916,12 @@ fun CartScreen(
             customer = custDueToWarn,
             newDue = pendingDueAmount,
             onVerifyOwnerPin = { pin ->
-                cartViewModel.authorizeCreditLimitOverride(pin, custDueToWarn.customerPhone, maxAmount = pendingDueAmount)
+                cartViewModel.authorizeCreditLimitOverride(
+                    pin = pin,
+                    phone = custDueToWarn.customerPhone,
+                    maxAmount = pendingDueAmount,
+                    cartHash = cartViewModel.computeCartHash()
+                )
             },
             onDismiss = {
                 showCreditLimitWarningDialog = false
@@ -3058,13 +3082,16 @@ fun CartScreen(
     }
 
     notFoundBarcode?.let { barcode ->
+        val canAddProduct = isOwner || activePermissions.contains(AppPermissions.INVENTORY_ADD_EDIT)
         StockCheckNotFoundDialog(
             barcode = barcode,
             onDismiss = { notFoundBarcode = null },
-            onAddNow = {
-                notFoundBarcode = null
-                onNavigateToProducts(barcode)
-            }
+            onAddNow = if (canAddProduct) {
+                {
+                    notFoundBarcode = null
+                    onNavigateToProducts(barcode)
+                }
+            } else null
         )
     }
 
@@ -3195,7 +3222,11 @@ fun CartItemRow(
             isCustomItem = isCustomItem,
             unit = item.product.unit,
             onConfirm = { qty ->
-                onQuantityChanged(qty)
+                if (qty <= 0.0) {
+                    onRemove()
+                } else {
+                    onQuantityChanged(qty)
+                }
                 showQuantityDialog = false
             },
             onDismiss = { showQuantityDialog = false }
@@ -3364,7 +3395,11 @@ fun CartItemRow(
                                 minusAnim.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
                             }
                             val next = (Math.round((item.quantity - stepVal) * 100.0) / 100.0).coerceAtLeast(0.0)
-                            onQuantityChanged(next)
+                            if (next <= 0.0) {
+                                onRemove()
+                            } else {
+                                onQuantityChanged(next)
+                            }
                         },
                         shape = RoundedCornerShape(10.dp),
                         color = Color(0xFFFEE2E2),

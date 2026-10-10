@@ -223,6 +223,48 @@ class DataRepository(
 
     @Volatile private var pendingCreditOverride: CreditOverrideToken? = null
 
+    data class DiscountOverrideToken(
+        val maxDiscountAmount: Double,
+        val cartHash: String? = null,
+        val expiresAt: Long
+    )
+
+    @Volatile private var pendingDiscountOverride: DiscountOverrideToken? = null
+
+    fun grantDiscountOverride(maxDiscountAmount: Double, cartHash: String? = null) {
+        synchronized(this) {
+            pendingDiscountOverride = DiscountOverrideToken(
+                maxDiscountAmount = maxDiscountAmount,
+                cartHash = cartHash,
+                expiresAt = System.currentTimeMillis() + CREDIT_OVERRIDE_VALIDITY_MS
+            )
+        }
+    }
+
+    suspend fun authorizeDiscountOverride(
+        pin: String,
+        maxDiscountAmount: Double,
+        cartHash: String? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        val supervisor = verifySupervisorPin(pin) ?: return@withContext false
+        grantDiscountOverride(maxDiscountAmount, cartHash)
+        true
+    }
+
+    internal fun consumeDiscountOverride(
+        discountAmount: Double,
+        cartHash: String? = null
+    ): Boolean = synchronized(this) {
+        val grant = pendingDiscountOverride
+        val valid = grant != null &&
+            grant.expiresAt >= System.currentTimeMillis() &&
+            (grant.maxDiscountAmount >= discountAmount - 0.01) &&
+            (grant.cartHash == null || cartHash == null || grant.cartHash == cartHash)
+
+        pendingDiscountOverride = null
+        valid
+    }
+
     fun setSessionUser(user: User?) {
         sessionUser = user
     }
@@ -366,6 +408,7 @@ class DataRepository(
     /** Updates a product and records its inventory audit entry as a single transaction, so a manual stock edit can never leave stock changed without an audit row (or vice versa). */
     suspend fun updateProductWithInventoryAdjustment(product: Product, adjustment: InventoryAdjustment) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
+        requirePermission(AppPermissions.INVENTORY_ADJUST_STOCK)
         val normalized = product.copy(barcode = toEnglishDigits(product.barcode.trim()).lowercase())
         database.withDriverTransaction {
             productDao.updateProduct(normalized)
@@ -380,6 +423,9 @@ class DataRepository(
         adjustment: InventoryAdjustment? = null
     ) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
+        if (adjustment != null) {
+            requirePermission(AppPermissions.INVENTORY_ADJUST_STOCK)
+        }
         val cleanOldBarcode = toEnglishDigits(oldBarcode.trim()).lowercase()
         val normalizedProduct = updatedProduct.copy(barcode = toEnglishDigits(updatedProduct.barcode.trim()).lowercase())
         if (cleanOldBarcode != normalizedProduct.barcode) requireProductNotInSavedCarts(cleanOldBarcode)
@@ -878,7 +924,9 @@ class DataRepository(
         isTaxInclusive: Boolean = false
     ): Long = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.SALES_SELL)
-        if (discountAmount > 0.0) {
+        val computedCartHash = cartItemsWithNotes.sortedBy { it.first.barcode }
+            .joinToString("|") { "${it.first.barcode}:${it.second}:${it.first.sellingPrice}" }
+        if (discountAmount > 0.0 && !consumeDiscountOverride(discountAmount, computedCartHash)) {
             requirePermission(AppPermissions.SALES_APPLY_DISCOUNT)
         }
         val normalizedCustomerPhone = customerPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) }
@@ -1059,8 +1107,7 @@ class DataRepository(
                 }
             }
 
-            val cartHash = cartItemsWithNotes.sortedBy { it.first.barcode }
-                .joinToString("|") { "${it.first.barcode}:${it.second}:${it.first.sellingPrice}" }
+            val cartHash = computedCartHash
 
             val dueAddition = calculateDueAddition(paymentMethod, grandTotal, amountPaid, splitPaymentJson)
             if (dueAddition > 0.0) {
@@ -4024,7 +4071,9 @@ class DataRepository(
         if (users.isEmpty()) {
             require(role == AppRoles.OWNER) { "The first account must be an owner" }
         } else {
-            requireOwnerSession()
+            if (!hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
+                requireOwnerSession()
+            }
         }
         if (role == AppRoles.OWNER && users.any { it.role == AppRoles.OWNER }) {
             throw IllegalStateException("An owner account already exists")
@@ -4131,7 +4180,9 @@ class DataRepository(
     }
 
     suspend fun deleteUser(user: User) = withContext(Dispatchers.IO) {
-        requireOwnerSession()
+        if (!hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
+            requireOwnerSession()
+        }
         if (user.role == AppRoles.OWNER && userDao.getOwnerCount() <= 1) {
             throw IllegalStateException("The last owner account cannot be deleted")
         }
@@ -4148,7 +4199,9 @@ class DataRepository(
         isActive: Boolean? = null,
         maxDiscount: Double? = null
     ) = withContext(Dispatchers.IO) {
-        requireOwnerSession()
+        if (!hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
+            requireOwnerSession()
+        }
         val all = userDao.getAllUsersOnce()
         val existing = all.firstOrNull { it.id == userId } ?: error("User not found")
         require(newName.isNotBlank()) { "Staff name cannot be blank" }
@@ -4205,7 +4258,9 @@ class DataRepository(
     }
 
     suspend fun setStaffActive(userId: Long, isActive: Boolean) = withContext(Dispatchers.IO) {
-        requireOwnerSession()
+        if (!hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
+            requireOwnerSession()
+        }
         val all = userDao.getAllUsersOnce()
         val existing = all.firstOrNull { it.id == userId } ?: error("User not found")
         if (existing.role == AppRoles.OWNER && !isActive && userDao.getActiveOwnerCount() <= 1) {
@@ -4215,7 +4270,9 @@ class DataRepository(
     }
 
     suspend fun updateStaffPermissions(userId: Long, permissions: Set<String>?) = withContext(Dispatchers.IO) {
-        requireOwnerSession()
+        if (!hasPermission(AppPermissions.SYSTEM_PERMISSIONS)) {
+            requireOwnerSession()
+        }
         val permissionsJson = AppPermissions.serializePermissions(permissions)
         userDao.updatePermissions(userId, permissionsJson)
     }

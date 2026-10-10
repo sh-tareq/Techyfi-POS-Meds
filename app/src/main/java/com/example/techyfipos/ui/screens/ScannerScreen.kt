@@ -497,13 +497,16 @@ fun ScannerScreen(
             }
 
             if (scannedBarcode != null) {
+                val canAddProduct = isOwner || effectivePermissions.contains(AppPermissions.INVENTORY_ADD_EDIT)
                 StockCheckNotFoundDialog(
                     barcode = scannedBarcode!!,
-                    onAddNow = {
-                        val code = scannedBarcode
-                        scannerViewModel.clearScanned()
-                        onNavigateToProducts(code)
-                    },
+                    onAddNow = if (canAddProduct) {
+                        {
+                            val code = scannedBarcode
+                            scannerViewModel.clearScanned()
+                            onNavigateToProducts(code)
+                        }
+                    } else null,
                     onDismiss = { scannerViewModel.clearScanned() }
                 )
             }
@@ -1283,7 +1286,11 @@ private fun TabletSplitTerminal(
                                     item = item,
                                     allowNegativeInventory = allowNegativeInventory,
                                     onQuantityChange = { newQty ->
-                                        cartViewModel.setQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
+                                        if (newQty <= 0.0) {
+                                            onRemoveItemRequested(item.product)
+                                        } else {
+                                            cartViewModel.setQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
+                                        }
                                     },
                                     onRemove = {
                                         onRemoveItemRequested(item.product)
@@ -1629,7 +1636,11 @@ private fun TabletSplitTerminal(
                                     item = item,
                                     allowNegativeInventory = allowNegativeInventory,
                                     onQuantityChange = { newQty ->
-                                        cartViewModel.setQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
+                                        if (newQty <= 0.0) {
+                                            onRemoveItemRequested(item.product)
+                                        } else {
+                                            cartViewModel.setQuantity(item.product, newQty, allowNegative = allowNegativeInventory)
+                                        }
                                     },
                                     onRemove = {
                                         onRemoveItemRequested(item.product)

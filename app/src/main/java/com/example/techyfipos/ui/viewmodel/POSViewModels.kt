@@ -590,6 +590,25 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     ): Boolean =
         repository.authorizeCreditLimitOverride(pin, phone, maxAmount, cartHash)
 
+    fun computeCartHash(): String = computeCartHash(_cartItems.value)
+
+    companion object {
+        fun computeCartHash(items: List<CartItem>): String {
+            return items.sortedBy { it.product.barcode }
+                .joinToString("|") { "${it.product.barcode}:${it.quantity}:${it.product.sellingPrice}" }
+        }
+    }
+
+    fun grantDiscountOverride(maxDiscountAmount: Double, cartHash: String? = null) {
+        repository.grantDiscountOverride(maxDiscountAmount, cartHash)
+    }
+
+    suspend fun authorizeDiscountOverride(
+        pin: String,
+        maxDiscountAmount: Double,
+        cartHash: String? = null
+    ): Boolean = repository.authorizeDiscountOverride(pin, maxDiscountAmount, cartHash)
+
     /**
      * Loads a past sale's items (looked up fresh by barcode, so current stock/price applies) plus
      * its customer details into the cart, for "Edit" (void + rebuild) and "Add to Cart Again" on a
@@ -1774,10 +1793,11 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         newStock: Double,
         difference: Double,
         reason: String,
-        note: String? = null
+        note: String? = null,
+        onResult: (Result<Unit>) -> Unit = {}
     ) {
         viewModelScope.launch {
-            try {
+            val result = runCatching {
                 repository.updateProductWithInventoryAdjustment(
                     updatedProduct,
                     InventoryAdjustment(
@@ -1790,9 +1810,12 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
                         note = note
                     )
                 )
-            } catch (e: Exception) {
-                android.util.Log.e("ProductsViewModel", "Failed to update product with inventory adjustment", e)
+                Unit
             }
+            if (result.isFailure) {
+                android.util.Log.e("ProductsViewModel", "Failed to update product with inventory adjustment", result.exceptionOrNull())
+            }
+            onResult(result)
         }
     }
 
@@ -2482,6 +2505,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         outputStream: java.io.OutputStream
     ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         try {
+            repository.requirePermission(com.example.techyfipos.data.AppPermissions.REPORTS_EXPORT_EXCEL)
             val buffer = java.io.ByteArrayOutputStream()
             com.example.techyfipos.utils.ExcelHelper.exportSalesReport(report, dateRangeLabel, buffer)
             outputStream.write(buffer.toByteArray())

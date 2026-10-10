@@ -9,11 +9,11 @@ import com.example.techyfipos.ui.viewmodel.AuthViewModel
 object CartAuthHelper {
 
     fun canVoidCart(isOwner: Boolean, isSupervisor: Boolean, activePermissions: Set<String>): Boolean {
-        return isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_VOID_CART)
+        return isOwner || activePermissions.contains(AppPermissions.SALES_VOID_CART)
     }
 
     fun canRemoveItem(isOwner: Boolean, isSupervisor: Boolean, activePermissions: Set<String>): Boolean {
-        return isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_VOID_CART)
+        return isOwner || activePermissions.contains(AppPermissions.SALES_VOID_CART)
     }
 
     fun handleVoidCartRequest(

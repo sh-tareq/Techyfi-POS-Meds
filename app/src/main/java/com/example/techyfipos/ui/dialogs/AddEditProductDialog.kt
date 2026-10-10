@@ -89,6 +89,7 @@ fun AddEditProductDialog(
     initialMfgOrPkgDate: String = "",
     initialExpiryDate: String = "",
     initialUnit: String = "Pcs",
+    canAdjustStock: Boolean = true,
     onDismiss: () -> Unit,
     onSave: (
         name: String,
@@ -1288,18 +1289,23 @@ fun AddEditProductDialog(
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
+                                        val stockEditable = !isEdit || canAdjustStock
                                         BasicTextField(
                                             value = stockQty,
+                                            readOnly = !stockEditable,
+                                            enabled = stockEditable,
                                             onValueChange = { input ->
-                                                val filtered = input.filter { it.isDigit() || it == '.' }
-                                                if (filtered.count { it == '.' } <= 1) {
-                                                    stockQty = filtered.take(7)
+                                                if (stockEditable) {
+                                                    val filtered = input.filter { it.isDigit() || it == '.' }
+                                                    if (filtered.count { it == '.' } <= 1) {
+                                                        stockQty = filtered.take(7)
+                                                    }
                                                 }
                                             },
                                             textStyle = TextStyle(
                                                 fontSize = 13.5.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onSurface
+                                                color = if (stockEditable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                             ),
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                             singleLine = true,
@@ -1310,7 +1316,11 @@ fun AddEditProductDialog(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .height(42.dp)
-                                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                                        .background(
+                                                            if (stockEditable) MaterialTheme.colorScheme.surface
+                                                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                                            RoundedCornerShape(8.dp)
+                                                        )
                                                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 10.dp),
                                                     contentAlignment = Alignment.CenterStart
