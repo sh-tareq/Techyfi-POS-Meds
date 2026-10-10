@@ -556,7 +556,7 @@ fun CartScreen(
         val snapshotDiscount = discountVal
         val snapshotTax = taxVal
         val snapshotGrandTotal = grandTotal
-        val snapshotStoreCreditApplied = cartViewModel.storeCreditApplied.value
+        val snapshotStoreCreditApplied = cartViewModel.storeCreditApplied.value.coerceAtMost(snapshotGrandTotal)
         val snapshotRedeemedVoucher = cartViewModel.redeemedVoucher.value
         val snapshotVoucherCode = snapshotRedeemedVoucher?.code
         val snapshotVoucherAmount = if (snapshotRedeemedVoucher != null) {

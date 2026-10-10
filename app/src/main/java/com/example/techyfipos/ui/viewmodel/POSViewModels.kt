@@ -392,7 +392,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun setStoreCreditApplied(amount: Double) {
         val maxAvailable = (_resolvedCustomer.value?.storeCredit ?: 0.0) + (_redeemedVoucher.value?.remainingBalance ?: 0.0)
-        _storeCreditApplied.value = amount.coerceIn(0.0, maxAvailable)
+        val maxPayable = grandTotal.value
+        _storeCreditApplied.value = amount.coerceIn(0.0, minOf(maxAvailable, maxPayable))
     }
 
     fun setRedeemedVoucher(voucher: StoreCreditVoucher?) {
@@ -453,8 +454,12 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     private var customerLookupJob: Job? = null
 
     fun onCustomerPhoneChanged(phone: String) {
+        val oldClean = _customerPhone.value.trim()
         _customerPhone.value = phone
         val clean = phone.trim()
+        if (clean != oldClean && _redeemedVoucher.value == null) {
+            _storeCreditApplied.value = 0.0
+        }
         customerLookupJob?.cancel()
         if (clean.isBlank()) {
             _resolvedCustomer.value = null
@@ -515,11 +520,16 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun selectCustomerSuggestion(suggestion: CustomerLookupResult) {
+        val oldClean = _customerPhone.value.trim()
+        val newClean = suggestion.phone.trim()
         _customerPhone.value = suggestion.phone
         _customerName.value = suggestion.name
         _isAutoFilledName.value = true
         _resolvedCustomer.value = suggestion
         _customerSuggestions.value = emptyList()
+        if (newClean != oldClean && _redeemedVoucher.value == null) {
+            _storeCreditApplied.value = 0.0
+        }
         lookupLoyalty(suggestion.phone)
     }
 
@@ -529,6 +539,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _isAutoFilledName.value = false
         _resolvedCustomer.value = null
         _customerSuggestions.value = emptyList()
+        if (_redeemedVoucher.value == null) {
+            _storeCreditApplied.value = 0.0
+        }
         lookupLoyalty("")
     }
 
@@ -944,8 +957,16 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 } else null
                 val finalVoucher = validRestoredVoucher ?: fallbackVoucher
                 _redeemedVoucher.value = finalVoucher
-                val maxVoucherBalance = finalVoucher?.remainingBalance ?: Double.MAX_VALUE
-                _storeCreditApplied.value = payload.storeCreditApplied.coerceAtMost(maxVoucherBalance)
+                if (!payload.voucherCode.isNullOrBlank()) {
+                    if (finalVoucher != null) {
+                        _storeCreditApplied.value = payload.storeCreditApplied.coerceAtMost(finalVoucher.remainingBalance)
+                    } else {
+                        _storeCreditApplied.value = 0.0
+                    }
+                } else {
+                    val custCredit = authoritativeCustPhone.takeIf { it.isNotBlank() }?.let { repository.resolveCustomerDetails(it)?.storeCredit } ?: 0.0
+                    _storeCreditApplied.value = payload.storeCreditApplied.coerceAtMost(custCredit)
+                }
                 persistCartSnapshotSync(restored)
                 if (unavailable == 0) repository.deleteHeldCart(heldCart.id) else {
                     val remainingPayload = HeldCartPayload(
@@ -1071,6 +1092,20 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 persistCartSnapshot(_cartItems.value)
             }
         }
+        viewModelScope.launch {
+            grandTotal.collect { currentGrandTotal ->
+                if (_storeCreditApplied.value > currentGrandTotal) {
+                    _storeCreditApplied.value = currentGrandTotal.coerceAtLeast(0.0)
+                }
+            }
+        }
+        viewModelScope.launch {
+            combine(subtotal, discountValue, taxSettings) { _, _, _ -> Unit }.collect {
+                if (_loyaltyDiscount.value > 0.0) {
+                    setLoyaltyDiscount(_loyaltyDiscount.value)
+                }
+            }
+        }
     }
 
     private suspend fun restoreCartSnapshot() {
@@ -1123,7 +1158,10 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             val maxLoyaltyDiscount = ((_loyaltyCustomer.value?.pointsBalance ?: 0) * pointCashValue).coerceAtLeast(0.0)
             _loyaltyDiscount.value = payload.loyaltyDiscount.coerceAtMost(maxLoyaltyDiscount)
             val restoredVoucher = payload.voucherCode?.let { repository.getStoreCreditVoucher(it) }
-            val fallbackVoucher = if (restoredVoucher == null && !payload.voucherCode.isNullOrBlank() && payload.storeCreditApplied > 0.0) {
+            val validRestoredVoucher = restoredVoucher?.takeIf { v ->
+                v.status == "ACTIVE" && (v.expiresAt == null || v.expiresAt == 0L || v.expiresAt >= System.currentTimeMillis()) && v.remainingBalance > 0.01
+            }
+            val fallbackVoucher = if (validRestoredVoucher == null && restoredVoucher == null && !payload.voucherCode.isNullOrBlank() && payload.storeCreditApplied > 0.0) {
                 StoreCreditVoucher(
                     code = payload.voucherCode,
                     initialAmount = payload.voucherOriginalBalance ?: payload.storeCreditApplied,
@@ -1132,8 +1170,18 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                     status = "ACTIVE"
                 )
             } else null
-            _redeemedVoucher.value = restoredVoucher ?: fallbackVoucher
-            _storeCreditApplied.value = payload.storeCreditApplied
+            val finalVoucher = validRestoredVoucher ?: fallbackVoucher
+            _redeemedVoucher.value = finalVoucher
+            if (!payload.voucherCode.isNullOrBlank()) {
+                if (finalVoucher != null) {
+                    _storeCreditApplied.value = payload.storeCreditApplied.coerceAtMost(finalVoucher.remainingBalance)
+                } else {
+                    _storeCreditApplied.value = 0.0
+                }
+            } else {
+                val custCredit = payload.customerPhone.takeIf { it.isNotBlank() }?.let { repository.resolveCustomerDetails(it)?.storeCredit } ?: 0.0
+                _storeCreditApplied.value = payload.storeCreditApplied.coerceAtMost(custCredit)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
