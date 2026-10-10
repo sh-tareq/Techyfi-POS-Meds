@@ -39,13 +39,16 @@ private const val TAG = "BtPrinterTransport"
 private const val SPP_UUID = "00001101-0000-1000-8000-00805F9B34FB"
 private const val CHUNK_SIZE = 512
 private const val CHUNK_DELAY_MS = 15L
+private const val CONNECT_SETTLE_MS = 250L
 private const val POST_PRINT_DRAIN_MS = 300L
 
 @SuppressLint("MissingPermission")
 suspend fun sendToBluetoothPrinter(
     context: Context,
     address: String,
-    payload: ByteArray
+    segments: List<ByteArray>,
+    delayBetweenSegmentsMs: Long = 0L,
+    perSegmentDelaysMs: List<Long>? = null
 ): DirectPrintResult = withContext(Dispatchers.IO) {
     val trimmedAddress = address.trim()
     if (trimmedAddress.isBlank()) {
@@ -106,14 +109,24 @@ suspend fun sendToBluetoothPrinter(
             insecureSocket
         }
 
+        // Allow printer firmware and buffer to settle after connection establishment
+        delay(CONNECT_SETTLE_MS)
+
         val os: OutputStream = socket.outputStream
-        var offset = 0
-        while (offset < payload.size) {
-            val length = minOf(CHUNK_SIZE, payload.size - offset)
-            os.write(payload, offset, length)
-            offset += length
-            if (offset < payload.size) {
-                delay(CHUNK_DELAY_MS)
+        for ((index, segment) in segments.withIndex()) {
+            var offset = 0
+            while (offset < segment.size) {
+                val length = minOf(CHUNK_SIZE, segment.size - offset)
+                os.write(segment, offset, length)
+                offset += length
+                if (offset < segment.size) {
+                    delay(CHUNK_DELAY_MS)
+                }
+            }
+            val delayMs = perSegmentDelaysMs?.getOrNull(index) ?: delayBetweenSegmentsMs
+            if (delayMs > 0L) {
+                os.flush()
+                delay(delayMs)
             }
         }
         os.flush()
@@ -131,10 +144,53 @@ suspend fun sendToBluetoothPrinter(
     }
 }
 
+suspend fun sendToBluetoothPrinter(
+    context: Context,
+    address: String,
+    payload: ByteArray
+): DirectPrintResult = sendToBluetoothPrinter(context, address, listOf(payload), 0L)
+
+suspend fun sendToBluetoothPrinter(
+    context: Context,
+    address: String,
+    segments: List<ByteArray>,
+    perSegmentDelaysMs: List<Long>
+): DirectPrintResult = sendToBluetoothPrinter(
+    context = context,
+    address = address,
+    segments = segments,
+    delayBetweenSegmentsMs = 0L,
+    perSegmentDelaysMs = perSegmentDelaysMs
+)
+
 object BluetoothPrinterTransport {
     suspend fun sendToBluetoothPrinter(
         context: Context,
         address: String,
         payload: ByteArray
     ): DirectPrintResult = com.example.techyfipos.printer.sendToBluetoothPrinter(context, address, payload)
+
+    suspend fun sendToBluetoothPrinter(
+        context: Context,
+        address: String,
+        segments: List<ByteArray>,
+        delayBetweenSegmentsMs: Long
+    ): DirectPrintResult = com.example.techyfipos.printer.sendToBluetoothPrinter(
+        context = context,
+        address = address,
+        segments = segments,
+        delayBetweenSegmentsMs = delayBetweenSegmentsMs
+    )
+
+    suspend fun sendToBluetoothPrinter(
+        context: Context,
+        address: String,
+        segments: List<ByteArray>,
+        perSegmentDelaysMs: List<Long>
+    ): DirectPrintResult = com.example.techyfipos.printer.sendToBluetoothPrinter(
+        context = context,
+        address = address,
+        segments = segments,
+        perSegmentDelaysMs = perSegmentDelaysMs
+    )
 }

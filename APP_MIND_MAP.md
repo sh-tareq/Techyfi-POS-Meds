@@ -2690,9 +2690,14 @@ mindmap
     - Settings picker validation: prevents selecting the configured receipt printer as the label printer (or vice versa), displaying an explanatory AlertDialog with OK confirmation.
     - Warning indicator: renders a persistent red error caption beneath the Label Printer device selector when both roles are configured to the same Bluetooth device.
     - Direct print dispatch guard: in `BillActions.printLabelImages()`, intercepts `BLUETOOTH` and `AUTO` dispatch if `isSamePrinter(settings.labelPrinterAddress, settings.resolvedReceiptPrinterAddress())`, showing an informative Toast on `Dispatchers.Main` ("Label printer is set to the receipt printer. Change it in Settings > Printers.") and returning `false`, eliminating TSPL command garbage output on ESC/POS receipt printers while preserving Android Print Service `SYSTEM` mode.
+  - **Sunmi V2s & Budget ESC/POS Printer Initialization & Band Sizing Fix**:
+    - Post-connect settle delay: Introduced `CONNECT_SETTLE_MS = 250L` in `BluetoothPrinterTransport.kt` after RFCOMM socket connect before dispatching initial bytes, preventing printers from dropping command headers during startup.
+    - Segmented payload transport: Added `sendToBluetoothPrinter` overload supporting `List<ByteArray>` with configurable inter-segment delays, maintaining 512-byte chunking and 15ms delays while enabling distinct pause intervals between command phases.
+    - 64-row band decomposition: Reduced ESC/POS raster `maxBandHeight` from 256 to 64 rows, guaranteeing `yH = 0` across all band headers and limiting packet loss impact. Refactored `bitmapToEscPosBands` returning a list of discrete bands with `bitmapToEscPosRaster` as a backward-compatible concatenating wrapper.
+    - Sequenced receipt dispatch: Dispatches `ESC @` (100ms settle delay), `ESC a 1` (20ms delay), individual raster bands (20ms delay between bands), and terminal feed/cut/kick (0ms delay), completely eliminating garbage text at receipt head and preserving logo printing on Sunmi V2s built-in printers.
   - **R8 Minification & Deliverable**:
     - `Techyfi-POS-Final-V10-10-2026.apk` (36 MB, versionCode 220946, versionName "2.6.70-V10-10-2026") - R8 minified release build with dead-code stripping and resource optimization.
-    - Unit tests: 107/107 passing (`testDebugUnitTest`).
+    - Unit tests: 108/108 passing (`testDebugUnitTest`).
 
 ## Maintenance note
 

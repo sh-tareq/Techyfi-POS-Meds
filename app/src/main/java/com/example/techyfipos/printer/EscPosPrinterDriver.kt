@@ -27,22 +27,28 @@ object EscPosPrinterDriver {
     fun receiptLuminanceThreshold(darkness: Int): Int = 110 + darkness.coerceIn(0, 15) * 8
 
     /**
-     * Converts a Bitmap into an ESC/POS GS v 0 raster bit image byte stream.
+     * Converts a Bitmap into a list of ESC/POS GS v 0 raster bit image bands.
      * Supports 384 dots (58mm) or 576 dots (80mm).
+     * Bands are capped at 64 rows to ensure yH = 0 and minimize corrupted rows on packet drop.
      */
-    fun bitmapToEscPosRaster(src: Bitmap, targetWidthDots: Int = 384, darkness: Int = 8): ByteArray {
+    fun bitmapToEscPosBands(src: Bitmap, targetWidthDots: Int = 384, darkness: Int = 8): List<ByteArray> {
         val aspect = src.height.toFloat() / src.width.toFloat()
         val targetHeightDots = (targetWidthDots * aspect).toInt()
-        val scaled = Bitmap.createScaledBitmap(src, targetWidthDots, targetHeightDots, true)
+        val scaled = if (src.width == targetWidthDots && src.height == targetHeightDots) {
+            src
+        } else {
+            Bitmap.createScaledBitmap(src, targetWidthDots, targetHeightDots, true)
+        }
 
         val widthBytes = (targetWidthDots + 7) / 8
-        val out = ByteArrayOutputStream()
+        val bands = mutableListOf<ByteArray>()
 
-        // Process in horizontal bands of up to 256 rows to avoid printer buffer overflows
-        val maxBandHeight = 256
+        // Process in horizontal bands of up to 64 rows so every band header has yH = 0
+        val maxBandHeight = 64
         var yOffset = 0
         while (yOffset < targetHeightDots) {
             val bandHeight = minOf(maxBandHeight, targetHeightDots - yOffset)
+            val bandOut = ByteArrayOutputStream(8 + widthBytes * bandHeight)
 
             // GS v 0 m xL xH yL yH
             val xL = (widthBytes and 0xFF).toByte()
@@ -50,7 +56,7 @@ object EscPosPrinterDriver {
             val yL = (bandHeight and 0xFF).toByte()
             val yH = ((bandHeight shr 8) and 0xFF).toByte()
 
-            out.write(byteArrayOf(0x1D, 0x76, 0x30, 0x00, xL, xH, yL, yH))
+            bandOut.write(byteArrayOf(0x1D, 0x76, 0x30, 0x00, xL, xH, yL, yH))
 
             for (y in 0 until bandHeight) {
                 val actualY = yOffset + y
@@ -73,14 +79,29 @@ object EscPosPrinterDriver {
                             }
                         }
                     }
-                    out.write(b)
+                    bandOut.write(b)
                 }
             }
+            bands.add(bandOut.toByteArray())
             yOffset += bandHeight
         }
 
         if (scaled != src) {
             scaled.recycle()
+        }
+        return bands
+    }
+
+    /**
+     * Converts a Bitmap into an ESC/POS GS v 0 raster bit image byte stream.
+     * Backwards-compatible wrapper concatenating all raster bands.
+     */
+    fun bitmapToEscPosRaster(src: Bitmap, targetWidthDots: Int = 384, darkness: Int = 8): ByteArray {
+        val bands = bitmapToEscPosBands(src, targetWidthDots, darkness)
+        val totalSize = bands.sumOf { it.size }
+        val out = ByteArrayOutputStream(totalSize)
+        for (band in bands) {
+            out.write(band)
         }
         return out.toByteArray()
     }
@@ -88,6 +109,7 @@ object EscPosPrinterDriver {
     /**
      * Direct Bluetooth SPP printing over RFCOMM socket using shared BluetoothPrinterTransport.
      * Runs rasterization off the main thread on Dispatchers.Default.
+     * Transmits receipt commands and bands as distinct timed segments to protect printer buffers.
      */
     suspend fun printReceiptDirect(
         context: Context,
@@ -97,19 +119,37 @@ object EscPosPrinterDriver {
         autoKickDrawer: Boolean = false,
         darkness: Int = 8
     ): DirectPrintResult {
-        val payload = withContext(Dispatchers.Default) {
-            val rasterData = bitmapToEscPosRaster(bitmap, paperWidthDots, darkness)
-            val out = ByteArrayOutputStream()
-            out.write(CMD_INIT)
-            out.write(CMD_ALIGN_CENTER)
-            out.write(rasterData)
-            out.write(CMD_FEED_4_LINES)
-            out.write(CMD_PARTIAL_CUT)
-            if (autoKickDrawer) {
-                out.write(CMD_DRAWER_KICK)
+        val (segments, delays) = withContext(Dispatchers.Default) {
+            val bands = bitmapToEscPosBands(bitmap, paperWidthDots, darkness)
+            val segList = ArrayList<ByteArray>(bands.size + 3)
+            val delayList = ArrayList<Long>(bands.size + 3)
+
+            // Segment 1: ESC @ (CMD_INIT) only
+            segList.add(CMD_INIT)
+            delayList.add(100L)
+
+            // Segment 2: ESC a 1 (CMD_ALIGN_CENTER)
+            segList.add(CMD_ALIGN_CENTER)
+            delayList.add(20L)
+
+            // Segments 3..n: one segment per GS v 0 band (header + its rows)
+            for (band in bands) {
+                segList.add(band)
+                delayList.add(20L)
             }
-            out.toByteArray()
+
+            // Last segment: feed, cut, and optional drawer kick
+            val endOut = ByteArrayOutputStream()
+            endOut.write(CMD_FEED_4_LINES)
+            endOut.write(CMD_PARTIAL_CUT)
+            if (autoKickDrawer) {
+                endOut.write(CMD_DRAWER_KICK)
+            }
+            segList.add(endOut.toByteArray())
+            delayList.add(0L)
+
+            Pair(segList, delayList)
         }
-        return sendToBluetoothPrinter(context, printerAddress, payload)
+        return sendToBluetoothPrinter(context, printerAddress, segments, delays)
     }
 }

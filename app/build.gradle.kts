@@ -76,6 +76,10 @@ android {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    systemProperty("net.bytebuddy.experimental", "true")
+}
+
 tasks.register<Copy>("packageDatedReleaseApk") {
     dependsOn("assembleRelease")
     from(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))

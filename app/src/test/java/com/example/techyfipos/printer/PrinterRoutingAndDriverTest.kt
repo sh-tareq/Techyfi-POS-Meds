@@ -1,5 +1,6 @@
 package com.example.techyfipos.printer
 
+import android.graphics.Bitmap
 import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.utils.RoutingDecision
 import com.example.techyfipos.utils.decidePrintRouting
@@ -8,6 +9,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.mock
 
 class PrinterRoutingAndDriverTest {
 
@@ -191,5 +195,45 @@ class PrinterRoutingAndDriverTest {
         assertFalse(isSamePrinter("   ", "AA:BB:CC:DD:EE:FF"))
         assertFalse(isSamePrinter("AA:BB:CC:DD:EE:FF", "   "))
         assertFalse(isSamePrinter("\t \n ", "\t \n "))
+    }
+
+    // 7. Tests for bitmapToEscPosBands()
+    @Test
+    fun `bitmapToEscPosBands with 16x150 bitmap produces 3 bands with correct headers and matches bitmapToEscPosRaster`() {
+        val mockBitmap = mock(Bitmap::class.java)
+        `when`(mockBitmap.width).thenReturn(16)
+        `when`(mockBitmap.height).thenReturn(150)
+        `when`(mockBitmap.getPixel(anyInt(), anyInt())).thenReturn(-0x1000000 /* black pixel */)
+
+        val bands = EscPosPrinterDriver.bitmapToEscPosBands(src = mockBitmap, targetWidthDots = 16, darkness = 8)
+
+        // 1. Returns 3 bands
+        assertEquals(3, bands.size)
+
+        // 2. Band heights: 64, 64, 22
+        val expectedHeights = listOf(64, 64, 22)
+        val expectedPrefix = byteArrayOf(0x1D.toByte(), 0x76.toByte(), 0x30.toByte(), 0x00.toByte())
+
+        for (i in 0 until 3) {
+            val band = bands[i]
+            val expectedHeight = expectedHeights[i]
+
+            // Starts with bytes 1D 76 30 00
+            assertArrayEquals(expectedPrefix, band.copyOfRange(0, 4))
+
+            // Followed by xL=2, xH=0, yL=band height, yH=0
+            assertEquals(2.toByte(), band[4])
+            assertEquals(0.toByte(), band[5])
+            assertEquals(expectedHeight.toByte(), band[6])
+            assertEquals(0.toByte(), band[7])
+
+            // Total size of band is 8 (header) + widthBytes (2) * bandHeight
+            assertEquals(8 + 2 * expectedHeight, band.size)
+        }
+
+        // 3. Concatenation equals bitmapToEscPosRaster output
+        val concatenated = bands.flatMap { it.toList() }.toByteArray()
+        val rasterOutput = EscPosPrinterDriver.bitmapToEscPosRaster(src = mockBitmap, targetWidthDots = 16, darkness = 8)
+        assertArrayEquals(concatenated, rasterOutput)
     }
 }
