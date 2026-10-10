@@ -794,7 +794,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _customerSuggestions.value = emptyList()
         _isAutoFilledName.value = false
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             try {
                 repository.insertHeldCart(heldCart)
                 persistCartSnapshotSync(emptyList())
@@ -2906,12 +2906,17 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun deleteCustomerDue(phone: String) {
-        viewModelScope.launch {
-            repository.deleteCustomerDue(phone)
-            if (_selectedCustomer.value?.customerPhone == phone) {
+    fun deleteCustomerDue(phone: String, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val result = runCatching {
+                repository.deleteCustomerDue(phone)
+                Unit
+            }
+            result.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
+            if (result.isSuccess && _selectedCustomer.value?.customerPhone == phone) {
                 _selectedCustomer.value = null
             }
+            onResult(result)
         }
     }
 
@@ -3962,18 +3967,20 @@ class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
         category: String,
         amount: Double,
         paymentSource: String = "Cash",
-        note: String? = null
+        note: String? = null,
+        onResult: (Result<Unit>) -> Unit = {}
     ) {
-        addExpense(title, category, "EXPENSE", amount, paymentSource, note)
+        addExpense(title, category, "EXPENSE", amount, paymentSource, note, onResult = onResult)
     }
 
     fun recordCashIn(
         title: String,
         amount: Double,
         paymentSource: String = "Cash",
-        note: String? = null
+        note: String? = null,
+        onResult: (Result<Unit>) -> Unit = {}
     ) {
-        addExpense(title, "Cash In", "CASH_IN", amount, paymentSource, note)
+        addExpense(title, "Cash In", "CASH_IN", amount, paymentSource, note, onResult = onResult)
     }
 
     fun deleteExpense(expense: Expense, onResult: (Result<Unit>) -> Unit = {}) {
@@ -3987,21 +3994,27 @@ class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
         amount: Double,
         paymentSource: String = "Cash",
         note: String? = null,
-        cashierName: String = "Admin"
+        cashierName: String = "Admin",
+        onResult: (Result<Unit>) -> Unit = {}
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.insertExpense(
-                Expense(
-                    title = title.trim(),
-                    category = category,
-                    type = type,
-                    amount = amount,
-                    paymentSource = paymentSource,
-                    note = note?.takeIf { it.isNotBlank() },
-                    timestamp = System.currentTimeMillis(),
-                    cashierName = cashierName
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val res = runCatching {
+                repository.insertExpense(
+                    Expense(
+                        title = title.trim(),
+                        category = category,
+                        type = type,
+                        amount = amount,
+                        paymentSource = paymentSource,
+                        note = note?.takeIf { it.isNotBlank() },
+                        timestamp = System.currentTimeMillis(),
+                        cashierName = cashierName
+                    )
                 )
-            )
+                Unit
+            }
+            res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
+            onResult(res)
         }
     }
 
@@ -4293,17 +4306,22 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
     val programSettings: StateFlow<LoyaltyProgramSettings> = _programSettings.asStateFlow()
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             _programSettings.value = repository.getLoyaltySettings()
         }
     }
 
-    fun updateProgramSettings(settings: LoyaltyProgramSettings) {
-        viewModelScope.launch(Dispatchers.IO) {
-            LoyaltySettingsHelper.saveSettings(repository.appContext, settings)
-            _programSettings.value = settings
-            repository.updateLoyaltySettings(settings)
-            repository.recomputeCustomerLoyaltyTiersWithConfiguredThresholds()
+    fun updateProgramSettings(settings: LoyaltyProgramSettings, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val res = runCatching {
+                LoyaltySettingsHelper.saveSettings(repository.appContext, settings)
+                _programSettings.value = settings
+                repository.updateLoyaltySettings(settings)
+                repository.recomputeCustomerLoyaltyTiersWithConfiguredThresholds()
+                Unit
+            }
+            res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
+            onResult(res)
         }
     }
 
@@ -4386,38 +4404,78 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun upsertMember(phone: String, name: String, tier: String? = null) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val existing = repository.getLoyaltyByPhone(phone)
-            val effectiveTier = tier?.takeIf { it.isNotBlank() } ?: existing?.tier ?: "Regular"
-            repository.upsertLoyalty(
-                CustomerLoyalty(
-                    phone = phone.trim(),
-                    name = name.trim(),
-                    tier = effectiveTier
+    fun upsertMember(
+        phone: String,
+        name: String,
+        tier: String? = null,
+        onResult: (Result<Unit>) -> Unit = {}
+    ) {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val res = runCatching {
+                val existing = repository.getLoyaltyByPhone(phone)
+                val effectiveTier = tier?.takeIf { it.isNotBlank() } ?: existing?.tier ?: "Regular"
+                repository.upsertLoyalty(
+                    CustomerLoyalty(
+                        phone = phone.trim(),
+                        name = name.trim(),
+                        tier = effectiveTier
+                    )
                 )
-            )
+            }
+            res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
+            onResult(res)
         }
     }
 
-    fun addPoints(phone: String, pts: Int, spend: Double, reason: String = "Manual points adjustment") {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.addLoyaltyPoints(phone.trim(), pts, spend, reason)
+    fun addPoints(
+        phone: String,
+        pts: Int,
+        spend: Double,
+        reason: String = "Manual points adjustment",
+        onResult: (Result<Unit>) -> Unit = {}
+    ) {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val res = runCatching {
+                repository.addLoyaltyPoints(phone.trim(), pts, spend, reason)
+            }
+            res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
+            onResult(res)
         }
     }
 
-    fun redeemPoints(phone: String, pts: Int, reason: String = "Manual redemption") {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.redeemLoyaltyPoints(phone.trim(), pts, reason)
+    fun redeemPoints(
+        phone: String,
+        pts: Int,
+        reason: String = "Manual redemption",
+        onResult: (Result<Boolean>) -> Unit = {}
+    ) {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val res = runCatching {
+                repository.redeemLoyaltyPoints(phone.trim(), pts, reason)
+            }
+            res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
+            onResult(res)
         }
     }
 
-    fun deactivateMember(phone: String) {
-        viewModelScope.launch(Dispatchers.IO) { repository.setLoyaltyMemberActive(phone, false) }
+    fun deactivateMember(phone: String, onResult: (Result<Boolean>) -> Unit = {}) {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val res = runCatching {
+                repository.setLoyaltyMemberActive(phone, false)
+            }
+            res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
+            onResult(res)
+        }
     }
 
-    fun deleteMember(phone: String) {
-        viewModelScope.launch(Dispatchers.IO) { repository.deleteLoyaltyMember(phone) }
+    fun deleteMember(phone: String, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val res = runCatching {
+                repository.deleteLoyaltyMember(phone)
+            }
+            res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
+            onResult(res)
+        }
     }
 
     fun transactionsForCustomer(phone: String): Flow<List<LoyaltyTransaction>> {

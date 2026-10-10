@@ -4929,7 +4929,7 @@ class DataRepository(
     }
 
     suspend fun upsertLoyalty(loyalty: CustomerLoyalty) = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.DUES_ADD_DUE)
+        requirePermission(AppPermissions.LOYALTY_MANAGE)
         val phone = normalizePhone(loyalty.phone)
         val existing = customerLoyaltyDao.getLoyaltyByPhone(phone)
         customerLoyaltyDao.upsertLoyalty(
@@ -4945,7 +4945,7 @@ class DataRepository(
     }
 
     suspend fun addLoyaltyPoints(phone: String, pts: Int, spend: Double, reason: String = "Manual points adjustment") = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.DUES_ADD_DUE)
+        requirePermission(AppPermissions.LOYALTY_MANAGE)
         require(pts > 0 && spend.isFinite() && spend >= 0.0) { "Invalid loyalty adjustment" }
         val normalized = normalizePhone(phone)
         val timestamp = System.currentTimeMillis()
@@ -4961,7 +4961,7 @@ class DataRepository(
     }
 
     suspend fun redeemLoyaltyPoints(phone: String, pts: Int, reason: String = "Manual redemption"): Boolean = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.DUES_ADD_DUE)
+        requirePermission(AppPermissions.LOYALTY_MANAGE)
         if (pts <= 0) return@withContext false
         val normalized = normalizePhone(phone)
         val timestamp = System.currentTimeMillis()
@@ -4978,7 +4978,7 @@ class DataRepository(
     }
 
     suspend fun setLoyaltyMemberActive(phone: String, active: Boolean): Boolean = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.DUES_ADD_DUE)
+        requirePermission(AppPermissions.LOYALTY_MANAGE)
         val normalized = normalizePhone(phone)
         val changed = customerLoyaltyDao.setActive(normalized, active, System.currentTimeMillis()) == 1
         if (changed) syncCustomerProfileFromLedgers(normalized)
@@ -4989,7 +4989,7 @@ class DataRepository(
         loyaltyTransactionDao.getForCustomer(normalizePhone(phone))
 
     suspend fun deleteLoyaltyMember(phone: String) = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.DUES_ADD_DUE)
+        requirePermission(AppPermissions.LOYALTY_MANAGE)
         val normalized = normalizePhone(phone)
         database.withDriverTransaction {
             customerLoyaltyDao.delete(normalized)

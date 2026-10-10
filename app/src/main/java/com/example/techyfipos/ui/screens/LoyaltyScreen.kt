@@ -255,9 +255,14 @@ fun LoyaltyScreen(
             minRedeem = programSettings.minRedeemPoints,
             onDismiss = { memberToQuickRedeem = null },
             onConfirmRedeem = { points, reason ->
-                loyaltyViewModel.redeemPoints(member.phone, points, reason)
+                val phone = member.phone
+                val name = member.name
                 memberToQuickRedeem = null
-                Toast.makeText(context, context.getString(R.string.loyalty_redeemed_points_toast, points, member.name), Toast.LENGTH_SHORT).show()
+                loyaltyViewModel.redeemPoints(phone, points, reason) { result ->
+                    if (result.getOrNull() == true) {
+                        Toast.makeText(context, context.getString(R.string.loyalty_redeemed_points_toast, points, name), Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         )
     }
@@ -268,8 +273,11 @@ fun LoyaltyScreen(
             member = member,
             onDismiss = { memberToAdjust = null },
             onSaveProfile = { name ->
-                loyaltyViewModel.upsertMember(member.phone, name)
-                Toast.makeText(context, context.getString(R.string.loyalty_profile_saved_toast), Toast.LENGTH_SHORT).show()
+                loyaltyViewModel.upsertMember(member.phone, name) { result ->
+                    if (result.isSuccess) {
+                        Toast.makeText(context, context.getString(R.string.loyalty_profile_saved_toast), Toast.LENGTH_SHORT).show()
+                    }
+                }
             },
             onAddPoints = { pts, reason ->
                 loyaltyViewModel.addPoints(member.phone, pts, 0.0, reason)
@@ -296,9 +304,13 @@ fun LoyaltyScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        loyaltyViewModel.deleteMember(member.phone)
+                        val phone = member.phone
                         memberToDelete = null
-                        Toast.makeText(context, memberDeletedMessage, Toast.LENGTH_SHORT).show()
+                        loyaltyViewModel.deleteMember(phone) { result ->
+                            if (result.isSuccess) {
+                                Toast.makeText(context, memberDeletedMessage, Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -319,9 +331,12 @@ fun LoyaltyScreen(
             loyaltyViewModel = loyaltyViewModel,
             onDismiss = { showAddMemberDialog = false },
             onSave = { phone, name, tier ->
-                loyaltyViewModel.upsertMember(phone, name, tier)
                 showAddMemberDialog = false
-                Toast.makeText(context, context.getString(R.string.loyalty_member_registered_toast), Toast.LENGTH_SHORT).show()
+                loyaltyViewModel.upsertMember(phone, name, tier) { result ->
+                    if (result.isSuccess) {
+                        Toast.makeText(context, context.getString(R.string.loyalty_member_registered_toast), Toast.LENGTH_SHORT).show()
+                    }
+                }
             },
             onViewExistingMember = { existing ->
                 showAddMemberDialog = false
