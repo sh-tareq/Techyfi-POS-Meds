@@ -211,7 +211,7 @@ Suggested shape (one small new file plus a collector):
 
 - [x] **R20-35 MED Reported. Screen gates run side effects during composition.** (Fixed in `e57bede`). Navigation.kt about 1140, 1240, 1272, 1293, 1311, 1338, 1368, 1388, 1412 call `Toast.show()` and `backStack.removeLastOrNull()` in the composable body; a recomposition during the exit animation pops twice. Fix: move into `LaunchedEffect(Unit)` and only pop if the top is still that key.
 
-- [ ] **R20-36 MED Reported. Backup and restore gaps.**
+- [x] **R20-36 MED Reported. Backup and restore gaps.** (Fixed in `10263fc`).
   - Drive backup (`utils/BackupPackageManager.kt` about 444-458 `capturePreferences`) omits quick-sale presets, note presets, due-reminder templates, custom categories, return-audit presets, theme/layout, default cost %, and the loyalty settings in SharedPreferences `loyalty_program_prefs` (`utils/LoyaltySettingsHelper.kt` about 37). The JSON backup also omits loyalty settings. Fix: add them to capture/apply and to JSON export/import; call `repository.updateLoyaltySettings` after restore.
   - Offline shows a false "Reconnect Google Drive" alert and drops the run: `AutoBackupWorker.kt` about 93-98 treats any exception from `authorizeWithoutUi` as needing auth. Fix: only when `result.hasResolution()`; treat `IOException` as retry; add a network constraint for Drive scope.
   - `AutoBackupScheduler.kt` about 127-131 uses `ExistingWorkPolicy.REPLACE` on every `MainActivity.onStop`, which cancels a running upload. Fix: `KEEP` for the `respectDueTime = true` path.
@@ -223,11 +223,11 @@ Suggested shape (one small new file plus a collector):
   - Drive retention prunes manual backups too, and `listBackups` turns errors into an empty list (`GoogleDriveBackupManager.kt` about 151-203). Fix: prune only `-auto-` files; return a `Result`.
   - Offline, the Drive switch shows OFF and "Not connected" (SettingsScreen about 3101, 4162). Fix: use the stored `driveAccountEmail` for connected state and show "offline" separately.
 
-- [ ] **R20-37 MED Reported. Factory reset leaves data behind.** repo `resetFactoryDefaults` (about 5000-5022) deletes `custom_logo.png` but the logo is saved as `store_logo.png` (SettingsScreen about 4008). It also leaves `filesDir/AutoBackups/*.json` (plaintext customer and sales data), `safety_rollback/*.sqlite`, `restored_product_images/`, `restored_*logo.png`, the `loyalty_program_prefs` and `auth_security` prefs, and WorkManager/alarm jobs. Fix: delete them and cancel the unique works and alarm.
+- [x] **R20-37 MED Reported. Factory reset leaves data behind.** (Fixed in `10263fc`). repo `resetFactoryDefaults` (about 5000-5022) deletes `custom_logo.png` but the logo is saved as `store_logo.png` (SettingsScreen about 4008). It also leaves `filesDir/AutoBackups/*.json` (plaintext customer and sales data), `safety_rollback/*.sqlite`, `restored_product_images/`, `restored_*logo.png`, the `loyalty_program_prefs` and `auth_security` prefs, and WorkManager/alarm jobs. Fix: delete them and cancel the unique works and alarm.
 
-- [ ] **R20-38 MED Reported. Settings sub-page edits are saved even when the user backs out.** SettingsScreen about 4486-4615 write into the screen-level `currentSettings`; any Home toggle (about 4405-4426) or the logo picker (about 4012) then saves it all. Fix: keep a draft per sub-page and reset it on back, or prompt about unsaved changes.
+- [x] **R20-38 MED Reported. Settings sub-page edits are saved even when the user backs out.** (Fixed in `10263fc`). SettingsScreen about 4486-4615 write into the screen-level `currentSettings`; any Home toggle (about 4405-4426) or the logo picker (about 4012) then saves it all. Fix: keep a draft per sub-page and reset it on back, or prompt about unsaved changes.
 
-- [ ] **R20-39 MED Reported. Settings toggles that do nothing.**
+- [x] **R20-39 MED Reported. Settings toggles that do nothing.** (Fixed in `10263fc`).
   - Due receipt QR: printer checks `showDueReceiptQr || showDueReceiptVerificationQr` (`utils/BillPdfGenerator.kt` about 1627, 1889); the second has no UI and defaults to true. Fix: use one flag.
   - Due receipt logo: `(settings.showDueReceiptLogo || settings.showLogo)` (about 1559). Fix: `settings.showDueReceiptLogo && logoUri.isNotBlank()`.
   - Loyalty "Points expiry (days)" is saved (`LoyaltyScreen.kt` about 1339, 1469) but unused; EXPIRING_SOON is hard-coded to 90 days (VM about 4340). Fix: use it, or hide the field.
