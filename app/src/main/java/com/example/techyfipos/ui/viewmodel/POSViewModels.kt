@@ -2125,7 +2125,13 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         val salesByIdAll = salesWithItems.value.associateBy { it.sale.id }
         // Reports reconcile with register close: returns occurring within [startMillis, endMillis)
         // are applied according to when they impacted the till and actual refund payment methods.
-        val returnsInPeriod = allReturns.value.filter { it.timestamp in startMillis until endMillis }
+        val rawReturnsInPeriod = allReturns.value.filter { it.timestamp in startMillis until endMillis }
+        val returnsInPeriod = if (sourceList != null) {
+            val allowedSaleIds = sourceList.map { it.sale.id }.toSet()
+            rawReturnsInPeriod.filter { it.saleId in allowedSaleIds }
+        } else {
+            rawReturnsInPeriod
+        }
         val totalRefunds = returnsInPeriod.sumOf { it.refundAmount }
 
         var refundedProfit = 0.0
@@ -2301,14 +2307,24 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
 
         // Apply return adjustments
         returnedQtyByBarcode.forEach { (barcode, qty) ->
-            val existing = productTotals[barcode] ?: return@forEach
+            val existing = productTotals.getOrPut(barcode) {
+                val prod = repository.getProductByBarcode(barcode)
+                ProductReportData(
+                    barcode = barcode,
+                    name = prod?.name ?: "Unknown ($barcode)",
+                    quantity = 0.0,
+                    revenue = 0.0
+                )
+            }
             productTotals[barcode] = existing.copy(
                 quantity = (existing.quantity - qty).coerceAtLeast(0.0),
                 revenue = (existing.revenue - (returnedRevenueByBarcode[barcode] ?: 0.0)).coerceAtLeast(0.0)
             )
         }
         returnedByDay.forEach { (day, revenueProfit) ->
-            val existing = dailyTotals[day] ?: return@forEach
+            val existing = dailyTotals.getOrPut(day) {
+                DailyReportData(timestamp = day, revenue = 0.0, profit = 0.0, transactionCount = 0)
+            }
             dailyTotals[day] = existing.copy(
                 revenue = (existing.revenue - revenueProfit.first).coerceAtLeast(0.0),
                 profit = existing.profit - revenueProfit.second,
@@ -2317,24 +2333,24 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         }
         duePaymentsInPeriod.forEach { dp ->
             val dayStart = com.example.techyfipos.utils.startOfDay(dp.timestamp)
-            val existing = dailyTotals[dayStart]
-            if (existing != null) {
-                dailyTotals[dayStart] = existing.copy(dueCollected = existing.dueCollected + dp.amountPaid)
+            val existing = dailyTotals.getOrPut(dayStart) {
+                DailyReportData(timestamp = dayStart, revenue = 0.0, profit = 0.0, transactionCount = 0)
             }
+            dailyTotals[dayStart] = existing.copy(dueCollected = existing.dueCollected + dp.amountPaid)
         }
         supplierPaymentsInPeriod.forEach { sp ->
             val dayStart = com.example.techyfipos.utils.startOfDay(sp.timestamp)
-            val existing = dailyTotals[dayStart]
-            if (existing != null) {
-                dailyTotals[dayStart] = existing.copy(supplierPayments = existing.supplierPayments + sp.amount)
+            val existing = dailyTotals.getOrPut(dayStart) {
+                DailyReportData(timestamp = dayStart, revenue = 0.0, profit = 0.0, transactionCount = 0)
             }
+            dailyTotals[dayStart] = existing.copy(supplierPayments = existing.supplierPayments + sp.amount)
         }
         expensesList.filter { it.type == "EXPENSE" && !it.category.equals("Supplier Payment", ignoreCase = true) && !it.category.equals("Safe Drop", ignoreCase = true) }.forEach { exp ->
             val dayStart = com.example.techyfipos.utils.startOfDay(exp.timestamp)
-            val existing = dailyTotals[dayStart]
-            if (existing != null) {
-                dailyTotals[dayStart] = existing.copy(expenses = existing.expenses + exp.amount)
+            val existing = dailyTotals.getOrPut(dayStart) {
+                DailyReportData(timestamp = dayStart, revenue = 0.0, profit = 0.0, transactionCount = 0)
             }
+            dailyTotals[dayStart] = existing.copy(expenses = existing.expenses + exp.amount)
         }
         returnedByHour.forEach { (hour, adjustment) ->
             val existing = hourlyTotals[hour] ?: return@forEach
@@ -2650,27 +2666,54 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
             )
         }
 
-        // 2. Credit Sales (where paymentMethod is Due or grandTotal > amountPaid)
-        sales.filter { s ->
-            val due = (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
-            s.paymentMethod.equals("Due", ignoreCase = true) || due > 0.001
-        }.forEach { s ->
-            val due = if (s.paymentMethod.equals("Due", ignoreCase = true)) s.grandTotal else (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
-            val phone = s.customerPhone ?: ""
-            val name = s.customerName ?: (customerNameMap[phone] ?: phone)
+        val salesById = sales.associateBy { it.id }
+        val chargeSaleIds = charges.filter { it.reason.equals("Sale", ignoreCase = true) && it.saleId != null }
+            .mapNotNull { it.saleId }
+            .toSet()
+
+        // 2. Credit Sales: from DueCharge(reason="Sale") rows, plus legacy sales without a charge row
+        charges.filter { it.reason.equals("Sale", ignoreCase = true) }.forEach { c ->
+            val linkedSale = c.saleId?.let { salesById[it] }
+            val phone = c.customerPhone
+            val name = linkedSale?.customerName ?: (customerNameMap[phone] ?: phone)
+            val refId = if (c.saleId != null) "#INV-${c.saleId}" else "#CHG-${c.id}"
             list.add(
                 DuesAuditEntry(
-                    id = "sale_${s.id}",
+                    id = "charge_sale_${c.id}",
                     type = DuesAuditType.CREDIT_SALE,
                     customerPhone = phone,
                     customerName = name,
-                    amount = due,
-                    timestamp = s.timestamp,
-                    channelOrMethod = s.paymentMethod,
-                    note = "Invoice #INV-${s.id}",
-                    referenceId = "#INV-${s.id}"
+                    amount = c.amount,
+                    timestamp = c.timestamp,
+                    channelOrMethod = linkedSale?.paymentMethod ?: "Due",
+                    note = if (c.saleId != null) "Invoice #INV-${c.saleId}" else (c.note ?: "Credit Sale"),
+                    referenceId = refId
                 )
             )
+        }
+
+        sales.filter { s ->
+            val due = (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
+            (s.paymentMethod.equals("Due", ignoreCase = true) || due > 0.001) && s.id !in chargeSaleIds
+        }.forEach { s ->
+            val due = (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
+            if (due > 0.0) {
+                val phone = s.customerPhone ?: ""
+                val name = s.customerName ?: (customerNameMap[phone] ?: phone)
+                list.add(
+                    DuesAuditEntry(
+                        id = "sale_${s.id}",
+                        type = DuesAuditType.CREDIT_SALE,
+                        customerPhone = phone,
+                        customerName = name,
+                        amount = due,
+                        timestamp = s.timestamp,
+                        channelOrMethod = s.paymentMethod,
+                        note = "Invoice #INV-${s.id}",
+                        referenceId = "#INV-${s.id}"
+                    )
+                )
+            }
         }
 
         // 3. Return Due Adjustments (dueAdjustmentAmount > 0)
@@ -2693,8 +2736,8 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
             )
         }
 
-        // 4. Manual Due Charges
-        charges.forEach { c ->
+        // 4. Manual Due Charges (exclude Sale charges)
+        charges.filter { !it.reason.equals("Sale", ignoreCase = true) }.forEach { c ->
             val name = customerNameMap[c.customerPhone] ?: c.customerPhone
             list.add(
                 DuesAuditEntry(
@@ -2729,14 +2772,14 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
             val due = (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
             s.paymentMethod.equals("Due", ignoreCase = true) || due > 0.001
         }.forEach { s ->
-            val due = if (s.paymentMethod.equals("Due", ignoreCase = true)) s.grandTotal else (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
+            val due = (s.grandTotal - s.amountPaid).coerceAtLeast(0.0)
             val phone = s.customerPhone
             if (!phone.isNullOrBlank() && due > 0.0) {
                 debtsByPhone.getOrPut(phone) { mutableListOf() }.add(Pair(s.timestamp, due))
             }
         }
 
-        charges.filter { it.amount > 0.0 }.forEach { c ->
+        charges.filter { it.amount > 0.0 && !it.reason.equals("Sale", ignoreCase = true) }.forEach { c ->
             debtsByPhone.getOrPut(c.customerPhone) { mutableListOf() }.add(Pair(c.timestamp, c.amount))
         }
 
@@ -5057,6 +5100,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
         notes: String? = null,
         tag: String = "Retail",
         creditLimit: Double = 0.0,
+        isEdit: Boolean = false,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -5073,6 +5117,10 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                     return@launch
                 }
                 val existing = repository.getCustomerByPhone(cleanPhone)
+                if (!isEdit && existing != null) {
+                    onError(repository.context.getString(R.string.customer_phone_already_exists_error, existing.name))
+                    return@launch
+                }
                 val customer = (existing ?: Customer(phone = cleanPhone, name = cleanName)).copy(
                     phone = cleanPhone,
                     name = cleanName,

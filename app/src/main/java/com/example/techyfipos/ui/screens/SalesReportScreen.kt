@@ -45,6 +45,8 @@ import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 import com.example.techyfipos.utils.startOfDay
 import com.example.techyfipos.utils.endOfDay
+import com.example.techyfipos.utils.localMillisToUtcMidnight
+import com.example.techyfipos.utils.utcMidnightToLocalMidnight
 import com.example.techyfipos.utils.toBanglaDigits
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.util.Calendar
@@ -183,7 +185,7 @@ fun SalesReportScreen(
 
     val allExpenses by (expenseViewModel?.allExpenses?.collectAsStateWithLifecycle(emptyList()) ?: remember { mutableStateOf(emptyList()) })
     val periodExpenses = remember(allExpenses, rangeStart, rangeEnd) {
-        allExpenses.filter { it.timestamp in rangeStart until rangeEnd && it.type != "CASH_IN" && !it.category.equals("Supplier Payment", ignoreCase = true) && !it.category.equals("Safe Drop", ignoreCase = true) }
+        allExpenses.filter { it.timestamp in rangeStart until rangeEnd && it.type == "EXPENSE" && !it.category.equals("Supplier Payment", ignoreCase = true) && !it.category.equals("Safe Drop", ignoreCase = true) }
     }
     val periodExpenseTotal = remember(periodExpenses) { periodExpenses.sumOf { it.amount } }
 
@@ -489,7 +491,7 @@ fun SalesReportScreen(
 
     if (showStartPicker) {
         val state = rememberDatePickerState(
-            initialSelectedDateMillis = customStart.coerceAtMost(System.currentTimeMillis()),
+            initialSelectedDateMillis = localMillisToUtcMidnight(customStart.coerceAtMost(System.currentTimeMillis())),
             selectableDates = pastAndPresentSelectableDates
         )
         DatePickerDialog(
@@ -497,7 +499,7 @@ fun SalesReportScreen(
             properties = DialogProperties(dismissOnClickOutside = false),
             confirmButton = {
                 TextButton(onClick = {
-                    state.selectedDateMillis?.let { customStart = it.coerceAtMost(System.currentTimeMillis()) }
+                    state.selectedDateMillis?.let { customStart = utcMidnightToLocalMidnight(it).coerceAtMost(System.currentTimeMillis()) }
                     showStartPicker = false
                     showEndPicker = true
                 }) { Text(stringResource(R.string.dues_next_end_date_button)) }
@@ -508,7 +510,7 @@ fun SalesReportScreen(
 
     if (showEndPicker) {
         val state = rememberDatePickerState(
-            initialSelectedDateMillis = customEnd.coerceAtMost(System.currentTimeMillis()),
+            initialSelectedDateMillis = localMillisToUtcMidnight(customEnd.coerceAtMost(System.currentTimeMillis())),
             selectableDates = pastAndPresentSelectableDates
         )
         DatePickerDialog(
@@ -517,7 +519,7 @@ fun SalesReportScreen(
             confirmButton = {
                 TextButton(onClick = {
                     state.selectedDateMillis?.let {
-                        customEnd = it.coerceAtMost(System.currentTimeMillis())
+                        customEnd = utcMidnightToLocalMidnight(it).coerceAtMost(System.currentTimeMillis())
                     }
                     selectedPeriod = ReportPeriod.CUSTOM
                     showEndPicker = false
@@ -539,7 +541,7 @@ private fun ReportExecutiveSummaryCard(
     var showProfitMode by remember { mutableStateOf(false) }
     val average = data.totalRevenue / data.transactionCount.coerceAtLeast(1)
     val netSales = (data.totalRevenue - data.totalTax).coerceAtLeast(0.0)
-    val effectiveNetProfit = data.grossProfit - data.totalDiscount - (if (data.totalLoyaltyDiscount > 0.0) data.totalLoyaltyDiscount else 0.0) - periodExpenseTotal
+    val effectiveNetProfit = data.netProfit
     val marginPercent = if (netSales == 0.0) 0.0 else (effectiveNetProfit / netSales * 100)
     val growthDelta = change(data.totalRevenue, previous?.totalRevenue)
 
@@ -869,7 +871,7 @@ private fun OverviewPanel(
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         if (hasExpenseFeature || hasSupplierFeature) {
-            val netOperatingProfit = data.grossProfit - periodExpenseTotal
+            val netOperatingProfit = data.netProfit
             Card(
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.fillMaxWidth(),

@@ -965,7 +965,7 @@ fun SalesHistoryScreen(
 
     if (showStartPicker) {
         val state = rememberDatePickerState(
-            initialSelectedDateMillis = customStart.coerceAtMost(System.currentTimeMillis()),
+            initialSelectedDateMillis = localMillisToUtcMidnight(customStart.coerceAtMost(System.currentTimeMillis())),
             selectableDates = historySelectableDates
         )
         DatePickerDialog(
@@ -973,7 +973,7 @@ fun SalesHistoryScreen(
             confirmButton = {
                 TextButton(onClick = {
                     state.selectedDateMillis?.let {
-                        customStart = it.coerceAtMost(System.currentTimeMillis())
+                        customStart = utcMidnightToLocalMidnight(it).coerceAtMost(System.currentTimeMillis())
                     }
                     showStartPicker = false
                     showEndPicker = true
@@ -989,7 +989,7 @@ fun SalesHistoryScreen(
 
     if (showEndPicker) {
         val state = rememberDatePickerState(
-            initialSelectedDateMillis = customEnd.coerceAtMost(System.currentTimeMillis()),
+            initialSelectedDateMillis = localMillisToUtcMidnight(customEnd.coerceAtMost(System.currentTimeMillis())),
             selectableDates = historySelectableDates
         )
         DatePickerDialog(
@@ -997,7 +997,7 @@ fun SalesHistoryScreen(
             confirmButton = {
                 TextButton(onClick = {
                     state.selectedDateMillis?.let {
-                        customEnd = it.coerceAtMost(System.currentTimeMillis())
+                        customEnd = utcMidnightToLocalMidnight(it).coerceAtMost(System.currentTimeMillis())
                         selectedPeriod = HistoryReportPeriod.CUSTOM
                     }
                     showEndPicker = false

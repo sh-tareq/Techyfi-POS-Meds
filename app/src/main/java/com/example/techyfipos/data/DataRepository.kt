@@ -2054,12 +2054,36 @@ class DataRepository(
             require(charge.customerPhone == cleanPhone) { "Charge does not belong to this customer" }
             val currentDue = customerDueDao.getCustomerDueByPhone(cleanPhone)
             if (currentDue != null) {
+                val newOutstanding = currentDue.outstandingAmount - charge.amount
+                val excess = if (newOutstanding < 0.0) -newOutstanding else 0.0
                 customerDueDao.upsertCustomerDue(
                     currentDue.copy(
-                        outstandingAmount = (currentDue.outstandingAmount - charge.amount).coerceAtLeast(0.0),
+                        outstandingAmount = newOutstanding.coerceAtLeast(0.0),
                         updatedAt = System.currentTimeMillis()
                     )
                 )
+                if (excess > 0.001) {
+                    var customer = customerDao.getCustomerByPhone(cleanPhone)
+                    if (customer == null) {
+                        customer = Customer(
+                            phone = cleanPhone,
+                            name = currentDue.customerName.ifBlank { "Customer ${cleanPhone.takeLast(4)}" },
+                            storeCredit = 0.0
+                        )
+                        customerDao.upsertCustomer(customer)
+                    }
+                    customerDao.adjustCustomerStoreCredit(cleanPhone, excess, System.currentTimeMillis())
+                    val updated = customerDao.getCustomerByPhone(cleanPhone) ?: customer
+                    storeCreditLedgerDao.insertEntry(
+                        StoreCreditLedgerEntry(
+                            customerPhone = cleanPhone,
+                            deltaAmount = excess,
+                            balanceAfter = updated.storeCredit,
+                            type = "CHARGE_REVERSAL_OVERPAYMENT",
+                            note = "Store credit from due charge reversal overpayment (#CHG-$chargeId)"
+                        )
+                    )
+                }
             }
             customerDueDao.deleteDueChargeById(chargeId)
         }

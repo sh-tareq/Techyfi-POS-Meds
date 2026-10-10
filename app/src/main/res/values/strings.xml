@@ -2814,6 +2814,7 @@
     <string name="settings_label_printer_same_as_receipt_warning">Same device as the receipt printer. Labels will print as garbage. Choose a different label printer.</string>
     <string name="direct_print_error_label_same_as_receipt">Label printer is set to the receipt printer. Change it in Settings &gt; Printers.</string>
     <string name="settings_printer_conflict_title">Printer Selection</string>
+    <string name="customer_phone_already_exists_error">A customer with this phone number already exists (%1$s)</string>
 </resources>
 
 

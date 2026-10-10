@@ -2816,4 +2816,5 @@
     <string name="settings_label_printer_same_as_receipt_warning">রসিদ প্রিন্টারের অনুরূপ ডিভাইস। লেবেল প্রিন্ট করলে এলোমেলো লেখা আসবে। ভিন্ন লেবেল প্রিন্টার বেছে নিন।</string>
     <string name="direct_print_error_label_same_as_receipt">লেবেল প্রিন্টারটি রসিদ প্রিন্টার হিসেবে সেট করা আছে। সেটিংস &gt; প্রিন্টারসমূহ থেকে এটি পরিবর্তন করুন।</string>
     <string name="settings_printer_conflict_title">প্রিন্টার নির্বাচন</string>
+    <string name="customer_phone_already_exists_error">এই ফোন নম্বরের একজন গ্রাহক ইতিমধ্যে বিদ্যমান (%1$s)</string>
 </resources>

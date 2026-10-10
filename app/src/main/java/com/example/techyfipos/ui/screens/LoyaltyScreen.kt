@@ -472,6 +472,7 @@ fun LoyaltyScreen(
                     notes = notes,
                     tag = tag,
                     creditLimit = creditLimit,
+                    isEdit = true,
                     onSuccess = {
                         Toast.makeText(context, context.getString(R.string.loyalty_customer_saved_toast), Toast.LENGTH_SHORT).show()
                         customerToEditInLoyalty = null

@@ -820,6 +820,7 @@ fun CustomersScreen(
                         notes = notes,
                         tag = tag,
                         creditLimit = creditLimit,
+                        isEdit = editingCustomer != null,
                         onSuccess = {
                             Toast.makeText(context, customerSavedMessage, Toast.LENGTH_SHORT).show()
                             showAddCustomerDialog = false

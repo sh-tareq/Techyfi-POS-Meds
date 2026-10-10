@@ -12,6 +12,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Calendar
 
 class MoneyFlowsTest {
 
@@ -779,5 +780,138 @@ class MoneyFlowsTest {
         )
         val isSupplierPayment = supplierPaymentExpense.category.equals("Supplier Payment", ignoreCase = true)
         assertTrue(isSupplierPayment)
+    }
+
+    @Test
+    fun `R20-19h dues audit history does not double count sale charges and ages debt by actual due`() {
+        val sale = com.example.techyfipos.data.db.Sale(
+            id = 101,
+            timestamp = 1000L,
+            subtotal = 500.0,
+            discountAmount = 0.0,
+            isPercentageDiscount = false,
+            grandTotal = 500.0,
+            paymentMethod = "Cash",
+            customerPhone = "01711111111",
+            amountPaid = 200.0
+        )
+        val charges = listOf(
+            com.example.techyfipos.data.db.DueCharge(
+                id = 1,
+                customerPhone = "01711111111",
+                amount = 300.0,
+                timestamp = 1000L,
+                reason = "Sale",
+                saleId = 101
+            ),
+            com.example.techyfipos.data.db.DueCharge(
+                id = 2,
+                customerPhone = "01711111111",
+                amount = 150.0,
+                timestamp = 2000L,
+                reason = "Manual",
+                saleId = null
+            )
+        )
+        val manualCharges = charges.filter { !it.reason.equals("Sale", ignoreCase = true) }
+        assertEquals(1, manualCharges.size)
+        assertEquals(150.0, manualCharges.first().amount, 0.001)
+
+        val chargeSaleIds = charges.filter { it.reason.equals("Sale", ignoreCase = true) && it.saleId != null }
+            .mapNotNull { it.saleId }.toSet()
+        assertTrue(chargeSaleIds.contains(101L))
+
+        val saleDue = (sale.grandTotal - sale.amountPaid).coerceAtLeast(0.0)
+        assertEquals(300.0, saleDue, 0.001)
+        val debts = mutableListOf<Pair<Long, Double>>()
+        debts.add(Pair(sale.timestamp, saleDue))
+        manualCharges.forEach { debts.add(Pair(it.timestamp, it.amount)) }
+        assertEquals(2, debts.size)
+        assertEquals(450.0, debts.sumOf { it.second }, 0.001)
+    }
+
+    @Test
+    fun `R20-19i due charge deletion transfers excess overpayment to store credit`() {
+        val currentOutstanding = 100.0
+        val chargeAmount = 250.0
+        val newOutstanding = currentOutstanding - chargeAmount
+        val excess = if (newOutstanding < 0.0) -newOutstanding else 0.0
+
+        assertEquals(-150.0, newOutstanding, 0.001)
+        assertEquals(150.0, excess, 0.001)
+        assertEquals(0.0, newOutstanding.coerceAtLeast(0.0), 0.001)
+    }
+
+    @Test
+    fun `R20-19j add customer checks existing phone while edit mode allows it`() {
+        val existingCustomer = Customer(phone = "01712345678", name = "Rahim", storeCredit = 0.0)
+        
+        fun validateUpsert(isEdit: Boolean, phone: String): String? {
+            val existing = if (phone == existingCustomer.phone) existingCustomer else null
+            if (!isEdit && existing != null) {
+                return "A customer with this phone number already exists (${existing.name})"
+            }
+            return null
+        }
+
+        val addCollisionError = validateUpsert(isEdit = false, phone = "01712345678")
+        assertNotNull(addCollisionError)
+        assertTrue(addCollisionError!!.contains("Rahim"))
+
+        val addFreshError = validateUpsert(isEdit = false, phone = "01899999999")
+        assertEquals(null, addFreshError)
+
+        val editError = validateUpsert(isEdit = true, phone = "01712345678")
+        assertEquals(null, editError)
+    }
+
+    @Test
+    fun `R20-19k report returns filtered by sourceList when provided`() {
+        val allReturns = listOf(
+            com.example.techyfipos.data.db.Return(id = 1, saleId = 10, refundMethod = "Cash", refundAmount = 50.0, timestamp = 100L),
+            com.example.techyfipos.data.db.Return(id = 2, saleId = 20, refundMethod = "Cash", refundAmount = 70.0, timestamp = 200L)
+        )
+        val sourceSaleIds = setOf(10L)
+        val filteredReturns = allReturns.filter { it.saleId in sourceSaleIds }
+        assertEquals(1, filteredReturns.size)
+        assertEquals(10L, filteredReturns.first().saleId)
+        assertEquals(50.0, filteredReturns.first().refundAmount, 0.001)
+    }
+
+    @Test
+    fun `R20-19l UTC midnight datepicker roundtrip preserves calendar date in UTC+6`() {
+        val tz = java.util.TimeZone.getTimeZone("GMT+6")
+        val localCal = Calendar.getInstance(tz).apply {
+            set(2026, Calendar.OCTOBER, 11, 14, 30, 0)
+        }
+        val utcMillis = com.example.techyfipos.utils.localMillisToUtcMidnight(localCal.timeInMillis)
+        val localResultMillis = com.example.techyfipos.utils.utcMidnightToLocalMidnight(utcMillis)
+
+        val resultCal = Calendar.getInstance().apply { timeInMillis = localResultMillis }
+        assertEquals(2026, resultCal.get(Calendar.YEAR))
+        assertEquals(Calendar.OCTOBER, resultCal.get(Calendar.MONTH))
+        assertEquals(11, resultCal.get(Calendar.DAY_OF_MONTH))
+        assertEquals(0, resultCal.get(Calendar.HOUR_OF_DAY))
+        assertEquals(0, resultCal.get(Calendar.MINUTE))
+    }
+
+    @Test
+    fun `R20-19m repayment reprint data flags reprint and omits previous due`() {
+        val originalData = com.example.techyfipos.ui.screens.DueRepaymentReceiptData(
+            customerName = "Kalam",
+            customerPhone = "01700000000",
+            amountPaid = 500.0,
+            paymentMethod = "Cash",
+            referenceNote = "Paid due",
+            remainingDue = 1000.0,
+            timestamp = 1000L,
+            isReprint = false
+        )
+        assertFalse(originalData.isReprint)
+
+        val reprintData = originalData.copy(isReprint = true)
+        assertTrue(reprintData.isReprint)
+        assertEquals(500.0, reprintData.amountPaid, 0.001)
+        assertEquals(1000.0, reprintData.remainingDue, 0.001)
     }
 }

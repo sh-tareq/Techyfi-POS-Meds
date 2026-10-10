@@ -90,6 +90,42 @@ fun endOfDay(millis: Long = System.currentTimeMillis()): Long = Calendar.getInst
     set(Calendar.MILLISECOND, 999)
 }.timeInMillis
 
+/**
+ * Converts local epoch milliseconds to UTC midnight milliseconds representing the same calendar date.
+ * Required for Material 3 DatePicker which operates in UTC midnight.
+ */
+fun localMillisToUtcMidnight(localMillis: Long): Long {
+    val localCal = Calendar.getInstance().apply { timeInMillis = localMillis }
+    val year = localCal.get(Calendar.YEAR)
+    val month = localCal.get(Calendar.MONTH)
+    val day = localCal.get(Calendar.DAY_OF_MONTH)
+    val utcCal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+        clear()
+        set(year, month, day, 0, 0, 0)
+    }
+    return utcCal.timeInMillis
+}
+
+/**
+ * Converts UTC midnight milliseconds from Material 3 DatePicker back to local midnight milliseconds.
+ */
+fun utcMidnightToLocalMidnight(utcMillis: Long): Long {
+    val utcCal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply { timeInMillis = utcMillis }
+    val year = utcCal.get(Calendar.YEAR)
+    val month = utcCal.get(Calendar.MONTH)
+    val day = utcCal.get(Calendar.DAY_OF_MONTH)
+    val localCal = Calendar.getInstance().apply {
+        set(Calendar.YEAR, year)
+        set(Calendar.MONTH, month)
+        set(Calendar.DAY_OF_MONTH, day)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    return localCal.timeInMillis
+}
+
 val LocalAppLanguage = androidx.compose.runtime.staticCompositionLocalOf { "en" }
 
 @Volatile

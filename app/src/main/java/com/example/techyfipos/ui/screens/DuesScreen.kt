@@ -474,7 +474,8 @@ fun DuesScreen(
                         paymentMethod = p.paymentMethod,
                         referenceNote = p.referenceNote,
                         remainingDue = selectedCustomer!!.outstandingAmount,
-                        timestamp = p.timestamp
+                        timestamp = p.timestamp,
+                        isReprint = true
                     )
                 },
                 onDeletePaymentClick = { p -> paymentToDelete = p },
@@ -6118,7 +6119,8 @@ data class DueRepaymentReceiptData(
     val paymentMethod: String,
     val referenceNote: String?,
     val remainingDue: Double,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val isReprint: Boolean = false
 )
 
 @Composable
@@ -6157,7 +6159,8 @@ fun DueRepaymentReceiptDialog(
                     storePhone = storePhone,
                     isBangla = isReceiptBangla,
                     settings = settings.copy(paperRollWidthMm = selectedRollWidth),
-                    timestamp = data.timestamp
+                    timestamp = data.timestamp,
+                    isReprint = data.isReprint
                 )
             }
             receiptFile = file
@@ -6185,15 +6188,20 @@ fun DueRepaymentReceiptDialog(
         buildString {
             if (isReceiptBangla) {
                 appendLine("★ ${storeName.ifBlank { "TECHYFI STORE" }} ★")
-                appendLine("--- টাকা জমার রশিদ • বাকি আদায় ---")
+                appendLine(if (data.isReprint) "--- টাকা জমার রশিদ (পুনঃমুদ্রণ) ---" else "--- টাকা জমার রশিদ • বাকি আদায় ---")
                 appendLine("তারিখ: ${DateFormatters.formatLongDateTime(data.timestamp, java.util.Locale.forLanguageTag("bn-BD"))}")
                 appendLine("ভাউচার নং: REC-${data.timestamp % 1000000}")
                 appendLine("কাস্টমার: ${data.customerName}")
                 appendLine("মোবাইল: ${data.customerPhone}")
                 data.referenceNote?.takeIf { it.isNotBlank() }?.let { appendLine("রেফারেন্স: $it") }
-                appendLine("আগের বাকি: ${formatTakaBn(data.amountPaid + data.remainingDue)}")
-                appendLine("আজকের জমা: ${formatTakaBn(data.amountPaid)} (${if (data.paymentMethod.equals("Cash", ignoreCase = true)) "নগদ" else data.paymentMethod})")
-                appendLine("অবশিষ্ট বাকি: ${if (isSettled) "${formatTakaBn(0.0)} (সম্পূর্ণ পরিশোধ ✓)" else formatTakaBn(data.remainingDue)}")
+                if (data.isReprint) {
+                    appendLine("জমা করা হয়েছে: ${formatTakaBn(data.amountPaid)} (${if (data.paymentMethod.equals("Cash", ignoreCase = true)) "নগদ" else data.paymentMethod})")
+                    appendLine("বর্তমান বাকি: ${formatTakaBn(data.remainingDue)}")
+                } else {
+                    appendLine("আগের বাকি: ${formatTakaBn(data.amountPaid + data.remainingDue)}")
+                    appendLine("আজকের জমা: ${formatTakaBn(data.amountPaid)} (${if (data.paymentMethod.equals("Cash", ignoreCase = true)) "নগদ" else data.paymentMethod})")
+                    appendLine("অবশিষ্ট বাকি: ${if (isSettled) "${formatTakaBn(0.0)} (সম্পূর্ণ পরিশোধ ✓)" else formatTakaBn(data.remainingDue)}")
+                }
                 appendLine(if (isSettled) "✔ বাকি সম্পূর্ণ পরিশোধ হয়েছে" else "⏳ আংশিক জমা নেওয়া হলো")
                 if (settings.showDueReceiptCustomNotes && settings.dueReceiptCustomNotes.isNotBlank()) {
                     appendLine("নোট: ${settings.dueReceiptCustomNotes}")
@@ -6201,15 +6209,20 @@ fun DueRepaymentReceiptDialog(
                 appendLine("ধন্যবাদ, আবার আসবেন!")
             } else {
                 appendLine("★ ${storeName.ifBlank { "TECHYFI STORE" }} ★")
-                appendLine("--- MONEY RECEIPT / DUE PAYMENT ---")
+                appendLine(if (data.isReprint) "--- MONEY RECEIPT (REPRINT) ---" else "--- MONEY RECEIPT / DUE PAYMENT ---")
                 appendLine("Date: ${DateFormatters.formatDateTime(data.timestamp, Locale.US)}")
                 appendLine("Voucher #: REC-${data.timestamp % 1000000}")
                 appendLine("Customer: ${data.customerName}")
                 appendLine("Phone: ${data.customerPhone}")
                 data.referenceNote?.takeIf { it.isNotBlank() }?.let { appendLine("Ref: $it") }
-                appendLine("Previous Due: ${formatTaka(data.amountPaid + data.remainingDue)}")
-                appendLine("Amount Paid: ${formatTaka(data.amountPaid)} (${data.paymentMethod})")
-                appendLine("Remaining Due: ${if (isSettled) "${formatTaka(0.0)} (Fully Settled ✓)" else formatTaka(data.remainingDue)}")
+                if (data.isReprint) {
+                    appendLine("Amount Paid: ${formatTaka(data.amountPaid)} (${data.paymentMethod})")
+                    appendLine("Current Due: ${formatTaka(data.remainingDue)}")
+                } else {
+                    appendLine("Previous Due: ${formatTaka(data.amountPaid + data.remainingDue)}")
+                    appendLine("Amount Paid: ${formatTaka(data.amountPaid)} (${data.paymentMethod})")
+                    appendLine("Remaining Due: ${if (isSettled) "${formatTaka(0.0)} (Fully Settled ✓)" else formatTaka(data.remainingDue)}")
+                }
                 appendLine(if (isSettled) "✔ PAID IN FULL & SETTLED" else "⏳ PARTIAL PAYMENT RECEIVED")
                 if (settings.showDueReceiptCustomNotes && settings.dueReceiptCustomNotes.isNotBlank()) {
                     appendLine("Note: ${settings.dueReceiptCustomNotes}")
@@ -6775,7 +6788,8 @@ fun DueRepaymentReceiptDialog(
                                         storePhone = storePhone,
                                         isBangla = isReceiptBangla,
                                         settings = settings.copy(paperRollWidthMm = selectedRollWidth),
-                                        timestamp = data.timestamp
+                                        timestamp = data.timestamp,
+                                        isReprint = data.isReprint
                                     )
                                     val uri = FileProvider.getUriForFile(
                                         context,
@@ -6832,7 +6846,8 @@ fun DueRepaymentReceiptDialog(
                                         storePhone = storePhone,
                                         isBangla = isReceiptBangla,
                                         settings = settings.copy(paperRollWidthMm = selectedRollWidth),
-                                        timestamp = data.timestamp
+                                        timestamp = data.timestamp,
+                                        isReprint = data.isReprint
                                     )
                                     val success = saveBillJpegToDownloads(context, file)
                                     if (success) {

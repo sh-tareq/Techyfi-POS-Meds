@@ -1548,7 +1548,8 @@ fun generateDueRepaymentJpeg(
     storePhone: String,
     isBangla: Boolean = false,
     settings: InvoiceSettingsData = InvoiceSettingsData(),
-    timestamp: Long = System.currentTimeMillis()
+    timestamp: Long = System.currentTimeMillis(),
+    isReprint: Boolean = false
 ): File {
     val is58 = settings.paperRollWidthMm == 58
     val width = if (is58) 384 else 576
@@ -1588,7 +1589,9 @@ fun generateDueRepaymentJpeg(
     val metaRowHeight = if (is58) 22f else 28f
     totalHeight += metaRowHeight * (if (!referenceNote.isNullOrBlank()) 5 else 4) // Metadata rows
     totalHeight += 20f // Divider 2
-    totalHeight += if (is58) 28f else 34f // Previous Due
+    if (!isReprint) {
+        totalHeight += if (is58) 28f else 34f // Previous Due
+    }
     totalHeight += 12f + (if (is58) 46f else 54f) + 30f // Amount Paid Hero Box + padding
     totalHeight += if (is58) 28f else 34f // Remaining Due
     totalHeight += 20f // Divider 3
@@ -1700,7 +1703,11 @@ fun generateDueRepaymentJpeg(
     }
 
     // Title banner
-    val titleBanner = if (isBangla) "★ টাকা জমার রশিদ • বাকি আদায় ★" else "★ MONEY RECEIPT • DUE REPAYMENT ★"
+    val titleBanner = if (isReprint) {
+        if (isBangla) "★ টাকা জমার রশিদ (পুনঃমুদ্রণ) ★" else "★ MONEY RECEIPT • REPRINT ★"
+    } else {
+        if (isBangla) "★ টাকা জমার রশিদ • বাকি আদায় ★" else "★ MONEY RECEIPT • DUE REPAYMENT ★"
+    }
     boldPaint.textSize = if (is58) 15f else 20f
     boldPaint.textAlign = Paint.Align.CENTER
     canvas.drawText(titleBanner, width / 2f, y, boldPaint)
@@ -1747,14 +1754,16 @@ fun generateDueRepaymentJpeg(
         if (isBangla) formatTakaBn(remainingDue) else formatTaka(remainingDue)
     }
 
-    // Previous Outstanding Row
-    paint.textSize = if (is58) 15f else 20f
-    paint.textAlign = Paint.Align.LEFT
-    canvas.drawText(if (isBangla) "আগের বাকি" else "Previous Outstanding", sidePad, y, paint)
-    boldPaint.textSize = if (is58) 15f else 20f
-    boldPaint.textAlign = Paint.Align.RIGHT
-    canvas.drawText(prevDueVal, width - sidePad, y, boldPaint)
-    y += if (is58) 18f else 24f
+    // Previous Outstanding Row (only on original collection slip)
+    if (!isReprint) {
+        paint.textSize = if (is58) 15f else 20f
+        paint.textAlign = Paint.Align.LEFT
+        canvas.drawText(if (isBangla) "আগের বাকি" else "Previous Outstanding", sidePad, y, paint)
+        boldPaint.textSize = if (is58) 15f else 20f
+        boldPaint.textAlign = Paint.Align.RIGHT
+        canvas.drawText(prevDueVal, width - sidePad, y, boldPaint)
+        y += if (is58) 18f else 24f
+    }
 
     // Hero Box for Amount Collected
     y += 8f
@@ -1780,7 +1789,11 @@ fun generateDueRepaymentJpeg(
     boldPaint.textSize = if (is58) 15f else 20f
     boldPaint.textAlign = Paint.Align.LEFT
     val methodDisplay = if (isBangla && paymentMethod.equals("Cash", ignoreCase = true)) "নগদ" else paymentMethod
-    val paidLabel = if (isBangla) "আজকের জমা [$methodDisplay]" else "AMOUNT COLLECTED [$paymentMethod]"
+    val paidLabel = if (isReprint) {
+        if (isBangla) "জমা করা হয়েছে [$methodDisplay]" else "AMOUNT PAID [$paymentMethod]"
+    } else {
+        if (isBangla) "আজকের জমা [$methodDisplay]" else "AMOUNT COLLECTED [$paymentMethod]"
+    }
     canvas.drawText(paidLabel, sidePad + 6f, boxTextY, boldPaint)
 
     boldPaint.textSize = if (is58) 17f else 22f
@@ -1791,9 +1804,14 @@ fun generateDueRepaymentJpeg(
     y = boxBottom + (if (is58) 26f else 34f)
 
     // Remaining Balance Row
+    val balanceLabel = if (isReprint) {
+        if (isBangla) "বর্তমান বাকি" else "Current Due"
+    } else {
+        if (isBangla) "অবশিষ্ট বাকি" else "Remaining Balance"
+    }
     boldPaint.textSize = if (is58) 16f else 21f
     boldPaint.textAlign = Paint.Align.LEFT
-    canvas.drawText(if (isBangla) "অবশিষ্ট বাকি" else "Remaining Balance", sidePad, y, boldPaint)
+    canvas.drawText(balanceLabel, sidePad, y, boldPaint)
     boldPaint.textAlign = Paint.Align.RIGHT
     canvas.drawText(remDueVal, width - sidePad, y, boldPaint)
     y += if (is58) 18f else 24f
