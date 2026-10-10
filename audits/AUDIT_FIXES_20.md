@@ -24,31 +24,31 @@ Suggested shape (one small new file plus a collector):
 
 ## P0: Crashes
 
-- [ ] **R20-01 HIGH Verified. Settings saves crash for anyone without `SYSTEM_SHOP_SETTINGS`.**
+- [x] **R20-01 HIGH Verified. Settings saves crash for anyone without `SYSTEM_SHOP_SETTINGS`.** (Fixed in `41ae6c0`, test: `testR20_01_saveInvoiceSettingsDataWithoutPermissionCatchesErrorAndEmitsToBus` in `SettingsViewModelCrashTest`).
   - `CartScreen.kt` about 2470 and 2485: the "item-by-item / summary only" FilterChips call `settingsViewModel.saveInvoiceSettingsData(...)`. Default cashiers and managers can see these chips.
   - VM about 3053: `saveInvoiceSettingsData` is a bare `viewModelScope.launch`. repo about 2316 calls `requirePermission(SYSTEM_SHOP_SETTINGS)`, which default cashiers and managers lack (`data/AppPermissions.kt` 94-110). Uncaught, so the app crashes.
   - Managers can open Settings (Navigation.kt about 551, 791, 1337 allow `isSupervisor`), so every toggle there (SettingsScreen about 4405-4431) crashes the same way. Also `saveShopInfo`, `saveInvoiceSettings`, `saveAutoBackup`, `resetFactoryDefaults`, `mergeDuplicateDueLedgers` (owner-only in repo about 2130, but the "Repair dues" row in SettingsScreen about 1251, 4456, 5433 has no owner check).
   - Fix: apply the shared fix to every `viewModelScope.launch` in `SettingsViewModel` (VM 2941 to 3431, 16 launches). Hide the two cart chips unless the user has `SYSTEM_SHOP_SETTINGS`. Hide or disable the Repair Dues row when `!isOwner`. See also R20-20 (Settings gate).
   - Test: unit or instrumented test that calls `saveInvoiceSettingsData` as a cashier session and asserts no crash and an error emitted.
 
-- [ ] **R20-02 HIGH Verified. Hold cart crashes when the user lacks `SALES_HOLD_CART`, and loses the cart.**
+- [x] **R20-02 HIGH Verified. Hold cart crashes when the user lacks `SALES_HOLD_CART`, and loses the cart.** (Fixed in `9764426`, test: `testR20_02_holdCurrentCartFailureRollsBackStateAndEmitsToErrorBus` in `CartViewModelHoldCrashTest`).
   - VM `holdCurrentCart` (about 717-787): it clears cart state first, then runs `launch(Dispatchers.IO) { repository.insertHeldCart(heldCart) }` with no try/catch. repo about 318 requires `SALES_HOLD_CART` of the signed-in user. CartScreen about 662-672 and 1023-1030 let a supervisor approve a hold for a cashier who lacks it, so the insert throws and the app crashes.
   - Also: the reset is partial. It does not reset `_paymentMethod`, `_cardType`, `_manualCashierName`, `_resolvedCustomer`, `_customerSuggestions`, `_isAutoFilledName` (compare `clearCart()` about 1264). After holding customer A's cart, the next walk-in sale shows A's store credit and starts in A's payment method.
   - Fix: do the same full reset as `clearCart()` (without `persistCartSnapshot`). Wrap the insert in try/catch (rethrow `CancellationException`); on failure, if the cart is still empty, restore `items`, discount, percent flag, price mode, customer name and phone, call `persistCartSnapshot(items)`, and report the error. Longer term, give a supervisor-approved hold a scoped override token, like `authorizeCreditLimitOverride`.
 
-- [ ] **R20-03 HIGH Reported. Loyalty, expense and dues writes crash on permission errors and show success anyway.**
+- [x] **R20-03 HIGH Reported. Loyalty, expense and dues writes crash on permission errors and show success anyway.** (Fixed in `518d6cf`, test: `LoyaltyExpenseDuesCrashTest`).
   - VM about 4362-4394: `LoyaltyViewModel.upsertMember`, `addPoints`, `redeemPoints`, `deactivateMember`, `deleteMember` use `launch(Dispatchers.IO)` with no catch. The repo methods (about 4932-4992) check `DUES_ADD_DUE`, but the Loyalty screen is gated by `LOYALTY_MANAGE` (Navigation.kt about 1387), so a user with only `LOYALTY_MANAGE` crashes the app on Add Points.
   - VM about 3961 `ExpenseViewModel.addExpense`: same; Expenses is gated by `isSupervisor` but the repo requires `EXPENSES_MANAGE`.
   - VM about 2882 `DuesViewModel.deleteCustomerDue`: bare launch; repo about 2078-2086 throws when the balance is above 0 or the row is archived.
   - `LoyaltyScreen.kt` about 260, 272, 301, 324 show success toasts before the result. `redeemPoints` returning `false` is ignored.
   - Fix: shared fix plus `Result` callbacks; toast only on success. Change the loyalty repo methods to check `AppPermissions.LOYALTY_MANAGE`.
 
-- [ ] **R20-04 HIGH Reported. Taking a product photo crashes if camera permission was never granted.**
+- [x] **R20-04 HIGH Reported. Taking a product photo crashes if camera permission was never granted.** (Fixed in `4b61513`).
   - `ui/dialogs/AddEditProductDialog.kt` about 799 calls `cameraLauncher.launch(null)` with no permission check. The manifest declares CAMERA, so `ACTION_IMAGE_CAPTURE` throws `SecurityException` until it is granted.
   - Fix: check `CAMERA` and request it with `rememberLauncherForActivityResult(RequestPermission())` before launching; wrap `launch` in try/catch.
   - Same family, not a crash: `ui/dialogs/ProductMediaDialogs.kt` about 111-160, the barcode scan dialog binds CameraX without a permission check and shows a black box. Request permission and show a rationale.
 
-- [ ] **R20-05 MED Reported. Receipt generation errors crash the app; double tap prints twice.**
+- [x] **R20-05 MED Reported. Receipt generation errors crash the app; double tap prints twice.** (Fixed in `559af8d`).
   - `utils/BillActions.kt` about 956: `printReceiptWithBluetoothFallback` no longer catches around `generateBillJpeg` (it did before 38720a3). It is called from `scope.launch` in `ui/dialogs/ReceiptSummaryDialog.kt` about 709 with no handler.
   - The Print button has no in-flight guard, so a double tap opens two RFCOMM connections; the second fails and in AUTO mode falls back to the system print dialog.
   - Fix: in the dialog add `var isPrinting by remember { mutableStateOf(false) }`, skip the click while true, set `enabled = !isPrinting`, wrap the call in try/catch (rethrow `CancellationException`, toast `R.string.print_error_message`), reset in `finally`. Optionally also add a process-wide `Mutex` in `sendToBluetoothPrinter` (`printer/BluetoothPrinterTransport.kt`).
@@ -57,110 +57,110 @@ Suggested shape (one small new file plus a collector):
 
 ## P1: Money, stock and data integrity
 
-- [ ] **R20-06 HIGH Verified. The %/৳ discount toggle bypasses the discount limit.**
+- [x] **R20-06 HIGH Verified. The %/৳ discount toggle bypasses the discount limit.** (Fixed in `a95f026`, test: `DiscountInputTest`).
   - `CartScreen.kt` about 1283: the trailing toggle calls `cartViewModel.toggleDiscountUnit()` (VM about 1256), which only flips the flag. The limit and supervisor check only run in the text field's `onValueChange` (about 1258-1278).
   - Scenario: cashier with a 10% limit types 50 in ৳ mode on a ৳1,000 bill (5%, allowed) and taps the toggle; the discount becomes 50%. Typing 100 then toggling gives 100%.
   - Fix: in the toggle's onClick set `discountInput = ""`, call `cartViewModel.setDiscountAmount(0.0)`, then toggle; the next entry re-runs the check. Also re-check the limit when the subtotal changes (removing items or changing price mode after a fixed ৳ discount raises its percentage).
 
-- [ ] **R20-07 HIGH Reported. Safe drops are counted as business expenses and lower net profit.**
+- [x] **R20-07 HIGH Reported. Safe drops are counted as business expenses and lower net profit.** (Fixed in `45d8778`, test: `MoneyFlowsTest`).
   - `RegisterCloseScreen.kt` about 1075-1082 saves a safe drop as `type = "EXPENSE", category = "Safe Drop"`.
   - VM `buildReport` (about 2071 and 2291, both `.filter { it.type == "EXPENSE" && it.category != "Supplier Payment" }`) and `SalesReportScreen.kt` about 186 count it as an expense. A ৳20,000 drop to the vault lowers Net Profit by ৳20,000 in the report, Z-report and CSV.
   - Fix: also exclude `category == "Safe Drop"` (case-insensitive in SalesReportScreen) in those three places. Keep it in the register `cashOut` (VM about 3878), which is correct. Better long term: a separate `type = "SAFE_DROP"` with a migration.
 
-- [ ] **R20-08 HIGH Verified. The Z-report shown right after "Close register" describes the new, empty shift.**
+- [x] **R20-08 HIGH Verified. The Z-report shown right after "Close register" describes the new, empty shift.** (Fixed in `4121358`, test: `MoneyFlowsTest`).
   - `RegisterCloseScreen.kt` about 1119-1145: `onConfirmClose` calls `closeRegister`, which (repo about 4909) writes a new shift state (`startedAt = now`). That changes `shiftStart`, so the `LaunchedEffect` rebuilds `report` for an empty shift and `rangeLabel` changes. `onSuccess` then opens the Z dialog (about 1211), which reads the new `report`. The printed "DAILY CLOSING Z-REPORT" shows 0 sales.
   - Fix: add `var closedShiftZReport by remember { mutableStateOf<Pair<SalesReportData, String>?>(null) }`. In `onConfirmClose` capture `report?.let { it to rangeLabel }` before calling `closeRegister`, and store it in `onSuccess`. The Z dialog, its print/save, and the share-format dialog (about 1256) use `closedShiftZReport ?: report?.let { it to rangeLabel }`. Clear it when both dialogs are dismissed.
 
-- [ ] **R20-09 HIGH Verified. Printing or reprinting any receipt opens the cash drawer.**
+- [x] **R20-09 HIGH Verified. Printing or reprinting any receipt opens the cash drawer.** (Fixed in `559af8d`).
   - `utils/BillActions.kt` about 965 passes `kickDrawer = settings.cashDrawerKickEnabled`. The only caller is `ReceiptSummaryDialog.kt` about 714, which is also used for reprints from Sales History. Checkout already kicks the drawer for Cash and Split sales (`CartScreen.kt` about 575).
   - Fix: pass `kickDrawer = false` there.
 
-- [ ] **R20-10 HIGH Reported. One invoice shows three different profit figures.**
+- [x] **R20-10 HIGH Reported. One invoice shows three different profit figures.** (Fixed in `41331c1` and `b6e2d4a`, test: `MoneyFlowsTest`).
   - Sales History rows use `calculateInvoiceProfit` (VM about 1882); the invoice detail uses `OwnerProfitAnalyticsContent` (`ui/components/OwnerProfitAnalyticsComponents.kt` about 62-108); the report uses `buildReport`.
   - Owner view: counts tax as profit (`bill.subtotal`), uses a fixed 75% cost fallback instead of `defaultCostPercentage`, matches returns by name not barcode, subtracts refunds including tax, estimates reversed cost as `refund * 0.75`.
   - `calculateInvoiceProfit`: ignores the loyalty discount; for tax-exclusive sales subtracts refunds including tax (`refundTaxRatio = 1.0`, about 1936).
   - Fix: make `calculateInvoiceProfit` the single source (subtract `loyaltyPointsRedeemed * pointValue`, strip tax from refunds as `buildReport` does) and pass its result into `OwnerProfitAnalyticsContent`.
   - Test: one invoice with tax, discount, loyalty and a partial return; assert all three views agree.
 
-- [ ] **R20-11 HIGH Reported. Excel import does not lowercase barcodes.**
+- [x] **R20-11 HIGH Reported. Excel import does not lowercase barcodes.** (Fixed in `929f92f`, test: `ProductValidationTest`).
   - `utils/ExcelHelper.kt` about 342; repo `upsertProducts` about 3779-3805. Other write paths lowercase, and the R-6 lookup assumes it.
   - Existing product: sheet "ABC-1", stored "abc-1"; lookup finds it but `updateProduct(p.copy(...))` keeps key "ABC-1", so `@Update` matches 0 rows while the toast reports success.
   - New product: inserted as "ABC-1", never found by scanner or cart; the user adds it again and gets a duplicate.
   - Fix: normalise with `toEnglishDigits(trim).lowercase()` in `upsertProducts`; update with `p.copy(barcode = existing.barcode, createdAt = existing.createdAt, ...)`.
 
-- [ ] **R20-12 HIGH Reported. Excel import's leading-zero guess rewrites real barcodes.**
+- [x] **R20-12 HIGH Reported. Excel import's leading-zero guess rewrites real barcodes.** (Fixed in `929f92f`, test: `ProductValidationTest`).
   - `ExcelHelper.kt` about 59-70, applied to every string and numeric cell (about 76-81). Every valid 12-digit UPC-A passes `isValidEan13WithLeadingZero`, so "036000291452" becomes "0036000291452" after export then import, creating a duplicate. 10-digit codes starting with "1" are treated as phone numbers.
   - Fix: never apply it to string cells. For numeric cells use `DataFormatter`, and only consider the leading-zero rule for the barcode column.
 
-- [ ] **R20-13 HIGH Reported. Excel import silently zeroes stock, writes no audit row and hides row errors.**
+- [x] **R20-13 HIGH Reported. Excel import silently zeroes stock, writes no audit row and hides row errors.** (Fixed in `929f92f`, test: `ProductValidationTest`).
   - `ExcelHelper.kt` about 354, 365: unparseable values ("12 pcs", "N/A", Bengali "১০") become 0 and overwrite stock. `upsertProducts` writes no `InventoryAdjustment`. `ProductsScreen.kt` about 349 shows only "Imported N"; `failCount` and `failures` are never shown. No preview before overwriting.
   - Fix: run `toEnglishDigits` in `parseDouble`; treat non-blank unparseable stock or price as a row failure; insert an `InventoryAdjustment` (reason "Import") when stock changes; show failures in a result dialog; add a confirmation ("N new, M updated, K stock changes").
   - Related: `ExcelHelper.kt` about 76-84 never uses `DateUtil.isCellDateFormatted`, so expiry dates import as serial numbers like "46387" and expiry alerts never fire. Format date cells as `dd/MM/yyyy` and reject unparseable expiry values.
 
-- [ ] **R20-14 MED Verified. The "Exact" cash chip ignores store credit.**
+- [x] **R20-14 MED Verified. The "Exact" cash chip ignores store credit.** (Fixed in `a95f026`, test: `DiscountCalculationTest`).
   - `CartScreen.kt` about 2078: `val exactAmt = grandTotal`. With a ৳300 bill and ৳100 store credit, Exact fills ৳300 and shows ৳100 change. `remainingAfterSC` is already computed at about 2066.
   - Fix: `val exactAmt = remainingAfterSC`.
 
-- [ ] **R20-15 MED Verified. The cart summary card shows the raw discount input, not the discount amount.**
+- [x] **R20-15 MED Verified. The cart summary card shows the raw discount input, not the discount amount.** (Fixed in `a95f026`, test: `DiscountCalculationTest`).
   - `CartScreen.kt` about 1011 passes `discountAmount` (for example `10` meaning 10%) to `CartTotalSummaryCard`. 10% off ৳500 shows "-৳10" while the total uses ৳50.
   - Fix: pass `discountVal` (collected at about 319).
 
-- [ ] **R20-16 MED Verified. Store credit applied for one customer is charged to another.**
+- [x] **R20-16 MED Verified. Store credit applied for one customer is charged to another.** (Fixed in `442eb1a`, test: `MoneyFlowsTest`).
   - VM `onCustomerPhoneChanged` (about 455), `selectCustomerSuggestion` (about 520) and `clearCustomerDetails` (about 526) never reset `_storeCreditApplied`. Apply ৳500 of A's credit, change the phone to B, and checkout takes ৳500 from B. Clearing the phone makes the sale fail.
   - Fix: when the trimmed phone actually changes (note `refreshResolvedCustomer` calls `onCustomerPhoneChanged` with the same phone) and `_redeemedVoucher.value == null`, set `_storeCreditApplied.value = 0.0`. Same in the other two functions.
 
-- [ ] **R20-17 MED Reported. Store credit, loyalty and voucher amounts are not re-capped when the total drops.**
+- [x] **R20-17 MED Reported. Store credit, loyalty and voucher amounts are not re-capped when the total drops.** (Fixed in `442eb1a`, test: `MoneyFlowsTest`).
   - `storeCreditApplied` is never re-capped after a later discount, price-mode change or removed line (`CartScreen.kt` about 537-541, 582-584, 620-624; VM about 393-396). The receipt shows ৳500 credit on a ৳300 bill and prints the voucher's remaining balance too low (the database is correct).
   - `loyaltyDiscount` is fixed when redeemed (VM about 548-564); if the cart shrinks it can exceed `maxBillPercentPayable` and the repo rejects the sale.
   - `restoreHeldCart` (about 897-921): an expired or used-up voucher leaves the cap at `Double.MAX_VALUE`, so the full credit is restored without a voucher. `restoreCartSnapshot` (about 1109) restores it with no check.
   - Fix: re-clamp both in a `combine` on subtotal, discount and tax (or at snapshot time with `min(value, grandTotal)`). On restore with an invalid voucher, set credit to 0 and tell the cashier.
 
-- [ ] **R20-18 MED Reported. Edit dialog logs stock decreases as "Restock"; clearing the stock field sets it to 0.**
+- [x] **R20-18 MED Reported. Edit dialog logs stock decreases as "Restock"; clearing the stock field sets it to 0.** (Fixed in `1d66e41`, test: `ProductValidationTest`).
   - `AddEditProductDialog.kt` about 173 defaults `editStockReason` to "Restock" and about 275 always passes it, so the fallback in `ProductsScreen.kt` about 2799 never runs. `stockAltered` requires a parseable value, so an empty field hides the reason panel but saves 0.
   - Fix: default the reason to null and require one when stock changes; treat a blank stock field as unchanged in edit mode.
 
-- [ ] **R20-19 MED Reported. Stock-adjustment reasons are stored in the UI language.**
+- [x] **R20-19 MED Reported. Stock-adjustment reasons are stored in the UI language.** (Fixed in `1d66e41`, test: `ProductValidationTest`).
   - `ProductsScreen.kt` about 2709, 2799, 2838 store `context.getString(R.string.products_reason_restock)` etc.; about 3374 uses `stringArrayResource(R.array.stock_adjustment_reasons)`. In Bangla the DB stores "পুনরায় মজুদ", so `StockAuditDialogs.kt` about 49 (filter by "Restock") and about 200 (badge colour) fail.
   - Fix: store canonical English keys; show labels via `localizedAdjustmentReasonLabel`.
 
-- [ ] **R20-19b MED Reported. Bulk price change does not update `discountedPrice`, so the next edit undoes it.** repo about 3808-3825 updates only `sellingPrice`; the edit form prefills from `discountedPrice` (`ProductsScreen.kt` about 2731). Fix: also set `discountedPrice = newPrice` when it is above 0.
+- [x] **R20-19b MED Reported. Bulk price change does not update `discountedPrice`, so the next edit undoes it.** (Fixed in `929f92f`, test: `ProductValidationTest`). repo about 3808-3825 updates only `sellingPrice`; the edit form prefills from `discountedPrice` (`ProductsScreen.kt` about 2731). Fix: also set `discountedPrice = newPrice` when it is above 0.
 
-- [ ] **R20-19c MED Reported. Editing or importing a product overwrites `createdAt`.** `ProductsScreen.kt` about 2774 builds `Product(...)` without `createdAt`; repo about 3786 does not keep `existing.createdAt`. Fix: copy the existing value. Then a "Newest" sort (`ProductSortOption`, about 167) becomes possible.
+- [x] **R20-19c MED Reported. Editing or importing a product overwrites `createdAt`.** (Fixed in `929f92f`, test: `ProductValidationTest`). `ProductsScreen.kt` about 2774 builds `Product(...)` without `createdAt`; repo about 3786 does not keep `existing.createdAt`. Fix: copy the existing value. Then a "Newest" sort (`ProductSortOption`, about 167) becomes possible.
 
-- [ ] **R20-19d MED Reported. Selling price can be higher than MRP.** `AddEditProductDialog.kt` about 228-262 has no check. Fix: block saving or confirm when `mPrice > 0 && dPrice > mPrice`.
+- [x] **R20-19d MED Reported. Selling price can be higher than MRP.** (Fixed in `1d66e41`, test: `ProductValidationTest`). `AddEditProductDialog.kt` about 228-262 has no check. Fix: block saving or confirm when `mPrice > 0 && dPrice > mPrice`.
 
-- [ ] **R20-19e MED Reported. Counted cash in the close dialog drops decimals; invalid input closes with ৳0; failure leaves the dialog stuck.**
+- [x] **R20-19e MED Reported. Counted cash in the close dialog drops decimals; invalid input closes with ৳0; failure leaves the dialog stuck.** (Fixed in `4121358`, test: `MoneyFlowsTest`).
   - `RegisterCloseScreen.kt` about 2334: `initialCountedCash.toInt().toString()` turns 1234.50 into "1234" and shows a ৳0.50 shortage.
   - About 2339: `actualCashText.toDoubleOrNull() ?: 0.0` lets a blank field submit as 0.
   - `isSubmitting` is never reset on failure (about 2491); Confirm and Cancel stay disabled. There is one caller (about 1114).
   - Fix: format with decimals (trim trailing zeros); disable Confirm when the text does not parse; add a failure callback parameter to `onConfirmClose` that resets `isSubmitting`.
 
-- [ ] **R20-19f MED Reported. Supplier "Pay Due" can be submitted twice.** `SuppliersScreen.kt` about 1272-1290 has no in-flight guard; a double tap records two payments and two expenses. Fix: `isSaving` flag as in `RecordPaymentDialog`.
+- [x] **R20-19f MED Reported. Supplier "Pay Due" can be submitted twice.** (Fixed in `eb400cb`, test: `MoneyFlowsTest`). `SuppliersScreen.kt` about 1272-1290 has no in-flight guard; a double tap records two payments and two expenses. Fix: `isSaving` flag as in `RecordPaymentDialog`.
 
-- [ ] **R20-19g HIGH Reported. "Supplier Payment" expenses break the books.**
+- [x] **R20-19g HIGH Reported. "Supplier Payment" expenses break the books.** (Fixed in `eb400cb`, test: `MoneyFlowsTest`).
   - `ui/components/AdvancedPosFeatures.kt` about 1224 offers "Supplier Payment" as a manual expense category. VM about 3838 and `RegisterCloseScreen.kt` about 202 drop that category from `cashOut`, assuming a `SupplierPayment` row exists. A manual one never reduces drawer cash or the supplier's due.
   - Deleting the auto-created expense (`ExpensesScreen.kt` about 434, repo about 4662) leaves the supplier payment; re-categorising it counts it twice.
   - Fix: remove the category from the manual list (or route it to `recordSupplierPayment`); make auto-generated supplier expenses read-only.
 
-- [ ] **R20-19h HIGH Reported. Dues Audit History lists due sales twice and ages debts wrongly.**
+- [x] **R20-19h HIGH Reported. Dues Audit History lists due sales twice and ages debts wrongly.** (Fixed in `ec65f52`, test: `MoneyFlowsTest`).
   - VM `allDuesAuditEntries` (about 2566-2631) adds a CREDIT_SALE entry from sales and a MANUAL_DUE entry from the `DueCharge(reason="Sale")` row that repo about 1197 now writes for each due sale. It also uses `grandTotal` instead of `grandTotal - amountPaid`. `customerDebtOriginTimestamps` (about 2636-2680) double counts the same way, so customers move into 30+ day overdue too early (`DuesScreen.kt` about 866-876).
   - Fix: build credit-sale entries from `DueCharge` rows with `reason == "Sale"`; use sales only for legacy sales with no charge row; exclude Sale charges from MANUAL_DUE and from aging.
 
-- [ ] **R20-19i MED Reported. Deleting a charge clamps the balance to 0 and loses the overpayment.** repo about 2048-2066 `(outstanding - charge.amount).coerceAtLeast(0.0)`. Fix: move the excess to store credit with a ledger row, or block the delete until payments are reversed.
+- [x] **R20-19i MED Reported. Deleting a charge clamps the balance to 0 and loses the overpayment.** (Fixed in `ec65f52`, test: `MoneyFlowsTest`). repo about 2048-2066 `(outstanding - charge.amount).coerceAtLeast(0.0)`. Fix: move the excess to store credit with a ledger row, or block the delete until payments are reversed.
 
-- [ ] **R20-19j MED Reported. "Add customer" with an existing phone silently overwrites that customer.** `CustomersScreen.kt` about 813-835 then VM about 4936-4947. Fix: in add mode, if the normalised phone exists, show an error or the merge prompt.
+- [x] **R20-19j MED Reported. "Add customer" with an existing phone silently overwrites that customer.** (Fixed in `ec65f52`, test: `MoneyFlowsTest`). `CustomersScreen.kt` about 813-835 then VM about 4936-4947. Fix: in add mode, if the normalised phone exists, show an error or the merge prompt.
 
-- [ ] **R20-19k MED Reported. Report totals disagree with each other.**
+- [x] **R20-19k MED Reported. Report totals disagree with each other.** (Fixed in `ec65f52`, test: `MoneyFlowsTest`).
   - `SalesReportScreen.kt` about 542 vs 872: header net profit subtracts discounts and loyalty; the Overview card's `netOperatingProfit` does not. The two expense filters also differ (any non-`CASH_IN` vs `type == "EXPENSE"`).
   - `SalesHistoryScreen.kt` about 259-264: header profit with a filter active still subtracts all returns in the range (VM about 2047).
   - VM about 2222-2250: returns, due collections and expenses on days, hours or products with no sales are dropped from the breakdowns (`?: return@forEach`) but still counted in the totals.
   - Fix: use `data.netProfit` everywhere with one expense filter in the VM; when `sourceList` is passed, keep only returns whose `saleId` is in it; create missing breakdown entries instead of skipping.
 
-- [ ] **R20-19l MED Reported. Custom date range shifts one day earlier in UTC+6.** `SalesReportScreen.kt` about 320-323, 491-500 and `SalesHistoryScreen.kt` about 977-985 pass local-midnight millis to `DatePicker`, which reads UTC. Fix: convert local Y/M/D to UTC midnight for `initialSelectedDateMillis`, and back to local midnight on confirm.
+- [x] **R20-19l MED Reported. Custom date range shifts one day earlier in UTC+6.** (Fixed in `ec65f52`, test: `MoneyFlowsTest`). `SalesReportScreen.kt` about 320-323, 491-500 and `SalesHistoryScreen.kt` about 977-985 pass local-midnight millis to `DatePicker`, which reads UTC. Fix: convert local Y/M/D to UTC midnight for `initialSelectedDateMillis`, and back to local midnight on confirm.
 
-- [ ] **R20-19m MED Reported. Reprinted repayment receipts show today's balance as "Remaining Due".** `DuesScreen.kt` about 469-478 and 6194, 6210. Fix: store `balanceAfter` on `DuePayment`, or replay the ledger, or relabel as "Current Due".
+- [x] **R20-19m MED Reported. Reprinted repayment receipts show today's balance as "Remaining Due".** (Fixed in `ec65f52`, test: `MoneyFlowsTest`). `DuesScreen.kt` about 469-478 and 6194, 6210. Fix: store `balanceAfter` on `DuePayment`, or replay the ledger, or relabel as "Current Due".
 
-- [ ] **R20-19n LOW Reported. Bank refunds are left out of register digital refunds.** `RegisterCloseScreen.kt` about 222: the `startsWith` list (MFS, Card, bKash, Nagad, Rocket) lacks "Bank", which `ReturnDialog.kt` about 103 offers and stores as the refund method. Fix: add `method.startsWith("Bank")` or test against `REGISTER_CLOSE_DIGITAL_METHODS`.
+- [x] **R20-19n LOW Reported. Bank refunds are left out of register digital refunds.** (Fixed in `4121358`, test: `MoneyFlowsTest`). `RegisterCloseScreen.kt` about 222: the `startsWith` list (MFS, Card, bKash, Nagad, Rocket) lacks "Bank", which `ReturnDialog.kt` about 103 offers and stores as the refund method. Fix: add `method.startsWith("Bank")` or test against `REGISTER_CLOSE_DIGITAL_METHODS`.
 
 ---
 
