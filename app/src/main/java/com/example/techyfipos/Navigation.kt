@@ -314,6 +314,14 @@ fun MainNavigation() {
         val ownerOnlyDuesText = stringResource(R.string.owner_only_dues)
         val backStack = rememberNavBackStack(Splash)
         val scope = rememberCoroutineScope()
+        val localizedContext = LocalContext.current
+
+        LaunchedEffect(Unit) {
+            com.example.techyfipos.utils.RepositoryErrorBus.errors.collect { error ->
+                val msg = com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(localizedContext, error)
+                android.widget.Toast.makeText(localizedContext, msg, android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
 
         val scannerViewModel: ScannerViewModel = viewModel(factory = factory)
         val cartViewModel: CartViewModel = viewModel(factory = factory)

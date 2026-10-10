@@ -3015,81 +3015,81 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     val isLoadingBackups: StateFlow<Boolean> = _isLoadingBackups.asStateFlow()
 
     fun saveLanguage(lang: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveLanguage(lang)
         }
     }
 
     fun saveThemeMode(mode: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveThemeMode(mode)
         }
     }
 
     fun saveUiLayoutMode(mode: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveUiLayoutMode(mode)
         }
     }
 
     fun saveDefaultCostPercentage(percentage: Double) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveDefaultCostPercentage(percentage)
         }
     }
 
     fun saveShopInfo(name: String, address: String, phone: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveShopInfo(name, address, phone)
         }
     }
 
     fun saveInvoiceSettings(logoUri: String, facebookUrl: String, qrCodeInfo: String, cashierName: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveInvoiceSettings(logoUri, facebookUrl, qrCodeInfo, cashierName)
         }
     }
 
     fun saveInvoiceSettingsData(settings: com.example.techyfipos.data.InvoiceSettingsData) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveInvoiceSettingsData(settings)
         }
     }
 
     fun saveQuickSalePresets(presets: List<com.example.techyfipos.data.QuickSalePreset>) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveQuickSalePresets(presets)
         }
     }
 
     fun saveDueReminderTemplates(templates: List<com.example.techyfipos.data.DueTemplate>) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveDueReminderTemplates(templates)
         }
     }
 
     fun resetFactoryDefaults(onComplete: () -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.resetFactoryDefaults()
             onComplete()
         }
     }
 
     fun previewDuplicateDueLedgers(onResult: (List<DataRepository.DuplicateDueLedgerGroup>) -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             onResult(repository.previewDuplicatePhoneDueLedgers())
         }
     }
 
     fun mergeDuplicateDueLedgers(onComplete: (Int) -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             val merged = repository.mergeDuplicatePhoneDueLedgers()
             onComplete(merged)
         }
     }
 
     fun saveAutoBackup(enabled: Boolean, frequency: String, context: Context) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveAutoBackup(enabled, frequency)
             val netPolicy = repository.driveNetworkPolicyFlow.first()
             com.example.techyfipos.utils.AutoBackupScheduler.scheduleDriveBackup(
@@ -3112,7 +3112,7 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
         retentionCount: Int,
         context: Context
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveAutoBackup(enabled, frequency)
             repository.saveDriveNetworkPolicy(networkPolicy)
             repository.saveDriveRetentionCount(retentionCount)
@@ -3127,7 +3127,7 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun saveLocalAutoBackup(enabled: Boolean, frequency: String, context: Context) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveLocalAutoBackup(enabled, frequency)
             com.example.techyfipos.utils.AutoBackupScheduler.scheduleLocalBackup(context, enabled, frequency, forceUpdate = true)
             if (enabled) {
@@ -3258,7 +3258,7 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
 
     // Google Drive Actions
     fun fetchDriveBackups(driveService: com.google.api.services.drive.Drive) {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO + com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             _isLoadingBackups.value = true
             val list = com.example.techyfipos.utils.GoogleDriveHelper.listBackups(driveService)
             _driveBackups.value = list

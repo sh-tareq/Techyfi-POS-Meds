@@ -313,7 +313,8 @@ private fun OptimizedSettingsHome(
     onTransferClick: () -> Unit,
     onAboutClick: () -> Unit,
     onResetClick: () -> Unit,
-    onRepairDuesClick: () -> Unit = {}
+    onRepairDuesClick: () -> Unit = {},
+    isOwner: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1284,40 +1285,42 @@ private fun OptimizedSettingsHome(
     }
 
     SettingsSectionLabel(stringResource(R.string.settings_section_danger_zone), color = MaterialTheme.colorScheme.error)
-    Card(
-        onClick = onRepairDuesClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.35f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+    if (isOwner) {
+        Card(
+            onClick = onRepairDuesClick,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.35f))
         ) {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Realistic3DResetWarningIcon(size = 36.dp)
-                Column {
-                    Text(
-                        stringResource(R.string.settings_repair_dues_title),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 14.sp
-                    )
-                    Text(
-                        stringResource(R.string.settings_repair_dues_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Realistic3DResetWarningIcon(size = 36.dp)
+                    Column {
+                        Text(
+                            stringResource(R.string.settings_repair_dues_title),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            stringResource(R.string.settings_repair_dues_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                        )
+                    }
                 }
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.error)
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.error)
         }
     }
 
@@ -4491,12 +4494,17 @@ fun SettingsScreen(
                         }
                     },
                     onRepairDuesClick = {
-                        isCheckingDuplicateLedgers = true
-                        settingsViewModel.previewDuplicateDueLedgers { groups ->
-                            isCheckingDuplicateLedgers = false
-                            duplicateLedgerGroups = groups
+                        if (isOwner) {
+                            isCheckingDuplicateLedgers = true
+                            settingsViewModel.previewDuplicateDueLedgers { groups ->
+                                isCheckingDuplicateLedgers = false
+                                duplicateLedgerGroups = groups
+                            }
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
                         }
-                    }
+                    },
+                    isOwner = isOwner
                 )
                 SettingsPage.RECEIPT -> OptimizedReceiptOverview(
                     settings = currentSettings,

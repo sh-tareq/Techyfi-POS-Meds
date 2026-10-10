@@ -301,6 +301,7 @@ fun CartScreen(
     val canSell = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_SELL)
     val canHoldCart = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_HOLD_CART)
     val canChangePriceTier = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_PRICE_TIER)
+    val canEditShopSettings = isOwner || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
     val maxDiscountAllowed: Double = if (isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_HIGH_DISCOUNT)) 100.0 else userDiscountLimit
     val isCompletingSale by cartViewModel.isCompletingSale.collectAsStateWithLifecycle()
 
@@ -2458,41 +2459,43 @@ fun CartScreen(
                                         Text(stringResource(R.string.cart_savings_with_pct, formatTaka(totalSavings), pctStr), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = Color(0xFF15803D))
                                     }
 
-                                    // Switch between item-by-item discount and summary only
-                                    Spacer(Modifier.height(4.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        FilterChip(
-                                            selected = isItemWise,
-                                            onClick = {
-                                                settingsViewModel.saveInvoiceSettingsData(invoiceSettingsData.copy(showItemWiseMrpDiscount = true))
-                                            },
-                                            label = { Text(stringResource(R.string.cart_item_by_item_switch), fontSize = 11.sp, fontWeight = if (isItemWise) FontWeight.Bold else FontWeight.Normal) },
-                                            leadingIcon = if (isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
-                                            colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor = Color(0xFF16A34A),
-                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
-                                            ),
-                                            modifier = Modifier.weight(1f)
-                                        )
+                                    if (canEditShopSettings) {
+                                        // Switch between item-by-item discount and summary only
+                                        Spacer(Modifier.height(4.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            FilterChip(
+                                                selected = isItemWise,
+                                                onClick = {
+                                                    settingsViewModel.saveInvoiceSettingsData(invoiceSettingsData.copy(showItemWiseMrpDiscount = true))
+                                                },
+                                                label = { Text(stringResource(R.string.cart_item_by_item_switch), fontSize = 11.sp, fontWeight = if (isItemWise) FontWeight.Bold else FontWeight.Normal) },
+                                                leadingIcon = if (isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
+                                                colors = FilterChipDefaults.filterChipColors(
+                                                    selectedContainerColor = Color(0xFF16A34A),
+                                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                                                ),
+                                                modifier = Modifier.weight(1f)
+                                            )
 
-                                        FilterChip(
-                                            selected = !isItemWise,
-                                            onClick = {
-                                                settingsViewModel.saveInvoiceSettingsData(invoiceSettingsData.copy(showItemWiseMrpDiscount = false))
-                                            },
-                                            label = { Text(stringResource(R.string.cart_summary_only_switch), fontSize = 11.sp, fontWeight = if (!isItemWise) FontWeight.Bold else FontWeight.Normal) },
-                                            leadingIcon = if (!isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
-                                            colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor = Color(0xFF16A34A),
-                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
-                                            ),
-                                            modifier = Modifier.weight(1f)
-                                        )
+                                            FilterChip(
+                                                selected = !isItemWise,
+                                                onClick = {
+                                                    settingsViewModel.saveInvoiceSettingsData(invoiceSettingsData.copy(showItemWiseMrpDiscount = false))
+                                                },
+                                                label = { Text(stringResource(R.string.cart_summary_only_switch), fontSize = 11.sp, fontWeight = if (!isItemWise) FontWeight.Bold else FontWeight.Normal) },
+                                                leadingIcon = if (!isItemWise) { { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) } } else null,
+                                                colors = FilterChipDefaults.filterChipColors(
+                                                    selectedContainerColor = Color(0xFF16A34A),
+                                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                                                ),
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
                                     }
                                 }
                             }
