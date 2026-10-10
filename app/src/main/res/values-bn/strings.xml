@@ -1493,6 +1493,7 @@
     <string name="loyalty_member_deleted">সদস্য মুছে ফেলা হয়েছে</string>
     <string name="scanner_torch_toggle_cd">টর্চ পরিবর্তন করুন</string>
     <string name="camera_permission_required">বারকোড স্ক্যান করতে ক্যামেরা অনুমতির প্রয়োজন।</string>
+    <string name="camera_permission_photo_required">পণ্যের ছবি তোলার জন্য ক্যামেরার অনুমতি প্রয়োজন।</string>
     <string name="grant_permission">অনুমতি দিন</string>
     <string name="loyalty_members_count">%1$d জন সদস্য</string>
     <string name="loyalty_show_all_history">সব দেখুন</string>

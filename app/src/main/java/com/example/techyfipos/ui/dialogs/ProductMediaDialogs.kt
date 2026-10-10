@@ -48,6 +48,27 @@ fun ProductBarcodeScanDialog(
     val scope = rememberCoroutineScope()
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.CAMERA
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val cameraPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasCameraPermission = granted
+    }
+
+    LaunchedEffect(Unit) {
+        if (!hasCameraPermission) {
+            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
@@ -101,74 +122,107 @@ fun ProductBarcodeScanDialog(
                         .background(Color.Black),
                     contentAlignment = Alignment.Center
                 ) {
-                    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
-                    DisposableEffect(Unit) {
-                        onDispose {
-                            cameraExecutor.shutdown()
+                    if (hasCameraPermission) {
+                        val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+                        DisposableEffect(Unit) {
+                            onDispose {
+                                cameraExecutor.shutdown()
+                            }
+                        }
+
+                        AndroidView(
+                            factory = { ctx ->
+                                val previewView = PreviewView(ctx).apply {
+                                    scaleType = PreviewView.ScaleType.FILL_CENTER
+                                }
+                                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                                cameraProviderFuture.addListener({
+                                    try {
+                                        val cameraProvider = cameraProviderFuture.get()
+                                        val preview = androidx.camera.core.Preview.Builder().build().apply {
+                                            setSurfaceProvider(previewView.surfaceProvider)
+                                        }
+                                        val imageAnalysis = ImageAnalysis.Builder()
+                                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                            .setResolutionSelector(
+                                                ResolutionSelector.Builder()
+                                                    .setResolutionStrategy(
+                                                        ResolutionStrategy(
+                                                            android.util.Size(1280, 720),
+                                                            ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                                                        )
+                                                    )
+                                                    .build()
+                                            )
+                                            .build()
+
+                                        imageAnalysis.setAnalyzer(
+                                            cameraExecutor,
+                                            BarcodeAnalyzer(
+                                                getPreviewSize = { android.util.Size(previewView.width, previewView.height) },
+                                                onBarcodeDetected = { barcode ->
+                                                    if (barcode.isNotBlank()) {
+                                                        beepAndVibrate(ctx)
+                                                        onBarcodeScanned(barcode)
+                                                    }
+                                                }
+                                            )
+                                        )
+
+                                        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                                        cameraProvider.unbindAll()
+                                        cameraProvider.bindToLifecycle(
+                                            lifecycleOwner,
+                                            cameraSelector,
+                                            preview,
+                                            imageAnalysis
+                                        )
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }, ContextCompat.getMainExecutor(ctx))
+                                previewView
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .size(width = 240.dp, height = 120.dp)
+                                .border(2.dp, Color(0xFF10B981), RoundedCornerShape(12.dp))
+                        )
+                    } else {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = null,
+                                tint = Color.LightGray,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = stringResource(R.string.camera_permission_required),
+                                color = Color.White,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = { cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                            ) {
+                                Text(
+                                    stringResource(R.string.grant_permission),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
-
-                    AndroidView(
-                        factory = { ctx ->
-                            val previewView = PreviewView(ctx).apply {
-                                scaleType = PreviewView.ScaleType.FILL_CENTER
-                            }
-                            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-                            cameraProviderFuture.addListener({
-                                try {
-                                    val cameraProvider = cameraProviderFuture.get()
-                                    val preview = androidx.camera.core.Preview.Builder().build().apply {
-                                        setSurfaceProvider(previewView.surfaceProvider)
-                                    }
-                                    val imageAnalysis = ImageAnalysis.Builder()
-                                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                                        .setResolutionSelector(
-                                            ResolutionSelector.Builder()
-                                                .setResolutionStrategy(
-                                                    ResolutionStrategy(
-                                                        android.util.Size(1280, 720),
-                                                        ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
-                                                    )
-                                                )
-                                                .build()
-                                        )
-                                        .build()
-
-                                    imageAnalysis.setAnalyzer(
-                                        cameraExecutor,
-                                        BarcodeAnalyzer(
-                                            getPreviewSize = { android.util.Size(previewView.width, previewView.height) },
-                                            onBarcodeDetected = { barcode ->
-                                                if (barcode.isNotBlank()) {
-                                                    beepAndVibrate(ctx)
-                                                    onBarcodeScanned(barcode)
-                                                }
-                                            }
-                                        )
-                                    )
-
-                                    val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-                                    cameraProvider.unbindAll()
-                                    cameraProvider.bindToLifecycle(
-                                        lifecycleOwner,
-                                        cameraSelector,
-                                        preview,
-                                        imageAnalysis
-                                    )
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            }, ContextCompat.getMainExecutor(ctx))
-                            previewView
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .size(width = 240.dp, height = 120.dp)
-                            .border(2.dp, Color(0xFF10B981), RoundedCornerShape(12.dp))
-                    )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))

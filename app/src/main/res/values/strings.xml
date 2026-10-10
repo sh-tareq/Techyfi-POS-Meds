@@ -1497,6 +1497,7 @@
     <string name="loyalty_member_deleted">Member removed</string>
     <string name="scanner_torch_toggle_cd">Toggle flashlight</string>
     <string name="camera_permission_required">Camera permission is required to scan barcodes.</string>
+    <string name="camera_permission_photo_required">Camera permission is required to take product photos.</string>
     <string name="grant_permission">Grant Permission</string>
     <string name="loyalty_members_count">%1$d Members</string>
     <string name="loyalty_show_all_history">Show All</string>

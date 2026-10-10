@@ -217,6 +217,20 @@ fun AddEditProductDialog(
         }
     }
 
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            try {
+                cameraLauncher.launch(null)
+            } catch (e: Exception) {
+                Toast.makeText(context, context.getString(R.string.camera_permission_photo_required), Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(context, context.getString(R.string.camera_permission_photo_required), Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val submitProduct = {
         if (!isSaving) {
         val pPrice = purchasePrice.toDoubleOrNull() ?: 0.0
@@ -796,7 +810,21 @@ fun AddEditProductDialog(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         OutlinedButton(
-                                            onClick = { cameraLauncher.launch(null) },
+                                            onClick = {
+                                                val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                                                    context,
+                                                    android.Manifest.permission.CAMERA
+                                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                                if (hasPermission) {
+                                                    try {
+                                                        cameraLauncher.launch(null)
+                                                    } catch (e: Exception) {
+                                                        Toast.makeText(context, context.getString(R.string.camera_permission_photo_required), Toast.LENGTH_SHORT).show()
+                                                    }
+                                                } else {
+                                                    cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                                                }
+                                            },
                                             shape = RoundedCornerShape(8.dp),
                                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                                             modifier = Modifier
