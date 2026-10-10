@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.techyfipos.R
 import com.example.techyfipos.data.db.Supplier
+import com.example.techyfipos.data.db.PurchaseInvoice
+import com.example.techyfipos.data.db.SupplierPayment
 import com.example.techyfipos.ui.components.InwardStockDialog
 import com.example.techyfipos.ui.components.SupplierCard
 import com.example.techyfipos.ui.components.Realistic3DSupplierWarehouseIcon
@@ -117,6 +119,9 @@ fun SuppliersScreen(
     var selectedSupplierForInflow by remember { mutableStateOf<Supplier?>(null) }
     var showSupplierPickerForInflow by remember { mutableStateOf(false) }
     var selectedSupplierForPayDue by remember { mutableStateOf<Supplier?>(null) }
+    var selectedSupplierForDetail by remember { mutableStateOf<Supplier?>(null) }
+    var invoiceToVoid by remember { mutableStateOf<PurchaseInvoice?>(null) }
+    var paymentToVoid by remember { mutableStateOf<SupplierPayment?>(null) }
 
     var searchQuery by remember { mutableStateOf("") }
     var dueFilter by remember { mutableStateOf(SupplierDueFilter.ALL) }
@@ -702,7 +707,8 @@ fun SuppliersScreen(
                         onAddInflow = { runWithSupplierPermission(context.getString(R.string.supplier_auth_receive_stock)) { selectedSupplierForInflow = supplier } },
                         onPayDue = { runWithSupplierPermission(context.getString(R.string.supplier_auth_record_payment)) { selectedSupplierForPayDue = supplier } },
                         onEdit = { runWithSupplierPermission(context.getString(R.string.supplier_auth_edit_supplier)) { supplierToEdit = supplier } },
-                        onDelete = { runWithSupplierPermission(context.getString(R.string.supplier_auth_delete_supplier)) { supplierToDelete = supplier } }
+                        onDelete = { runWithSupplierPermission(context.getString(R.string.supplier_auth_delete_supplier)) { supplierToDelete = supplier } },
+                        onClick = { selectedSupplierForDetail = supplier }
                     )
                 }
             }
@@ -724,7 +730,17 @@ fun SuppliersScreen(
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("#${invoice.invoiceNumber}", fontWeight = FontWeight.Bold)
-                                Text(formatTaka(invoice.totalAmount), fontWeight = FontWeight.ExtraBold)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(formatTaka(invoice.totalAmount), fontWeight = FontWeight.ExtraBold)
+                                    if (isOwner) {
+                                        IconButton(
+                                            onClick = { invoiceToVoid = invoice },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.supplier_void_button), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text(supplierName, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
@@ -771,13 +787,23 @@ fun SuppliersScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
+                            Column(Modifier.weight(1f)) {
                                 Text(supplierName, fontWeight = FontWeight.Bold)
                                 Text(payment.paymentMethod, fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Text(DateFormatters.formatDateTime(payment.timestamp), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
                                 payment.referenceNote?.takeIf { it.isNotBlank() }?.let { Text(it, fontSize = 11.sp) }
                             }
-                            Text(formatTaka(payment.amountPaid), fontWeight = FontWeight.ExtraBold, color = Color(0xFF10B981))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(formatTaka(payment.amountPaid), fontWeight = FontWeight.ExtraBold, color = Color(0xFF10B981))
+                                if (isOwner) {
+                                    IconButton(
+                                        onClick = { paymentToVoid = payment },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.supplier_void_button), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1321,5 +1347,376 @@ fun SuppliersScreen(
                 action?.invoke()
             }
         )
+    }
+
+    selectedSupplierForDetail?.let { supplier ->
+        SupplierDetailSheet(
+            supplier = supplier,
+            supplierViewModel = supplierViewModel,
+            isOwner = isOwner,
+            onVoidInvoice = { inv -> invoiceToVoid = inv },
+            onVoidPayment = { p -> paymentToVoid = p },
+            onAddInflow = {
+                selectedSupplierForDetail = null
+                runWithSupplierPermission(context.getString(R.string.supplier_auth_receive_stock)) {
+                    selectedSupplierForInflow = supplier
+                }
+            },
+            onPayDue = {
+                selectedSupplierForDetail = null
+                runWithSupplierPermission(context.getString(R.string.supplier_auth_record_payment)) {
+                    selectedSupplierForPayDue = supplier
+                }
+            },
+            onDismiss = { selectedSupplierForDetail = null }
+        )
+    }
+
+    if (invoiceToVoid != null) {
+        val inv = invoiceToVoid!!
+        AlertDialog(
+            onDismissRequest = { invoiceToVoid = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
+            title = {
+                Text(stringResource(R.string.supplier_void_invoice_title), fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(stringResource(R.string.supplier_void_invoice_desc, inv.invoiceNumber))
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val currentInv = inv
+                        invoiceToVoid = null
+                        supplierViewModel.voidPurchaseInvoice(currentInv.id) { result ->
+                            result.onSuccess {
+                                Toast.makeText(context, context.getString(R.string.supplier_void_invoice_success), Toast.LENGTH_SHORT).show()
+                            }.onFailure { e ->
+                                Toast.makeText(context, e.localizedMessage ?: "Void failed", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.supplier_void_button), color = MaterialTheme.colorScheme.onError)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { invoiceToVoid = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (paymentToVoid != null) {
+        val p = paymentToVoid!!
+        AlertDialog(
+            onDismissRequest = { paymentToVoid = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
+            title = {
+                Text(stringResource(R.string.supplier_void_payment_title), fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(stringResource(R.string.supplier_void_payment_desc, formatTaka(p.amountPaid)))
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val currentP = p
+                        paymentToVoid = null
+                        supplierViewModel.voidSupplierPayment(currentP.id) { result ->
+                            result.onSuccess {
+                                Toast.makeText(context, context.getString(R.string.supplier_void_payment_success), Toast.LENGTH_SHORT).show()
+                            }.onFailure { e ->
+                                Toast.makeText(context, e.localizedMessage ?: "Void failed", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.supplier_void_button), color = MaterialTheme.colorScheme.onError)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { paymentToVoid = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SupplierDetailSheet(
+    supplier: Supplier,
+    supplierViewModel: SupplierViewModel,
+    isOwner: Boolean,
+    onVoidInvoice: (PurchaseInvoice) -> Unit,
+    onVoidPayment: (SupplierPayment) -> Unit,
+    onAddInflow: () -> Unit,
+    onPayDue: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val invoices by supplierViewModel.getInvoicesForSupplier(supplier.id).collectAsStateWithLifecycle(emptyList())
+    val payments by supplierViewModel.getSupplierPayments(supplier.id).collectAsStateWithLifecycle(emptyList())
+    var selectedTab by remember { mutableStateOf(0) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.supplier_detail_ledger_title, supplier.companyName.ifBlank { supplier.name }),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = stringResource(R.string.supplier_phone_format, supplier.phone),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.common_close_content_description), modifier = Modifier.size(20.dp))
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            text = stringResource(R.string.supplier_total_inward_purchases),
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = formatTaka(supplier.totalPurchased),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (supplier.totalDue > 0) Color(0xFFFEF3C7) else Color(0xFFDCFCE7),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            text = stringResource(R.string.dues_current_due_label),
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (supplier.totalDue > 0) Color(0xFF92400E) else Color(0xFF166534)
+                        )
+                        Text(
+                            text = formatTaka(supplier.totalDue),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (supplier.totalDue > 0) Color(0xFF92400E) else Color(0xFF166534)
+                        )
+                    }
+                }
+            }
+
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                modifier = Modifier.clip(RoundedCornerShape(10.dp))
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = {
+                        Text(
+                            text = "${stringResource(R.string.supplier_detail_tab_invoices)} (${invoices.size})",
+                            fontSize = 12.5.sp,
+                            fontWeight = if (selectedTab == 0) FontWeight.ExtraBold else FontWeight.Medium
+                        )
+                    }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = {
+                        Text(
+                            text = "${stringResource(R.string.supplier_detail_tab_payments)} (${payments.size})",
+                            fontSize = 12.5.sp,
+                            fontWeight = if (selectedTab == 1) FontWeight.ExtraBold else FontWeight.Medium
+                        )
+                    }
+                )
+            }
+
+            if (selectedTab == 0) {
+                if (invoices.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.supplier_no_invoices),
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 380.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(invoices, key = { it.id }) { invoice ->
+                            OutlinedCard(Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("#${invoice.invoiceNumber}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text(formatTaka(invoice.totalAmount), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                                            if (isOwner) {
+                                                IconButton(
+                                                    onClick = { onVoidInvoice(invoice) },
+                                                    modifier = Modifier.size(32.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.supplier_void_button), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(DateFormatters.formatDateTime(invoice.timestamp), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                                        Text(
+                                            stringResource(
+                                                R.string.supplier_purchase_ledger_payment,
+                                                formatTaka(invoice.paidAmount), formatTaka(invoice.dueAmount), invoice.paymentMethod
+                                            ),
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    if (invoice.itemsSummary.isNotBlank()) {
+                                        Text(invoice.itemsSummary, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                if (payments.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.supplier_no_payments),
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 380.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(payments, key = { it.id }) { payment ->
+                            OutlinedCard(Modifier.fillMaxWidth()) {
+                                Row(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(payment.paymentMethod, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                                        Text(DateFormatters.formatDateTime(payment.timestamp), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                                        payment.referenceNote?.takeIf { it.isNotBlank() }?.let {
+                                            Text(it, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(formatTaka(payment.amountPaid), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color(0xFF10B981))
+                                        if (isOwner) {
+                                            IconButton(
+                                                onClick = { onVoidPayment(payment) },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.supplier_void_button), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onAddInflow,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.supplier_add_inward_bill), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                if (supplier.totalDue > 0) {
+                    Button(
+                        onClick = onPayDue,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.pay_due), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }

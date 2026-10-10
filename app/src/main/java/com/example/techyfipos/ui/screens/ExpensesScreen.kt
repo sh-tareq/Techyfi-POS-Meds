@@ -485,9 +485,11 @@ fun ExpensesScreen(
                 ) { result ->
                     result.onSuccess {
                         Toast.makeText(context, expenseUpdatedMessage, Toast.LENGTH_SHORT).show()
+                        expenseToEdit = null
+                    }.onFailure { err ->
+                        Toast.makeText(context, err.localizedMessage ?: "Failed to update expense", Toast.LENGTH_LONG).show()
                     }
                 }
-                expenseToEdit = null
             }
         )
     }

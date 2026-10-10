@@ -2993,7 +2993,7 @@ fun ProductsScreen(
     // Batch Barcode Print Dialog
     if (showBatchPrintDialog) {
         BatchProductCodePrintDialog(
-            products = allProductsList,
+            products = if (selectedBarcodes.isNotEmpty()) allProductsList.filter { it.barcode in selectedBarcodes } else allProductsList,
             onDismiss = { showBatchPrintDialog = false }
         )
     }

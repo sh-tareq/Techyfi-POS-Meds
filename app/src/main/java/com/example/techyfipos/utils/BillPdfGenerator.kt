@@ -1122,6 +1122,9 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     if (data.hasCashReconciliation) {
         totalHeight += 32f // CASH RECONCILIATION
         totalHeight += 9 * 30f // items + divider + expected cash
+        if (data.countedCash != null) {
+            totalHeight += 3 * 30f // counted cash + variance + reason
+        }
         totalHeight += 40f
     }
 
@@ -1259,6 +1262,20 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         paint.textAlign = Paint.Align.RIGHT
         canvas.drawText(formatTaka(data.expectedCash, isBangla = isBangla), width - 24f, y, boldPaint)
         y += 32f
+
+        if (data.countedCash != null) {
+            drawKeyValue(if (isBangla) "গণনাকৃত প্রকৃত ক্যাশ" else "Actual Counted Cash", formatTaka(data.countedCash, isBangla = isBangla))
+            val variance = data.cashVariance ?: (data.countedCash - data.expectedCash)
+            val varianceSign = if (variance > 0) "+" else ""
+            drawKeyValue(if (isBangla) "ক্যাশ পার্থক্য / গড়মিল" else "Cash Variance", "$varianceSign${formatTaka(variance, isBangla = isBangla)}")
+            if (!data.varianceReason.isNullOrBlank()) {
+                paint.textAlign = Paint.Align.LEFT
+                paint.textSize = 17f
+                canvas.drawText("${if (isBangla) "পার্থক্য কারণ: " else "Variance Reason: "}${data.varianceReason}", 24f, y, paint)
+                paint.textSize = 20f
+                y += 28f
+            }
+        }
     }
 
     // Top Products

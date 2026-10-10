@@ -72,6 +72,7 @@ import com.example.techyfipos.ui.viewmodel.SettingsViewModel
 import com.example.techyfipos.data.db.Customer
 import com.example.techyfipos.data.db.CustomerDue
 import com.example.techyfipos.data.db.DuePayment
+import com.example.techyfipos.data.db.DueCharge
 import com.example.techyfipos.data.db.DueReminderLog
 import com.example.techyfipos.data.db.ScheduledDueReminder
 import com.example.techyfipos.ui.viewmodel.CustomerViewModel
@@ -435,7 +436,7 @@ fun DuesScreen(
                         IconButton(
                             onClick = {
                                 selectedCustomer?.let { c ->
-                                    shareCustomerStatement(context, c, selectedPayments, storeName)
+                                    shareCustomerStatement(context, c, selectedPayments, selectedCharges, storeName)
                                 }
                             },
                             modifier = Modifier.size(48.dp)
@@ -486,7 +487,7 @@ fun DuesScreen(
                 onDeleteChargeClick = { c -> chargeToDelete = c },
                 onShareStatement = {
                     selectedCustomer?.let { c ->
-                        shareCustomerStatement(context, c, selectedPayments, storeName)
+                        shareCustomerStatement(context, c, selectedPayments, selectedCharges, storeName)
                     }
                 },
                 onSetCreditLimit = { limit ->
@@ -1233,9 +1234,31 @@ fun DuesScreen(
             logs = reminderLogs,
             onCancelReminder = { phone -> duesViewModel.cancelScheduledReminder(context, phone) },
             onSendReminderNow = { reminder ->
-                openWhatsAppReminder(context, reminder.customerPhone, reminder.messageText)
-                duesViewModel.logReminder(reminder.customerPhone, reminder.customerName, reminder.dueAmount, "WHATSAPP", reminder.messageText, "SENT")
-                duesViewModel.cancelScheduledReminder(context, reminder.customerPhone)
+                val currentDue = duesViewModel.duesList.value.firstOrNull { it.customerPhone == reminder.customerPhone }?.outstandingAmount ?: reminder.dueAmount
+                val message = if (currentDue != reminder.dueAmount) {
+                    reminder.messageText
+                        .replace(formatTaka(reminder.dueAmount, isBangla = false), formatTaka(currentDue, isBangla = false))
+                        .replace(formatTaka(reminder.dueAmount, isBangla = true), formatTaka(currentDue, isBangla = true))
+                } else reminder.messageText
+
+                val channelName = when (reminder.channel.lowercase(Locale.ROOT)) {
+                    "sms" -> {
+                        openPaymentReminder(context, reminder.customerPhone, message)
+                        "SMS"
+                    }
+                    "wa" -> {
+                        openWhatsAppReminder(context, reminder.customerPhone, message)
+                        "WHATSAPP"
+                    }
+                    else -> {
+                        openWhatsAppReminder(context, reminder.customerPhone, message)
+                        "BOTH"
+                    }
+                }
+                duesViewModel.logReminder(reminder.customerPhone, reminder.customerName, currentDue, channelName, message, "SENT")
+                if (!reminder.isRecurring) {
+                    duesViewModel.cancelScheduledReminder(context, reminder.customerPhone)
+                }
             },
             onDeleteLog = { id -> duesViewModel.deleteReminderLog(id) },
             onClearAllLogs = { duesViewModel.clearAllReminderLogs() },
@@ -1635,38 +1658,73 @@ private fun shareCustomerStatement(
     context: android.content.Context,
     customer: CustomerDue,
     payments: List<DuePayment>,
+    charges: List<DueCharge> = emptyList(),
     storeName: String = ""
 ) {
+    val isBangla = com.example.techyfipos.utils.isAppBangla()
     val totalRepaid = payments.sumOf { it.amountPaid }
-    val displayStore = storeName.trim().ifBlank { "TECHYFI STORE" }.uppercase()
+    val displayStore = storeName.trim().ifBlank { if (isBangla) "টেকিফাই স্টোর" else "TECHYFI STORE" }.uppercase()
+
+    data class StatementLedgerEntry(
+        val timestamp: Long,
+        val description: String,
+        val debit: Double,
+        val credit: Double
+    )
+
+    val ledger = mutableListOf<StatementLedgerEntry>()
+    charges.forEach { c ->
+        val desc = when {
+            c.reason.equals("Sale", ignoreCase = true) -> if (isBangla) "বাকিতে বিক্রয়" else "Credit Sale"
+            !c.note.isNullOrBlank() -> c.note
+            else -> if (isBangla) "বকেয়া চার্জ" else "Due Charge"
+        }
+        ledger.add(StatementLedgerEntry(c.timestamp, desc, debit = c.amount, credit = 0.0))
+    }
+    payments.forEach { p ->
+        val noteSuffix = p.referenceNote?.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""
+        val desc = "${if (isBangla) "পরিশোধ" else "Payment"} [${p.paymentMethod}]$noteSuffix"
+        ledger.add(StatementLedgerEntry(p.timestamp, desc, debit = 0.0, credit = p.amountPaid))
+    }
+    ledger.sortBy { it.timestamp }
+
     val statement = buildString {
         appendLine("================================")
-        appendLine("     $displayStore - KHATA STATEMENT")
+        appendLine(if (isBangla) "     $displayStore - খাতা স্টেটমেন্ট" else "     $displayStore - KHATA STATEMENT")
         appendLine("================================")
-        appendLine("Customer: ${customer.customerName}")
-        appendLine("Phone: ${customer.customerPhone}")
+        appendLine("${if (isBangla) "গ্রাহক" else "Customer"}: ${customer.customerName}")
+        appendLine("${if (isBangla) "মোবাইল" else "Phone"}: ${customer.customerPhone}")
         appendLine("--------------------------------")
-        appendLine("Outstanding Due: ${formatTaka(customer.outstandingAmount)}")
+        appendLine("${if (isBangla) "বর্তমান বকেয়া" else "Outstanding Due"}: ${formatTaka(customer.outstandingAmount, isBangla = isBangla)}")
         if (customer.creditLimit > 0.0) {
             val pct = ((customer.outstandingAmount / customer.creditLimit) * 100).toInt()
-            appendLine("Credit Limit: ${formatTaka(customer.creditLimit)} ($pct% used)")
+            appendLine("${if (isBangla) "ক্রেডিট সীমা" else "Credit Limit"}: ${formatTaka(customer.creditLimit, isBangla = isBangla)} ($pct% used)")
         }
-        appendLine("Total Repaid to Date: ${formatTaka(totalRepaid)}")
+        appendLine("${if (isBangla) "সর্বমোট পরিশোধ" else "Total Repaid to Date"}: ${formatTaka(totalRepaid, isBangla = isBangla)}")
         appendLine("--------------------------------")
-        appendLine("PAYMENT HISTORY:")
-        if (payments.isEmpty()) {
-            appendLine("  No payments recorded yet.")
+        appendLine(if (isBangla) "লেনদেনের খতিয়ান (চলতি জের):" else "TRANSACTION LEDGER (RUNNING BALANCE):")
+
+        if (ledger.isEmpty()) {
+            appendLine(if (isBangla) "  কোনো লেনদেন রেকর্ড পাওয়া যায়নি।" else "  No transactions recorded yet.")
         } else {
-            payments.forEach { p ->
-                appendLine("  • ${DateFormatters.formatDateTime(p.timestamp)}: +${formatTaka(p.amountPaid)} (${p.paymentMethod})")
-                p.referenceNote?.takeIf { it.isNotBlank() }?.let { ref ->
-                    appendLine("    Ref: $ref")
+            var runningBalance = 0.0
+            ledger.forEach { entry ->
+                runningBalance += (entry.debit - entry.credit)
+                val dateStr = DateFormatters.formatDateTime(entry.timestamp)
+                appendLine("• $dateStr")
+                appendLine("  ${entry.description}")
+                if (entry.debit > 0.0) {
+                    appendLine("  +${if (isBangla) "বকেয়া" else "Due"}: ${formatTaka(entry.debit, isBangla = isBangla)}")
                 }
+                if (entry.credit > 0.0) {
+                    appendLine("  -${if (isBangla) "জমা" else "Paid"}: ${formatTaka(entry.credit, isBangla = isBangla)}")
+                }
+                appendLine("  => ${if (isBangla) "জের" else "Balance"}: ${formatTaka(runningBalance, isBangla = isBangla)}")
             }
         }
         appendLine("--------------------------------")
-        appendLine("Generated: ${DateFormatters.formatDateTime(System.currentTimeMillis())}")
-        appendLine("Thank you for your business!")
+        appendLine("${if (isBangla) "তৈরির তারিখ" else "Generated"}: ${DateFormatters.formatDateTime(System.currentTimeMillis())}")
+        appendLine(if (isBangla) "আমাদের সাথে থাকার জন্য ধন্যবাদ!" else "Thank you for your business!")
     }
     shareReceiptAsText(context, statement)
 }

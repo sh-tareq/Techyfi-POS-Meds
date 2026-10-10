@@ -87,6 +87,20 @@ fun StoreCreditVoucherSlipDialog(
     var showShareOptionsSheet by remember { mutableStateOf(false) }
     var isPrinting by remember { mutableStateOf(false) }
 
+    val now = System.currentTimeMillis()
+    val isExpired = voucher.expiresAt != null && voucher.expiresAt > 0 && now > voucher.expiresAt
+    val isExhausted = voucher.remainingBalance <= 0.0 || voucher.status.equals("EXHAUSTED", ignoreCase = true)
+    val isVoid = voucher.status.equals("VOID", ignoreCase = true) || voucher.status.equals("CANCELLED", ignoreCase = true)
+    val isVoucherValid = voucher.status.equals("ACTIVE", ignoreCase = true) && !isExpired && !isExhausted && !isVoid
+
+    val (statusLabel, statusBg, statusTextColor) = when {
+        isVoid -> Triple("VOID / CANCELLED", Color(0xFFFEF2F2), Color(0xFFDC2626))
+        isExpired -> Triple("EXPIRED", Color(0xFFFFFBEB), Color(0xFFD97706))
+        isExhausted -> Triple("USED / EXHAUSTED", Color(0xFFF3F4F6), Color(0xFF4B5563))
+        !voucher.status.equals("ACTIVE", ignoreCase = true) -> Triple(voucher.status.uppercase(java.util.Locale.US), Color(0xFFFEF2F2), Color(0xFFDC2626))
+        else -> Triple("ACTIVE", Color(0xFFECFDF5), Color(0xFF059669))
+    }
+
     // Micro-animation for 3D ticket breathing
     val infiniteTransition = rememberInfiniteTransition(label = "3d_ticket_anim")
     val ticketScale by infiniteTransition.animateFloat(
@@ -258,6 +272,20 @@ fun StoreCreditVoucherSlipDialog(
                                         fontSize = 11.5.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = Color(0xFF059669),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = statusBg,
+                                    border = BorderStroke(1.dp, statusTextColor.copy(alpha = 0.35f))
+                                ) {
+                                    Text(
+                                        text = statusLabel,
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = statusTextColor,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
@@ -601,6 +629,31 @@ fun StoreCreditVoucherSlipDialog(
                     }
                 }
 
+                if (!isVoucherValid) {
+                    Surface(
+                        color = Color(0xFFFEF2F2),
+                        border = BorderStroke(1.dp, Color(0xFFFECACA)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFDC2626), modifier = Modifier.size(16.dp))
+                            Text(
+                                text = "This voucher is $statusLabel and cannot be printed, shared, or redeemed.",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFFB91C1C)
+                            )
+                        }
+                    }
+                }
+
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
                 // --- 4. ERGONOMIC ZERO-WRAPPING ACTIONS BAR WITH 3D ICONS ---
@@ -614,6 +667,7 @@ fun StoreCreditVoucherSlipDialog(
                 ) {
                     // PRINT VOUCHER (Primary Action with 3D Printer Icon)
                     Button(
+                        enabled = isVoucherValid && !isPrinting,
                         onClick = {
                             val file = slipJpegFile
                             if (file != null && file.exists()) {
@@ -674,12 +728,13 @@ fun StoreCreditVoucherSlipDialog(
 
                     // SHARE SLIP (Secondary Action with 3D Share Hub Icon)
                     OutlinedButton(
+                        enabled = isVoucherValid,
                         onClick = { showShareOptionsSheet = true },
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.5.dp, Color(0xFF0D9488)),
+                        border = BorderStroke(1.5.dp, if (isVoucherValid) Color(0xFF0D9488) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF0D9488))
                     ) {
                         Image(
@@ -701,11 +756,11 @@ fun StoreCreditVoucherSlipDialog(
                     // 1-TAP WHATSAPP QUICK BUTTON (Ergonomic 48dp with 3D Animated WhatsApp Icon)
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFF25D366).copy(alpha = 0.12f),
-                        border = BorderStroke(1.2.dp, Color(0xFF25D366)),
+                        color = if (isVoucherValid) Color(0xFF25D366).copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        border = BorderStroke(1.2.dp, if (isVoucherValid) Color(0xFF25D366) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                         modifier = Modifier
                             .size(48.dp)
-                            .clickable {
+                            .clickable(enabled = isVoucherValid) {
                                 val phone = voucher.customerPhone ?: ""
                                 shareStoreCreditVoucherWhatsApp(context, phone, voucherText)
                             }
@@ -713,7 +768,7 @@ fun StoreCreditVoucherSlipDialog(
                         Box(contentAlignment = Alignment.Center) {
                             Realistic3DWhatsAppIcon(
                                 size = 28.dp,
-                                animate = true
+                                animate = isVoucherValid
                             )
                         }
                     }

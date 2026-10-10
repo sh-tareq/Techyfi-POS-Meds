@@ -109,9 +109,20 @@ suspend fun sendToBluetoothPrinter(
                 Log.w(TAG, "Error closing secure socket before fallback: ${closeEx.message}")
             }
             Log.w(TAG, "Standard RFCOMM socket failed, retrying insecure RFCOMM socket: ${firstEx.message}")
-            val insecureSocket = device.createInsecureRfcommSocketToServiceRecord(uuid)
-            insecureSocket.connect()
-            insecureSocket
+            var inSec: BluetoothSocket? = null
+            try {
+                val insecureSocket = device.createInsecureRfcommSocketToServiceRecord(uuid)
+                inSec = insecureSocket
+                insecureSocket.connect()
+                insecureSocket
+            } catch (secEx: Exception) {
+                try {
+                    inSec?.close()
+                } catch (closeEx: Exception) {
+                    Log.w(TAG, "Error closing insecure socket after failure: ${closeEx.message}")
+                }
+                throw secEx
+            }
         }
 
         // Allow printer firmware and buffer to settle after connection establishment

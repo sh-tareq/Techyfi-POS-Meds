@@ -2827,4 +2827,16 @@
     <string name="direct_print_error_label_same_as_receipt">লেবেল প্রিন্টারটি রসিদ প্রিন্টার হিসেবে সেট করা আছে। সেটিংস &gt; প্রিন্টারসমূহ থেকে এটি পরিবর্তন করুন।</string>
     <string name="settings_printer_conflict_title">প্রিন্টার নির্বাচন</string>
     <string name="customer_phone_already_exists_error">এই ফোন নম্বরের একজন গ্রাহক ইতিমধ্যে বিদ্যমান (%1$s)</string>
+    <string name="supplier_void_invoice_title">ক্রয় ইনভয়েস বাতিল</string>
+    <string name="supplier_void_invoice_desc">আপনি কি নিশ্চিত যে ইনভয়েস #%1$s বাতিল করতে চান? এতে রিসিভকৃত স্টক কমে যাবে এবং সাপ্লায়ার ব্যালেন্স সমন্বয় হবে।</string>
+    <string name="supplier_void_invoice_success">ইনভয়েস সফলভাবে বাতিল করা হয়েছে</string>
+    <string name="supplier_void_payment_title">সাপ্লায়ার পরিশোধ বাতিল</string>
+    <string name="supplier_void_payment_desc">আপনি কি নিশ্চিত যে %1$s টাকার পরিশোধটি বাতিল করতে চান? এতে সাপ্লায়ার বকেয়া পুনরায় যুক্ত হবে এবং খরচের রেকর্ড মুছে যাবে।</string>
+    <string name="supplier_void_payment_success">পরিশোধ সফলভাবে বাতিল করা হয়েছে</string>
+    <string name="supplier_void_button">বাতিল</string>
+    <string name="supplier_detail_ledger_title">%1$s - খতিয়ান</string>
+    <string name="supplier_detail_tab_invoices">ইনভয়েস</string>
+    <string name="supplier_detail_tab_payments">পরিশোধ</string>
+    <string name="supplier_no_invoices">কোনো ক্রয় ইনভয়েস নেই</string>
+    <string name="supplier_no_payments">কোনো পরিশোধ রেকর্ড নেই</string>
 </resources>

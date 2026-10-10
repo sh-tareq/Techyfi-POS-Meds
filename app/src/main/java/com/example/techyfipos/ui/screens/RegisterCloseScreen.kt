@@ -358,7 +358,7 @@ fun RegisterCloseScreen(
                                 ) {
                                     Realistic3DRegisterAuditZReportIcon(size = if (showFullReportLabel) 16.dp else 14.dp)
                                     Text(
-                                        text = if (showFullReportLabel) "Z-Report" else "Z",
+                                        text = if (showFullReportLabel) "Preview Z" else "Z",
                                         fontSize = 11.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
@@ -1121,7 +1121,13 @@ fun RegisterCloseScreen(
                 showDenomDialog = true
             },
             onConfirmClose = { actualCash, notes, discrepancyReason, onError ->
-                val snapshotZ = report?.let { it to rangeLabel }
+                val snapshotZ = report?.let {
+                    it.copy(
+                        countedCash = actualCash,
+                        cashVariance = actualCash - expectedCash,
+                        varianceReason = discrepancyReason
+                    ) to rangeLabel
+                }
                 registerClosingViewModel.closeRegister(
                     startingFloat = startingFloat,
                     cashSales = cashSales,

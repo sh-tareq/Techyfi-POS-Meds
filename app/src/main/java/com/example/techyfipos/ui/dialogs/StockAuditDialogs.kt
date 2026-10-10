@@ -221,7 +221,8 @@ fun StockAuditHistorySheet(
                                     val dateStr = remember(adj.timestamp) {
                                         DateFormatters.formatDateTime(adj.timestamp)
                                     }
-                                    Text(dateStr, fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline)
+                                    val cashierText = if (adj.cashierName.isNotBlank()) " - By: ${adj.cashierName}" else ""
+                                    Text("$dateStr$cashierText", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline)
                                 }
 
                                 Row(

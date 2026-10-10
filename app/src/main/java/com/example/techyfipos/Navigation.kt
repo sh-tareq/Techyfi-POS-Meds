@@ -373,16 +373,18 @@ fun MainNavigation() {
         DisposableEffect(lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
                 when (event) {
-                    Lifecycle.Event.ON_STOP -> backgroundedAt = System.currentTimeMillis()
+                    Lifecycle.Event.ON_STOP -> backgroundedAt = android.os.SystemClock.elapsedRealtime()
                     Lifecycle.Event.ON_START -> {
                         val shouldLock = backgroundedAt > 0L &&
-                            System.currentTimeMillis() - backgroundedAt >= 5 * 60_000L &&
+                            android.os.SystemClock.elapsedRealtime() - backgroundedAt >= 5 * 60_000L &&
                             latestCurrentKey != Splash && latestCurrentKey != Lock
                         if (shouldLock) {
                             authViewModel.logout()
                             com.example.techyfipos.utils.HardwareBarcodeScanner.clearPendingInput()
                             while (backStack.isNotEmpty()) backStack.removeLastOrNull()
                             backStack.add(Lock)
+                        } else {
+                            authViewModel.recordUserActivity()
                         }
                         backgroundedAt = 0L
                     }
@@ -391,6 +393,20 @@ fun MainNavigation() {
             }
             lifecycleOwner.lifecycle.addObserver(observer)
             onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
+
+        LaunchedEffect(currentUser) {
+            if (currentUser != null) {
+                while (true) {
+                    kotlinx.coroutines.delay(60_000L)
+                    if (authViewModel.checkIdleAutoLock(15)) {
+                        com.example.techyfipos.utils.HardwareBarcodeScanner.clearPendingInput()
+                        while (backStack.isNotEmpty()) backStack.removeLastOrNull()
+                        backStack.add(Lock)
+                        break
+                    }
+                }
+            }
         }
 
         // Pressed animation states for each tab

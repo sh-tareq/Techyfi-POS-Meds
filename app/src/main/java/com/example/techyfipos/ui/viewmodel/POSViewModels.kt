@@ -1765,10 +1765,12 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         newStock: Double,
         difference: Double,
         reason: String,
-        note: String? = null
+        note: String? = null,
+        cashierName: String = ""
     ) {
         viewModelScope.launch {
             try {
+                val resolvedCashier = cashierName.ifBlank { repository.sessionUserName.ifBlank { "Admin" } }
                 repository.recordInventoryAdjustment(
                     InventoryAdjustment(
                         productBarcode = productBarcode,
@@ -1777,7 +1779,8 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
                         newStock = newStock,
                         difference = difference,
                         reason = reason,
-                        note = note
+                        note = note,
+                        cashierName = resolvedCashier
                     )
                 )
             } catch (e: Exception) {
@@ -1794,10 +1797,12 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         difference: Double,
         reason: String,
         note: String? = null,
+        cashierName: String = "",
         onResult: (Result<Unit>) -> Unit = {}
     ) {
         viewModelScope.launch {
             val result = runCatching {
+                val resolvedCashier = cashierName.ifBlank { repository.sessionUserName.ifBlank { "Admin" } }
                 repository.updateProductWithInventoryAdjustment(
                     updatedProduct,
                     InventoryAdjustment(
@@ -1807,7 +1812,8 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
                         newStock = newStock,
                         difference = difference,
                         reason = reason,
-                        note = note
+                        note = note,
+                        cashierName = resolvedCashier
                     )
                 )
                 Unit
@@ -2465,6 +2471,10 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         false
     }
 
+    suspend fun deleteSaleResult(saleId: Long, reason: String = "Sale Cancelled/Deleted"): Result<Unit> = runCatching {
+        repository.deleteSale(saleId, reason)
+    }
+
     suspend fun getReturnedQuantities(saleId: Long): Map<String, Double> {
         return repository.getReturnedQuantities(saleId)
     }
@@ -2541,10 +2551,13 @@ data class SalesReportData(
     val dueCashCollected: Double = 0.0,
     val supplierCashPaid: Double = 0.0,
     val cashRefunds: Double = 0.0,
-    val expectedCash: Double = 0.0
+    val expectedCash: Double = 0.0,
+    val countedCash: Double? = null,
+    val cashVariance: Double? = null,
+    val varianceReason: String? = null
 ) {
     val totalProfit: Double get() = grossProfit
-    val hasCashReconciliation: Boolean get() = startingFloat > 0.0 || cashIn > 0.0 || cashOut > 0.0 || dueCashCollected > 0.0 || supplierCashPaid > 0.0 || expectedCash > 0.0
+    val hasCashReconciliation: Boolean get() = startingFloat > 0.0 || cashIn > 0.0 || cashOut > 0.0 || dueCashCollected > 0.0 || supplierCashPaid > 0.0 || expectedCash > 0.0 || countedCash != null
 }
 
 data class HourlyReportData(
@@ -3623,6 +3636,25 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
     private fun setCurrentUser(user: User?) {
         _currentUser.value = user
         repository.setSessionUser(user)
+        if (user != null) {
+            lastUserActivityElapsed = android.os.SystemClock.elapsedRealtime()
+        }
+    }
+
+    private var lastUserActivityElapsed: Long = android.os.SystemClock.elapsedRealtime()
+
+    fun recordUserActivity() {
+        lastUserActivityElapsed = android.os.SystemClock.elapsedRealtime()
+    }
+
+    fun checkIdleAutoLock(timeoutMinutes: Long = 15): Boolean {
+        if (_currentUser.value == null) return false
+        val idleMillis = android.os.SystemClock.elapsedRealtime() - lastUserActivityElapsed
+        if (idleMillis >= timeoutMinutes * 60_000L) {
+            logout()
+            return true
+        }
+        return false
     }
 
     val isOwner: StateFlow<Boolean> = _currentUser
@@ -4184,6 +4216,7 @@ class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
         viewModelScope.launch {
             val result = runCatching {
                 kotlinx.coroutines.withContext(Dispatchers.IO) { repository.updateExpense(expense) }
+                Unit
             }
             onResult(result)
         }
@@ -4360,6 +4393,33 @@ class SupplierViewModel(private val repository: DataRepository) : ViewModel() {
                 kotlinx.coroutines.withContext(Dispatchers.IO) {
                     repository.recordSupplierPayment(supplierId, amountPaid, paymentMethod, referenceNote)
                 }
+            }
+            onResult(result)
+        }
+    }
+
+    fun getInvoicesForSupplier(supplierId: Long): Flow<List<PurchaseInvoice>> =
+        repository.getInvoicesForSupplier(supplierId)
+
+    fun getSupplierPayments(supplierId: Long): Flow<List<SupplierPayment>> =
+        repository.getSupplierPayments(supplierId)
+
+    fun getPurchaseItemsForInvoice(invoiceId: Long): Flow<List<PurchaseInvoiceItem>> =
+        repository.getPurchaseItemsForInvoice(invoiceId)
+
+    fun voidSupplierPayment(paymentId: Long, reason: String = "Voided by Owner", onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = runCatching {
+                repository.voidSupplierPayment(paymentId, reason)
+            }
+            onResult(result)
+        }
+    }
+
+    fun voidPurchaseInvoice(invoiceId: Long, reason: String = "Voided by Owner", onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = runCatching {
+                repository.voidPurchaseInvoice(invoiceId, reason)
             }
             onResult(result)
         }

@@ -849,17 +849,16 @@ fun SalesHistoryScreen(
                         deleteInProgress = true
                         scope.launch {
                             val reason = deleteReason.ifBlank { context.getString(R.string.sales_history_void_reason_fallback, target.sale.id.toString()) }
-                            val deleted = salesViewModel.deleteSaleAndAwait(target.sale.id, reason)
+                            val deleteResult = salesViewModel.deleteSaleResult(target.sale.id, reason)
                             deleteInProgress = false
-                            if (deleted) {
+                            if (deleteResult.isSuccess) {
                                 deleteTarget = null
                                 deleteReason = ""
+                                Toast.makeText(context, deletedMessage, Toast.LENGTH_SHORT).show()
+                            } else {
+                                val err = deleteResult.exceptionOrNull()?.localizedMessage ?: deleteFailedMessage
+                                Toast.makeText(context, err, Toast.LENGTH_LONG).show()
                             }
-                            Toast.makeText(
-                                context,
-                                if (deleted) deletedMessage else deleteFailedMessage,
-                                Toast.LENGTH_SHORT
-                            ).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -1987,17 +1986,19 @@ private fun SaleDetailDialog(
                 }
             }
         } else null,
-        onDelete = {
-            if (canDelete) {
-                onDelete()
-                onDismiss()
-            } else if (onRequestSupervisorElevation != null) {
-                onRequestSupervisorElevation("Authorize Delete for Invoice #${saleWithItems.sale.id}") {
+        onDelete = if (currentReturnSummary?.hasReturns != true) {
+            {
+                if (canDelete) {
                     onDelete()
                     onDismiss()
+                } else if (onRequestSupervisorElevation != null) {
+                    onRequestSupervisorElevation("Authorize Delete for Invoice #${saleWithItems.sale.id}") {
+                        onDelete()
+                        onDismiss()
+                    }
                 }
             }
-        },
+        } else null,
         onAddToCartAgain = if (cartViewModel != null) {
             {
                 scope.launch {
@@ -2010,7 +2011,7 @@ private fun SaleDetailDialog(
                 }
             }
         } else null,
-        onEdit = if (cartViewModel != null) {
+        onEdit = if (cartViewModel != null && currentReturnSummary?.hasReturns != true) {
             {
                 if (canEdit) {
                     showEditConfirm = true
@@ -2200,8 +2201,8 @@ private fun SaleDetailDialog(
                     onClick = {
                         showEditConfirm = false
                         scope.launch {
-                            val voided = salesViewModel?.deleteSaleAndAwait(saleWithItems.sale.id, context.getString(R.string.void_reason_for_edit)) ?: false
-                            if (voided && cartViewModel != null) {
+                            val voidResult = salesViewModel?.deleteSaleResult(saleWithItems.sale.id, context.getString(R.string.void_reason_for_edit))
+                            if (voidResult?.isSuccess == true && cartViewModel != null) {
                                 val skipped = cartViewModel.loadFromPastSale(saleWithItems, replaceCart = true)
                                 if (skipped > 0) {
                                     Toast.makeText(context, resources.getString(R.string.cart_add_to_cart_again_skipped_toast, skipped), Toast.LENGTH_LONG).show()
@@ -2209,7 +2210,8 @@ private fun SaleDetailDialog(
                                 onDismiss()
                                 onNavigateToCart?.invoke()
                             } else {
-                                Toast.makeText(context, resources.getString(R.string.sales_history_void_for_edit_failed), Toast.LENGTH_SHORT).show()
+                                val err = voidResult?.exceptionOrNull()?.localizedMessage ?: resources.getString(R.string.sales_history_void_for_edit_failed)
+                                Toast.makeText(context, err, Toast.LENGTH_LONG).show()
                             }
                         }
                     },

@@ -423,6 +423,9 @@ interface ExpenseDao {
  
      @Query("DELETE FROM expenses WHERE id = :id")
      suspend fun deleteExpenseById(id: Long)
+
+     @Query("SELECT * FROM expenses WHERE category = 'Supplier Payment' AND timestamp = :timestamp LIMIT 1")
+     suspend fun getSupplierExpenseByTimestamp(timestamp: Long): Expense?
  
      @Query("SELECT COALESCE(SUM(amount), 0.0) FROM expenses WHERE type = 'EXPENSE' AND paymentSource = 'Cash' AND timestamp >= :startTime")
      suspend fun getCashExpensesSince(startTime: Long): Double
@@ -456,6 +459,15 @@ interface ExpenseDao {
  
      @Insert(onConflict = OnConflictStrategy.ABORT)
      suspend fun insertSupplierPayment(payment: SupplierPayment): Long
+
+     @Delete
+     suspend fun deleteSupplierPayment(payment: SupplierPayment)
+
+     @Query("DELETE FROM supplier_payments WHERE id = :id")
+     suspend fun deleteSupplierPaymentById(id: Long)
+
+     @Query("SELECT * FROM supplier_payments WHERE id = :id LIMIT 1")
+     suspend fun getSupplierPaymentById(id: Long): SupplierPayment?
  
      @Query("SELECT * FROM supplier_payments WHERE supplierId = :supplierId ORDER BY timestamp DESC")
      fun getPaymentsForSupplier(supplierId: Long): Flow<List<SupplierPayment>>
@@ -478,6 +490,9 @@ interface ExpenseDao {
      @Query("SELECT * FROM purchase_invoices ORDER BY timestamp DESC")
      suspend fun getAllInvoicesOnce(): List<PurchaseInvoice>
 
+     @Query("SELECT * FROM purchase_invoices WHERE id = :id LIMIT 1")
+     suspend fun getInvoiceById(id: Long): PurchaseInvoice?
+
     @Query("SELECT * FROM purchase_invoices WHERE supplierId = :supplierId ORDER BY timestamp DESC")
     fun getInvoicesForSupplier(supplierId: Long): Flow<List<PurchaseInvoice>>
 
@@ -490,8 +505,14 @@ interface ExpenseDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPurchaseInvoiceItems(items: List<PurchaseInvoiceItem>)
 
+    @Query("DELETE FROM purchase_invoice_items WHERE invoiceId = :invoiceId")
+    suspend fun deleteItemsForInvoice(invoiceId: Long)
+
     @Query("SELECT * FROM purchase_invoice_items WHERE invoiceId = :invoiceId ORDER BY id ASC")
     fun getItemsForInvoice(invoiceId: Long): Flow<List<PurchaseInvoiceItem>>
+
+    @Query("SELECT * FROM purchase_invoice_items WHERE invoiceId = :invoiceId ORDER BY id ASC")
+    suspend fun getItemsForInvoiceOnce(invoiceId: Long): List<PurchaseInvoiceItem>
 
     @Query("SELECT * FROM purchase_invoice_items ORDER BY invoiceId ASC, id ASC")
     fun getAllPurchaseInvoiceItems(): Flow<List<PurchaseInvoiceItem>>

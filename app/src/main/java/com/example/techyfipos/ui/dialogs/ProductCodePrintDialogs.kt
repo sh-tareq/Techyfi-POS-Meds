@@ -380,7 +380,7 @@ fun PriceTierSwitcherCard(
                         )
 
                         val notSetText = stringResource(R.string.products_price_tier_not_set)
-                        val mrpCandidate = if (mrpPriceDisplay.isNotBlank() && mrpPriceDisplay != notSetText && mrpPriceDisplay != "—") {
+                        val mrpCandidate = if (mrpPriceDisplay.isNotBlank() && mrpPriceDisplay != notSetText && mrpPriceDisplay != "-") {
                             mrpPriceDisplay
                         } else {
                             sellingPriceDisplay
@@ -588,11 +588,12 @@ fun BatchProductCodePrintDialog(
     }
 
     val totalLabelCount = remember(candidateProducts, copiesModeByStock) {
-        if (copiesModeByStock) {
+        val count = if (copiesModeByStock) {
             candidateProducts.sumOf { kotlin.math.max(1, it.stockQty.toInt()) }
         } else {
             candidateProducts.size
         }
+        count.coerceAtMost(500)
     }
 
     Dialog(
@@ -750,7 +751,7 @@ fun BatchProductCodePrintDialog(
                 val batchSellingDisplay = if (sampleProd != null) {
                     val base = formatTaka(sampleProd.sellingPrice)
                     if (showBanglaDigits) toBanglaDigits(base) else base
-                } else "—"
+                } else "-"
                 val batchMrpDisplay = if (sampleProd != null && sampleProd.mrpPrice > 0) {
                     val base = formatTaka(sampleProd.mrpPrice)
                     if (showBanglaDigits) toBanglaDigits(base) else base
@@ -825,8 +826,13 @@ fun BatchProductCodePrintDialog(
                         }
                         isGenerating = true
                         scope.launch(Dispatchers.IO) {
-                            val items = candidateProducts.map { prod ->
-                                val qty = if (copiesModeByStock) kotlin.math.max(1, prod.stockQty.toInt()) else 1
+                            var remainingAllowed = 500
+                            val items = mutableListOf<ProductLabelItem>()
+                            for (prod in candidateProducts) {
+                                if (remainingAllowed <= 0) break
+                                val requestedQty = if (copiesModeByStock) kotlin.math.max(1, prod.stockQty.toInt()) else 1
+                                val qty = requestedQty.coerceAtMost(remainingAllowed)
+                                remainingAllowed -= qty
                                 val priceString = formatProductCodeLabelPriceString(
                                     tier = priceTier,
                                     sellingPrice = prod.sellingPrice,
@@ -835,11 +841,13 @@ fun BatchProductCodePrintDialog(
                                     showUnit = showUnit,
                                     showBanglaDigits = showBanglaDigits
                                 )
-                                ProductLabelItem(
-                                    productName = prod.name,
-                                    barcode = prod.barcode,
-                                    formattedPrice = priceString,
-                                    quantity = qty
+                                items.add(
+                                    ProductLabelItem(
+                                        productName = prod.name,
+                                        barcode = prod.barcode,
+                                        formattedPrice = priceString,
+                                        quantity = qty
+                                    )
                                 )
                             }
                             val result = cacheBatchProductCodeLabelsPdf(

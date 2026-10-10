@@ -736,6 +736,17 @@ suspend fun showDirectPrintToast(context: Context, result: DirectPrintResult) = 
         is DirectPrintResult.Failed -> context.getString(R.string.direct_print_error_connection_failed, result.message)
     }
     Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+    if (result is DirectPrintResult.NoPermission) {
+        try {
+            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            android.util.Log.w("BillActions", "Could not open app settings: ${e.message}")
+        }
+    }
 }
 
 /**

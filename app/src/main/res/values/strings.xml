@@ -2825,6 +2825,18 @@
     <string name="direct_print_error_label_same_as_receipt">Label printer is set to the receipt printer. Change it in Settings &gt; Printers.</string>
     <string name="settings_printer_conflict_title">Printer Selection</string>
     <string name="customer_phone_already_exists_error">A customer with this phone number already exists (%1$s)</string>
+    <string name="supplier_void_invoice_title">Void Purchase Invoice</string>
+    <string name="supplier_void_invoice_desc">Are you sure you want to void invoice #%1$s? This will deduct the received inventory stock and reverse supplier balances.</string>
+    <string name="supplier_void_invoice_success">Invoice voided successfully</string>
+    <string name="supplier_void_payment_title">Void Supplier Payment</string>
+    <string name="supplier_void_payment_desc">Are you sure you want to void this payment of %1$s? This will re-add the due amount to the supplier and delete the linked expense.</string>
+    <string name="supplier_void_payment_success">Payment voided successfully</string>
+    <string name="supplier_void_button">Void</string>
+    <string name="supplier_detail_ledger_title">%1$s - Ledger</string>
+    <string name="supplier_detail_tab_invoices">Invoices</string>
+    <string name="supplier_detail_tab_payments">Payments</string>
+    <string name="supplier_no_invoices">No purchase invoices recorded</string>
+    <string name="supplier_no_payments">No supplier payments recorded</string>
 </resources>
 
 

@@ -207,7 +207,8 @@ class DataRepository(
 
     suspend fun recordInventoryAdjustment(adjustment: InventoryAdjustment): Long = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADJUST_STOCK)
-        inventoryAdjustmentDao.insertAdjustment(adjustment)
+        val cashier = adjustment.cashierName.ifBlank { sessionUser?.name ?: "Admin" }
+        inventoryAdjustmentDao.insertAdjustment(adjustment.copy(cashierName = cashier))
     }
 
     // Current session's signed-in user. This is the single shared DataRepository instance every
@@ -410,9 +411,10 @@ class DataRepository(
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
         requirePermission(AppPermissions.INVENTORY_ADJUST_STOCK)
         val normalized = product.copy(barcode = toEnglishDigits(product.barcode.trim()).lowercase())
+        val cashier = adjustment.cashierName.ifBlank { sessionUser?.name ?: "Admin" }
         database.withDriverTransaction {
             productDao.updateProduct(normalized)
-            inventoryAdjustmentDao.insertAdjustment(adjustment)
+            inventoryAdjustmentDao.insertAdjustment(adjustment.copy(cashierName = cashier))
         }
     }
 
@@ -445,7 +447,8 @@ class DataRepository(
                 productDao.insertProduct(normalizedProduct)
             }
             if (adjustment != null) {
-                inventoryAdjustmentDao.insertAdjustment(adjustment)
+                val cashier = adjustment.cashierName.ifBlank { sessionUser?.name ?: "Admin" }
+                inventoryAdjustmentDao.insertAdjustment(adjustment.copy(cashierName = cashier))
             }
         }
     }
@@ -4818,6 +4821,20 @@ class DataRepository(
             throw IllegalStateException("Supplier payment expenses are auto-generated and cannot be edited directly.")
         }
         expenseDao.updateExpense(expense)
+        expenseAuditLogDao.insertAuditLog(
+            com.example.techyfipos.data.db.ExpenseAuditLog(
+                expenseId = expense.id,
+                action = "UPDATED",
+                reason = "Expense updated",
+                amount = expense.amount,
+                category = expense.category,
+                paymentSource = expense.paymentSource,
+                userName = sessionUser?.name.orEmpty().also {
+                    if (sessionUser == null) Log.w("DataRepository", "sessionUser null at write time")
+                },
+                timestamp = System.currentTimeMillis()
+            )
+        )
     }
 
     suspend fun deleteExpense(id: Long, reason: String = "Expense Deleted") = withContext(Dispatchers.IO) {
@@ -5054,6 +5071,108 @@ class DataRepository(
 
     fun getSupplierPayments(supplierId: Long): Flow<List<SupplierPayment>> =
         supplierDao.getPaymentsForSupplier(supplierId)
+
+    suspend fun voidSupplierPayment(paymentId: Long, reason: String = "Voided by Owner") = withContext(Dispatchers.IO) {
+        requireOwnerSession()
+        database.withDriverTransaction {
+            val payment = supplierDao.getSupplierPaymentById(paymentId)
+                ?: throw IllegalArgumentException("Supplier payment not found")
+            val supplier = supplierDao.getSupplierById(payment.supplierId)
+            if (supplier != null) {
+                supplierDao.updateSupplierBalances(
+                    supplierId = payment.supplierId,
+                    purchaseAmount = 0.0,
+                    dueChange = payment.amountPaid,
+                    timestamp = System.currentTimeMillis()
+                )
+            }
+            supplierDao.deleteSupplierPaymentById(paymentId)
+            val linkedExpense = expenseDao.getSupplierExpenseByTimestamp(payment.timestamp)
+            if (linkedExpense != null) {
+                expenseAuditLogDao.insertAuditLog(
+                    com.example.techyfipos.data.db.ExpenseAuditLog(
+                        expenseId = linkedExpense.id,
+                        action = "DELETED",
+                        reason = "Voided supplier payment: $reason",
+                        amount = linkedExpense.amount,
+                        category = linkedExpense.category,
+                        paymentSource = linkedExpense.paymentSource,
+                        userName = sessionUser?.name.orEmpty().also {
+                            if (sessionUser == null) Log.w("DataRepository", "sessionUser null at write time")
+                        },
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+                expenseDao.deleteExpenseById(linkedExpense.id)
+            }
+        }
+    }
+
+    suspend fun voidPurchaseInvoice(invoiceId: Long, reason: String = "Voided by Owner") = withContext(Dispatchers.IO) {
+        requireOwnerSession()
+        database.withDriverTransaction {
+            val invoice = purchaseInvoiceDao.getInvoiceById(invoiceId)
+                ?: throw IllegalArgumentException("Invoice not found")
+            val items = purchaseInvoiceDao.getItemsForInvoiceOnce(invoiceId)
+            items.forEach { item ->
+                val product = productDao.getProductByBarcode(item.productBarcode)
+                    ?: productDao.getProductByBarcodeCaseInsensitive(item.productBarcode)
+                if (product != null) {
+                    val newStock = (product.stockQty - item.quantity).coerceAtLeast(0.0)
+                    productDao.updateProduct(product.copy(stockQty = newStock))
+                    inventoryAdjustmentDao.insertAdjustment(
+                        InventoryAdjustment(
+                            productBarcode = item.productBarcode,
+                            productName = product.name,
+                            previousStock = product.stockQty,
+                            newStock = newStock,
+                            difference = -item.quantity,
+                            reason = "Void Purchase Invoice",
+                            note = "Void Invoice #${invoice.invoiceNumber}: $reason",
+                            cashierName = sessionUser?.name.orEmpty().ifBlank { "Admin" }
+                        )
+                    )
+                }
+            }
+            supplierDao.updateSupplierBalances(
+                supplierId = invoice.supplierId,
+                purchaseAmount = -invoice.totalAmount,
+                dueChange = -invoice.dueAmount,
+                timestamp = System.currentTimeMillis()
+            )
+            purchaseInvoiceDao.deleteItemsForInvoice(invoiceId)
+            purchaseInvoiceDao.deletePurchaseInvoice(invoice)
+
+            if (invoice.paidAmount > 0.0) {
+                val payments = supplierDao.getPaymentsForSupplierOnce(invoice.supplierId)
+                val matchingPayment = payments.firstOrNull {
+                    it.referenceNote?.contains("#${invoice.invoiceNumber}") == true &&
+                    kotlin.math.abs(it.amountPaid - invoice.paidAmount) < 0.01
+                }
+                if (matchingPayment != null) {
+                    supplierDao.deleteSupplierPaymentById(matchingPayment.id)
+                    val linkedExpense = expenseDao.getSupplierExpenseByTimestamp(matchingPayment.timestamp)
+                    if (linkedExpense != null) {
+                        expenseAuditLogDao.insertAuditLog(
+                            com.example.techyfipos.data.db.ExpenseAuditLog(
+                                expenseId = linkedExpense.id,
+                                action = "DELETED",
+                                reason = "Voided invoice #${invoice.invoiceNumber}: $reason",
+                                amount = linkedExpense.amount,
+                                category = linkedExpense.category,
+                                paymentSource = linkedExpense.paymentSource,
+                                userName = sessionUser?.name.orEmpty().also {
+                                    if (sessionUser == null) Log.w("DataRepository", "sessionUser null at write time")
+                                },
+                                timestamp = System.currentTimeMillis()
+                            )
+                        )
+                        expenseDao.deleteExpenseById(linkedExpense.id)
+                    }
+                }
+            }
+        }
+    }
 
     // Register Closings & Cash Shifts
     val allRegisterClosings: Flow<List<RegisterClosing>> = registerClosingDao.getAllClosings()

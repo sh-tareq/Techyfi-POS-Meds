@@ -870,7 +870,7 @@ fun ReceiptSummaryDialog(
                             horizontalArrangement = Arrangement.spacedBy(2.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (onEdit != null) {
+                            if (onEdit != null && returnSummary?.hasReturns != true) {
                                 TextButton(
                                     onClick = onEdit,
                                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
@@ -902,7 +902,7 @@ fun ReceiptSummaryDialog(
                                 }
                             }
 
-                            if (onDelete != null) {
+                            if (onDelete != null && returnSummary?.hasReturns != true) {
                                 TextButton(
                                     onClick = {
                                         scope.launch {

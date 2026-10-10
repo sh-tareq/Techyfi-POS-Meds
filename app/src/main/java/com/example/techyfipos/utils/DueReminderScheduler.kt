@@ -349,7 +349,7 @@ object DueReminderScheduler {
 
         // Log the reminder
         try {
-            val status = "NOTIFIED"
+            val status = if (notificationShown) "NOTIFIED" else "FAILED"
             val channelName = when (channel) {
                 "sms" -> "SMS"
                 "wa" -> "WHATSAPP"
@@ -400,7 +400,11 @@ object DueReminderScheduler {
                         isRecurring = true
                     )
                 } else {
-                    dao.deleteByPhone(normalizedPhone)
+                    if (notificationShown) {
+                        dao.deleteByPhone(normalizedPhone)
+                    } else {
+                        Log.w(TAG, "Notification blocked/failed for $normalizedPhone; keeping scheduled reminder row")
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to update scheduled reminder tracking row: ${e.message}")
@@ -443,11 +447,16 @@ object DueReminderScheduler {
             notificationManager.createNotificationChannel(notificationChannel)
         }
 
-        val cleanPhone = customerPhone.replace(Regex("[^0-9+]"), "").let {
-            if (it.startsWith("01")) "+88$it" else it
+        val cleanPhone = customerPhone.trim()
+        val rawDigits = customerPhone.replace(Regex("[^0-9+]"), "")
+        val international = when {
+            rawDigits.startsWith("+") -> rawDigits.substring(1)
+            rawDigits.startsWith("880") -> rawDigits
+            rawDigits.startsWith("0") -> "88$rawDigits"
+            else -> "880$rawDigits"
         }
         val encodedMsg = try { URLEncoder.encode(messageText, "UTF-8") } catch (e: Exception) { "" }
-        val waUri = Uri.parse("https://api.whatsapp.com/send?phone=$cleanPhone&text=$encodedMsg")
+        val waUri = Uri.parse("https://api.whatsapp.com/send?phone=$international&text=$encodedMsg")
         val waIntent = Intent(Intent.ACTION_VIEW, waUri).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
