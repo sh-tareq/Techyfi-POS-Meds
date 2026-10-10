@@ -631,12 +631,15 @@ mindmap
           Receipt printer
             Print method selector: Bluetooth, Android print service, Auto
             Direct Bluetooth ESC/POS driver (58mm / 80mm roll width)
+            Receipt print darkness slider (0-15) with software luminance thresholding
+            System print service note when in SYSTEM mode
             Test receipt button with real-time feedback
           Label printer
             Print method selector: Bluetooth, Android print service, Auto
             Direct Bluetooth TSPL driver (Deli E886BW support at 203 DPI)
             Label gap adjustment (mm) and darkness slider (0-15)
             Test label button with real-time feedback
+          Deferred slider persistence: local Compose state during drag and save on onValueChangeFinished
           Cash drawer kick
             Option for Same as receipt printer or custom address
             Enable or disable automatic drawer kick for Cash and Split sales
@@ -1046,7 +1049,7 @@ mindmap
 - Automatic backup WorkManager: `app/src/main/java/com/example/techyfipos/utils/AutoBackupWorker.kt`
 - Backup scheduler: `app/src/main/java/com/example/techyfipos/utils/AutoBackupScheduler.kt`
 - Receipt generation: `app/src/main/java/com/example/techyfipos/utils/BillPdfGenerator.kt` (standard 80mm thermal bills, 80mm/58mm thermal Money Receipt vouchers, and PDF invoice generators)
-- Thermal printer architecture & byte formatting: `app/src/main/java/com/example/techyfipos/printer/` (`BluetoothPrinterTransport.kt` for shared resilient Bluetooth socket communication with insecure RFCOMM fallback and 512-byte chunk throttling; `EscPosPrinterDriver.kt` for ESC/POS receipt raster generation; `TsplLabelPrinterDriver.kt` for TSPL label raster and ASCII command generation)
+- Thermal printer architecture & byte formatting: `app/src/main/java/com/example/techyfipos/printer/` (`BluetoothPrinterTransport.kt` for shared resilient Bluetooth socket communication with insecure RFCOMM fallback, early secure socket closure, and 512-byte chunk throttling; `EscPosPrinterDriver.kt` for ESC/POS receipt raster generation with software luminance thresholding on `Dispatchers.Default`; `TsplLabelPrinterDriver.kt` for TSPL label raster and ASCII command generation)
 - Excel import and export: `app/src/main/java/com/example/techyfipos/utils/ExcelHelper.kt`
 - PIN lock / first-run setup: `app/src/main/java/com/example/techyfipos/ui/screens/LockScreen.kt`
 - Staff management: `app/src/main/java/com/example/techyfipos/ui/screens/ManageUsersScreen.kt`
@@ -2669,9 +2672,18 @@ mindmap
     - Cash drawer kick picker updated with a "Same as receipt printer" option, selected by default when blank.
     - `BluetoothPrinterPickerDialog` displays clear guidance when Bluetooth is disabled.
     - Fully bilingual in English (`res/values/strings.xml`) and Bengali (`res/values-bn/strings.xml`) with zero em dashes.
+  - **Receipt Print Darkness & Software Luminance Thresholding**:
+    - Added `receiptDarkness: Int = 8` to `InvoiceSettingsData` with backward-compatible JSON save/load.
+    - Pure function `receiptLuminanceThreshold(darkness: Int): Int = 110 + darkness.coerceIn(0, 15) * 8` (0 -> 110 lightest, 8 -> 174 default, 15 -> 230 darkest) avoiding vendor-incompatible hardware density commands.
+    - Receipt darkness slider (0-15, steps = 14) with "Lighter" and "Darker" captions, or system print service note when in SYSTEM mode.
+    - Local Compose state for drag interaction, saving to settings only on `onValueChangeFinished` for both receipt and label sliders.
+  - **Printer Concurrency & Resource Leak Hardening**:
+    - Thread safety: Wrapped all `printBillJpeg` and `printPdfDocument` invocations in `withContext(Dispatchers.Main)` inside `printReceiptImage` and `printLabelImages`.
+    - Rasterization offload: Wrapped bitmap scaling, luminance conversion, and ESC/POS payload generation inside `withContext(Dispatchers.Default)` in `EscPosPrinterDriver.printReceiptDirect`.
+    - Socket leak prevention: Safely closed the initial secure Bluetooth socket upon `connect()` failure before creating and connecting the insecure fallback socket in `BluetoothPrinterTransport.kt`.
   - **R8 Minification & Deliverable**:
     - `Techyfi-POS-Final-V73.apk` (36 MB, versionCode 220944) - R8 minified release build with dead-code stripping and resource optimization.
-    - Unit tests: 99/99 passing (`testDebugUnitTest`).
+    - Unit tests: 102/102 passing (`testDebugUnitTest`).
 
 ## Maintenance note
 

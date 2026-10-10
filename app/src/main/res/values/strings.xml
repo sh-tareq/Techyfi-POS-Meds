@@ -2800,6 +2800,10 @@
     <string name="direct_print_error_bluetooth_off">Bluetooth is turned off. Please turn on Bluetooth and try again.</string>
     <string name="direct_print_error_not_paired">Printer is not paired. Please pair it in Android Bluetooth settings first.</string>
     <string name="direct_print_error_connection_failed">Connection to printer failed: %1$s</string>
+    <string name="settings_receipt_darkness_label">Print Darkness (%1$d)</string>
+    <string name="settings_darkness_lighter">Lighter</string>
+    <string name="settings_darkness_darker">Darker</string>
+    <string name="settings_receipt_darkness_system_note">Darkness for Android print service printers is set in the printer\'s print service app.</string>
 </resources>
 
 

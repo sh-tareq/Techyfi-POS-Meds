@@ -3,6 +3,8 @@ package com.example.techyfipos.printer
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 
 object EscPosPrinterDriver {
@@ -19,10 +21,16 @@ object EscPosPrinterDriver {
     private val CMD_DRAWER_KICK = byteArrayOf(0x1B, 0x70, 0x00, 0x19, 0xFA.toByte())
 
     /**
+     * Pure function returning the grayscale luminance cutoff (0-255) for black dots.
+     * 0 -> 110 lightest, 8 -> 174 default, 15 -> 230 darkest.
+     */
+    fun receiptLuminanceThreshold(darkness: Int): Int = 110 + darkness.coerceIn(0, 15) * 8
+
+    /**
      * Converts a Bitmap into an ESC/POS GS v 0 raster bit image byte stream.
      * Supports 384 dots (58mm) or 576 dots (80mm).
      */
-    fun bitmapToEscPosRaster(src: Bitmap, targetWidthDots: Int = 384): ByteArray {
+    fun bitmapToEscPosRaster(src: Bitmap, targetWidthDots: Int = 384, darkness: Int = 8): ByteArray {
         val aspect = src.height.toFloat() / src.width.toFloat()
         val targetHeightDots = (targetWidthDots * aspect).toInt()
         val scaled = Bitmap.createScaledBitmap(src, targetWidthDots, targetHeightDots, true)
@@ -59,7 +67,7 @@ object EscPosPrinterDriver {
                             // Luminance: 0.299R + 0.587G + 0.114B
                             val luminance = (0.299 * red + 0.587 * green + 0.114 * blue).toInt()
                             // In ESC/POS raster, 1 is black (dot printed), 0 is white (blank)
-                            val isBlack = alpha > 40 && luminance < 170
+                            val isBlack = alpha > 40 && luminance < receiptLuminanceThreshold(darkness)
                             if (isBlack) {
                                 b = b or (1 shl (7 - bit))
                             }
@@ -79,26 +87,29 @@ object EscPosPrinterDriver {
 
     /**
      * Direct Bluetooth SPP printing over RFCOMM socket using shared BluetoothPrinterTransport.
-     * Takes < 1 second to print the receipt directly on a physical thermal printer.
+     * Runs rasterization off the main thread on Dispatchers.Default.
      */
     suspend fun printReceiptDirect(
         context: Context,
         printerAddress: String,
         bitmap: Bitmap,
         paperWidthDots: Int = 384,
-        autoKickDrawer: Boolean = false
+        autoKickDrawer: Boolean = false,
+        darkness: Int = 8
     ): DirectPrintResult {
-        val rasterData = bitmapToEscPosRaster(bitmap, paperWidthDots)
-        val out = ByteArrayOutputStream()
-        out.write(CMD_INIT)
-        out.write(CMD_ALIGN_CENTER)
-        out.write(rasterData)
-        out.write(CMD_FEED_4_LINES)
-        out.write(CMD_PARTIAL_CUT)
-        if (autoKickDrawer) {
-            out.write(CMD_DRAWER_KICK)
+        val payload = withContext(Dispatchers.Default) {
+            val rasterData = bitmapToEscPosRaster(bitmap, paperWidthDots, darkness)
+            val out = ByteArrayOutputStream()
+            out.write(CMD_INIT)
+            out.write(CMD_ALIGN_CENTER)
+            out.write(rasterData)
+            out.write(CMD_FEED_4_LINES)
+            out.write(CMD_PARTIAL_CUT)
+            if (autoKickDrawer) {
+                out.write(CMD_DRAWER_KICK)
+            }
+            out.toByteArray()
         }
-        val payload = out.toByteArray()
         return sendToBluetoothPrinter(context, printerAddress, payload)
     }
 }

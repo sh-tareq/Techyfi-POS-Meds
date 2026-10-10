@@ -769,6 +769,51 @@ private fun OptimizedSettingsHome(
                 }
             }
 
+            // Receipt print darkness slider (0-15) or system note
+            if (currentSettings.receiptPrintMode != "SYSTEM") {
+                var localReceiptDarkness by remember(currentSettings.receiptDarkness) {
+                    mutableStateOf(currentSettings.receiptDarkness.toFloat().coerceIn(0f, 15f))
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.settings_receipt_darkness_label, localReceiptDarkness.roundToInt().coerceIn(0, 15)),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Slider(
+                        value = localReceiptDarkness,
+                        onValueChange = { v -> localReceiptDarkness = v },
+                        onValueChangeFinished = {
+                            onUpdateSettings(currentSettings.copy(receiptDarkness = localReceiptDarkness.roundToInt().coerceIn(0, 15)))
+                        },
+                        valueRange = 0f..15f,
+                        steps = 14,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_darkness_lighter),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_darkness_darker),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = stringResource(R.string.settings_receipt_darkness_system_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             // Test receipt button
             OutlinedButton(
                 onClick = {
@@ -925,21 +970,40 @@ private fun OptimizedSettingsHome(
             )
 
             // Darkness slider (0-15)
+            var localLabelDarkness by remember(currentSettings.labelDarkness) {
+                mutableStateOf(currentSettings.labelDarkness.toFloat().coerceIn(0f, 15f))
+            }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = stringResource(R.string.settings_label_darkness_label, currentSettings.labelDarkness),
+                    text = stringResource(R.string.settings_label_darkness_label, localLabelDarkness.roundToInt().coerceIn(0, 15)),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold
                 )
                 Slider(
-                    value = currentSettings.labelDarkness.toFloat().coerceIn(0f, 15f),
-                    onValueChange = { v ->
-                        onUpdateSettings(currentSettings.copy(labelDarkness = v.roundToInt().coerceIn(0, 15)))
+                    value = localLabelDarkness,
+                    onValueChange = { v -> localLabelDarkness = v },
+                    onValueChangeFinished = {
+                        onUpdateSettings(currentSettings.copy(labelDarkness = localLabelDarkness.roundToInt().coerceIn(0, 15)))
                     },
                     valueRange = 0f..15f,
                     steps = 14,
                     modifier = Modifier.fillMaxWidth()
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_darkness_lighter),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_darkness_darker),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             // Test label button

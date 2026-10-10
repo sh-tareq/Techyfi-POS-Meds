@@ -127,4 +127,32 @@ class PrinterRoutingAndDriverTest {
         assertEquals(RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG, notPaired)
         assertEquals(RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG, noPermission)
     }
+
+    // 4. Tests for receiptLuminanceThreshold()
+    @Test
+    fun `receiptLuminanceThreshold maps values correctly and clamps out of bounds inputs`() {
+        assertEquals(110, EscPosPrinterDriver.receiptLuminanceThreshold(0))
+        assertEquals(174, EscPosPrinterDriver.receiptLuminanceThreshold(8))
+        assertEquals(230, EscPosPrinterDriver.receiptLuminanceThreshold(15))
+        assertEquals(110, EscPosPrinterDriver.receiptLuminanceThreshold(-3))
+        assertEquals(230, EscPosPrinterDriver.receiptLuminanceThreshold(99))
+    }
+
+    // 5. Tests for InvoiceSettingsData receiptDarkness serialization
+    @Test
+    fun `InvoiceSettingsData JSON round trip preserves receiptDarkness`() {
+        val original = InvoiceSettingsData(receiptDarkness = 12)
+        val jsonString = original.toJson()
+        val loaded = InvoiceSettingsData.fromJson(jsonString)
+        assertEquals(12, loaded.receiptDarkness)
+    }
+
+    @Test
+    fun `InvoiceSettingsData fromJson without receiptDarkness defaults to 8`() {
+        val jsonObject = org.json.JSONObject().apply {
+            put("storeName", "Test Shop")
+        }
+        val loaded = InvoiceSettingsData.fromJson(jsonObject.toString())
+        assertEquals(8, loaded.receiptDarkness)
+    }
 }

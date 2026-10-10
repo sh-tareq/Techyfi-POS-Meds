@@ -73,6 +73,7 @@ data class InvoiceSettingsData(
     val directBluetoothPrintEnabled: Boolean = false,
     val directBluetoothPrinterAddress: String = "",
     val receiptPrintMode: String = "AUTO", // "BLUETOOTH", "SYSTEM", "AUTO"
+    val receiptDarkness: Int = 8,
     val labelPrintMode: String = "AUTO", // "BLUETOOTH", "SYSTEM", "AUTO"
     val labelPrinterAddress: String = "",
     val labelGapMm: Float = 2f,
@@ -155,6 +156,7 @@ data class InvoiceSettingsData(
             put("directBluetoothPrintEnabled", directBluetoothPrintEnabled)
             put("directBluetoothPrinterAddress", directBluetoothPrinterAddress)
             put("receiptPrintMode", receiptPrintMode)
+            put("receiptDarkness", receiptDarkness)
             put("labelPrintMode", labelPrintMode)
             put("labelPrinterAddress", labelPrinterAddress)
             put("labelGapMm", labelGapMm.toDouble())
@@ -247,6 +249,7 @@ data class InvoiceSettingsData(
                     directBluetoothPrintEnabled = json.optBoolean("directBluetoothPrintEnabled", false),
                     directBluetoothPrinterAddress = json.optString("directBluetoothPrinterAddress", ""),
                     receiptPrintMode = json.optString("receiptPrintMode", "AUTO").ifBlank { "AUTO" },
+                    receiptDarkness = json.optInt("receiptDarkness", 8),
                     labelPrintMode = json.optString("labelPrintMode", "AUTO").ifBlank { "AUTO" },
                     labelPrinterAddress = json.optString("labelPrinterAddress", ""),
                     labelGapMm = json.optDouble("labelGapMm", 2.0).toFloat(),

@@ -2802,4 +2802,8 @@
     <string name="direct_print_error_bluetooth_off">ব্লুটুথ বন্ধ রয়েছে। দয়া করে ব্লুটুথ চালু করে আবার চেষ্টা করুন।</string>
     <string name="direct_print_error_not_paired">প্রিন্টারটি পেয়ার করা নেই। আগে অ্যান্ড্রয়েড ব্লুটুথ সেটিংস থেকে পেয়ার করুন।</string>
     <string name="direct_print_error_connection_failed">প্রিন্টারের সাথে সংযোগ ব্যর্থ হয়েছে: %1$s</string>
+    <string name="settings_receipt_darkness_label">প্রিন্টের কালির ঘনত্ব (%1$d)</string>
+    <string name="settings_darkness_lighter">হালকা</string>
+    <string name="settings_darkness_darker">গাঢ়</string>
+    <string name="settings_receipt_darkness_system_note">অ্যান্ড্রয়েড প্রিন্ট সার্ভিসের প্রিন্টারের কালির ঘনত্ব সংশ্লিষ্ট প্রিন্ট সার্ভিস অ্যাপ থেকে নির্ধারণ করতে হয়।</string>
 </resources>

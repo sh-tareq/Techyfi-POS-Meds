@@ -768,7 +768,8 @@ suspend fun printReceiptDirectBluetooth(
     bitmap: Bitmap,
     printerAddress: String,
     paperRollWidthMm: Int = 80,
-    autoKickDrawer: Boolean = false
+    autoKickDrawer: Boolean = false,
+    darkness: Int = 8
 ): Boolean {
     val dots = if (paperRollWidthMm == 58) 384 else 576
     val res = EscPosPrinterDriver.printReceiptDirect(
@@ -776,7 +777,8 @@ suspend fun printReceiptDirectBluetooth(
         printerAddress = printerAddress,
         bitmap = bitmap,
         paperWidthDots = dots,
-        autoKickDrawer = autoKickDrawer
+        autoKickDrawer = autoKickDrawer,
+        darkness = darkness
     )
     return res is DirectPrintResult.Success
 }
@@ -797,7 +799,9 @@ suspend fun printReceiptImage(
     val address = settings.resolvedReceiptPrinterAddress()
 
     if (mode == "SYSTEM") {
-        printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+        withContext(Dispatchers.Main) {
+            printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+        }
         return true
     }
 
@@ -810,7 +814,9 @@ suspend fun printReceiptImage(
             }
             RoutingDecision.SYSTEM_DIALOG,
             RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
-                printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+                withContext(Dispatchers.Main) {
+                    printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+                }
                 true
             }
             RoutingDecision.DIRECT_OK -> true
@@ -827,7 +833,8 @@ suspend fun printReceiptImage(
             printerAddress = address,
             bitmap = bitmap,
             paperWidthDots = paperDots,
-            autoKickDrawer = kickDrawer
+            autoKickDrawer = kickDrawer,
+            darkness = settings.receiptDarkness
         )
     } else {
         DirectPrintResult.Failed("Could not decode receipt image file")
@@ -842,11 +849,15 @@ suspend fun printReceiptImage(
         }
         RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
             showDirectPrintToast(context, directResult)
-            printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+            withContext(Dispatchers.Main) {
+                printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+            }
             true
         }
         RoutingDecision.SYSTEM_DIALOG -> {
-            printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+            withContext(Dispatchers.Main) {
+                printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+            }
             true
         }
     }
@@ -871,7 +882,9 @@ suspend fun printLabelImages(
     val address = settings.labelPrinterAddress.trim()
 
     if (mode == "SYSTEM") {
-        return printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+        return withContext(Dispatchers.Main) {
+            printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+        }
     }
 
     if (address.isBlank()) {
@@ -883,7 +896,9 @@ suspend fun printLabelImages(
             }
             RoutingDecision.SYSTEM_DIALOG,
             RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
-                printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+                withContext(Dispatchers.Main) {
+                    printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+                }
             }
             RoutingDecision.DIRECT_OK -> true
         }
@@ -916,10 +931,14 @@ suspend fun printLabelImages(
         }
         RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
             showDirectPrintToast(context, directResult)
-            printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+            withContext(Dispatchers.Main) {
+                printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+            }
         }
         RoutingDecision.SYSTEM_DIALOG -> {
-            printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+            withContext(Dispatchers.Main) {
+                printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+            }
         }
     }
 }

@@ -76,11 +76,18 @@ suspend fun sendToBluetoothPrinter(
     val uuid = UUID.fromString(SPP_UUID)
     var socket: BluetoothSocket? = null
     try {
+        var secureSocket: BluetoothSocket? = null
         socket = try {
             val s = device.createRfcommSocketToServiceRecord(uuid)
+            secureSocket = s
             s.connect()
             s
         } catch (firstEx: Exception) {
+            try {
+                secureSocket?.close()
+            } catch (closeEx: Exception) {
+                Log.w(TAG, "Error closing secure socket before fallback: ${closeEx.message}")
+            }
             Log.w(TAG, "Standard RFCOMM socket failed, retrying insecure RFCOMM socket: ${firstEx.message}")
             val insecureSocket = device.createInsecureRfcommSocketToServiceRecord(uuid)
             insecureSocket.connect()
