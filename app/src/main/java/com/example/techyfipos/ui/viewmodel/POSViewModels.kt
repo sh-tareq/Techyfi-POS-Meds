@@ -2056,7 +2056,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         val list = rawList.filter { it.sale.timestamp in startMillis until endMillis }
         val expensesList = repository.getExpensesBetween(startMillis, endMillis).first()
         val totalExpenses = expensesList
-            .filter { it.type == "EXPENSE" && it.category != "Supplier Payment" }
+            .filter { it.type == "EXPENSE" && !it.category.equals("Supplier Payment", ignoreCase = true) && !it.category.equals("Safe Drop", ignoreCase = true) }
             .sumOf { it.amount }
         val duePaymentsInPeriod = repository.allDuePayments.first().filter { it.timestamp in startMillis until endMillis }
         val supplierPaymentsInPeriod = expensesList.filter { it.category == "Supplier Payment" }
@@ -2276,7 +2276,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
                 dailyTotals[dayStart] = existing.copy(supplierPayments = existing.supplierPayments + sp.amount)
             }
         }
-        expensesList.filter { it.type == "EXPENSE" && it.category != "Supplier Payment" }.forEach { exp ->
+        expensesList.filter { it.type == "EXPENSE" && !it.category.equals("Supplier Payment", ignoreCase = true) && !it.category.equals("Safe Drop", ignoreCase = true) }.forEach { exp ->
             val dayStart = com.example.techyfipos.utils.startOfDay(exp.timestamp)
             val existing = dailyTotals[dayStart]
             if (existing != null) {

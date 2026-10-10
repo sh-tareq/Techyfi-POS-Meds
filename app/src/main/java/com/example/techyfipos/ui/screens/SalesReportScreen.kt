@@ -183,7 +183,7 @@ fun SalesReportScreen(
 
     val allExpenses by (expenseViewModel?.allExpenses?.collectAsStateWithLifecycle(emptyList()) ?: remember { mutableStateOf(emptyList()) })
     val periodExpenses = remember(allExpenses, rangeStart, rangeEnd) {
-        allExpenses.filter { it.timestamp in rangeStart until rangeEnd && it.type != "CASH_IN" && !it.category.equals("Supplier Payment", ignoreCase = true) }
+        allExpenses.filter { it.timestamp in rangeStart until rangeEnd && it.type != "CASH_IN" && !it.category.equals("Supplier Payment", ignoreCase = true) && !it.category.equals("Safe Drop", ignoreCase = true) }
     }
     val periodExpenseTotal = remember(periodExpenses) { periodExpenses.sumOf { it.amount } }
 
