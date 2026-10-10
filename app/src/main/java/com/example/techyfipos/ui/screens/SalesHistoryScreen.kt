@@ -1924,7 +1924,8 @@ private fun SaleDetailDialog(
                     lineTotal = item.price * item.quantity,
                     note = item.note,
                     purchasePrice = item.purchasePriceAtSale,
-                    taxable = item.taxable
+                    taxable = item.taxable,
+                    barcode = item.productBarcode
                 )
             },
             subtotal = saleWithItems.sale.subtotal,
@@ -1968,7 +1969,7 @@ private fun SaleDetailDialog(
     }
 
     val currentProfitSummary = remember(saleWithItems, currentReturnSummary, isOwner) {
-        if (isOwner) salesViewModel.calculateInvoiceProfit(saleWithItems, currentReturnSummary) else null
+        if (isOwner) salesViewModel?.calculateInvoiceProfit(saleWithItems, currentReturnSummary) else null
     }
 
     ReceiptSummaryDialog(

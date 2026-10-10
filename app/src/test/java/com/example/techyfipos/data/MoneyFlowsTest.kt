@@ -690,9 +690,9 @@ class MoneyFlowsTest {
     @Test
     fun `R20-07 Safe Drop is excluded from operating expenses filter`() {
         val expenses = listOf(
-            com.example.techyfipos.data.db.Expense(id = 1, amount = 50.0, category = "Utilities", type = "EXPENSE", paymentSource = "Cash", timestamp = 1000L),
-            com.example.techyfipos.data.db.Expense(id = 2, amount = 20000.0, category = "Safe Drop", type = "EXPENSE", paymentSource = "Cash", timestamp = 1000L),
-            com.example.techyfipos.data.db.Expense(id = 3, amount = 500.0, category = "Supplier Payment", type = "EXPENSE", paymentSource = "Cash", timestamp = 1000L)
+            com.example.techyfipos.data.db.Expense(id = 1, title = "Utils", amount = 50.0, category = "Utilities", type = "EXPENSE", paymentSource = "Cash", timestamp = 1000L),
+            com.example.techyfipos.data.db.Expense(id = 2, title = "Drop", amount = 20000.0, category = "Safe Drop", type = "EXPENSE", paymentSource = "Cash", timestamp = 1000L),
+            com.example.techyfipos.data.db.Expense(id = 3, title = "Supplier", amount = 500.0, category = "Supplier Payment", type = "EXPENSE", paymentSource = "Cash", timestamp = 1000L)
         )
         val filtered = expenses.filter {
             it.type == "EXPENSE" &&

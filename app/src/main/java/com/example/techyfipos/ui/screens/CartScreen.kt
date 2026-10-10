@@ -544,7 +544,8 @@ fun CartScreen(
                 note = item.note,
                 mrpPrice = if (item.product.mrpPrice > 0.0) item.product.mrpPrice else item.product.sellingPrice,
                 purchasePrice = item.product.purchasePrice,
-                taxable = item.taxable
+                taxable = item.taxable,
+                barcode = item.product.barcode
             )
         }
         val snapshotSubtotal = subtotal

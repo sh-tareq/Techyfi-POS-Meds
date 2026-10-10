@@ -36,7 +36,8 @@ data class BillLineItem(
     val note: String? = null,
     val mrpPrice: Double = 0.0,
     val purchasePrice: Double? = null,
-    val taxable: Boolean = true
+    val taxable: Boolean = true,
+    val barcode: String = ""
 )
 
 data class BillData(
