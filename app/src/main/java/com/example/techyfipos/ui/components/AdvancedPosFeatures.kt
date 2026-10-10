@@ -1221,7 +1221,7 @@ fun AddExpenseDialog(
     val categories = if (isCashIn) {
         listOf("Float In", "Owner Capital", "Change Exchange", "Other")
     } else {
-        listOf("Tea & Refreshments", "Staff Meal", "Electricity (Token)", "Transport", "Shop Rent", "Cleaning", "Supplier Payment", "Other")
+        listOf("Tea & Refreshments", "Staff Meal", "Electricity (Token)", "Transport", "Shop Rent", "Cleaning", "Other")
     }
 
     val sources = listOf("Cash", "bKash", "Nagad", "Bank")
@@ -1355,16 +1355,17 @@ fun AddExpenseDialog(
 fun ExpenseItemRow(
     expense: Expense,
     onEdit: (() -> Unit)? = null,
-    onDelete: () -> Unit,
+    onDelete: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
     val isCashIn = expense.type == "CASH_IN"
+    val isSupplierPayment = expense.category.equals("Supplier Payment", ignoreCase = true)
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        onClick = { onEdit?.invoke() },
+        onClick = { if (!isSupplierPayment) onEdit?.invoke() },
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
@@ -1447,7 +1448,7 @@ fun ExpenseItemRow(
                     fontSize = 14.sp,
                     color = if (isCashIn) Color(0xFF059669) else Color(0xFFE11D48)
                 )
-                if (onEdit != null) {
+                if (!isSupplierPayment && onEdit != null) {
                     IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
                         Icon(
                             Icons.Default.Edit,
@@ -1457,13 +1458,15 @@ fun ExpenseItemRow(
                         )
                     }
                 }
-                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(48.dp)) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.delete),
-                        tint = Color.Gray.copy(alpha = 0.6f),
-                        modifier = Modifier.size(18.dp)
-                    )
+                if (!isSupplierPayment && onDelete != null) {
+                    IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete),
+                            tint = Color.Gray.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }
@@ -1475,7 +1478,7 @@ fun ExpenseItemRow(
             text = { Text(stringResource(R.string.expense_delete_confirm_message, expense.title, formatTaka(expense.amount))) },
             confirmButton = {
                 Button(
-                    onClick = { confirmDelete = false; onDelete() },
+                    onClick = { confirmDelete = false; onDelete?.invoke() },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) { Text(stringResource(R.string.delete)) }
             },

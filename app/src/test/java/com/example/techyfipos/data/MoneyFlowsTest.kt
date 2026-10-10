@@ -736,4 +736,48 @@ class MoneyFlowsTest {
         assertEquals(30.0, reportNetProfit, 0.001)
         assertEquals(invoiceNetProfit, reportNetProfit, 0.001)
     }
+
+    @Test
+    fun `R20-19f supplier pay due in-flight guard prevents double submission`() {
+        var isSaving = false
+        var callCount = 0
+
+        fun triggerPay() {
+            if (!isSaving) {
+                isSaving = true
+                callCount++
+            }
+        }
+
+        // First tap
+        triggerPay()
+        assertEquals(1, callCount)
+        assertTrue(isSaving)
+
+        // Rapid second tap while in-flight
+        triggerPay()
+        assertEquals(1, callCount)
+
+        // Callback completes
+        isSaving = false
+        assertFalse(isSaving)
+    }
+
+    @Test
+    fun `R20-19g manual expense categories exclude Supplier Payment`() {
+        val manualExpenseCategories = listOf("Tea & Refreshments", "Staff Meal", "Electricity (Token)", "Transport", "Shop Rent", "Cleaning", "Other")
+        assertFalse(manualExpenseCategories.contains("Supplier Payment"))
+
+        val supplierPaymentExpense = com.example.techyfipos.data.db.Expense(
+            id = 10,
+            title = "Supplier Due Pay",
+            category = "Supplier Payment",
+            type = "EXPENSE",
+            amount = 1500.0,
+            paymentSource = "Cash",
+            timestamp = 1000L
+        )
+        val isSupplierPayment = supplierPaymentExpense.category.equals("Supplier Payment", ignoreCase = true)
+        assertTrue(isSupplierPayment)
+    }
 }

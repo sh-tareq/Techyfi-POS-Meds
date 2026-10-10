@@ -1190,12 +1190,13 @@ fun SuppliersScreen(
         var payAmountText by remember { mutableStateOf("") }
         var payNote by remember { mutableStateOf("") }
         var payMethod by remember { mutableStateOf(supplierViewModel.paymentMethods.firstOrNull() ?: "") }
+        var isSaving by remember { mutableStateOf(false) }
         val payAmount = payAmountText.toDoubleOrNull() ?: 0.0
         val isExceeding = payAmount > sup.totalDue
         val isAmountValid = payAmount > 0.0 && !isExceeding
 
         AlertDialog(
-            onDismissRequest = { selectedSupplierForPayDue = null },
+            onDismissRequest = { if (!isSaving) selectedSupplierForPayDue = null },
             properties = DialogProperties(dismissOnClickOutside = false),
             title = {
                 Row(
@@ -1270,15 +1271,18 @@ fun SuppliersScreen(
             },
             confirmButton = {
                 Button(
-                    enabled = payMethod.isNotBlank() && isAmountValid,
+                    enabled = !isSaving && payMethod.isNotBlank() && isAmountValid,
                     onClick = {
                         val amount = payAmountText.toDoubleOrNull() ?: 0.0
-                        if (amount > 0 && amount <= sup.totalDue) {
+                        if (!isSaving && amount > 0 && amount <= sup.totalDue) {
+                            isSaving = true
                             supplierViewModel.paySupplierDue(sup, amount, payMethod, payNote) { result ->
                                 result.onSuccess {
+                                    isSaving = false
                                     selectedSupplierForPayDue = null
                                     android.widget.Toast.makeText(context, paymentSavedMessage, android.widget.Toast.LENGTH_SHORT).show()
                                 }.onFailure {
+                                    isSaving = false
                                     android.widget.Toast.makeText(context, it.localizedMessage ?: supplierOperationFailedMessage, android.widget.Toast.LENGTH_LONG).show()
                                 }
                             }
@@ -1291,7 +1295,10 @@ fun SuppliersScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { selectedSupplierForPayDue = null }) {
+                TextButton(
+                    enabled = !isSaving,
+                    onClick = { if (!isSaving) selectedSupplierForPayDue = null }
+                ) {
                     Text(stringResource(R.string.cancel), fontWeight = FontWeight.Bold)
                 }
             }

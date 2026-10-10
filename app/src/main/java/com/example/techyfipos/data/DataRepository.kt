@@ -4677,12 +4677,19 @@ class DataRepository(
 
     suspend fun updateExpense(expense: Expense) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.EXPENSES_MANAGE)
+        val existing = expenseDao.getExpenseById(expense.id)
+        if (existing != null && existing.category.equals("Supplier Payment", ignoreCase = true)) {
+            throw IllegalStateException("Supplier payment expenses are auto-generated and cannot be edited directly.")
+        }
         expenseDao.updateExpense(expense)
     }
 
     suspend fun deleteExpense(id: Long, reason: String = "Expense Deleted") = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.EXPENSES_MANAGE)
         val expense = expenseDao.getExpenseById(id)
+        if (expense != null && expense.category.equals("Supplier Payment", ignoreCase = true)) {
+            throw IllegalStateException("Supplier payment expenses are auto-generated and cannot be deleted directly. Manage them from Suppliers.")
+        }
         if (expense != null) {
             expenseAuditLogDao.insertAuditLog(
                 com.example.techyfipos.data.db.ExpenseAuditLog(

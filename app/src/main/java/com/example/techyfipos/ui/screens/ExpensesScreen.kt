@@ -428,12 +428,17 @@ fun ExpensesScreen(
                 }
             } else {
                 items(filteredExpenses, key = { it.id }) { expense ->
+                    val isSupplierPayment = expense.category.equals("Supplier Payment", ignoreCase = true)
                     ExpenseItemRow(
                         expense = expense,
-                        onEdit = { expenseToEdit = expense },
-                        onDelete = { expenseViewModel.deleteExpense(expense) { result ->
-                            result.onFailure { Toast.makeText(context, it.localizedMessage ?: deleteFailedMessage, Toast.LENGTH_LONG).show() }
-                        } }
+                        onEdit = if (!isSupplierPayment) { { expenseToEdit = expense } } else null,
+                        onDelete = if (!isSupplierPayment) {
+                            {
+                                expenseViewModel.deleteExpense(expense) { result ->
+                                    result.onFailure { Toast.makeText(context, it.localizedMessage ?: deleteFailedMessage, Toast.LENGTH_LONG).show() }
+                                }
+                            }
+                        } else null
                     )
                 }
             }
