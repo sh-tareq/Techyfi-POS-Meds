@@ -7,7 +7,10 @@ import android.util.Log
 import androidx.room.support.getSupportWrapper
 import com.example.techyfipos.R
 import com.example.techyfipos.TechyfiPOSApplication
+import com.example.techyfipos.data.CategoryItem
+import com.example.techyfipos.data.DueTemplate
 import com.example.techyfipos.data.InvoiceSettingsData
+import com.example.techyfipos.data.QuickSalePreset
 import com.example.techyfipos.data.SettingsDataStore
 import com.example.techyfipos.data.db.AppDatabase
 import com.example.techyfipos.data.db.APP_DATABASE_VERSION
@@ -133,7 +136,7 @@ object BackupPackageManager {
 
             // 4. Export DataStore preferences to preferences.json
             val stagingPrefFile = File(stagingDir, "preferences.json")
-            val prefJson = capturePreferences(settings, invoiceSettings)
+            val prefJson = capturePreferences(settings, invoiceSettings, context)
             stagingPrefFile.writeText(prefJson.toString(2))
 
             // 5. Copy logo asset if available
@@ -281,7 +284,7 @@ object BackupPackageManager {
         val rollbackDir = File(context.filesDir, "safety_rollback").apply { mkdirs() }
         val rollbackDbFile = File(rollbackDir, "pre_restore_${DB_NAME}_${System.currentTimeMillis()}.sqlite")
         val settings = SettingsDataStore(context)
-        val rollbackPreferences = runCatching { capturePreferences(settings) }.getOrNull()
+        val rollbackPreferences = runCatching { capturePreferences(settings, context = context) }.getOrNull()
         val restoredLogoFile = File(context.filesDir, "restored_shop_logo.png")
         val previousRestoredLogo = restoredLogoFile.takeIf(File::isFile)?.readBytes()
         var databaseWasSwapped = false
@@ -353,7 +356,7 @@ object BackupPackageManager {
             if (prefFile.exists()) {
                 try {
                     val prefJson = JSONObject(prefFile.readText())
-                    applyPreferences(settings, prefJson)
+                    applyPreferences(settings, prefJson, context)
                 } catch (e: Exception) {
                     Log.w(TAG, "Error restoring preferences: ${e.message}")
                 }
@@ -372,6 +375,7 @@ object BackupPackageManager {
             restoreProductImages(context, stagingDir, reopenedDb)
             val restoredProds = reopenedDb.productDao().getAllProducts().first().size
             DueReminderScheduler.reschedulePersistedReminders(context.applicationContext)
+            AutoBackupScheduler.scheduleAllAutoBackups(context.applicationContext, forceUpdate = true)
             Log.i(TAG, "Database successfully restored. Verified $restoredProds products.")
 
             // The process-wide repository captured DAO instances from the database that was just
@@ -396,7 +400,7 @@ object BackupPackageManager {
                     context.getDatabasePath("$DB_NAME-shm").delete()
                     AppDatabase.getDatabase(context)
                     (context.applicationContext as? TechyfiPOSApplication)?.reloadRepositoryAfterDatabaseRestore()
-                    rollbackPreferences?.let { applyPreferences(settings, it) }
+                    rollbackPreferences?.let { applyPreferences(settings, it, context) }
                     if (previousRestoredLogo == null) {
                         restoredLogoFile.delete()
                     } else {
@@ -443,7 +447,8 @@ object BackupPackageManager {
 
     private suspend fun capturePreferences(
         settings: SettingsDataStore,
-        invoiceSettings: InvoiceSettingsData? = null
+        invoiceSettings: InvoiceSettingsData? = null,
+        context: Context? = null
     ): JSONObject = JSONObject().apply {
         val effectiveInvoiceSettings = invoiceSettings ?: settings.invoiceSettingsDataFlow.first()
         put("invoiceSettings", effectiveInvoiceSettings.toJson())
@@ -455,9 +460,31 @@ object BackupPackageManager {
         put("driveRetentionCount", settings.driveRetentionCountFlow.first())
         put("driveNetworkPolicy", settings.driveNetworkPolicyFlow.first())
         put("driveBackupTime", settings.driveBackupTimeFlow.first())
+        put("quickSalePresets", QuickSalePreset.listToJson(settings.quickSalePresetsFlow.first()))
+        put("notePresets", JSONArray().apply { settings.notePresetsFlow.first().forEach { put(it) } })
+        put("dueReminderTemplates", DueTemplate.listToJson(settings.dueReminderTemplatesFlow.first()))
+        put("customCategories", CategoryItem.listToJson(settings.categoriesFlow.first()))
+        settings.returnAuditPresetsFlow.first()?.let { put("returnAuditPresets", it) }
+        put("themeMode", settings.themeModeFlow.first())
+        put("uiLayoutMode", settings.uiLayoutModeFlow.first())
+        put("defaultCostPercentage", settings.defaultCostPercentageFlow.first())
+        if (context != null) {
+            val loyaltySettings = LoyaltySettingsHelper.getSettings(context)
+            put("loyaltyProgramSettings", JSONObject().apply {
+                put("takaPerPoint", loyaltySettings.takaPerPoint)
+                put("pointCashValue", loyaltySettings.pointCashValue)
+                put("minRedeemPoints", loyaltySettings.minRedeemPoints)
+                put("maxBillPercentPayable", loyaltySettings.maxBillPercentPayable)
+                put("silverSpendThreshold", loyaltySettings.silverSpendThreshold)
+                put("goldSpendThreshold", loyaltySettings.goldSpendThreshold)
+                put("platinumSpendThreshold", loyaltySettings.platinumSpendThreshold)
+                put("pointsExpiryDays", loyaltySettings.pointsExpiryDays)
+                put("isTiersEnabled", loyaltySettings.isTiersEnabled)
+            })
+        }
     }
 
-    private suspend fun applyPreferences(settings: SettingsDataStore, json: JSONObject) {
+    private suspend fun applyPreferences(settings: SettingsDataStore, json: JSONObject, context: Context? = null) {
         if (json.has("invoiceSettings")) {
             settings.saveInvoiceSettingsData(InvoiceSettingsData.fromJson(json.getString("invoiceSettings")))
         }
@@ -477,6 +504,61 @@ object BackupPackageManager {
         if (json.has("driveRetentionCount")) settings.saveDriveRetentionCount(json.optInt("driveRetentionCount", 7))
         if (json.has("driveNetworkPolicy")) settings.saveDriveNetworkPolicy(json.optString("driveNetworkPolicy", "WIFI_ONLY"))
         if (json.has("driveBackupTime")) settings.saveDriveBackupTime(json.optString("driveBackupTime", "02:00"))
+        if (json.has("quickSalePresets")) {
+            runCatching {
+                settings.saveQuickSalePresets(QuickSalePreset.listFromJson(json.getString("quickSalePresets")))
+            }
+        }
+        if (json.has("notePresets")) {
+            runCatching {
+                val array = json.getJSONArray("notePresets")
+                val list = (0 until array.length()).map { array.getString(it) }
+                settings.saveNotePresets(list)
+            }
+        }
+        if (json.has("dueReminderTemplates")) {
+            runCatching {
+                settings.saveDueReminderTemplates(DueTemplate.listFromJson(json.getString("dueReminderTemplates")))
+            }
+        }
+        if (json.has("customCategories")) {
+            runCatching {
+                settings.saveCategories(CategoryItem.listFromJson(json.getString("customCategories")))
+            }
+        }
+        if (json.has("returnAuditPresets")) {
+            runCatching {
+                settings.saveReturnAuditPresets(json.getString("returnAuditPresets"))
+            }
+        }
+        if (json.has("themeMode")) {
+            runCatching { settings.saveThemeMode(json.getString("themeMode")) }
+        }
+        if (json.has("uiLayoutMode")) {
+            runCatching { settings.saveUiLayoutMode(json.getString("uiLayoutMode")) }
+        }
+        if (json.has("defaultCostPercentage")) {
+            runCatching { settings.saveDefaultCostPercentage(json.getDouble("defaultCostPercentage")) }
+        }
+        if (context != null && json.has("loyaltyProgramSettings")) {
+            runCatching {
+                val lObj = json.getJSONObject("loyaltyProgramSettings")
+                val restoredLoyalty = LoyaltyProgramSettings(
+                    takaPerPoint = lObj.optDouble("takaPerPoint", 100.0),
+                    pointCashValue = lObj.optDouble("pointCashValue", 1.0),
+                    minRedeemPoints = lObj.optInt("minRedeemPoints", 20),
+                    maxBillPercentPayable = lObj.optInt("maxBillPercentPayable", 50),
+                    silverSpendThreshold = lObj.optDouble("silverSpendThreshold", 3000.0),
+                    goldSpendThreshold = lObj.optDouble("goldSpendThreshold", 7500.0),
+                    platinumSpendThreshold = lObj.optDouble("platinumSpendThreshold", 15000.0),
+                    pointsExpiryDays = lObj.optInt("pointsExpiryDays", 365),
+                    isTiersEnabled = lObj.optBoolean("isTiersEnabled", true)
+                )
+                LoyaltySettingsHelper.saveSettings(context, restoredLoyalty)
+                val app = context.applicationContext as? TechyfiPOSApplication
+                app?.repository?.updateLoyaltySettings(restoredLoyalty)
+            }
+        }
     }
 
     private fun unzipFile(zipFile: File, targetDir: File) {

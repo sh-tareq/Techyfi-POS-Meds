@@ -2791,6 +2791,22 @@ class DataRepository(
             backupJson.put("notePresets", JSONArray().apply { notePresetsList.forEach { put(it) } })
             backupJson.put("dueReminderTemplates", DueTemplate.listToJson(dueTemplatesList))
             backupJson.put("customCategories", CategoryItem.listToJson(categoriesList))
+            settingsDataStore.returnAuditPresetsFlow.first()?.let { backupJson.put("returnAuditPresets", it) }
+            backupJson.put("themeMode", settingsDataStore.themeModeFlow.first())
+            backupJson.put("uiLayoutMode", settingsDataStore.uiLayoutModeFlow.first())
+            backupJson.put("defaultCostPercentage", settingsDataStore.defaultCostPercentageFlow.first())
+            val loyaltySettings = com.example.techyfipos.utils.LoyaltySettingsHelper.getSettings(context)
+            backupJson.put("loyaltyProgramSettings", JSONObject().apply {
+                put("takaPerPoint", loyaltySettings.takaPerPoint)
+                put("pointCashValue", loyaltySettings.pointCashValue)
+                put("minRedeemPoints", loyaltySettings.minRedeemPoints)
+                put("maxBillPercentPayable", loyaltySettings.maxBillPercentPayable)
+                put("silverSpendThreshold", loyaltySettings.silverSpendThreshold)
+                put("goldSpendThreshold", loyaltySettings.goldSpendThreshold)
+                put("platinumSpendThreshold", loyaltySettings.platinumSpendThreshold)
+                put("pointsExpiryDays", loyaltySettings.pointsExpiryDays)
+                put("isTiersEnabled", loyaltySettings.isTiersEnabled)
+            })
 
             // Settings & Logo Image JSON
             try {
@@ -3809,6 +3825,44 @@ class DataRepository(
                     settingsDataStore.saveCategories(CategoryItem.listFromJson(backupJson.getString("customCategories")))
                 } catch (e: Exception) { e.printStackTrace() }
             }
+            if (backupJson.has("returnAuditPresets")) {
+                try {
+                    settingsDataStore.saveReturnAuditPresets(backupJson.getString("returnAuditPresets"))
+                } catch (e: Exception) { e.printStackTrace() }
+            }
+            if (backupJson.has("themeMode")) {
+                try {
+                    settingsDataStore.saveThemeMode(backupJson.getString("themeMode"))
+                } catch (e: Exception) { e.printStackTrace() }
+            }
+            if (backupJson.has("uiLayoutMode")) {
+                try {
+                    settingsDataStore.saveUiLayoutMode(backupJson.getString("uiLayoutMode"))
+                } catch (e: Exception) { e.printStackTrace() }
+            }
+            if (backupJson.has("defaultCostPercentage")) {
+                try {
+                    settingsDataStore.saveDefaultCostPercentage(backupJson.getDouble("defaultCostPercentage"))
+                } catch (e: Exception) { e.printStackTrace() }
+            }
+            if (backupJson.has("loyaltyProgramSettings")) {
+                try {
+                    val lObj = backupJson.getJSONObject("loyaltyProgramSettings")
+                    val restoredLoyalty = com.example.techyfipos.utils.LoyaltyProgramSettings(
+                        takaPerPoint = lObj.optDouble("takaPerPoint", 100.0),
+                        pointCashValue = lObj.optDouble("pointCashValue", 1.0),
+                        minRedeemPoints = lObj.optInt("minRedeemPoints", 20),
+                        maxBillPercentPayable = lObj.optInt("maxBillPercentPayable", 50),
+                        silverSpendThreshold = lObj.optDouble("silverSpendThreshold", 3000.0),
+                        goldSpendThreshold = lObj.optDouble("goldSpendThreshold", 7500.0),
+                        platinumSpendThreshold = lObj.optDouble("platinumSpendThreshold", 15000.0),
+                        pointsExpiryDays = lObj.optInt("pointsExpiryDays", 365),
+                        isTiersEnabled = lObj.optBoolean("isTiersEnabled", true)
+                    )
+                    com.example.techyfipos.utils.LoyaltySettingsHelper.saveSettings(context, restoredLoyalty)
+                    updateLoyaltySettings(restoredLoyalty)
+                } catch (e: Exception) { e.printStackTrace() }
+            }
 
             // Settings import
             if (backupJson.has("settings")) {
@@ -3838,6 +3892,7 @@ class DataRepository(
                 }
             }
 
+            com.example.techyfipos.utils.AutoBackupScheduler.scheduleAllAutoBackups(context.applicationContext, forceUpdate = true)
             true
         } catch (e: Exception) {
             e.printStackTrace()
@@ -5122,9 +5177,49 @@ class DataRepository(
                 e.printStackTrace()
             }
         }
+
+        // Cleanup all persistent files and leftover caches (R20-37)
         try {
-            val logoFile = File(context.filesDir, "custom_logo.png")
-            if (logoFile.exists()) logoFile.delete()
+            val filesToDelete = listOf(
+                "store_logo.png",
+                "custom_logo.png",
+                "restored_logo.png",
+                "restored_shop_logo.png"
+            )
+            filesToDelete.forEach { name ->
+                val f = File(context.filesDir, name)
+                if (f.exists()) f.delete()
+            }
+            context.filesDir.listFiles { _, name -> name.startsWith("restored_") && name.endsWith(".png") }
+                ?.forEach { it.delete() }
+            File(context.filesDir, "AutoBackups").deleteRecursively()
+            File(context.filesDir, "safety_rollback").deleteRecursively()
+            File(context.filesDir, "restored_product_images").deleteRecursively()
+            context.filesDir.listFiles { _, name -> name.endsWith(".sqlite") || name.endsWith(".sqlite-wal") || name.endsWith(".sqlite-shm") }
+                ?.forEach { it.delete() }
+            context.cacheDir.listFiles { _, name -> name.startsWith("auto_backup_") || name.startsWith("restore_") || name.endsWith(".posenc") }
+                ?.forEach { it.deleteRecursively() }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Clear shared preferences
+        try {
+            context.getSharedPreferences("loyalty_program_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+            context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit().clear().apply()
+            context.getSharedPreferences("techyfi_return_dialog_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Cancel background workers and alarms
+        try {
+            val workManager = androidx.work.WorkManager.getInstance(context)
+            workManager.cancelUniqueWork(com.example.techyfipos.utils.AutoBackupScheduler.WORK_LOCAL_BACKUP)
+            workManager.cancelUniqueWork(com.example.techyfipos.utils.AutoBackupScheduler.WORK_DRIVE_BACKUP)
+            workManager.cancelUniqueWork(com.example.techyfipos.utils.AutoBackupScheduler.WORK_ONETIME_BACKUP)
+            com.example.techyfipos.utils.AutoBackupScheduler.scheduleAlarmManagerBackup(context, enabled = false)
+            com.example.techyfipos.utils.DueReminderScheduler.cancelAllScheduledReminders(context)
         } catch (e: Exception) {
             e.printStackTrace()
         }

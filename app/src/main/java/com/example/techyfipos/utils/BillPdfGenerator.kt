@@ -1558,7 +1558,7 @@ fun generateDueRepaymentJpeg(
 
     // 1. Process Monochrome Logo if enabled (Exact same sharp thresholding as sale receipt)
     var logoBitmap: Bitmap? = null
-    val shouldShowLogo = (settings.showDueReceiptLogo || settings.showLogo) && settings.logoUri.isNotBlank()
+    val shouldShowLogo = settings.showDueReceiptLogo && settings.logoUri.isNotBlank()
     if (shouldShowLogo) {
         try {
             val uri = Uri.parse(settings.logoUri)
@@ -1628,7 +1628,7 @@ fun generateDueRepaymentJpeg(
         val sigBottomMargin = if (is58) 32f else 44f
         totalHeight += sigTopClearance + sigLineToLabel + sigBottomMargin // Generous clearance for seal & signature + line + labels + padding
     }
-    if (settings.showDueReceiptQr || settings.showDueReceiptVerificationQr) {
+    if (settings.showDueReceiptQr) {
         totalHeight += (if (is58) 150f else 200f) + 24f // QR Code + caption/padding
     }
     totalHeight += if (is58) 24f else 28f // Thank You
@@ -1905,7 +1905,7 @@ fun generateDueRepaymentJpeg(
     }
 
     // 8. Optional Verification QR Code
-    if (settings.showDueReceiptQr || settings.showDueReceiptVerificationQr) {
+    if (settings.showDueReceiptQr) {
         val qrSize = if (is58) 140 else 180
         val qrContent = "TECHYFI-VOUCHER|REC-${voucherNo}|${customerName}|${customerPhone}|PAID:${amountPaid}|DUE:${remainingDue}|TS:${timestamp}"
         val qrBmp = generateQrBitmap(qrContent, qrSize)

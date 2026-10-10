@@ -998,6 +998,14 @@
     <string name="settings_field_custom_qr_url">কাস্টম কিউআর টার্গেট ইউআরএল</string>
     <string name="settings_field_default_cashier_name">ডিফল্ট ক্যাশিয়ারের নাম</string>
     <string name="settings_field_facebook_url">ফেসবুক পেজ ইউআরএল</string>
+    <string name="settings_field_website_url">ওয়েবসাইট / অনলাইন স্টোর ইউআরএল</string>
+    <string name="settings_local_auto_backups_title">স্বয়ংক্রিয় ব্যাকআপ ইতিহাস</string>
+    <string name="settings_local_auto_backups_desc">ডিভাইসে সংরক্ষিত স্বয়ংক্রিয় ব্যাকআপ দেখুন, পুনরুদ্ধার বা শেয়ার করুন</string>
+    <string name="settings_no_auto_backups">কোনো স্বয়ংক্রিয় ব্যাকআপ পাওয়া যায়নি</string>
+    <string name="settings_restore_auto_backup_confirm_title">স্বয়ংক্রিয় ব্যাকআপ পুনরুদ্ধার</string>
+    <string name="settings_restore_auto_backup_confirm_msg">আপনি কি এই ব্যাকআপ থেকে ডেটা পুনরুদ্ধার করতে চান? বর্তমান ডেটা প্রতিস্থাপিত হবে।</string>
+    <string name="settings_replace_confirm_title">সম্পূর্ণ প্রতিস্থাপন নিশ্চিত করুন</string>
+    <string name="settings_replace_confirm_msg">সম্পূর্ণ প্রতিস্থাপন বিদ্যমান সকল পণ্য, বিক্রয় এবং বকেয়া ডেটা মুছে ব্যাকআপ ডেটা দিয়ে পরিবর্তন করবে। আপনি কি চালিয়ে যেতে চান?</string>
     <string name="settings_field_primary_phone">প্রধান ফোন</string>
     <string name="settings_field_qr_caption">কিউআর ক্যাপশন সাবটেক্সট</string>
     <string name="settings_field_secondary_footer_message">দ্বিতীয় ফুটার বার্তা</string>
@@ -1136,6 +1144,8 @@
     <string name="settings_status_active">সক্রিয়</string>
     <string name="settings_status_configured">কনফিগার করা হয়েছে</string>
     <string name="settings_status_connected_dot">● সংযুক্ত</string>
+    <string name="settings_status_connected_offline">◐ সংযুক্ত (অফলাইন)</string>
+    <string name="settings_offline_cloud_sync_pending">ক্লাউড সিঙ্ক স্থগিত (অফলাইন)</string>
     <string name="settings_status_drive_ready">ড্রাইভ প্রস্তুত</string>
     <string name="settings_status_enabled">সক্রিয় করা হয়েছে</string>
     <string name="settings_status_excel_csv">এক্সেল / সিএসভি</string>

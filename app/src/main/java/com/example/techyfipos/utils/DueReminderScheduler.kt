@@ -239,6 +239,20 @@ object DueReminderScheduler {
         Log.i(TAG, "Cancelled due reminder for $uniqueWorkName")
     }
 
+    fun cancelAllScheduledReminders(context: Context) {
+        scope.launch {
+            try {
+                val db = AppDatabase.getDatabase(context)
+                val all = db.scheduledDueReminderDao().getAllOnce()
+                for (reminder in all) {
+                    cancelDueReminder(context, reminder.customerPhone)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to cancel all reminders: ${e.message}")
+            }
+        }
+    }
+
     suspend fun reschedulePersistedReminders(context: Context) {
         val reminders = AppDatabase.getDatabase(context).scheduledDueReminderDao().getAllOnce()
         val now = System.currentTimeMillis()

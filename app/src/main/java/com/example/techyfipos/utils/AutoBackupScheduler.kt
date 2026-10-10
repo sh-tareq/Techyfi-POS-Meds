@@ -34,9 +34,10 @@ object AutoBackupScheduler {
                 val driveEnabled = settingsDataStore.autoBackupFlow.first()
                 val driveFreq = settingsDataStore.driveAutoBackupFrequencyFlow.first()
                 val driveNetPolicy = settingsDataStore.driveNetworkPolicyFlow.first()
+                val driveTime = settingsDataStore.driveBackupTimeFlow.first()
 
                 scheduleLocalBackup(context, localEnabled, localFreq, forceUpdate)
-                scheduleDriveBackup(context, driveEnabled, driveFreq, driveNetPolicy, forceUpdate)
+                scheduleDriveBackup(context, driveEnabled, driveFreq, driveNetPolicy, driveTime, forceUpdate)
                 scheduleAlarmManagerBackup(context, localEnabled || driveEnabled)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -73,6 +74,7 @@ object AutoBackupScheduler {
         enabled: Boolean,
         frequency: String,
         networkPolicy: String = "WIFI_ONLY",
+        targetTime: String = "02:00",
         forceUpdate: Boolean = false
     ) {
         val workManager = WorkManager.getInstance(context)
@@ -91,9 +93,11 @@ object AutoBackupScheduler {
                 .setRequiredNetworkType(netType)
                 .setRequiresBatteryNotLow(true)
                 .build()
+            val initialDelayMillis = computeInitialDelayToTargetTime(targetTime)
             val workRequest = PeriodicWorkRequestBuilder<AutoBackupWorker>(repeatDays, TimeUnit.DAYS)
                 .setInputData(workDataOf(INPUT_BACKUP_SCOPE to SCOPE_DRIVE))
                 .setConstraints(constraints)
+                .setInitialDelay(initialDelayMillis, TimeUnit.MILLISECONDS)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
                 .build()
 
@@ -105,6 +109,27 @@ object AutoBackupScheduler {
             )
         } else {
             workManager.cancelUniqueWork(WORK_DRIVE_BACKUP)
+        }
+    }
+
+    private fun computeInitialDelayToTargetTime(targetTime: String): Long {
+        return try {
+            val parts = targetTime.split(":")
+            val targetHour = parts.getOrNull(0)?.toIntOrNull() ?: 2
+            val targetMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+            val now = java.util.Calendar.getInstance()
+            val target = java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.HOUR_OF_DAY, targetHour)
+                set(java.util.Calendar.MINUTE, targetMinute)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+                if (before(now)) {
+                    add(java.util.Calendar.DAY_OF_YEAR, 1)
+                }
+            }
+            (target.timeInMillis - now.timeInMillis).coerceAtLeast(0L)
+        } catch (_: Exception) {
+            0L
         }
     }
 
@@ -128,9 +153,10 @@ object AutoBackupScheduler {
             .setConstraints(constraintsBuilder.build())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
             .build()
+        val policy = if (respectDueTime) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE
         workManager.enqueueUniqueWork(
             WORK_ONETIME_BACKUP,
-            ExistingWorkPolicy.REPLACE,
+            policy,
             workRequest
         )
     }

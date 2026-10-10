@@ -1000,6 +1000,14 @@
     <string name="settings_field_custom_qr_url">Custom QR Target URL</string>
     <string name="settings_field_default_cashier_name">Default Cashier Name</string>
     <string name="settings_field_facebook_url">Facebook Page URL</string>
+    <string name="settings_field_website_url">Website / Online Store URL</string>
+    <string name="settings_local_auto_backups_title">Automatic Backups History</string>
+    <string name="settings_local_auto_backups_desc">View, restore or share locally stored automatic backups</string>
+    <string name="settings_no_auto_backups">No automatic backups found</string>
+    <string name="settings_restore_auto_backup_confirm_title">Restore Automatic Backup</string>
+    <string name="settings_restore_auto_backup_confirm_msg">Do you want to restore data from this backup? Current data will be replaced.</string>
+    <string name="settings_replace_confirm_title">Confirm Full Replace</string>
+    <string name="settings_replace_confirm_msg">Full replace will overwrite all existing products, sales, and dues with the backup data. Do you want to continue?</string>
     <string name="settings_field_primary_phone">Primary Phone</string>
     <string name="settings_field_qr_caption">QR Caption Subtext</string>
     <string name="settings_field_secondary_footer_message">Secondary Footer Message</string>
@@ -1138,6 +1146,8 @@
     <string name="settings_status_active">Active</string>
     <string name="settings_status_configured">Configured</string>
     <string name="settings_status_connected_dot">● CONNECTED</string>
+    <string name="settings_status_connected_offline">◐ CONNECTED (OFFLINE)</string>
+    <string name="settings_offline_cloud_sync_pending">Cloud sync paused (Offline)</string>
     <string name="settings_status_drive_ready">Drive ready</string>
     <string name="settings_status_enabled">Enabled</string>
     <string name="settings_status_excel_csv">Excel / CSV</string>

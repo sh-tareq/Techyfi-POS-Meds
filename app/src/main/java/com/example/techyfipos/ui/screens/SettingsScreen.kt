@@ -54,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.text.selection.SelectionContainer
+import android.content.Intent
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.asImageBitmap
 import com.example.techyfipos.data.InvoiceSettingsData
@@ -2026,6 +2027,14 @@ private fun QrCodeLinksSettings(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            OutlinedTextField(
+                value = currentSettings.websiteUrl,
+                onValueChange = { onSettingsChanged(currentSettings.copy(websiteUrl = it)) },
+                label = { Text(stringResource(R.string.settings_field_website_url)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -2815,6 +2824,7 @@ private fun MoneyReceiptVoucherSettings(
 @Composable
 private fun OptimizedBackupSettings(
     driveConnection: GoogleDriveHelper.DriveConnection?,
+    savedDriveAccountEmail: String = "",
     autoBackupEnabled: Boolean,
     localAutoBackupEnabled: Boolean,
     autoBackupFrequency: String,
@@ -2828,6 +2838,7 @@ private fun OptimizedBackupSettings(
     onLocalRestore: () -> Unit,
     onExportEncryptedBackup: () -> Unit = {},
     onImportEncryptedBackup: () -> Unit = {},
+    onOpenLocalAutoBackups: () -> Unit = {},
     onGoogleSignIn: () -> Unit,
     onGoogleSignOut: () -> Unit,
     onDriveBackupNow: () -> Unit,
@@ -2836,7 +2847,8 @@ private fun OptimizedBackupSettings(
     onDriveSettingsChanged: (Boolean, String, String, Int) -> Unit,
     onLocalAutoBackupChanged: (Boolean, String) -> Unit
 ) {
-    var activeStorageTab by remember { mutableStateOf(if (driveConnection != null) "CLOUD" else "LOCAL") }
+    val isDriveConfigured = driveConnection != null || savedDriveAccountEmail.isNotBlank()
+    var activeStorageTab by remember { mutableStateOf(if (isDriveConfigured) "CLOUD" else "LOCAL") }
 
     // 1. Master Compact Cloud Status & Telemetry Hub
     Card(
@@ -2864,6 +2876,8 @@ private fun OptimizedBackupSettings(
                 .padding(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                val isOnlineConnected = driveConnection != null
+                val isOfflineConnected = driveConnection == null && savedDriveAccountEmail.isNotBlank()
                 // Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -2880,15 +2894,22 @@ private fun OptimizedBackupSettings(
                             isSyncing = isBackingUpToDrive
                         )
                         Column {
+                            val displayEmail = driveConnection?.email
+                                ?: savedDriveAccountEmail.ifBlank { stringResource(R.string.settings_google_drive_cloud_default) }
                             Text(
-                                text = driveConnection?.email ?: stringResource(R.string.settings_google_drive_cloud_default),
+                                text = displayEmail,
                                 fontSize = 13.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White,
                                 maxLines = 1
                             )
+                            val statusSubtitle = when {
+                                isOnlineConnected -> stringResource(R.string.settings_vault_isolated_label)
+                                isOfflineConnected -> stringResource(R.string.settings_offline_cloud_sync_pending)
+                                else -> stringResource(R.string.settings_connect_cloud_sync)
+                            }
                             Text(
-                                text = if (driveConnection != null) stringResource(R.string.settings_vault_isolated_label) else stringResource(R.string.settings_connect_cloud_sync),
+                                text = statusSubtitle,
                                 fontSize = 10.5.sp,
                                 color = Color(0xFF94A3B8),
                                 maxLines = 1
@@ -2899,19 +2920,36 @@ private fun OptimizedBackupSettings(
                     Spacer(modifier = Modifier.width(6.dp))
 
                     // Status Pill
+                    val pillBg = when {
+                        isOnlineConnected -> Color(0xFF10B981).copy(alpha = 0.20f)
+                        isOfflineConnected -> Color(0xFFF59E0B).copy(alpha = 0.20f)
+                        else -> Color(0xFFEF4444).copy(alpha = 0.20f)
+                    }
+                    val pillBorder = when {
+                        isOnlineConnected -> Color(0xFF34D399).copy(alpha = 0.5f)
+                        isOfflineConnected -> Color(0xFFFBBF24).copy(alpha = 0.5f)
+                        else -> Color(0xFFF87171).copy(alpha = 0.5f)
+                    }
+                    val pillText = when {
+                        isOnlineConnected -> stringResource(R.string.settings_status_connected_dot)
+                        isOfflineConnected -> stringResource(R.string.settings_status_connected_offline)
+                        else -> stringResource(R.string.settings_status_not_connected_dot)
+                    }
+                    val pillTextColor = when {
+                        isOnlineConnected -> Color(0xFF34D399)
+                        isOfflineConnected -> Color(0xFFFBBF24)
+                        else -> Color(0xFFF87171)
+                    }
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = if (driveConnection != null) Color(0xFF10B981).copy(alpha = 0.20f) else Color(0xFFEF4444).copy(alpha = 0.20f),
-                        border = BorderStroke(
-                            1.dp,
-                            if (driveConnection != null) Color(0xFF34D399).copy(alpha = 0.5f) else Color(0xFFF87171).copy(alpha = 0.5f)
-                        )
+                        color = pillBg,
+                        border = BorderStroke(1.dp, pillBorder)
                     ) {
                         Text(
-                            text = if (driveConnection != null) stringResource(R.string.settings_status_connected_dot) else stringResource(R.string.settings_status_not_connected_dot),
+                            text = pillText,
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = if (driveConnection != null) Color(0xFF34D399) else Color(0xFFF87171),
+                            color = pillTextColor,
                             maxLines = 1,
                             softWrap = false,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -2955,7 +2993,7 @@ private fun OptimizedBackupSettings(
                 }
 
                 // Cloud Actions
-                if (driveConnection == null) {
+                if (!isDriveConfigured) {
                     Button(
                         onClick = onGoogleSignIn,
                         modifier = Modifier
@@ -3127,10 +3165,11 @@ private fun OptimizedBackupSettings(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = if (driveConnection == null) {
+                            text = if (!isDriveConfigured) {
                                 stringResource(R.string.settings_requires_google_connection)
                             } else if (autoBackupEnabled) {
-                                stringResource(R.string.settings_auto_sync_freq, driveAutoBackupFrequency.lowercase())
+                                if (driveConnection == null) stringResource(R.string.settings_offline_cloud_sync_pending)
+                                else stringResource(R.string.settings_auto_sync_freq, driveAutoBackupFrequency.lowercase())
                             } else {
                                 stringResource(R.string.settings_disabled_manual_only)
                             },
@@ -3140,8 +3179,8 @@ private fun OptimizedBackupSettings(
                     }
 
                     Switch(
-                        checked = autoBackupEnabled && driveConnection != null,
-                        enabled = driveConnection != null,
+                        checked = autoBackupEnabled && isDriveConfigured,
+                        enabled = isDriveConfigured,
                         onCheckedChange = { isChecked ->
                             onDriveSettingsChanged(isChecked, driveAutoBackupFrequency, driveNetworkPolicy, driveRetentionCount)
                         },
@@ -3149,7 +3188,7 @@ private fun OptimizedBackupSettings(
                     )
                 }
 
-                if (autoBackupEnabled && driveConnection != null) {
+                if (autoBackupEnabled && isDriveConfigured) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                     // Frequency Pills
@@ -3443,6 +3482,20 @@ private fun OptimizedBackupSettings(
                             }
                         }
                     }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                OutlinedButton(
+                    onClick = onOpenLocalAutoBackups,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.settings_local_auto_backups_title), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -4132,10 +4185,13 @@ fun SettingsScreen(
     // from app authentication, as recommended by the current AuthorizationClient API.
     val driveAuthorizationClient = remember { GoogleDriveHelper.getAuthorizationClient(context) }
     val settingsStore = remember { SettingsDataStore(context) }
+    val savedDriveAccountEmail by settingsStore.driveAccountEmailFlow.collectAsStateWithLifecycle(initialValue = "")
     var driveConnection by remember { mutableStateOf<GoogleDriveHelper.DriveConnection?>(null) }
     var showDriveBackupsDialog by remember { mutableStateOf(false) }
     var showRestoreConfirmDialog by remember { mutableStateOf<GoogleDriveHelper.DriveBackupFile?>(null) }
     var showGoogleConfigDialog by remember { mutableStateOf(false) }
+    var showLocalAutoBackupsDialog by remember { mutableStateOf(false) }
+    var selectedAutoBackupFileForRestore by remember { mutableStateOf<File?>(null) }
 
     val driveBackups by settingsViewModel.driveBackups.collectAsStateWithLifecycle()
     val isLoadingBackups by settingsViewModel.isLoadingBackups.collectAsStateWithLifecycle()
@@ -4362,6 +4418,7 @@ fun SettingsScreen(
     }
 
     BackHandler(enabled = settingsPage != SettingsPage.HOME) {
+        currentSettings = invoiceSettingsData
         settingsPage = when (settingsPage) {
             SettingsPage.SHOP_IDENTITY,
             SettingsPage.SHOP_LOGO,
@@ -4391,6 +4448,9 @@ fun SettingsScreen(
                     if (settingsPage != SettingsPage.HOME || !isTablet) {
                         IconButton(
                             onClick = {
+                                if (settingsPage != SettingsPage.HOME) {
+                                    currentSettings = invoiceSettingsData
+                                }
                                 settingsPage = when (settingsPage) {
                                     SettingsPage.HOME -> {
                                         onBack()
@@ -4450,7 +4510,7 @@ fun SettingsScreen(
                     currentLanguage = currentLang,
                     currentThemeMode = currentThemeMode,
                     receiptConfigured = currentSettings.storeName.isNotBlank(),
-                    driveConnected = driveConnection != null,
+                    driveConnected = driveConnection != null || savedDriveAccountEmail.isNotBlank(),
                     taxEnabled = currentSettings.taxEnabled,
                     allowNegativeInventory = currentSettings.allowNegativeInventory,
                     onAllowNegativeInventoryChanged = { enabled ->
@@ -4666,6 +4726,7 @@ fun SettingsScreen(
                 )
                 SettingsPage.BACKUP -> OptimizedBackupSettings(
                     driveConnection = driveConnection,
+                    savedDriveAccountEmail = savedDriveAccountEmail,
                     autoBackupEnabled = autoBackupEnabled,
                     localAutoBackupEnabled = localAutoBackupEnabled,
                     autoBackupFrequency = autoBackupFrequency,
@@ -4697,8 +4758,10 @@ fun SettingsScreen(
                             Toast.makeText(context, context.getString(R.string.toast_only_owner_restore_backup), Toast.LENGTH_LONG).show()
                         }
                     },
+                    onOpenLocalAutoBackups = { showLocalAutoBackupsDialog = true },
                     onTestDriveConnection = {
-                        driveConnection?.let { connection ->
+                        val connection = driveConnection
+                        if (connection != null) {
                             scope.launch {
                                 Toast.makeText(context, context.getString(R.string.toast_testing_drive_connection), Toast.LENGTH_SHORT).show()
                                 val ok = GoogleDriveHelper.testDriveConnection(context, connection.email).isSuccess
@@ -4708,6 +4771,8 @@ fun SettingsScreen(
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
+                        } else {
+                            requestDriveAuthorization()
                         }
                     },
                     onGoogleSignIn = { requestDriveAuthorization() },
@@ -4729,7 +4794,8 @@ fun SettingsScreen(
                         }
                     },
                     onDriveBackupNow = {
-                        driveConnection?.let { connection ->
+                        val connection = driveConnection
+                        if (connection != null) {
                             scope.launch {
                                 isBackingUpToDrive = true
                                 val ok = settingsViewModel.backupToDriveEncrypted(context, connection)
@@ -4740,13 +4806,18 @@ fun SettingsScreen(
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
+                        } else {
+                            requestDriveAuthorization()
                         }
                     },
                     onOpenDriveHistory = {
-                        driveConnection?.let { connection ->
+                        val connection = driveConnection
+                        if (connection != null) {
                             val driveService = GoogleDriveHelper.getDriveService(connection)
                             settingsViewModel.fetchDriveBackups(driveService)
                             showDriveBackupsDialog = true
+                        } else {
+                            requestDriveAuthorization()
                         }
                     },
                     onDriveSettingsChanged = { enabled, freq, netPolicy, retention ->
@@ -4958,6 +5029,180 @@ fun SettingsScreen(
                 }
             )
         }
+    }
+
+    // Local Automatic Backups History Dialog
+    if (showLocalAutoBackupsDialog) {
+        val autoBackupsDir = remember { File(context.filesDir, "AutoBackups") }
+        val backupFiles = remember(showLocalAutoBackupsDialog) {
+            autoBackupsDir.listFiles { _, name -> name.endsWith(".json") }
+                ?.sortedByDescending { it.lastModified() }
+                ?: emptyList()
+        }
+
+        AlertDialog(
+            onDismissRequest = { showLocalAutoBackupsDialog = false },
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.History, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.settings_local_auto_backups_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            },
+            text = {
+                if (backupFiles.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            stringResource(R.string.settings_no_auto_backups),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 350.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(backupFiles) { file ->
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = file.name,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 12.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "${DateFormatters.formatShortDateTime(file.lastModified())} • ${file.length() / 1024} KB",
+                                            fontSize = 10.5.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        IconButton(
+                                            onClick = {
+                                                try {
+                                                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                                                        context,
+                                                        "${context.packageName}.fileprovider",
+                                                        file
+                                                    )
+                                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                        type = "application/json"
+                                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                    }
+                                                    context.startActivity(Intent.createChooser(shareIntent, file.name))
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                    Toast.makeText(context, "Failed to share backup file", Toast.LENGTH_SHORT).show()
+                                                }
+                                            },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Share,
+                                                contentDescription = "Share",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                if (!isOwner) {
+                                                    Toast.makeText(context, context.getString(R.string.toast_only_owner_restore_backup), Toast.LENGTH_LONG).show()
+                                                    return@IconButton
+                                                }
+                                                selectedAutoBackupFileForRestore = file
+                                            },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Restore,
+                                                contentDescription = "Restore",
+                                                tint = MaterialTheme.colorScheme.secondary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLocalAutoBackupsDialog = false }) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        )
+    }
+
+    selectedAutoBackupFileForRestore?.let { fileToRestore ->
+        AlertDialog(
+            onDismissRequest = { selectedAutoBackupFileForRestore = null },
+            properties = DialogProperties(dismissOnClickOutside = false),
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text(stringResource(R.string.settings_restore_auto_backup_confirm_title), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.settings_restore_auto_backup_confirm_msg)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val file = fileToRestore
+                        selectedAutoBackupFileForRestore = null
+                        showLocalAutoBackupsDialog = false
+                        isRestoringDatabase = true
+                        scope.launch(Dispatchers.IO) {
+                            val ok = try {
+                                java.io.FileInputStream(file).use { input ->
+                                    settingsViewModel.restoreDatabase(input, BackupImportMode.REPLACE)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                false
+                            }
+                            withContext(Dispatchers.Main) {
+                                isRestoringDatabase = false
+                                if (ok) {
+                                    Toast.makeText(context, context.getString(R.string.restore_success), Toast.LENGTH_SHORT).show()
+                                    restartApp(context)
+                                } else {
+                                    Toast.makeText(context, context.getString(R.string.restore_failed), Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text(stringResource(R.string.settings_button_restore))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedAutoBackupFileForRestore = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 
     // Google Drive Backups List Dialog
@@ -5659,9 +5904,35 @@ fun SettingsScreen(
         val targetUri = pendingEncryptedImportUri!!
         var password by remember { mutableStateOf("") }
         var passwordVisible by remember { mutableStateOf(false) }
-        var isReplacing by remember { mutableStateOf(true) }
+        var isReplacing by remember { mutableStateOf(false) }
         var errorMessage by remember { mutableStateOf<String?>(null) }
         var isImporting by remember { mutableStateOf(false) }
+        var showReplaceConfirmDialogForEncrypted by remember { mutableStateOf(false) }
+
+        val startImportAction: (BackupImportMode) -> Unit = { mode ->
+            isImporting = true
+            scope.launch(Dispatchers.IO) {
+                val ok = try {
+                    context.contentResolver.openInputStream(targetUri)?.use { input ->
+                        settingsViewModel.importEncryptedLocalBackup(input, password, mode)
+                    } ?: false
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    false
+                }
+                withContext(Dispatchers.Main) {
+                    isImporting = false
+                    if (ok) {
+                        showEncryptedImportPasswordDialog = false
+                        pendingEncryptedImportUri = null
+                        Toast.makeText(context, context.getString(R.string.settings_encrypted_backup_restored_toast), Toast.LENGTH_LONG).show()
+                        restartApp(context)
+                    } else {
+                        errorMessage = context.getString(R.string.settings_encrypted_backup_decrypt_failed)
+                    }
+                }
+            }
+        }
 
         AlertDialog(
             onDismissRequest = {
@@ -5725,28 +5996,10 @@ fun SettingsScreen(
                             errorMessage = "Please enter password"
                             return@Button
                         }
-                        isImporting = true
-                        scope.launch(Dispatchers.IO) {
-                            val mode = if (isReplacing) BackupImportMode.REPLACE else BackupImportMode.MERGE
-                            val ok = try {
-                                context.contentResolver.openInputStream(targetUri)?.use { input ->
-                                    settingsViewModel.importEncryptedLocalBackup(input, password, mode)
-                                } ?: false
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                false
-                            }
-                            withContext(Dispatchers.Main) {
-                                isImporting = false
-                                if (ok) {
-                                    showEncryptedImportPasswordDialog = false
-                                    pendingEncryptedImportUri = null
-                                    Toast.makeText(context, context.getString(R.string.settings_encrypted_backup_restored_toast), Toast.LENGTH_LONG).show()
-                                    restartApp(context)
-                                } else {
-                                    errorMessage = context.getString(R.string.settings_encrypted_backup_decrypt_failed)
-                                }
-                            }
+                        if (isReplacing) {
+                            showReplaceConfirmDialogForEncrypted = true
+                        } else {
+                            startImportAction(BackupImportMode.MERGE)
                         }
                     },
                     enabled = !isImporting
@@ -5770,5 +6023,30 @@ fun SettingsScreen(
                 }
             }
         )
+
+        if (showReplaceConfirmDialogForEncrypted) {
+            AlertDialog(
+                onDismissRequest = { showReplaceConfirmDialogForEncrypted = false },
+                icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                title = { Text(stringResource(R.string.settings_replace_confirm_title), fontWeight = FontWeight.Bold) },
+                text = { Text(stringResource(R.string.settings_replace_confirm_msg)) },
+                confirmButton = {
+                    Button(
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        onClick = {
+                            showReplaceConfirmDialogForEncrypted = false
+                            startImportAction(BackupImportMode.REPLACE)
+                        }
+                    ) {
+                        Text(stringResource(R.string.settings_full_replace))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showReplaceConfirmDialogForEncrypted = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
     }
 }

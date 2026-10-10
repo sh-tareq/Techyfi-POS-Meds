@@ -112,19 +112,24 @@ object GoogleDriveHelper {
         ).fileId
     }
 
-    suspend fun listBackups(driveService: Drive): List<DriveBackupFile> = withContext(Dispatchers.IO) {
-        GoogleDriveBackupManager.listBackups(driveService).map { record ->
-            DriveBackupFile(
-                id = record.fileId,
-                name = record.fileName,
-                size = record.fileSize,
-                createdTime = record.createdTimestamp,
-                isAutoBackup = record.isAutoBackup,
-                formattedDate = record.formattedDate,
-                formattedSize = record.formattedSize
-            )
+    suspend fun listBackupsResult(driveService: Drive): Result<List<DriveBackupFile>> = withContext(Dispatchers.IO) {
+        GoogleDriveBackupManager.listBackupsResult(driveService).map { list ->
+            list.map { record ->
+                DriveBackupFile(
+                    id = record.fileId,
+                    name = record.fileName,
+                    size = record.fileSize,
+                    createdTime = record.createdTimestamp,
+                    isAutoBackup = record.isAutoBackup,
+                    formattedDate = record.formattedDate,
+                    formattedSize = record.formattedSize
+                )
+            }
         }
     }
+
+    suspend fun listBackups(driveService: Drive): List<DriveBackupFile> =
+        listBackupsResult(driveService).getOrDefault(emptyList())
 
     suspend fun downloadBackup(driveService: Drive, fileId: String, outputFile: File): Boolean =
         withContext(Dispatchers.IO) {

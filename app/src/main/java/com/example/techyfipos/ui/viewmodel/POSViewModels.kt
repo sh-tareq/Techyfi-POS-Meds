@@ -3243,17 +3243,24 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun saveAutoBackup(enabled: Boolean, frequency: String, context: Context) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val wasEnabled = repository.autoBackupFlow.first()
             repository.saveAutoBackup(enabled, frequency)
             val netPolicy = repository.driveNetworkPolicyFlow.first()
+            val backupTime = repository.driveBackupTimeFlow.first()
             com.example.techyfipos.utils.AutoBackupScheduler.scheduleDriveBackup(
                 context,
                 enabled,
                 frequency,
                 networkPolicy = netPolicy,
+                targetTime = backupTime,
                 forceUpdate = true
             )
-            if (enabled) {
-                com.example.techyfipos.utils.AutoBackupScheduler.performImmediateBackupIfDue(context, force = true)
+            if (enabled && !wasEnabled) {
+                com.example.techyfipos.utils.AutoBackupScheduler.triggerOneTimeBackup(
+                    context = context.applicationContext,
+                    scope = com.example.techyfipos.utils.AutoBackupScheduler.SCOPE_DRIVE,
+                    respectDueTime = false
+                )
             }
         }
     }
@@ -3266,25 +3273,40 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
         context: Context
     ) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val wasEnabled = repository.autoBackupFlow.first()
             repository.saveAutoBackup(enabled, frequency)
             repository.saveDriveNetworkPolicy(networkPolicy)
             repository.saveDriveRetentionCount(retentionCount)
+            val backupTime = repository.driveBackupTimeFlow.first()
             com.example.techyfipos.utils.AutoBackupScheduler.scheduleDriveBackup(
                 context,
                 enabled,
                 frequency,
                 networkPolicy = networkPolicy,
+                targetTime = backupTime,
                 forceUpdate = true
             )
+            if (enabled && !wasEnabled) {
+                com.example.techyfipos.utils.AutoBackupScheduler.triggerOneTimeBackup(
+                    context = context.applicationContext,
+                    scope = com.example.techyfipos.utils.AutoBackupScheduler.SCOPE_DRIVE,
+                    respectDueTime = false
+                )
+            }
         }
     }
 
     fun saveLocalAutoBackup(enabled: Boolean, frequency: String, context: Context) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val wasEnabled = repository.localAutoBackupFlow.first()
             repository.saveLocalAutoBackup(enabled, frequency)
             com.example.techyfipos.utils.AutoBackupScheduler.scheduleLocalBackup(context, enabled, frequency, forceUpdate = true)
-            if (enabled) {
-                com.example.techyfipos.utils.AutoBackupScheduler.performImmediateBackupIfDue(context, force = true)
+            if (enabled && !wasEnabled) {
+                com.example.techyfipos.utils.AutoBackupScheduler.triggerOneTimeBackup(
+                    context = context.applicationContext,
+                    scope = com.example.techyfipos.utils.AutoBackupScheduler.SCOPE_LOCAL,
+                    respectDueTime = false
+                )
             }
         }
     }
@@ -3480,6 +3502,9 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
                 encryptedFile = tempEncryptedFile,
                 accountIdOrPassphrase = connection.accountId
             )
+            if (result.isSuccess) {
+                com.example.techyfipos.utils.AutoBackupScheduler.scheduleAllAutoBackups(context, forceUpdate = true)
+            }
             result
         } catch (e: Exception) {
             e.printStackTrace()
@@ -3531,6 +3556,9 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
         if (downloadSuccess && tempFile.exists()) {
             val restoreSuccess = repository.importBackup(tempFile)
             tempFile.delete()
+            if (restoreSuccess) {
+                com.example.techyfipos.utils.AutoBackupScheduler.scheduleAllAutoBackups(repository.appContext, forceUpdate = true)
+            }
             return@withContext restoreSuccess
         }
         return@withContext false
@@ -3570,7 +3598,11 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
             tempFile.outputStream().use { output ->
                 inputStream.copyTo(output)
             }
-            repository.importEncryptedLocalBackup(tempFile, passphrase, mode)
+            val ok = repository.importEncryptedLocalBackup(tempFile, passphrase, mode)
+            if (ok) {
+                com.example.techyfipos.utils.AutoBackupScheduler.scheduleAllAutoBackups(repository.appContext, forceUpdate = true)
+            }
+            ok
         } catch (e: Exception) {
             e.printStackTrace()
             false
@@ -4490,20 +4522,23 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
         allMembers,
         searchQuery,
         selectedFilter,
-        selectedSort
-    ) { members, query, filter, sort ->
+        selectedSort,
+        programSettings
+    ) { members, query, filter, sort, settings ->
         val q = query.trim()
         var list = if (q.isBlank()) members else members.filter {
             it.name.contains(q, ignoreCase = true) || it.phone.contains(q)
         }
         val now = System.currentTimeMillis()
-        val ninetyDaysAgo = now - 90L * 24 * 60 * 60 * 1000
+        val expiryDays = settings.pointsExpiryDays.coerceAtLeast(1)
+        val expiryThreshold = now - expiryDays.toLong() * 24 * 60 * 60 * 1000
+        val activeThreshold = now - 90L * 24 * 60 * 60 * 1000
         list = when (filter) {
             LoyaltyFilterOption.ALL -> list
             LoyaltyFilterOption.VIP -> list.filter { it.tier.equals("Gold", ignoreCase = true) || it.tier.equals("Platinum", ignoreCase = true) }
             LoyaltyFilterOption.WITH_POINTS -> list.filter { it.pointsBalance > 0 }
-            LoyaltyFilterOption.ACTIVE -> list.filter { it.isActive && it.updatedAt >= ninetyDaysAgo }
-            LoyaltyFilterOption.EXPIRING_SOON -> list.filter { it.pointsBalance > 0 && it.updatedAt < ninetyDaysAgo }
+            LoyaltyFilterOption.ACTIVE -> list.filter { it.isActive && it.updatedAt >= activeThreshold }
+            LoyaltyFilterOption.EXPIRING_SOON -> list.filter { it.pointsBalance > 0 && it.updatedAt < expiryThreshold }
             LoyaltyFilterOption.ZERO_POINTS -> list.filter { it.pointsBalance == 0 }
         }
         when (sort) {

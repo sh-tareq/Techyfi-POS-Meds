@@ -113,9 +113,9 @@ object GoogleDriveBackupManager {
     }
 
     /**
-     * Lists all Techyfi POS backups stored in appDataFolder (and drive.file).
+     * Lists all Techyfi POS backups stored in appDataFolder (and drive.file) with explicit Result return.
      */
-    suspend fun listBackups(driveService: Drive): List<DriveBackupRecord> = withContext(Dispatchers.IO) {
+    suspend fun listBackupsResult(driveService: Drive): Result<List<DriveBackupRecord>> = withContext(Dispatchers.IO) {
         try {
             val query = "name contains '$BACKUP_PREFIX' and trashed = false"
             val fileList = driveService.files().list()
@@ -127,10 +127,10 @@ object GoogleDriveBackupManager {
 
             val dateFormat = SimpleDateFormat("MMM d, yyyy • h:mm a", Locale.getDefault())
 
-            fileList.files?.map { file ->
+            val records = fileList.files?.map { file ->
                 val sizeBytes = file.getSize() ?: 0L
                 val timeMillis = file.createdTime?.value ?: 0L
-                val isAuto = file.name?.contains("auto") == true
+                val isAuto = file.name?.contains("auto", ignoreCase = true) == true
 
                 val sizeStr = when {
                     sizeBytes >= 1024 * 1024 -> "%.1f MB".format(sizeBytes / (1024.0 * 1024.0))
@@ -148,11 +148,15 @@ object GoogleDriveBackupManager {
                     formattedSize = sizeStr
                 )
             } ?: emptyList()
+            Result.success(records)
         } catch (e: Exception) {
             Log.e(TAG, "Error listing Drive backups", e)
-            emptyList()
+            Result.failure(e)
         }
     }
+
+    suspend fun listBackups(driveService: Drive): List<DriveBackupRecord> =
+        listBackupsResult(driveService).getOrDefault(emptyList())
 
     /**
      * Downloads an encrypted backup file from Google Drive to local storage.
@@ -188,15 +192,17 @@ object GoogleDriveBackupManager {
     }
 
     /**
-     * Enforces the retention count (e.g. keep latest 7, 14, or 30 backups) by deleting older files.
+     * Enforces the retention count (e.g. keep latest 7, 14, or 30 backups) by deleting older auto backups only.
+     * Manual backups are permanently retained and never pruned.
      */
     private suspend fun pruneExcessBackups(driveService: Drive, maxToKeep: Int) {
         if (maxToKeep <= 0) return
         try {
             val allBackups = listBackups(driveService)
-            if (allBackups.size > maxToKeep) {
-                val toDelete = allBackups.drop(maxToKeep)
-                Log.i(TAG, "Pruning ${toDelete.size} old backups to maintain retention limit of $maxToKeep")
+            val autoBackups = allBackups.filter { it.isAutoBackup }
+            if (autoBackups.size > maxToKeep) {
+                val toDelete = autoBackups.drop(maxToKeep)
+                Log.i(TAG, "Pruning ${toDelete.size} old automatic backups to maintain retention limit of $maxToKeep (preserving manual backups)")
                 for (record in toDelete) {
                     deleteBackup(driveService, record.fileId)
                 }

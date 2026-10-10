@@ -69,12 +69,6 @@ class AutoBackupWorker(
             val tempFile = File(context.cacheDir, "auto_backup_${id}.json")
             val tempEncryptedFile = File(context.cacheDir, "auto_backup_enc_${id}.enc")
             try {
-                val exported = repository.exportBackupForSystem(tempFile)
-                if (!exported || !tempFile.exists() || tempFile.length() == 0L) {
-                    Log.e(TAG, "Backup export failed or produced an empty file")
-                    return Result.retry()
-                }
-
                 val timeString = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date(now))
                 val backupFileName = "TechyfiPOS_AutoBackup_$timeString.json"
                 var completedAt: Long? = null
@@ -82,6 +76,11 @@ class AutoBackupWorker(
                 var driveNeedsUserAuthorization = false
 
                 if (localDue) {
+                    val exported = repository.exportBackupForSystem(tempFile)
+                    if (!exported || !tempFile.exists() || tempFile.length() == 0L) {
+                        Log.e(TAG, "Backup export failed or produced an empty file")
+                        return Result.retry()
+                    }
                     saveLocalCopies(context, tempFile, backupFileName)
                     completedAt = System.currentTimeMillis()
                     settings.saveLastLocalBackupTimestamp(completedAt)
@@ -90,10 +89,24 @@ class AutoBackupWorker(
 
                 if (driveDue) {
                     val storedEmail = settings.driveAccountEmailFlow.first().takeIf { it.isNotBlank() }
+                    var authNetworkError = false
                     val connection = try {
-                        GoogleDriveHelper.authorizeWithoutUi(context, storedEmail)
+                        val authClient = GoogleDriveHelper.getAuthorizationClient(context)
+                        val authRequest = GoogleDriveHelper.buildAuthorizationRequest(storedEmail)
+                        val authResult = com.google.android.gms.tasks.Tasks.await(authClient.authorize(authRequest))
+                        if (authResult.hasResolution()) {
+                            driveNeedsUserAuthorization = true
+                            null
+                        } else {
+                            GoogleDriveHelper.resolveConnection(authResult)
+                        }
                     } catch (e: Exception) {
                         Log.e(TAG, "Drive authorization refresh failed", e)
+                        if (e is java.io.IOException || e.cause is java.io.IOException) {
+                            authNetworkError = true
+                        } else {
+                            driveNeedsUserAuthorization = true
+                        }
                         null
                     }
                     if (connection != null) {
@@ -126,8 +139,12 @@ class AutoBackupWorker(
                         }
                     } else {
                         driveFailed = true
-                        driveNeedsUserAuthorization = true
-                        Log.w(TAG, "Drive backup requires the user to reconnect Google Drive")
+                        if (authNetworkError) {
+                            Log.w(TAG, "Drive backup skipped due to network connectivity; will retry")
+                            return Result.retry()
+                        } else {
+                            Log.w(TAG, "Drive backup requires user authorization")
+                        }
                     }
                 }
 
@@ -246,7 +263,7 @@ class AutoBackupWorker(
         }
     }
 
-    private companion object {
+    companion object {
         const val TAG = "AutoBackupWorker"
         const val BACKUP_FOLDER = "AutoBackups"
         const val LATEST_FILE = "TechyfiPOS_AutoBackup_latest.json"
