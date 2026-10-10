@@ -219,7 +219,7 @@ fun RegisterCloseScreen(
                 val method = refund.refundMethod
                 val sale = salesById[refund.saleId]
                 when {
-                    method.startsWith("MFS") || method.startsWith("Card") || method.startsWith("bKash") || method.startsWith("Nagad") || method.startsWith("Rocket") -> refund.externalRefundAmount
+                    REGISTER_CLOSE_DIGITAL_METHODS.any { method.trim().lowercase().startsWith(it) } -> refund.externalRefundAmount
                     method.startsWith("Original method") && sale != null -> {
                         val (_, digitalPortion) = splitCashAndDigitalAmounts(sale)
                         val originalCollected = (sale.grandTotal - calculateSaleDueAmount(sale)).coerceAtLeast(0.0)
@@ -267,6 +267,7 @@ fun RegisterCloseScreen(
     var showXReportDialog by remember { mutableStateOf(false) }
     var showShareFormatDialog by remember { mutableStateOf(false) }
     var showXShareFormatDialog by remember { mutableStateOf(false) }
+    var closedShiftZReport by remember { mutableStateOf<Pair<SalesReportData, String>?>(null) }
 
     val rangeStart = shiftStart
     var report by remember { mutableStateOf<SalesReportData?>(null) }
@@ -1116,7 +1117,8 @@ fun RegisterCloseScreen(
                 showCloseReconcileDialog = false
                 showDenomDialog = true
             },
-            onConfirmClose = { actualCash, notes, discrepancyReason ->
+            onConfirmClose = { actualCash, notes, discrepancyReason, onError ->
+                val snapshotZ = report?.let { it to rangeLabel }
                 registerClosingViewModel.closeRegister(
                     startingFloat = startingFloat,
                     cashSales = cashSales,
@@ -1136,10 +1138,12 @@ fun RegisterCloseScreen(
                     dueSales = providerSales.due,
                     onResult = { result ->
                         result.onSuccess {
+                            closedShiftZReport = snapshotZ
                             showCloseReconcileDialog = false
                             showPnlZReportDialog = true
                             coroutineScope.launch { snackbarHostState.showSnackbar(successMessage) }
                         }.onFailure {
+                            onError()
                             coroutineScope.launch {
                                 snackbarHostState.showSnackbar(it.localizedMessage ?: "Unable to close register")
                             }
@@ -1208,24 +1212,30 @@ fun RegisterCloseScreen(
     }
 
     // 7. Z-Report Dialog (Closing)
-    if (showPnlZReportDialog && report != null) {
-        val r = report!!
+    val zTarget = closedShiftZReport ?: report?.let { it to rangeLabel }
+    if (showPnlZReportDialog && zTarget != null) {
+        val (r, label) = zTarget
         ZReportDialog(
             data = r,
-            rangeLabel = rangeLabel,
+            rangeLabel = label,
             isInterimX = false,
-            onDismiss = { showPnlZReportDialog = false },
+            onDismiss = {
+                showPnlZReportDialog = false
+                if (!showShareFormatDialog) {
+                    closedShiftZReport = null
+                }
+            },
             onPrint = {
                 coroutineScope.launch {
                     try {
                         val jpegFile = withContext(Dispatchers.IO) {
-                            generateZReportJpeg(context, r, rangeLabel)
+                            generateZReportJpeg(context, r, label)
                         }
                         printReceiptImage(
                             context = context,
                             activity = context.findActivity(),
                             imageFile = jpegFile,
-                            jobName = "Z-Report - $rangeLabel",
+                            jobName = "Z-Report - $label",
                             settings = invoiceSettings,
                             kickDrawer = false
                         )
@@ -1236,7 +1246,7 @@ fun RegisterCloseScreen(
             },
             onSave = {
                 try {
-                    val jpegFile = generateZReportJpeg(context, r, rangeLabel)
+                    val jpegFile = generateZReportJpeg(context, r, label)
                     val ok = saveBillJpegToDownloads(context, jpegFile)
                     if (ok) {
                         Toast.makeText(context, context.getString(R.string.z_report_z_saved_toast), Toast.LENGTH_LONG).show()
@@ -1253,13 +1263,21 @@ fun RegisterCloseScreen(
         )
     }
 
-    if (showShareFormatDialog && report != null) {
-        val r = report!!
+    if (showShareFormatDialog && zTarget != null) {
+        val (r, label) = zTarget
         ShareZReportFormatDialog(
-            onDismiss = { showShareFormatDialog = false },
+            onDismiss = {
+                showShareFormatDialog = false
+                if (!showPnlZReportDialog) {
+                    closedShiftZReport = null
+                }
+            },
             onFormatSelected = { format ->
                 showShareFormatDialog = false
-                shareReport(context, r, rangeLabel, isInterimX = false, format = format)
+                if (!showPnlZReportDialog) {
+                    closedShiftZReport = null
+                }
+                shareReport(context, r, label, isInterimX = false, format = format)
             }
         )
     }
@@ -2313,14 +2331,20 @@ fun CloseRegisterReconciliationDialog(
     initialNotes: String = "",
     onDismiss: () -> Unit,
     onOpenDenominationCounter: () -> Unit,
-    onConfirmClose: (actualCash: Double, notes: String?, discrepancyReason: String?) -> Unit
+    onConfirmClose: (actualCash: Double, notes: String?, discrepancyReason: String?, onError: () -> Unit) -> Unit
 ) {
-    var actualCashText by remember { mutableStateOf(initialCountedCash.toInt().toString()) }
+    var actualCashText by remember {
+        mutableStateOf(
+            if (initialCountedCash % 1.0 == 0.0) initialCountedCash.toLong().toString() else initialCountedCash.toString()
+        )
+    }
     var notesText by remember { mutableStateOf(initialNotes) }
     var discrepancyReasonText by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
 
-    val actualCash = actualCashText.toDoubleOrNull() ?: 0.0
+    val parsedActualCash = actualCashText.toDoubleOrNull()
+    val actualCash = parsedActualCash ?: 0.0
+    val isValidInput = parsedActualCash != null && parsedActualCash >= 0.0
     val variance = actualCash - expectedCash
 
     Dialog(
@@ -2472,16 +2496,17 @@ fun CloseRegisterReconciliationDialog(
                     }
                     Button(
                         onClick = {
-                            if (!isSubmitting) {
+                            if (!isSubmitting && isValidInput) {
                                 isSubmitting = true
                                 onConfirmClose(
                                     actualCash,
                                     notesText.ifBlank { null },
-                                    discrepancyReasonText.ifBlank { null }
+                                    discrepancyReasonText.ifBlank { null },
+                                    { isSubmitting = false }
                                 )
                             }
                         },
-                        enabled = !isSubmitting,
+                        enabled = !isSubmitting && isValidInput,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C3AED)),
                         modifier = Modifier.weight(1.5f)
