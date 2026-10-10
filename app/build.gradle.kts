@@ -14,8 +14,8 @@ android {
         applicationId = "com.techyfi.pos"
         minSdk = 24
         targetSdk = 36
-        versionCode = 220944
-        versionName = "2.6.68-V15-09-2026"
+        versionCode = 220945
+        versionName = "2.6.69-V10-10-2026"
 
         javaCompileOptions {
             annotationProcessorOptions {
