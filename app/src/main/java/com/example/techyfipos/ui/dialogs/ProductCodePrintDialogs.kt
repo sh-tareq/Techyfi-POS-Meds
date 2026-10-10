@@ -41,6 +41,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.R
 import com.example.techyfipos.data.db.Product
+import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.data.SettingsDataStore
 import com.example.techyfipos.utils.*
 import androidx.activity.compose.LocalActivity
@@ -893,6 +894,8 @@ fun ProductCodeImageDialog(
     val context = LocalContext.current
     val activity = LocalActivity.current
     val scope = rememberCoroutineScope()
+    val invoiceSettings by remember(context) { SettingsDataStore(context).invoiceSettingsDataFlow }
+        .collectAsStateWithLifecycle(initialValue = InvoiceSettingsData())
     val configuredStoreName by remember(context) { SettingsDataStore(context).shopNameFlow }
         .collectAsStateWithLifecycle(initialValue = "")
     val preferences = remember {
@@ -1449,26 +1452,37 @@ fun ProductCodeImageDialog(
                         OutlinedIconButton(
                             onClick = {
                                 scope.launch {
-                                    val cached = withContext(Dispatchers.IO) {
-                                        cacheProductCodeLabelPdf(
-                                            context = context,
-                                            bitmap = bitmap,
-                                            productName = product.name,
-                                            codeType = codeType,
-                                            widthMm = selectedLabelWidthMm,
-                                            heightMm = selectedLabelHeightMm
-                                        )
-                                    }
-                                    val opened = cached?.let { (pdfFile, _) ->
-                                        printPdfDocument(
-                                            context = activity ?: context,
-                                            pdfFile = pdfFile,
-                                            jobName = "${product.name} label",
-                                            widthMm = selectedLabelWidthMm,
-                                            heightMm = selectedLabelHeightMm
-                                        )
-                                    } ?: false
-                                    if (!opened) {
+                                    if (bitmap != null) {
+                                        val cached = withContext(Dispatchers.IO) {
+                                            cacheProductCodeLabelPdf(
+                                                context = context,
+                                                bitmap = bitmap,
+                                                productName = product.name,
+                                                codeType = codeType,
+                                                widthMm = selectedLabelWidthMm,
+                                                heightMm = selectedLabelHeightMm
+                                            )
+                                        }
+                                        val pdfFallback = cached?.first
+                                        if (pdfFallback != null) {
+                                            val opened = printLabelImages(
+                                                context = context,
+                                                activity = activity ?: context.findActivity(),
+                                                labels = listOf(bitmap),
+                                                pdfFallback = pdfFallback,
+                                                widthMm = selectedLabelWidthMm,
+                                                heightMm = selectedLabelHeightMm,
+                                                copies = 1,
+                                                jobName = "${product.name} label",
+                                                settings = invoiceSettings
+                                            )
+                                            if (!opened) {
+                                                actionStatus = context.getString(R.string.code_image_print_failed)
+                                            }
+                                        } else {
+                                            actionStatus = context.getString(R.string.code_image_print_failed)
+                                        }
+                                    } else {
                                         actionStatus = context.getString(R.string.code_image_print_failed)
                                     }
                                 }

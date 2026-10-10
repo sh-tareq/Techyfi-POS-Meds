@@ -2,6 +2,7 @@
 
 package com.example.techyfipos.ui.screens
 
+import android.app.Activity
 import android.content.Context
 import android.net.Uri
 import android.os.Build
@@ -63,6 +64,10 @@ import com.example.techyfipos.utils.BillLineItem
 import com.example.techyfipos.utils.generateBillJpeg
 import com.example.techyfipos.utils.generateDueRepaymentJpeg
 import com.example.techyfipos.utils.printBillJpeg
+import com.example.techyfipos.utils.printReceiptImage
+import com.example.techyfipos.utils.printLabelImages
+import com.example.techyfipos.utils.findActivity
+import kotlin.math.roundToInt
 import com.example.techyfipos.utils.convertToMonochromeThresholdBitmap
 import com.example.techyfipos.utils.triggerCashDrawerKick
 import com.example.techyfipos.utils.shareReceiptAsText
@@ -235,8 +240,48 @@ private fun SettingsMasterCard(
     }
 }
 
+private fun buildTestLabelBitmap(storeName: String): android.graphics.Bitmap {
+    val bmp = android.graphics.Bitmap.createBitmap(320, 240, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bmp)
+    canvas.drawColor(android.graphics.Color.WHITE)
+    val paint = android.graphics.Paint().apply {
+        color = android.graphics.Color.BLACK
+        isAntiAlias = true
+        textAlign = android.graphics.Paint.Align.CENTER
+        textSize = 24f
+        isFakeBoldText = true
+    }
+    canvas.drawText(storeName.ifBlank { "Techyfi POS" }, 160f, 60f, paint)
+    paint.textSize = 20f
+    paint.isFakeBoldText = false
+    canvas.drawText("TEST LABEL", 160f, 110f, paint)
+    paint.textSize = 16f
+    canvas.drawText("40 x 30 mm", 160f, 150f, paint)
+    canvas.drawText(
+        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()),
+        160f,
+        190f,
+        paint
+    )
+    return bmp
+}
+
+private fun buildTestLabelPdf(bitmap: android.graphics.Bitmap, cacheDir: java.io.File): java.io.File {
+    val pdfFile = java.io.File(cacheDir, "test_label_fallback.pdf")
+    val pdfDocument = android.graphics.pdf.PdfDocument()
+    val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(bitmap.width, bitmap.height, 1).create()
+    val page = pdfDocument.startPage(pageInfo)
+    page.canvas.drawBitmap(bitmap, 0f, 0f, null)
+    pdfDocument.finishPage(page)
+    pdfFile.outputStream().use { pdfDocument.writeTo(it) }
+    pdfDocument.close()
+    return pdfFile
+}
+
 @Composable
 private fun OptimizedSettingsHome(
+    currentSettings: InvoiceSettingsData = InvoiceSettingsData(),
+    onUpdateSettings: (InvoiceSettingsData) -> Unit = {},
     storeName: String,
     address: String,
     paperRollWidthMm: Int = 80,
@@ -272,6 +317,8 @@ private fun OptimizedSettingsHome(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showPrinterPicker by remember { mutableStateOf(false) }
+    var showReceiptPrinterPicker by remember { mutableStateOf(false) }
+    var showLabelPrinterPicker by remember { mutableStateOf(false) }
 
     // 💎 Settings Master Executive Card
     SettingsMasterCard(
@@ -586,6 +633,344 @@ private fun OptimizedSettingsHome(
         }
     }
 
+    SettingsSectionLabel(stringResource(R.string.settings_section_printers))
+
+    // Receipt Printer Card
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Realistic3DPrinterIcon(size = 32.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        stringResource(R.string.settings_receipt_printer_title),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        stringResource(R.string.settings_receipt_printer_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Print Method Selector
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    stringResource(R.string.settings_print_method_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    val currentMode = currentSettings.receiptPrintMode.ifBlank { "AUTO" }
+                    SegmentedButton(
+                        selected = currentMode == "AUTO",
+                        onClick = { onUpdateSettings(currentSettings.copy(receiptPrintMode = "AUTO")) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_print_mode_auto), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    SegmentedButton(
+                        selected = currentMode == "BLUETOOTH",
+                        onClick = { onUpdateSettings(currentSettings.copy(receiptPrintMode = "BLUETOOTH")) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_print_mode_bluetooth), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    SegmentedButton(
+                        selected = currentMode == "SYSTEM",
+                        onClick = { onUpdateSettings(currentSettings.copy(receiptPrintMode = "SYSTEM")) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_print_mode_system), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+
+            // Bluetooth device picker (shown for Bluetooth and Auto)
+            if (currentSettings.receiptPrintMode != "SYSTEM") {
+                Surface(
+                    onClick = { showReceiptPrinterPicker = true },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Realistic3DBluetoothPrinterIcon(
+                                size = 28.dp,
+                                isConnected = currentSettings.directBluetoothPrinterAddress.isNotBlank()
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    stringResource(R.string.settings_receipt_bluetooth_device),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    if (currentSettings.directBluetoothPrinterAddress.isBlank())
+                                        stringResource(R.string.settings_bluetooth_not_paired)
+                                    else currentSettings.directBluetoothPrinterAddress,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                        Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
+            // Paper width chips (58 mm / 80 mm)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(R.string.settings_paper_roll_width),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = currentSettings.paperRollWidthMm == 80,
+                        onClick = { onUpdateSettings(currentSettings.copy(paperRollWidthMm = 80)) },
+                        label = { Text("80 mm", fontWeight = FontWeight.Bold) }
+                    )
+                    FilterChip(
+                        selected = currentSettings.paperRollWidthMm == 58,
+                        onClick = { onUpdateSettings(currentSettings.copy(paperRollWidthMm = 58)) },
+                        label = { Text("58 mm", fontWeight = FontWeight.Bold) }
+                    )
+                }
+            }
+
+            // Test receipt button
+            OutlinedButton(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
+                        printReceiptImage(
+                            context = context,
+                            activity = context as? Activity,
+                            imageFile = testFile,
+                            jobName = "Test_Receipt",
+                            settings = currentSettings,
+                            kickDrawer = false
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.settings_test_receipt_button), fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+
+    // Label Printer Card
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Realistic3DPrinterIcon(size = 32.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        stringResource(R.string.settings_label_printer_title),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        stringResource(R.string.settings_label_printer_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Print Method Selector
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    stringResource(R.string.settings_print_method_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    val currentMode = currentSettings.labelPrintMode.ifBlank { "AUTO" }
+                    SegmentedButton(
+                        selected = currentMode == "AUTO",
+                        onClick = { onUpdateSettings(currentSettings.copy(labelPrintMode = "AUTO")) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_print_mode_auto), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    SegmentedButton(
+                        selected = currentMode == "BLUETOOTH",
+                        onClick = { onUpdateSettings(currentSettings.copy(labelPrintMode = "BLUETOOTH")) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_print_mode_bluetooth), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    SegmentedButton(
+                        selected = currentMode == "SYSTEM",
+                        onClick = { onUpdateSettings(currentSettings.copy(labelPrintMode = "SYSTEM")) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_print_mode_system), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+
+            // Bluetooth device picker (shown for Bluetooth and Auto)
+            if (currentSettings.labelPrintMode != "SYSTEM") {
+                Surface(
+                    onClick = { showLabelPrinterPicker = true },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Realistic3DBluetoothPrinterIcon(
+                                size = 28.dp,
+                                isConnected = currentSettings.labelPrinterAddress.isNotBlank()
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    stringResource(R.string.settings_label_bluetooth_device),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    if (currentSettings.labelPrinterAddress.isBlank())
+                                        stringResource(R.string.settings_bluetooth_not_paired)
+                                    else currentSettings.labelPrinterAddress,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                        Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
+            // Label gap field (mm)
+            var gapText by remember(currentSettings.labelGapMm) {
+                mutableStateOf(currentSettings.labelGapMm.toString())
+            }
+            OutlinedTextField(
+                value = gapText,
+                onValueChange = { input ->
+                    gapText = input
+                    input.toFloatOrNull()?.let { v ->
+                        if (v in 0f..20f) {
+                            onUpdateSettings(currentSettings.copy(labelGapMm = v))
+                        }
+                    }
+                },
+                label = { Text(stringResource(R.string.settings_label_gap_label)) },
+                suffix = { Text("mm", fontWeight = FontWeight.Bold) },
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Darkness slider (0-15)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_label_darkness_label, currentSettings.labelDarkness),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Slider(
+                    value = currentSettings.labelDarkness.toFloat().coerceIn(0f, 15f),
+                    onValueChange = { v ->
+                        onUpdateSettings(currentSettings.copy(labelDarkness = v.roundToInt().coerceIn(0, 15)))
+                    },
+                    valueRange = 0f..15f,
+                    steps = 14,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Test label button
+            OutlinedButton(
+                onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        val testBitmap = buildTestLabelBitmap(currentSettings.storeName)
+                        val dummyPdf = buildTestLabelPdf(testBitmap, context.cacheDir)
+                        printLabelImages(
+                            context = context,
+                            activity = context as? Activity,
+                            labels = listOf(testBitmap),
+                            pdfFallback = dummyPdf,
+                            widthMm = 40f,
+                            heightMm = 30f,
+                            copies = 1,
+                            jobName = "Test_Label",
+                            settings = currentSettings
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.settings_test_label_button), fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+
     SettingsSectionLabel(stringResource(R.string.settings_section_hardware_cash_drawer))
     SettingsGroup {
         Row(
@@ -629,15 +1014,23 @@ private fun OptimizedSettingsHome(
                     modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val hasDrawerPrinter = cashDrawerPrinterAddress.isNotBlank() || currentSettings.resolvedReceiptPrinterAddress().isNotBlank()
                     Realistic3DBluetoothPrinterIcon(
                         size = 32.dp,
-                        isConnected = cashDrawerPrinterAddress.isNotBlank()
+                        isConnected = hasDrawerPrinter
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(stringResource(R.string.settings_bluetooth_printer_label), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        val displayAddress = if (cashDrawerPrinterAddress.isBlank()) {
+                            val resolved = currentSettings.resolvedReceiptPrinterAddress()
+                            if (resolved.isNotBlank()) stringResource(R.string.settings_cash_drawer_same_as_receipt) + " ($resolved)"
+                            else stringResource(R.string.settings_cash_drawer_same_as_receipt)
+                        } else {
+                            cashDrawerPrinterAddress
+                        }
                         Text(
-                            if (cashDrawerPrinterAddress.isBlank()) stringResource(R.string.settings_bluetooth_not_paired) else cashDrawerPrinterAddress,
+                            displayAddress,
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray
                         )
@@ -660,9 +1053,12 @@ private fun OptimizedSettingsHome(
                 )
                 OutlinedButton(
                     onClick = {
-                        scope.launch { triggerCashDrawerKick(context, cashDrawerPrinterAddress) }
+                        scope.launch {
+                            val addr = cashDrawerPrinterAddress.ifBlank { currentSettings.resolvedReceiptPrinterAddress() }
+                            triggerCashDrawerKick(context, addr)
+                        }
                     },
-                    enabled = cashDrawerPrinterAddress.isNotBlank(),
+                    enabled = cashDrawerPrinterAddress.isNotBlank() || currentSettings.resolvedReceiptPrinterAddress().isNotBlank(),
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                 ) {
@@ -677,11 +1073,35 @@ private fun OptimizedSettingsHome(
     if (showPrinterPicker) {
         BluetoothPrinterPickerDialog(
             currentAddress = cashDrawerPrinterAddress,
+            showSameAsReceiptOption = true,
+            receiptPrinterAddress = currentSettings.resolvedReceiptPrinterAddress(),
             onSelected = { address ->
                 onCashDrawerPrinterSelected(address)
                 showPrinterPicker = false
             },
             onDismiss = { showPrinterPicker = false }
+        )
+    }
+
+    if (showReceiptPrinterPicker) {
+        BluetoothPrinterPickerDialog(
+            currentAddress = currentSettings.directBluetoothPrinterAddress,
+            onSelected = { address ->
+                onUpdateSettings(currentSettings.copy(directBluetoothPrinterAddress = address))
+                showReceiptPrinterPicker = false
+            },
+            onDismiss = { showReceiptPrinterPicker = false }
+        )
+    }
+
+    if (showLabelPrinterPicker) {
+        BluetoothPrinterPickerDialog(
+            currentAddress = currentSettings.labelPrinterAddress,
+            onSelected = { address ->
+                onUpdateSettings(currentSettings.copy(labelPrinterAddress = address))
+                showLabelPrinterPicker = false
+            },
+            onDismiss = { showLabelPrinterPicker = false }
         )
     }
     Card(
@@ -842,12 +1262,15 @@ private fun OptimizedSettingsHome(
 @Composable
 private fun BluetoothPrinterPickerDialog(
     currentAddress: String,
+    showSameAsReceiptOption: Boolean = false,
+    receiptPrinterAddress: String = "",
     onSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     var devices by remember { mutableStateOf<List<android.bluetooth.BluetoothDevice>>(emptyList()) }
     var permissionDenied by remember { mutableStateOf(false) }
+    var bluetoothOff by remember { mutableStateOf(false) }
 
     fun loadDevices() {
         val hasPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
@@ -861,7 +1284,13 @@ private fun BluetoothPrinterPickerDialog(
         permissionDenied = false
         try {
             val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter
-            devices = adapter?.bondedDevices?.toList().orEmpty()
+            if (adapter == null || !adapter.isEnabled) {
+                bluetoothOff = true
+                devices = emptyList()
+                return
+            }
+            bluetoothOff = false
+            devices = adapter.bondedDevices?.toList().orEmpty()
         } catch (e: SecurityException) {
             permissionDenied = true
         }
@@ -891,14 +1320,55 @@ private fun BluetoothPrinterPickerDialog(
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 13.sp
                     )
-                } else if (devices.isEmpty()) {
+                } else if (bluetoothOff) {
+                    Text(
+                        stringResource(R.string.settings_bt_bluetooth_off),
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else if (devices.isEmpty() && !showSameAsReceiptOption) {
                     Text(
                         stringResource(R.string.settings_bt_no_devices_found),
                         fontSize = 13.sp,
                         color = Color.Gray
                     )
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (showSameAsReceiptOption) {
+                            Surface(
+                                onClick = { onSelected("") },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (currentAddress.isBlank()) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else Color.Transparent
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            stringResource(R.string.settings_cash_drawer_same_as_receipt),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            if (receiptPrinterAddress.isNotBlank()) receiptPrinterAddress else stringResource(R.string.settings_bluetooth_not_paired),
+                                            fontSize = 11.sp,
+                                            color = Color.Gray
+                                        )
+                                    }
+                                    if (currentAddress.isBlank()) {
+                                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        }
                         devices.forEach { device ->
                             val name = try { device.name ?: device.address } catch (e: SecurityException) { device.address }
                             Surface(
@@ -908,9 +1378,18 @@ private fun BluetoothPrinterPickerDialog(
                                     MaterialTheme.colorScheme.primaryContainer
                                 } else Color.Transparent
                             ) {
-                                Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
-                                    Text(name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Text(device.address, fontSize = 11.sp, color = Color.Gray)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text(device.address, fontSize = 11.sp, color = Color.Gray)
+                                    }
+                                    if (device.address == currentAddress) {
+                                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    }
                                 }
                             }
                         }
@@ -1631,76 +2110,6 @@ private fun ReceiptLayoutSettings(
                             onClick = { onSettingsChanged(currentSettings.copy(paperRollWidthMm = 58)) },
                             label = { Text("58mm", fontWeight = FontWeight.Bold, fontSize = 11.5.sp) }
                         )
-                    }
-                }
-            }
-
-            var showBtPrinterPicker by remember { mutableStateOf(false) }
-
-            if (showBtPrinterPicker) {
-                BluetoothPrinterPickerDialog(
-                    currentAddress = currentSettings.directBluetoothPrinterAddress,
-                    onSelected = { addr ->
-                        onSettingsChanged(currentSettings.copy(directBluetoothPrinterAddress = addr))
-                        showBtPrinterPicker = false
-                    },
-                    onDismiss = { showBtPrinterPicker = false }
-                )
-            }
-
-            // Direct Bluetooth ESC/POS Printing Driver
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                            Text(
-                                text = stringResource(R.string.settings_direct_bluetooth_driver_title),
-                                fontSize = 12.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = stringResource(R.string.settings_direct_bluetooth_driver_desc),
-                                fontSize = 10.5.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = currentSettings.directBluetoothPrintEnabled,
-                            onCheckedChange = { onSettingsChanged(currentSettings.copy(directBluetoothPrintEnabled = it)) }
-                        )
-                    }
-                    if (currentSettings.directBluetoothPrintEnabled) {
-                        OutlinedButton(
-                            onClick = { showBtPrinterPicker = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(Icons.Default.Bluetooth, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (currentSettings.directBluetoothPrinterAddress.isNotBlank())
-                                    "Printer: ${currentSettings.directBluetoothPrinterAddress}"
-                                else
-                                    "Select Paired Bluetooth Thermal Printer",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
                     }
                 }
             }
@@ -3926,6 +4335,11 @@ fun SettingsScreen(
             ) {
             when (settingsPage) {
                 SettingsPage.HOME -> OptimizedSettingsHome(
+                    currentSettings = currentSettings,
+                    onUpdateSettings = { updated ->
+                        currentSettings = updated
+                        settingsViewModel.saveInvoiceSettingsData(updated)
+                    },
                     storeName = currentSettings.storeName,
                     address = currentSettings.address,
                     paperRollWidthMm = currentSettings.paperRollWidthMm,
@@ -4014,9 +4428,14 @@ fun SettingsScreen(
                                 isBangla = false,
                                 settings = currentSettings
                             )
-                            withContext(Dispatchers.Main) {
-                                printBillJpeg(activity ?: context, testFile, "Test_Repayment_#1", currentSettings.paperRollWidthMm)
-                            }
+                            printReceiptImage(
+                                context = context,
+                                activity = activity ?: context.findActivity(),
+                                imageFile = testFile,
+                                jobName = "Test_Repayment_#1",
+                                settings = currentSettings,
+                                kickDrawer = false
+                            )
                         }
                     }
                 )
@@ -4032,9 +4451,14 @@ fun SettingsScreen(
                     onTestPrint = {
                         scope.launch(Dispatchers.IO) {
                             val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
-                            withContext(Dispatchers.Main) {
-                                printBillJpeg(activity ?: context, testFile, "Test_Receipt_#12", currentSettings.paperRollWidthMm)
-                            }
+                            printReceiptImage(
+                                context = context,
+                                activity = activity ?: context.findActivity(),
+                                imageFile = testFile,
+                                jobName = "Test_Receipt_#12",
+                                settings = currentSettings,
+                                kickDrawer = false
+                            )
                         }
                     }
                 )
@@ -4049,9 +4473,14 @@ fun SettingsScreen(
                     onTestPrint = {
                         scope.launch(Dispatchers.IO) {
                             val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
-                            withContext(Dispatchers.Main) {
-                                printBillJpeg(activity ?: context, testFile, "Test_Receipt_#12", currentSettings.paperRollWidthMm)
-                            }
+                            printReceiptImage(
+                                context = context,
+                                activity = activity ?: context.findActivity(),
+                                imageFile = testFile,
+                                jobName = "Test_Receipt_#12",
+                                settings = currentSettings,
+                                kickDrawer = false
+                            )
                         }
                     }
                 )
@@ -4065,9 +4494,14 @@ fun SettingsScreen(
                     onTestPrint = {
                         scope.launch(Dispatchers.IO) {
                             val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
-                            withContext(Dispatchers.Main) {
-                                printBillJpeg(activity ?: context, testFile, "Test_Receipt_#12", currentSettings.paperRollWidthMm)
-                            }
+                            printReceiptImage(
+                                context = context,
+                                activity = activity ?: context.findActivity(),
+                                imageFile = testFile,
+                                jobName = "Test_Receipt_#12",
+                                settings = currentSettings,
+                                kickDrawer = false
+                            )
                         }
                     }
                 )
@@ -4097,9 +4531,14 @@ fun SettingsScreen(
                     onTestPrint = {
                         scope.launch(Dispatchers.IO) {
                             val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
-                            withContext(Dispatchers.Main) {
-                                printBillJpeg(activity ?: context, testFile, "Test_Receipt_#12", currentSettings.paperRollWidthMm)
-                            }
+                            printReceiptImage(
+                                context = context,
+                                activity = activity ?: context.findActivity(),
+                                imageFile = testFile,
+                                jobName = "Test_Receipt_#12",
+                                settings = currentSettings,
+                                kickDrawer = false
+                            )
                         }
                     },
                     onResetForm = {
@@ -4678,7 +5117,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(stringResource(R.string.settings_label_package_name), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     SelectionContainer {
-                        Text("com.example.techyfipos", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                        Text(context.packageName, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(stringResource(R.string.settings_label_sha1_fingerprint), fontWeight = FontWeight.Bold, fontSize = 12.sp)

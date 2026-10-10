@@ -2,6 +2,10 @@ package com.example.techyfipos.utils
 
 import com.example.techyfipos.R
 import com.example.techyfipos.data.InvoiceSettingsData
+import com.example.techyfipos.printer.DirectPrintResult
+import com.example.techyfipos.printer.EscPosPrinterDriver
+import com.example.techyfipos.printer.TsplLabelPrinterDriver
+import com.example.techyfipos.printer.sendToBluetoothPrinter
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -679,12 +683,62 @@ fun openWhatsAppChat(context: Context, phone: String): Boolean {
  */
 fun getCashDrawerKickCommand(): ByteArray = byteArrayOf(0x1B, 0x70, 0x00, 0x19, 0xFA.toByte())
 
-private const val SERIAL_PORT_PROFILE_UUID = "00001101-0000-1000-8000-00805F9B34FB"
+enum class RoutingDecision {
+    DIRECT_OK,
+    SHOW_ERROR,
+    SYSTEM_DIALOG,
+    SHOW_ERROR_THEN_SYSTEM_DIALOG
+}
 
 /**
- * Sends the ESC/POS drawer-kick pulse over a Bluetooth SPP socket to [printerAddress], the MAC
- * address of an already-paired thermal printer (paired via Android's own Bluetooth settings).
- * Must run off the main thread — RFCOMM connect/write are blocking calls.
+ * Pure function determining the routing decision based on configured mode,
+ * printer address, and direct printing result.
+ */
+fun decidePrintRouting(
+    mode: String,
+    address: String,
+    directResult: DirectPrintResult?
+): RoutingDecision {
+    val trimmedAddress = address.trim()
+    val normalizedMode = mode.trim().uppercase()
+    return when (normalizedMode) {
+        "SYSTEM" -> RoutingDecision.SYSTEM_DIALOG
+        "BLUETOOTH" -> {
+            if (trimmedAddress.isBlank() || directResult !is DirectPrintResult.Success) {
+                RoutingDecision.SHOW_ERROR
+            } else {
+                RoutingDecision.DIRECT_OK
+            }
+        }
+        else -> { // "AUTO"
+            if (trimmedAddress.isBlank()) {
+                RoutingDecision.SYSTEM_DIALOG
+            } else if (directResult is DirectPrintResult.Success) {
+                RoutingDecision.DIRECT_OK
+            } else {
+                RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG
+            }
+        }
+    }
+}
+
+/**
+ * Displays a localized Toast message explaining why direct Bluetooth printing failed.
+ */
+suspend fun showDirectPrintToast(context: Context, result: DirectPrintResult) = withContext(Dispatchers.Main) {
+    val message = when (result) {
+        is DirectPrintResult.Success -> return@withContext
+        is DirectPrintResult.NoAddress -> context.getString(R.string.direct_print_error_no_address)
+        is DirectPrintResult.NoPermission -> context.getString(R.string.direct_print_error_no_permission)
+        is DirectPrintResult.BluetoothOff -> context.getString(R.string.direct_print_error_bluetooth_off)
+        is DirectPrintResult.DeviceNotPaired -> context.getString(R.string.direct_print_error_not_paired)
+        is DirectPrintResult.Failed -> context.getString(R.string.direct_print_error_connection_failed, result.message)
+    }
+    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+}
+
+/**
+ * Sends the ESC/POS drawer-kick pulse over Bluetooth SPP socket to [printerAddress].
  */
 @SuppressLint("MissingPermission")
 suspend fun triggerCashDrawerKick(context: Context, printerAddress: String) = withContext(Dispatchers.IO) {
@@ -693,43 +747,21 @@ suspend fun triggerCashDrawerKick(context: Context, printerAddress: String) = wi
     }
 
     if (printerAddress.isBlank()) {
-        toast("⚠️ No cash drawer printer paired. Set one in Settings.")
+        toast("No cash drawer printer paired. Set one in Settings.")
         return@withContext
     }
 
-    val hasPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-        androidx.core.content.ContextCompat.checkSelfPermission(
-            context, android.Manifest.permission.BLUETOOTH_CONNECT
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-    if (!hasPermission) {
-        toast("⚠️ Bluetooth permission required to open the cash drawer")
-        return@withContext
-    }
-
-    try {
-        val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter
-        val device = adapter?.bondedDevices?.firstOrNull { it.address == printerAddress }
-        if (adapter == null || device == null) {
-            toast("⚠️ Paired printer not found. Re-select it in Settings.")
-            return@withContext
+    val result = sendToBluetoothPrinter(context, printerAddress, getCashDrawerKickCommand())
+    withContext(Dispatchers.Main) {
+        when (result) {
+            is DirectPrintResult.Success -> toast("Cash drawer kick sent")
+            else -> showDirectPrintToast(context, result)
         }
-        adapter.cancelDiscovery()
-        val socket = device.createRfcommSocketToServiceRecord(java.util.UUID.fromString(SERIAL_PORT_PROFILE_UUID))
-        socket.use {
-            it.connect()
-            it.outputStream.write(getCashDrawerKickCommand())
-            it.outputStream.flush()
-        }
-        toast("⚡ Cash drawer kick sent")
-    } catch (e: Exception) {
-        android.util.Log.e("CashDrawerKick", "Failed to send drawer kick to $printerAddress", e)
-        toast("⚠️ Could not reach the cash drawer printer")
     }
 }
 
 /**
  * Prints receipt bitmap directly via Bluetooth ESC/POS without launching system print dialog.
- * If direct printing fails or printer is not configured, it can fall back to standard system print.
  */
 suspend fun printReceiptDirectBluetooth(
     context: Context,
@@ -739,19 +771,161 @@ suspend fun printReceiptDirectBluetooth(
     autoKickDrawer: Boolean = false
 ): Boolean {
     val dots = if (paperRollWidthMm == 58) 384 else 576
-    return com.example.techyfipos.printer.EscPosPrinterDriver.printReceiptDirect(
+    val res = EscPosPrinterDriver.printReceiptDirect(
         context = context,
         printerAddress = printerAddress,
         bitmap = bitmap,
         paperWidthDots = dots,
         autoKickDrawer = autoKickDrawer
     )
+    return res is DirectPrintResult.Success
 }
 
 /**
- * Smart print function that first attempts direct ESC/POS Bluetooth printing
- * if a Bluetooth printer address is configured in InvoiceSettings.
- * If not configured or direct printing fails, falls back gracefully to standard Android OS print spooler.
+ * Unified entry point for printing receipt images.
+ * Respects receiptPrintMode (BLUETOOTH, SYSTEM, AUTO) and provides graceful fallback.
+ */
+suspend fun printReceiptImage(
+    context: Context,
+    activity: Activity?,
+    imageFile: File,
+    jobName: String,
+    settings: InvoiceSettingsData,
+    kickDrawer: Boolean
+): Boolean {
+    val mode = settings.receiptPrintMode.trim().uppercase()
+    val address = settings.resolvedReceiptPrinterAddress()
+
+    if (mode == "SYSTEM") {
+        printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+        return true
+    }
+
+    if (address.isBlank()) {
+        val decision = decidePrintRouting(mode, address, DirectPrintResult.NoAddress)
+        return when (decision) {
+            RoutingDecision.SHOW_ERROR -> {
+                showDirectPrintToast(context, DirectPrintResult.NoAddress)
+                false
+            }
+            RoutingDecision.SYSTEM_DIALOG,
+            RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
+                printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+                true
+            }
+            RoutingDecision.DIRECT_OK -> true
+        }
+    }
+
+    val bitmap = withContext(Dispatchers.IO) {
+        BitmapFactory.decodeFile(imageFile.absolutePath)
+    }
+    val directResult: DirectPrintResult = if (bitmap != null) {
+        val paperDots = if (settings.paperRollWidthMm == 58) 384 else 576
+        EscPosPrinterDriver.printReceiptDirect(
+            context = context,
+            printerAddress = address,
+            bitmap = bitmap,
+            paperWidthDots = paperDots,
+            autoKickDrawer = kickDrawer
+        )
+    } else {
+        DirectPrintResult.Failed("Could not decode receipt image file")
+    }
+
+    val decision = decidePrintRouting(mode, address, directResult)
+    return when (decision) {
+        RoutingDecision.DIRECT_OK -> true
+        RoutingDecision.SHOW_ERROR -> {
+            showDirectPrintToast(context, directResult)
+            false
+        }
+        RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
+            showDirectPrintToast(context, directResult)
+            printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+            true
+        }
+        RoutingDecision.SYSTEM_DIALOG -> {
+            printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
+            true
+        }
+    }
+}
+
+/**
+ * Unified entry point for printing label images.
+ * Respects labelPrintMode (BLUETOOTH, SYSTEM, AUTO) and provides graceful fallback.
+ */
+suspend fun printLabelImages(
+    context: Context,
+    activity: Activity?,
+    labels: List<Bitmap>,
+    pdfFallback: File,
+    widthMm: Float,
+    heightMm: Float,
+    copies: Int,
+    jobName: String,
+    settings: InvoiceSettingsData
+): Boolean {
+    val mode = settings.labelPrintMode.trim().uppercase()
+    val address = settings.labelPrinterAddress.trim()
+
+    if (mode == "SYSTEM") {
+        return printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+    }
+
+    if (address.isBlank()) {
+        val decision = decidePrintRouting(mode, address, DirectPrintResult.NoAddress)
+        return when (decision) {
+            RoutingDecision.SHOW_ERROR -> {
+                showDirectPrintToast(context, DirectPrintResult.NoAddress)
+                false
+            }
+            RoutingDecision.SYSTEM_DIALOG,
+            RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
+                printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+            }
+            RoutingDecision.DIRECT_OK -> true
+        }
+    }
+
+    var directResult: DirectPrintResult = DirectPrintResult.Success
+    for (labelBitmap in labels) {
+        val res = TsplLabelPrinterDriver.printLabel(
+            context = context,
+            address = address,
+            labelBitmap = labelBitmap,
+            widthMm = widthMm,
+            heightMm = heightMm,
+            gapMm = settings.labelGapMm,
+            copies = copies,
+            darkness = settings.labelDarkness
+        )
+        if (res !is DirectPrintResult.Success) {
+            directResult = res
+            break
+        }
+    }
+
+    val decision = decidePrintRouting(mode, address, directResult)
+    return when (decision) {
+        RoutingDecision.DIRECT_OK -> true
+        RoutingDecision.SHOW_ERROR -> {
+            showDirectPrintToast(context, directResult)
+            false
+        }
+        RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
+            showDirectPrintToast(context, directResult)
+            printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+        }
+        RoutingDecision.SYSTEM_DIALOG -> {
+            printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+        }
+    }
+}
+
+/**
+ * Smart print function for sales receipts that routes through printReceiptImage.
  */
 suspend fun printReceiptWithBluetoothFallback(
     context: Context,
@@ -760,39 +934,21 @@ suspend fun printReceiptWithBluetoothFallback(
     settings: InvoiceSettingsData,
     receiptLanguage: String = "EN"
 ): Boolean {
-    val printerAddress = settings.directBluetoothPrinterAddress.trim()
-    if (printerAddress.isNotBlank()) {
-        try {
-            val jpegFile = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                generateBillJpeg(context, bill, receiptLanguage)
-            }
-            val bitmap = BitmapFactory.decodeFile(jpegFile.absolutePath)
-            if (bitmap != null) {
-                val printed = printReceiptDirectBluetooth(
-                    context = context,
-                    bitmap = bitmap,
-                    printerAddress = printerAddress,
-                    paperRollWidthMm = settings.paperRollWidthMm,
-                    autoKickDrawer = settings.cashDrawerKickEnabled
-                )
-                if (printed) {
-                    return true
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.w("BillActions", "Direct Bluetooth print failed, falling back to OS print dialog", e)
-        }
+    val jpegFile = withContext(Dispatchers.IO) {
+        generateBillJpeg(context, bill, receiptLanguage)
     }
-    // Fallback to standard PDF print dialog
-    val pdfFile = kotlinx.coroutines.withContext(Dispatchers.IO) {
-        generateBillPdf(context, bill, receiptLanguage = receiptLanguage)
-    }
-    return printBillPdf(activity ?: context, pdfFile, "Invoice #${bill.saleId}")
+    return printReceiptImage(
+        context = context,
+        activity = activity,
+        imageFile = jpegFile,
+        jobName = "Invoice #${bill.saleId}",
+        settings = settings,
+        kickDrawer = settings.cashDrawerKickEnabled
+    )
 }
 
 /**
- * Smart print function for Store Credit Voucher slip.
- * Attempts direct ESC/POS Bluetooth printing if configured, otherwise falls back to system print.
+ * Smart print function for Store Credit Voucher slip that routes through printReceiptImage.
  */
 suspend fun printStoreCreditVoucherSlip(
     context: Context,
@@ -800,27 +956,14 @@ suspend fun printStoreCreditVoucherSlip(
     voucherCode: String,
     settings: InvoiceSettingsData
 ): Boolean {
-    val printerAddress = settings.directBluetoothPrinterAddress.trim()
-    if (printerAddress.isNotBlank()) {
-        try {
-            val bitmap = BitmapFactory.decodeFile(voucherFile.absolutePath)
-            if (bitmap != null) {
-                val printed = printReceiptDirectBluetooth(
-                    context = context,
-                    bitmap = bitmap,
-                    printerAddress = printerAddress,
-                    paperRollWidthMm = settings.paperRollWidthMm,
-                    autoKickDrawer = false // Do not kick drawer for voucher slip
-                )
-                if (printed) return true
-            }
-        } catch (e: Exception) {
-            android.util.Log.w("BillActions", "Direct Bluetooth print of voucher slip failed, falling back to OS print", e)
-        }
-    }
-    // Fallback to system print dialog
-    printBillJpeg(context, voucherFile, "Voucher-$voucherCode", paperRollWidthMm = settings.paperRollWidthMm)
-    return true
+    return printReceiptImage(
+        context = context,
+        activity = context.findActivity(),
+        imageFile = voucherFile,
+        jobName = "Voucher-$voucherCode",
+        settings = settings,
+        kickDrawer = false
+    )
 }
 
 /**

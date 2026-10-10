@@ -83,7 +83,14 @@ import com.example.techyfipos.utils.generateXReportPdf
 import com.example.techyfipos.utils.generateZReportJpeg
 import com.example.techyfipos.utils.generateZReportPdf
 import com.example.techyfipos.utils.printBillJpeg
+import com.example.techyfipos.utils.printReceiptImage
+import com.example.techyfipos.utils.findActivity
 import com.example.techyfipos.utils.saveBillJpegToDownloads
+import com.example.techyfipos.data.InvoiceSettingsData
+import com.example.techyfipos.data.SettingsDataStore
+import com.example.techyfipos.ui.viewmodel.SettingsViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Calendar
@@ -145,6 +152,7 @@ fun RegisterCloseScreen(
     registerClosingViewModel: RegisterClosingViewModel,
     expenseViewModel: ExpenseViewModel,
     salesViewModel: SalesViewModel,
+    settingsViewModel: SettingsViewModel? = null,
     onBack: () -> Unit,
     onNavigateToExpenses: () -> Unit = {},
     isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
@@ -154,6 +162,10 @@ fun RegisterCloseScreen(
     val configuration = LocalConfiguration.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val invoiceSettings by (settingsViewModel?.invoiceSettingsData ?: remember(context) {
+        SettingsDataStore(context).invoiceSettingsDataFlow
+    }).collectAsStateWithLifecycle(initialValue = InvoiceSettingsData())
 
     val closings by registerClosingViewModel.allClosings.collectAsStateWithLifecycle(initialValue = emptyList())
     val shiftState by registerClosingViewModel.shiftState.collectAsStateWithLifecycle()
@@ -1147,11 +1159,22 @@ fun RegisterCloseScreen(
             isInterimX = true,
             onDismiss = { showXReportDialog = false },
             onPrint = {
-                try {
-                    val jpegFile = generateXReportJpeg(context, r, rangeLabel)
-                    printBillJpeg(context, jpegFile, "X-Report - $rangeLabel")
-                } catch (e: Exception) {
-                    Toast.makeText(context, context.getString(R.string.toast_print_error_fmt, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
+                coroutineScope.launch {
+                    try {
+                        val jpegFile = withContext(Dispatchers.IO) {
+                            generateXReportJpeg(context, r, rangeLabel)
+                        }
+                        printReceiptImage(
+                            context = context,
+                            activity = context.findActivity(),
+                            imageFile = jpegFile,
+                            jobName = "X-Report - $rangeLabel",
+                            settings = invoiceSettings,
+                            kickDrawer = false
+                        )
+                    } catch (e: Exception) {
+                        Toast.makeText(context, context.getString(R.string.toast_print_error_fmt, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
+                    }
                 }
             },
             onSave = {
@@ -1193,11 +1216,22 @@ fun RegisterCloseScreen(
             isInterimX = false,
             onDismiss = { showPnlZReportDialog = false },
             onPrint = {
-                try {
-                    val jpegFile = generateZReportJpeg(context, r, rangeLabel)
-                    printBillJpeg(context, jpegFile, "Z-Report - $rangeLabel")
-                } catch (e: Exception) {
-                    Toast.makeText(context, context.getString(R.string.z_report_print_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
+                coroutineScope.launch {
+                    try {
+                        val jpegFile = withContext(Dispatchers.IO) {
+                            generateZReportJpeg(context, r, rangeLabel)
+                        }
+                        printReceiptImage(
+                            context = context,
+                            activity = context.findActivity(),
+                            imageFile = jpegFile,
+                            jobName = "Z-Report - $rangeLabel",
+                            settings = invoiceSettings,
+                            kickDrawer = false
+                        )
+                    } catch (e: Exception) {
+                        Toast.makeText(context, context.getString(R.string.z_report_print_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
+                    }
                 }
             },
             onSave = {

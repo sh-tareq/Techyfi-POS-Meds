@@ -2776,4 +2776,30 @@
     <string name="error_supplier_not_found">সাপ্লায়ার পাওয়া যায়নি</string>
     <string name="error_duplicate_record">সংরক্ষণ করা যায়নি: ডুপ্লিকেট তথ্যের দ্বন্দ্ব</string>
     <string name="error_generic">একটি সমস্যা দেখা দিয়েছে</string>
+
+    <!-- Printers Configuration -->
+    <string name="settings_section_printers">প্রিন্টারসমূহ</string>
+    <string name="settings_receipt_printer_title">রসিদ প্রিন্টার</string>
+    <string name="settings_receipt_printer_subtitle">বিক্রয় রসিদের প্রিন্ট পদ্ধতি, ডিভাইস ও কাগজের মাপ নির্ধারণ করুন</string>
+    <string name="settings_label_printer_title">লেবেল প্রিন্টার</string>
+    <string name="settings_label_printer_subtitle">বারকোড ও পণ্যের লেবেল প্রিন্টার সেটিংস নির্ধারণ করুন</string>
+    <string name="settings_print_mode_auto">স্বয়ংক্রিয়</string>
+    <string name="settings_print_mode_bluetooth">ব্লুটুথ</string>
+    <string name="settings_print_mode_system">অ্যান্ড্রয়েড প্রিন্ট সার্ভিস</string>
+    <string name="settings_print_method_label">প্রিন্ট পদ্ধতি</string>
+    <string name="settings_receipt_bluetooth_device">রসিদ ব্লুটুথ প্রিন্টার</string>
+    <string name="settings_label_bluetooth_device">লেবেল ব্লুটুথ প্রিন্টার</string>
+    <string name="settings_select_bluetooth_printer">পেয়ার করা ব্লুটুথ প্রিন্টার নির্বাচন করুন</string>
+    <string name="settings_paper_roll_width">কাগজের রোল প্রস্থ</string>
+    <string name="settings_test_receipt_button">টেস্ট রসিদ</string>
+    <string name="settings_test_label_button">টেস্ট লেবেল</string>
+    <string name="settings_label_gap_label">লেবেল গ্যাপ (মিমি)</string>
+    <string name="settings_label_darkness_label">কালির ঘনত্ব (%1$d)</string>
+    <string name="settings_cash_drawer_same_as_receipt">রসিদ প্রিন্টারের অনুরূপ</string>
+    <string name="settings_bt_bluetooth_off">ব্লুটুথ বন্ধ রয়েছে। আগে অ্যান্ড্রয়েড ব্লুটুথ সেটিংস থেকে এটি চালু করে প্রিন্টার পেয়ার করুন।</string>
+    <string name="direct_print_error_no_address">কোনো প্রিন্টার নির্বাচন করা হয়নি। সেটিংস থেকে ব্লুটুথ প্রিন্টার বেছে নিন।</string>
+    <string name="direct_print_error_no_permission">ব্লুটুথ পারমিশন নেই। অ্যান্ড্রয়েড সেটিংস থেকে ব্লুটুথ পারমিশন চালু করুন।</string>
+    <string name="direct_print_error_bluetooth_off">ব্লুটুথ বন্ধ রয়েছে। দয়া করে ব্লুটুথ চালু করে আবার চেষ্টা করুন।</string>
+    <string name="direct_print_error_not_paired">প্রিন্টারটি পেয়ার করা নেই। আগে অ্যান্ড্রয়েড ব্লুটুথ সেটিংস থেকে পেয়ার করুন।</string>
+    <string name="direct_print_error_connection_failed">প্রিন্টারের সাথে সংযোগ ব্যর্থ হয়েছে: %1$s</string>
 </resources>

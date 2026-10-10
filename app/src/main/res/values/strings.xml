@@ -2774,6 +2774,32 @@
     <string name="error_supplier_not_found">Supplier not found</string>
     <string name="error_duplicate_record">Failed to save: duplicate record conflict</string>
     <string name="error_generic">An error occurred</string>
+
+    <!-- Printers Configuration -->
+    <string name="settings_section_printers">Printers</string>
+    <string name="settings_receipt_printer_title">Receipt Printer</string>
+    <string name="settings_receipt_printer_subtitle">Configure printing method, device, and paper width for sales receipts</string>
+    <string name="settings_label_printer_title">Label Printer</string>
+    <string name="settings_label_printer_subtitle">Configure barcode and product label printer settings</string>
+    <string name="settings_print_mode_auto">Auto</string>
+    <string name="settings_print_mode_bluetooth">Bluetooth</string>
+    <string name="settings_print_mode_system">Android Print Service</string>
+    <string name="settings_print_method_label">Print Method</string>
+    <string name="settings_receipt_bluetooth_device">Receipt Bluetooth Printer</string>
+    <string name="settings_label_bluetooth_device">Label Bluetooth Printer</string>
+    <string name="settings_select_bluetooth_printer">Select Paired Bluetooth Printer</string>
+    <string name="settings_paper_roll_width">Paper Roll Width</string>
+    <string name="settings_test_receipt_button">Test Receipt</string>
+    <string name="settings_test_label_button">Test Label</string>
+    <string name="settings_label_gap_label">Label Gap (mm)</string>
+    <string name="settings_label_darkness_label">Darkness / Density (%1$d)</string>
+    <string name="settings_cash_drawer_same_as_receipt">Same as receipt printer</string>
+    <string name="settings_bt_bluetooth_off">Bluetooth is off. Turn it on and pair your printer in Android Bluetooth settings first.</string>
+    <string name="direct_print_error_no_address">No printer address configured. Please select a Bluetooth printer in Settings.</string>
+    <string name="direct_print_error_no_permission">Bluetooth permission is missing. Please grant Bluetooth permission in Android settings.</string>
+    <string name="direct_print_error_bluetooth_off">Bluetooth is turned off. Please turn on Bluetooth and try again.</string>
+    <string name="direct_print_error_not_paired">Printer is not paired. Please pair it in Android Bluetooth settings first.</string>
+    <string name="direct_print_error_connection_failed">Connection to printer failed: %1$s</string>
 </resources>
 
 

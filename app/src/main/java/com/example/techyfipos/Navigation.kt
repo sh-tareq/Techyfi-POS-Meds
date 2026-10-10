@@ -1374,6 +1374,7 @@ fun MainNavigation() {
                                     registerClosingViewModel = registerClosingViewModel,
                                     expenseViewModel = expenseViewModel,
                                     salesViewModel = salesViewModel,
+                                    settingsViewModel = settingsViewModel,
                                     onBack = { backStack.removeLastOrNull() },
                                     onNavigateToExpenses = {
                                         if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }

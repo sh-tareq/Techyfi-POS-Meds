@@ -6133,6 +6133,7 @@ fun DueRepaymentReceiptDialog(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val coroutineScope = rememberCoroutineScope()
 
     var selectedRollWidth by rememberSaveable { mutableIntStateOf(settings.paperRollWidthMm.takeIf { it == 58 || it == 80 } ?: 80) }
     var zoomScale by rememberSaveable { mutableFloatStateOf(1f) }
@@ -6721,12 +6722,16 @@ fun DueRepaymentReceiptDialog(
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val fileToPrint = receiptFile
                                 if (fileToPrint != null) {
-                                    printBillJpeg(
-                                        context = context,
-                                        imageFile = fileToPrint,
-                                        jobName = "Due_Voucher_${data.customerName}",
-                                        paperRollWidthMm = selectedRollWidth
-                                    )
+                                    coroutineScope.launch {
+                                        printReceiptImage(
+                                            context = context,
+                                            activity = context.findActivity(),
+                                            imageFile = fileToPrint,
+                                            jobName = "Due_Voucher_${data.customerName}",
+                                            settings = settings.copy(paperRollWidthMm = selectedRollWidth),
+                                            kickDrawer = false
+                                        )
+                                    }
                                 }
                             },
                             shape = RoundedCornerShape(12.dp),

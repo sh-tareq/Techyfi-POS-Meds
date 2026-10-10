@@ -112,6 +112,7 @@ dependencies {
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation("org.json:json:20240303")
+  testImplementation("org.mockito:mockito-core:5.11.0")
 
   // Instrumented tests: jUnit rules and runners
   androidTestImplementation(libs.androidx.test.core)

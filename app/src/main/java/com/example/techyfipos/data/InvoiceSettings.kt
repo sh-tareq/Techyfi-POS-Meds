@@ -72,6 +72,11 @@ data class InvoiceSettingsData(
     val cashDrawerPrinterAddress: String = "",
     val directBluetoothPrintEnabled: Boolean = false,
     val directBluetoothPrinterAddress: String = "",
+    val receiptPrintMode: String = "AUTO", // "BLUETOOTH", "SYSTEM", "AUTO"
+    val labelPrintMode: String = "AUTO", // "BLUETOOTH", "SYSTEM", "AUTO"
+    val labelPrinterAddress: String = "",
+    val labelGapMm: Float = 2f,
+    val labelDarkness: Int = 8,
     val allowNegativeInventory: Boolean = false,
     val decimalQuantitiesEnabled: Boolean = true,
     val paperRollWidthMm: Int = 80,
@@ -98,12 +103,17 @@ data class InvoiceSettingsData(
         CustomInfoBlock(
             id = "opening-hours",
             title = "Opening Hours",
-            content = "Saturday–Thursday: 8:00 AM–10:00 PM\nFriday: 3:00 PM–10:00 PM",
+            content = "Saturday-Thursday: 8:00 AM-10:00 PM\nFriday: 3:00 PM-10:00 PM",
             enabled = true,
             position = 2
         )
     )
 ) {
+    fun resolvedReceiptPrinterAddress(): String {
+        val direct = directBluetoothPrinterAddress.trim()
+        return if (direct.isNotBlank()) direct else cashDrawerPrinterAddress.trim()
+    }
+
     fun toJson(): String {
         val obj = JSONObject().apply {
             put("storeName", storeName)
@@ -144,6 +154,11 @@ data class InvoiceSettingsData(
             put("cashDrawerPrinterAddress", cashDrawerPrinterAddress)
             put("directBluetoothPrintEnabled", directBluetoothPrintEnabled)
             put("directBluetoothPrinterAddress", directBluetoothPrinterAddress)
+            put("receiptPrintMode", receiptPrintMode)
+            put("labelPrintMode", labelPrintMode)
+            put("labelPrinterAddress", labelPrinterAddress)
+            put("labelGapMm", labelGapMm.toDouble())
+            put("labelDarkness", labelDarkness)
             put("allowNegativeInventory", allowNegativeInventory)
             put("decimalQuantitiesEnabled", decimalQuantitiesEnabled)
             put("paperRollWidthMm", paperRollWidthMm)
@@ -231,6 +246,11 @@ data class InvoiceSettingsData(
                     cashDrawerPrinterAddress = json.optString("cashDrawerPrinterAddress", ""),
                     directBluetoothPrintEnabled = json.optBoolean("directBluetoothPrintEnabled", false),
                     directBluetoothPrinterAddress = json.optString("directBluetoothPrinterAddress", ""),
+                    receiptPrintMode = json.optString("receiptPrintMode", "AUTO").ifBlank { "AUTO" },
+                    labelPrintMode = json.optString("labelPrintMode", "AUTO").ifBlank { "AUTO" },
+                    labelPrinterAddress = json.optString("labelPrinterAddress", ""),
+                    labelGapMm = json.optDouble("labelGapMm", 2.0).toFloat(),
+                    labelDarkness = json.optInt("labelDarkness", 8),
                     allowNegativeInventory = json.optBoolean("allowNegativeInventory", false),
                     decimalQuantitiesEnabled = json.optBoolean("decimalQuantitiesEnabled", true),
                     paperRollWidthMm = json.optInt("paperRollWidthMm", 80),

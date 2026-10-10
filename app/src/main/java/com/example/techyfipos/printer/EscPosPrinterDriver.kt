@@ -1,19 +1,9 @@
 package com.example.techyfipos.printer
 
-import android.annotation.SuppressLint
-import android.bluetooth.BluetoothManager
 import android.content.Context
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.os.Build
-import android.util.Log
-import androidx.core.content.ContextCompat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
-import java.io.OutputStream
-import java.util.UUID
 
 object EscPosPrinterDriver {
     private const val TAG = "EscPosPrinterDriver"
@@ -88,68 +78,27 @@ object EscPosPrinterDriver {
     }
 
     /**
-     * Direct Bluetooth SPP printing over RFCOMM socket.
+     * Direct Bluetooth SPP printing over RFCOMM socket using shared BluetoothPrinterTransport.
      * Takes < 1 second to print the receipt directly on a physical thermal printer.
      */
-    @SuppressLint("MissingPermission")
     suspend fun printReceiptDirect(
         context: Context,
         printerAddress: String,
         bitmap: Bitmap,
         paperWidthDots: Int = 384,
         autoKickDrawer: Boolean = false
-    ): Boolean = withContext(Dispatchers.IO) {
-        if (printerAddress.isBlank()) {
-            Log.w(TAG, "No printer address configured")
-            return@withContext false
+    ): DirectPrintResult {
+        val rasterData = bitmapToEscPosRaster(bitmap, paperWidthDots)
+        val out = ByteArrayOutputStream()
+        out.write(CMD_INIT)
+        out.write(CMD_ALIGN_CENTER)
+        out.write(rasterData)
+        out.write(CMD_FEED_4_LINES)
+        out.write(CMD_PARTIAL_CUT)
+        if (autoKickDrawer) {
+            out.write(CMD_DRAWER_KICK)
         }
-
-        val hasBtPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-        if (!hasBtPermission) {
-            Log.w(TAG, "BLUETOOTH_CONNECT permission not granted")
-            return@withContext false
-        }
-
-        try {
-            val bm = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-            val adapter = bm?.adapter ?: return@withContext false
-            val device = adapter.bondedDevices.firstOrNull { it.address == printerAddress }
-            if (device == null) {
-                Log.w(TAG, "Printer $printerAddress not found in bonded devices")
-                return@withContext false
-            }
-
-            adapter.cancelDiscovery()
-            val socket = device.createRfcommSocketToServiceRecord(UUID.fromString(SPP_UUID))
-            socket.use { s ->
-                s.connect()
-                val os: OutputStream = s.outputStream
-
-                // 1. Initialize printer
-                os.write(CMD_INIT)
-                os.write(CMD_ALIGN_CENTER)
-
-                // 2. Write raster image data
-                val rasterData = bitmapToEscPosRaster(bitmap, paperWidthDots)
-                os.write(rasterData)
-
-                // 3. Feed paper & cut
-                os.write(CMD_FEED_4_LINES)
-                os.write(CMD_PARTIAL_CUT)
-
-                // 4. Optional Cash Drawer Kick
-                if (autoKickDrawer) {
-                    os.write(CMD_DRAWER_KICK)
-                }
-
-                os.flush()
-            }
-            Log.i(TAG, "Direct receipt print succeeded to $printerAddress")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed direct Bluetooth ESC/POS print: ${e.message}", e)
-            false
-        }
+        val payload = out.toByteArray()
+        return sendToBluetoothPrinter(context, printerAddress, payload)
     }
 }
