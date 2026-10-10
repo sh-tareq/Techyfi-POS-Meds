@@ -170,7 +170,7 @@ fun AddEditProductDialog(
     var mfgOrPkgType by remember { mutableStateOf(initialMfgOrPkgType) }
     var mfgOrPkgDate by remember { mutableStateOf(initialMfgOrPkgDate) }
     var expiryDate by remember { mutableStateOf(initialExpiryDate) }
-    var editStockReason by remember { mutableStateOf("Restock") }
+    var editStockReason by remember { mutableStateOf<String?>(null) }
     var editStockNote by remember { mutableStateOf("") }
 
     var showEnlargedView by remember { mutableStateOf(false) }
@@ -240,7 +240,8 @@ fun AddEditProductDialog(
         val effectiveSelling = if (dPrice > 0.0) dPrice else if (mPrice > 0.0) mPrice else 0.0
         val effectiveMrp = if (mPrice > 0.0) mPrice else effectiveSelling
         val effectiveDisc = if (dPrice > 0.0) dPrice else effectiveSelling
-        val qty = stockQty.toDoubleOrNull() ?: 0.0
+        val qty = if (isEdit && stockQty.isBlank()) initialStock else (stockQty.toDoubleOrNull() ?: if (isEdit) initialStock else 0.0)
+        val isStockAltered = isEdit && kotlin.math.abs(qty - initialStock) > 0.0001
         val reorder = reorderLevel.toIntOrNull() ?: 0
         val finalBarcode = toEnglishDigits(barcode).trim().ifBlank {
             var candidate: String
@@ -268,6 +269,14 @@ fun AddEditProductDialog(
             effectiveSelling <= 0 -> {
                 isError = true
                 Toast.makeText(context, context.getString(R.string.products_enter_valid_selling_price_warning), Toast.LENGTH_SHORT).show()
+            }
+            mPrice > 0.0 && effectiveSelling > mPrice -> {
+                isError = true
+                Toast.makeText(context, context.getString(R.string.products_selling_price_exceeds_mrp_warning), Toast.LENGTH_SHORT).show()
+            }
+            isStockAltered && editStockReason.isNullOrBlank() -> {
+                isError = true
+                Toast.makeText(context, context.getString(R.string.products_select_stock_adjustment_reason_warning), Toast.LENGTH_SHORT).show()
             }
             pPrice < 0.0 || wPrice < 0.0 || qty < 0.0 || reorder < 0 -> {
                 isError = true
@@ -1429,7 +1438,8 @@ fun AddEditProductDialog(
                                     }
                                 }
 
-                                val stockAltered = isEdit && stockQty.toDoubleOrNull() != null && kotlin.math.abs((stockQty.toDoubleOrNull() ?: 0.0) - initialStock) > 0.0001
+                                val qtyNumber = if (stockQty.isBlank()) initialStock else (stockQty.toDoubleOrNull() ?: initialStock)
+                                val stockAltered = isEdit && kotlin.math.abs(qtyNumber - initialStock) > 0.0001
                                 AnimatedVisibility(
                                     visible = stockAltered,
                                     enter = fadeIn() + expandVertically(),
@@ -1456,7 +1466,7 @@ fun AddEditProductDialog(
                                                 .horizontalScroll(rememberScrollState()),
                                             horizontalArrangement = Arrangement.spacedBy(5.dp)
                                         ) {
-                                            listOf("Restock", "Damage", "Expired", "Discrepancy", "Sample", "Store Use", "Internal Use").forEach { r ->
+                                            listOf("Restock", "Damage", "Expired", "Discrepancy", "Sample", "Store Use", "Internal Use", "Other").forEach { r ->
                                                 FilterChip(
                                                     selected = editStockReason == r,
                                                     onClick = { editStockReason = r },
@@ -1741,7 +1751,7 @@ fun AddEditProductDialog(
                         val effectiveSelling = if (dPrice > 0.0) dPrice else if (mPrice > 0.0) mPrice else 0.0
                         val effectiveMrp = if (mPrice > 0.0) mPrice else effectiveSelling
                         val effectiveDisc = if (dPrice > 0.0) dPrice else effectiveSelling
-                        val qty = stockQty.toDoubleOrNull() ?: 0.0
+                        val qty = if (isEdit && stockQty.isBlank()) initialStock else (stockQty.toDoubleOrNull() ?: if (isEdit) initialStock else 0.0)
                         val reorder = reorderLevel.toIntOrNull() ?: 0
                         val finalBarcode = toEnglishDigits(barcode).trim().ifBlank {
                             var candidate: String

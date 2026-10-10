@@ -1433,6 +1433,8 @@
     <string name="products_enter_category_name_warning">⚠️ Please enter category name in English</string>
     <string name="products_enter_product_name_warning">⚠️ Please enter a product name</string>
     <string name="products_enter_valid_selling_price_warning">⚠️ Please enter a valid selling price (&gt; 0)</string>
+    <string name="products_selling_price_exceeds_mrp_warning">⚠️ Selling price cannot be higher than MRP</string>
+    <string name="products_select_stock_adjustment_reason_warning">⚠️ Please select a reason for stock adjustment</string>
     <string name="products_edit_subtitle">Update details, pricing &amp; inventory</string>
     <string name="products_add_subtitle">Smart inventory · Live profit intelligence</string>
     <string name="products_product_name_required_label">Product Name *</string>

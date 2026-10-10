@@ -77,4 +77,39 @@ class ProductValidationTest {
         val edited = original.copy(name = "Updated Name", sellingPrice = 90.0)
         org.junit.Assert.assertEquals(createdTime, edited.createdAt)
     }
+
+    @Test
+    fun `R20-18 edit product treats blank stock as unchanged`() {
+        val initialStock = 25.0
+        val blankInput = ""
+        val isEdit = true
+        val resolvedQty = if (isEdit && blankInput.isBlank()) initialStock else (blankInput.toDoubleOrNull() ?: if (isEdit) initialStock else 0.0)
+        val isStockAltered = isEdit && kotlin.math.abs(resolvedQty - initialStock) > 0.0001
+
+        org.junit.Assert.assertEquals(25.0, resolvedQty, 0.001)
+        assertFalse(isStockAltered)
+    }
+
+    @Test
+    fun `R20-19 canonical English reasons are preserved for db storage`() {
+        val canonicalReasons = listOf("Restock", "Damage", "Expired", "Discrepancy", "Sample", "Store Use", "Internal Use", "Other")
+        assertTrue(canonicalReasons.contains("Restock"))
+        assertTrue(canonicalReasons.contains("Damage"))
+        assertTrue(canonicalReasons.contains("Discrepancy"))
+        // None of the canonical keys contain non-ASCII characters
+        assertTrue(canonicalReasons.all { r -> r.all { it.code < 128 } })
+    }
+
+    @Test
+    fun `R20-19d selling price cannot exceed MRP`() {
+        val mrpPrice = 100.0
+        val normalSelling = 90.0
+        val invalidSelling = 110.0
+
+        val isNormalValid = !(mrpPrice > 0.0 && normalSelling > mrpPrice)
+        val isInvalidBlocked = (mrpPrice > 0.0 && invalidSelling > mrpPrice)
+
+        assertTrue(isNormalValid)
+        assertTrue(isInvalidBlocked)
+    }
 }

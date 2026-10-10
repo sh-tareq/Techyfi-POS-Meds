@@ -1429,6 +1429,8 @@
     <string name="products_enter_category_name_warning">⚠️ ইংরেজিতে ক্যাটাগরির নাম লিখুন</string>
     <string name="products_enter_product_name_warning">⚠️ পণ্যের নাম লিখুন</string>
     <string name="products_enter_valid_selling_price_warning">⚠️ একটি বৈধ বিক্রয় মূল্য লিখুন (&gt; ০)</string>
+    <string name="products_selling_price_exceeds_mrp_warning">⚠️ বিক্রয় মূল্য MRP এর বেশি হতে পারে না</string>
+    <string name="products_select_stock_adjustment_reason_warning">⚠️ অনুগ্রহ করে মজুদ সমন্বয়ের কারণ নির্বাচন করুন</string>
     <string name="products_edit_subtitle">বিবরণ, মূল্য ও মজুদ আপডেট করুন</string>
     <string name="products_add_subtitle">স্মার্ট মজুদ · লাইভ লাভের বিশ্লেষণ</string>
     <string name="products_product_name_required_label">পণ্যের নাম *</string>

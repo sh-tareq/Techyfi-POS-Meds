@@ -2715,7 +2715,7 @@ fun ProductsScreen(
                                 previousStock = 0.0,
                                 newStock = qty,
                                 difference = qty,
-                                reason = reason ?: context.getString(R.string.products_reason_restock),
+                                reason = reason ?: "Restock",
                                 note = note ?: context.getString(R.string.products_initial_stock_note)
                             )
                         }
@@ -2805,7 +2805,7 @@ fun ProductsScreen(
                             previousStock = prevStock,
                             newStock = qty,
                             difference = diff,
-                            reason = reason ?: if (diff > 0) context.getString(R.string.products_reason_restock) else context.getString(R.string.products_reason_discrepancy),
+                            reason = reason ?: if (diff > 0) "Restock" else "Discrepancy",
                             note = note
                         )
                     } else null
@@ -2872,7 +2872,7 @@ fun ProductsScreen(
                     previousStock = prevStock,
                     newStock = newStock,
                     difference = addedQty.toDouble(),
-                    reason = context.getString(R.string.products_reason_restock),
+                    reason = "Restock",
                     note = context.getString(R.string.products_quick_restock_note)
                 )
                 Toast.makeText(context, context.getString(R.string.products_added_stock_toast, addedQty, prod.name), Toast.LENGTH_SHORT).show()
@@ -3409,8 +3409,8 @@ private fun HardwareStockCheckDialog(
         )
     }
     val quantity = quantityText.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
-    val reasonsList = stringArrayResource(R.array.stock_adjustment_reasons).toList()
-    var selectedReason by remember(reasonsList) { mutableStateOf(reasonsList.firstOrNull() ?: "") }
+    val reasonsList = listOf("Restock", "Damage", "Expired", "Discrepancy", "Sample", "Store Use", "Internal Use", "Other")
+    var selectedReason by remember(reasonsList) { mutableStateOf(reasonsList.first()) }
     var adjustmentNote by remember { mutableStateOf("") }
 
     AlertDialog(
