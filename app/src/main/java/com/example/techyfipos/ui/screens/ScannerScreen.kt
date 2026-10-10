@@ -129,6 +129,7 @@ fun ScannerScreen(
     onNavigateToCart: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToProducts: (String?) -> Unit,
+    onLockOrLogout: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -314,7 +315,8 @@ fun ScannerScreen(
                         isSellMode = isSellMode,
                         itemCount = cartUnitCount,
                         total = grandTotal,
-                        onCartClick = { showCartPreview = true }
+                        onCartClick = { showCartPreview = true },
+                        onLockClick = onLockOrLogout
                     )
                 },
                 bottomBar = {
@@ -520,6 +522,7 @@ fun ScannerScreen(
                             barcode = barcode,
                             cartViewModel = cartViewModel,
                             onSoundVibrate = { beepAndVibrate(context) },
+                            fromHardwareScanner = true,
                             onShowSnackbar = { name, price, stock, total, isSuccess ->
                                 scope.launch {
                                     val msg = if (isSuccess) {
@@ -2441,7 +2444,8 @@ private fun SellHeader(
     isSellMode: Boolean,
     itemCount: Double,
     total: Double,
-    onCartClick: () -> Unit
+    onCartClick: () -> Unit,
+    onLockClick: (() -> Unit)? = null
 ) {
     Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 2.dp) {
         Row(
@@ -2497,12 +2501,28 @@ private fun SellHeader(
                 }
             }
 
-            Surface(
-                onClick = onCartClick,
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.58f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                if (onLockClick != null) {
+                    IconButton(
+                        onClick = onLockClick,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = stringResource(R.string.sidebar_lock_terminal_title),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Surface(
+                    onClick = onCartClick,
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.58f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -2539,6 +2559,7 @@ private fun SellHeader(
                     Realistic3DChevronRightIcon(size = 14.dp)
                 }
             }
+        }
         }
     }
 }

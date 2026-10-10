@@ -422,6 +422,12 @@ fun CartScreen(
     var showCheckout by rememberSaveable { mutableStateOf(false) }
     var showCustomerDetails by rememberSaveable { mutableStateOf(false) }
 
+    androidx.activity.compose.BackHandler(enabled = showCheckout || isCompletingSale) {
+        if (!isCompletingSale) {
+            showCheckout = false
+        }
+    }
+
     val heldCarts by cartViewModel.allHeldCarts.collectAsStateWithLifecycle()
     val heldCartCount by cartViewModel.heldCartCount.collectAsStateWithLifecycle()
     var showHeldCartsSheet by remember { mutableStateOf(false) }
@@ -2611,7 +2617,9 @@ fun CartScreen(
                                     val snapshotAmountPaid = if (paymentMethod == "Cash" && !isSplitPayment) currentRawCash else currentPaymentBreakdown.amountPaidToRecord
                                     val snapshotChange = currentPaymentBreakdown.changeAmount
                                     scope.launch {
-                                        doCompleteSale(snapshotAmountPaid, snapshotChange)
+                                        kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                                            doCompleteSale(snapshotAmountPaid, snapshotChange)
+                                        }
                                     }
                                 }
                             }

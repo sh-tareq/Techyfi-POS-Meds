@@ -63,7 +63,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 enum class Nav3DType {
-    SELL, PRODUCTS, HISTORY, DUES, MORE, REPORT, EXPENSES, SUPPLIERS, SETTINGS, REGISTER, LOYALTY, CUSTOMERS
+    SELL, PRODUCTS, HISTORY, DUES, MORE, REPORT, EXPENSES, SUPPLIERS, SETTINGS, REGISTER, LOYALTY, CUSTOMERS, LOCK
 }
 
 @Composable
@@ -199,6 +199,21 @@ private fun ActiveAnimated3DNavItemIcon(
                 scaleY = pulseScale
             }
         }
+        Nav3DType.LOCK -> {
+            val pulseScale by infiniteTransition.animateFloat(
+                initialValue = 0.95f,
+                targetValue = 1.05f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1200, easing = LinearOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "pulse_lock"
+            )
+            Modifier.graphicsLayer {
+                scaleX = pulseScale
+                scaleY = pulseScale
+            }
+        }
     }
 
     Box(
@@ -224,6 +239,7 @@ private fun Nav3DIconContent(type: Nav3DType, targetSize: androidx.compose.ui.un
         Nav3DType.REGISTER -> Realistic3DRegisterReceiptIcon(size = targetSize)
         Nav3DType.LOYALTY -> Realistic3DLoyaltyStarIcon(size = targetSize)
         Nav3DType.CUSTOMERS -> Realistic3DCustomerHubIcon(size = targetSize)
+        Nav3DType.LOCK -> com.example.techyfipos.ui.components.Realistic3DLogoutVaultIcon(size = targetSize)
     }
 }
 
@@ -345,6 +361,14 @@ fun MainNavigation() {
         val lifecycleOwner = LocalLifecycleOwner.current
         val latestCurrentKey by rememberUpdatedState(currentKey)
         var backgroundedAt by rememberSaveable { mutableLongStateOf(0L) }
+
+        LaunchedEffect(currentUser, currentKey) {
+            if (currentUser == null && currentKey != null && currentKey != Splash && currentKey != Lock) {
+                com.example.techyfipos.utils.HardwareBarcodeScanner.clearPendingInput()
+                while (backStack.isNotEmpty()) backStack.removeLastOrNull()
+                backStack.add(Lock)
+            }
+        }
 
         DisposableEffect(lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
@@ -596,6 +620,10 @@ fun MainNavigation() {
                         } else {
                             android.widget.Toast.makeText(context, ownerOnlyCustomersText, android.widget.Toast.LENGTH_SHORT).show()
                         }
+                    },
+                    onLockOrLogout = {
+                        showMoreHubSheet = false
+                        showLogoutConfirmDialog = true
                     },
                     isOwner = isOwner,
                     isSupervisor = isSupervisor,
@@ -1152,11 +1180,15 @@ fun MainNavigation() {
                             entry<ManageUsers> {
                                 val canManageStaff = isOwner || activePermissions.contains(AppPermissions.SYSTEM_MANAGE_STAFF)
                                 val canEditPermissions = isOwner || activePermissions.contains(AppPermissions.SYSTEM_PERMISSIONS)
-                                if (!canManageStaff) {
-                                    android.widget.Toast.makeText(context, context.getString(R.string.user_management_permission_required), android.widget.Toast.LENGTH_SHORT).show()
-                                    backStack.removeLastOrNull()
-                                    return@entry
+                                LaunchedEffect(canManageStaff) {
+                                    if (!canManageStaff) {
+                                        android.widget.Toast.makeText(context, context.getString(R.string.user_management_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                        if (backStack.lastOrNull() == ManageUsers) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
                                 }
+                                if (!canManageStaff) return@entry
                                 ManageUsersScreen(
                                     authViewModel = authViewModel,
                                     onBack = { backStack.removeLastOrNull() },
@@ -1181,6 +1213,7 @@ fun MainNavigation() {
                                     canCheckStock = isOwner || activePermissions.contains(AppPermissions.INVENTORY_ADD_EDIT),
                                     onNavigateToCart = { backStack.add(Cart) },
                                     onNavigateToSettings = { backStack.add(Settings) },
+                                    onLockOrLogout = { showLogoutConfirmDialog = true },
                                     onNavigateToProducts = { barcode ->
                                         val canViewInventory = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
                                         if (canViewInventory) {
@@ -1218,11 +1251,15 @@ fun MainNavigation() {
                             }
                             entry<Products> {
                                 val canViewInventory = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
-                                if (!canViewInventory) {
-                                    android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
-                                    backStack.removeLastOrNull()
-                                    return@entry
+                                LaunchedEffect(canViewInventory) {
+                                    if (!canViewInventory) {
+                                        android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                        if (backStack.lastOrNull() == Products) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
                                 }
+                                if (!canViewInventory) return@entry
                                 val code = prefilledBarcodeForProductScreen
                                 DisposableEffect(Unit) {
                                     onDispose { prefilledBarcodeForProductScreen = null }
@@ -1270,11 +1307,15 @@ fun MainNavigation() {
                             }
                             entry<SalesReport> {
                                 val canReport = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
-                                if (!canReport) {
-                                    android.widget.Toast.makeText(context, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
-                                    backStack.removeLastOrNull()
-                                    return@entry
+                                LaunchedEffect(canReport) {
+                                    if (!canReport) {
+                                        android.widget.Toast.makeText(context, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (backStack.lastOrNull() == SalesReport) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
                                 }
+                                if (!canReport) return@entry
                                 SalesReportScreen(
                                     salesViewModel = salesViewModel,
                                     expenseViewModel = expenseViewModel,
@@ -1304,11 +1345,15 @@ fun MainNavigation() {
                             }
                             entry<Expenses> {
                                 val canExpense = isOwner || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
-                                if (!canExpense) {
-                                    android.widget.Toast.makeText(context, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
-                                    backStack.removeLastOrNull()
-                                    return@entry
+                                LaunchedEffect(canExpense) {
+                                    if (!canExpense) {
+                                        android.widget.Toast.makeText(context, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (backStack.lastOrNull() == Expenses) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
                                 }
+                                if (!canExpense) return@entry
                                 ExpensesScreen(
                                     expenseViewModel = expenseViewModel,
                                     onBack = { backStack.removeLastOrNull() },
@@ -1325,11 +1370,15 @@ fun MainNavigation() {
                             }
                             entry<Suppliers> {
                                 val canSuppliers = isOwner || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
-                                if (!canSuppliers) {
-                                    android.widget.Toast.makeText(context, ownerOnlySuppliersText, android.widget.Toast.LENGTH_SHORT).show()
-                                    backStack.removeLastOrNull()
-                                    return@entry
+                                LaunchedEffect(canSuppliers) {
+                                    if (!canSuppliers) {
+                                        android.widget.Toast.makeText(context, ownerOnlySuppliersText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (backStack.lastOrNull() == Suppliers) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
                                 }
+                                if (!canSuppliers) return@entry
                                 SuppliersScreen(
                                     supplierViewModel = supplierViewModel,
                                     onBack = { backStack.removeLastOrNull() },
@@ -1343,11 +1392,15 @@ fun MainNavigation() {
                             }
                             entry<Dues> {
                                 val canViewDues = isOwner || activePermissions.contains(AppPermissions.DUES_VIEW)
-                                if (!canViewDues) {
-                                    android.widget.Toast.makeText(context, ownerOnlyDuesText, android.widget.Toast.LENGTH_SHORT).show()
-                                    backStack.removeLastOrNull()
-                                    return@entry
+                                LaunchedEffect(canViewDues) {
+                                    if (!canViewDues) {
+                                        android.widget.Toast.makeText(context, ownerOnlyDuesText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (backStack.lastOrNull() == Dues) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
                                 }
+                                if (!canViewDues) return@entry
                                 DuesScreen(
                                     duesViewModel = duesViewModel,
                                     customerViewModel = customerViewModel,
@@ -1370,11 +1423,15 @@ fun MainNavigation() {
                             }
                             entry<Settings> {
                                 val canSettings = isOwner || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
-                                if (!canSettings) {
-                                    android.widget.Toast.makeText(context, ownerOnlySettingsText, android.widget.Toast.LENGTH_SHORT).show()
-                                    backStack.removeLastOrNull()
-                                    return@entry
+                                LaunchedEffect(canSettings) {
+                                    if (!canSettings) {
+                                        android.widget.Toast.makeText(context, ownerOnlySettingsText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (backStack.lastOrNull() == Settings) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
                                 }
+                                if (!canSettings) return@entry
                                 SettingsScreen(
                                     settingsViewModel = settingsViewModel,
                                     isOwner = isOwner,
@@ -1390,9 +1447,7 @@ fun MainNavigation() {
                                         }
                                     },
                                     onLogout = {
-                                        authViewModel.logout()
-                                        while (backStack.size > 0) { backStack.removeLastOrNull() }
-                                        backStack.add(Lock)
+                                        showLogoutConfirmDialog = true
                                     },
                                     isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
@@ -1400,11 +1455,15 @@ fun MainNavigation() {
                             }
                             entry<RegisterClose> {
                                 val canClose = isOwner || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
-                                if (!canClose) {
-                                    android.widget.Toast.makeText(context, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
-                                    backStack.removeLastOrNull()
-                                    return@entry
+                                LaunchedEffect(canClose) {
+                                    if (!canClose) {
+                                        android.widget.Toast.makeText(context, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (backStack.lastOrNull() == RegisterClose) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
                                 }
+                                if (!canClose) return@entry
                                 RegisterCloseScreen(
                                     registerClosingViewModel = registerClosingViewModel,
                                     expenseViewModel = expenseViewModel,
@@ -1421,11 +1480,15 @@ fun MainNavigation() {
                             }
                             entry<Loyalty> {
                                 val canLoyalty = isOwner || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
-                                if (!canLoyalty) {
-                                    android.widget.Toast.makeText(context, ownerOnlyLoyaltyText, android.widget.Toast.LENGTH_SHORT).show()
-                                    backStack.removeLastOrNull()
-                                    return@entry
+                                LaunchedEffect(canLoyalty) {
+                                    if (!canLoyalty) {
+                                        android.widget.Toast.makeText(context, ownerOnlyLoyaltyText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (backStack.lastOrNull() == Loyalty) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
                                 }
+                                if (!canLoyalty) return@entry
                                 LoyaltyScreen(
                                     loyaltyViewModel = loyaltyViewModel,
                                     customerViewModel = customerViewModel,
@@ -1445,11 +1508,15 @@ fun MainNavigation() {
                             }
                             entry<Customers> {
                                 val canCustomers = isOwner || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
-                                if (!canCustomers) {
-                                    android.widget.Toast.makeText(context, ownerOnlyCustomersText, android.widget.Toast.LENGTH_SHORT).show()
-                                    backStack.removeLastOrNull()
-                                    return@entry
+                                LaunchedEffect(canCustomers) {
+                                    if (!canCustomers) {
+                                        android.widget.Toast.makeText(context, ownerOnlyCustomersText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (backStack.lastOrNull() == Customers) {
+                                            backStack.removeLastOrNull()
+                                        }
+                                    }
                                 }
+                                if (!canCustomers) return@entry
                                 CustomersScreen(
                                     customerViewModel = customerViewModel,
                                     settingsViewModel = settingsViewModel,
@@ -1502,6 +1569,7 @@ fun MoreOperationsHubSheet(
     onNavigateToRegisterClose: () -> Unit,
     onNavigateToLoyalty: () -> Unit,
     onNavigateToCustomers: () -> Unit,
+    onLockOrLogout: () -> Unit = {},
     isOwner: Boolean,
     isSupervisor: Boolean = false,
     activePermissions: Set<String> = emptySet(),
@@ -1551,6 +1619,7 @@ fun MoreOperationsHubSheet(
                             onNavigateToRegisterClose = onNavigateToRegisterClose,
                             onNavigateToLoyalty = onNavigateToLoyalty,
                             onNavigateToCustomers = onNavigateToCustomers,
+                            onLockOrLogout = onLockOrLogout,
                             isOwner = isOwner,
                             isSupervisor = isSupervisor,
                             activePermissions = activePermissions,
@@ -1589,6 +1658,7 @@ fun MoreOperationsHubSheet(
                     onNavigateToRegisterClose = onNavigateToRegisterClose,
                     onNavigateToLoyalty = onNavigateToLoyalty,
                     onNavigateToCustomers = onNavigateToCustomers,
+                    onLockOrLogout = onLockOrLogout,
                     isOwner = isOwner,
                     isSupervisor = isSupervisor,
                     activePermissions = activePermissions,
@@ -1615,6 +1685,7 @@ private fun MoreOperationsHubContent(
     onNavigateToRegisterClose: () -> Unit,
     onNavigateToLoyalty: () -> Unit,
     onNavigateToCustomers: () -> Unit,
+    onLockOrLogout: () -> Unit = {},
     isOwner: Boolean,
     isSupervisor: Boolean = false,
     activePermissions: Set<String> = emptySet(),
@@ -1738,6 +1809,19 @@ private fun MoreOperationsHubContent(
                 )
             )
         }
+        add(
+            OperationHubItem(
+                title = stringResource(R.string.sidebar_lock_terminal_title),
+                subtitle = stringResource(R.string.sidebar_lock_terminal_desc),
+                navType = Nav3DType.LOCK,
+                badge = stringResource(R.string.sidebar_logout_title),
+                badgeColor = Color(0xFFEF4444),
+                isSelected = false,
+                category = OperationCategory.SHIFT,
+                isLocked = false,
+                onClick = onLockOrLogout
+            )
+        )
     }
 
     val filteredList = if (selectedCategory == OperationCategory.ALL) {
