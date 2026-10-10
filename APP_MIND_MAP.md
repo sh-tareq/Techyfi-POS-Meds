@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-10-10 (app version 2.6.68-V15-09-2026, build `Techyfi-POS-Final-V68.apk`; versionCode 220944; DB schema version 38)
+Last updated: 2026-10-10 (app version 2.6.68-V15-09-2026, build `Techyfi-POS-Final-V71.apk`; versionCode 220944; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -654,6 +654,11 @@ mindmap
       Language
         English
         Bengali
+        Centralized Single Source Engine
+          LocalAppLanguage CompositionLocal
+          formatTaka and formatMoney Bengali numeral rendering throughout UI
+          Bengali-aware DateFormatters with Locale.US file export isolation
+          100% localized X/Z sales reports and repository error toasts
       Backup and restore
         Master Cloud Status Card
           Connection state badge
@@ -1003,12 +1008,12 @@ mindmap
 ## Current Android package
 
 - Application ID: `com.techyfi.pos`
-- Version code: `220907`
-- Version name: `2.6.28-V06-09-2026`
+- Version code: `220944`
+- Version name: `2.6.68-V15-09-2026`
 - Upgrade rule: retain the same application ID and signing identity, and always increase the version code.
 - Signing SHA-1: `D6:7B:BD:1C:48:92:D4:FC:7F:D5:1F:D1:CB:22:79:B5:6F:C8:AD:9C` (this is the project's default AGP debug keystore at `~/.android/debug.keystore` — intentionally reused as the production signing key for this app; do not regenerate or replace it, or updates will stop installing over the existing app). **Not suitable for a real Google Play release as-is** — a debug keystore with a universally-known password must never be the production signing key, and this same certificate's SHA-1 is what Google Cloud Console has registered for the Google Drive OAuth client (no explicit client ID in code — the Identity Services Authorization API resolves it by package name + this certificate). Enrolling in Play App Signing would re-sign the app with a different certificate and silently break Drive backup/restore for Play-installed copies unless that new certificate is also added to the OAuth client first.
-- Database version: `25` (v15→16 reminder tracking, v16→17 immutable `purchasePriceAtSale` cost-snapshot for historical margin reports, v17→18 return refund-splitting/due-first settlement, v18→19 register-shift-state/loyalty-audit-trail/soft-delete, v19→20 due reminder log history, v20→21 unified customers CRM table, v21→22 users table RBAC roles/permissions/caps, and v24→25 `sale_audit_logs` table are explicitly tested)
-- Current build: `Techyfi-POS-Final-V06-09-2026.apk` (versionCode 220907) — includes Store Operations & Tools (More Hub) dual view mode switcher (interactive Material 3 segmented List vs Grid toggle for both Phone and Tablet), zero-cutoff 2-line wrapped subheadings, 760dp expanded tablet dialog geometry, Settings 3D holographic animated category icons, isolated subpage scroll states, customer CRM dossier sheet, and dynamic loyalty settings.
+- Database version: `38` (v15→16 reminder tracking, v16→17 purchasePriceAtSale snapshot, v17→18 return refund-splitting, v18→19 register shift states, v19→20 due reminders, v20→21 unified customers CRM, v21→22 users RBAC, v24→25 sale audit logs, v33→34, v34→35, v35→36, v36→37, and v37→38 cleaning legacy voucher phone fallback with nullable customerPhone support).
+- Current build: `Techyfi-POS-Final-V71.apk` (versionCode 220944) — R8 minified and resource-shrunk, Audit Round 19 full remediation (23 items verified), centralized single app-language source (`LocalAppLanguage`), automatic Bengali numerals in UI, WCAG AA contrast compliant, >= 48dp IconButtons.
 - This is the project's only mind map and the single source of truth for architecture, workflows, limitations, business rules, release metadata, and verification history.
 
 ## Primary code map
@@ -2585,6 +2590,45 @@ mindmap
     - Database & Query Performance Optimization:
       - Added Room `@Query("SELECT * FROM sales WHERE customerPhone = :phone ORDER BY timestamp DESC")` in `SaleDao` to fetch customer-specific sales directly by indexed phone number, replacing full in-memory table filtering.
     - Unit tests: 48/48 tests passing (`./gradlew testDebugUnitTest`).
+
+- **Version 2.6.68-V15-09-2026 (Build V71 — Audit Round 19 Complete Remediation, WCAG AA Accessibility, Single App-Language Engine & R8 Minification)**:
+  - **Financial Math & Partial Store Credit Integrity (R19-1, M-1/R-4, M-5/R-5)**:
+    - Fixed partial store credit + Cash two-step flow (`PaymentMath.calculatePaymentBreakdown`): cashier underpayment rejected, change computed strictly on cash tendered without inflating receipt snapshot.
+    - Due confirmation and credit limits evaluated directly from authoritative split payment due rows.
+    - Card over-tender rejected, and electronic + cash split accurately calculates cash change.
+    - Receipt snapshot amount paid matches reprint and invoice detail records.
+  - **Database Backup, Restore & Migrations (T-1, T-3, N-6, X-4b)**:
+    - Room migrations 33→34, 34→35, 35→36, 36→37, and 37→38 verified with real data suites.
+    - Full database backup merge across shared history, returns, voids, and mixed-case barcode handling without corrupting dues, loyalty points, or store credit.
+    - Migration 37→38 cleaning legacy `"VOUCHER"` phone fallback and supporting nullable customer phone in ledger.
+    - Suppressed voided-sale inventory adjustment inflation during backup merge.
+  - **Vouchers, Loyalty & Wallets (T-4, N-4, N-7, M-10, M-7, X-8)**:
+    - Vouchers across multiple sales, walk-in sales, and expired states correctly restored during void/return.
+    - Legacy pre-v37 voucher attribution preserved during sale voids.
+    - Registered customer cash returns on voucher-paid sales credited accurately to customer digital wallet.
+    - Loyalty points conversion to cash value evaluated with user-configured conversion rate; voucher labels localized.
+    - Loyalty tier recomputation with user-configured tier thresholds.
+  - **Catalog, Pricing & Supplier Dues (M-14, R-6, B-7, X-4a)**:
+    - Owner account permitted to clear customer credit limit to 0; upsert due preserves existing limits.
+    - Direct primary key index lookup on barcode (`barcode = :barcode OR barcode = LOWER(:barcode)`) eliminating full-table scans.
+    - Android-safe Excel export with proper stream flushing and memory cleanup.
+    - `isTaxInclusive` backfill for legacy sales; Excel exports and refund profit calculations accurately strip tax.
+    - Supplier payment invoice pairing and note ledger linkage.
+  - **UI/UX Ergonomics, Contrast & Theme Tokens (D-5, D-6, U-1, U-2, U-3, U-4)**:
+    - WCAG AA contrast compliance (>= 4.5:1) across light and dark theme tokens (primary/onPrimary 5.33:1, error/onError 4.77:1, tertiary/onTertiary 7.70:1, dark onSurfaceVariant 5.06:1, secondaryContainer 4.75:1, surface 5.08:1) and light Checkout button.
+    - Confirmation dialogs for held cart deletion, customer note deletion, and reminder log deletion.
+    - Ergonomic touch targets: all IconButtons enlarged to >= 48dp across DuesScreen, AdvancedPosFeatures, ReturnDialog, ScannerScreen, and CustomerDossierSheet.
+    - Dark mode white islands eliminated across date/time pickers, nudges, ReceiptSummaryDialog ribbon, and scanner badges.
+  - **Single App-Language Architecture & Full Localization (D-1/L-2, L-1)**:
+    - Centralized `LocalAppLanguage` CompositionLocal and `@Volatile var currentAppLanguage = "en"` with `setAppLanguage(lang)`.
+    - `formatTaka` and `formatMoney` default to `isAppBangla()`, dynamically rendering Bengali numerals in UI while keeping Latin digits for printers, SMS, and exports (`isBangla = false`).
+    - `DateFormatters.getAppLocale()` provides Bengali dates in UI while preserving `Locale.US` for file exports.
+    - Complete Bengali localization for ReturnDialog, LockScreen PIN setup, Dues Khata form, RegisterCloseScreen, interim mid-shift X-report, closing daily Z-report, and repository exception messages in error toasts.
+  - **R8 Minification & Resource Shrinking Deliverable**:
+    - `Techyfi-POS-Final-V71.apk` (37.9 MB, versionCode 220944, versionName "2.6.68-V15-09-2026")
+    - Full R8 tree shaking, dead code elimination, and resource shrinking verified with `proguard-rules.pro` keeping POI, XMLBeans, and MLKit models.
+    - Unit tests: 88/88 passing (`testDebugUnitTest`).
+    - Connected tests: 104/104 passing on `emulator-5554` (`connectedDebugAndroidTest`).
 
 ## Maintenance note
 
