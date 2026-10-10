@@ -166,32 +166,32 @@ Suggested shape (one small new file plus a collector):
 
 ## P2: Permissions and access control
 
-- [ ] **R20-20 HIGH Reported. The MANAGER role ignores the permission matrix in the UI but not in the repository.**
+- [x] **R20-20 HIGH Reported. The MANAGER role ignores the permission matrix in the UI but not in the repository.** (Fixed in `9681f86`, test: `AccessControlP2Test`).
   - Every UI gate is `isOwner || isSupervisor || perm`, and `isSupervisor` is true for any MANAGER (`AppPermissions.kt` about 254-257). Examples: Navigation.kt about 384-404, 1164, 1202-1206, 1271-1387; `utils/CartAuthHelper.kt` 12-16; `CartScreen.kt` 298-304. The repository uses `hasPermission`.
   - If the owner unticks a permission for a manager, the manager still sees the screen and every write fails (and crashes where uncaught).
   - Fix: gate on `activePermissions.contains(...)` alone (owners already get all permissions from `getEffectivePermissions`); keep `isSupervisor` only for the supervisor PIN override.
 
-- [ ] **R20-21 HIGH Reported. Reports show profit and allow Excel export to anyone with the daily-report permission.** Navigation.kt about 1239 admits `REPORTS_VIEW_DAILY` or `REPORTS_VIEW_PNL`; `SalesReportScreen` (about 139) takes no permission parameters. Fix: pass `canViewPnl` and `canExport`, hide profit/COGS and export when false, check in the repository too.
+- [x] **R20-21 HIGH Reported. Reports show profit and allow Excel export to anyone with the daily-report permission.** (Fixed in `9681f86`, test: `AccessControlP2Test`). Navigation.kt about 1239 admits `REPORTS_VIEW_DAILY` or `REPORTS_VIEW_PNL`; `SalesReportScreen` (about 139) takes no permission parameters. Fix: pass `canViewPnl` and `canExport`, hide profit/COGS and export when false, check in the repository too.
 
-- [ ] **R20-22 HIGH Reported. Dues ignores the permission system.** `DuesScreen.kt` about 465 (`canMutate = isOwner`), 977 and 1072 (`canCollect = isOwner`), 5037. Default cashiers have `DUES_COLLECT_PAYMENT` and the repo (about 2002) would allow it, but only the owner sees Collect. Fix: `canCollect` from `DUES_COLLECT_PAYMENT`, `canAddDue` from `DUES_ADD_DUE`; keep deletes owner-only.
+- [x] **R20-22 HIGH Reported. Dues ignores the permission system.** (Fixed in `9681f86`, test: `AccessControlP2Test`). `DuesScreen.kt` about 465 (`canMutate = isOwner`), 977 and 1072 (`canCollect = isOwner`), 5037. Default cashiers have `DUES_COLLECT_PAYMENT` and the repo (about 2002) would allow it, but only the owner sees Collect. Fix: `canCollect` from `DUES_COLLECT_PAYMENT`, `canAddDue` from `DUES_ADD_DUE`; keep deletes owner-only.
 
-- [ ] **R20-23 MED Verified. Removing the last unit with the minus button bypasses the void permission.**
+- [x] **R20-23 MED Verified. Removing the last unit with the minus button bypasses the void permission.** (Fixed in `9681f86`, test: `AccessControlP2Test`).
   - `CartScreen.kt` about 3333: the minus stepper calls `onQuantityChanged(next)` with 0, and `setQuantity(0)` (VM about 1225) quietly removes the line. The trash button goes through `onRemove`, which checks `SALES_VOID_CART`.
   - `ScannerScreen.kt` about 1286 and 1632: the tablet rows' `onQuantityChange` do the same.
   - Fix: if the next quantity is 0 or less, call `onRemove()` / `onRemoveItemRequested(item.product)` instead.
 
-- [ ] **R20-24 MED Reported. Stock changes ignore `INVENTORY_ADJUST_STOCK`, and failures still show "Stock saved".**
+- [x] **R20-24 MED Reported. Stock changes ignore `INVENTORY_ADJUST_STOCK`, and failures still show "Stock saved".** (Fixed in `9681f86`, test: `AccessControlP2Test`).
   - `ProductsScreen.kt` about 196 declares `canAdjustStock` but never uses it; about 2010 and 2063 open the stock dialog for everyone; quick add (about 2829-2843) and stock check (about 2854-2884) are ungated. The repository edit, quick-add and stock-check paths only require `INVENTORY_ADD_EDIT` (about 367, 382).
   - `updateProductWithAdjustment` only logs errors (VM about 1717) and the success toast always shows.
   - Fix: gate those entry points on `canAdjustStock`; disable the stock field in the edit dialog without it; require `INVENTORY_ADJUST_STOCK` in the repo whenever an adjustment is passed; return a `Result` and toast only on success.
 
-- [ ] **R20-25 MED Reported. Products can be opened without `INVENTORY_VIEW`.** The deep link "products" (Navigation.kt about 382, 1099; sent by `StockAlertWorker.kt` about 81), Cart "Add now" for an unknown barcode (`CartScreen.kt` about 3033), and Scanner (Navigation.kt about 1167) reach `entry<Products>`, which has no gate. `prefilledBarcode` opens the Add dialog even when `canEdit = false` (`ProductsScreen.kt` about 580-583). Fix: gate the deep link and the entry; hide "Add now" without `INVENTORY_ADD_EDIT`; only auto-open Add when `canEdit`.
+- [x] **R20-25 MED Reported. Products can be opened without `INVENTORY_VIEW`.** (Fixed in `9681f86`, test: `AccessControlP2Test`). The deep link "products" (Navigation.kt about 382, 1099; sent by `StockAlertWorker.kt` about 81), Cart "Add now" for an unknown barcode (`CartScreen.kt` about 3033), and Scanner (Navigation.kt about 1167) reach `entry<Products>`, which has no gate. `prefilledBarcode` opens the Add dialog even when `canEdit = false` (`ProductsScreen.kt` about 580-583). Fix: gate the deep link and the entry; hide "Add now" without `INVENTORY_ADD_EDIT`; only auto-open Add when `canEdit`.
 
-- [ ] **R20-26 MED Reported. Four permissions are never checked.** `SYSTEM_MANAGE_STAFF`, `SYSTEM_PERMISSIONS`, `REPORTS_VIEW_Z_REPORT`, `REPORTS_EXPORT_EXCEL` (ManageUsers is hard-gated on `isOwner`, Navigation.kt about 1139, 1350). Fix: enforce them or remove them from `CATEGORIES`.
+- [x] **R20-26 MED Reported. Four permissions are never checked.** (Fixed in `9681f86`, test: `AccessControlP2Test`). `SYSTEM_MANAGE_STAFF`, `SYSTEM_PERMISSIONS`, `REPORTS_VIEW_Z_REPORT`, `REPORTS_EXPORT_EXCEL` (ManageUsers is hard-gated on `isOwner`, Navigation.kt about 1139, 1350). Fix: enforce them or remove them from `CATEGORIES`.
 
-- [ ] **R20-27 MED Reported. Discount approved by a supervisor still fails at checkout.** repo about 881-883 checks `SALES_APPLY_DISCOUNT` against the signed-in cashier; `CartScreen.kt` about 1262-1270 allows supervisor approval. Fix: record the approval as a token (like `authorizeCreditLimitOverride`) and accept it in the repo. Related LOW: `CartScreen.kt` about 2867 calls `authorizeCreditLimitOverride` without a `cartHash`, so the override is not tied to the cart.
+- [x] **R20-27 MED Reported. Discount approved by a supervisor still fails at checkout.** (Fixed in `9681f86`, test: `AccessControlP2Test`). repo about 881-883 checks `SALES_APPLY_DISCOUNT` against the signed-in cashier; `CartScreen.kt` about 1262-1270 allows supervisor approval. Fix: record the approval as a token (like `authorizeCreditLimitOverride`) and accept it in the repo. Related LOW: `CartScreen.kt` about 2867 calls `authorizeCreditLimitOverride` without a `cartHash`, so the override is not tied to the cart.
 
-- [ ] **R20-28 MED Reported. Changing a user's role keeps their old custom permissions.** `ManageUsersScreen.kt` about 649. Fix: pass `null` (role defaults) when the role changes, or ask.
+- [x] **R20-28 MED Reported. Changing a user's role keeps their old custom permissions.** (Fixed in `9681f86`, test: `AccessControlP2Test`). `ManageUsersScreen.kt` about 649. Fix: pass `null` (role defaults) when the role changes, or ask.
 
 - [ ] **R20-29 MED Reported. OWNER role handling is inconsistent.** Add dialog offers OWNER but `createUser` always throws (repo about 3981); Edit allows promoting to a second owner (repo about 4106-4110); `resetOwnerPinAfterDeviceCredential` resets an arbitrary first owner (about 4013). Fix: hide OWNER in Add and pick one rule for multiple owners.
 
