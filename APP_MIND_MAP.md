@@ -1,6 +1,6 @@
 # Techyfi POS — App Mind Map
 
-Last updated: 2026-10-10 (app version 2.6.69-V10-10-2026, build `Techyfi-POS-Final-V10-10-2026.apk`; versionCode 220945; DB schema version 38)
+Last updated: 2026-10-10 (app version 2.6.70-V10-10-2026, build `Techyfi-POS-Final-V10-10-2026.apk`; versionCode 220946; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -1027,15 +1027,15 @@ mindmap
 ## Current Android package
 
 - Application ID: `com.techyfi.pos`
-- Version code: `220945`
-- Version name: `2.6.69-V10-10-2026`
+- Version code: `220946`
+- Version name: `2.6.70-V10-10-2026`
 - Upgrade rule: retain the same application ID and signing identity, and always increase the version code.
 - Signing SHA-1:
   - Active key (from Sep 29, 2026 onwards): `08:4A:15:4B:BB:A4:61:B7:98:C7:E2:62:F8:CE:C3:BA:8B:52:3A:FA` (keystore at `~/.android/debug.keystore`).
   - Legacy key (prior to Sep 29, 2026): `D6:7B:BD:1C:48:92:D4:FC:7F:D5:1F:D1:CB:22:79:B5:6F:C8:AD:9C`.
   - Both must be registered as Android OAuth 2.0 Client IDs in Google Cloud Console under `com.techyfi.pos` for Google Drive backup/restore.
 - Database version: `38` (v15→16 reminder tracking, v16→17 purchasePriceAtSale snapshot, v17→18 return refund-splitting, v18→19 register shift states, v19→20 due reminders, v20→21 unified customers CRM, v21→22 users RBAC, v24→25 sale audit logs, v33→34, v34→35, v35→36, v36→37, and v37→38 cleaning legacy voucher phone fallback with nullable customerPhone support).
-- Current build: `Techyfi-POS-Final-V10-10-2026.apk` (versionCode 220945) - R8 minified (36 MB) and resource-shrunk, Dual Printer Architecture (Direct Bluetooth ESC/POS for Receipts with software darkness, TSPL for Labels, Android Print Service fallback, thread-safe dispatch & reliable chunked transport).
+- Current build: `Techyfi-POS-Final-V10-10-2026.apk` (versionCode 220946) - R8 minified (36 MB) and resource-shrunk, Dual Printer Architecture (Direct Bluetooth ESC/POS for Receipts with software darkness, TSPL for Labels, Android Print Service fallback, thread-safe dispatch & reliable chunked transport, printer conflict guard).
 - This is the project's only mind map and the single source of truth for architecture, workflows, limitations, business rules, release metadata, and verification history.
 
 ## Primary code map
@@ -2691,7 +2691,7 @@ mindmap
     - Warning indicator: renders a persistent red error caption beneath the Label Printer device selector when both roles are configured to the same Bluetooth device.
     - Direct print dispatch guard: in `BillActions.printLabelImages()`, intercepts `BLUETOOTH` and `AUTO` dispatch if `isSamePrinter(settings.labelPrinterAddress, settings.resolvedReceiptPrinterAddress())`, showing an informative Toast on `Dispatchers.Main` ("Label printer is set to the receipt printer. Change it in Settings > Printers.") and returning `false`, eliminating TSPL command garbage output on ESC/POS receipt printers while preserving Android Print Service `SYSTEM` mode.
   - **R8 Minification & Deliverable**:
-    - `Techyfi-POS-Final-V10-10-2026.apk` (36 MB, versionCode 220945, versionName "2.6.69-V10-10-2026") - R8 minified release build with dead-code stripping and resource optimization.
+    - `Techyfi-POS-Final-V10-10-2026.apk` (36 MB, versionCode 220946, versionName "2.6.70-V10-10-2026") - R8 minified release build with dead-code stripping and resource optimization.
     - Unit tests: 107/107 passing (`testDebugUnitTest`).
 
 ## Maintenance note
