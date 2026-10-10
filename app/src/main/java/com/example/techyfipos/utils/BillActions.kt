@@ -963,10 +963,17 @@ suspend fun printReceiptWithBluetoothFallback(
     activity: Activity?,
     bill: BillData,
     settings: InvoiceSettingsData,
-    receiptLanguage: String = "EN"
+    receiptLanguage: String = "EN",
+    kickDrawer: Boolean = false
 ): Boolean {
-    val jpegFile = withContext(Dispatchers.IO) {
-        generateBillJpeg(context, bill, receiptLanguage)
+    val jpegFile = try {
+        withContext(Dispatchers.IO) {
+            generateBillJpeg(context, bill, receiptLanguage)
+        }
+    } catch (e: Exception) {
+        if (e is kotlinx.coroutines.CancellationException) throw e
+        android.util.Log.e("BillActions", "Failed to generate bill JPEG", e)
+        return false
     }
     return printReceiptImage(
         context = context,
@@ -974,7 +981,7 @@ suspend fun printReceiptWithBluetoothFallback(
         imageFile = jpegFile,
         jobName = "Invoice #${bill.saleId}",
         settings = settings,
-        kickDrawer = settings.cashDrawerKickEnabled
+        kickDrawer = kickDrawer
     )
 }
 

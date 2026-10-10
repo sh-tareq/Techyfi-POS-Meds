@@ -142,6 +142,7 @@ fun ReceiptSummaryDialog(
     )
 
     var printPressed by remember { mutableStateOf(false) }
+    var isPrinting by remember { mutableStateOf(false) }
     val printScale by animateFloatAsState(
         targetValue = if (printPressed) 0.88f else 1.0f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
@@ -707,19 +708,35 @@ fun ReceiptSummaryDialog(
                     // 1. Hero Primary Action: PRINT
                     Button(
                         onClick = {
+                            if (isPrinting) return@Button
+                            isPrinting = true
                             scope.launch {
-                                printPressed = true
-                                delay(100)
-                                printPressed = false
-                                com.example.techyfipos.utils.printReceiptWithBluetoothFallback(
-                                    context = context,
-                                    activity = activity,
-                                    bill = activeBill,
-                                    settings = activeBill.settingsData,
-                                    receiptLanguage = receiptLanguage
-                                )
+                                try {
+                                    printPressed = true
+                                    delay(100)
+                                    printPressed = false
+                                    com.example.techyfipos.utils.printReceiptWithBluetoothFallback(
+                                        context = context,
+                                        activity = activity,
+                                        bill = activeBill,
+                                        settings = activeBill.settingsData,
+                                        receiptLanguage = receiptLanguage,
+                                        kickDrawer = false
+                                    )
+                                } catch (e: Exception) {
+                                    if (e is kotlinx.coroutines.CancellationException) throw e
+                                    android.util.Log.e("ReceiptSummaryDialog", "Printing failed", e)
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        context.getString(R.string.print_error_message, e.localizedMessage ?: ""),
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                } finally {
+                                    isPrinting = false
+                                }
                             }
                         },
+                        enabled = !isPrinting,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)

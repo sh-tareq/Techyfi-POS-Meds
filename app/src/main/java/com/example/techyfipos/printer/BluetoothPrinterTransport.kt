@@ -11,8 +11,12 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.OutputStream
 import java.util.UUID
+
+private val bluetoothPrinterMutex = Mutex()
 
 sealed class DirectPrintResult {
     object Success : DirectPrintResult()
@@ -49,7 +53,8 @@ suspend fun sendToBluetoothPrinter(
     segments: List<ByteArray>,
     delayBetweenSegmentsMs: Long = 0L,
     perSegmentDelaysMs: List<Long>? = null
-): DirectPrintResult = withContext(Dispatchers.IO) {
+): DirectPrintResult = bluetoothPrinterMutex.withLock {
+    withContext(Dispatchers.IO) {
     val trimmedAddress = address.trim()
     if (trimmedAddress.isBlank()) {
         Log.w(TAG, "No printer address configured")
@@ -142,6 +147,7 @@ suspend fun sendToBluetoothPrinter(
             Log.w(TAG, "Error closing socket: ${closeEx.message}")
         }
     }
+}
 }
 
 suspend fun sendToBluetoothPrinter(
