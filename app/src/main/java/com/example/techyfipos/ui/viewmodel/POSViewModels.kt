@@ -1836,6 +1836,7 @@ data class InvoiceItemProfit(
 data class InvoiceProfitSummary(
     val grossRevenue: Double,
     val discountAmount: Double,
+    val loyaltyDiscount: Double = 0.0,
     val netRevenue: Double,
     val grossCogs: Double,
     val returnRefundTotal: Double,
@@ -1915,7 +1916,10 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             sale.subtotal
         }
         val discount = calculateDiscountValue(sale.subtotal, sale.discountAmount, sale.isPercentageDiscount)
-        val netRevBeforeRefund = (grossRevenue - discount).coerceAtLeast(0.0)
+        val ptCashVal = repository.getLoyaltySettings().pointCashValue.takeIf { it > 0.0 } ?: 1.0
+        val loyaltyDiscount = (sale.loyaltyPointsRedeemed * ptCashVal).coerceAtLeast(0.0)
+        val totalDiscounts = discount + loyaltyDiscount
+        val netRevBeforeRefund = (grossRevenue - totalDiscounts).coerceAtLeast(0.0)
 
         val productMap = allProductsForProfit.value.associateBy { it.barcode }
         var totalGrossCogs = 0.0
@@ -1961,10 +1965,10 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             returnCogsReversal += unitCost * retItem.quantity
         }
 
-        val refundTaxRatio = if (sale.isTaxInclusive && sale.grandTotal > 0.0 && sale.taxAmount > 0.0) {
-            (grossRevenue / sale.grandTotal)
-        } else 1.0
-        val effectiveRefundRevenue = refundAmount * refundTaxRatio
+        val retTaxPortion = if (sale.grandTotal > 0.0 && sale.taxAmount > 0.0) {
+            refundAmount / sale.grandTotal * sale.taxAmount
+        } else 0.0
+        val effectiveRefundRevenue = (refundAmount - retTaxPortion).coerceAtLeast(0.0)
         val netRev = (netRevBeforeRefund - effectiveRefundRevenue).coerceAtLeast(0.0)
         val netCogs = (totalGrossCogs - returnCogsReversal).coerceAtLeast(0.0)
         val netProfit = netRev - netCogs
@@ -1974,6 +1978,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         return InvoiceProfitSummary(
             grossRevenue = grossRevenue,
             discountAmount = discount,
+            loyaltyDiscount = loyaltyDiscount,
             netRevenue = netRev,
             grossCogs = totalGrossCogs,
             returnRefundTotal = refundAmount,

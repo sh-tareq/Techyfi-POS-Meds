@@ -2699,6 +2699,7 @@ fun CartScreen(
             onEdit = if (isOwner && completedSale != null) {
                 { showEditConfirmForCompletedSale = true }
             } else null,
+            profitSummary = completedSale?.let { if (isOwner) salesViewModel.calculateInvoiceProfit(it) else null },
             isOwner = isOwner
         )
     }

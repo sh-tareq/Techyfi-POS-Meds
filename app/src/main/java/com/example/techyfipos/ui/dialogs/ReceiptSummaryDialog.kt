@@ -33,6 +33,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.R
 import com.example.techyfipos.ui.components.*
+import com.example.techyfipos.ui.viewmodel.InvoiceProfitSummary
 import com.example.techyfipos.ui.viewmodel.SaleReturnSummary
 import com.example.techyfipos.utils.*
 import kotlinx.coroutines.Dispatchers
@@ -53,7 +54,8 @@ fun ReceiptSummaryDialog(
     onAddToCartAgain: (() -> Unit)? = null,
     onViewVoucherSlip: (() -> Unit)? = null,
     isOwner: Boolean = false,
-    returnSummary: SaleReturnSummary? = null
+    returnSummary: SaleReturnSummary? = null,
+    profitSummary: InvoiceProfitSummary? = null
 ) {
     val context = LocalContext.current
     val activity = LocalActivity.current
@@ -424,6 +426,7 @@ fun ReceiptSummaryDialog(
                     OwnerProfitAnalyticsContent(
                         bill = activeBill,
                         returnSummary = returnSummary,
+                        profitSummary = profitSummary,
                         modifier = Modifier.weight(1f)
                     )
                 } else {

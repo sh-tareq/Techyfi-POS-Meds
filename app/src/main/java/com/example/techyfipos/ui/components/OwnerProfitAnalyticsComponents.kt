@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.techyfipos.R
 import androidx.compose.ui.graphics.luminance
+import com.example.techyfipos.ui.viewmodel.InvoiceProfitSummary
 import com.example.techyfipos.ui.viewmodel.SaleReturnSummary
 import com.example.techyfipos.utils.BillData
 import com.example.techyfipos.utils.DateFormatters
@@ -54,20 +55,33 @@ import java.util.Locale
 fun OwnerProfitAnalyticsContent(
     bill: BillData,
     returnSummary: SaleReturnSummary? = null,
+    profitSummary: InvoiceProfitSummary? = null,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
     // Calculate line profits and metrics
-    val itemsWithProfit = remember(bill, returnSummary) {
-        bill.items.map { item ->
-            val cost = item.purchasePrice ?: (item.unitPrice * 0.75) // fallback to 75% if unset
-            val lineRev = item.lineTotal
-            val lineC = cost * item.quantity
-            val lineP = lineRev - lineC
-            val lineMargin = if (lineRev > 0) (lineP / lineRev) * 100.0 else 0.0
-            Triple(item, cost to lineC, lineP to lineMargin)
+    val itemsWithProfit = remember(bill, returnSummary, profitSummary) {
+        if (profitSummary != null) {
+            val summaryItemsByBarcode = profitSummary.itemsProfit.associateBy { it.barcode }
+            bill.items.map { item ->
+                val matching = summaryItemsByBarcode[item.barcode]
+                val unitCost = matching?.unitCost ?: item.purchasePrice ?: (item.unitPrice * 0.75)
+                val lineCost = matching?.lineCost ?: (unitCost * item.quantity)
+                val lineProfit = matching?.lineProfit ?: (item.lineTotal - lineCost)
+                val lineMargin = matching?.lineMarginPercent ?: (if (item.lineTotal > 0) (lineProfit / item.lineTotal) * 100.0 else 0.0)
+                Triple(item, unitCost to lineCost, lineProfit to lineMargin)
+            }
+        } else {
+            bill.items.map { item ->
+                val cost = item.purchasePrice ?: (item.unitPrice * 0.75) // fallback to 75% if unset
+                val lineRev = item.lineTotal
+                val lineC = cost * item.quantity
+                val lineP = lineRev - lineC
+                val lineMargin = if (lineRev > 0) (lineP / lineRev) * 100.0 else 0.0
+                Triple(item, cost to lineC, lineP to lineMargin)
+            }
         }
     }
 
@@ -75,18 +89,18 @@ fun OwnerProfitAnalyticsContent(
         itemsWithProfit.maxOfOrNull { it.third.first } ?: 0.0
     }
 
-    val grossCogs = remember(itemsWithProfit) {
+    val grossCogs = profitSummary?.grossCogs ?: remember(itemsWithProfit) {
         itemsWithProfit.sumOf { it.second.second }
     }
-    val grossRevenue = bill.subtotal
-    val discountVal = bill.discountValue
+    val grossRevenue = profitSummary?.grossRevenue ?: bill.subtotal
+    val discountVal = profitSummary?.discountAmount ?: bill.discountValue
     val netRevBeforeRefund = (grossRevenue - discountVal).coerceAtLeast(0.0)
 
-    val refundAmount = returnSummary?.totalRefundAmount ?: bill.returnRefundAmount
-    val hasReturns = bill.hasReturns || (returnSummary?.hasReturns == true) || refundAmount > 0.0
+    val refundAmount = profitSummary?.returnRefundTotal ?: returnSummary?.totalRefundAmount ?: bill.returnRefundAmount
+    val hasReturns = profitSummary?.hasReturns ?: (bill.hasReturns || (returnSummary?.hasReturns == true) || refundAmount > 0.0)
 
     // Reverse COGS for returned items if available
-    val returnCogsReversal = remember(returnSummary, bill) {
+    val returnCogsReversal = profitSummary?.returnCogsReversal ?: remember(returnSummary, bill) {
         val retItems = returnSummary?.returnItems ?: emptyList()
         if (retItems.isNotEmpty()) {
             retItems.sumOf { ret ->
@@ -100,11 +114,11 @@ fun OwnerProfitAnalyticsContent(
         } else 0.0
     }
 
-    val netRev = (netRevBeforeRefund - refundAmount).coerceAtLeast(0.0)
-    val netCogs = (grossCogs - returnCogsReversal).coerceAtLeast(0.0)
-    val netProfit = netRev - netCogs
-    val netMargin = if (netRev > 0) (netProfit / netRev) * 100.0 else 0.0
-    val markup = if (netCogs > 0) (netProfit / netCogs) * 100.0 else 0.0
+    val netRev = profitSummary?.netRevenue ?: (netRevBeforeRefund - refundAmount).coerceAtLeast(0.0)
+    val netCogs = profitSummary?.netCogs ?: (grossCogs - returnCogsReversal).coerceAtLeast(0.0)
+    val netProfit = profitSummary?.netProfit ?: (netRev - netCogs)
+    val netMargin = profitSummary?.netMarginPercent ?: (if (netRev > 0) (netProfit / netRev) * 100.0 else 0.0)
+    val markup = profitSummary?.markupPercent ?: (if (netCogs > 0) (netProfit / netCogs) * 100.0 else 0.0)
 
     val originalProfit = netRevBeforeRefund - grossCogs
 

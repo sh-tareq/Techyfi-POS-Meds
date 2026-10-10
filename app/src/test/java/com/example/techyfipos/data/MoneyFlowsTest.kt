@@ -702,4 +702,38 @@ class MoneyFlowsTest {
         assertEquals(1, filtered.size)
         assertEquals(50.0, filtered.sumOf { it.amount }, 0.001)
     }
+
+    @Test
+    fun `R20-10 invoice profit calculation agrees with report and owner analytics`() {
+        val subtotal = 200.0
+        val grossCogs = 120.0
+        val taxAmount = 20.0
+        val discount = 10.0
+        val loyaltyDiscount = 10.0
+        val grandTotal = 200.0
+
+        val refundAmount = 100.0
+        val returnedCost = 60.0
+        val retTaxPortion = (refundAmount / grandTotal) * taxAmount
+        val effectiveRefundRevenue = refundAmount - retTaxPortion
+
+        // 1. calculateInvoiceProfit formula
+        val totalDiscounts = discount + loyaltyDiscount
+        val netRevBeforeRefund = subtotal - totalDiscounts
+        val invoiceNetRev = netRevBeforeRefund - effectiveRefundRevenue
+        val invoiceNetCogs = grossCogs - returnedCost
+        val invoiceNetProfit = invoiceNetRev - invoiceNetCogs
+
+        // 2. buildReport formula
+        val lineRev = 200.0
+        val profitSum = lineRev - grossCogs
+        val refundedProfit = (refundAmount - retTaxPortion) - returnedCost
+        val grossMargin = profitSum - refundedProfit
+        val reportNetProfit = grossMargin - discount - loyaltyDiscount
+
+        // 3. Assert all views agree
+        assertEquals(30.0, invoiceNetProfit, 0.001)
+        assertEquals(30.0, reportNetProfit, 0.001)
+        assertEquals(invoiceNetProfit, reportNetProfit, 0.001)
+    }
 }

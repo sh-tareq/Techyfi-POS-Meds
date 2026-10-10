@@ -1967,6 +1967,10 @@ private fun SaleDetailDialog(
         )
     }
 
+    val currentProfitSummary = remember(saleWithItems, currentReturnSummary, isOwner) {
+        if (isOwner) salesViewModel.calculateInvoiceProfit(saleWithItems, currentReturnSummary) else null
+    }
+
     ReceiptSummaryDialog(
         bill = billData,
         title = stringResource(R.string.history_invoice_title_fmt, saleWithItems.sale.id),
@@ -2020,7 +2024,8 @@ private fun SaleDetailDialog(
             { showVoucherSlipDialog = true }
         } else null,
         isOwner = isOwner,
-        returnSummary = currentReturnSummary
+        returnSummary = currentReturnSummary,
+        profitSummary = currentProfitSummary
     )
 
     if (showVoucherSlipDialog && voucherForSale != null) {
