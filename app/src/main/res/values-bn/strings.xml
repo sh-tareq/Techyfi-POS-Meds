@@ -1602,6 +1602,8 @@
     <string name="batch_print_generating">লেবেল পিডিএফ তৈরি হচ্ছে...</string>
     <string name="batch_print_no_products">প্রিন্ট করার মতো বারকোডযুক্ত পণ্য নেই</string>
     <string name="products_import_success">%1$d টি পণ্য সফলভাবে ইমপোর্ট হয়েছে</string>
+    <string name="import_failure_dialog_title">ইমপোর্ট ফলাফল</string>
+    <string name="import_failure_dialog_summary">ইমপোর্ট হয়েছে: %1$d | ব্যর্থ: %2$d</string>
     <string name="products_export_success">পণ্য তালিকা এক্সেলে সংরক্ষিত হয়েছে</string>
     <string name="register_close_due_cash_collected">গ্রাহকের বকেয়া জমা (ক্যাশ ইন)</string>
     <string name="register_close_supplier_cash_paid">সাপ্লায়ার পেমেন্ট (ক্যাশ আউট)</string>

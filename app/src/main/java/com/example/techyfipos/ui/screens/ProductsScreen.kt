@@ -332,6 +332,7 @@ fun ProductsScreen(
     }
 
     var isImporting by remember { mutableStateOf(false) }
+    var importFailureResult by remember { mutableStateOf<com.example.techyfipos.utils.ExcelHelper.ImportResult?>(null) }
 
     val importExcelLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -346,8 +347,15 @@ fun ProductsScreen(
                 try {
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
                         val result = productsViewModel.importProductsFromExcel(inputStream)
-                        val msg = context.getString(R.string.products_import_success, result.importedProducts.size)
+                        val msg = if (result.failCount > 0) {
+                            "${context.getString(R.string.products_import_success, result.importedProducts.size)} (${result.failCount} failed)"
+                        } else {
+                            context.getString(R.string.products_import_success, result.importedProducts.size)
+                        }
                         Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        if (result.failCount > 0) {
+                            importFailureResult = result
+                        }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -2786,7 +2794,8 @@ fun ProductsScreen(
                     unit = unit,
                     wholesalePrice = wPrice,
                     mrpPrice = mrp,
-                    discountedPrice = disc
+                    discountedPrice = disc,
+                    createdAt = prod.createdAt
                 )
                 scope.launch {
                     val adjustment = if (kotlin.math.abs(diff) > 0.0001) {
@@ -2817,6 +2826,35 @@ fun ProductsScreen(
             },
             onCategoryRenamed = { old, new -> productsViewModel.renameCategory(old, new) },
             checkBarcodeExists = { code -> productsViewModel.productExistsByBarcode(code) }
+        )
+    }
+
+    importFailureResult?.let { result ->
+        AlertDialog(
+            onDismissRequest = { importFailureResult = null },
+            title = { Text(stringResource(R.string.import_failure_dialog_title), fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.import_failure_dialog_summary, result.importedProducts.size, result.failCount),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    result.failures.take(50).forEach { failure ->
+                        Text(failure, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { importFailureResult = null }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
         )
     }
 

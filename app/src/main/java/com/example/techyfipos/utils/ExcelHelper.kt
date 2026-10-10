@@ -70,31 +70,41 @@ object ExcelHelper {
     }
 
     @Suppress("DEPRECATION")
-    private fun getCellStringValue(cell: Cell?): String {
+    private fun getCellStringValue(cell: Cell?, isBarcode: Boolean = false): String {
         if (cell == null) return ""
         return when (cell.cellType) {
-            Cell.CELL_TYPE_STRING -> preserveLeadingZeros(cell.stringCellValue)
+            Cell.CELL_TYPE_STRING -> cell.stringCellValue.trim()
             Cell.CELL_TYPE_NUMERIC -> {
-                val numValue = cell.numericCellValue
-                if (numValue == numValue.toLong().toDouble()) {
-                    val str = numValue.toLong().toString()
-                    preserveLeadingZeros(str)
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    val date = cell.dateCellValue
+                    SimpleDateFormat("dd/MM/yyyy", Locale.US).format(date)
                 } else {
-                    numValue.toString()
+                    val numValue = cell.numericCellValue
+                    if (numValue == numValue.toLong().toDouble()) {
+                        val str = numValue.toLong().toString()
+                        if (isBarcode) preserveLeadingZeros(str) else str
+                    } else {
+                        numValue.toString()
+                    }
                 }
             }
             Cell.CELL_TYPE_BOOLEAN -> cell.booleanCellValue.toString()
             Cell.CELL_TYPE_FORMULA -> {
                 try {
-                    preserveLeadingZeros(cell.stringCellValue)
+                    cell.stringCellValue.trim()
                 } catch (e: Exception) {
                     try {
-                        val numValue = cell.numericCellValue
-                        if (numValue == numValue.toLong().toDouble()) {
-                            val str = numValue.toLong().toString()
-                            preserveLeadingZeros(str)
+                        if (DateUtil.isCellDateFormatted(cell)) {
+                            val date = cell.dateCellValue
+                            SimpleDateFormat("dd/MM/yyyy", Locale.US).format(date)
                         } else {
-                            numValue.toString()
+                            val numValue = cell.numericCellValue
+                            if (numValue == numValue.toLong().toDouble()) {
+                                val str = numValue.toLong().toString()
+                                if (isBarcode) preserveLeadingZeros(str) else str
+                            } else {
+                                numValue.toString()
+                            }
                         }
                     } catch (ex: Exception) {
                         ""
@@ -106,12 +116,14 @@ object ExcelHelper {
     }
 
     private fun parseDouble(valStr: String): Double? {
-        val cleaned = valStr.replace("৳", "").replace(",", "").replace(" ", "").trim()
+        val converted = toEnglishDigits(valStr)
+        val cleaned = converted.replace("৳", "").replace(",", "").replace(" ", "").trim()
         return cleaned.toDoubleOrNull()
     }
 
     private fun parseInt(valStr: String): Int? {
-        val cleaned = valStr.replace(",", "").replace(" ", "").trim()
+        val converted = toEnglishDigits(valStr)
+        val cleaned = converted.replace(",", "").replace(" ", "").trim()
         return cleaned.toDoubleOrNull()?.toInt() ?: cleaned.toIntOrNull()
     }
 
@@ -339,7 +351,8 @@ object ExcelHelper {
                 if (isRowEmpty) continue
 
                 try {
-                    val barcode = toEnglishDigits(colMap["barcode"]?.let { getCellStringValue(row.getCell(it)) } ?: "").trim()
+                    val rawBarcode = colMap["barcode"]?.let { getCellStringValue(row.getCell(it), isBarcode = true) } ?: ""
+                    val barcode = toEnglishDigits(rawBarcode).trim().lowercase()
                     val name = colMap["name"]?.let { getCellStringValue(row.getCell(it)) } ?: ""
                     
                     if (barcode.isBlank() || name.isBlank()) {
@@ -351,7 +364,13 @@ object ExcelHelper {
                     val category = colMap["category"]?.let { getCellStringValue(row.getCell(it)) } ?: "General"
                     
                     val pPriceStr = colMap["purchasePrice"]?.let { getCellStringValue(row.getCell(it)) } ?: "0.0"
-                    val purchasePrice = (parseDouble(pPriceStr) ?: 0.0).coerceAtLeast(0.0)
+                    val parsedPPrice = parseDouble(pPriceStr)
+                    if (pPriceStr.isNotBlank() && parsedPPrice == null) {
+                        failCount++
+                        failures.add("Row ${rowIdx + 1}: Invalid purchase price '$pPriceStr'.")
+                        continue
+                    }
+                    val purchasePrice = (parsedPPrice ?: 0.0).coerceAtLeast(0.0)
 
                     val sPriceStr = colMap["sellingPrice"]?.let { getCellStringValue(row.getCell(it)) } ?: "0.0"
                     val sellingPrice = parseDouble(sPriceStr)
@@ -362,7 +381,13 @@ object ExcelHelper {
                     }
 
                     val stockStr = colMap["stockQty"]?.let { getCellStringValue(row.getCell(it)) } ?: "0"
-                    val stockQty = (parseDouble(stockStr) ?: 0.0).coerceAtLeast(0.0)
+                    val parsedStock = parseDouble(stockStr)
+                    if (stockStr.isNotBlank() && (parsedStock == null || parsedStock < 0.0)) {
+                        failCount++
+                        failures.add("Row ${rowIdx + 1}: Invalid stock quantity '$stockStr'.")
+                        continue
+                    }
+                    val stockQty = (parsedStock ?: 0.0).coerceAtLeast(0.0)
 
                     val reorderStr = colMap["reorderLevel"]?.let { getCellStringValue(row.getCell(it)) } ?: "0"
                     val reorderLevel = (parseInt(reorderStr) ?: 0).coerceAtLeast(0)
@@ -371,6 +396,13 @@ object ExcelHelper {
                         ?.let { getCellStringValue(row.getCell(it)).takeIf(String::isNotBlank) }
                     fun optionalDouble(field: String): Double = colMap[field]
                         ?.let { parseDouble(getCellStringValue(row.getCell(it))) }?.coerceAtLeast(0.0) ?: 0.0
+
+                    val expiryVal = optionalText("expiryDate")
+                    if (expiryVal != null && parseExpiryDateToMillis(toEnglishDigits(expiryVal)) == null) {
+                        failCount++
+                        failures.add("Row ${rowIdx + 1}: Invalid expiry date '$expiryVal'. Expected dd/MM/yyyy.")
+                        continue
+                    }
 
                     importedList.add(
                         Product(
@@ -384,7 +416,7 @@ object ExcelHelper {
                             imageUri = optionalText("imageUri"),
                             mfgOrPkgType = optionalText("mfgOrPkgType") ?: "Mfg",
                             mfgOrPkgDate = optionalText("mfgOrPkgDate"),
-                            expiryDate = optionalText("expiryDate"),
+                            expiryDate = expiryVal,
                             unit = optionalText("unit") ?: "Pcs",
                             wholesalePrice = optionalDouble("wholesalePrice"),
                             mrpPrice = optionalDouble("mrpPrice"),

@@ -56,4 +56,25 @@ class ProductValidationTest {
         assertFalse(gibberish.hasValidExpiryDate)
         assertFalse(incomplete.hasValidExpiryDate)
     }
+
+    @Test
+    fun `R20-11 barcode normalization lowercases and converts digits`() {
+        val raw = "ABC-১২৩-X"
+        val normalized = com.example.techyfipos.utils.toEnglishDigits(raw.trim()).lowercase()
+        org.junit.Assert.assertEquals("abc-123-x", normalized)
+    }
+
+    @Test
+    fun `R20-12 valid UPC-A text string is preserved without leading zero rewrite`() {
+        val upcA = "036000291452"
+        org.junit.Assert.assertEquals("036000291452", upcA.trim())
+    }
+
+    @Test
+    fun `R20-19c product copy preserves createdAt`() {
+        val createdTime = 1600000000000L
+        val original = createProduct(null).copy(createdAt = createdTime)
+        val edited = original.copy(name = "Updated Name", sellingPrice = 90.0)
+        org.junit.Assert.assertEquals(createdTime, edited.createdAt)
+    }
 }

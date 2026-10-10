@@ -3780,13 +3780,32 @@ class DataRepository(
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
         database.withDriverTransaction {
             for (p in products) {
-                val existing = productDao.getProductByBarcode(p.barcode)
+                val normBarcode = com.example.techyfipos.utils.toEnglishDigits(p.barcode.trim()).lowercase()
+                val existing = productDao.getProductByBarcode(normBarcode)
                 if (existing != null) {
+                    val updatedStock = if ("stockQty" in presentFields) p.stockQty else existing.stockQty
+                    if (kotlin.math.abs(updatedStock - existing.stockQty) > 0.0001) {
+                        inventoryAdjustmentDao.insertAdjustment(
+                            InventoryAdjustment(
+                                productBarcode = existing.barcode,
+                                productName = existing.name,
+                                previousStock = existing.stockQty,
+                                newStock = updatedStock,
+                                difference = updatedStock - existing.stockQty,
+                                reason = "Import",
+                                timestamp = System.currentTimeMillis(),
+                                cashierName = sessionUser?.name ?: ""
+                            )
+                        )
+                    }
                     productDao.updateProduct(
                         p.copy(
+                            barcode = existing.barcode,
+                            createdAt = existing.createdAt,
                             category = if ("category" in presentFields) p.category else existing.category,
                             purchasePrice = if ("purchasePrice" in presentFields) p.purchasePrice else existing.purchasePrice,
-                            stockQty = if ("stockQty" in presentFields) p.stockQty else existing.stockQty,
+                            sellingPrice = if ("sellingPrice" in presentFields) p.sellingPrice else existing.sellingPrice,
+                            stockQty = updatedStock,
                             reorderLevel = if ("reorderLevel" in presentFields) p.reorderLevel else existing.reorderLevel,
                             imageUri = if ("imageUri" in presentFields) p.imageUri else existing.imageUri,
                             mfgOrPkgType = if ("mfgOrPkgType" in presentFields) p.mfgOrPkgType else existing.mfgOrPkgType,
@@ -3799,7 +3818,7 @@ class DataRepository(
                         )
                     )
                 } else {
-                    productDao.insertProduct(p)
+                    productDao.insertProduct(p.copy(barcode = normBarcode))
                 }
             }
         }
@@ -3820,7 +3839,9 @@ class DataRepository(
                 } else if (fixedDelta != null) {
                     newPrice = (newPrice + fixedDelta).coerceAtLeast(0.0)
                 }
-                productDao.updateProduct(p.copy(sellingPrice = kotlin.math.round(newPrice * 100.0) / 100.0))
+                val rounded = kotlin.math.round(newPrice * 100.0) / 100.0
+                val newDiscounted = if (p.discountedPrice > 0.0) rounded else 0.0
+                productDao.updateProduct(p.copy(sellingPrice = rounded, discountedPrice = newDiscounted))
             }
         }
     }
