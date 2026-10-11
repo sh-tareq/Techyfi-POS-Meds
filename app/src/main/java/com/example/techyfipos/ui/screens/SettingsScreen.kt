@@ -5599,7 +5599,7 @@ fun SettingsScreen(
                     Text(
                         stringResource(R.string.settings_factory_reset_delete_list),
                         fontSize = 13.sp,
-                        color = Color.DarkGray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Row(
                         modifier = Modifier
@@ -5701,7 +5701,7 @@ fun SettingsScreen(
                         Text(
                             stringResource(R.string.settings_repair_dues_found_intro),
                             fontSize = 13.sp,
-                            color = Color.DarkGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         groups.forEach { group ->
                             Text(

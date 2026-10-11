@@ -54,4 +54,56 @@ val AmberOnContainerDark = Color(0xFFFDE68A)
 val CrimsonContainerDark = Color(0xFF7F1D1D)
 val CrimsonOnContainerDark = Color(0xFFFECDD3)
 
+data class ExtendedColors(
+    val success: Color,
+    val onSuccess: Color,
+    val successContainer: Color,
+    val onSuccessContainer: Color,
+    val warning: Color,
+    val onWarning: Color,
+    val warningContainer: Color,
+    val onWarningContainer: Color,
+    val info: Color,
+    val onInfo: Color,
+    val infoContainer: Color,
+    val onInfoContainer: Color
+)
+
+val LightExtendedColors = ExtendedColors(
+    success = EmeraldDark,
+    onSuccess = Color.White,
+    successContainer = EmeraldContainerLight,
+    onSuccessContainer = EmeraldOnContainerLight,
+    warning = AmberWarning,
+    onWarning = Color(0xFF451A03),
+    warningContainer = AmberContainerLight,
+    onWarningContainer = AmberOnContainerLight,
+    info = SapphireInfo,
+    onInfo = Color.White,
+    infoContainer = Color(0xFFDBEAFE),
+    onInfoContainer = Color(0xFF1E40AF)
+)
+
+val DarkExtendedColors = ExtendedColors(
+    success = EmeraldPrimary,
+    onSuccess = DarkOnPrimary,
+    successContainer = EmeraldContainerDark,
+    onSuccessContainer = EmeraldOnContainerDark,
+    warning = AmberWarning,
+    onWarning = Color(0xFF451A03),
+    warningContainer = AmberContainerDark,
+    onWarningContainer = AmberOnContainerDark,
+    info = SapphireInfo,
+    onInfo = Color.White,
+    infoContainer = Color(0xFF1E3A8A),
+    onInfoContainer = Color(0xFFBFDBFE)
+)
+
+val LocalExtendedColors = androidx.compose.runtime.staticCompositionLocalOf { LightExtendedColors }
+
+val androidx.compose.material3.MaterialTheme.extendedColors: ExtendedColors
+    @androidx.compose.runtime.Composable
+    @androidx.compose.runtime.ReadOnlyComposable
+    get() = LocalExtendedColors.current
+
 

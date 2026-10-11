@@ -2864,4 +2864,5 @@
     <string name="splash_init">টেকিফাই পিওএস চালু হচ্ছে...</string>
     <string name="splash_catalog">পণ্য তালিকা লোড হচ্ছে...</string>
     <string name="splash_ready">বিক্রয় টার্মিনাল প্রস্তুত হচ্ছে...</string>
+    <string name="search_settings_placeholder">সেটিংস খুঁজুন...</string>
 </resources>

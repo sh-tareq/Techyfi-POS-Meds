@@ -670,10 +670,10 @@ fun ReturnItemsDialog(
                     // 3. SMART RESTOCK BANNER
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = if (isRestockEnabled) Color(0xFFF0FDF4) else MaterialTheme.colorScheme.errorContainer,
+                        color = if (isRestockEnabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
-                            if (isRestockEnabled) Color(0xFFBBF7D0) else MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                            if (isRestockEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.error.copy(alpha = 0.4f)
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -733,8 +733,8 @@ fun ReturnItemsDialog(
 
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFEEF2FF),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC7D2FE)),
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)),
                             shadowElevation = 2.dp,
                             modifier = Modifier.clickable { showManagePresetsDialog = true }
                         ) {
@@ -928,15 +928,15 @@ fun ReturnItemsDialog(
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = when (selectedSettlementDestination) {
-                            "DUE" -> Color(0xFFFFF1F2)
-                            "MFS" -> Color(0xFFEEF2FF)
+                            "DUE" -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f)
+                            "MFS" -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f)
                             else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                         },
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
                             when (selectedSettlementDestination) {
-                                "DUE" -> Color(0xFFFDA4AF)
-                                "MFS" -> Color(0xFFC7D2FE)
+                                "DUE" -> MaterialTheme.colorScheme.error.copy(alpha = 0.4f)
+                                "MFS" -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
                                 else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
                             }
                         ),
@@ -958,14 +958,14 @@ fun ReturnItemsDialog(
                                         Text("💵 Cash Drawer Float", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
-                                            color = Color(0xFFECFDF5),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0))
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
                                         ) {
                                             Text(
                                                 stringResource(R.string.return_active_register),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.ExtraBold,
-                                                color = Color(0xFF059669),
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                             )
                                         }
@@ -1143,14 +1143,14 @@ fun ReturnItemsDialog(
                                                 Text("⚠️ " + stringResource(R.string.store_credit_walkin_resolution_title), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
                                                 Surface(
                                                     shape = RoundedCornerShape(6.dp),
-                                                    color = Color(0xFFFEF3C7),
-                                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A))
+                                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f))
                                                 ) {
                                                     Text(
                                                         "Walk-in Customer",
                                                         fontSize = 11.sp,
                                                         fontWeight = FontWeight.ExtraBold,
-                                                        color = Color(0xFFB45309),
+                                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
                                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                     )
                                                 }
@@ -1260,14 +1260,14 @@ fun ReturnItemsDialog(
                                             Text("🪙 " + stringResource(R.string.store_credit_balance), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                             Surface(
                                                 shape = RoundedCornerShape(6.dp),
-                                                color = Color(0xFFFFFBEB),
-                                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A))
+                                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f))
                                             ) {
                                                 Text(
                                                     stringResource(R.string.return_customer_wallet),
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.ExtraBold,
-                                                    color = Color(0xFFD97706),
+                                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
                                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                 )
                                             }

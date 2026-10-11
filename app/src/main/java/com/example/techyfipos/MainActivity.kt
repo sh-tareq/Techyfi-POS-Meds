@@ -68,6 +68,21 @@ class MainActivity : ComponentActivity() {
       }
       androidx.compose.runtime.CompositionLocalProvider(com.example.techyfipos.utils.LocalAppLanguage provides appLanguage) {
         TechyfiPOSTheme(darkTheme = isDark) {
+          androidx.compose.runtime.DisposableEffect(isDark) {
+            enableEdgeToEdge(
+              statusBarStyle = if (isDark) {
+                androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+              } else {
+                androidx.activity.SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+              },
+              navigationBarStyle = if (isDark) {
+                androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+              } else {
+                androidx.activity.SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+              }
+            )
+            onDispose {}
+          }
           Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             MainNavigation()
           }

@@ -198,8 +198,8 @@ fun StoreCreditVoucherSlipDialog(
                         // 3D Iridescent Voucher Ticket Icon with subtle breathing animation
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFF4F46E5).copy(alpha = 0.12f),
-                            border = BorderStroke(1.dp, Color(0xFF4F46E5).copy(alpha = 0.3f)),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
                             modifier = Modifier
                                 .size(40.dp)
                                 .graphicsLayer {
@@ -234,8 +234,8 @@ fun StoreCreditVoucherSlipDialog(
                             ) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = Color(0xFF4F46E5).copy(alpha = 0.12f),
-                                    border = BorderStroke(1.dp, Color(0xFF4F46E5).copy(alpha = 0.25f)),
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
                                     modifier = Modifier.clickable {
                                         clipboardManager.setText(AnnotatedString(voucher.code))
                                         Toast.makeText(context, context.getString(R.string.store_credit_code_copied), Toast.LENGTH_SHORT).show()
@@ -251,12 +251,12 @@ fun StoreCreditVoucherSlipDialog(
                                             fontSize = 11.5.sp,
                                             fontWeight = FontWeight.Bold,
                                             fontFamily = FontFamily.Monospace,
-                                            color = Color(0xFF4F46E5)
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                         Icon(
                                             Icons.Default.ContentCopy,
                                             contentDescription = stringResource(R.string.cd_copy),
-                                            tint = Color(0xFF4F46E5),
+                                            tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(11.dp)
                                         )
                                     }
@@ -588,15 +588,15 @@ fun StoreCreditVoucherSlipDialog(
                                 // Accurate format badge indicator
                                 Surface(
                                     shape = RoundedCornerShape(9999.dp),
-                                    color = Color(0xFF4F46E5).copy(alpha = 0.12f),
-                                    border = BorderStroke(1.dp, Color(0xFF4F46E5).copy(alpha = 0.25f)),
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
                                     modifier = Modifier.padding(bottom = 6.dp)
                                 ) {
                                     Text(
                                         text = if (selectedRollWidth == 58) "58mm ESC/POS (Narrow 32 Col)" else "80mm ESC/POS (Standard 42 Col)",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF4F46E5),
+                                        color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                     )
                                 }
@@ -695,7 +695,7 @@ fun StoreCreditVoucherSlipDialog(
                             .weight(1.35f)
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         if (isPrinting) {
                             CircularProgressIndicator(

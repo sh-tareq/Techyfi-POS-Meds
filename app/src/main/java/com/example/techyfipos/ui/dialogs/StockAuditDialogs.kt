@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -197,14 +198,15 @@ fun StockAuditHistorySheet(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                                     val (badgeBg, badgeFg) = when (adj.reason.lowercase().trim()) {
-                                        "damage" -> Color(0xFFFEE2E2) to Color(0xFFDC2626)
-                                        "expired" -> Color(0xFFFFEDD5) to Color(0xFFC2410C)
-                                        "restock" -> Color(0xFFDCFCE7) to Color(0xFF15803D)
-                                        "sample" -> Color(0xFFEDE9FE) to Color(0xFF6D28D9)
-                                        "store use", "internal use", "internal" -> Color(0xFFE0E7FF) to Color(0xFF3730A3)
-                                        "discrepancy" -> Color(0xFFFEF3C7) to Color(0xFFB45309)
-                                        else -> Color(0xFFF1F5F9) to Color(0xFF475569)
+                                        "damage" -> if (isDark) Color(0xFF7F1D1D) to Color(0xFFFECDD3) else Color(0xFFFEE2E2) to Color(0xFFDC2626)
+                                        "expired" -> if (isDark) Color(0xFF7C2D12) to Color(0xFFFFEDD5) else Color(0xFFFFEDD5) to Color(0xFFC2410C)
+                                        "restock" -> if (isDark) Color(0xFF14532D) to Color(0xFFBBF7D0) else Color(0xFFDCFCE7) to Color(0xFF15803D)
+                                        "sample" -> if (isDark) Color(0xFF4C1D95) to Color(0xFFDDD6FE) else Color(0xFFEDE9FE) to Color(0xFF6D28D9)
+                                        "store use", "internal use", "internal" -> if (isDark) Color(0xFF1E1B4B) to Color(0xFFC7D2FE) else Color(0xFFE0E7FF) to Color(0xFF3730A3)
+                                        "discrepancy" -> if (isDark) Color(0xFF78350F) to Color(0xFFFDE68A) else Color(0xFFFEF3C7) to Color(0xFFB45309)
+                                        else -> if (isDark) Color(0xFF1E293B) to Color(0xFF94A3B8) else Color(0xFFF1F5F9) to Color(0xFF475569)
                                     }
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),

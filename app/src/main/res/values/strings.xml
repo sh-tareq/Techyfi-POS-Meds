@@ -2862,6 +2862,7 @@
     <string name="splash_init">Initializing Techyfi POS...</string>
     <string name="splash_catalog">Loading Product Catalog...</string>
     <string name="splash_ready">Preparing Sell Terminal...</string>
+    <string name="search_settings_placeholder">Search settings...</string>
 </resources>
 
 

@@ -37,6 +37,7 @@ import com.example.techyfipos.data.PermissionCategory
 import com.example.techyfipos.data.PermissionItem
 import com.example.techyfipos.data.db.User
 import com.example.techyfipos.ui.components.*
+import com.example.techyfipos.theme.extendedColors
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
 import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 
@@ -220,16 +221,16 @@ private fun StaffUserCard(
     onToggleActive: (Boolean) -> Unit,
     onDelete: () -> Unit
 ) {
-    val roleColor = when (user.role) {
-        AppRoles.OWNER -> Color(0xFFF59E0B) // Amber
-        AppRoles.MANAGER -> Color(0xFF6366F1) // Indigo
-        else -> Color(0xFF10B981) // Emerald
+    val roleBg = when (user.role) {
+        AppRoles.OWNER -> MaterialTheme.extendedColors.warningContainer
+        AppRoles.MANAGER -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.extendedColors.successContainer
     }
 
-    val roleBg = when (user.role) {
-        AppRoles.OWNER -> Color(0xFFFEF3C7)
-        AppRoles.MANAGER -> Color(0xFFEEF2FF)
-        else -> Color(0xFFECFDF5)
+    val roleTextColor = when (user.role) {
+        AppRoles.OWNER -> MaterialTheme.extendedColors.onWarningContainer
+        AppRoles.MANAGER -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.extendedColors.onSuccessContainer
     }
 
     val roleLabel = when (user.role) {
@@ -268,7 +269,7 @@ private fun StaffUserCard(
                             Text(
                                 text = user.name.take(1).uppercase(),
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = roleColor
+                                color = roleTextColor
                             )
                         }
                     }
@@ -311,7 +312,7 @@ private fun StaffUserCard(
                                 Text(
                                     text = roleLabel,
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = roleColor,
+                                    color = roleTextColor,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                             }

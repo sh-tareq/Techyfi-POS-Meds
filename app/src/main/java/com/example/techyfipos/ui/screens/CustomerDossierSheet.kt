@@ -363,8 +363,8 @@ fun CustomerDossierSheet(
             // Store Credit Wallet Banner Card with Adjust Action
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = if (customer.storeCredit > 0) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                border = BorderStroke(1.dp, if (customer.storeCredit > 0) Color(0xFFA7F3D0) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                color = if (customer.storeCredit > 0) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                border = BorderStroke(1.dp, if (customer.storeCredit > 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 6.dp)
@@ -386,13 +386,13 @@ fun CustomerDossierSheet(
                                 text = stringResource(R.string.store_credit_balance),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (customer.storeCredit > 0) Color(0xFF065F46) else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (customer.storeCredit > 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = formatTaka(customer.storeCredit),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = if (customer.storeCredit > 0) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface
+                                color = if (customer.storeCredit > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -1163,15 +1163,15 @@ fun AdjustStoreCreditDialog(
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFECFDF5),
-                    border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         stringResource(R.string.store_credit_current_balance, formatTaka(currentCredit)),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF065F46),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(10.dp)
                     )
                 }

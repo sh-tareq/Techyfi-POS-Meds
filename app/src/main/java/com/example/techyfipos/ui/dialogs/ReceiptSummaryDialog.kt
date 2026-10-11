@@ -61,7 +61,8 @@ fun ReceiptSummaryDialog(
     val activity = LocalActivity.current
     val scope = rememberCoroutineScope()
     var selectedDialogTab by rememberSaveable { mutableIntStateOf(0) }
-    val receiptLanguageState = rememberSaveable { mutableStateOf("EN") }
+    val defaultReceiptLang = if (com.example.techyfipos.utils.isAppBangla()) "BN" else "EN"
+    val receiptLanguageState = rememberSaveable { mutableStateOf(defaultReceiptLang) }
     var receiptLanguage by receiptLanguageState
     val receiptText = remember(bill, receiptLanguage) { buildBillReceiptText(bill, receiptLanguage = receiptLanguage) }
     var shareMenuExpanded by remember { mutableStateOf(false) }
@@ -600,8 +601,8 @@ fun ReceiptSummaryDialog(
                                 // Sliding Pill Language Toggle [ EN | বাং ]
                                 Surface(
                                     shape = RoundedCornerShape(999.dp),
-                                    color = Color.White,
-                                    border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                     shadowElevation = 2.dp
                                 ) {
                                     Row(
@@ -612,14 +613,14 @@ fun ReceiptSummaryDialog(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(999.dp))
-                                                .background(if (receiptLanguage == "EN") Color(0xFF10B981) else Color.Transparent)
+                                                .background(if (receiptLanguage == "EN") MaterialTheme.colorScheme.primary else Color.Transparent)
                                                 .clickable { receiptLanguage = "EN" }
                                                 .padding(horizontal = 9.dp, vertical = 3.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
                                                 "EN",
-                                                color = if (receiptLanguage == "EN") Color.White else Color(0xFF475569),
+                                                color = if (receiptLanguage == "EN") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.ExtraBold
                                             )
@@ -627,14 +628,14 @@ fun ReceiptSummaryDialog(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(999.dp))
-                                                .background(if (receiptLanguage == "BN") Color(0xFF10B981) else Color.Transparent)
+                                                .background(if (receiptLanguage == "BN") MaterialTheme.colorScheme.primary else Color.Transparent)
                                                 .clickable { receiptLanguage = "BN" }
                                                 .padding(horizontal = 9.dp, vertical = 3.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
                                                 "বাং",
-                                                color = if (receiptLanguage == "BN") Color.White else Color(0xFF475569),
+                                                color = if (receiptLanguage == "BN") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.ExtraBold
                                             )
@@ -920,7 +921,7 @@ fun ReceiptSummaryDialog(
                                         text = stringResource(R.string.cart_delete_button),
                                         fontSize = 11.5.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFDC2626)
+                                        color = MaterialTheme.colorScheme.error
                                     )
                                 }
                             }

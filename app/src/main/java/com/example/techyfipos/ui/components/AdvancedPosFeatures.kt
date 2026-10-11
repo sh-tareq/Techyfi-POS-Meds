@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -1380,8 +1381,8 @@ fun ExpenseItemRow(
             ) {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = if (isCashIn) Color(0xFFECFDF5) else Color(0xFFFFF1F2),
-                    border = BorderStroke(1.dp, if (isCashIn) Color(0xFFA7F3D0) else Color(0xFFFECDD3)),
+                    color = if (isCashIn) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, if (isCashIn) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f) else MaterialTheme.colorScheme.error.copy(alpha = 0.35f)),
                     modifier = Modifier.size(40.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -1407,13 +1408,14 @@ fun ExpenseItemRow(
                             overflow = TextOverflow.Ellipsis
                         )
                         // Source Badge
+                        val isDarkExpense = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = when (expense.paymentSource.lowercase()) {
-                                "bkash" -> Color(0xFFFDF2F8)
-                                "nagad" -> Color(0xFFFFF7ED)
-                                "bank" -> Color(0xFFEFF6FF)
-                                else -> Color(0xFFF1F5F9)
+                                "bkash" -> if (isDarkExpense) Color(0xFF831843).copy(alpha = 0.35f) else Color(0xFFFDF2F8)
+                                "nagad" -> if (isDarkExpense) Color(0xFF7C2D12).copy(alpha = 0.35f) else Color(0xFFFFF7ED)
+                                "bank" -> if (isDarkExpense) Color(0xFF1E3A8A).copy(alpha = 0.35f) else Color(0xFFEFF6FF)
+                                else -> MaterialTheme.colorScheme.surfaceVariant
                             }
                         ) {
                             Text(
@@ -1421,10 +1423,10 @@ fun ExpenseItemRow(
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = when (expense.paymentSource.lowercase()) {
-                                    "bkash" -> Color(0xFFDB2777)
-                                    "nagad" -> Color(0xFFEA580C)
-                                    "bank" -> Color(0xFF2563EB)
-                                    else -> Color(0xFF475569)
+                                    "bkash" -> if (isDarkExpense) Color(0xFFF472B6) else Color(0xFFDB2777)
+                                    "nagad" -> if (isDarkExpense) Color(0xFFFB923C) else Color(0xFFEA580C)
+                                    "bank" -> if (isDarkExpense) Color(0xFF93C5FD) else Color(0xFF2563EB)
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
                                 },
                                 modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
                             )

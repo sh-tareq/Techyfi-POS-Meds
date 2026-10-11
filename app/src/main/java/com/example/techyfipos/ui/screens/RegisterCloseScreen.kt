@@ -32,6 +32,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import com.example.techyfipos.theme.extendedColors
 import com.example.techyfipos.utils.isZeroMoney
 import com.example.techyfipos.utils.startOfDay
 import com.example.techyfipos.utils.endOfDay
@@ -2438,8 +2439,8 @@ fun CloseRegisterReconciliationDialog(
                 if (heldCartCount > 0) {
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFFEF3C7),
-                        border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -2450,7 +2451,7 @@ fun CloseRegisterReconciliationDialog(
                             Text("⚠️", fontSize = 16.sp)
                             Text(
                                 text = stringResource(R.string.register_close_held_carts_banner, heldCartCount),
-                                color = Color(0xFF92400E),
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -2493,9 +2494,21 @@ fun CloseRegisterReconciliationDialog(
 
                 // Variance Badge
                 val (varianceText, varianceBg, varianceTextColor) = when {
-                    variance.isZeroMoney() -> Triple("✓ Matched (Exact Match)", Color(0xFFDCFCE7), Color(0xFF166534))
-                    variance < 0.0 -> Triple("⚠️ Shortage: -${formatTaka(kotlin.math.abs(variance))}", Color(0xFFFEE2E2), Color(0xFF991B1B))
-                    else -> Triple("ℹ️ Surplus: +${formatTaka(variance)}", Color(0xFFE0F2FE), Color(0xFF075985))
+                    variance.isZeroMoney() -> Triple(
+                        "✓ Matched (Exact Match)",
+                        MaterialTheme.extendedColors.successContainer,
+                        MaterialTheme.extendedColors.onSuccessContainer
+                    )
+                    variance < 0.0 -> Triple(
+                        "⚠️ Shortage: -${formatTaka(kotlin.math.abs(variance))}",
+                        MaterialTheme.colorScheme.errorContainer,
+                        MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    else -> Triple(
+                        "ℹ️ Surplus: +${formatTaka(variance)}",
+                        MaterialTheme.extendedColors.infoContainer,
+                        MaterialTheme.extendedColors.onInfoContainer
+                    )
                 }
                 Surface(
                     shape = RoundedCornerShape(10.dp),

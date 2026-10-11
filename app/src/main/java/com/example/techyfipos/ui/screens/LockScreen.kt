@@ -158,13 +158,13 @@ fun LockScreen(
     fun beginSecurePinRecovery() {
         val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
         if (keyguard?.isDeviceSecure != true) {
-            triggerErrorShake("Set a device screen lock before using secure PIN recovery.")
+            triggerErrorShake("Device screen lock or biometrics not enrolled. Please set up a screen lock in Android Settings.")
             return
         }
         @Suppress("DEPRECATION")
         val intent = keyguard.createConfirmDeviceCredentialIntent(
             "Verify device owner",
-            "Confirm your Android screen lock to reset the Techyfi POS owner PIN."
+            "Confirm your Android screen lock or biometrics to reset the Techyfi POS owner PIN."
         )
         if (intent != null) credentialLauncher.launch(intent)
         else triggerErrorShake("Device verification is unavailable on this device.")
@@ -697,8 +697,8 @@ private fun TechyfiLockBrandingHeader(isCompact: Boolean = false) {
 
         Text(
             text = "POWERING YOUR DIGITAL LIFESTYLE",
-            color = Color(0xFF64748B),
-            fontSize = if (isCompact) 7.5.sp else 8.5.sp,
+            color = Color(0xFF94A3B8),
+            fontSize = if (isCompact) 10.sp else 11.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.1.sp,
             textAlign = TextAlign.Center

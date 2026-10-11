@@ -181,8 +181,8 @@ fun SplashScreen(
         // Subdued enterprise footer safely anchored above navigation insets
         Text(
             text = stringResource(R.string.splash_subtitle),
-            color = Color(0xFF475569),
-            fontSize = if (isTabletDevice) 11.5.sp else 10.sp,
+            color = Color(0xFF94A3B8),
+            fontSize = if (isTabletDevice) 12.sp else 11.sp,
             fontWeight = FontWeight.Medium,
             letterSpacing = 0.9.sp,
             textAlign = TextAlign.Center,

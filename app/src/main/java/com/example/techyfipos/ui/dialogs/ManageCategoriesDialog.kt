@@ -167,10 +167,10 @@ fun ManageCategoriesDialog(
                     val isEditing = editingCategory != null
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = if (isEditing) Color(0xFFEFF6FF) else Color(0xFFF8FAFC),
+                        color = if (isEditing) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         border = BorderStroke(
                             1.5.dp,
-                            if (isEditing) Color(0xFF93C5FD) else Color(0xFFE2E8F0)
+                            if (isEditing) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -291,7 +291,7 @@ fun ManageCategoriesDialog(
                             text = stringResource(R.string.products_all_categories_tap_edit, localCategories.size),
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF475569)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -306,10 +306,10 @@ fun ManageCategoriesDialog(
                             val isItemBeingEdited = editingCategory?.id == catItem.id
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (isItemBeingEdited) Color(0xFFEEF2FF) else Color.White,
+                                color = if (isItemBeingEdited) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface,
                                 border = BorderStroke(
                                     1.dp,
-                                    if (isItemBeingEdited) Color(0xFF6366F1) else Color(0xFFE2E8F0)
+                                    if (isItemBeingEdited) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -352,8 +352,8 @@ fun ManageCategoriesDialog(
                                         // Edit Button
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
-                                            color = Color(0xFFF1F5F9),
-                                            border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
                                             modifier = Modifier.clickable { startEditing(catItem) }
                                         ) {
                                             Row(
@@ -366,7 +366,7 @@ fun ManageCategoriesDialog(
                                                     stringResource(R.string.products_edit_action),
                                                     fontSize = 10.5.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFF4F46E5)
+                                                    color = MaterialTheme.colorScheme.primary
                                                 )
                                             }
                                         }
@@ -374,8 +374,8 @@ fun ManageCategoriesDialog(
                                         // Delete Button
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
-                                            color = Color(0xFFFEF2F2),
-                                            border = BorderStroke(1.dp, Color(0xFFFECACA)),
+                                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
                                             modifier = Modifier.clickable {
                                                 if (localCategories.size <= 1) {
                                                     Toast.makeText(context, context.getString(R.string.products_keep_at_least_one_category_warning), Toast.LENGTH_SHORT).show()

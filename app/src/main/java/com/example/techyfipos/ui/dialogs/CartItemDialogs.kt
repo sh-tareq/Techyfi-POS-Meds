@@ -252,15 +252,15 @@ fun CreditLimitWarningDialog(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFFFFF1F2),
-                    border = BorderStroke(1.dp, Color(0xFFFECDD3)),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = stringResource(R.string.cart_credit_ceiling_reached, customer.customerName),
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFBE123C),
+                            color = MaterialTheme.colorScheme.error,
                             fontSize = 13.sp
                         )
                         Text(stringResource(R.string.cart_credit_limit_line, formatTaka(customer.creditLimit)), fontSize = 11.5.sp)

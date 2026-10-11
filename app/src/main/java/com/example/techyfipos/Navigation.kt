@@ -721,10 +721,10 @@ fun MainNavigation() {
             ) {
                 if (isTablet && isCoreScreen) {
                     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-                    val dividerColor = if (isDark) Color(0x1FFFFFFF) else Color(0xFFE2E8F0)
-                    val brandEmerald = Color(0xFF10B981)
-                    val railBg = if (isDark) Color(0xFF0E131F) else Color(0xFFFFFFFF)
-                    val unselectedColor = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+                    val brandEmerald = MaterialTheme.colorScheme.primary
+                    val railBg = MaterialTheme.colorScheme.surface
+                    val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
 
                     NavigationRail(
                         modifier = Modifier
@@ -899,9 +899,9 @@ fun MainNavigation() {
                                             )
                                         },
                                         colors = NavigationRailItemDefaults.colors(
-                                            selectedIconColor = Color(0xFF10B981),
-                                            selectedTextColor = Color(0xFF10B981),
-                                            indicatorColor = if (isDark) Color(0x2410B981) else Color(0x1810B981),
+                                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                                            indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                                             unselectedIconColor = unselectedColor,
                                             unselectedTextColor = unselectedColor
                                         ),

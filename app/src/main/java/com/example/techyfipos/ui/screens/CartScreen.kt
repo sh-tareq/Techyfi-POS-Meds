@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.*
+import com.example.techyfipos.theme.extendedColors
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -179,12 +180,11 @@ private fun CartTotalSummaryCard(
     grandTotal: Double,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val cardBg = if (isDark) Color(0xFF0A0E18) else Color(0xFFF8FAFC)
-    val cardBorder = if (isDark) Color(0x1FFFFFFF) else Color(0xFFE2E8F0)
-    val textSec = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
-    val textMain = if (isDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
-    val emeraldColor = Color(0xFF00C48C)
+    val cardBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    val cardBorder = MaterialTheme.colorScheme.outlineVariant
+    val textSec = MaterialTheme.colorScheme.onSurfaceVariant
+    val textMain = MaterialTheme.colorScheme.onSurface
+    val emeraldColor = MaterialTheme.colorScheme.primary
 
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -3322,14 +3322,14 @@ fun CartItemRow(
                         )
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = if (unitPrice == 0.0) Color(0xFFDCFCE7) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-                            border = if (unitPrice == 0.0) BorderStroke(0.8.dp, Color(0xFF10B981)) else null
+                            color = if (unitPrice == 0.0) MaterialTheme.extendedColors.successContainer else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                            border = if (unitPrice == 0.0) BorderStroke(0.8.dp, MaterialTheme.extendedColors.success) else null
                         ) {
                             Text(
                                 text = if (unitPrice == 0.0) "🎁 " + stringResource(R.string.cart_free_badge) else stringResource(R.string.cart_item_line_total, totalAmountStr),
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = if (unitPrice == 0.0) Color(0xFF047857) else MaterialTheme.colorScheme.primary,
+                                color = if (unitPrice == 0.0) MaterialTheme.extendedColors.onSuccessContainer else MaterialTheme.colorScheme.primary,
                                 maxLines = 1,
                                 softWrap = false,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp)
@@ -3341,12 +3341,12 @@ fun CartItemRow(
                             if (expMillis < now) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = Color(0xFFFEE2E2),
-                                    border = BorderStroke(0.8.dp, Color(0xFFEF4444))
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
                                 ) {
                                     Text(
                                         text = stringResource(R.string.cart_expired_badge, item.product.expiryDate ?: ""),
-                                        color = Color(0xFFB91C1C),
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp)
@@ -3356,12 +3356,12 @@ fun CartItemRow(
                                 val daysLeft = ((expMillis - now) / (24 * 60 * 60 * 1000)).coerceAtLeast(0)
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = Color(0xFFFEF3C7),
-                                    border = BorderStroke(0.8.dp, Color(0xFFF59E0B))
+                                    color = MaterialTheme.extendedColors.warningContainer,
+                                    border = BorderStroke(0.8.dp, MaterialTheme.extendedColors.warning.copy(alpha = 0.5f))
                                 ) {
                                     Text(
                                         text = stringResource(R.string.cart_expiring_badge, daysLeft, item.product.expiryDate ?: ""),
-                                        color = Color(0xFFB45309),
+                                        color = MaterialTheme.extendedColors.onWarningContainer,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp)
@@ -3429,7 +3429,7 @@ fun CartItemRow(
                             }
                         },
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFFEE2E2),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -3513,7 +3513,7 @@ fun CartItemRow(
                             onRemove()
                         },
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFFEE2E2),
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {

@@ -252,8 +252,28 @@ fun SalesReportScreen(
                     }
                 },
                 actions = {
+                    val hasTransactions = report != null && (report!!.transactionCount > 0 || report!!.totalRefunds > 0.0 || report!!.totalExpenses > 0.0)
+                    IconButton(
+                        onClick = {
+                            if (report != null) {
+                                val textReport = generateStructuredReportText(report!!, rangeLabel, periodExpenseTotal)
+                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Techyfi POS Sales Report ($rangeLabel)")
+                                    putExtra(android.content.Intent.EXTRA_TEXT, textReport)
+                                }
+                                context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Sales Report"))
+                            }
+                        },
+                        enabled = hasTransactions
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(R.string.share),
+                            tint = if (hasTransactions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                        )
+                    }
                     if (canExport) {
-                        val hasTransactions = report != null && (report!!.transactionCount > 0 || report!!.totalRefunds > 0.0 || report!!.totalExpenses > 0.0)
                         IconButton(
                             onClick = {
                                 if (hasTransactions) {
@@ -525,7 +545,13 @@ fun SalesReportScreen(
             confirmButton = {
                 TextButton(onClick = {
                     state.selectedDateMillis?.let {
-                        customEnd = utcMidnightToLocalMidnight(it).coerceAtMost(System.currentTimeMillis())
+                        val selected = utcMidnightToLocalMidnight(it).coerceAtMost(System.currentTimeMillis())
+                        if (selected < customStart) {
+                            customEnd = customStart
+                            customStart = selected
+                        } else {
+                            customEnd = selected
+                        }
                     }
                     selectedPeriod = ReportPeriod.CUSTOM
                     showEndPicker = false
@@ -535,6 +561,47 @@ fun SalesReportScreen(
         ) { DatePicker(state = state, title = { Text(stringResource(R.string.sales_report_select_end_date), Modifier.padding(24.dp, 16.dp)) }) }
     }
 
+}
+
+private fun generateStructuredReportText(
+    report: SalesReportData,
+    rangeLabel: String,
+    periodExpenseTotal: Double
+): String {
+    val sb = StringBuilder()
+    sb.appendLine("=== Techyfi POS Sales Report ===")
+    sb.appendLine("Period: $rangeLabel")
+    sb.appendLine("--------------------------------")
+    sb.appendLine("Total Revenue: ${formatTaka(report.totalRevenue)}")
+    sb.appendLine("Net Sales: ${formatTaka((report.totalRevenue - report.totalTax).coerceAtLeast(0.0))}")
+    sb.appendLine("Gross Profit: ${formatTaka(report.grossProfit)}")
+    sb.appendLine("Invoices / Bills: ${report.transactionCount}")
+    val itemsSoldStr = if (report.itemsSold % 1.0 == 0.0) report.itemsSold.toLong().toString() else String.format(Locale.US, "%.2f", report.itemsSold).trimEnd('0').trimEnd('.')
+    sb.appendLine("Items Sold: $itemsSoldStr")
+    sb.appendLine("Total Tax: ${formatTaka(report.totalTax)}")
+    sb.appendLine("Total Discount: ${formatTaka(report.totalDiscount)}")
+    sb.appendLine("Total Refunds: ${formatTaka(report.totalRefunds)}")
+    val effectiveExpense = if (periodExpenseTotal > 0.0) periodExpenseTotal else report.totalExpenses
+    sb.appendLine("Expenses: ${formatTaka(effectiveExpense)}")
+    val netOperatingProfit = report.grossProfit - effectiveExpense
+    sb.appendLine("Net Operating Profit: ${formatTaka(netOperatingProfit)}")
+    if (report.paymentBreakdown.isNotEmpty()) {
+        sb.appendLine("--------------------------------")
+        sb.appendLine("Payment Breakdown:")
+        report.paymentBreakdown.forEach { p ->
+            sb.appendLine("  ${p.method}: ${formatTaka(p.amount)} (${p.transactionCount} bills)")
+        }
+    }
+    if (report.topProducts.isNotEmpty()) {
+        sb.appendLine("--------------------------------")
+        sb.appendLine("Top Products:")
+        report.topProducts.take(10).forEachIndexed { i, p ->
+            val qStr = if (p.quantity % 1.0 == 0.0) p.quantity.toLong().toString() else String.format(Locale.US, "%.2f", p.quantity).trimEnd('0').trimEnd('.')
+            sb.appendLine("  ${i + 1}. ${p.name}: $qStr sold (${formatTaka(p.revenue)})")
+        }
+    }
+    sb.appendLine("================================")
+    return sb.toString()
 }
 
 @Composable
