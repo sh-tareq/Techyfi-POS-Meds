@@ -2971,6 +2971,13 @@
     <string name="notif_stock_expiring_soon_fmt">%1$d item(s) are expiring soon</string>
     <string name="notif_stock_sample_tap_fmt"> (e.g. %1$s). Tap to restock.</string>
     <string name="notif_stock_fallback_sample_product">Products</string>
+    <string name="backup_restore_decryption_failed">Decryption failed. Invalid encryption key or corrupt archive.</string>
+    <string name="backup_restore_package_corrupt">Corrupt backup package: metadata or database file is missing.</string>
+    <string name="backup_restore_newer_version">This backup was created by a newer Techyfi POS version. Update the app before restoring.</string>
+    <string name="backup_restore_checksum_mismatch">Integrity check failed: database checksum mismatch.</string>
+    <string name="backup_restore_failed_rollback_fmt">Restore failed: %1$s. Previous database state was safely restored.</string>
+    <string name="notif_backup_channel_name">Backup Alerts</string>
+    <string name="error_unknown">Unknown error</string>
 </resources>
 
 

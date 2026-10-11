@@ -2973,4 +2973,11 @@
     <string name="notif_stock_expiring_soon_fmt">%1$dটি পণ্যের মেয়াদ দ্রুত শেষ হচ্ছে</string>
     <string name="notif_stock_sample_tap_fmt"> (যেমন: %1$s)। স্টক যোগ করতে ট্যাপ করুন।</string>
     <string name="notif_stock_fallback_sample_product">পণ্য</string>
+    <string name="backup_restore_decryption_failed">ডিক্রিপশন ব্যর্থ হয়েছে। ভুল এনক্রিপশন কী বা নষ্ট ফাইল।</string>
+    <string name="backup_restore_package_corrupt">ব্যাকআপ প্যাকেজটি ক্ষতিগ্রস্ত: মেটাডাটা বা ডেটাবেস ফাইল পাওয়া যায়নি।</string>
+    <string name="backup_restore_newer_version">এই ব্যাকআপটি টেকিফাই পিওএস-এর একটি নতুন ভার্সন দ্বারা তৈরি। রিস্টোর করার পূর্বে অ্যাপ আপডেট করুন।</string>
+    <string name="backup_restore_checksum_mismatch">নিরাপত্তা পরীক্ষা ব্যর্থ হয়েছে: ডেটাবেস চেকসাম মিলছে না।</string>
+    <string name="backup_restore_failed_rollback_fmt">রিস্টোর ব্যর্থ হয়েছে: %1$s। পূর্ববর্তী ডেটাবেস নিরাপদে বহাল রাখা হয়েছে।</string>
+    <string name="notif_backup_channel_name">ব্যাকআপ সতর্কতা</string>
+    <string name="error_unknown">অজানা ত্রুটি</string>
 </resources>

@@ -3172,7 +3172,7 @@ private fun OptimizedBackupSettings(
                                 stringResource(R.string.settings_requires_google_connection)
                             } else if (autoBackupEnabled) {
                                 if (driveConnection == null) stringResource(R.string.settings_offline_cloud_sync_pending)
-                                else stringResource(R.string.settings_auto_sync_freq, driveAutoBackupFrequency.lowercase())
+                                else stringResource(R.string.settings_auto_sync_freq, formatFrequencyLabel(driveAutoBackupFrequency))
                             } else {
                                 stringResource(R.string.settings_disabled_manual_only)
                             },
@@ -3433,8 +3433,8 @@ private fun OptimizedBackupSettings(
                         } else null
                         Text(
                             text = if (localAutoBackupEnabled) {
-                                if (lastBackup != null) stringResource(R.string.settings_last_backup_freq, lastBackup ?: "", autoBackupFrequency.lowercase())
-                                else stringResource(R.string.settings_scheduled_freq, autoBackupFrequency.lowercase())
+                                if (lastBackup != null) stringResource(R.string.settings_last_backup_freq, lastBackup ?: "", formatFrequencyLabel(autoBackupFrequency))
+                                else stringResource(R.string.settings_scheduled_freq, formatFrequencyLabel(autoBackupFrequency))
                             } else stringResource(R.string.settings_off_manual_backup_active),
                             fontSize = 10.5.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -6051,5 +6051,15 @@ fun SettingsScreen(
                 }
             )
         }
+    }
+}
+
+@Composable
+private fun formatFrequencyLabel(freq: String): String {
+    return when (freq.trim().lowercase(java.util.Locale.ROOT)) {
+        "daily" -> stringResource(R.string.settings_freq_daily)
+        "weekly" -> stringResource(R.string.settings_freq_weekly)
+        "monthly" -> stringResource(R.string.settings_freq_monthly)
+        else -> freq
     }
 }

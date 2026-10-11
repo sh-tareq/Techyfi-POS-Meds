@@ -293,7 +293,7 @@ object BackupPackageManager {
             // 1. Decrypt archive
             val decryptedOk = BackupEncryptionHelper.decryptFile(encryptedFile, tempZip, accountIdOrPassphrase)
             if (!decryptedOk || !tempZip.exists()) {
-                return@withContext RestoreResult(false, "Decryption failed. Invalid encryption key or corrupt archive.")
+                return@withContext RestoreResult(false, context.getString(R.string.backup_restore_decryption_failed))
             }
 
             // 2. Unpack archive
@@ -302,21 +302,21 @@ object BackupPackageManager {
             val stagingDbFile = File(stagingDir, "$DB_NAME.sqlite")
 
             if (!metaFile.exists() || !stagingDbFile.exists()) {
-                return@withContext RestoreResult(false, "Corrupt backup package: metadata or database file is missing.")
+                return@withContext RestoreResult(false, context.getString(R.string.backup_restore_package_corrupt))
             }
 
             val metadata = BackupMetadata.fromJson(JSONObject(metaFile.readText()))
             if (metadata.backupVersion > BACKUP_FORMAT_VERSION || metadata.databaseVersion > CURRENT_DB_VERSION) {
                 return@withContext RestoreResult(
                     false,
-                    "This backup was created by a newer Techyfi POS version. Update the app before restoring."
+                    context.getString(R.string.backup_restore_newer_version)
                 )
             }
 
             // 3. Verify SQLite checksum
             val calculatedChecksum = BackupEncryptionHelper.calculateSha256(stagingDbFile)
             if (metadata.checksumSha256.isNotBlank() && calculatedChecksum != metadata.checksumSha256) {
-                return@withContext RestoreResult(false, "Integrity check failed: database checksum mismatch.")
+                return@withContext RestoreResult(false, context.getString(R.string.backup_restore_checksum_mismatch))
             }
 
             // 4. Create Safety Rollback snapshot of active live DB
@@ -413,7 +413,7 @@ object BackupPackageManager {
             }
             RestoreResult(
                 false,
-                "Restore failed: ${e.localizedMessage ?: "Unknown error"}. Previous database state was safely restored.",
+                context.getString(R.string.backup_restore_failed_rollback_fmt, e.localizedMessage ?: context.getString(R.string.error_unknown)),
                 requiresUiReload = databaseWasSwapped
             )
         } finally {

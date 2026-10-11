@@ -151,20 +151,29 @@ class AutoBackupWorker(
                 if (!driveFailed && !driveNeedsUserAuthorization) {
                     completedAt?.let { settings.saveLastBackupTimestamp(it) }
                 }
+                val localizedContext = runCatching {
+                    val lang = settings.languageFlow.first()
+                    val locale = Locale.forLanguageTag(lang)
+                    val config = android.content.res.Configuration(context.resources.configuration).apply {
+                        setLocale(locale)
+                    }
+                    context.createConfigurationContext(config)
+                }.getOrDefault(context)
+
                 when {
                     driveNeedsUserAuthorization -> {
                         notifyBackupFailure(
-                            context = context,
-                            title = context.getString(R.string.notif_drive_reconnect_title),
-                            message = context.getString(R.string.notif_drive_reconnect_desc)
+                            context = localizedContext,
+                            title = localizedContext.getString(R.string.notif_drive_reconnect_title),
+                            message = localizedContext.getString(R.string.notif_drive_reconnect_desc)
                         )
                         Result.failure()
                     }
                     driveFailed -> {
                         notifyBackupFailure(
-                            context = context,
-                            title = context.getString(R.string.notif_drive_backup_failed_title),
-                            message = context.getString(R.string.notif_drive_backup_failed_desc)
+                            context = localizedContext,
+                            title = localizedContext.getString(R.string.notif_drive_backup_failed_title),
+                            message = localizedContext.getString(R.string.notif_drive_backup_failed_desc)
                         )
                         Result.retry()
                     }
@@ -232,7 +241,7 @@ class AutoBackupWorker(
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 val channel = android.app.NotificationChannel(
                     channelId,
-                    "Backup Alerts",
+                    context.getString(R.string.notif_backup_channel_name),
                     android.app.NotificationManager.IMPORTANCE_HIGH
                 ).apply {
                     description = context.getString(R.string.notif_drive_channel_desc)
