@@ -168,9 +168,9 @@ internal fun sanitizeDiscountInput(rawValue: String): String {
 }
 
 private fun editableAmount(value: Double): String = when {
-    value == 0.0 -> "0"
+    value <= 0.0 -> "0"
     value % 1.0 == 0.0 -> value.toLong().toString()
-    else -> value.toString()
+    else -> String.format(Locale.US, "%.2f", value).trimEnd('0').trimEnd('.')
 }
 
 @Composable
@@ -184,7 +184,7 @@ private fun CartTotalSummaryCard(
     val cardBorder = MaterialTheme.colorScheme.outlineVariant
     val textSec = MaterialTheme.colorScheme.onSurfaceVariant
     val textMain = MaterialTheme.colorScheme.onSurface
-    val emeraldColor = MaterialTheme.colorScheme.primary
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -204,13 +204,13 @@ private fun CartTotalSummaryCard(
             ) {
                 Text(
                     text = stringResource(R.string.tablet_subtotal),
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = textSec,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = formatTaka(subtotal),
-                    fontSize = 13.5.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = textMain,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -220,8 +220,8 @@ private fun CartTotalSummaryCard(
             if (discountAmount > 0.0) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFEF4444).copy(alpha = 0.10f),
-                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.30f)),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -230,20 +230,25 @@ private fun CartTotalSummaryCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🏷️", fontSize = 13.sp)
+                            Icon(
+                                imageVector = Icons.Default.LocalOffer,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(14.dp)
+                            )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = stringResource(R.string.cart_discount_applied_badge),
-                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFFDC2626)
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
                         Text(
                             text = "-${formatTaka(discountAmount)}",
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFDC2626)
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
                 }
@@ -257,15 +262,15 @@ private fun CartTotalSummaryCard(
             ) {
                 Text(
                     text = stringResource(R.string.total),
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 15.sp,
                     color = textMain
                 )
                 Text(
                     text = formatTaka(grandTotal),
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Black,
-                    fontSize = 22.sp,
-                    color = emeraldColor
+                    color = primaryColor
                 )
             }
         }
