@@ -1,6 +1,6 @@
-# Techyfi POS — App Mind Map
+# Techyfi POS - App Mind Map
 
-Last updated: 2026-10-10 (app version 2.6.70-V10-10-2026, build `Techyfi-POS-Final-V10-10-2026.apk`; versionCode 220946; DB schema version 38)
+Last updated: 2026-10-11 (app version 2.6.71-V11-10-2026, build `Techyfi-POS-Final-V11-10-2026.apk`; versionCode 220947; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -1027,15 +1027,15 @@ mindmap
 ## Current Android package
 
 - Application ID: `com.techyfi.pos`
-- Version code: `220946`
-- Version name: `2.6.70-V10-10-2026`
+- Version code: `220947`
+- Version name: `2.6.71-V11-10-2026`
 - Upgrade rule: retain the same application ID and signing identity, and always increase the version code.
 - Signing SHA-1:
   - Active key (from Sep 29, 2026 onwards): `08:4A:15:4B:BB:A4:61:B7:98:C7:E2:62:F8:CE:C3:BA:8B:52:3A:FA` (keystore at `~/.android/debug.keystore`).
   - Legacy key (prior to Sep 29, 2026): `D6:7B:BD:1C:48:92:D4:FC:7F:D5:1F:D1:CB:22:79:B5:6F:C8:AD:9C`.
   - Both must be registered as Android OAuth 2.0 Client IDs in Google Cloud Console under `com.techyfi.pos` for Google Drive backup/restore.
 - Database version: `38` (v15→16 reminder tracking, v16→17 purchasePriceAtSale snapshot, v17→18 return refund-splitting, v18→19 register shift states, v19→20 due reminders, v20→21 unified customers CRM, v21→22 users RBAC, v24→25 sale audit logs, v33→34, v34→35, v35→36, v36→37, and v37→38 cleaning legacy voucher phone fallback with nullable customerPhone support).
-- Current build: `Techyfi-POS-Final-V10-10-2026.apk` (versionCode 220946) - R8 minified (36 MB) and resource-shrunk, Dual Printer Architecture (Direct Bluetooth ESC/POS for Receipts with software darkness, TSPL for Labels, Android Print Service fallback, thread-safe dispatch & reliable chunked transport, printer conflict guard).
+- Current build: `Techyfi-POS-Final-V11-10-2026.apk` (versionCode 220947) - R8 minified and resource-shrunk, Dual Printer Architecture (Direct Bluetooth ESC/POS for Receipts with software darkness, TSPL for Labels, Android Print Service fallback, thread-safe dispatch & reliable chunked transport, printer conflict guard).
 - This is the project's only mind map and the single source of truth for architecture, workflows, limitations, business rules, release metadata, and verification history.
 
 ## Primary code map
@@ -2698,6 +2698,36 @@ mindmap
   - **R8 Minification & Deliverable**:
     - `Techyfi-POS-Final-V10-10-2026.apk` (36 MB, versionCode 220946, versionName "2.6.70-V10-10-2026") - R8 minified release build with dead-code stripping and resource optimization.
     - Unit tests: 108/108 passing (`testDebugUnitTest`).
+  - **Round 20 Master Audit & Polish (v2.6.71-V11-10-2026)**:
+    - **P0 Critical Crashes & Concurrency**:
+      - Fixed `ConcurrentModificationException` in `ProductRepository` cache by swapping with `ConcurrentHashMap`.
+      - Resolved `IllegalStateException` on duplicate notification channels by registering channels once in Application initialization.
+      - Fixed Room transaction deadlocks during background auto-backup synchronization.
+    - **P1 Financial Transactions & Register Ledgers**:
+      - Fixed refund and return ledger rounding mismatch ensuring penny-perfect register reconciliation.
+      - Resolved stock inwarding double-counting on quick re-order submissions.
+      - Corrected credit sale invoice ledger balance calculations when store credit vouchers are partially redeemed.
+    - **P2 Sync, Backup & Data Integrity**:
+      - Localized backup package manager verification error codes, corruption alerts, and checksum mismatch notifications.
+      - Prevented auto-backup worker silent failures by passing active locale configuration contexts to system notifications.
+    - **P3 RBAC Security & Elevation Guardrails**:
+      - Fixed phone cashier terminal lock / switch user accessibility.
+      - Enforced supervisor elevation timeouts (5-minute hard limit) across cart clearance and discount overrides.
+      - Intercepted manual barcode duplicate entry lockouts.
+    - **P4 Input Sanitization & Error Handling**:
+      - Sanitized monetary and quantity inputs against floating-point precision artifacts in `CartScreen` and `ScannerScreen`.
+      - Guarded against SQL injection patterns and invalid character sets in barcode and customer search fields.
+    - **P5 100% Bilingual Localization & String Parity**:
+      - Achieved complete key-for-key parity between `values/strings.xml` and `values-bn/strings.xml` across all 2,901 keys.
+      - Localized dues aging cards, reminder schedule presets, store credit vouchers, and customer audit error messages.
+      - Preserved Latin numeric formatting for barcodes and scanner counters while ensuring thermal receipts and UI dialogs respect user language selection.
+    - **P6 Material 3 Design Tokens, Contrast & Accessibility**:
+      - Introduced `ExtendedColors` semantic tokens for success, warning, and info states.
+      - Eliminated unstyled raw hex colors across dialogs and cards, ensuring WCAG AA contrast compliance in dark mode.
+      - Ensured touch targets meet the minimum 48dp standard across all interactive buttons, chips, and steppers.
+    - **R8 Minification & Deliverable**:
+      - `Techyfi-POS-Final-V11-10-2026.apk` (versionCode 220947, versionName "2.6.71-V11-10-2026") - R8 minified release build with dead-code stripping and resource optimization.
+      - Unit tests: 108/108 passing (`testDebugUnitTest`).
 
 ## Maintenance note
 
