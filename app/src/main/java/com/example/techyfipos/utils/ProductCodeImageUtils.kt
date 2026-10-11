@@ -1,5 +1,6 @@
 package com.example.techyfipos.utils
 
+import com.example.techyfipos.R
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -40,7 +41,8 @@ enum class ProductCodePriceTier {
 enum class ProductCodeLabelSize(
     val widthMm: Float,
     val heightMm: Float,
-    val displayName: String
+    val displayName: String,
+    @androidx.annotation.StringRes val displayNameRes: Int? = null
 ) {
     SIZE_25_X_15(25f, 15f, "25 × 15 mm"),
     SIZE_30_X_20(30f, 20f, "30 × 20 mm"),
@@ -49,7 +51,11 @@ enum class ProductCodeLabelSize(
     SIZE_50_X_30(50f, 30f, "50 × 30 mm"),
     SIZE_60_X_40(60f, 40f, "60 × 40 mm"),
     SIZE_100_X_150(100f, 150f, "100 × 150 mm"),
-    CUSTOM(0f, 0f, "Custom size")
+    CUSTOM(0f, 0f, "Custom size", R.string.product_code_label_custom_size)
+}
+
+fun ProductCodeLabelSize.getLocalizedName(context: Context): String {
+    return displayNameRes?.let { context.getString(it) } ?: displayName
 }
 
 fun productCodeLabelPixelSize(
@@ -541,7 +547,7 @@ fun shareProductCodeLabelPdf(context: Context, pdfUri: Uri, productName: String)
             clipData = ClipData.newUri(context.contentResolver, productName, pdfUri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(intent, "Share label PDF").apply {
+        val chooser = Intent.createChooser(intent, context.getString(R.string.share_label_pdf)).apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         val launchContext = context.findActivity() ?: context

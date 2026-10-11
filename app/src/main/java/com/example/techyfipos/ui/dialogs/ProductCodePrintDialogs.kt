@@ -397,7 +397,7 @@ fun PriceTierSwitcherCard(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = "MRP $mrpCandidate",
+                                    text = stringResource(R.string.product_code_mrp_strikethrough_fmt, mrpCandidate),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = Color(0xFF64748B),
@@ -803,13 +803,13 @@ fun BatchProductCodePrintDialog(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            "Total Pages/Labels:",
+                            stringResource(R.string.product_code_total_pages_labels_label),
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            "$totalLabelCount Labels",
+                            stringResource(R.string.product_code_labels_count_fmt, totalLabelCount),
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 15.sp,
                             color = MaterialTheme.colorScheme.primary

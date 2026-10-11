@@ -2960,4 +2960,17 @@
     <string name="owner_analytics_no_discounts_given">কোনো ছাড় দেওয়া হয়নি</string>
     <string name="owner_analytics_line_margin_fmt">%1$s%% মার্জিন</string>
     <string name="receipt_summary_thermal_receipt_cd">%1$d মিমি থার্মাল রসিদ</string>
+    <string name="product_profit_per_unit_fmt">প্রতি ইউনিটে লাভ: +%1$s</string>
+    <string name="product_loss_per_unit_fmt">প্রতি ইউনিটে ক্ষতি: -%1$s</string>
+    <string name="product_selling_price_below_cost_alert">⚠️ সতর্কতা: বিক্রয়মূল্য কেনামূল্যের চেয়ে কম!</string>
+    <string name="product_code_mrp_strikethrough_fmt">এমআরপি %1$s</string>
+    <string name="product_code_total_pages_labels_label">মোট পৃষ্ঠা/লেবেল:</string>
+    <string name="product_code_labels_count_fmt">%1$dটি লেবেল</string>
+    <string name="product_code_label_custom_size">কাস্টম সাইজ</string>
+    <string name="notif_stock_channel_name">ইনভেন্টরি ও মেয়াদ উত্তীর্ণের সতর্কতা</string>
+    <string name="notif_stock_alert_title">⚠️ টেকিফাই পিওএস: ইনভেন্টরি সতর্কতা</string>
+    <string name="notif_stock_low_stock_fmt">%1$dটি পণ্যের স্টক কম</string>
+    <string name="notif_stock_expiring_soon_fmt">%1$dটি পণ্যের মেয়াদ দ্রুত শেষ হচ্ছে</string>
+    <string name="notif_stock_sample_tap_fmt"> (যেমন: %1$s)। স্টক যোগ করতে ট্যাপ করুন।</string>
+    <string name="notif_stock_fallback_sample_product">পণ্য</string>
 </resources>

@@ -1148,7 +1148,11 @@ fun AddEditProductDialog(
                                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                     Text(if (profitPerUnit >= 0) "📈" else "⚠️", fontSize = 13.sp)
                                                     Text(
-                                                        text = if (profitPerUnit >= 0) "Unit Profit: +৳${String.format(Locale.US, "%.2f", profitPerUnit)}" else "Loss per Unit: -৳${String.format(Locale.US, "%.2f", -profitPerUnit)}",
+                                                        text = if (profitPerUnit >= 0) {
+                                                            stringResource(R.string.product_profit_per_unit_fmt, formatTaka(profitPerUnit))
+                                                        } else {
+                                                            stringResource(R.string.product_loss_per_unit_fmt, formatTaka(-profitPerUnit))
+                                                        },
                                                         fontWeight = FontWeight.ExtraBold,
                                                         fontSize = 12.sp,
                                                         color = if (profitPerUnit >= 0) {
@@ -1191,7 +1195,7 @@ fun AddEditProductDialog(
 
                                             if (profitPerUnit < 0) {
                                                 Text(
-                                                    text = "⚠️ Alert: Selling price is lower than cost price!",
+                                                    text = stringResource(R.string.product_selling_price_below_cost_alert),
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onErrorContainer

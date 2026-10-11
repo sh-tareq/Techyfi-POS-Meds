@@ -76,7 +76,7 @@ class StockAlertWorker(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                CHANNEL_NAME,
+                context.getString(R.string.notif_stock_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = context.getString(R.string.notif_stock_channel_desc)
@@ -97,16 +97,17 @@ class StockAlertWorker(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val title = "⚠️ Techyfi POS: Inventory Alert"
+        val title = context.getString(R.string.notif_stock_alert_title)
         val body = buildString {
             if (lowStockCount > 0) {
-                append("$lowStockCount item(s) are low in stock")
+                append(context.getString(R.string.notif_stock_low_stock_fmt, lowStockCount))
             }
             if (expiringCount > 0) {
                 if (isNotEmpty()) append(", ")
-                append("$expiringCount item(s) are expiring soon")
+                append(context.getString(R.string.notif_stock_expiring_soon_fmt, expiringCount))
             }
-            append(" (e.g. $sampleProduct). Tap to restock.")
+            val displaySample = sampleProduct.ifBlank { context.getString(R.string.notif_stock_fallback_sample_product) }
+            append(context.getString(R.string.notif_stock_sample_tap_fmt, displaySample))
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)

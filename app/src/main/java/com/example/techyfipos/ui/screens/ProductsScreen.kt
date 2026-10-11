@@ -1741,6 +1741,7 @@ fun ProductsScreen(
                 availableCategories.forEach { category ->
                     val isCatActive = selectedCategory == category
                     val emoji = getCategoryEmoji(category)
+                    val displayCategory = getLocalizedCategoryName(category)
                     Surface(
                         onClick = {
                             selectedCategory = if (isCatActive) null else category
@@ -1755,7 +1756,7 @@ fun ProductsScreen(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
                         ) {
                             Text(
-                                text = "$emoji $category",
+                                text = "$emoji $displayCategory",
                                 fontSize = 12.sp,
                                 fontWeight = if (isCatActive) FontWeight.Bold else FontWeight.Medium,
                                 color = if (isCatActive) Color.White else MaterialTheme.colorScheme.onSurface
@@ -3539,7 +3540,7 @@ private fun HardwareStockCheckDialog(
                                     border = BorderStroke(1.dp, Color(0xFFC7D2FE))
                                 ) {
                                     Text(
-                                        text = product.category,
+                                        text = getLocalizedCategoryName(product.category),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF4F46E5),
@@ -4512,7 +4513,7 @@ fun ProductItemRow(
                         }
                         if (product.category.isNotBlank()) {
                             Text(
-                                text = product.category,
+                                text = getLocalizedCategoryName(product.category),
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF4F46E5),
@@ -4742,7 +4743,7 @@ fun ProductItemRow(
                             }
                             if (product.category.isNotBlank()) {
                                 Text(
-                                    text = product.category,
+                                    text = getLocalizedCategoryName(product.category),
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF4F46E5),
@@ -4895,7 +4896,21 @@ fun ProductItemRow(
 }
 }
 
+fun getLocalizedCategoryName(category: String, isBn: Boolean = com.example.techyfipos.utils.isAppBangla()): String {
+    if (!isBn || category.isBlank()) return category
+    val trimmed = category.trim()
+    val match = com.example.techyfipos.data.CategoryItem.defaultCategories().find {
+        it.nameEn.equals(trimmed, ignoreCase = true)
+    }
+    return match?.nameBn?.takeIf { it.isNotBlank() } ?: category
+}
+
 fun getCategoryEmoji(category: String): String {
+    val trimmed = category.trim()
+    val categoryMatch = com.example.techyfipos.data.CategoryItem.defaultCategories().find {
+        it.nameEn.equals(trimmed, ignoreCase = true) || it.nameBn.equals(trimmed, ignoreCase = true)
+    }
+    if (categoryMatch != null) return categoryMatch.icon
     val lower = category.lowercase(Locale.ROOT)
     return when {
         lower.contains("সস") || lower.contains("sauce") || lower.contains("ketchup") -> "🥫"
@@ -5102,7 +5117,7 @@ private fun ProductGridCard(
                 // Category Text (in bold indigo)
                 if (product.category.isNotBlank()) {
                     Text(
-                        text = product.category,
+                        text = getLocalizedCategoryName(product.category),
                         color = Color(0xFF4F46E5),
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,

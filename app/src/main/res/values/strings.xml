@@ -2958,6 +2958,19 @@
     <string name="owner_analytics_no_discounts_given">No discounts given</string>
     <string name="owner_analytics_line_margin_fmt">%1$s%% margin</string>
     <string name="receipt_summary_thermal_receipt_cd">%1$d mm Thermal Receipt</string>
+    <string name="product_profit_per_unit_fmt">Unit Profit: +%1$s</string>
+    <string name="product_loss_per_unit_fmt">Loss per Unit: -%1$s</string>
+    <string name="product_selling_price_below_cost_alert">⚠️ Alert: Selling price is lower than cost price!</string>
+    <string name="product_code_mrp_strikethrough_fmt">MRP %1$s</string>
+    <string name="product_code_total_pages_labels_label">Total Pages/Labels:</string>
+    <string name="product_code_labels_count_fmt">%1$d Labels</string>
+    <string name="product_code_label_custom_size">Custom size</string>
+    <string name="notif_stock_channel_name">Inventory &amp; Expiry Alerts</string>
+    <string name="notif_stock_alert_title">⚠️ Techyfi POS: Inventory Alert</string>
+    <string name="notif_stock_low_stock_fmt">%1$d item(s) are low in stock</string>
+    <string name="notif_stock_expiring_soon_fmt">%1$d item(s) are expiring soon</string>
+    <string name="notif_stock_sample_tap_fmt"> (e.g. %1$s). Tap to restock.</string>
+    <string name="notif_stock_fallback_sample_product">Products</string>
 </resources>
 
 
