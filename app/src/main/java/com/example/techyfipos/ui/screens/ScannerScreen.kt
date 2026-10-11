@@ -2269,8 +2269,9 @@ private fun TabletProductGridCard(
                             color = TabletTerminalColors.Emerald,
                             shadowElevation = 2.dp
                         ) {
+                            val inCartDisp = if (inCartQuantity % 1.0 == 0.0) inCartQuantity.toLong().toString() else String.format(Locale.US, "%.2f", inCartQuantity).trimEnd('0').trimEnd('.')
                             Text(
-                                text = "${inCartQuantity.toInt()}",
+                                text = inCartDisp,
                                 color = Color.White,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Black,
