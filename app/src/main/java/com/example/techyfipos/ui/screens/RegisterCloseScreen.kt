@@ -288,7 +288,8 @@ fun RegisterCloseScreen(
             expectedCash = expectedCash
         )
     }
-    val rangeLabel = remember(rangeStart) { "Shift: ${DateFormatters.formatShortDateTime(rangeStart)}" }
+    val formattedRangeStart = remember(rangeStart) { DateFormatters.formatShortDateTime(rangeStart) }
+    val rangeLabel = stringResource(R.string.register_close_shift_range_prefix, formattedRangeStart)
     var selectedHistoricalClosing by remember { mutableStateOf<RegisterClosing?>(null) }
 
     val successMessage = stringResource(R.string.register_close_success_message)
@@ -334,7 +335,7 @@ fun RegisterCloseScreen(
                             ) {
                                 Realistic3DClipboardDuesIcon(size = if (showFullReportLabel) 16.dp else 14.dp)
                                 Text(
-                                    text = if (showFullReportLabel) "X-Report" else "X",
+                                    text = if (showFullReportLabel) stringResource(R.string.register_close_x_report_btn) else stringResource(R.string.register_close_x_report_short_btn),
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -361,7 +362,7 @@ fun RegisterCloseScreen(
                                 ) {
                                     Realistic3DRegisterAuditZReportIcon(size = if (showFullReportLabel) 16.dp else 14.dp)
                                     Text(
-                                        text = if (showFullReportLabel) "Preview Z" else "Z",
+                                        text = if (showFullReportLabel) stringResource(R.string.register_close_preview_z_btn) else stringResource(R.string.register_close_preview_z_short_btn),
                                         fontSize = 11.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
@@ -722,7 +723,7 @@ fun RegisterCloseScreen(
                             Text(if (hasShiftTransactions) "🔒" else "💵", fontSize = 20.sp)
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                text = if (hasShiftTransactions) "Float (Locked)" else stringResource(R.string.day_close_tool_open_float),
+                                text = if (hasShiftTransactions) stringResource(R.string.register_close_float_locked) else stringResource(R.string.day_close_tool_open_float),
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (hasShiftTransactions) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface
@@ -888,7 +889,7 @@ fun RegisterCloseScreen(
                                 color = Color(0xFF059669).copy(alpha = 0.25f)
                             ) {
                                 Text(
-                                    text = "Audited",
+                                    text = stringResource(R.string.register_close_badge_audited),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF34D399),
@@ -2495,17 +2496,17 @@ fun CloseRegisterReconciliationDialog(
                 // Variance Badge
                 val (varianceText, varianceBg, varianceTextColor) = when {
                     variance.isZeroMoney() -> Triple(
-                        "✓ Matched (Exact Match)",
+                        stringResource(R.string.register_close_variance_matched_exact),
                         MaterialTheme.extendedColors.successContainer,
                         MaterialTheme.extendedColors.onSuccessContainer
                     )
                     variance < 0.0 -> Triple(
-                        "⚠️ Shortage: -${formatTaka(kotlin.math.abs(variance))}",
+                        stringResource(R.string.register_close_variance_shortage_badge, formatTaka(kotlin.math.abs(variance))),
                         MaterialTheme.colorScheme.errorContainer,
                         MaterialTheme.colorScheme.onErrorContainer
                     )
                     else -> Triple(
-                        "ℹ️ Surplus: +${formatTaka(variance)}",
+                        stringResource(R.string.register_close_variance_surplus_badge, formatTaka(variance)),
                         MaterialTheme.extendedColors.infoContainer,
                         MaterialTheme.extendedColors.onInfoContainer
                     )
@@ -2664,14 +2665,14 @@ private fun RegisterClosingRow(closing: RegisterClosing, onClick: () -> Unit = {
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                "Expected ${formatTaka(closing.expectedCash)} · Counted ${formatTaka(closing.actualCountedCash)} · ${closing.cashierName}",
+                stringResource(R.string.register_close_history_sub_fmt, formatTaka(closing.expectedCash), formatTaka(closing.actualCountedCash), closing.cashierName),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (!closing.discrepancyReason.isNullOrBlank()) {
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "Reason: ${closing.discrepancyReason}",
+                    stringResource(R.string.register_close_discrepancy_reason_fmt, closing.discrepancyReason),
                     fontSize = 10.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFFDC2626),
@@ -2725,7 +2726,11 @@ private fun HistoricalClosingDetailDialog(
                     Text(stringResource(R.string.register_close_cash_sales_fmt, formatTaka(closing.cashSales)), fontSize = 12.5.sp)
                     Text(stringResource(R.string.register_close_digital_sales_fmt, formatTaka(closing.digitalSales)), fontSize = 12.5.sp)
                     if (closing.bkashSales > 0 || closing.nagadSales > 0 || closing.cardSales > 0) {
-                        Text("  • bKash: ${formatTaka(closing.bkashSales)}  • Nagad: ${formatTaka(closing.nagadSales)}  • Card: ${formatTaka(closing.cardSales)}", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            stringResource(R.string.register_close_digital_breakdown_fmt, formatTaka(closing.bkashSales), formatTaka(closing.nagadSales), formatTaka(closing.cardSales)),
+                            fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Text(stringResource(R.string.register_close_cash_in_out_fmt, formatTaka(closing.cashIn), formatTaka(closing.cashOut)), fontSize = 12.5.sp)
                     Text(stringResource(R.string.register_close_cash_refunds_fmt, formatTaka(closing.cashRefunds)), fontSize = 12.5.sp)
@@ -2762,7 +2767,7 @@ private fun HistoricalClosingDetailDialog(
                 }
                 if (!closing.discrepancyReason.isNullOrBlank()) {
                     Text(
-                        "Discrepancy Reason: ${closing.discrepancyReason}",
+                        stringResource(R.string.register_close_discrepancy_reason_full_fmt, closing.discrepancyReason),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFDC2626)
@@ -2791,10 +2796,9 @@ fun ZReportDialog(
     onSave: () -> Unit,
     onShare: () -> Unit
 ) {
-    val isBn = com.example.techyfipos.utils.isAppBangla()
-    val reportTitle = if (isBn) (if (isInterimX) "মিড-শিফট এক্স-রিপোর্ট" else "দৈনিক সমাপনী জেড-রিপোর্ট") else (if (isInterimX) "Mid-Shift X-Report (Interim)" else "Daily Closing Z-Report")
-    val reportHeader = if (isBn) (if (isInterimX) "টেকিফাই পিওএস - মিড-শিফট রিডিং (এক্স-রিপোর্ট)\n(অন্তর্বর্তী হিসাব - শিফট চালু থাকবে)" else "টেকিফাই পিওএস - দৈনিক ক্লোজিং (জেড-রিপোর্ট)") else (if (isInterimX) "TECHYFI POS - MID-SHIFT READING (X-REPORT)\n(INTERIM TOTALS - NO SHIFT RESET)" else "TECHYFI POS - DAILY CLOSING (Z-REPORT)")
-    val reportFooter = if (isBn) (if (isInterimX) "*** এক্স-রিপোর্ট সমাপ্ত ***" else "*** জেড-রিপোর্ট সমাপ্ত (চূড়ান্ত নিরীক্ষা) ***") else (if (isInterimX) "*** END OF X-REPORT (INTERIM) ***" else "*** END OF Z-REPORT (AUDIT FINAL) ***")
+    val reportTitle = if (isInterimX) stringResource(R.string.z_report_title_interim) else stringResource(R.string.z_report_title_daily)
+    val reportHeader = if (isInterimX) stringResource(R.string.z_report_header_interim) else stringResource(R.string.z_report_header_daily)
+    val reportFooter = if (isInterimX) stringResource(R.string.z_report_footer_interim) else stringResource(R.string.z_report_footer_daily)
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -2864,19 +2868,19 @@ fun ZReportDialog(
                         val taxVatLabel = stringResource(R.string.tax_vat)
                         val cashReconHeader = stringResource(R.string.cash_reconciliation)
                         val expectedCashLabel = stringResource(R.string.expected_cash_till)
-                        val grossSalesLabel = if (isBn) "মোট বিক্রয়" else "Gross Sales"
-                        val grossMarginLabel = if (isBn) "মোট লাভ" else "Gross Margin"
-                        val discountsLabel = if (isBn) "প্রদত্ত ছাড়" else "Discounts Given"
-                        val expensesLabel = if (isBn) "খরচ" else "Expenses"
-                        val netProfitLabel = if (isBn) "নীট লাভ (আনুমানিক)" else "Net Profit (est)"
-                        val paymentsHeader = if (isBn) "মূল্য পরিশোধ:" else "PAYMENTS:"
-                        val startFloatLabel = if (isBn) "শুরুর ক্যাশ ফ্লোট" else "Starting Float"
-                        val cashSalesLabel = if (isBn) "ক্যাশ বিক্রয়" else "Cash Sales"
-                        val cashInLabel = if (isBn) "ক্যাশ-ইন" else "Cash-In"
-                        val dueCollLabel = if (isBn) "বকেয়া আদায়" else "Due Collections"
-                        val cashRefundLabel = if (isBn) "ক্যাশ রিফান্ড" else "Cash Refunds"
-                        val cashOutLabel = if (isBn) "ক্যাশ-আউট (খরচ)" else "Cash-Out (Expenses)"
-                        val suppCashLabel = if (isBn) "সাপ্লায়ার ক্যাশ প্রদান" else "Supplier Cash Paid"
+                        val grossSalesLabel = stringResource(R.string.z_report_gross_sales)
+                        val grossMarginLabel = stringResource(R.string.z_report_gross_margin)
+                        val discountsLabel = stringResource(R.string.z_report_discounts_given)
+                        val expensesLabel = stringResource(R.string.z_report_expenses)
+                        val netProfitLabel = stringResource(R.string.z_report_net_profit_est)
+                        val paymentsHeader = stringResource(R.string.z_report_payments_header)
+                        val startFloatLabel = stringResource(R.string.z_report_starting_float)
+                        val cashSalesLabel = stringResource(R.string.z_report_cash_sales)
+                        val cashInLabel = stringResource(R.string.z_report_cash_in)
+                        val dueCollLabel = stringResource(R.string.z_report_due_collections)
+                        val cashRefundLabel = stringResource(R.string.z_report_cash_refunds)
+                        val cashOutLabel = stringResource(R.string.z_report_cash_out_expenses)
+                        val suppCashLabel = stringResource(R.string.z_report_supplier_cash_paid)
 
                         val cashReconSection = if (data.hasCashReconciliation) {
                             "\n--------------------------------\n" +
@@ -2892,7 +2896,8 @@ fun ZReportDialog(
                             "$expectedCashLabel: ${formatTaka(data.expectedCash)}"
                         } else ""
 
-                        val invoicesUnitsLabel = if (isBn) "চালান: ${data.transactionCount} | পণ্য বিক্রয়: ${data.itemsSold}" else "Invoices: ${data.transactionCount} | Units: ${data.itemsSold}"
+                        val invoicesUnitsLabel = stringResource(R.string.z_report_invoices_units_fmt, data.transactionCount, data.itemsSold)
+                        val loyaltyRedeemedLabel = stringResource(R.string.z_report_loyalty_redeemed)
                         Text(
                             text = stringResource(R.string.report_period_fmt, rangeLabel) + "\n" +
                                 "$invoicesUnitsLabel\n" +
@@ -2903,7 +2908,7 @@ fun ZReportDialog(
                                 (if (data.totalTax > 0.0) "$taxVatLabel:        ${formatTaka(data.totalTax)}\n" else "") +
                                 "$grossMarginLabel:     ${formatTaka(data.totalProfit)}\n" +
                                 "$discountsLabel:  ${formatTaka(data.totalDiscount)}\n" +
-                                (if (data.totalLoyaltyDiscount > 0.0) "${if (isBn) "লয়্যালটি পয়েন্ট ছাড়" else "Loyalty Redeemed"}: -${formatTaka(data.totalLoyaltyDiscount)}\n" else "") +
+                                (if (data.totalLoyaltyDiscount > 0.0) "$loyaltyRedeemedLabel: -${formatTaka(data.totalLoyaltyDiscount)}\n" else "") +
                                 "$expensesLabel:         ${formatTaka(data.totalExpenses)}\n" +
                                 "$netProfitLabel: ${formatTaka(data.netProfit)}\n" +
                                 "--------------------------------\n" +
@@ -3109,7 +3114,12 @@ fun ShareZReportFormatDialog(
 
 private fun shareReport(context: android.content.Context, r: SalesReportData, rangeLabel: String, isInterimX: Boolean, format: ZReportFormat) {
     try {
-        val subject = if (isInterimX) "Techyfi POS Mid-Shift X-Report – $rangeLabel" else "Techyfi POS Daily Closing Z-Report – $rangeLabel"
+        val subject = if (isInterimX) {
+            context.getString(R.string.register_close_mid_shift_x_report_subject, rangeLabel)
+        } else {
+            context.getString(R.string.register_close_daily_closing_z_report_subject, rangeLabel)
+        }
+        val chooserTitle = context.getString(R.string.register_close_share_report_chooser_title)
         when (format) {
             ZReportFormat.JPEG -> {
                 val file = if (isInterimX) generateXReportJpeg(context, r, rangeLabel) else generateZReportJpeg(context, r, rangeLabel)
@@ -3122,7 +3132,7 @@ private fun shareReport(context: android.content.Context, r: SalesReportData, ra
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     if (context.findActivity() == null) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                context.startActivity(Intent.createChooser(intent, "Share Report via"))
+                context.startActivity(Intent.createChooser(intent, chooserTitle))
             }
             ZReportFormat.PDF -> {
                 val file = if (isInterimX) generateXReportPdf(context, r, rangeLabel) else generateZReportPdf(context, r, rangeLabel)
@@ -3135,7 +3145,7 @@ private fun shareReport(context: android.content.Context, r: SalesReportData, ra
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     if (context.findActivity() == null) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                context.startActivity(Intent.createChooser(intent, "Share Report via"))
+                context.startActivity(Intent.createChooser(intent, chooserTitle))
             }
             ZReportFormat.CSV -> {
                 val directory = File(context.cacheDir, "reports").apply { mkdirs() }
@@ -3150,7 +3160,7 @@ private fun shareReport(context: android.content.Context, r: SalesReportData, ra
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     if (context.findActivity() == null) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                context.startActivity(Intent.createChooser(intent, "Share Report via"))
+                context.startActivity(Intent.createChooser(intent, chooserTitle))
             }
         }
     } catch (e: Exception) {

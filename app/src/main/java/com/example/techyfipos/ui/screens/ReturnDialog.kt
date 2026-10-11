@@ -161,7 +161,7 @@ fun ReturnItemsDialog(
         !customerName.isNullOrBlank() && !customerPhone.isNullOrBlank() -> "$customerName • $customerPhone"
         !customerName.isNullOrBlank() -> customerName
         !customerPhone.isNullOrBlank() -> customerPhone
-        else -> "Walk-in Customer"
+        else -> stringResource(R.string.walk_in_customer)
     }
 
     // Walk-in store credit resolution mode: "REGISTER" or "VOUCHER"
@@ -691,7 +691,7 @@ fun ReturnItemsDialog(
                                 Text(if (isRestockEnabled) "📦" else "🗑️", fontSize = 16.sp)
                                 Column {
                                     Text(
-                                        text = if (isRestockEnabled) "Restock item(s) to shelf inventory" else "Mark as Damaged / Write-off",
+                                        text = if (isRestockEnabled) stringResource(R.string.return_restock_shelf_title) else stringResource(R.string.return_mark_damaged_title),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.5.sp,
                                         color = if (isRestockEnabled) Color(0xFF166534) else MaterialTheme.colorScheme.onErrorContainer
@@ -855,7 +855,7 @@ fun ReturnItemsDialog(
                                 onClick = {
                                     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak return reason or note...")
+                                        putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.return_speech_prompt))
                                     }
                                     try {
                                         voiceLauncher.launch(intent)
@@ -955,7 +955,7 @@ fun ReturnItemsDialog(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("💵 Cash Drawer Float", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text(stringResource(R.string.return_cash_drawer_float_title), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
                                             color = MaterialTheme.colorScheme.primaryContainer,
@@ -972,9 +972,9 @@ fun ReturnItemsDialog(
                                     }
                                     Text(
                                         if (externalRefund == 0.0 && storeCreditRestored > 0.0) {
-                                            "Original sale was paid with Store Credit / Voucher. The refund of ${formatTaka(storeCreditRestored)} will be restored to Store Credit / Voucher; no cash will be paid out."
+                                            stringResource(R.string.return_credit_restored_no_cash, formatTaka(storeCreditRestored))
                                         } else if (storeCreditRestored > 0.0) {
-                                            "${formatTaka(storeCreditRestored)} will be restored to Store Credit / Voucher. ${formatTaka(externalRefund)} physical cash will be handed over to customer from till drawer."
+                                            stringResource(R.string.return_credit_restored_and_cash, formatTaka(storeCreditRestored), formatTaka(externalRefund))
                                         } else {
                                             stringResource(R.string.return_physical_cash_desc)
                                         },
@@ -1147,7 +1147,7 @@ fun ReturnItemsDialog(
                                                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f))
                                                 ) {
                                                     Text(
-                                                        "Walk-in Customer",
+                                                        stringResource(R.string.walk_in_customer),
                                                         fontSize = 11.sp,
                                                         fontWeight = FontWeight.ExtraBold,
                                                         color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -1273,7 +1273,7 @@ fun ReturnItemsDialog(
                                             }
                                         }
                                         Text(
-                                            "Refund amount will be added to customer's account for their next purchase.",
+                                            stringResource(R.string.return_wallet_credit_notice),
                                             fontSize = 10.5.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             lineHeight = 15.sp
@@ -1338,7 +1338,7 @@ fun ReturnItemsDialog(
                                     text = if (dueAdjustment > 0.0 && externalRefund > 0.0) {
                                         when (selectedSettlementDestination) {
                                             "WALLET" -> stringResource(R.string.return_excess_store_credit)
-                                            "MFS" -> "Excess ($selectedMfsChannel)"
+                                            "MFS" -> stringResource(R.string.return_excess_mfs_channel, selectedMfsChannel)
                                             else -> stringResource(R.string.return_excess_cash_payout)
                                         }
                                     } else if (dueAdjustment > 0.0 && externalRefund == 0.0) {
@@ -1350,7 +1350,7 @@ fun ReturnItemsDialog(
                                     } else {
                                         when (selectedSettlementDestination) {
                                             "WALLET" -> stringResource(R.string.return_store_credit_payout)
-                                            "MFS" -> "Digital / MFS Payout"
+                                            "MFS" -> stringResource(R.string.return_mfs_payout_title)
                                             else -> stringResource(R.string.return_customer_refund_payout)
                                         }
                                     },
@@ -1452,28 +1452,28 @@ fun ReturnItemsDialog(
                             text = if (!hasSelection) {
                                 stringResource(R.string.return_select_items)
                             } else if (externalRefund == 0.0 && dueAdjustment > 0.0) {
-                                "Clear ${formatTaka(dueAdjustment)} Customer Debt"
+                                stringResource(R.string.return_clear_debt_action, formatTaka(dueAdjustment))
                             } else if (dueAdjustment > 0.0 && externalRefund > 0.0) {
-                                "Clear ${formatTaka(dueAdjustment)} Debt + Refund ${formatTaka(externalRefund)}"
+                                stringResource(R.string.return_clear_debt_and_refund_action, formatTaka(dueAdjustment), formatTaka(externalRefund))
                             } else if (selectedSettlementDestination == "WALLET") {
                                 if (isWalkinCustomer) {
                                     if (walkinMode == "REGISTER") {
                                         if (walkinRegPhone.trim().length < 6) stringResource(R.string.return_enter_customer_mobile)
-                                        else "Register & Credit ${formatTaka(refundTotal)}"
+                                        else stringResource(R.string.return_register_and_credit_action, formatTaka(refundTotal))
                                     } else {
-                                        "Issue ${formatTaka(refundTotal)} Credit Voucher"
+                                        stringResource(R.string.return_issue_voucher_action, formatTaka(refundTotal))
                                     }
                                 } else {
-                                    "Add ${formatTaka(refundTotal)} to Store Credit"
+                                    stringResource(R.string.return_add_store_credit_action, formatTaka(refundTotal))
                                 }
                             } else if (storeCreditRestored > 0.0) {
                                 if (externalRefund == 0.0) {
-                                    "Restore ${formatTaka(storeCreditRestored)} Store Credit"
+                                    stringResource(R.string.return_restore_store_credit_action, formatTaka(storeCreditRestored))
                                 } else {
-                                    "Refund ${formatTaka(externalRefund)} + Restore ${formatTaka(storeCreditRestored)} Credit"
+                                    stringResource(R.string.return_refund_and_restore_action, formatTaka(externalRefund), formatTaka(storeCreditRestored))
                                 }
                             } else {
-                                "Process ${formatTaka(externalRefund)} Return"
+                                stringResource(R.string.return_process_refund_action, formatTaka(externalRefund))
                             },
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 13.sp,
@@ -1671,7 +1671,7 @@ private fun ManualReturnQuantityDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Clear",
+                                text = stringResource(R.string.clear_action),
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFE11D48)
@@ -1738,7 +1738,7 @@ fun ManageAuditPresetsDialog(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    "Tap ✏️ to rename or 🗑️ to delete custom preset notes:",
+                    text = stringResource(R.string.return_manage_presets_hint),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
