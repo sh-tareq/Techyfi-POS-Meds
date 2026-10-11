@@ -9,6 +9,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.work.WorkManager
 import com.example.techyfipos.MainActivity
@@ -34,11 +35,15 @@ object DueReminderScheduler {
         scope.cancel()
     }
 
-    enum class SchedulePreset(val titleBn: String, val titleEn: String) {
-        TOMORROW_10AM("আগামীকাল ১০টা", "Tomorrow 10 AM"),
-        IN_3_DAYS("৩ দিন পর", "In 3 Days"),
-        WEEKLY("সাপ্তাহিক", "Weekly"),
-        CUSTOM("কাস্টম", "Custom")
+    enum class SchedulePreset(
+        @StringRes val titleRes: Int,
+        val titleBn: String,
+        val titleEn: String
+    ) {
+        TOMORROW_10AM(R.string.due_preset_tomorrow_10am, "আগামীকাল ১০টা", "Tomorrow 10 AM"),
+        IN_3_DAYS(R.string.due_preset_in_3_days, "৩ দিন পর", "In 3 Days"),
+        WEEKLY(R.string.due_preset_weekly, "সাপ্তাহিক", "Weekly"),
+        CUSTOM(R.string.due_preset_custom, "কাস্টম", "Custom")
     }
 
     fun calculateDelayForPreset(

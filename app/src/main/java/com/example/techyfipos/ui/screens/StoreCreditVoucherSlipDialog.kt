@@ -81,7 +81,7 @@ fun StoreCreditVoucherSlipDialog(
         mutableIntStateOf(invoiceSettingsData.paperRollWidthMm.takeIf { it == 58 || it == 80 } ?: 80)
     }
     // Receipt-only language toggle (affects printed receipt content, NOT the window UI)
-    var isBangla by rememberSaveable { mutableStateOf(false) }
+    var isBangla by rememberSaveable { mutableStateOf(com.example.techyfipos.utils.isAppBangla()) }
     var isZoomed by rememberSaveable { mutableStateOf(false) }
     var isQuickScanMode by rememberSaveable { mutableStateOf(false) }
     var showShareOptionsSheet by remember { mutableStateOf(false) }
@@ -94,11 +94,11 @@ fun StoreCreditVoucherSlipDialog(
     val isVoucherValid = voucher.status.equals("ACTIVE", ignoreCase = true) && !isExpired && !isExhausted && !isVoid
 
     val (statusLabel, statusBg, statusTextColor) = when {
-        isVoid -> Triple("VOID / CANCELLED", Color(0xFFFEF2F2), Color(0xFFDC2626))
-        isExpired -> Triple("EXPIRED", Color(0xFFFFFBEB), Color(0xFFD97706))
-        isExhausted -> Triple("USED / EXHAUSTED", Color(0xFFF3F4F6), Color(0xFF4B5563))
+        isVoid -> Triple(stringResource(R.string.voucher_status_void), Color(0xFFFEF2F2), Color(0xFFDC2626))
+        isExpired -> Triple(stringResource(R.string.voucher_status_expired), Color(0xFFFFFBEB), Color(0xFFD97706))
+        isExhausted -> Triple(stringResource(R.string.voucher_status_exhausted), Color(0xFFF3F4F6), Color(0xFF4B5563))
         !voucher.status.equals("ACTIVE", ignoreCase = true) -> Triple(voucher.status.uppercase(java.util.Locale.US), Color(0xFFFEF2F2), Color(0xFFDC2626))
-        else -> Triple("ACTIVE", Color(0xFFECFDF5), Color(0xFF059669))
+        else -> Triple(stringResource(R.string.voucher_status_active), Color(0xFFECFDF5), Color(0xFF059669))
     }
 
     // Micro-animation for 3D ticket breathing
@@ -209,7 +209,7 @@ fun StoreCreditVoucherSlipDialog(
                         ) {
                             Image(
                                 painter = painterResource(id = R.drawable.ic_3d_voucher_ticket),
-                                contentDescription = "3D Voucher Ticket",
+                                contentDescription = stringResource(R.string.cd_3d_voucher_ticket),
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
@@ -480,7 +480,7 @@ fun StoreCreditVoucherSlipDialog(
 
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
-                                        text = "STORE CREDIT PASS",
+                                        text = stringResource(R.string.store_credit_pass_header),
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color(0xFFA5B4FC),
@@ -792,7 +792,7 @@ fun StoreCreditVoucherSlipDialog(
                     Box(contentAlignment = Alignment.Center) {
                         Image(
                             painter = painterResource(id = R.drawable.ic_3d_share_hub),
-                            contentDescription = "3D Share Hub",
+                            contentDescription = stringResource(R.string.cd_3d_share_hub),
                             modifier = Modifier.size(42.dp)
                         )
                     }

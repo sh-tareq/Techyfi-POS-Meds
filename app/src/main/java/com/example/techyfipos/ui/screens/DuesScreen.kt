@@ -899,17 +899,17 @@ fun DuesScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(horizontalAlignment = Alignment.Start) {
-                                    Text("< 7 Days", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF059669))
+                                    Text(stringResource(R.string.dues_aging_under_7_days), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF059669))
                                     Text(formatTaka(currentDueTotal), fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 Box(modifier = Modifier.width(1.dp).height(20.dp).background(MaterialTheme.colorScheme.outlineVariant))
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("7–30 Days", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                                    Text(stringResource(R.string.dues_aging_7_to_30_days), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
                                     Text(formatTaka(moderateDueTotal), fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 Box(modifier = Modifier.width(1.dp).height(20.dp).background(MaterialTheme.colorScheme.outlineVariant))
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("> 30d Overdue", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFDC2626))
+                                    Text(stringResource(R.string.dues_aging_over_30_days), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFDC2626))
                                     Text(formatTaka(overdueDueTotal), fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFDC2626))
                                 }
                             }
@@ -1729,21 +1729,37 @@ private fun shareCustomerStatement(
     shareReceiptAsText(context, statement)
 }
 
-enum class ReminderMode(val titleBn: String, val titleEn: String) {
-    INSTANT("তাৎক্ষণিক পাঠান", "Instant Send"),
-    SCHEDULE("শিডিউল করুন", "Auto-Schedule")
+enum class ReminderMode(
+    @StringRes val titleRes: Int,
+    val titleBn: String,
+    val titleEn: String
+) {
+    INSTANT(R.string.due_reminder_mode_instant, "তাৎক্ষণিক পাঠান", "Instant Send"),
+    SCHEDULE(R.string.due_reminder_mode_schedule, "শিডিউল করুন", "Auto-Schedule")
 }
 
-enum class ReminderLanguage(val titleBn: String, val titleEn: String) {
-    BANGLA("বাংলা (Bengali)", "Bengali (বাংলা)"),
-    ENGLISH("ইংরেজি (English)", "English"),
-    BILINGUAL("উভয় (Bilingual)", "Bilingual (উভয়)")
+enum class ReminderLanguage(
+    @StringRes val titleRes: Int,
+    val titleBn: String,
+    val titleEn: String
+) {
+    BANGLA(R.string.due_reminder_lang_bangla, "বাংলা (Bengali)", "Bengali (বাংলা)"),
+    ENGLISH(R.string.due_reminder_lang_english, "ইংরেজি (English)", "English"),
+    BILINGUAL(R.string.due_reminder_lang_bilingual, "উভয় (Bilingual)", "Bilingual (উভয়)")
 }
 
-enum class DeliveryChannel(val titleBn: String, val titleEn: String, val id: String, val hintBn: String, val hintEn: String) {
-    WHATSAPP("WhatsApp", "WhatsApp", "wa", "নির্ধারিত সময়ে WhatsApp পাঠানোর নোটিফিকেশন আসবে", "Triggers WhatsApp notification prompt"),
-    SMS("SMS", "SMS", "sms", "নির্ধারিত সময়ে SMS পাঠানোর নোটিফিকেশন আসবে", "Triggers SMS notification prompt"),
-    BOTH("উভয় (Both)", "Both", "both", "SMS ও WhatsApp নোটিফিকেশন প্রম্পট আসবে", "SMS & WhatsApp notification prompts")
+enum class DeliveryChannel(
+    @StringRes val titleRes: Int,
+    val titleBn: String,
+    val titleEn: String,
+    val id: String,
+    @StringRes val hintRes: Int,
+    val hintBn: String,
+    val hintEn: String
+) {
+    WHATSAPP(R.string.delivery_channel_whatsapp, "WhatsApp", "WhatsApp", "wa", R.string.delivery_channel_whatsapp_hint, "নির্ধারিত সময়ে WhatsApp পাঠানোর নোটিফিকেশন আসবে", "Triggers WhatsApp notification prompt"),
+    SMS(R.string.delivery_channel_sms, "SMS", "SMS", "sms", R.string.delivery_channel_sms_hint, "নির্ধারিত সময়ে SMS পাঠানোর নোটিফিকেশন আসবে", "Triggers SMS notification prompt"),
+    BOTH(R.string.delivery_channel_both, "উভয় (Both)", "Both", "both", R.string.delivery_channel_both_hint, "SMS ও WhatsApp নোটিফিকেশন প্রম্পট আসবে", "SMS & WhatsApp notification prompts")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1796,11 +1812,11 @@ fun SendDueReminderDialog(
         }
     }
 
-    fun formatTemplateString(raw: String): String {
+    fun formatTemplateString(raw: String, isBn: Boolean = isAppBangla): String {
         var res = raw
             .replace("{customer}", customer.customerName)
-            .replace("{due}", formatTaka(customer.outstandingAmount))
-            .replace("{store}", if (selectedLang == ReminderLanguage.ENGLISH) effectiveStoreNameEng else effectiveStoreName)
+            .replace("{due}", formatTaka(customer.outstandingAmount, isBangla = isBn))
+            .replace("{store}", if (!isBn) effectiveStoreNameEng else effectiveStoreName)
             .replace("{phone}", customer.customerPhone)
         if (effectiveBkash.isNotBlank()) {
             res = res.replace("{bkash}", effectiveBkash)
@@ -1822,11 +1838,11 @@ fun SendDueReminderDialog(
 
     val computedReminderText = remember(activeTemplate, selectedLang, customer, effectiveStoreName, effectiveBkash) {
         when (selectedLang) {
-            ReminderLanguage.BANGLA -> formatTemplateString(activeTemplate.textBn)
-            ReminderLanguage.ENGLISH -> formatTemplateString(activeTemplate.textEn)
+            ReminderLanguage.BANGLA -> formatTemplateString(activeTemplate.textBn, isBn = true)
+            ReminderLanguage.ENGLISH -> formatTemplateString(activeTemplate.textEn, isBn = false)
             ReminderLanguage.BILINGUAL -> {
-                val en = formatTemplateString(activeTemplate.textEn)
-                val bn = formatTemplateString(activeTemplate.textBn)
+                val en = formatTemplateString(activeTemplate.textEn, isBn = false)
+                val bn = formatTemplateString(activeTemplate.textBn, isBn = true)
                 "$bn\n\n($en)"
             }
         }
@@ -1859,16 +1875,14 @@ fun SendDueReminderDialog(
             "SCHEDULED"
         )
         val presetName = when (selectedPreset) {
-            DueReminderScheduler.SchedulePreset.TOMORROW_10AM -> if (isAppBangla) "আগামীকাল ১০টা" else "Tomorrow 10 AM"
-            DueReminderScheduler.SchedulePreset.IN_3_DAYS -> if (isAppBangla) "৩ দিন পর" else "In 3 Days"
-            DueReminderScheduler.SchedulePreset.WEEKLY -> if (isAppBangla) "সাপ্তাহিক" else "Weekly"
             DueReminderScheduler.SchedulePreset.CUSTOM -> {
                 DateFormatters.formatShortDateTime(customTargetMillis, if (isAppBangla) Locale.forLanguageTag("bn") else Locale.ENGLISH)
             }
+            else -> context.getString(selectedPreset.titleRes)
         }
         Toast.makeText(
             context,
-            if (isAppBangla) "✅ বকেয়া তাগাদা শিডিউল সম্পন্ন ($presetName)" else "✅ Reminder scheduled for $presetName",
+            context.getString(R.string.dues_reminder_scheduled_toast_fmt, presetName),
             Toast.LENGTH_SHORT
         ).show()
         onDismiss()
@@ -2041,7 +2055,7 @@ fun SendDueReminderDialog(
                                     }
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        text = if (isAppBangla) m.titleBn else m.titleEn,
+                                        text = stringResource(m.titleRes),
                                         fontSize = 13.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         color = if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFF64748B)
@@ -2115,7 +2129,7 @@ fun SendDueReminderDialog(
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
-                                            text = if (isAppBangla) lang.titleBn else lang.titleEn,
+                                            text = stringResource(lang.titleRes),
                                             fontSize = 11.5.sp,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                             color = if (isSelected) Color.White else Color(0xFF334155),
@@ -2250,7 +2264,7 @@ fun SendDueReminderDialog(
                             ) {
                                 DueReminderScheduler.SchedulePreset.values().forEach { preset ->
                                     val isSelected = selectedPreset == preset
-                                    val title = if (isAppBangla) preset.titleBn else preset.titleEn
+                                    val title = stringResource(preset.titleRes)
                                     Surface(
                                         onClick = { selectedPreset = preset },
                                         shape = RoundedCornerShape(8.dp),
@@ -2541,7 +2555,7 @@ fun SendDueReminderDialog(
                                                 }
                                                 Spacer(Modifier.width(4.dp))
                                                 Text(
-                                                    text = if (isAppBangla) chan.titleBn else chan.titleEn,
+                                                    text = stringResource(chan.titleRes),
                                                     fontSize = 10.5.sp,
                                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                                                     color = if (isSelected) Color.White else Color(0xFF0369A1),
@@ -3092,10 +3106,10 @@ fun DuesAuditCard(
     entry: DuesAuditEntry
 ) {
     val (badgeBg, badgeFg, typeLabel) = when (entry.type) {
-        DuesAuditType.REPAYMENT -> Triple(Color(0xFFECFDF5), Color(0xFF059669), "Repayment")
-        DuesAuditType.CREDIT_SALE -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), "Credit Sale")
-        DuesAuditType.RETURN_ADJUSTMENT -> Triple(Color(0xFFEFF6FF), Color(0xFF2563EB), "Return Settlement")
-        DuesAuditType.MANUAL_DUE -> Triple(Color(0xFFF3E8FF), Color(0xFF9333EA), "Manual Due")
+        DuesAuditType.REPAYMENT -> Triple(Color(0xFFECFDF5), Color(0xFF059669), stringResource(R.string.dues_audit_type_repayment))
+        DuesAuditType.CREDIT_SALE -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), stringResource(R.string.dues_audit_type_credit_sale))
+        DuesAuditType.RETURN_ADJUSTMENT -> Triple(Color(0xFFEFF6FF), Color(0xFF2563EB), stringResource(R.string.dues_audit_type_return_settlement))
+        DuesAuditType.MANUAL_DUE -> Triple(Color(0xFFF3E8FF), Color(0xFF9333EA), stringResource(R.string.dues_audit_type_manual_due))
     }
 
     Surface(
@@ -6435,13 +6449,13 @@ fun DueRepaymentReceiptDialog(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = if (isAppBangla) "আজকের জমা:" else "Repaid:",
+                                    text = stringResource(R.string.dues_repaid_label),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF047857)
                                 )
                                 Text(
-                                    text = if (isAppBangla) "${formatTakaBn(data.amountPaid)} (${if (data.paymentMethod.equals("Cash", ignoreCase = true)) "নগদ" else data.paymentMethod})" else "${formatTaka(data.amountPaid)} (${data.paymentMethod})",
+                                    text = if (isAppBangla) "${formatTakaBn(data.amountPaid)} (${if (data.paymentMethod.equals("Cash", ignoreCase = true)) stringResource(R.string.cash) else data.paymentMethod})" else "${formatTaka(data.amountPaid)} (${data.paymentMethod})",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFF065F46)
@@ -6453,9 +6467,9 @@ fun DueRepaymentReceiptDialog(
                             ) {
                                 Text(
                                     text = if (isSettled) {
-                                        if (isAppBangla) "✔ বাকি সম্পূর্ণ পরিশোধ" else "✔ PAID IN FULL"
+                                        stringResource(R.string.dues_paid_in_full)
                                     } else {
-                                        if (isAppBangla) "⏳ আংশিক জমা" else "⏳ PARTIAL"
+                                        stringResource(R.string.dues_partial_payment)
                                     },
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.ExtraBold,
@@ -6500,7 +6514,7 @@ fun DueRepaymentReceiptDialog(
                                             .background(Color(0xFF10B981))
                                     )
                                     Text(
-                                        text = "THERMAL DISPENSER ACTIVE",
+                                        text = stringResource(R.string.thermal_dispenser_active),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF94A3B8),
@@ -6561,7 +6575,7 @@ fun DueRepaymentReceiptDialog(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "SCALE: ",
+                                        text = stringResource(R.string.thermal_zoom_scale_label),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF64748B)
@@ -6610,7 +6624,7 @@ fun DueRepaymentReceiptDialog(
                                             modifier = Modifier.padding(horizontal = 6.dp)
                                         ) {
                                             Text(
-                                                text = if (zoomScale != 1f) "🔎 Reset 1x" else "🔍 Zoom 1.35x",
+                                                text = if (zoomScale != 1f) stringResource(R.string.thermal_zoom_reset) else stringResource(R.string.thermal_zoom_in),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(0xFFCBD5E1)
@@ -6700,14 +6714,14 @@ fun DueRepaymentReceiptDialog(
                                         isCopied = true
                                         Toast.makeText(
                                             context,
-                                            if (isAppBangla) "রসিদের টেক্সট কপি হয়েছে!" else "Receipt text copied to clipboard!",
+                                            context.getString(R.string.receipt_text_copied),
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
                             ) {
                                 Realistic3DClipboardCopyIcon(size = 18.dp, copied = isCopied)
                                 Text(
-                                    text = if (isAppBangla) "রসিদের SMS / WhatsApp টেক্সট" else "Receipt SMS / WhatsApp Text",
+                                    text = stringResource(R.string.receipt_sms_whatsapp_text),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -6742,7 +6756,7 @@ fun DueRepaymentReceiptDialog(
                                             modifier = Modifier.size(10.dp)
                                         )
                                         Text(
-                                            text = if (isAppBangla) "শেয়ার" else "Share",
+                                            text = stringResource(R.string.share),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = Color(0xFF0284C7)
@@ -6758,7 +6772,7 @@ fun DueRepaymentReceiptDialog(
                                         isCopied = true
                                         Toast.makeText(
                                             context,
-                                            if (isAppBangla) "রসিদের টেক্সট কপি হয়েছে!" else "Receipt text copied to clipboard!",
+                                            context.getString(R.string.receipt_text_copied),
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     },
@@ -6773,9 +6787,9 @@ fun DueRepaymentReceiptDialog(
                                     ) {
                                         Text(
                                             text = if (isCopied) {
-                                                if (isAppBangla) "কপি হয়েছে! ✓" else "Copied! ✓"
+                                                stringResource(R.string.copied_check)
                                             } else {
-                                                if (isAppBangla) "কপি" else "Copy"
+                                                stringResource(R.string.copy)
                                             },
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.ExtraBold,
@@ -6826,7 +6840,7 @@ fun DueRepaymentReceiptDialog(
                                 Realistic3DPrinterIcon(size = 18.dp, animate = true)
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    text = if (isAppBangla) "প্রিন্ট (${if (selectedRollWidth == 80) "৮০মিমি" else "৫৮মিমি"})" else "Print (${selectedRollWidth}mm)",
+                                    text = stringResource(R.string.print_roll_fmt, if (isAppBangla) (if (selectedRollWidth == 80) "৮০মিমি" else "৫৮মিমি") else "${selectedRollWidth}mm"),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     maxLines = 1
@@ -6884,7 +6898,7 @@ fun DueRepaymentReceiptDialog(
                                 Realistic3DShareIcon(size = 18.dp, animate = true)
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    text = if (isAppBangla) "শেয়ার স্লিপ" else "Share Slip",
+                                    text = stringResource(R.string.share_slip),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     maxLines = 1
@@ -6917,13 +6931,13 @@ fun DueRepaymentReceiptDialog(
                                     if (success) {
                                         Toast.makeText(
                                             context,
-                                            if (isAppBangla) "রসিদটি Downloads ফোল্ডারে সেভ হয়েছে" else "Receipt saved as JPEG to Downloads",
+                                            context.getString(R.string.repayment_receipt_saved_success),
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     } else {
                                         Toast.makeText(
                                             context,
-                                            if (isAppBangla) "রসিদ সেভ করা সম্ভব হয়নি" else "Failed to save receipt JPEG",
+                                            context.getString(R.string.receipt_save_failed),
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
@@ -6931,7 +6945,7 @@ fun DueRepaymentReceiptDialog(
                                     e.printStackTrace()
                                     Toast.makeText(
                                         context,
-                                        if (isAppBangla) "রসিদ সেভ করা সম্ভব হয়নি" else "Failed to save receipt JPEG",
+                                        context.getString(R.string.receipt_save_failed),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }

@@ -3029,11 +3029,13 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
                         onCollision(res.existingCustomer)
                     }
                     is com.example.techyfipos.data.CustomerPhoneUpdateResult.Error -> {
-                        onError(res.message)
+                        val msg = if (com.example.techyfipos.utils.isAppBangla()) "অকার্যকর মোবাইল নম্বর (কমপক্ষে ৫ সংখ্যার হতে হবে)" else res.message
+                        onError(msg)
                     }
                 }
             } catch (e: Exception) {
-                onError(e.message ?: "Failed to update phone number")
+                val msg = if (com.example.techyfipos.utils.isAppBangla()) "মোবাইল নম্বর আপডেট করতে ব্যর্থ হয়েছে" else "Failed to update phone number"
+                onError(e.message ?: msg)
             }
         }
     }
@@ -4993,7 +4995,8 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                 clearCustomerSelection()
                 onSuccess()
             } catch (e: Exception) {
-                onError(e.message ?: "Failed to assign bulk tag")
+                val msg = if (com.example.techyfipos.utils.isAppBangla()) "বাল্ক ট্যাগ অ্যাসাইন করতে ব্যর্থ হয়েছে" else "Failed to assign bulk tag"
+                onError(e.message ?: msg)
             }
         }
     }
@@ -5006,10 +5009,12 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                     loadCustomerDossier(masterPhone)
                     onSuccess()
                 } else {
-                    onError("Could not merge selected customer accounts")
+                    val msg = if (com.example.techyfipos.utils.isAppBangla()) "নির্বাচিত গ্রাহক অ্যাকাউন্টগুলো মার্জ করা যায়নি" else "Could not merge selected customer accounts"
+                    onError(msg)
                 }
             } catch (e: Exception) {
-                onError(e.message ?: "Merge failed")
+                val msg = if (com.example.techyfipos.utils.isAppBangla()) "মার্জ ব্যর্থ হয়েছে" else "Merge failed"
+                onError(e.message ?: msg)
             }
         }
     }
@@ -5049,11 +5054,13 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                         onCollision(res.existingCustomer)
                     }
                     is com.example.techyfipos.data.CustomerPhoneUpdateResult.Error -> {
-                        onError(res.message)
+                        val msg = if (com.example.techyfipos.utils.isAppBangla()) "অকার্যকর মোবাইল নম্বর (কমপক্ষে ৫ সংখ্যার হতে হবে)" else res.message
+                        onError(msg)
                     }
                 }
             } catch (e: Exception) {
-                onError(e.message ?: "Failed to migrate customer phone")
+                val msg = if (com.example.techyfipos.utils.isAppBangla()) "গ্রাহকের মোবাইল নম্বর স্থানান্তর করতে ব্যর্থ হয়েছে" else "Failed to migrate customer phone"
+                onError(e.message ?: msg)
             }
         }
     }
@@ -5066,10 +5073,12 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                     loadCustomerDossier(phone)
                     onSuccess()
                 } else {
-                    onError("Failed to add note")
+                    val msg = if (com.example.techyfipos.utils.isAppBangla()) "নোট যোগ করতে ব্যর্থ হয়েছে" else "Failed to add note"
+                    onError(msg)
                 }
             } catch (e: Exception) {
-                onError(e.message ?: "Error saving note")
+                val msg = if (com.example.techyfipos.utils.isAppBangla()) "নোট সংরক্ষণে ত্রুটি" else "Error saving note"
+                onError(e.message ?: msg)
             }
         }
     }
@@ -5082,10 +5091,12 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                     loadCustomerDossier(phone)
                     onSuccess()
                 } else {
-                    onError("Failed to delete note")
+                    val msg = if (com.example.techyfipos.utils.isAppBangla()) "নোট মুছতে ব্যর্থ হয়েছে" else "Failed to delete note"
+                    onError(msg)
                 }
             } catch (e: Exception) {
-                onError(e.message ?: "Error deleting note")
+                val msg = if (com.example.techyfipos.utils.isAppBangla()) "নোট মুছতে ত্রুটি" else "Error deleting note"
+                onError(e.message ?: msg)
             }
         }
     }

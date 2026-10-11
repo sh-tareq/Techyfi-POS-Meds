@@ -2978,6 +2978,52 @@
     <string name="backup_restore_failed_rollback_fmt">Restore failed: %1$s. Previous database state was safely restored.</string>
     <string name="notif_backup_channel_name">Backup Alerts</string>
     <string name="error_unknown">Unknown error</string>
+
+    <!-- Dues and Customers Localization (R20-72) -->
+    <string name="dues_aging_under_7_days">&lt; 7 Days</string>
+    <string name="dues_aging_7_to_30_days">7-30 Days</string>
+    <string name="dues_aging_over_30_days">&gt; 30d Overdue</string>
+    <string name="due_preset_tomorrow_10am">Tomorrow 10 AM</string>
+    <string name="due_preset_in_3_days">In 3 Days</string>
+    <string name="due_preset_weekly">Weekly</string>
+    <string name="due_preset_custom">Custom</string>
+    <string name="due_reminder_mode_instant">Instant Send</string>
+    <string name="due_reminder_mode_schedule">Auto-Schedule</string>
+    <string name="due_reminder_lang_bangla">Bengali (বাংলা)</string>
+    <string name="due_reminder_lang_english">English</string>
+    <string name="due_reminder_lang_bilingual">Bilingual (উভয়)</string>
+    <string name="delivery_channel_whatsapp">WhatsApp</string>
+    <string name="delivery_channel_whatsapp_hint">Triggers WhatsApp notification prompt</string>
+    <string name="delivery_channel_sms">SMS</string>
+    <string name="delivery_channel_sms_hint">Triggers SMS notification prompt</string>
+    <string name="delivery_channel_both">Both</string>
+    <string name="delivery_channel_both_hint">SMS &amp; WhatsApp notification prompts</string>
+    <string name="dues_reminder_scheduled_toast_fmt">✅ Reminder scheduled for %1$s</string>
+    <string name="dues_audit_type_repayment">Repayment</string>
+    <string name="dues_audit_type_credit_sale">Credit Sale</string>
+    <string name="dues_audit_type_return_settlement">Return Settlement</string>
+    <string name="dues_audit_type_manual_due">Manual Due</string>
+    <string name="dues_repaid_label">Repaid:</string>
+    <string name="dues_paid_in_full">✔ PAID IN FULL</string>
+    <string name="dues_partial_payment">⏳ PARTIAL</string>
+    <string name="thermal_dispenser_active">THERMAL DISPENSER ACTIVE</string>
+    <string name="thermal_zoom_scale_label">SCALE: </string>
+    <string name="thermal_zoom_reset">🔎 Reset 1x</string>
+    <string name="thermal_zoom_in">🔍 Zoom 1.35x</string>
+    <string name="receipt_text_copied">Receipt text copied to clipboard!</string>
+    <string name="receipt_sms_whatsapp_text">Receipt SMS / WhatsApp Text</string>
+    <string name="copied_check">Copied! ✓</string>
+    <string name="print_roll_fmt">Print (%1$s)</string>
+    <string name="share_slip">Share Slip</string>
+    <string name="receipt_save_failed">Failed to save receipt JPEG</string>
+    <string name="voucher_status_void">VOID / CANCELLED</string>
+    <string name="voucher_status_expired">EXPIRED</string>
+    <string name="voucher_status_exhausted">USED / EXHAUSTED</string>
+    <string name="voucher_status_active">ACTIVE</string>
+    <string name="cd_3d_voucher_ticket">3D Voucher Ticket</string>
+    <string name="store_credit_pass_header">STORE CREDIT PASS</string>
+    <string name="cd_3d_share_hub">3D Share Hub</string>
+    <string name="copy">Copy</string>
 </resources>
 
 
