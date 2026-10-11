@@ -260,13 +260,13 @@ Suggested shape (one small new file plus a collector):
 
 ## P4: UX polish (LOW unless noted)
 
-- [ ] **R20-45** Cart line removal is one tap with no undo; supervisor-approved "Clear cart" skips the confirm (`CartScreen.kt` about 983, 723-731). Add a Snackbar with Undo; route the supervisor path to the confirm dialog.
-- [ ] **R20-46** Cash-received field does not sanitise Bengali digits or comma (`CartScreen.kt` about 2158-2161, chips about 2114). Use `sanitizeDiscountInput` or `toEnglishDigits`. Same pattern: `AddEditProductDialog.kt` about 913, 951, 996, 1257; `ProductsScreen.kt` about 3373, 3617; expense amount (`AdvancedPosFeatures.kt` about 1280, 1322); `DuesScreen.kt` about 5674; `CustomerDossierSheet.kt` about 1144; `CustomItemDialogs.kt` about 96, 705, 741, 813, 833.
-- [ ] **R20-47** Scanner snackbar total is stale (reads `grandTotal.value` right after changing items, VM about 1220, 1495) and shows "2.0" and `sellingPrice` regardless of price mode (`ScannerScreen.kt` about 240, 479, 523).
-- [ ] **R20-48** Supervisor dialog says "Invalid PIN" during a lockout (`SupervisorAuthDialog.kt` about 51; repo about 4029). Show "locked for N s".
-- [ ] **R20-49** Deactivated user sees "Incorrect PIN" (repo about 4034-4036 returns null; VM about 3676 branch never runs).
-- [ ] **R20-50** PIN recovery success shows in the red error box; both fields are labelled "PIN"; mismatch gives no feedback (`LockScreen.kt` about 474-492, 547, 563, 586).
-- [ ] **R20-51** User-management errors are raw English or wrong; every toggle/delete failure says "The only owner account cannot be removed" (`ManageUsersScreen.kt` about 134, 193, 495, 656). Map with `getLocalizedRepositoryErrorMessage`.
+- [x] **R20-45** (Fixed in `e7d4eb5`). Cart line removal is one tap with no undo; supervisor-approved "Clear cart" skips the confirm (`CartScreen.kt` about 983, 723-731). Add a Snackbar with Undo; route the supervisor path to the confirm dialog.
+- [x] **R20-46** (Fixed in `e7d4eb5`). Cash-received field does not sanitise Bengali digits or comma (`CartScreen.kt` about 2158-2161, chips about 2114). Use `sanitizeDiscountInput` or `toEnglishDigits`. Same pattern: `AddEditProductDialog.kt` about 913, 951, 996, 1257; `ProductsScreen.kt` about 3373, 3617; expense amount (`AdvancedPosFeatures.kt` about 1280, 1322); `DuesScreen.kt` about 5674; `CustomerDossierSheet.kt` about 1144; `CustomItemDialogs.kt` about 96, 705, 741, 813, 833.
+- [x] **R20-47** (Fixed in `e7d4eb5`). Scanner snackbar total is stale (reads `grandTotal.value` right after changing items, VM about 1220, 1495) and shows "2.0" and `sellingPrice` regardless of price mode (`ScannerScreen.kt` about 240, 479, 523).
+- [x] **R20-48** (Fixed in `e7d4eb5`). Supervisor dialog says "Invalid PIN" during a lockout (`SupervisorAuthDialog.kt` about 51; repo about 4029). Show "locked for N s".
+- [x] **R20-49** (Fixed in `e7d4eb5`). Deactivated user sees "Incorrect PIN" (repo about 4034-4036 returns null; VM about 3676 branch never runs).
+- [x] **R20-50** (Fixed in `e7d4eb5`). PIN recovery success shows in the red error box; both fields are labelled "PIN"; mismatch gives no feedback (`LockScreen.kt` about 474-492, 547, 563, 586).
+- [x] **R20-51** (Fixed in `e7d4eb5`). User-management errors are raw English or wrong; every toggle/delete failure says "The only owner account cannot be removed" (`ManageUsersScreen.kt` about 134, 193, 495, 656). Map with `getLocalizedRepositoryErrorMessage`.
 - [ ] **R20-52** Splash waits about 2.6 s doing nothing; progress is chosen by comparing English literals (`SplashScreen.kt` about 73-82, 164-167).
 - [ ] **R20-53** Product form loses everything on rotation (`AddEditProductDialog.kt` about 119-176 use `remember`). Use `rememberSaveable`.
 - [ ] **R20-54** A hardware scan during stock check replaces the open product and discards the count (`ProductsScreen.kt` about 588-600).
