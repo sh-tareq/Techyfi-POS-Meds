@@ -2932,6 +2932,32 @@
     <string name="register_close_mid_shift_x_report_subject">Techyfi POS Mid-Shift X-Report - %1$s</string>
     <string name="register_close_daily_closing_z_report_subject">Techyfi POS Daily Closing Z-Report - %1$s</string>
     <string name="register_close_share_report_chooser_title">Share Report via</string>
+    <string name="share_invoice_via_chooser">Share Invoice Via</string>
+    <string name="share_invoice_pdf_jpeg_chooser">Share Invoice PDF + JPEG</string>
+    <string name="share_invoice_pdf_via_chooser">Share Invoice PDF Via</string>
+    <string name="share_receipt_via_chooser">Share Receipt Via</string>
+    <string name="cash_drawer_no_printer_paired">No cash drawer printer paired. Set one in Settings.</string>
+    <string name="cash_drawer_kick_sent">Cash drawer kick sent</string>
+    <string name="store_credit_voucher_subject_fmt">Store Credit Voucher %1$s</string>
+    <string name="store_credit_voucher_text_fmt">Store Credit Voucher: %1$s\nAmount: %2$s</string>
+    <string name="store_credit_share_voucher_via_chooser">Share Store Credit Voucher Via</string>
+    <string name="history_auth_return_invoice_fmt">Authorize Return for Invoice #%1$d</string>
+    <string name="history_auth_delete_invoice_fmt">Authorize Delete for Invoice #%1$d</string>
+    <string name="history_auth_edit_invoice_fmt">Authorize Edit for Invoice #%1$d</string>
+    <string name="owner_analytics_fallback_staff">Staff</string>
+    <string name="owner_analytics_fallback_refunded">Refunded</string>
+    <string name="owner_analytics_margin_percent_fmt">%1$s%% Margin</string>
+    <string name="owner_analytics_margin_healthy">Healthy margin</string>
+    <string name="owner_analytics_margin_low">Low margin</string>
+    <string name="owner_analytics_after_disc_fmt">After %1$s disc.</string>
+    <string name="owner_analytics_full_price_sale">Full price sale</string>
+    <string name="owner_analytics_price_over_wholesale">Price over wholesale</string>
+    <string name="owner_analytics_refund_and_discount">Refund &amp; Discount</string>
+    <string name="owner_analytics_discount_given">Discount Given</string>
+    <string name="owner_analytics_deducted_from_gross">Deducted from gross</string>
+    <string name="owner_analytics_no_discounts_given">No discounts given</string>
+    <string name="owner_analytics_line_margin_fmt">%1$s%% margin</string>
+    <string name="receipt_summary_thermal_receipt_cd">%1$d mm Thermal Receipt</string>
 </resources>
 
 

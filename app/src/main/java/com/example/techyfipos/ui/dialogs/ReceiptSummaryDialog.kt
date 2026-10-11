@@ -673,7 +673,7 @@ fun ReceiptSummaryDialog(
                                 if (currentBmp != null) {
                                     Image(
                                         bitmap = currentBmp,
-                                        contentDescription = "$selectedRollWidth mm Thermal Receipt",
+                                        contentDescription = stringResource(R.string.receipt_summary_thermal_receipt_cd, selectedRollWidth),
                                         modifier = Modifier
                                             .then(
                                                 if (selectedRollWidth == 58) Modifier.fillMaxWidth(0.78f)
@@ -932,7 +932,7 @@ fun ReceiptSummaryDialog(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "Done",
+                                text = stringResource(R.string.cart_done_button),
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFF059669)

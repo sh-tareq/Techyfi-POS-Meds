@@ -442,7 +442,7 @@ fun shareBillJpeg(context: Context, imageUri: Uri, targetPackage: String? = null
     val target = context.findActivity() ?: context
     return try {
         val launchIntent = if (targetPackage == null) {
-            Intent.createChooser(intent, "Share Invoice Via").apply {
+            Intent.createChooser(intent, context.getString(R.string.share_invoice_via_chooser)).apply {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
@@ -475,7 +475,7 @@ fun shareBillPdfAndJpeg(context: Context, pdfUri: Uri, jpegUri: Uri): Boolean {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     return try {
-        val chooser = Intent.createChooser(intent, "Share Invoice PDF + JPEG").apply {
+        val chooser = Intent.createChooser(intent, context.getString(R.string.share_invoice_pdf_jpeg_chooser)).apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
@@ -502,7 +502,7 @@ fun shareBillPdf(context: Context, pdfUri: Uri, targetPackage: String? = null): 
     }
     return try {
         val launchIntent = if (targetPackage == null) {
-            Intent.createChooser(intent, "Share Invoice PDF Via").apply {
+            Intent.createChooser(intent, context.getString(R.string.share_invoice_pdf_via_chooser)).apply {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
@@ -528,7 +528,7 @@ fun shareReceiptAsText(context: Context, text: String): Boolean {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     return try {
-        val chooser = Intent.createChooser(intent, "Share Receipt Via").apply {
+        val chooser = Intent.createChooser(intent, context.getString(R.string.share_receipt_via_chooser)).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         target.startActivity(chooser)
@@ -759,14 +759,14 @@ suspend fun triggerCashDrawerKick(context: Context, printerAddress: String) = wi
     }
 
     if (printerAddress.isBlank()) {
-        toast("No cash drawer printer paired. Set one in Settings.")
+        toast(context.getString(R.string.cash_drawer_no_printer_paired))
         return@withContext
     }
 
     val result = sendToBluetoothPrinter(context, printerAddress, getCashDrawerKickCommand())
     withContext(Dispatchers.Main) {
         when (result) {
-            is DirectPrintResult.Success -> toast("Cash drawer kick sent")
+            is DirectPrintResult.Success -> toast(context.getString(R.string.cash_drawer_kick_sent))
             else -> showDirectPrintToast(context, result)
         }
     }
@@ -1028,15 +1028,15 @@ fun shareStoreCreditVoucherSlip(
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "image/jpeg"
         putExtra(Intent.EXTRA_STREAM, uri)
-        putExtra(Intent.EXTRA_SUBJECT, "Store Credit Voucher $voucherCode")
-        putExtra(Intent.EXTRA_TEXT, "Store Credit Voucher: $voucherCode\nAmount: ${formatTaka(voucherAmount, isBangla = false)}")
+        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.store_credit_voucher_subject_fmt, voucherCode))
+        putExtra(Intent.EXTRA_TEXT, context.getString(R.string.store_credit_voucher_text_fmt, voucherCode, formatTaka(voucherAmount, isBangla = false)))
         clipData = ClipData.newUri(context.contentResolver, "Voucher Slip", uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     val target = context.findActivity() ?: context
     return try {
-        val chooser = Intent.createChooser(intent, "Share Store Credit Voucher Via").apply {
+        val chooser = Intent.createChooser(intent, context.getString(R.string.store_credit_share_voucher_via_chooser)).apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }

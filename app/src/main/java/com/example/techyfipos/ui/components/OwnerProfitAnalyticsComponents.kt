@@ -237,7 +237,7 @@ fun OwnerProfitAnalyticsContent(
                                 color = if (isDark) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF7F1D1D)
                             )
                             Text(
-                                text = returnSummary?.performedByName?.takeIf { it.isNotBlank() } ?: "Staff",
+                                text = returnSummary?.performedByName?.takeIf { it.isNotBlank() } ?: stringResource(R.string.owner_analytics_fallback_staff),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF450A0A)
@@ -250,7 +250,7 @@ fun OwnerProfitAnalyticsContent(
                                 color = if (isDark) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF7F1D1D)
                             )
                             Text(
-                                text = returnSummary?.refundMethod ?: "Refunded",
+                                text = returnSummary?.refundMethod ?: stringResource(R.string.owner_analytics_fallback_refunded),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isDark) MaterialTheme.colorScheme.onSurface else Color(0xFF450A0A)
@@ -362,7 +362,7 @@ fun OwnerProfitAnalyticsContent(
                 KpiMetricCard(
                     title = stringResource(R.string.invoice_net_profit_title),
                     value = "${if (netProfit >= 0) "+" else ""}${formatTaka(netProfit)}",
-                    sub = "${String.format(Locale.US, "%.1f", netMargin)}% Margin",
+                    sub = stringResource(R.string.owner_analytics_margin_percent_fmt, String.format(Locale.US, "%.1f", netMargin)),
                     icon = {
                         if (netProfit >= 0) Realistic3DHighMarginGemIcon(size = 18.dp)
                         else Realistic3DLossPrismIcon(size = 18.dp)
@@ -376,7 +376,7 @@ fun OwnerProfitAnalyticsContent(
                 KpiMetricCard(
                     title = stringResource(R.string.invoice_profit_margin_label),
                     value = "${String.format(Locale.US, "%.1f", netMargin)}%",
-                    sub = if (netMargin >= 20) "Healthy margin" else "Low margin",
+                    sub = if (netMargin >= 20) stringResource(R.string.owner_analytics_margin_healthy) else stringResource(R.string.owner_analytics_margin_low),
                     icon = { Realistic3DHighMarginGemIcon(size = 18.dp) },
                     containerColor = Color(0xFFEFF6FF),
                     borderColor = Color(0xFFBFDBFE),
@@ -401,7 +401,7 @@ fun OwnerProfitAnalyticsContent(
                 KpiMetricCard(
                     title = stringResource(R.string.invoice_net_revenue_label),
                     value = formatTaka(netRev),
-                    sub = if (discountVal > 0) "After ৳${discountVal.toInt()} disc." else "Full price sale",
+                    sub = if (discountVal > 0) stringResource(R.string.owner_analytics_after_disc_fmt, formatTaka(discountVal)) else stringResource(R.string.owner_analytics_full_price_sale),
                     icon = { Realistic3DGoldTakaCoinIcon(size = 18.dp) },
                     containerColor = Color(0xFFFAF5FF),
                     borderColor = Color(0xFFE9D5FF),
@@ -415,7 +415,7 @@ fun OwnerProfitAnalyticsContent(
                 KpiMetricCard(
                     title = stringResource(R.string.invoice_markup_label),
                     value = "${String.format(Locale.US, "%.1f", markup)}%",
-                    sub = "Price over wholesale",
+                    sub = stringResource(R.string.owner_analytics_price_over_wholesale),
                     icon = { Realistic3DProfitVaultIcon(size = 18.dp, animated = false) },
                     containerColor = Color(0xFFF0FDF4),
                     borderColor = Color(0xFFBBF7D0),
@@ -425,9 +425,9 @@ fun OwnerProfitAnalyticsContent(
                 // 6. Discount & Return Impact
                 val totalDeductions = discountVal + refundAmount
                 KpiMetricCard(
-                    title = if (hasReturns) "Refund & Discount" else "Discount Given",
+                    title = if (hasReturns) stringResource(R.string.owner_analytics_refund_and_discount) else stringResource(R.string.owner_analytics_discount_given),
                     value = "-${formatTaka(totalDeductions)}",
-                    sub = if (totalDeductions > 0) "Deducted from gross" else "No discounts given",
+                    sub = if (totalDeductions > 0) stringResource(R.string.owner_analytics_deducted_from_gross) else stringResource(R.string.owner_analytics_no_discounts_given),
                     icon = {
                         if (hasReturns) Realistic3DReturnOrbIcon(size = 18.dp, animated = false)
                         else Text("🏷️", fontSize = 14.sp)
@@ -592,7 +592,7 @@ fun OwnerProfitAnalyticsContent(
                             )
 
                             Text(
-                                text = "${String.format(Locale.US, "%.1f", lineMargin)}% margin",
+                                text = stringResource(R.string.owner_analytics_line_margin_fmt, String.format(Locale.US, "%.1f", lineMargin)),
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (lineMargin >= 20) Color(0xFF059669) else Color(0xFFB45309)

@@ -1984,7 +1984,7 @@ private fun SaleDetailDialog(
                 if (canReturn) {
                     onReturn()
                 } else if (onRequestSupervisorElevation != null) {
-                    onRequestSupervisorElevation("Authorize Return for Invoice #${saleWithItems.sale.id}") {
+                    onRequestSupervisorElevation(context.getString(R.string.history_auth_return_invoice_fmt, saleWithItems.sale.id)) {
                         onReturn()
                     }
                 }
@@ -1996,7 +1996,7 @@ private fun SaleDetailDialog(
                     onDelete()
                     onDismiss()
                 } else if (onRequestSupervisorElevation != null) {
-                    onRequestSupervisorElevation("Authorize Delete for Invoice #${saleWithItems.sale.id}") {
+                    onRequestSupervisorElevation(context.getString(R.string.history_auth_delete_invoice_fmt, saleWithItems.sale.id)) {
                         onDelete()
                         onDismiss()
                     }
@@ -2020,7 +2020,7 @@ private fun SaleDetailDialog(
                 if (canEdit) {
                     showEditConfirm = true
                 } else if (onRequestSupervisorElevation != null) {
-                    onRequestSupervisorElevation("Authorize Edit for Invoice #${saleWithItems.sale.id}") {
+                    onRequestSupervisorElevation(context.getString(R.string.history_auth_edit_invoice_fmt, saleWithItems.sale.id)) {
                         showEditConfirm = true
                     }
                 }
