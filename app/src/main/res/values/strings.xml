@@ -512,6 +512,11 @@
     <string name="loyalty_adjustment_reason">Reason / reference</string>
     <string name="loyalty_save_profile">Save profile</string>
     <string name="loyalty_deactivate">Deactivate</string>
+    <string name="loyalty_reactivate">Reactivate</string>
+    <string name="loyalty_deactivate_confirm_title">Deactivate Member?</string>
+    <string name="loyalty_deactivate_confirm_message">Are you sure you want to deactivate %1$s? They will no longer earn or redeem loyalty points.</string>
+    <string name="loyalty_inactive_badge">Inactive</string>
+    <string name="loyalty_settings_invalid">Invalid settings values. Please check rates and limits.</string>
     <string name="products_delete_failed">Unable to delete product</string>
     <string name="expense_delete_failed">Unable to delete cash entry</string>
     <string name="owner_only_reports">Reports are owner-only</string>
@@ -1440,6 +1445,11 @@
     <string name="products_reset_defaults">Reset Defaults</string>
     <string name="products_save_apply_action">✓ Save &amp; Apply</string>
     <string name="products_keep_at_least_one_category_warning">⚠️ Keep at least 1 category</string>
+    <string name="products_category_already_exists">⚠️ Category name already exists</string>
+    <string name="products_reset_categories_confirm_title">Reset Categories?</string>
+    <string name="products_reset_categories_confirm_msg">Reset to default categories? This will replace your custom category list.</string>
+    <string name="products_delete_category_confirm_title">Delete Category?</string>
+    <string name="products_delete_category_confirm_msg">Are you sure you want to delete \"%1$s\"?</string>
     <string name="products_enter_category_name_warning">⚠️ Please enter category name in English</string>
     <string name="products_enter_product_name_warning">⚠️ Please enter a product name</string>
     <string name="products_enter_valid_selling_price_warning">⚠️ Please enter a valid selling price (&gt; 0)</string>
@@ -1681,6 +1691,11 @@
     <string name="customer_cannot_delete_title">Cannot Delete Customer</string>
     <string name="customer_cannot_delete_due_desc">Cannot delete customer \"%1$s\" because they have an outstanding due of %2$s. All dues must be cleared or settled before deleting the customer.</string>
     <string name="customer_delete_confirm_desc">Are you sure you want to delete customer \"%1$s\"? This action cannot be undone.</string>
+    <string name="register_close_held_carts_title">Pending Held Carts</string>
+    <string name="register_close_held_carts_desc">You have %1$d held cart(s) pending in checkout. Closing the register without completing or voiding them may cause inventory inconsistencies. Do you want to proceed anyway?</string>
+    <string name="register_close_held_carts_banner">Warning: %1$d held cart(s) pending in checkout!</string>
+    <string name="register_close_proceed_anyway">Proceed to Close</string>
+    <string name="register_close_review_carts">Review Carts</string>
     <string name="customer_search_placeholder">Search by name, phone, address, tag...</string>
     <string name="customer_saved_success">Customer saved successfully!</string>
     <string name="customer_add_title">Add New Customer</string>
@@ -1939,7 +1954,8 @@
     <string name="tablet_stock_available">Stock: %1$d</string>
     <string name="tablet_mode_sell">Sell</string>
     <string name="tablet_mode_stock">Stock</string>
-    <string name="tablet_stock_check_banner">Stock Check Mode Active — Tap or Scan any product to view &amp; adjust stock</string>
+    <string name="tablet_stock_check_banner">Stock Check Mode Active - Tap or Scan any product to view &amp; adjust stock</string>
+    <string name="products_stock_check_in_progress">Please complete or close the active stock check first</string>
 
     <!-- Stock Check Financial Intelligence Strings -->
     <string name="stock_check_purchase">Purchase</string>

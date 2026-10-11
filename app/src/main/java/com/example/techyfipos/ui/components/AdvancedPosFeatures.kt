@@ -1430,8 +1430,24 @@ fun ExpenseItemRow(
                             )
                         }
                     }
+                    val expenseDateLabel = remember(expense.timestamp) {
+                        val cal = java.util.Calendar.getInstance()
+                        val curYear = cal.get(java.util.Calendar.YEAR)
+                        val curDay = cal.get(java.util.Calendar.DAY_OF_YEAR)
+                        cal.timeInMillis = expense.timestamp
+                        val expYear = cal.get(java.util.Calendar.YEAR)
+                        val expDay = cal.get(java.util.Calendar.DAY_OF_YEAR)
+                        val timeStr = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(expense.timestamp))
+                        if (curYear == expYear && curDay == expDay) {
+                            timeStr
+                        } else if (curYear == expYear && curDay - expDay == 1) {
+                            "Yesterday, $timeStr"
+                        } else {
+                            "${SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(expense.timestamp))}, $timeStr"
+                        }
+                    }
                     Text(
-                        text = "${expenseCategoryDisplayName(expense.category)} • ${SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(expense.timestamp))}",
+                        text = "${expenseCategoryDisplayName(expense.category)} • $expenseDateLabel",
                         fontSize = 11.sp,
                         color = Color.Gray
                     )

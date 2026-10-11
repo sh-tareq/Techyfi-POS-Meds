@@ -838,7 +838,7 @@ fun CustomersScreen(
             },
             onDelete = if (editingCustomer != null) {
                 {
-                    customerViewModel.archiveCustomer(
+                    customerViewModel.deleteCustomerPermanently(
                         phone = editingCustomer.phone,
                         onSuccess = {
                             Toast.makeText(context, context.getString(R.string.customer_deleted_toast), Toast.LENGTH_SHORT).show()

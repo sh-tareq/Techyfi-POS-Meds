@@ -512,6 +512,11 @@
     <string name="loyalty_adjustment_reason">কারণ / রেফারেন্স</string>
     <string name="loyalty_save_profile">প্রোফাইল সংরক্ষণ</string>
     <string name="loyalty_deactivate">নিষ্ক্রিয় করুন</string>
+    <string name="loyalty_reactivate">পুনরায় সক্রিয় করুন</string>
+    <string name="loyalty_deactivate_confirm_title">সদস্য নিষ্ক্রিয় করবেন?</string>
+    <string name="loyalty_deactivate_confirm_message">আপনি কি নিশ্চিতভাবে %1$s-কে নিষ্ক্রিয় করতে চান? তিনি আর লয়্যালটি পয়েন্ট অর্জন বা ব্যবহার করতে পারবেন না।</string>
+    <string name="loyalty_inactive_badge">নিষ্ক্রিয়</string>
+    <string name="loyalty_settings_invalid">ভুল সেটিংস মান। অনুগ্রহ করে হার এবং সীমা পরীক্ষা করুন।</string>
     <string name="products_delete_failed">পণ্য মুছে ফেলা যায়নি</string>
     <string name="expense_delete_failed">ক্যাশ এন্ট্রি মুছে ফেলা যায়নি</string>
     <string name="owner_only_reports">শুধুমাত্র মালিক রিপোর্ট দেখতে পারবেন</string>
@@ -1436,6 +1441,11 @@
     <string name="products_reset_defaults">ডিফল্টে ফিরিয়ে আনুন</string>
     <string name="products_save_apply_action">✓ সংরক্ষণ ও প্রয়োগ করুন</string>
     <string name="products_keep_at_least_one_category_warning">⚠️ অন্তত ১টি ক্যাটাগরি রাখুন</string>
+    <string name="products_category_already_exists">⚠️ এই নামের ক্যাটাগরি ইতিমধ্যে রয়েছে</string>
+    <string name="products_reset_categories_confirm_title">ক্যাটাগরি রিসেট করবেন?</string>
+    <string name="products_reset_categories_confirm_msg">ডিফল্ট ক্যাটাগরিতে রিসেট করবেন? এতে আপনার কাস্টম ক্যাটাগরি তালিকা প্রতিস্থাপিত হবে।</string>
+    <string name="products_delete_category_confirm_title">ক্যাটাগরি মুছবেন?</string>
+    <string name="products_delete_category_confirm_msg">আপনি কি \"%1$s\" ক্যাটাগরি মুছে ফেলতে চান?</string>
     <string name="products_enter_category_name_warning">⚠️ ইংরেজিতে ক্যাটাগরির নাম লিখুন</string>
     <string name="products_enter_product_name_warning">⚠️ পণ্যের নাম লিখুন</string>
     <string name="products_enter_valid_selling_price_warning">⚠️ একটি বৈধ বিক্রয় মূল্য লিখুন (&gt; ০)</string>
@@ -1677,6 +1687,11 @@
     <string name="customer_cannot_delete_title">গ্রাহক মুছে ফেলা সম্ভব নয়</string>
     <string name="customer_cannot_delete_due_desc">গ্রাহক \"%1$s\" মুছে ফেলা সম্ভব নয় কারণ তার বকেয়া রয়েছে %2$s। গ্রাহক মুছে ফেলার আগে বকেয়া পরিশোধ করতে হবে।</string>
     <string name="customer_delete_confirm_desc">আপনি কি নিশ্চিত যে আপনি গ্রাহক \"%1$s\" মুছে ফেলতে চান? এই পরিবর্তনটি পুনরুদ্ধার করা যাবে না।</string>
+    <string name="register_close_held_carts_title">হোল্ড করা কার্ট বিদ্যমান</string>
+    <string name="register_close_held_carts_desc">চেকআউটে %1$dটি হোল্ড করা কার্ট রয়েছে। এগুলো সম্পন্ন বা বাতিল না করে রেজিস্টার বন্ধ করলে স্টক ও বিক্রিতে গরমিল হতে পারে। আপনি কি রেজিস্টার বন্ধ করতে চান?</string>
+    <string name="register_close_held_carts_banner">সতর্কতা: %1$dটি হোল্ড করা কার্ট চেকআউটে পেন্ডিং আছে!</string>
+    <string name="register_close_proceed_anyway">তবুও বন্ধ করুন</string>
+    <string name="register_close_review_carts">কার্ট যাচাই করুন</string>
     <string name="customer_search_placeholder">নাম, মোবাইল নম্বর, ঠিকানা দিয়ে খুঁজুন...</string>
     <string name="customer_saved_success">গ্রাহকের তথ্য সফলভাবে সংরক্ষণ হয়েছে!</string>
     <string name="customer_add_title">নতুন গ্রাহক যোগ করুন</string>
@@ -1935,7 +1950,8 @@
     <string name="tablet_stock_available">স্টক: %1$d</string>
     <string name="tablet_mode_sell">বিক্রয়</string>
     <string name="tablet_mode_stock">স্টক</string>
-    <string name="tablet_stock_check_banner">স্টক অনুসন্ধান মোড সক্রিয় — স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ বা স্ক্যান করুন</string>
+    <string name="tablet_stock_check_banner">স্টক অনুসন্ধান মোড সক্রিয় - স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ বা স্ক্যান করুন</string>
+    <string name="products_stock_check_in_progress">চলতি স্টক চেক সম্পন্ন বা বন্ধ করে নতুন স্ক্যান করুন</string>
 
     <!-- Stock Check Financial Intelligence Strings (Bangla) -->
     <string name="stock_check_purchase">ক্রয়</string>

@@ -262,6 +262,8 @@ fun RegisterCloseScreen(
     var showSafeDropDialog by remember { mutableStateOf(false) }
     var showEditFloatDialog by remember { mutableStateOf(false) }
     var showCloseReconcileDialog by remember { mutableStateOf(false) }
+    val heldCartCount by salesViewModel.heldCartCount.collectAsStateWithLifecycle(0)
+    var showHeldCartsWarningDialog by remember { mutableStateOf(false) }
 
     // Z-Report / X-Report dialog flags
     var showPnlZReportDialog by remember { mutableStateOf(false) }
@@ -940,7 +942,13 @@ fun RegisterCloseScreen(
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Button(
                         enabled = canCloseRegister,
-                        onClick = { showCloseReconcileDialog = true },
+                        onClick = {
+                            if (heldCartCount > 0) {
+                                showHeldCartsWarningDialog = true
+                            } else {
+                                showCloseReconcileDialog = true
+                            }
+                        },
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF7C3AED),
@@ -1109,12 +1117,45 @@ fun RegisterCloseScreen(
         )
     }
 
+    // 4.5. Active Held Carts Warning Dialog
+    if (showHeldCartsWarningDialog) {
+        AlertDialog(
+            onDismissRequest = { showHeldCartsWarningDialog = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
+            icon = { Text("⚠️", fontSize = 28.sp) },
+            title = { Text(stringResource(R.string.register_close_held_carts_title), fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    stringResource(R.string.register_close_held_carts_desc, heldCartCount),
+                    fontSize = 13.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showHeldCartsWarningDialog = false
+                        showCloseReconcileDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                ) {
+                    Text(stringResource(R.string.register_close_proceed_anyway), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showHeldCartsWarningDialog = false }) {
+                    Text(stringResource(R.string.register_close_review_carts))
+                }
+            }
+        )
+    }
+
     // 5. Close Register Reconciliation Dialog
     if (showCloseReconcileDialog) {
         CloseRegisterReconciliationDialog(
             expectedCash = expectedCash,
             initialCountedCash = appliedCountedCash ?: expectedCash,
             initialNotes = appliedAuditNote,
+            heldCartCount = heldCartCount,
             onDismiss = { showCloseReconcileDialog = false },
             onOpenDenominationCounter = {
                 showCloseReconcileDialog = false
@@ -2338,6 +2379,7 @@ fun CloseRegisterReconciliationDialog(
     expectedCash: Double,
     initialCountedCash: Double,
     initialNotes: String = "",
+    heldCartCount: Int = 0,
     onDismiss: () -> Unit,
     onOpenDenominationCounter: () -> Unit,
     onConfirmClose: (actualCash: Double, notes: String?, discrepancyReason: String?, onError: () -> Unit) -> Unit
@@ -2390,6 +2432,29 @@ fun CloseRegisterReconciliationDialog(
                     }
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
+                    }
+                }
+
+                if (heldCartCount > 0) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFFEF3C7),
+                        border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("⚠️", fontSize = 16.sp)
+                            Text(
+                                text = stringResource(R.string.register_close_held_carts_banner, heldCartCount),
+                                color = Color(0xFF92400E),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
 
@@ -2825,6 +2890,7 @@ fun ZReportDialog(
                                 (if (data.totalTax > 0.0) "$taxVatLabel:        ${formatTaka(data.totalTax)}\n" else "") +
                                 "$grossMarginLabel:     ${formatTaka(data.totalProfit)}\n" +
                                 "$discountsLabel:  ${formatTaka(data.totalDiscount)}\n" +
+                                (if (data.totalLoyaltyDiscount > 0.0) "${if (isBn) "লয়্যালটি পয়েন্ট ছাড়" else "Loyalty Redeemed"}: -${formatTaka(data.totalLoyaltyDiscount)}\n" else "") +
                                 "$expensesLabel:         ${formatTaka(data.totalExpenses)}\n" +
                                 "$netProfitLabel: ${formatTaka(data.netProfit)}\n" +
                                 "--------------------------------\n" +

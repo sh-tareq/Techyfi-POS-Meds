@@ -98,8 +98,12 @@ private fun rangeForPeriod(period: HistoryReportPeriod, customStart: Long, custo
             val cal = Calendar.getInstance().apply { timeInMillis = now; set(Calendar.DAY_OF_YEAR, 1) }
             startOfDay(cal.timeInMillis) to endOfDay(now) + 1
         }
-        HistoryReportPeriod.ALL_TIME -> 0L to Long.MAX_VALUE
-        HistoryReportPeriod.CUSTOM -> startOfDay(customStart) to endOfDay(customEnd) + 1
+        HistoryReportPeriod.ALL_TIME -> 0L to (endOfDay(now) + 1)
+        HistoryReportPeriod.CUSTOM -> {
+            val s = kotlin.math.min(customStart, customEnd)
+            val e = kotlin.math.max(customStart, customEnd)
+            startOfDay(s) to endOfDay(e) + 1
+        }
     }
 }
 
@@ -1092,8 +1096,8 @@ fun SalesHistoryScreen(
                             minimumTotal = draftMinimumTotal
                             maximumTotal = draftMaximumTotal
                             selectedPeriod = draftPeriod
-                            customStart = draftCustomStart
-                            customEnd = draftCustomEnd
+                            customStart = kotlin.math.min(draftCustomStart, draftCustomEnd)
+                            customEnd = kotlin.math.max(draftCustomStart, draftCustomEnd)
                             showFilters = false
                         },
                         modifier = Modifier.weight(2f)

@@ -69,15 +69,15 @@ fun SplashScreen(
         label = "alpha"
     )
 
-    // Dynamic loading messages
-    var loadingStatusText by remember { mutableStateOf("Initializing Techyfi POS...") }
+    // Dynamic loading messages and phases
+    var splashPhase by remember { mutableStateOf(SplashPhase.INIT) }
 
     LaunchedEffect(Unit) {
-        delay(800)
-        loadingStatusText = "Loading Product Catalog..."
-        delay(900)
-        loadingStatusText = "Preparing Sell..."
-        delay(900)
+        delay(350)
+        splashPhase = SplashPhase.CATALOG
+        delay(350)
+        splashPhase = SplashPhase.READY
+        delay(300)
         onSplashFinished()
     }
 
@@ -149,7 +149,7 @@ fun SplashScreen(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = loadingStatusText,
+                    text = stringResource(splashPhase.stringRes),
                     color = Color.White.copy(alpha = 0.92f),
                     fontSize = if (isTabletDevice) 15.sp else 13.5.sp,
                     fontWeight = FontWeight.Medium,
@@ -161,12 +161,8 @@ fun SplashScreen(
 
                 // Dynamic progress bar indicator
                 val progress by animateFloatAsState(
-                    targetValue = when (loadingStatusText) {
-                        "Initializing Techyfi POS..." -> 0.35f
-                        "Loading Product Catalog..." -> 0.75f
-                        else -> 1.0f
-                    },
-                    animationSpec = tween(700),
+                    targetValue = splashPhase.progress,
+                    animationSpec = tween(300),
                     label = "progress"
                 )
 
@@ -242,3 +238,10 @@ private fun TechyfiSplashLogo(
         )
     }
 }
+
+private enum class SplashPhase(val progress: Float, val stringRes: Int) {
+    INIT(0.35f, com.example.techyfipos.R.string.splash_init),
+    CATALOG(0.75f, com.example.techyfipos.R.string.splash_catalog),
+    READY(1.0f, com.example.techyfipos.R.string.splash_ready)
+}
+

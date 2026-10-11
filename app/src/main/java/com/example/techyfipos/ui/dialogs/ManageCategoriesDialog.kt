@@ -42,6 +42,8 @@ fun ManageCategoriesDialog(
     var iconInput by remember { mutableStateOf("🏷️") }
     var nameEnInput by remember { mutableStateOf("") }
     var nameBnInput by remember { mutableStateOf("") }
+    var showResetConfirm by remember { mutableStateOf(false) }
+    var categoryToDelete by remember { mutableStateOf<CategoryItem?>(null) }
 
     val context = LocalContext.current
 
@@ -68,7 +70,15 @@ fun ManageCategoriesDialog(
             Toast.makeText(context, context.getString(R.string.products_enter_category_name_warning), Toast.LENGTH_SHORT).show()
         } else {
             val currentEditing = editingCategory
-            if (currentEditing != null) {
+            val isDuplicate = if (currentEditing != null) {
+                localCategories.any { it.id != currentEditing.id && it.nameEn.equals(trimEn, ignoreCase = true) }
+            } else {
+                localCategories.any { it.nameEn.equals(trimEn, ignoreCase = true) }
+            }
+
+            if (isDuplicate) {
+                Toast.makeText(context, context.getString(R.string.products_category_already_exists), Toast.LENGTH_SHORT).show()
+            } else if (currentEditing != null) {
                 // Update existing category
                 localCategories = localCategories.map {
                     if (it.id == currentEditing.id) {
@@ -370,10 +380,7 @@ fun ManageCategoriesDialog(
                                                 if (localCategories.size <= 1) {
                                                     Toast.makeText(context, context.getString(R.string.products_keep_at_least_one_category_warning), Toast.LENGTH_SHORT).show()
                                                 } else {
-                                                    localCategories = localCategories.filter { it.id != catItem.id }
-                                                    if (editingCategory?.id == catItem.id) {
-                                                        cancelEditing()
-                                                    }
+                                                    categoryToDelete = catItem
                                                 }
                                             }
                                         ) {
@@ -405,9 +412,7 @@ fun ManageCategoriesDialog(
                     ) {
                         TextButton(
                             onClick = {
-                                localCategories = CategoryItem.defaultCategories()
-                                cancelEditing()
-                                onReset()
+                                showResetConfirm = true
                             }
                         ) {
                             Text(
@@ -437,5 +442,53 @@ fun ManageCategoriesDialog(
                 }
             }
         }
+    }
+
+    if (categoryToDelete != null) {
+        val targetCat = categoryToDelete!!
+        AlertDialog(
+            onDismissRequest = { categoryToDelete = null },
+            title = { Text(stringResource(R.string.products_delete_category_confirm_title)) },
+            text = { Text(stringResource(R.string.products_delete_category_confirm_msg, targetCat.nameEn)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    categoryToDelete = null
+                    localCategories = localCategories.filter { it.id != targetCat.id }
+                    if (editingCategory?.id == targetCat.id) {
+                        cancelEditing()
+                    }
+                }) {
+                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { categoryToDelete = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text(stringResource(R.string.products_reset_categories_confirm_title)) },
+            text = { Text(stringResource(R.string.products_reset_categories_confirm_msg)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showResetConfirm = false
+                    localCategories = CategoryItem.defaultCategories()
+                    cancelEditing()
+                    onReset()
+                }) {
+                    Text(stringResource(R.string.products_reset_defaults), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirm = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 }

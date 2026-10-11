@@ -38,7 +38,7 @@ import java.util.zip.ZipOutputStream
 object BackupPackageManager {
 
     private const val TAG = "BackupPackageManager"
-    private const val CURRENT_APP_VERSION = "2.6.3-2026.08.30"
+    private val CURRENT_APP_VERSION = com.example.techyfipos.BuildConfig.VERSION_NAME
     private const val CURRENT_DB_VERSION = APP_DATABASE_VERSION
     private const val BACKUP_FORMAT_VERSION = 4
     private const val DB_NAME = "techyfi_pos_db"

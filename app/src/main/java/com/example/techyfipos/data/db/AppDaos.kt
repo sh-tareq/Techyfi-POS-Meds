@@ -813,6 +813,9 @@ interface StoreCreditVoucherDao {
 
     @Query("SELECT * FROM store_credit_vouchers WHERE customerPhone = :phone AND status = 'ACTIVE' LIMIT 1")
     suspend fun getActiveVoucherForPhone(phone: String): StoreCreditVoucher?
+
+    @Query("DELETE FROM store_credit_vouchers WHERE customerPhone = :phone")
+    suspend fun deleteVouchersByPhone(phone: String)
 }
 
 @Dao
@@ -834,4 +837,7 @@ interface StoreCreditLedgerDao {
 
     @Query("SELECT * FROM store_credit_ledger WHERE referenceInvoiceId = :saleId")
     suspend fun getEntriesForInvoiceOnce(saleId: Long): List<StoreCreditLedgerEntry>
+
+    @Query("DELETE FROM store_credit_ledger WHERE customerPhone = :phone")
+    suspend fun deleteLedgerByPhone(phone: String)
 }

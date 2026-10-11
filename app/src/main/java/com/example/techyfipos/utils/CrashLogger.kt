@@ -74,7 +74,7 @@ object CrashLogger {
 
     /** First line of the stack trace after the header, i.e. the exception type + message. */
     fun summarize(file: File): String = try {
-        file.readLines().getOrNull(6)?.takeIf { it.isNotBlank() } ?: file.name
+        file.readLines().drop(6).firstOrNull { it.isNotBlank() } ?: file.name
     } catch (_: Exception) {
         file.name
     }

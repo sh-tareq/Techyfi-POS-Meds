@@ -7,6 +7,8 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -116,9 +118,9 @@ fun AddEditProductDialog(
     checkBarcodeExists: (suspend (String) -> Boolean)? = null
 ) {
     val context = LocalContext.current
-    var name by remember { mutableStateOf(initialName) }
-    var barcode by remember { mutableStateOf(toEnglishDigits(initialBarcode)) }
-    var showBarcodeScanModal by remember { mutableStateOf(false) }
+    var name by rememberSaveable { mutableStateOf(initialName) }
+    var barcode by rememberSaveable { mutableStateOf(toEnglishDigits(initialBarcode)) }
+    var showBarcodeScanModal by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(initialBarcode) {
         if (initialBarcode.isNotBlank()) {
@@ -137,46 +139,45 @@ fun AddEditProductDialog(
     val settingsDataStore = remember { SettingsDataStore(context) }
     val customCategories by settingsDataStore.categoriesFlow.collectAsStateWithLifecycle(initialValue = CategoryItem.defaultCategories())
     val coroutineScope = rememberCoroutineScope()
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-    var isSaving by remember { mutableStateOf(false) }
-    var showCategoryManagerDialog by remember { mutableStateOf(false) }
-    var categoryDropdownExpanded by remember { mutableStateOf(false) }
-    var category by remember { mutableStateOf(initialCategory) }
-    var purchasePrice by remember { mutableStateOf(if (initialPurchasePrice == 0.0) "" else initialPurchasePrice.toString()) }
-    var mrpPrice by remember {
+    var isSaving by rememberSaveable { mutableStateOf(false) }
+    var showCategoryManagerDialog by rememberSaveable { mutableStateOf(false) }
+    var categoryDropdownExpanded by rememberSaveable { mutableStateOf(false) }
+    var category by rememberSaveable { mutableStateOf(initialCategory) }
+    var purchasePrice by rememberSaveable { mutableStateOf(if (initialPurchasePrice == 0.0) "" else initialPurchasePrice.toString()) }
+    var mrpPrice by rememberSaveable {
         mutableStateOf(
             if (initialMrpPrice > 0.0) initialMrpPrice.toString()
             else if (initialSellingPrice > 0.0) initialSellingPrice.toString()
             else ""
         )
     }
-    var discountedPrice by remember {
+    var discountedPrice by rememberSaveable {
         mutableStateOf(
             if (initialDiscountedPrice > 0.0) initialDiscountedPrice.toString()
             else if (initialSellingPrice > 0.0) initialSellingPrice.toString()
             else ""
         )
     }
-    var wholesalePrice by remember { mutableStateOf(if (initialWholesalePrice == 0.0) "" else initialWholesalePrice.toString()) }
-    var stockQty by remember {
+    var wholesalePrice by rememberSaveable { mutableStateOf(if (initialWholesalePrice == 0.0) "" else initialWholesalePrice.toString()) }
+    var stockQty by rememberSaveable {
         mutableStateOf(
             if (initialStock == 0.0) ""
             else if (initialStock % 1.0 == 0.0) initialStock.toLong().toString()
             else String.format(Locale.US, "%.2f", initialStock).trimEnd('0').trimEnd('.')
         )
     }
-    var reorderLevel by remember { mutableStateOf(initialReorder.toString()) }
-    var unit by remember { mutableStateOf(initialUnit) }
-    var imageUri by remember { mutableStateOf(initialImageUri) }
-    var mfgOrPkgType by remember { mutableStateOf(initialMfgOrPkgType) }
-    var mfgOrPkgDate by remember { mutableStateOf(initialMfgOrPkgDate) }
-    var expiryDate by remember { mutableStateOf(initialExpiryDate) }
-    var editStockReason by remember { mutableStateOf<String?>(null) }
-    var editStockNote by remember { mutableStateOf("") }
+    var reorderLevel by rememberSaveable { mutableStateOf(initialReorder.toString()) }
+    var unit by rememberSaveable { mutableStateOf(initialUnit) }
+    var imageUri by rememberSaveable { mutableStateOf(initialImageUri) }
+    var mfgOrPkgType by rememberSaveable { mutableStateOf(initialMfgOrPkgType) }
+    var mfgOrPkgDate by rememberSaveable { mutableStateOf(initialMfgOrPkgDate) }
+    var expiryDate by rememberSaveable { mutableStateOf(initialExpiryDate) }
+    var editStockReason by rememberSaveable { mutableStateOf<String?>(null) }
+    var editStockNote by rememberSaveable { mutableStateOf("") }
 
-    var showEnlargedView by remember { mutableStateOf(false) }
-    var isError by remember { mutableStateOf(false) }
-    var showPastExpiryConfirmDialog by remember { mutableStateOf(false) }
+    var showEnlargedView by rememberSaveable { mutableStateOf(false) }
+    var isError by rememberSaveable { mutableStateOf(false) }
+    var showPastExpiryConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -195,9 +196,11 @@ fun AddEditProductDialog(
                 Toast.makeText(context, context.getString(R.string.products_image_too_large), Toast.LENGTH_SHORT).show()
                 return@rememberLauncherForActivityResult
             }
-            val savedPath = copyUriToInternalStorage(context, uri)
-            if (savedPath != null) {
-                imageUri = savedPath
+            coroutineScope.launch {
+                val savedPath = copyUriToInternalStorage(context, uri)
+                if (savedPath != null) {
+                    imageUri = savedPath
+                }
             }
         }
     }
@@ -206,14 +209,18 @@ fun AddEditProductDialog(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
-            val file = File(context.filesDir, "product_${System.currentTimeMillis()}.jpg")
-            try {
-                file.outputStream().use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            coroutineScope.launch(Dispatchers.IO) {
+                val file = File(context.filesDir, "product_${System.currentTimeMillis()}.jpg")
+                try {
+                    file.outputStream().use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                    }
+                    kotlinx.coroutines.withContext(Dispatchers.Main) {
+                        imageUri = file.absolutePath
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-                imageUri = file.absolutePath
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
     }
@@ -1640,34 +1647,13 @@ fun AddEditProductDialog(
 
                         if (isEdit && onDelete != null) {
                             OutlinedButton(
-                                onClick = { showDeleteConfirm = true },
+                                onClick = { onDelete() },
                                 shape = RoundedCornerShape(9.dp),
                                 border = BorderStroke(1.dp, Color(0xFFFCA5A5)),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
                                 modifier = Modifier.height(44.dp)
                             ) {
                                 Text(stringResource(R.string.products_delete_action), fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
-                            }
-
-                            if (showDeleteConfirm) {
-                                AlertDialog(
-                                    onDismissRequest = { showDeleteConfirm = false },
-                                    title = { Text(stringResource(R.string.dialog_delete_product_title)) },
-                                    text = { Text(stringResource(R.string.dialog_delete_product_body)) },
-                                    confirmButton = {
-                                        TextButton(onClick = {
-                                            showDeleteConfirm = false
-                                            onDelete()
-                                        }) {
-                                            Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
-                                        }
-                                    },
-                                    dismissButton = {
-                                        TextButton(onClick = { showDeleteConfirm = false }) {
-                                            Text(stringResource(R.string.action_cancel))
-                                        }
-                                    }
-                                )
                             }
                         }
 

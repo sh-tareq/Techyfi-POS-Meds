@@ -1722,6 +1722,10 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
     val allProducts: StateFlow<List<Product>> = repository.allProducts
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    val isProductsLoaded: StateFlow<Boolean> = repository.allProducts
+        .map { true }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     val allAlerts: StateFlow<InventoryAlertsData> = allProducts.map { products ->
         val now = System.currentTimeMillis()
         val expired = mutableListOf<Product>()
@@ -1979,6 +1983,9 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
 
     val salesWithItems: StateFlow<List<SaleWithItems>> = repository.allSalesWithItems
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val heldCartCount: StateFlow<Int> = repository.heldCartCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     private val _historyDateRange = MutableStateFlow<Pair<Long, Long>?>(null)
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -4688,7 +4695,8 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
                     CustomerLoyalty(
                         phone = phone.trim(),
                         name = name.trim(),
-                        tier = effectiveTier
+                        tier = effectiveTier,
+                        isActive = existing?.isActive ?: true
                     )
                 )
             }
@@ -4732,6 +4740,16 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             val res = runCatching {
                 repository.setLoyaltyMemberActive(phone, false)
+            }
+            res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
+            onResult(res)
+        }
+    }
+
+    fun reactivateMember(phone: String, onResult: (Result<Boolean>) -> Unit = {}) {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val res = runCatching {
+                repository.setLoyaltyMemberActive(phone, true)
             }
             res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
             onResult(res)
@@ -5323,6 +5341,18 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                 onSuccess()
             } catch (e: Exception) {
                 onError(e.message ?: "Failed to delete customer")
+            }
+        }
+    }
+
+    fun deleteCustomerPermanently(phone: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                repository.deleteCustomerPermanently(phone)
+                clearDossier()
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Failed to permanently delete customer")
             }
         }
     }

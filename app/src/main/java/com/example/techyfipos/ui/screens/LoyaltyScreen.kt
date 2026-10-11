@@ -287,8 +287,12 @@ fun LoyaltyScreen(
                 loyaltyViewModel.redeemPoints(member.phone, pts, reason)
                 memberToAdjust = null
             },
-            onDeactivate = {
-                loyaltyViewModel.deactivateMember(member.phone)
+            onToggleActive = {
+                if (member.isActive) {
+                    loyaltyViewModel.deactivateMember(member.phone)
+                } else {
+                    loyaltyViewModel.reactivateMember(member.phone)
+                }
                 memberToAdjust = null
             }
         )
@@ -775,6 +779,20 @@ private fun CompactLoyaltyRow(
                         horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         TierBadgeCapsule(tier = member.tier)
+                        if (!member.isActive) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.errorContainer
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.loyalty_inactive_badge),
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
                         Text(
                             text = member.phone,
                             fontSize = 11.sp,
@@ -1122,12 +1140,38 @@ private fun LoyaltyAdjustPointsDialog(
     onSaveProfile: (name: String) -> Unit,
     onAddPoints: (pts: Int, reason: String) -> Unit,
     onRedeemPoints: (pts: Int, reason: String) -> Unit,
-    onDeactivate: () -> Unit
+    onToggleActive: () -> Unit
 ) {
     var pointsText by remember(member.phone) { mutableStateOf("") }
     var reason by remember(member.phone) { mutableStateOf("") }
     var editedName by remember(member.phone) { mutableStateOf(member.name) }
+    var showDeactivateConfirm by remember { mutableStateOf(false) }
     val points = pointsText.toIntOrNull() ?: 0
+
+    if (showDeactivateConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeactivateConfirm = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
+            title = { Text(stringResource(R.string.loyalty_deactivate_confirm_title), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.loyalty_deactivate_confirm_message, member.name)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeactivateConfirm = false
+                        onToggleActive()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.loyalty_deactivate), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeactivateConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1167,8 +1211,20 @@ private fun LoyaltyAdjustPointsDialog(
                     TextButton(onClick = { onSaveProfile(editedName) }) {
                         Text(stringResource(R.string.loyalty_save_profile), fontWeight = FontWeight.Bold)
                     }
-                    TextButton(onClick = onDeactivate) {
-                        Text(stringResource(R.string.loyalty_deactivate), color = MaterialTheme.colorScheme.error)
+                    TextButton(
+                        onClick = {
+                            if (member.isActive) {
+                                showDeactivateConfirm = true
+                            } else {
+                                onToggleActive()
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = if (member.isActive) stringResource(R.string.loyalty_deactivate) else stringResource(R.string.loyalty_reactivate),
+                            color = if (member.isActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -1464,15 +1520,32 @@ private fun LoyaltySettingsDialog(
                         )
                     }
                 }
+                val earnRateVal = takaPerPoint.toDoubleOrNull() ?: 0.0
+                val redeemVal = cashValPerPoint.toDoubleOrNull() ?: 0.0
+                val minRedeemVal = minRedeemPts.toIntOrNull() ?: -1
+                val maxBillPctVal = maxBillPercent.toIntOrNull() ?: -1
+                val isCoreValid = earnRateVal > 0.0 && redeemVal > 0.0 && minRedeemVal >= 0 && maxBillPctVal in 1..100
+                if (!isCoreValid) {
+                    Text(
+                        text = stringResource(R.string.loyalty_settings_invalid),
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 11.sp
+                    )
+                }
             }
         },
         confirmButton = {
+            val earnRateVal = takaPerPoint.toDoubleOrNull() ?: 0.0
+            val redeemVal = cashValPerPoint.toDoubleOrNull() ?: 0.0
+            val minRedeemVal = minRedeemPts.toIntOrNull() ?: -1
+            val maxBillPctVal = maxBillPercent.toIntOrNull() ?: -1
+            val isCoreValid = earnRateVal > 0.0 && redeemVal > 0.0 && minRedeemVal >= 0 && maxBillPctVal in 1..100
             val sVal = silverThresh.toDoubleOrNull() ?: 0.0
             val gVal = goldThresh.toDoubleOrNull() ?: 0.0
             val pVal = platThresh.toDoubleOrNull() ?: 0.0
             val isTiersValid = !isTiersEnabled || (sVal < gVal && gVal < pVal)
             Button(
-                enabled = isTiersValid,
+                enabled = isCoreValid && isTiersValid,
                 onClick = {
                     val updated = currentSettings.copy(
                         takaPerPoint = takaPerPoint.toDoubleOrNull() ?: currentSettings.takaPerPoint,

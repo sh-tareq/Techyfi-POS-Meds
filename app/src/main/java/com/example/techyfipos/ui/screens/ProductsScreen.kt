@@ -209,6 +209,7 @@ fun ProductsScreen(
     val searchQuery by productsViewModel.searchQuery.collectAsStateWithLifecycle()
     val productsList by productsViewModel.products.collectAsStateWithLifecycle()
     val allProductsList by productsViewModel.allProducts.collectAsStateWithLifecycle()
+    val isProductsLoaded by productsViewModel.isProductsLoaded.collectAsStateWithLifecycle()
     val cartItems by cartViewModel.cartItems.collectAsStateWithLifecycle()
     val cartUnitCount = cartItems.sumOf { it.quantity }
 
@@ -603,7 +604,11 @@ fun ProductsScreen(
                     val product = productsViewModel.getProductByBarcode(trimmedCode)
                     beepAndVibrate(context)
                     if (stockScannerEnabled) {
-                        if (product != null) {
+                        if (stockCheckProduct != null) {
+                            if (stockCheckProduct?.barcode != trimmedCode) {
+                                Toast.makeText(context, context.getString(R.string.products_stock_check_in_progress), Toast.LENGTH_SHORT).show()
+                            }
+                        } else if (product != null) {
                             stockCheckProduct = product
                         } else {
                             stockNotFoundBarcode = trimmedCode
@@ -1905,7 +1910,20 @@ fun ProductsScreen(
             }
 
             // Products Content Area
-            if (allProductsList.isEmpty()) {
+            if (!isProductsLoaded) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(36.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 3.dp
+                    )
+                }
+            } else if (allProductsList.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -3853,34 +3871,15 @@ private fun HardwareStockCheckDialog(
     )
 }
 
-fun copyUriToInternalStorage(context: android.content.Context, uri: Uri): String? {
-    return try {
-        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-        val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
-        inputStream.close()
-        if (originalBitmap == null) return null
-
-        val maxDim = 600
-        val width = originalBitmap.width
-        val height = originalBitmap.height
-        val scaledBitmap = if (width > maxDim || height > maxDim) {
-            val ratio = width.toFloat() / height.toFloat()
-            val targetW = if (width >= height) maxDim else (maxDim * ratio).toInt().coerceAtLeast(1)
-            val targetH = if (height > width) maxDim else (maxDim / ratio).toInt().coerceAtLeast(1)
-            android.graphics.Bitmap.createScaledBitmap(originalBitmap, targetW, targetH, true)
-        } else {
-            originalBitmap
-        }
-
+suspend fun copyUriToInternalStorage(context: android.content.Context, uri: Uri): String? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        val sampledBitmap = decodeSampledBitmapFromUri(context, uri.toString(), reqWidth = 600, reqHeight = 600) ?: return@withContext null
         val fileName = "product_${System.currentTimeMillis()}.jpg"
         val file = File(context.filesDir, fileName)
         file.outputStream().use { outputStream ->
-            scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream)
+            sampledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream)
         }
-        if (scaledBitmap != originalBitmap) {
-            scaledBitmap.recycle()
-        }
-        originalBitmap.recycle()
+        sampledBitmap.recycle()
         file.absolutePath
     } catch (e: Exception) {
         e.printStackTrace()
@@ -3917,18 +3916,49 @@ private fun calculateInSampleSize(options: android.graphics.BitmapFactory.Option
     return inSampleSize.coerceAtLeast(1)
 }
 
+private fun rotateBitmap(bitmap: android.graphics.Bitmap, orientation: Int): android.graphics.Bitmap {
+    val matrix = android.graphics.Matrix()
+    when (orientation) {
+        android.media.ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+        android.media.ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+        android.media.ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+        android.media.ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+        android.media.ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+        else -> return bitmap
+    }
+    val rotated = android.graphics.Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    if (rotated != bitmap) {
+        bitmap.recycle()
+    }
+    return rotated
+}
+
 private fun decodeSampledBitmapFromUri(context: android.content.Context, uriString: String, reqWidth: Int = 256, reqHeight: Int = 256): android.graphics.Bitmap? {
     try {
         val file = File(uriString)
         val options = android.graphics.BitmapFactory.Options().apply {
             inJustDecodeBounds = true
         }
-        if (file.exists()) {
+        val orientation = try {
+            if (file.exists()) {
+                val exif = android.media.ExifInterface(file.absolutePath)
+                exif.getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, android.media.ExifInterface.ORIENTATION_NORMAL)
+            } else {
+                val uri = Uri.parse(uriString)
+                context.contentResolver.openInputStream(uri)?.use { s ->
+                    android.media.ExifInterface(s).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, android.media.ExifInterface.ORIENTATION_NORMAL)
+                } ?: android.media.ExifInterface.ORIENTATION_NORMAL
+            }
+        } catch (_: Exception) {
+            android.media.ExifInterface.ORIENTATION_NORMAL
+        }
+
+        val rawBitmap = if (file.exists()) {
             android.graphics.BitmapFactory.decodeFile(file.absolutePath, options)
             options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
             options.inJustDecodeBounds = false
             options.inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
-            return android.graphics.BitmapFactory.decodeFile(file.absolutePath, options)
+            android.graphics.BitmapFactory.decodeFile(file.absolutePath, options)
         } else {
             val uri = Uri.parse(uriString)
             val cr = context.contentResolver
@@ -3942,12 +3972,16 @@ private fun decodeSampledBitmapFromUri(context: android.content.Context, uriStri
             options.inJustDecodeBounds = false
             options.inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
             val is2 = cr.openInputStream(uri)
-            return if (is2 != null) {
+            if (is2 != null) {
                 is2.use { s ->
                     android.graphics.BitmapFactory.decodeStream(s, null, options)
                 }
             } else null
         }
+
+        return if (rawBitmap != null) {
+            rotateBitmap(rawBitmap, orientation)
+        } else null
     } catch (_: Exception) {
         // Corrupted or missing file
     }

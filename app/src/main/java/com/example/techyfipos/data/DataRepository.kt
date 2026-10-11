@@ -1597,6 +1597,8 @@ class DataRepository(
             customerDueDao.deleteCustomerDue(normalized)
             customerLoyaltyDao.delete(normalized)
             scheduledDueReminderDao.deleteByPhone(normalized)
+            storeCreditVoucherDao.deleteVouchersByPhone(normalized)
+            storeCreditLedgerDao.deleteLedgerByPhone(normalized)
         }
     }
 
@@ -5236,7 +5238,7 @@ class DataRepository(
                 name = loyalty.name.trim().ifBlank { existing.name },
                 tier = loyalty.tier.ifBlank { existing.tier },
                 updatedAt = System.currentTimeMillis(),
-                isActive = true
+                isActive = existing.isActive
             )
         )
         syncCustomerProfileFromLedgers(phone)

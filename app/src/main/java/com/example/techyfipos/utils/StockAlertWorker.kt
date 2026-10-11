@@ -32,21 +32,30 @@ class StockAlertWorker(
             val products = db.productDao().getAllProductsList()
 
             val now = System.currentTimeMillis()
-            val sevenDaysMillis = 7L * 24 * 60 * 60 * 1000
+            val thirtyDaysMillis = 30L * 24 * 60 * 60 * 1000
 
-            val lowStockItems = products.filter { it.stockQty <= it.reorderLevel }
+            val lowStockItems = products.filter { it.stockQty > 0.0 && it.stockQty <= it.reorderLevel }
             val expiringItems = products.filter { p ->
                 val exp = parseExpiryDateToMillis(p.expiryDate)
-                exp != null && exp > 0 && exp <= (now + sevenDaysMillis)
+                exp != null && exp > now && exp <= (now + thirtyDaysMillis)
             }
 
             if (lowStockItems.isNotEmpty() || expiringItems.isNotEmpty()) {
-                sendStockNotification(
-                    context = context,
-                    lowStockCount = lowStockItems.size,
-                    expiringCount = expiringItems.size,
-                    sampleProduct = (lowStockItems + expiringItems).firstOrNull()?.name ?: "Products"
-                )
+                val alertSignature = "${lowStockItems.map { it.barcode }.sorted()}_${expiringItems.map { it.barcode }.sorted()}"
+                val prefs = context.getSharedPreferences("stock_alert_worker_prefs", Context.MODE_PRIVATE)
+                val lastSignature = prefs.getString("last_alert_signature", null)
+                if (alertSignature != lastSignature) {
+                    sendStockNotification(
+                        context = context,
+                        lowStockCount = lowStockItems.size,
+                        expiringCount = expiringItems.size,
+                        sampleProduct = (lowStockItems + expiringItems).firstOrNull()?.name ?: "Products"
+                    )
+                    prefs.edit().putString("last_alert_signature", alertSignature).apply()
+                }
+            } else {
+                val prefs = context.getSharedPreferences("stock_alert_worker_prefs", Context.MODE_PRIVATE)
+                prefs.edit().remove("last_alert_signature").apply()
             }
             Result.success()
         } catch (e: Exception) {

@@ -253,7 +253,7 @@ fun SalesReportScreen(
                 },
                 actions = {
                     if (canExport) {
-                        val hasTransactions = report != null && report!!.transactionCount > 0
+                        val hasTransactions = report != null && (report!!.transactionCount > 0 || report!!.totalRefunds > 0.0 || report!!.totalExpenses > 0.0)
                         IconButton(
                             onClick = {
                                 if (hasTransactions) {
@@ -385,7 +385,7 @@ fun SalesReportScreen(
                 Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (data.transactionCount == 0) {
+            } else if (data.transactionCount == 0 && data.totalRefunds == 0.0 && data.totalExpenses == 0.0) {
                 EmptyReportState(
                     selectedPeriod = selectedPeriod,
                     onSelectPeriod = { selectedPeriod = it }

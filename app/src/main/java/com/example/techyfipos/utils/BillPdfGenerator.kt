@@ -1105,11 +1105,16 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     totalHeight += 40f // Single divider
 
     // 3. Financial Summary
-    totalHeight += 34f // Gross Sales: ...
-    totalHeight += 34f // Discounts Given: ...
-    totalHeight += 34f // Gross Margin: ...
-    totalHeight += 34f // Expenses: ...
-    totalHeight += 34f // Net Profit: ...
+    totalHeight += 34f // Section header
+    totalHeight += 30f // Gross Sales
+    if (data.totalRefunds > 0.0) totalHeight += 30f // Returns / Refunds
+    totalHeight += 30f // Net Sales
+    if (data.totalTax > 0.0) totalHeight += 30f // Tax / VAT
+    if (data.totalDiscount > 0.0) totalHeight += 30f // Discounts Given
+    if (data.totalLoyaltyDiscount > 0.0) totalHeight += 30f // Loyalty Redeemed
+    totalHeight += 30f // Gross Margin
+    totalHeight += 30f // Expenses
+    totalHeight += 30f // Net Profit
     totalHeight += 40f // Single divider
 
     // 4. Payments
@@ -1210,6 +1215,9 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         drawKeyValue(if (isBangla) "কর / ভ্যাট" else "Tax (VAT)", formatTaka(data.totalTax, isBangla = isBangla))
     }
     drawKeyValue(if (isBangla) "প্রদত্ত ছাড়" else "Discounts Given", formatTaka(data.totalDiscount, isBangla = isBangla))
+    if (data.totalLoyaltyDiscount > 0.0) {
+        drawKeyValue(if (isBangla) "লয়্যালটি পয়েন্ট ছাড়" else "Loyalty Redeemed", "-${formatTaka(data.totalLoyaltyDiscount, isBangla = isBangla)}")
+    }
     drawKeyValue(if (isBangla) "মোট লাভ" else "Gross Margin", formatTaka(data.totalProfit, isBangla = isBangla))
     drawKeyValue(if (isBangla) "খরচ" else "Expenses", formatTaka(data.totalExpenses, isBangla = isBangla))
     drawKeyValue(if (isBangla) "নীট লাভ" else "Net Profit", formatTaka(data.netProfit, isBangla = isBangla))

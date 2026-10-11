@@ -79,6 +79,7 @@ fun ExpensesScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf("All") }
     var selectedTypeFilter by remember { mutableStateOf("All") }
+    var selectedDateFilter by remember { mutableStateOf("All") }
 
     val todayStart = remember { todayStartMillis() }
     val todayExpenses = remember(allExpenses, todayStart) {
@@ -131,7 +132,7 @@ fun ExpensesScreen(
         )
     }
 
-    val filteredExpenses = remember(allExpenses, searchQuery, selectedCategoryFilter, selectedTypeFilter, categories) {
+    val filteredExpenses = remember(allExpenses, searchQuery, selectedCategoryFilter, selectedTypeFilter, selectedDateFilter, categories) {
         allExpenses.filter { exp ->
             val matchesSearch = searchQuery.isBlank() ||
                     exp.title.contains(searchQuery, ignoreCase = true) ||
@@ -147,7 +148,23 @@ fun ExpensesScreen(
                 else -> true
             }
 
-            matchesSearch && matchesCat && matchesType
+            val matchesDate = when (selectedDateFilter) {
+                "Today" -> exp.timestamp >= todayStart
+                "Week" -> exp.timestamp >= (todayStart - 6 * 24 * 60 * 60 * 1000L)
+                "Month" -> {
+                    val cal = java.util.Calendar.getInstance().apply {
+                        set(java.util.Calendar.DAY_OF_MONTH, 1)
+                        set(java.util.Calendar.HOUR_OF_DAY, 0)
+                        set(java.util.Calendar.MINUTE, 0)
+                        set(java.util.Calendar.SECOND, 0)
+                        set(java.util.Calendar.MILLISECOND, 0)
+                    }
+                    exp.timestamp >= cal.timeInMillis
+                }
+                else -> true
+            }
+
+            matchesSearch && matchesCat && matchesType && matchesDate
         }
     }
 
@@ -329,6 +346,45 @@ fun ExpensesScreen(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+
+            // 4.5 Date Filter Chips
+            item {
+                val dateOptions = listOf(
+                    "All" to R.string.history_period_all,
+                    "Today" to R.string.today,
+                    "Week" to R.string.history_period_week,
+                    "Month" to R.string.history_period_month
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    dateOptions.forEach { (key, labelRes) ->
+                        val isSelected = selectedDateFilter == key
+                        Surface(
+                            onClick = { selectedDateFilter = key },
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            ),
+                            shadowElevation = if (isSelected) 1.dp else 0.dp,
+                            modifier = Modifier.defaultMinSize(minHeight = 36.dp)
+                        ) {
+                            Text(
+                                text = stringResource(labelRes),
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
                         }
                     }
                 }

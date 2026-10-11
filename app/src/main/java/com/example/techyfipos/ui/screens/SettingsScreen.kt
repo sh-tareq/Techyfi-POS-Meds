@@ -1898,7 +1898,7 @@ private fun ShopLogoSettings(
                 var logoImageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
                 var monochromeLogoBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
-                LaunchedEffect(currentSettings.logoUri) {
+                LaunchedEffect(currentSettings.logoUri, File(context.filesDir, "store_logo.png").lastModified()) {
                     if (currentSettings.logoUri.isNotBlank()) {
                         val (orig, mono) = withContext(Dispatchers.IO) {
                             try {
@@ -2982,12 +2982,15 @@ private fun OptimizedBackupSettings(
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(stringResource(R.string.settings_label_integrity), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
-                            Text(stringResource(R.string.settings_value_100_verified), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF34D399))
+                            val integrityText = if (lastDriveBackupTimestamp > 0L) stringResource(R.string.settings_value_100_verified) else "-"
+                            val integrityColor = if (lastDriveBackupTimestamp > 0L) Color(0xFF34D399) else Color(0xFF94A3B8)
+                            Text(integrityText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = integrityColor)
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(stringResource(R.string.settings_label_security), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
-                            Text(stringResource(R.string.settings_value_aes256_armed), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            val securityText = if (lastDriveBackupTimestamp > 0L) stringResource(R.string.settings_value_aes256_armed) else "Standby"
+                            Text(securityText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
                         }
                     }
                 }
@@ -4438,7 +4441,7 @@ fun SettingsScreen(
                 title = {
                     PosTopAppBarTitle(
                         title = settingsTitle,
-                        metricBadge = "v2.6 POS",
+                        metricBadge = "v${com.example.techyfipos.BuildConfig.VERSION_NAME} POS",
                         badgeColor = PosSectionColors.Settings,
                         isTablet = isTablet,
                         icon = { size -> Realistic3DSettingsGearIcon(size = size) }
