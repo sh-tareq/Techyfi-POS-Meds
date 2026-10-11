@@ -702,7 +702,7 @@ fun AddCustomItemDialog(
                             ) {
                                 IconButton(
                                     onClick = {
-                                        val cur = qtyText.toDoubleOrNull() ?: 1.0
+                                        val cur = com.example.techyfipos.utils.sanitizeNumericInput(qtyText).toDoubleOrNull() ?: 1.0
                                         val next = (Math.round((cur - stepValue) * 100.0) / 100.0).coerceAtLeast(0.01)
                                         qtyText = if (next % 1.0 == 0.0) next.toLong().toString() else String.format(Locale.US, "%.2f", next).trimEnd('0').trimEnd('.')
                                     },
@@ -719,7 +719,7 @@ fun AddCustomItemDialog(
                                 BasicTextField(
                                     value = qtyText,
                                     onValueChange = { input ->
-                                        val filtered = input.filter { it.isDigit() || it == '.' }
+                                        val filtered = com.example.techyfipos.utils.sanitizeNumericInput(input)
                                         if (filtered.count { it == '.' } <= 1) {
                                             qtyText = filtered.take(6)
                                         }
@@ -738,7 +738,7 @@ fun AddCustomItemDialog(
 
                                 IconButton(
                                     onClick = {
-                                        val cur = qtyText.toDoubleOrNull() ?: 1.0
+                                        val cur = com.example.techyfipos.utils.sanitizeNumericInput(qtyText).toDoubleOrNull() ?: 1.0
                                         val next = Math.round((cur + stepValue) * 100.0) / 100.0
                                         qtyText = if (next % 1.0 == 0.0) next.toLong().toString() else String.format(Locale.US, "%.2f", next).trimEnd('0').trimEnd('.')
                                     },
@@ -810,7 +810,7 @@ fun AddCustomItemDialog(
                         // Increment chip +0.25
                         Surface(
                             onClick = {
-                                val cur = qtyText.toDoubleOrNull() ?: 0.0
+                                val cur = com.example.techyfipos.utils.sanitizeNumericInput(qtyText).toDoubleOrNull() ?: 0.0
                                 val next = Math.round((cur + 0.25) * 100.0) / 100.0
                                 qtyText = if (next % 1.0 == 0.0) next.toLong().toString() else String.format(Locale.US, "%.2f", next).trimEnd('0').trimEnd('.')
                             },
@@ -830,7 +830,7 @@ fun AddCustomItemDialog(
                         // Increment chip +0.50
                         Surface(
                             onClick = {
-                                val cur = qtyText.toDoubleOrNull() ?: 0.0
+                                val cur = com.example.techyfipos.utils.sanitizeNumericInput(qtyText).toDoubleOrNull() ?: 0.0
                                 val next = Math.round((cur + 0.50) * 100.0) / 100.0
                                 qtyText = if (next % 1.0 == 0.0) next.toLong().toString() else String.format(Locale.US, "%.2f", next).trimEnd('0').trimEnd('.')
                             },

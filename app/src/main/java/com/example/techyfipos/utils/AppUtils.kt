@@ -383,6 +383,45 @@ fun toEnglishDigits(input: String): String {
 }
 
 /**
+ * Sanitizes numeric input by converting non-English digits (Bengali, Arabic),
+ * handling comma/period as decimal separator, and trimming leading zeros.
+ */
+fun sanitizeNumericInput(rawValue: String): String {
+    var hasDecimalSeparator = false
+    val sanitized = buildString {
+        rawValue.forEach { character ->
+            when {
+                character.isDigit() -> {
+                    val digit = Character.getNumericValue(character)
+                    if (digit in 0..9) append(digit)
+                }
+                (character == '.' || character == ',') && !hasDecimalSeparator -> {
+                    append('.')
+                    hasDecimalSeparator = true
+                }
+            }
+        }
+    }
+    if (sanitized.isEmpty()) return ""
+
+    val decimalIndex = sanitized.indexOf('.')
+    val integerPart = (if (decimalIndex >= 0) sanitized.substring(0, decimalIndex) else sanitized)
+        .trimStart('0')
+    val normalizedInteger = when {
+        integerPart.isEmpty() && decimalIndex >= 0 -> "0"
+        integerPart.isEmpty() -> "0"
+        else -> integerPart
+    }
+
+    return if (decimalIndex >= 0) {
+        val fractionPart = sanitized.substring(decimalIndex + 1)
+        "$normalizedInteger.$fractionPart"
+    } else {
+        normalizedInteger
+    }
+}
+
+/**
  * Maps database and repository exception messages to localized, human-friendly string resources.
  */
 fun getLocalizedRepositoryErrorMessage(context: Context, error: Throwable?): String {
@@ -431,3 +470,9 @@ fun getLocalizedRepositoryErrorMessage(context: Context, error: Throwable?): Str
         else -> context.getString(com.example.techyfipos.R.string.error_generic)
     }
 }
+
+fun getLocalizedRepositoryErrorMessage(context: Context, rawMessage: String?): String {
+    if (rawMessage.isNullOrBlank()) return context.getString(com.example.techyfipos.R.string.error_generic)
+    return getLocalizedRepositoryErrorMessage(context, Exception(rawMessage))
+}
+

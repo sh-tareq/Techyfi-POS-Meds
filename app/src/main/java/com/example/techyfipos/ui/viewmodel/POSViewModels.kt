@@ -1094,6 +1094,37 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         (withTax - loyaltyDisc).coerceAtLeast(0.0).roundMoney()
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
 
+    fun computeCurrentGrandTotal(items: List<CartItem> = _cartItems.value): Double {
+        val mode = priceMode.value
+        val discAmt = discountAmount.value
+        val isPct = isPercentageDiscount.value
+        val settings = taxSettings.value
+        val loyaltyDisc = loyaltyDiscount.value
+
+        val sub = items.sumOf { effectivePrice(it.product, mode) * it.quantity }
+        val discVal = calculateDiscountValue(sub, discAmt, isPct)
+        val tax = if (settings.taxEnabled && settings.taxRate > 0.0) {
+            val taxableSub = items.filter { it.taxable }.sumOf { effectivePrice(it.product, mode) * it.quantity }
+            val discountRatio = if (sub > 0.0) (discVal / sub).coerceIn(0.0, 1.0) else 0.0
+            val taxableBase = (taxableSub * (1.0 - discountRatio)).coerceAtLeast(0.0)
+            val rawTax = if (settings.taxInclusive) {
+                taxableBase * (settings.taxRate / (100.0 + settings.taxRate))
+            } else {
+                taxableBase * settings.taxRate / 100.0
+            }
+            rawTax.roundMoney()
+        } else {
+            0.0
+        }
+        val base = (sub - discVal).coerceAtLeast(0.0)
+        val withTax = if (settings.taxEnabled && !settings.taxInclusive) {
+            base + tax
+        } else {
+            base
+        }
+        return (withTax - loyaltyDisc).coerceAtLeast(0.0).roundMoney()
+    }
+
     init {
         // Restore whatever was in the cart before the app was last closed.
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -1272,6 +1303,16 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
+    fun setItemNoteByBarcode(barcode: String, note: String?) {
+        val current = _cartItems.value.toMutableList()
+        val index = current.indexOfFirst { it.product.barcode == barcode }
+        if (index != -1) {
+            current[index] = current[index].copy(note = note?.takeIf { it.isNotBlank() })
+            _cartItems.value = current
+            persistCartSnapshot(current)
+        }
+    }
+
     fun addToCart(product: Product, quantity: Double = 1.0): Boolean {
         if (!quantity.isFinite() || quantity <= 0.0) return false
         val currentList = _cartItems.value.toMutableList()
@@ -1311,7 +1352,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             barcode = normalizedBarcode,
             productName = product.name,
             quantityInCart = quantity,
-            grandTotal = grandTotal.value,
+            grandTotal = computeCurrentGrandTotal(),
             status = if (added) CartBarcodeStatus.ADDED else CartBarcodeStatus.STOCK_LIMIT
         )
     }
@@ -1390,6 +1431,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
 
     /** Public accessor so UI (cart rows, receipt line items) can display the same price mode-aware unit price used for the cart total. */
     fun effectivePriceFor(item: CartItem): Double = effectivePrice(item.product, priceMode.value)
+    fun effectivePriceFor(product: Product): Double = effectivePrice(product, priceMode.value)
 
     suspend fun completeSale(): Long = saleCompletionMutex.withLock {
         _isCompletingSale.value = true
@@ -1582,15 +1624,17 @@ class ScannerViewModel(private val repository: DataRepository) : ViewModel() {
             if (product != null) {
                 if (_isSellMode.value) {
                     val added = cartViewModel.addToCart(product)
+                    val effectivePrice = cartViewModel.effectivePriceFor(product)
+                    val total = cartViewModel.computeCurrentGrandTotal()
                     _addedProductConfirmation.value = AddedProductConfirmation(
                         barcode = product.barcode,
                         productName = product.name,
-                        price = product.sellingPrice,
+                        price = effectivePrice,
                         stockQty = product.stockQty,
-                        grandTotal = cartViewModel.grandTotal.value,
+                        grandTotal = total,
                         isSuccess = added
                     )
-                    onShowSnackbar(product.name, product.sellingPrice, product.stockQty, cartViewModel.grandTotal.value, added)
+                    onShowSnackbar(product.name, effectivePrice, product.stockQty, total, added)
                 } else {
                     _scannedProduct.value = product
                 }
@@ -3819,18 +3863,18 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun setStaffActive(userId: Long, isActive: Boolean, onComplete: (Boolean) -> Unit) {
+    fun setStaffActive(userId: Long, isActive: Boolean, onComplete: (Boolean, String?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
             try {
                 if (!repository.isSessionOwner()) {
-                    onComplete(false)
+                    onComplete(false, "Owner privileges required")
                     return@launch
                 }
                 repository.setStaffActive(userId, isActive)
-                onComplete(true)
+                onComplete(true, null)
             } catch (error: Exception) {
                 android.util.Log.e("AuthViewModel", "Unable to toggle staff status", error)
-                onComplete(false)
+                onComplete(false, error.message)
             }
         }
     }
@@ -3864,44 +3908,54 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun deleteUser(user: User, onComplete: (Boolean) -> Unit = {}) {
+    fun verifySupervisorPinDetailed(pin: String, onResult: (com.example.techyfipos.data.SupervisorVerifyResult) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.verifySupervisorPinDetailed(pin)
+            onResult(result)
+        }
+    }
+
+    fun deleteUser(user: User, onComplete: (Boolean, String?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
             if (user.role == AppRoles.OWNER && repository.getOwnerCount() <= 1) {
-                onComplete(false)
+                onComplete(false, "The last owner account cannot be deleted")
                 return@launch
             }
             try {
                 repository.deleteUser(user)
-                onComplete(true)
+                onComplete(true, null)
             } catch (error: Exception) {
                 android.util.Log.e("AuthViewModel", "Unable to delete user", error)
-                onComplete(false)
+                onComplete(false, error.message)
             }
         }
     }
 
     fun attemptLogin(pin: String, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
-            val remainingBefore = repository.loginLockRemainingMillis()
-            if (remainingBefore > 0L) {
-                val s = (remainingBefore + 999L) / 1000L
-                _lockoutSeconds.value = s
-                onResult(false, "Too many failed attempts. Try again in $s seconds.")
-                return@launch
+            when (val res = repository.verifyPinDetailed(pin)) {
+                is com.example.techyfipos.data.PinVerifyResult.Success -> {
+                    setCurrentUser(res.user)
+                    _lockoutSeconds.value = 0L
+                    onResult(true, null)
+                }
+                is com.example.techyfipos.data.PinVerifyResult.Locked -> {
+                    val s = (res.remainingMillis + 999L) / 1000L
+                    _lockoutSeconds.value = s
+                    onResult(false, "Too many failed attempts. Try again in $s seconds.")
+                }
+                is com.example.techyfipos.data.PinVerifyResult.Deactivated -> {
+                    onResult(false, "This account is deactivated. Contact store owner.")
+                }
+                is com.example.techyfipos.data.PinVerifyResult.Invalid -> {
+                    val lockSec = (res.remainingMillis + 999L) / 1000L
+                    _lockoutSeconds.value = lockSec
+                    val message = if (lockSec > 0L) {
+                        "Too many failed attempts. Try again in $lockSec seconds."
+                    } else null
+                    onResult(false, message)
+                }
             }
-            val user = repository.verifyPin(pin)
-            if (user != null && !user.isActive) {
-                onResult(false, "This account is deactivated. Contact store owner.")
-                return@launch
-            }
-            setCurrentUser(user)
-            val lockMillis = repository.loginLockRemainingMillis()
-            val lockSec = (lockMillis + 999L) / 1000L
-            _lockoutSeconds.value = lockSec
-            val message = if (user == null && lockSec > 0L) {
-                "Too many failed attempts. Try again in $lockSec seconds."
-            } else null
-            onResult(user != null, message)
         }
     }
 

@@ -85,6 +85,7 @@ fun LockScreen(
     var awaitingConfirm by remember { mutableStateOf(false) }
     var isPinVisible by rememberSaveable { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var successMessage by remember { mutableStateOf<String?>(null) }
     var showPinRecoveryDialog by remember { mutableStateOf(false) }
     var recoveryPin by remember { mutableStateOf("") }
     var recoveryPinConfirm by remember { mutableStateOf("") }
@@ -201,6 +202,7 @@ fun LockScreen(
         }
         triggerHaptic(strong = false)
         errorMessage = null
+        successMessage = null
         if (mode == LockMode.SETUP && awaitingConfirm) {
             if (confirmPin.length < 4) confirmPin += digit
             if (confirmPin.length == 4) {
@@ -245,6 +247,7 @@ fun LockScreen(
         if (lockoutSeconds > 0L) return
         triggerHaptic(strong = false)
         errorMessage = null
+        successMessage = null
         if (mode == LockMode.SETUP && awaitingConfirm) {
             confirmPin = confirmPin.dropLast(1)
         } else {
@@ -256,6 +259,7 @@ fun LockScreen(
         if (lockoutSeconds > 0L) return
         triggerHaptic(strong = false)
         errorMessage = null
+        successMessage = null
         reset()
     }
 
@@ -467,16 +471,12 @@ fun LockScreen(
                     }
 
                     AnimatedVisibility(
-                        visible = lockoutSeconds > 0L || errorMessage != null,
+                        visible = lockoutSeconds > 0L || errorMessage != null || successMessage != null,
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically()
                     ) {
-                        val displayMsg = if (lockoutSeconds > 0L) {
-                            "🔒 Too many failed attempts. Terminal locked for ${lockoutSeconds}s."
-                        } else {
-                            errorMessage?.let { "⚠️ $it" }
-                        }
-                        if (displayMsg != null) {
+                        if (lockoutSeconds > 0L) {
+                            val displayMsg = "🔒 Too many failed attempts. Terminal locked for ${lockoutSeconds}s."
                             Spacer(Modifier.height(8.dp))
                             Surface(
                                 color = Color(0xFFEF4444).copy(alpha = 0.15f),
@@ -486,6 +486,36 @@ fun LockScreen(
                                 Text(
                                     text = displayMsg,
                                     color = Color(0xFFFCA5A5),
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                )
+                            }
+                        } else if (errorMessage != null) {
+                            Spacer(Modifier.height(8.dp))
+                            Surface(
+                                color = Color(0xFFEF4444).copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(10.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.4f))
+                            ) {
+                                Text(
+                                    text = "⚠️ $errorMessage",
+                                    color = Color(0xFFFCA5A5),
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                )
+                            }
+                        } else if (successMessage != null) {
+                            Spacer(Modifier.height(8.dp))
+                            Surface(
+                                color = Color(0xFF10B981).copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(10.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.4f))
+                            ) {
+                                Text(
+                                    text = "✅ $successMessage",
+                                    color = Color(0xFF6EE7B7),
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
@@ -560,7 +590,13 @@ fun LockScreen(
                     OutlinedTextField(
                         value = recoveryPinConfirm,
                         onValueChange = { recoveryPinConfirm = it.filter(Char::isDigit).take(4) },
-                        label = { Text(stringResource(R.string.users_pin_label)) },
+                        label = { Text(stringResource(R.string.lock_confirm_pin_label)) },
+                        isError = recoveryPinConfirm.isNotEmpty() && recoveryPin != recoveryPinConfirm,
+                        supportingText = {
+                            if (recoveryPinConfirm.isNotEmpty() && recoveryPin != recoveryPinConfirm) {
+                                Text(stringResource(R.string.lock_pins_do_not_match), color = MaterialTheme.colorScheme.error)
+                            }
+                        },
                         singleLine = true,
                         visualTransformation = if (recoveryPinVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
@@ -583,8 +619,10 @@ fun LockScreen(
                             showPinRecoveryDialog = false
                             if (success) {
                                 pin = ""
-                                errorMessage = pinResetSuccessText
+                                errorMessage = null
+                                successMessage = pinResetSuccessText
                             } else {
+                                successMessage = null
                                 triggerErrorShake(pinInUseErrorText)
                             }
                         }

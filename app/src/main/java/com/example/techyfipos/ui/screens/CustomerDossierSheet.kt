@@ -1220,7 +1220,7 @@ fun AdjustStoreCreditDialog(
 
                 OutlinedTextField(
                     value = amountText,
-                    onValueChange = { amountText = it.filter { c -> c.isDigit() || c == '.' } },
+                    onValueChange = { amountText = com.example.techyfipos.utils.sanitizeNumericInput(it) },
                     label = { Text(stringResource(R.string.store_credit_amount_to_adjust)) },
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
                     singleLine = true,

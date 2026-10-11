@@ -325,13 +325,23 @@ class DataRepository(
         true
     }
 
-    suspend fun verifySupervisorPin(pin: String): User? = withContext(Dispatchers.IO) {
-        val user = verifyPin(pin)
-        if (user != null && AppPermissions.isSupervisor(user)) {
-            user
-        } else {
-            null
+    suspend fun verifySupervisorPinDetailed(pin: String): SupervisorVerifyResult = withContext(Dispatchers.IO) {
+        when (val res = verifyPinDetailed(pin)) {
+            is PinVerifyResult.Success -> {
+                if (AppPermissions.isSupervisor(res.user)) {
+                    SupervisorVerifyResult.Success(res.user)
+                } else {
+                    SupervisorVerifyResult.NotSupervisor
+                }
+            }
+            is PinVerifyResult.Locked -> SupervisorVerifyResult.Locked(res.remainingMillis)
+            is PinVerifyResult.Deactivated -> SupervisorVerifyResult.Deactivated(res.user)
+            is PinVerifyResult.Invalid -> SupervisorVerifyResult.Invalid(res.remainingMillis)
         }
+    }
+
+    suspend fun verifySupervisorPin(pin: String): User? = withContext(Dispatchers.IO) {
+        (verifySupervisorPinDetailed(pin) as? SupervisorVerifyResult.Success)?.user
     }
 
     private fun consumeCreditLimitOverride(
@@ -4169,49 +4179,54 @@ class DataRepository(
         true
     }
 
-    /** Returns the matching user for [pin], or null if no user has that PIN or account is inactive. */
-    suspend fun verifyPin(pin: String): User? = withContext(Dispatchers.IO) {
-        val securityPrefs = context.getSharedPreferences("auth_security", Context.MODE_PRIVATE)
-        val nowElapsed = android.os.SystemClock.elapsedRealtime()
-        val lockUntilElapsed = securityPrefs.getLong("lock_until_elapsed", 0L)
-        val nowWall = System.currentTimeMillis()
-        val lockUntilWall = securityPrefs.getLong("lock_until", 0L)
+    suspend fun verifyPinDetailed(pin: String): PinVerifyResult = withContext(Dispatchers.IO) {
         val remainingLock = loginLockRemainingMillis()
-
-        if (remainingLock > 0L) return@withContext null
+        if (remainingLock > 0L) return@withContext PinVerifyResult.Locked(remainingLock)
 
         val all = userDao.getAllUsersOnce()
         val matchingUser = all.firstOrNull { pinMatches(pin, it.pinHash) }
         if (matchingUser != null) {
             if (!matchingUser.isActive) {
-                return@withContext null
+                return@withContext PinVerifyResult.Deactivated(matchingUser)
             }
             if (!matchingUser.pinHash.startsWith("pbkdf2$")) {
                 userDao.updatePinHash(matchingUser.id, hashPin(pin))
             }
-            securityPrefs.edit().clear().apply()
-            return@withContext matchingUser
+            context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit().clear().apply()
+            return@withContext PinVerifyResult.Success(matchingUser)
         }
 
+        val securityPrefs = context.getSharedPreferences("auth_security", Context.MODE_PRIVATE)
+        val nowElapsed = android.os.SystemClock.elapsedRealtime()
+        val nowWall = System.currentTimeMillis()
         val totalFailures = securityPrefs.getInt("total_failures", 0) + 1
         val failuresInWindow = securityPrefs.getInt("failed_attempts", 0) + 1
         val editor = securityPrefs.edit()
             .putInt("total_failures", totalFailures)
             .putInt("failed_attempts", failuresInWindow)
 
+        var newLockMs = 0L
         if (failuresInWindow >= 5) {
-            val lockDurationMs = when {
+            newLockMs = when {
                 totalFailures >= 20 -> 15 * 60 * 1000L // 15 mins
                 totalFailures >= 15 -> 5 * 60 * 1000L  // 5 mins
                 totalFailures >= 10 -> 2 * 60 * 1000L  // 2 mins
                 else -> 30 * 1000L                      // 30 secs
             }.coerceAtMost(15 * 60 * 1000L)
-            editor.putLong("lock_until_elapsed", nowElapsed + lockDurationMs)
-                .putLong("lock_until", nowWall + lockDurationMs)
+            editor.putLong("lock_until_elapsed", nowElapsed + newLockMs)
+                .putLong("lock_until", nowWall + newLockMs)
                 .putInt("failed_attempts", 0)
         }
         editor.apply()
-        null
+        PinVerifyResult.Invalid(newLockMs)
+    }
+
+    /** Returns the matching user for [pin], or null if no user has that PIN or account is inactive. */
+    suspend fun verifyPin(pin: String): User? = withContext(Dispatchers.IO) {
+        when (val res = verifyPinDetailed(pin)) {
+            is PinVerifyResult.Success -> res.user
+            else -> null
+        }
     }
 
     fun loginLockRemainingMillis(): Long {
@@ -5422,4 +5437,19 @@ class DataRepository(
         "silver" -> 1
         else -> 0
     }
+}
+
+sealed class PinVerifyResult {
+    data class Success(val user: User) : PinVerifyResult()
+    data class Locked(val remainingMillis: Long) : PinVerifyResult()
+    data class Deactivated(val user: User) : PinVerifyResult()
+    data class Invalid(val remainingMillis: Long = 0L) : PinVerifyResult()
+}
+
+sealed class SupervisorVerifyResult {
+    data class Success(val user: User) : SupervisorVerifyResult()
+    data class Locked(val remainingMillis: Long) : SupervisorVerifyResult()
+    data class Deactivated(val user: User) : SupervisorVerifyResult()
+    object NotSupervisor : SupervisorVerifyResult()
+    data class Invalid(val remainingMillis: Long = 0L) : SupervisorVerifyResult()
 }

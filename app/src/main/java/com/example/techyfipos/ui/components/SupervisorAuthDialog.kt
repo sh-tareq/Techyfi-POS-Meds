@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.R
+import com.example.techyfipos.data.SupervisorVerifyResult
 import com.example.techyfipos.data.db.User
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
 
@@ -42,13 +43,34 @@ fun SupervisorAuthDialog(
         if (currentPin.length != 4 || isChecking) return
         isChecking = true
         errorMessage = null
-        authViewModel.verifySupervisorPin(currentPin) { supervisor ->
+        authViewModel.verifySupervisorPinDetailed(currentPin) { result ->
             isChecking = false
-            if (supervisor != null) {
-                onAuthorized(supervisor)
-            } else {
-                pin = ""
-                errorMessage = "Invalid Supervisor / Owner PIN"
+            when (result) {
+                is SupervisorVerifyResult.Success -> {
+                    onAuthorized(result.user)
+                }
+                is SupervisorVerifyResult.Locked -> {
+                    pin = ""
+                    val s = (result.remainingMillis + 999L) / 1000L
+                    errorMessage = "Locked for ${s}s. Try again later."
+                }
+                is SupervisorVerifyResult.Deactivated -> {
+                    pin = ""
+                    errorMessage = "Account is deactivated"
+                }
+                SupervisorVerifyResult.NotSupervisor -> {
+                    pin = ""
+                    errorMessage = "User is not a supervisor or owner"
+                }
+                is SupervisorVerifyResult.Invalid -> {
+                    pin = ""
+                    val s = (result.remainingMillis + 999L) / 1000L
+                    errorMessage = if (s > 0L) {
+                        "Locked for ${s}s. Try again later."
+                    } else {
+                        "Invalid Supervisor / Owner PIN"
+                    }
+                }
             }
         }
     }

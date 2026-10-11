@@ -5736,7 +5736,7 @@ fun RecordPaymentDialog(
                                     }
                                     BasicTextField(
                                         value = amount,
-                                        onValueChange = { amount = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                                        onValueChange = { amount = sanitizeNumericInput(it) },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                         singleLine = true,
                                         textStyle = TextStyle(

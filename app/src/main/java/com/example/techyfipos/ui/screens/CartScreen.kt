@@ -658,7 +658,30 @@ fun CartScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    fun removeCartItemWithUndo(item: CartItem) {
+        val removedProduct = item.product
+        val removedQty = item.quantity
+        val removedNote = item.note
+        cartViewModel.removeFromCart(removedProduct)
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = context.getString(R.string.cart_item_removed_message, removedProduct.name),
+                actionLabel = context.getString(R.string.cart_undo),
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                cartViewModel.addToCart(removedProduct, removedQty)
+                if (!removedNote.isNullOrBlank()) {
+                    cartViewModel.setItemNoteByBarcode(removedProduct.barcode, removedNote)
+                }
+            }
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -747,12 +770,7 @@ fun CartScreen(
                                     onRequestSupervisorAuth = { desc ->
                                         pendingSupervisorDesc = desc
                                         pendingSupervisorAction = {
-                                            scope.launch {
-                                                trashAnim.animateTo(-15f, tween(60))
-                                                trashAnim.animateTo(15f, tween(60))
-                                                trashAnim.animateTo(0f, tween(60))
-                                            }
-                                            cartViewModel.clearCart()
+                                            showVoidConfirmDialog = true
                                         }
                                         showSupervisorAuthDialog = true
                                     }
@@ -1003,10 +1021,10 @@ fun CartScreen(
                                         isSupervisor = isSupervisor,
                                         activePermissions = activePermissions,
                                         authViewModel = authViewModel,
-                                        onAllowed = { cartViewModel.removeFromCart(item.product) },
+                                        onAllowed = { removeCartItemWithUndo(item) },
                                         onRequestSupervisorAuth = { desc ->
                                             pendingSupervisorDesc = desc
-                                            pendingSupervisorAction = { cartViewModel.removeFromCart(item.product) }
+                                            pendingSupervisorAction = { removeCartItemWithUndo(item) }
                                             showSupervisorAuthDialog = true
                                         }
                                     )
@@ -1026,10 +1044,10 @@ fun CartScreen(
                                     isSupervisor = isSupervisor,
                                     activePermissions = activePermissions,
                                     authViewModel = authViewModel,
-                                    onAllowed = { cartViewModel.removeFromCart(item.product) },
+                                    onAllowed = { removeCartItemWithUndo(item) },
                                     onRequestSupervisorAuth = { desc ->
                                         pendingSupervisorDesc = desc
-                                        pendingSupervisorAction = { cartViewModel.removeFromCart(item.product) }
+                                        pendingSupervisorAction = { removeCartItemWithUndo(item) }
                                         showSupervisorAuthDialog = true
                                     }
                                 )
@@ -2167,7 +2185,7 @@ fun CartScreen(
                                     listOf(50.0, 100.0, 500.0, 1000.0).forEach { inc ->
                                         Surface(
                                             onClick = {
-                                                val curr = receivedAmountText.toDoubleOrNull() ?: 0.0
+                                                val curr = com.example.techyfipos.utils.sanitizeNumericInput(receivedAmountText).toDoubleOrNull() ?: 0.0
                                                 val updated = curr + inc
                                                 cartViewModel.setAmountPaid(updated)
                                                 receivedAmountText = if (updated % 1.0 == 0.0) updated.toLong().toString() else updated.toString()
@@ -2212,8 +2230,9 @@ fun CartScreen(
                                 OutlinedTextField(
                                     value = receivedAmountText,
                                     onValueChange = { input ->
-                                        receivedAmountText = input
-                                        cartViewModel.setAmountPaid(input.toDoubleOrNull() ?: 0.0)
+                                        val sanitized = com.example.techyfipos.utils.sanitizeNumericInput(input)
+                                        receivedAmountText = sanitized
+                                        cartViewModel.setAmountPaid(sanitized.toDoubleOrNull() ?: 0.0)
                                     },
                                     label = { Text(stringResource(R.string.cart_cash_received_label), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 11.5.sp) },
                                     leadingIcon = { Text(formatMoney(0.0).take(1), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary) },

@@ -2837,6 +2837,15 @@
     <string name="supplier_detail_tab_payments">Payments</string>
     <string name="supplier_no_invoices">No purchase invoices recorded</string>
     <string name="supplier_no_payments">No supplier payments recorded</string>
+    <string name="cart_item_removed_message">Removed %1$s from cart</string>
+    <string name="cart_undo">Undo</string>
+    <string name="auth_locked_out_seconds">Terminal locked for %1$d seconds</string>
+    <string name="lock_new_pin_label">New 4-digit PIN</string>
+    <string name="lock_confirm_pin_label">Confirm New PIN</string>
+    <string name="lock_pins_do_not_match">PINs do not match</string>
+    <string name="splash_init">Initializing Techyfi POS...</string>
+    <string name="splash_catalog">Loading Product Catalog...</string>
+    <string name="splash_ready">Preparing Sell Terminal...</string>
 </resources>
 
 

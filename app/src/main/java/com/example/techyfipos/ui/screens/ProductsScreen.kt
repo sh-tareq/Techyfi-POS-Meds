@@ -3197,7 +3197,7 @@ fun BulkPriceAdjustmentDialog(
 
                 OutlinedTextField(
                     value = valueText,
-                    onValueChange = { valueText = it.filter { c -> c.isDigit() || c == '.' } },
+                    onValueChange = { valueText = com.example.techyfipos.utils.sanitizeNumericInput(it) },
                     label = { Text(if (mode == 0) stringResource(R.string.bulk_price_label_percentage) else stringResource(R.string.bulk_price_label_fixed)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
@@ -3699,7 +3699,7 @@ private fun HardwareStockCheckDialog(
                         OutlinedTextField(
                             value = quantityText,
                             onValueChange = { input ->
-                                val filtered = input.filter { it.isDigit() || it == '.' }
+                                val filtered = com.example.techyfipos.utils.sanitizeNumericInput(input)
                                 if (filtered.count { it == '.' } <= 1) {
                                     quantityText = filtered.take(7)
                                 }

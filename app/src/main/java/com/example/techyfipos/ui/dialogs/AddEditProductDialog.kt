@@ -948,7 +948,7 @@ fun AddEditProductDialog(
                                         BasicTextField(
                                             value = purchasePrice,
                                             onValueChange = { input ->
-                                                val filtered = input.filter { it.isDigit() || it == '.' }
+                                                val filtered = com.example.techyfipos.utils.sanitizeNumericInput(input)
                                                 if (filtered.count { it == '.' } <= 1) purchasePrice = filtered.take(8)
                                             },
                                             textStyle = TextStyle(
@@ -984,7 +984,7 @@ fun AddEditProductDialog(
                                         BasicTextField(
                                             value = mrpPrice,
                                             onValueChange = { input ->
-                                                val filtered = input.filter { it.isDigit() || it == '.' }
+                                                val filtered = com.example.techyfipos.utils.sanitizeNumericInput(input)
                                                 if (filtered.count { it == '.' } <= 1) {
                                                     mrpPrice = filtered.take(8)
                                                     if (discountedPrice.isBlank()) {
@@ -1030,7 +1030,7 @@ fun AddEditProductDialog(
                                         BasicTextField(
                                             value = discountedPrice,
                                             onValueChange = { input ->
-                                                val filtered = input.filter { it.isDigit() || it == '.' }
+                                                val filtered = com.example.techyfipos.utils.sanitizeNumericInput(input)
                                                 if (filtered.count { it == '.' } <= 1) discountedPrice = filtered.take(8)
                                             },
                                             textStyle = TextStyle(
@@ -1296,7 +1296,7 @@ fun AddEditProductDialog(
                                             enabled = stockEditable,
                                             onValueChange = { input ->
                                                 if (stockEditable) {
-                                                    val filtered = input.filter { it.isDigit() || it == '.' }
+                                                    val filtered = com.example.techyfipos.utils.sanitizeNumericInput(input)
                                                     if (filtered.count { it == '.' } <= 1) {
                                                         stockQty = filtered.take(7)
                                                     }

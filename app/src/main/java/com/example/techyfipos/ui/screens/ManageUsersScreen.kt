@@ -38,6 +38,7 @@ import com.example.techyfipos.data.PermissionItem
 import com.example.techyfipos.data.db.User
 import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
+import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,9 +133,10 @@ fun ManageUsersScreen(
                             onEdit = { userToEdit = user },
                             onPermissions = { userForPermissions = user },
                             onToggleActive = { isActive ->
-                                authViewModel.setStaffActive(user.id, isActive) { success ->
+                                authViewModel.setStaffActive(user.id, isActive) { success, err ->
                                     if (!success) {
-                                        Toast.makeText(context, onlyOwnerMessage, Toast.LENGTH_SHORT).show()
+                                        val msg = getLocalizedRepositoryErrorMessage(context, err ?: onlyOwnerMessage)
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             },
@@ -191,9 +193,10 @@ fun ManageUsersScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        authViewModel.deleteUser(user) { success ->
+                        authViewModel.deleteUser(user) { success, err ->
                             if (!success) {
-                                Toast.makeText(context, onlyOwnerMessage, Toast.LENGTH_SHORT).show()
+                                val msg = getLocalizedRepositoryErrorMessage(context, err ?: onlyOwnerMessage)
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                             }
                         }
                         userToDelete = null
@@ -395,6 +398,7 @@ private fun AddStaffDialog(
     onDismiss: () -> Unit,
     onSuccess: () -> Unit
 ) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var pin by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf(AppRoles.CASHIER) }
@@ -500,7 +504,7 @@ private fun AddStaffDialog(
                         if (success) {
                             onSuccess()
                         } else {
-                            errorMessage = err ?: addFailedMessage
+                            errorMessage = getLocalizedRepositoryErrorMessage(context, err ?: addFailedMessage)
                         }
                     }
                 }
@@ -519,6 +523,7 @@ private fun EditStaffDialog(
     onDismiss: () -> Unit,
     onSuccess: () -> Unit
 ) {
+    val context = LocalContext.current
     var editName by remember(user) { mutableStateOf(user.name) }
     var editPin by remember(user) { mutableStateOf("") }
     var editOldPin by remember(user) { mutableStateOf("") }
@@ -661,7 +666,7 @@ private fun EditStaffDialog(
                         if (success) {
                             onSuccess()
                         } else {
-                            editError = err ?: addFailedMessage
+                            editError = getLocalizedRepositoryErrorMessage(context, err ?: addFailedMessage)
                         }
                     }
                 }

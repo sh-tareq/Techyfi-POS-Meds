@@ -1283,7 +1283,7 @@ fun AddExpenseDialog(
 
                 OutlinedTextField(
                     value = amountText,
-                    onValueChange = { amountText = it },
+                    onValueChange = { amountText = com.example.techyfipos.utils.sanitizeNumericInput(it) },
                     label = { Text(stringResource(R.string.expense_amount_label)) },
                     placeholder = { Text(stringResource(R.string.expense_amount_placeholder)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -1319,7 +1319,7 @@ fun AddExpenseDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val amt = amountText.toDoubleOrNull() ?: 0.0
+                    val amt = com.example.techyfipos.utils.sanitizeNumericInput(amountText).toDoubleOrNull() ?: 0.0
                     if (amt > 0) {
                         onSave(
                             if (title.isNotBlank()) title else selectedCategory,

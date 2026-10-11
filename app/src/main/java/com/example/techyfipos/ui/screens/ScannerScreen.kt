@@ -236,11 +236,12 @@ fun ScannerScreen(
                 onSoundVibrate = { beepAndVibrate(context) },
                 onShowSnackbar = { name, price, stock, total, isSuccess ->
                     scope.launch {
+                        val stockDisplay = if (stock % 1.0 == 0.0) stock.toLong().toString() else String.format(java.util.Locale.US, "%.2f", stock).trimEnd('0').trimEnd('.')
                         snackbarHostState.showSnackbar(
                             message = if (isSuccess) {
-                                context.getString(R.string.scanner_added_snackbar, name, formatTaka(price), stock, formatTaka(total))
+                                context.getString(R.string.scanner_added_snackbar, name, formatTaka(price), stockDisplay, formatTaka(total))
                             } else {
-                                context.getString(R.string.scanner_out_of_stock_snackbar, name, stock)
+                                context.getString(R.string.scanner_out_of_stock_snackbar, name, stockDisplay)
                             },
                             duration = SnackbarDuration.Short
                         )
@@ -478,7 +479,8 @@ fun ScannerScreen(
                         val p = scannedProduct
                         if (p != null) {
                             scannerViewModel.saveStockQty(p, newQty)
-                            val stockSavedMsg = context.getString(R.string.scanner_stock_saved_toast, p.name, newQty.toString())
+                            val qtyDisplay = if (newQty % 1.0 == 0.0) newQty.toLong().toString() else String.format(java.util.Locale.US, "%.2f", newQty).trimEnd('0').trimEnd('.')
+                            val stockSavedMsg = context.getString(R.string.scanner_stock_saved_toast, p.name, qtyDisplay)
                             Toast.makeText(
                                 context,
                                 stockSavedMsg,
@@ -525,10 +527,11 @@ fun ScannerScreen(
                             fromHardwareScanner = true,
                             onShowSnackbar = { name, price, stock, total, isSuccess ->
                                 scope.launch {
+                                    val stockDisplay = if (stock % 1.0 == 0.0) stock.toLong().toString() else String.format(java.util.Locale.US, "%.2f", stock).trimEnd('0').trimEnd('.')
                                     val msg = if (isSuccess) {
-                                        context.getString(R.string.scanner_added_snackbar, name, formatTaka(price), stock, formatTaka(total))
+                                        context.getString(R.string.scanner_added_snackbar, name, formatTaka(price), stockDisplay, formatTaka(total))
                                     } else {
-                                        context.getString(R.string.scanner_out_of_stock_snackbar, name, stock)
+                                        context.getString(R.string.scanner_out_of_stock_snackbar, name, stockDisplay)
                                     }
                                     snackbarHostState.showSnackbar(
                                         message = msg,
