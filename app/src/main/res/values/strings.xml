@@ -2863,6 +2863,17 @@
     <string name="splash_catalog">Loading Product Catalog...</string>
     <string name="splash_ready">Preparing Sell Terminal...</string>
     <string name="search_settings_placeholder">Search settings...</string>
+    <string name="lock_no_device_secure">Device screen lock or biometrics not enrolled. Please set up a screen lock in Android Settings.</string>
+    <string name="lock_verify_device_owner_title">Verify device owner</string>
+    <string name="lock_verify_device_owner_desc">Confirm your Android screen lock or biometrics to reset the Techyfi POS owner PIN.</string>
+    <string name="lock_device_verify_unavailable">Device verification is unavailable on this device.</string>
+    <string name="lock_create_owner_failed">Could not create owner account. Try again.</string>
+    <string name="lock_pins_not_matched">PINs didn\'t match. Choose a new 4-digit PIN.</string>
+    <string name="lock_incorrect_pin">Incorrect PIN. Try again.</string>
+    <string name="lock_too_many_attempts_banner">🔒 Too many failed attempts. Terminal locked for %1$ds.</string>
+    <string name="lock_powering_digital_lifestyle">POWERING YOUR DIGITAL LIFESTYLE</string>
+    <string name="lock_keypad_delete">DELETE</string>
+    <string name="lock_keypad_clear">CLEAR</string>
 </resources>
 
 

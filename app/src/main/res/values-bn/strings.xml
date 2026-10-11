@@ -2865,4 +2865,15 @@
     <string name="splash_catalog">পণ্য তালিকা লোড হচ্ছে...</string>
     <string name="splash_ready">বিক্রয় টার্মিনাল প্রস্তুত হচ্ছে...</string>
     <string name="search_settings_placeholder">সেটিংস খুঁজুন...</string>
+    <string name="lock_no_device_secure">ডিভাইস স্ক্রিন লক বা বায়োমেট্রিক্স যুক্ত করা নেই। অনুগ্রহ করে অ্যান্ড্রয়েড সেটিংসে স্ক্রিন লক সেট করুন।</string>
+    <string name="lock_verify_device_owner_title">ডিভাইস মালিক যাচাই করুন</string>
+    <string name="lock_verify_device_owner_desc">টেকিফাই পিওএস মালিকের পিন রিসেট করতে আপনার অ্যান্ড্রয়েড স্ক্রিন লক বা বায়োমেট্রিক্স নিশ্চিত করুন।</string>
+    <string name="lock_device_verify_unavailable">এই ডিভাইসে ডিভাইস যাচাইকরণ অনুপলব্ধ।</string>
+    <string name="lock_create_owner_failed">মালিকের অ্যাকাউন্ট তৈরি করা যায়নি। আবার চেষ্টা করুন।</string>
+    <string name="lock_pins_not_matched">পিন মেলেনি। একটি নতুন ৪-সংখ্যার পিন নির্বাচন করুন।</string>
+    <string name="lock_incorrect_pin">ভুল পিন। আবার চেষ্টা করুন।</string>
+    <string name="lock_too_many_attempts_banner">🔒 অতিরিক্ত ব্যর্থ প্রচেষ্টা। টার্মিনাল %1$d সেকেন্ডের জন্য লক করা হয়েছে।</string>
+    <string name="lock_powering_digital_lifestyle">পাওয়ারিং ইয়োর ডিজিটাল লাইফস্টাইল</string>
+    <string name="lock_keypad_delete">মুছুন</string>
+    <string name="lock_keypad_clear">ক্লিয়ার</string>
 </resources>

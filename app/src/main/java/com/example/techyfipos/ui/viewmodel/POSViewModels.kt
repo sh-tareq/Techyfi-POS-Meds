@@ -3949,16 +3949,30 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
                 is com.example.techyfipos.data.PinVerifyResult.Locked -> {
                     val s = (res.remainingMillis + 999L) / 1000L
                     _lockoutSeconds.value = s
-                    onResult(false, "Too many failed attempts. Try again in $s seconds.")
+                    val msg = if (com.example.techyfipos.utils.isAppBangla()) {
+                        "অতিরিক্ত ব্যর্থ প্রচেষ্টা। $s সেকেন্ড পরে আবার চেষ্টা করুন।"
+                    } else {
+                        "Too many failed attempts. Try again in $s seconds."
+                    }
+                    onResult(false, msg)
                 }
                 is com.example.techyfipos.data.PinVerifyResult.Deactivated -> {
-                    onResult(false, "This account is deactivated. Contact store owner.")
+                    val msg = if (com.example.techyfipos.utils.isAppBangla()) {
+                        "এই অ্যাকাউন্টটি নিষ্ক্রিয় করা হয়েছে। স্টোর মালিকের সাথে যোগাযোগ করুন।"
+                    } else {
+                        "This account is deactivated. Contact store owner."
+                    }
+                    onResult(false, msg)
                 }
                 is com.example.techyfipos.data.PinVerifyResult.Invalid -> {
                     val lockSec = (res.remainingMillis + 999L) / 1000L
                     _lockoutSeconds.value = lockSec
                     val message = if (lockSec > 0L) {
-                        "Too many failed attempts. Try again in $lockSec seconds."
+                        if (com.example.techyfipos.utils.isAppBangla()) {
+                            "অতিরিক্ত ব্যর্থ প্রচেষ্টা। $lockSec সেকেন্ড পরে আবার চেষ্টা করুন।"
+                        } else {
+                            "Too many failed attempts. Try again in $lockSec seconds."
+                        }
                     } else null
                     onResult(false, message)
                 }

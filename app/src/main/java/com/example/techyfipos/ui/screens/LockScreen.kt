@@ -158,16 +158,16 @@ fun LockScreen(
     fun beginSecurePinRecovery() {
         val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
         if (keyguard?.isDeviceSecure != true) {
-            triggerErrorShake("Device screen lock or biometrics not enrolled. Please set up a screen lock in Android Settings.")
+            triggerErrorShake(context.getString(R.string.lock_no_device_secure))
             return
         }
         @Suppress("DEPRECATION")
         val intent = keyguard.createConfirmDeviceCredentialIntent(
-            "Verify device owner",
-            "Confirm your Android screen lock or biometrics to reset the Techyfi POS owner PIN."
+            context.getString(R.string.lock_verify_device_owner_title),
+            context.getString(R.string.lock_verify_device_owner_desc)
         )
         if (intent != null) credentialLauncher.launch(intent)
-        else triggerErrorShake("Device verification is unavailable on this device.")
+        else triggerErrorShake(context.getString(R.string.lock_device_verify_unavailable))
     }
 
     val lockoutSeconds by authViewModel.lockoutSeconds.collectAsStateWithLifecycle()
@@ -213,12 +213,12 @@ fun LockScreen(
                             triggerHaptic(strong = true)
                             onUnlocked()
                         } else {
-                            triggerErrorShake("Could not create owner account. Try again.")
+                            triggerErrorShake(context.getString(R.string.lock_create_owner_failed))
                             reset()
                         }
                     }
                 } else {
-                    triggerErrorShake("PINs didn't match. Choose a new 4-digit PIN.")
+                    triggerErrorShake(context.getString(R.string.lock_pins_not_matched))
                     reset()
                 }
             }
@@ -230,7 +230,7 @@ fun LockScreen(
                 } else {
                     authViewModel.attemptLogin(pin) { success, loginMessage ->
                         if (!success) {
-                            triggerErrorShake(loginMessage ?: "Incorrect PIN. Try again.")
+                            triggerErrorShake(loginMessage ?: context.getString(R.string.lock_incorrect_pin))
                             pin = ""
                         } else {
                             successfulLogin = true
@@ -476,7 +476,7 @@ fun LockScreen(
                         exit = fadeOut() + shrinkVertically()
                     ) {
                         if (lockoutSeconds > 0L) {
-                            val displayMsg = "🔒 Too many failed attempts. Terminal locked for ${lockoutSeconds}s."
+                            val displayMsg = stringResource(R.string.lock_too_many_attempts_banner, lockoutSeconds)
                             Spacer(Modifier.height(8.dp))
                             Surface(
                                 color = Color(0xFFEF4444).copy(alpha = 0.15f),
@@ -696,7 +696,7 @@ private fun TechyfiLockBrandingHeader(isCompact: Boolean = false) {
         )
 
         Text(
-            text = "POWERING YOUR DIGITAL LIFESTYLE",
+            text = stringResource(R.string.lock_powering_digital_lifestyle),
             color = Color(0xFF94A3B8),
             fontSize = if (isCompact) 10.sp else 11.sp,
             fontWeight = FontWeight.Bold,
@@ -989,7 +989,7 @@ private fun Realistic3DNumpadButton(
                         modifier = Modifier.size(if (isCompact) 18.dp else 20.dp)
                     )
                     Text(
-                        text = "DELETE",
+                        text = stringResource(R.string.lock_keypad_delete),
                         color = Color(0xFFFCA5A5).copy(alpha = 0.8f),
                         fontSize = if (isCompact) 7.5.sp else 8.sp,
                         fontWeight = FontWeight.Bold,
@@ -1005,7 +1005,7 @@ private fun Realistic3DNumpadButton(
                         textAlign = TextAlign.Center
                     )
                     Text(
-                        text = "CLEAR",
+                        text = stringResource(R.string.lock_keypad_clear),
                         color = Color(0xFFFDE68A).copy(alpha = 0.8f),
                         fontSize = if (isCompact) 7.5.sp else 8.sp,
                         fontWeight = FontWeight.Bold,
