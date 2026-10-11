@@ -267,21 +267,21 @@ Suggested shape (one small new file plus a collector):
 - [x] **R20-49** (Fixed in `e7d4eb5`). Deactivated user sees "Incorrect PIN" (repo about 4034-4036 returns null; VM about 3676 branch never runs).
 - [x] **R20-50** (Fixed in `e7d4eb5`). PIN recovery success shows in the red error box; both fields are labelled "PIN"; mismatch gives no feedback (`LockScreen.kt` about 474-492, 547, 563, 586).
 - [x] **R20-51** (Fixed in `e7d4eb5`). User-management errors are raw English or wrong; every toggle/delete failure says "The only owner account cannot be removed" (`ManageUsersScreen.kt` about 134, 193, 495, 656). Map with `getLocalizedRepositoryErrorMessage`.
-- [ ] **R20-52** Splash waits about 2.6 s doing nothing; progress is chosen by comparing English literals (`SplashScreen.kt` about 73-82, 164-167).
-- [ ] **R20-53** Product form loses everything on rotation (`AddEditProductDialog.kt` about 119-176 use `remember`). Use `rememberSaveable`.
-- [ ] **R20-54** A hardware scan during stock check replaces the open product and discards the count (`ProductsScreen.kt` about 588-600).
-- [ ] **R20-55** Products empty state flashes before data loads (VM about 1580-1584 start as `emptyList()`).
-- [ ] **R20-56** Delete from the edit dialog asks twice (`AddEditProductDialog.kt` about 1593-1612 then `ProductsScreen.kt` about 2758).
-- [ ] **R20-57 MED** Category manager: "Reset defaults" writes immediately with no confirm, delete has no confirm, duplicate names allowed and renaming merges silently (`ManageCategoriesDialog.kt` about 62-92, 365-375, 399-404).
-- [ ] **R20-58 MED** Picked product images are decoded full size on the main thread with no EXIF rotation (`ProductsScreen.kt` about 3771-3800). Use `decodeSampledBitmapFromUri` (about 3835), apply orientation, run on `Dispatchers.IO`.
-- [ ] **R20-59** `StockAlertWorker` repeats forever for expired and 0-stock items and uses 7 days while the UI uses 30 (`utils/StockAlertWorker.kt` about 37-41).
-- [ ] **R20-60** Sales Report shows "no sales" (and disables CSV) on a returns-only or expenses-only day (`SalesReportScreen.kt` about 248, 382); Sales History custom range with end before start is silently empty (`SalesHistoryScreen.kt` about 102).
-- [ ] **R20-61** Printed Z-report is clipped when returns and tax are both present (`BillPdfGenerator.kt` about 1104-1110); loyalty redeemed is subtracted from net profit but not printed (about 1194-1198; `RegisterCloseScreen.kt` about 2788-2794).
-- [ ] **R20-62** Loyalty: Deactivate has no confirm and no Reactivate; "Save profile" silently reactivates (`LoyaltyScreen.kt` about 1152; repo about 4935-4941). Settings accept `takaPerPoint = 0`, `maxBillPercent = 150`, negative values (about 1460-1470).
-- [ ] **R20-63** Expense rows show only the time though the list covers all dates (`AdvancedPosFeatures.kt` about 1433). Show date or day headers; add a date filter.
-- [ ] **R20-64** Replacing the shop logo does not refresh the preview (same filename, `SettingsScreen.kt` about 1860); Backup hub shows fixed "100% Verified" / "AES-256 Armed" (about 2905-2913); version labels are hard-coded ("v2.6 POS" about 4344; `BackupPackageManager.kt` about 38). Use `BuildConfig.VERSION_NAME`.
-- [ ] **R20-65** Crash Logs list shows the file name instead of the exception: `utils/CrashLogger.kt` about 77 reads line index 6 (blank). Use index 7.
-- [ ] **R20-66** `android:windowSoftInputMode` is set on `<application>` in the manifest, where it is ignored. Move it to the `<activity>`.
+- [x] **R20-52** (Fixed in `24b5659`). Splash waits about 2.6 s doing nothing; progress is chosen by comparing English literals (`SplashScreen.kt` about 73-82, 164-167).
+- [x] **R20-53** (Fixed in `24b5659`). Product form loses everything on rotation (`AddEditProductDialog.kt` about 119-176 use `remember`). Use `rememberSaveable`.
+- [x] **R20-54** (Fixed in `24b5659`). A hardware scan during stock check replaces the open product and discards the count (`ProductsScreen.kt` about 588-600).
+- [x] **R20-55** (Fixed in `24b5659`). Products empty state flashes before data loads (VM about 1580-1584 start as `emptyList()`).
+- [x] **R20-56** (Fixed in `24b5659`). Delete from the edit dialog asks twice (`AddEditProductDialog.kt` about 1593-1612 then `ProductsScreen.kt` about 2758).
+- [x] **R20-57 MED** (Fixed in `24b5659`). Category manager: "Reset defaults" writes immediately with no confirm, delete has no confirm, duplicate names allowed and renaming merges silently (`ManageCategoriesDialog.kt` about 62-92, 365-375, 399-404).
+- [x] **R20-58 MED** (Fixed in `24b5659`). Picked product images are decoded full size on the main thread with no EXIF rotation (`ProductsScreen.kt` about 3771-3800). Use `decodeSampledBitmapFromUri` (about 3835), apply orientation, run on `Dispatchers.IO`.
+- [x] **R20-59** (Fixed in `24b5659`). `StockAlertWorker` repeats forever for expired and 0-stock items and uses 7 days while the UI uses 30 (`utils/StockAlertWorker.kt` about 37-41).
+- [x] **R20-60** (Fixed in `24b5659`). Sales Report shows "no sales" (and disables CSV) on a returns-only or expenses-only day (`SalesReportScreen.kt` about 248, 382); Sales History custom range with end before start is silently empty (`SalesHistoryScreen.kt` about 102).
+- [x] **R20-61** (Fixed in `24b5659`). Printed Z-report is clipped when returns and tax are both present (`BillPdfGenerator.kt` about 1104-1110); loyalty redeemed is subtracted from net profit but not printed (about 1194-1198; `RegisterCloseScreen.kt` about 2788-2794).
+- [x] **R20-62** (Fixed in `24b5659`). Loyalty: Deactivate has no confirm and no Reactivate; "Save profile" silently reactivates (`LoyaltyScreen.kt` about 1152; repo about 4935-4941). Settings accept `takaPerPoint = 0`, `maxBillPercent = 150`, negative values (about 1460-1470).
+- [x] **R20-63** (Fixed in `24b5659`). Expense rows show only the time though the list covers all dates (`AdvancedPosFeatures.kt` about 1433). Show date or day headers; add a date filter.
+- [x] **R20-64** (Fixed in `24b5659`). Replacing the shop logo does not refresh the preview (same filename, `SettingsScreen.kt` about 1860); Backup hub shows fixed "100% Verified" / "AES-256 Armed" (about 2905-2913); version labels are hard-coded ("v2.6 POS" about 4344; `BackupPackageManager.kt` about 38). Use `BuildConfig.VERSION_NAME`.
+- [x] **R20-65** (Fixed in `24b5659`). Crash Logs list shows the file name instead of the exception: `utils/CrashLogger.kt` about 77 reads line index 6 (blank). Use index 7.
+- [x] **R20-66** (Fixed in `24b5659`). `android:windowSoftInputMode` is set on `<application>` in the manifest, where it is ignored. Move it to the `<activity>`.
 
 ---
 
