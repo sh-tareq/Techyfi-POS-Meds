@@ -302,8 +302,8 @@ Move each literal into `values/strings.xml` and `values-bn/strings.xml`.
 
 Cross-app counts in `ui/`: `Color(0x...)` 2360 uses in 34 files; `Color.White/Black/Gray/DarkGray/LightGray` 540; raw `fontSize = N.sp` 1900. The most common hex values copy existing tokens in `theme/Color.kt` (`0xFF059669` 150 times, `0xFF10B981` 139, `0xFFF59E0B` 104, `0xFFEF4444` 60).
 
-- [ ] **R20-74 MED Add semantic tokens first.** Add an `ExtendedColors` CompositionLocal (success, warning, info, each with container and on-container, light and dark) in `theme/`. Add the missing typography styles in `theme/Type.kt` (bodySmall, labelSmall, labelMedium, titleSmall). Then replace hex values one screen per commit, as round 19 did.
-- [ ] **R20-75 MED Unreadable dark-mode panels (fix these first).**
+- [x] **R20-74 MED Add semantic tokens first.** (Fixed in `b92f510`). Add an `ExtendedColors` CompositionLocal (success, warning, info, each with container and on-container, light and dark) in `theme/`. Add the missing typography styles in `theme/Type.kt` (bodySmall, labelSmall, labelMedium, titleSmall). Then replace hex values one screen per commit, as round 19 did.
+- [x] **R20-75 MED Unreadable dark-mode panels (fix these first).** (Fixed in `b92f510`).
   - `ReturnDialog.kt` about 928-933: DUE and MFS refund panels use fixed light backgrounds with theme text that is light in dark mode. Also about 673, 736, 961, 1146, 1263.
   - `RegisterCloseScreen.kt` about 2397-2400 (variance badge).
   - `SettingsScreen.kt` about 5309, 5411 (`Color.DarkGray` dialog text) and 28 `Color.Gray` uses.
@@ -311,10 +311,10 @@ Cross-app counts in `ui/`: `Color(0x...)` 2360 uses in 34 files; `Color.White/Bl
   - Products: `ProductsScreen.kt` about 3438-3470; `ManageCategoriesDialog.kt` about 157-162, 297-301, 382; `AddEditProductDialog.kt` about 1527; `StockAuditDialogs.kt` about 200-207.
   - Dues and customers: `DuesScreen.kt` about 3032-3035; `AdvancedPosFeatures.kt` about 1382, 1412-1415; `ExpensesScreen.kt` about 704-705; `CustomerDossierSheet.kt` about 366-367, 1166; `SuppliersScreen.kt` about 776, 1215.
   - Users: `ManageUsersScreen.kt` about 216-226, 674-676 (amber on `#FEF3C7` about 1.9:1 contrast).
-- [ ] **R20-76 MED Status bar icons do not follow the in-app theme.** `MainActivity.kt` about 59 calls `enableEdgeToEdge()` with defaults. Pass `SystemBarStyle.auto(..., detectDarkMode = { isDark })` or set `isAppearanceLightStatusBars` in a `SideEffect`.
-- [ ] **R20-77 LOW** `themes.xml` sets window, status and nav bar backgrounds to `#070709` in every mode with no `values-night`, so light mode flashes black on cold start.
-- [ ] **R20-78 LOW** Tablet rail hard-codes colours (Navigation.kt about 669-672, 848-851, 893-902, 928-957) while the phone bar uses the theme.
-- [ ] **R20-79 LOW** Low-contrast and tiny text: Splash footer `#475569` on `#070709` (about 2.6:1, `SplashScreen.kt` about 188); LockScreen tagline 7.5 to 8.5sp (`LockScreen.kt` about 660-664). Use at least 10sp and 4.5:1.
+- [x] **R20-76 MED Status bar icons do not follow the in-app theme.** (Fixed in `b92f510`). `MainActivity.kt` about 59 calls `enableEdgeToEdge()` with defaults. Pass `SystemBarStyle.auto(..., detectDarkMode = { isDark })` or set `isAppearanceLightStatusBars` in a `SideEffect`.
+- [x] **R20-77 LOW** (Fixed in `b92f510`). `themes.xml` sets window, status and nav bar backgrounds to `#070709` in every mode with no `values-night`, so light mode flashes black on cold start.
+- [x] **R20-78 LOW** (Fixed in `b92f510`). Tablet rail hard-codes colours (Navigation.kt about 669-672, 848-851, 893-902, 928-957) while the phone bar uses the theme.
+- [x] **R20-79 LOW** (Fixed in `b92f510`). Low-contrast and tiny text: Splash footer `#475569` on `#070709` (about 2.6:1, `SplashScreen.kt` about 188); LockScreen tagline 7.5 to 8.5sp (`LockScreen.kt` about 660-664). Use at least 10sp and 4.5:1.
 
 ---
 
