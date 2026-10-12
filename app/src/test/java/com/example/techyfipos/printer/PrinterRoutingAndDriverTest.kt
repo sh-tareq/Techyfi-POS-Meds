@@ -138,6 +138,28 @@ class PrinterRoutingAndDriverTest {
         assertEquals(RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG, noPermission)
     }
 
+    @Test
+    fun `decidePrintRouting with AUTO mode and partial success returns SHOW_ERROR instead of falling back`() {
+        val partialFailure = decidePrintRouting(
+            mode = "AUTO",
+            address = "AA:BB:CC:DD:EE:FF",
+            directResult = DirectPrintResult.Failed("Connection dropped"),
+            partialSuccessCount = 3
+        )
+        assertEquals(RoutingDecision.SHOW_ERROR, partialFailure)
+    }
+
+    @Test
+    fun `decidePrintRouting with AUTO mode and zero partial success falls back to SYSTEM_DIALOG`() {
+        val zeroFailure = decidePrintRouting(
+            mode = "AUTO",
+            address = "AA:BB:CC:DD:EE:FF",
+            directResult = DirectPrintResult.Failed("Connection dropped"),
+            partialSuccessCount = 0
+        )
+        assertEquals(RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG, zeroFailure)
+    }
+
     // 4. Tests for receiptLuminanceThreshold()
     @Test
     fun `receiptLuminanceThreshold maps values correctly and clamps out of bounds inputs`() {

@@ -736,12 +736,13 @@ enum class RoutingDecision {
 
 /**
  * Pure function determining the routing decision based on configured mode,
- * printer address, and direct printing result.
+ * printer address, direct printing result, and partial success count.
  */
 fun decidePrintRouting(
     mode: String,
     address: String,
-    directResult: DirectPrintResult?
+    directResult: DirectPrintResult?,
+    partialSuccessCount: Int = 0
 ): RoutingDecision {
     val trimmedAddress = address.trim()
     val normalizedMode = mode.trim().uppercase()
@@ -759,6 +760,10 @@ fun decidePrintRouting(
                 RoutingDecision.SYSTEM_DIALOG
             } else if (directResult is DirectPrintResult.Success) {
                 RoutingDecision.DIRECT_OK
+            } else if (partialSuccessCount > 0) {
+                // Do not fall back to system dialog if some items were already printed directly;
+                // reprinting the entire batch in the system dialog causes duplicates.
+                RoutingDecision.SHOW_ERROR
             } else {
                 RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG
             }
@@ -988,7 +993,7 @@ suspend fun printLabelImages(
         }
     }
 
-    val decision = decidePrintRouting(mode, address, directResult)
+    val decision = decidePrintRouting(mode, address, directResult, batchResult.successfulCount)
     return when (decision) {
         RoutingDecision.DIRECT_OK -> true
         RoutingDecision.SHOW_ERROR -> {
