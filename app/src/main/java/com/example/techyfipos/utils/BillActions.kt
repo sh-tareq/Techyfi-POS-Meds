@@ -4,6 +4,7 @@ import com.example.techyfipos.R
 import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.printer.DirectPrintResult
 import com.example.techyfipos.printer.EscPosPrinterDriver
+import com.example.techyfipos.printer.LabelJob
 import com.example.techyfipos.printer.TsplLabelPrinterDriver
 import com.example.techyfipos.printer.isSamePrinter
 import com.example.techyfipos.printer.sendToBluetoothPrinter
@@ -965,21 +966,25 @@ suspend fun printLabelImages(
         }
     }
 
-    var directResult: DirectPrintResult = DirectPrintResult.Success
-    for (labelBitmap in labels) {
-        val res = TsplLabelPrinterDriver.printLabel(
-            context = context,
-            address = address,
-            labelBitmap = labelBitmap,
-            widthMm = widthMm,
-            heightMm = heightMm,
-            gapMm = settings.labelGapMm,
-            copies = copies,
-            darkness = settings.labelDarkness
-        )
-        if (res !is DirectPrintResult.Success) {
-            directResult = res
-            break
+    val jobs = labels.map { LabelJob(it, copies) }
+    val batchResult = TsplLabelPrinterDriver.printLabelsBatch(
+        context = context,
+        address = address,
+        jobs = jobs,
+        widthMm = widthMm,
+        heightMm = heightMm,
+        gapMm = settings.labelGapMm,
+        darkness = settings.labelDarkness
+    )
+    val directResult = batchResult.result
+
+    if (batchResult.successfulCount > 0 && directResult !is DirectPrintResult.Success) {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.batch_print_partial_failure, batchResult.successfulCount),
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 

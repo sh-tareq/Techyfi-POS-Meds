@@ -270,6 +270,41 @@ class PrinterRoutingAndDriverTest {
         assertEquals("Powered by Techyfi POS", reportPoweredByText(InvoiceSettingsData(poweredByText = "")))
         assertEquals("Powered by Techyfi POS", reportPoweredByText(InvoiceSettingsData(poweredByText = "   ")))
     }
+
+    // 10. Tests for buildTsplPayload clamping (DENSITY, GAP, PRINT 1,n)
+    @Test
+    fun `buildTsplPayload clamps negative and excessive darkness, gap, and copies`() {
+        val dummyBytes = byteArrayOf(0x01, 0x02)
+        val payloadLow = buildTsplPayload(
+            widthMm = 40f,
+            heightMm = 30f,
+            gapMm = -1f,
+            copies = -5,
+            darkness = -3,
+            bitmapBytes = dummyBytes,
+            targetWidthDots = 320,
+            targetHeightDots = 240
+        )
+        val textLow = String(payloadLow, Charsets.US_ASCII)
+        assertTrue(textLow.contains("DENSITY 0\r\n"))
+        assertTrue(textLow.contains("GAP 0 mm,0 mm\r\n"))
+        assertTrue(textLow.contains("PRINT 1,1\r\n"))
+
+        val payloadHigh = buildTsplPayload(
+            widthMm = 40f,
+            heightMm = 30f,
+            gapMm = 3f,
+            copies = 5,
+            darkness = 99,
+            bitmapBytes = dummyBytes,
+            targetWidthDots = 320,
+            targetHeightDots = 240
+        )
+        val textHigh = String(payloadHigh, Charsets.US_ASCII)
+        assertTrue(textHigh.contains("DENSITY 15\r\n"))
+        assertTrue(textHigh.contains("GAP 3 mm,0 mm\r\n"))
+        assertTrue(textHigh.contains("PRINT 1,5\r\n"))
+    }
 }
 
 

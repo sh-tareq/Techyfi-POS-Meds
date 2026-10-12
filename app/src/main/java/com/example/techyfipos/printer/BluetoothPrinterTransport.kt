@@ -52,7 +52,8 @@ suspend fun sendToBluetoothPrinter(
     address: String,
     segments: List<ByteArray>,
     delayBetweenSegmentsMs: Long = 0L,
-    perSegmentDelaysMs: List<Long>? = null
+    perSegmentDelaysMs: List<Long>? = null,
+    onSegmentSent: ((index: Int) -> Unit)? = null
 ): DirectPrintResult = bluetoothPrinterMutex.withLock {
     withContext(Dispatchers.IO) {
     val trimmedAddress = address.trim()
@@ -139,6 +140,7 @@ suspend fun sendToBluetoothPrinter(
                     delay(CHUNK_DELAY_MS)
                 }
             }
+            onSegmentSent?.invoke(index)
             val delayMs = perSegmentDelaysMs?.getOrNull(index) ?: delayBetweenSegmentsMs
             if (delayMs > 0L) {
                 os.flush()

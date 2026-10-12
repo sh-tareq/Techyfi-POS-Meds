@@ -63,6 +63,45 @@ fun tsplBitmapBytes(bitmap: Bitmap, invertBits: Boolean = TSPL_INVERT_BITS): Byt
     tsplBitmapBytes(bitmap.width, bitmap.height, invertBits) { x, y -> bitmap.getPixel(x, y) }
 
 /**
+ * Builds the complete TSPL binary command stream for printing a label from pre-rendered bitmap bytes.
+ */
+fun buildTsplPayload(
+    widthMm: Float,
+    heightMm: Float,
+    gapMm: Float,
+    copies: Int,
+    darkness: Int,
+    bitmapBytes: ByteArray,
+    targetWidthDots: Int,
+    targetHeightDots: Int
+): ByteArray {
+    val safeCopies = copies.coerceAtLeast(1)
+    val safeDarkness = darkness.coerceIn(0, 15)
+    val safeGapMm = gapMm.coerceAtLeast(0f)
+    val safeWidthDots = maxOf(1, targetWidthDots)
+    val safeHeightDots = maxOf(1, targetHeightDots)
+    val widthBytes = (safeWidthDots + 7) / 8
+
+    val header = "SIZE ${formatMm(widthMm)} mm,${formatMm(heightMm)} mm\r\n" +
+        "GAP ${formatMm(safeGapMm)} mm,0 mm\r\n" +
+        "DIRECTION 1\r\n" +
+        "DENSITY $safeDarkness\r\n" +
+        "CLS\r\n" +
+        "BITMAP 0,0,$widthBytes,$safeHeightDots,0,"
+
+    val footer = "\r\nPRINT 1,$safeCopies\r\n"
+
+    val headerBytes = header.toByteArray(Charsets.US_ASCII)
+    val footerBytes = footer.toByteArray(Charsets.US_ASCII)
+
+    val out = ByteArrayOutputStream(headerBytes.size + bitmapBytes.size + footerBytes.size)
+    out.write(headerBytes)
+    out.write(bitmapBytes)
+    out.write(footerBytes)
+    return out.toByteArray()
+}
+
+/**
  * Builds the complete TSPL binary command stream for printing a label.
  */
 fun buildTsplPayload(
@@ -74,12 +113,8 @@ fun buildTsplPayload(
     darkness: Int,
     invertBits: Boolean = TSPL_INVERT_BITS
 ): ByteArray {
-    val safeCopies = copies.coerceAtLeast(1)
-    val safeDarkness = darkness.coerceIn(0, 15)
-    val safeGapMm = gapMm.coerceAtLeast(0f)
     val targetWidthDots = maxOf(1, (widthMm * 8f).roundToInt())
     val targetHeightDots = maxOf(1, (heightMm * 8f).roundToInt())
-    val widthBytes = (targetWidthDots + 7) / 8
 
     val scaled = if (labelBitmap.width == targetWidthDots && labelBitmap.height == targetHeightDots) {
         labelBitmap
@@ -92,24 +127,27 @@ fun buildTsplPayload(
         scaled.recycle()
     }
 
-    val header = "SIZE ${formatMm(widthMm)} mm,${formatMm(heightMm)} mm\r\n" +
-        "GAP ${formatMm(safeGapMm)} mm,0 mm\r\n" +
-        "DIRECTION 1\r\n" +
-        "DENSITY $safeDarkness\r\n" +
-        "CLS\r\n" +
-        "BITMAP 0,0,$widthBytes,$targetHeightDots,0,"
-
-    val footer = "\r\nPRINT 1,$safeCopies\r\n"
-
-    val headerBytes = header.toByteArray(Charsets.US_ASCII)
-    val footerBytes = footer.toByteArray(Charsets.US_ASCII)
-
-    val out = ByteArrayOutputStream(headerBytes.size + rawBytes.size + footerBytes.size)
-    out.write(headerBytes)
-    out.write(rawBytes)
-    out.write(footerBytes)
-    return out.toByteArray()
+    return buildTsplPayload(
+        widthMm = widthMm,
+        heightMm = heightMm,
+        gapMm = gapMm,
+        copies = copies,
+        darkness = darkness,
+        bitmapBytes = rawBytes,
+        targetWidthDots = targetWidthDots,
+        targetHeightDots = targetHeightDots
+    )
 }
+
+data class LabelJob(
+    val bitmap: Bitmap,
+    val copies: Int = 1
+)
+
+data class BatchLabelPrintResult(
+    val result: DirectPrintResult,
+    val successfulCount: Int
+)
 
 /**
  * Prints label directly to a Bluetooth TSPL printer (e.g. Deli E886BW).
@@ -128,6 +166,52 @@ suspend fun printLabel(
     sendToBluetoothPrinter(context, address, payload)
 }
 
+/**
+ * Prints a batch of label jobs to a Bluetooth TSPL printer in a single RFCOMM session.
+ * Avoids repeated connect / settle / drain overhead per label.
+ */
+suspend fun printLabelsBatch(
+    context: Context,
+    address: String,
+    jobs: List<LabelJob>,
+    widthMm: Float,
+    heightMm: Float,
+    gapMm: Float,
+    darkness: Int,
+    invertBits: Boolean = TSPL_INVERT_BITS
+): BatchLabelPrintResult = withContext(Dispatchers.IO) {
+    if (jobs.isEmpty()) {
+        return@withContext BatchLabelPrintResult(DirectPrintResult.Success, 0)
+    }
+
+    val segments = jobs.map { job ->
+        buildTsplPayload(
+            labelBitmap = job.bitmap,
+            widthMm = widthMm,
+            heightMm = heightMm,
+            gapMm = gapMm,
+            copies = job.copies,
+            darkness = darkness,
+            invertBits = invertBits
+        )
+    }
+
+    var totalSuccessfulCopies = 0
+    val delays = List(segments.size) { 100L }
+
+    val res = sendToBluetoothPrinter(
+        context = context,
+        address = address,
+        segments = segments,
+        perSegmentDelaysMs = delays,
+        onSegmentSent = { index ->
+            totalSuccessfulCopies += jobs[index].copies
+        }
+    )
+
+    BatchLabelPrintResult(res, totalSuccessfulCopies)
+}
+
 object TsplLabelPrinterDriver {
     suspend fun printLabel(
         context: Context,
@@ -141,4 +225,17 @@ object TsplLabelPrinterDriver {
     ): DirectPrintResult = com.example.techyfipos.printer.printLabel(
         context, address, labelBitmap, widthMm, heightMm, gapMm, copies, darkness
     )
+
+    suspend fun printLabelsBatch(
+        context: Context,
+        address: String,
+        jobs: List<LabelJob>,
+        widthMm: Float,
+        heightMm: Float,
+        gapMm: Float,
+        darkness: Int
+    ): BatchLabelPrintResult = com.example.techyfipos.printer.printLabelsBatch(
+        context, address, jobs, widthMm, heightMm, gapMm, darkness
+    )
 }
+
