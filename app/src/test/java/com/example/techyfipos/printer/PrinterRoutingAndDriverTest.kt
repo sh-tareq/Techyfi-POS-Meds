@@ -384,6 +384,22 @@ class PrinterRoutingAndDriverTest {
         val loaded = InvoiceSettingsData.fromJson(defaultJson)
         assertEquals("AUTO", loaded.receiptPrintMode)
     }
+
+    // 14. Tests for FileSaveResult
+    @Test
+    fun `FileSaveResult isSuccessful returns true for PublicSaved and PrivateFallback and false for Failed`() {
+        val publicResult = com.example.techyfipos.utils.FileSaveResult.PublicSaved("/storage/emulated/0/Pictures/Invoices/test.jpg")
+        val fallbackResult = com.example.techyfipos.utils.FileSaveResult.PrivateFallback("/data/user/0/com.example.techyfipos/files/test.jpg")
+        val failedResult = com.example.techyfipos.utils.FileSaveResult.Failed
+
+        assertTrue(publicResult.isSuccessful)
+        assertEquals("/storage/emulated/0/Pictures/Invoices/test.jpg", publicResult.path)
+
+        assertTrue(fallbackResult.isSuccessful)
+        assertEquals("/data/user/0/com.example.techyfipos/files/test.jpg", fallbackResult.path)
+
+        assertFalse(failedResult.isSuccessful)
+    }
 }
 
 

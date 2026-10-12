@@ -813,12 +813,18 @@ fun ReceiptSummaryDialog(
                                     delay(100)
                                     savePressed = false
                                     withJpeg { file ->
-                                        val saved = saveBillJpegToDownloads(context, file)
-                                        if (saved) {
-                                            copyImageUriToClipboard(context, getBillImageUri(context, file), "Invoice #${bill.saleId}")
-                                            Toast.makeText(context, context.getString(R.string.cart_saved_jpeg_toast), Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, context.getString(R.string.cart_failed_save_jpeg_toast), Toast.LENGTH_SHORT).show()
+                                        when (val result = saveBillJpegToDownloads(context, file)) {
+                                            is FileSaveResult.PublicSaved -> {
+                                                copyImageUriToClipboard(context, getBillImageUri(context, file), "Invoice #${bill.saleId}")
+                                                Toast.makeText(context, context.getString(R.string.cart_saved_jpeg_toast), Toast.LENGTH_SHORT).show()
+                                            }
+                                            is FileSaveResult.PrivateFallback -> {
+                                                copyImageUriToClipboard(context, getBillImageUri(context, file), "Invoice #${bill.saleId}")
+                                                Toast.makeText(context, context.getString(R.string.file_saved_private_fallback, result.path), Toast.LENGTH_LONG).show()
+                                            }
+                                            FileSaveResult.Failed -> {
+                                                Toast.makeText(context, context.getString(R.string.cart_failed_save_jpeg_toast), Toast.LENGTH_SHORT).show()
+                                            }
                                         }
                                     }
                                 }

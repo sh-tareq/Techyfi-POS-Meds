@@ -342,10 +342,19 @@ private fun Float.toCleanMillimetres(): String =
 fun printBillPdf(context: Context, pdfFile: File, jobName: String): Boolean =
     printPdfDocument(context, pdfFile, jobName)
 
+sealed class FileSaveResult {
+    data class PublicSaved(val path: String = "") : FileSaveResult()
+    data class PrivateFallback(val path: String) : FileSaveResult()
+    object Failed : FileSaveResult()
+
+    val isSuccessful: Boolean get() = this is PublicSaved || this is PrivateFallback
+}
+
 /**
- * Copies the invoice JPEG into the public Pictures/Invoices or Downloads folder. Returns true on success.
+ * Copies the invoice JPEG into the public Pictures/Invoices or Downloads folder.
+ * Returns FileSaveResult indicating whether saved publicly, fell back to private storage, or failed.
  */
-fun saveBillJpegToDownloads(context: Context, imageFile: File): Boolean {
+fun saveBillJpegToDownloads(context: Context, imageFile: File): FileSaveResult {
     val fileName = if (imageFile.nameWithoutExtension.contains("repayment", ignoreCase = true)) {
         "Repayment_Receipt_${System.currentTimeMillis()}.jpg"
     } else {
@@ -363,13 +372,15 @@ fun saveBillJpegToDownloads(context: Context, imageFile: File): Boolean {
             }
             val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
             if (uri != null) {
-                context.contentResolver.openOutputStream(uri)?.use { out ->
+                val copied = context.contentResolver.openOutputStream(uri)?.use { out ->
                     FileInputStream(imageFile).use { input -> input.copyTo(out) }
                 }
-                values.clear()
-                values.put(MediaStore.Images.Media.IS_PENDING, 0)
-                context.contentResolver.update(uri, values, null, null)
-                return true
+                if (copied != null) {
+                    values.clear()
+                    values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                    context.contentResolver.update(uri, values, null, null)
+                    return FileSaveResult.PublicSaved("${Environment.DIRECTORY_PICTURES}/Invoices/$fileName")
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -385,13 +396,15 @@ fun saveBillJpegToDownloads(context: Context, imageFile: File): Boolean {
             }
             val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
             if (uri != null) {
-                context.contentResolver.openOutputStream(uri)?.use { out ->
+                val copied = context.contentResolver.openOutputStream(uri)?.use { out ->
                     FileInputStream(imageFile).use { input -> input.copyTo(out) }
                 }
-                values.clear()
-                values.put(MediaStore.Downloads.IS_PENDING, 0)
-                context.contentResolver.update(uri, values, null, null)
-                return true
+                if (copied != null) {
+                    values.clear()
+                    values.put(MediaStore.Downloads.IS_PENDING, 0)
+                    context.contentResolver.update(uri, values, null, null)
+                    return FileSaveResult.PublicSaved("${Environment.DIRECTORY_DOWNLOADS}/$fileName")
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -406,7 +419,7 @@ fun saveBillJpegToDownloads(context: Context, imageFile: File): Boolean {
         FileInputStream(imageFile).use { input ->
             FileOutputStream(outFile).use { output -> input.copyTo(output) }
         }
-        true
+        FileSaveResult.PublicSaved(outFile.absolutePath)
     } catch (e: Exception) {
         e.printStackTrace()
         // Final fallback: save in app's external files dir
@@ -416,16 +429,16 @@ fun saveBillJpegToDownloads(context: Context, imageFile: File): Boolean {
             FileInputStream(imageFile).use { input ->
                 FileOutputStream(outFile).use { output -> input.copyTo(output) }
             }
-            true
+            FileSaveResult.PrivateFallback(outFile.absolutePath)
         } catch (e2: Exception) {
             e2.printStackTrace()
-            false
+            FileSaveResult.Failed
         }
     }
 }
 
-fun saveBillPdfToDownloads(context: Context, pdfFile: File): Boolean {
-    if (!isPdfFile(pdfFile)) return false
+fun saveBillPdfToDownloads(context: Context, pdfFile: File): FileSaveResult {
+    if (!isPdfFile(pdfFile)) return FileSaveResult.Failed
     val fileName = "Invoice_${pdfFile.nameWithoutExtension}_${System.currentTimeMillis()}.pdf"
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -438,13 +451,15 @@ fun saveBillPdfToDownloads(context: Context, pdfFile: File): Boolean {
             }
             val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
             if (uri != null) {
-                context.contentResolver.openOutputStream(uri)?.use { output ->
+                val copied = context.contentResolver.openOutputStream(uri)?.use { output ->
                     FileInputStream(pdfFile).use { input -> input.copyTo(output) }
-                } ?: return false
-                values.clear()
-                values.put(MediaStore.Downloads.IS_PENDING, 0)
-                context.contentResolver.update(uri, values, null, null)
-                return true
+                }
+                if (copied != null) {
+                    values.clear()
+                    values.put(MediaStore.Downloads.IS_PENDING, 0)
+                    context.contentResolver.update(uri, values, null, null)
+                    return FileSaveResult.PublicSaved("${Environment.DIRECTORY_DOWNLOADS}/Invoices/$fileName")
+                }
             }
         } catch (error: Exception) {
             error.printStackTrace()
@@ -453,13 +468,14 @@ fun saveBillPdfToDownloads(context: Context, pdfFile: File): Boolean {
 
     return try {
         val targetDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.filesDir
+        val outFile = File(targetDir, fileName)
         FileInputStream(pdfFile).use { input ->
-            FileOutputStream(File(targetDir, fileName)).use { output -> input.copyTo(output) }
+            FileOutputStream(outFile).use { output -> input.copyTo(output) }
         }
-        true
+        FileSaveResult.PrivateFallback(outFile.absolutePath)
     } catch (error: Exception) {
         error.printStackTrace()
-        false
+        FileSaveResult.Failed
     }
 }
 

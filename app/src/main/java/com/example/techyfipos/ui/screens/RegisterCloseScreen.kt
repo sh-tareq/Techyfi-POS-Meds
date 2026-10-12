@@ -87,6 +87,7 @@ import com.example.techyfipos.utils.printBillJpeg
 import com.example.techyfipos.utils.printReceiptImage
 import com.example.techyfipos.utils.findActivity
 import com.example.techyfipos.utils.saveBillJpegToDownloads
+import com.example.techyfipos.utils.FileSaveResult
 import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.data.SettingsDataStore
 import com.example.techyfipos.ui.viewmodel.SettingsViewModel
@@ -1239,11 +1240,16 @@ fun RegisterCloseScreen(
             onSave = {
                 try {
                     val jpegFile = generateXReportJpeg(context, r, rangeLabel, settings = invoiceSettings)
-                    val ok = saveBillJpegToDownloads(context, jpegFile)
-                    if (ok) {
-                        Toast.makeText(context, context.getString(R.string.z_report_x_saved_toast), Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
+                    when (val res = saveBillJpegToDownloads(context, jpegFile)) {
+                        is FileSaveResult.PublicSaved -> {
+                            Toast.makeText(context, context.getString(R.string.z_report_x_saved_toast), Toast.LENGTH_LONG).show()
+                        }
+                        is FileSaveResult.PrivateFallback -> {
+                            Toast.makeText(context, context.getString(R.string.file_saved_private_fallback, res.path), Toast.LENGTH_LONG).show()
+                        }
+                        FileSaveResult.Failed -> {
+                            Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
+                        }
                     }
                 } catch (e: Exception) {
                     Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
@@ -1305,11 +1311,16 @@ fun RegisterCloseScreen(
             onSave = {
                 try {
                     val jpegFile = generateZReportJpeg(context, r, label, settings = invoiceSettings)
-                    val ok = saveBillJpegToDownloads(context, jpegFile)
-                    if (ok) {
-                        Toast.makeText(context, context.getString(R.string.z_report_z_saved_toast), Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
+                    when (val res = saveBillJpegToDownloads(context, jpegFile)) {
+                        is FileSaveResult.PublicSaved -> {
+                            Toast.makeText(context, context.getString(R.string.z_report_z_saved_toast), Toast.LENGTH_LONG).show()
+                        }
+                        is FileSaveResult.PrivateFallback -> {
+                            Toast.makeText(context, context.getString(R.string.file_saved_private_fallback, res.path), Toast.LENGTH_LONG).show()
+                        }
+                        FileSaveResult.Failed -> {
+                            Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
+                        }
                     }
                 } catch (e: Exception) {
                     Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()

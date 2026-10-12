@@ -649,6 +649,7 @@
     <string name="cart_thermal_receipt_preview">৮০ মিমি থার্মাল রশিদ প্রিভিউ</string>
     <string name="cart_print_button">প্রিন্ট</string>
     <string name="cart_saved_jpeg_toast">জেপিইজি সংরক্ষিত হয়েছে এবং ক্লিপবোর্ডে কপি হয়েছে</string>
+    <string name="file_saved_private_fallback">অ্যাপ স্টোরেজে সংরক্ষিত (গ্যালারিতে নয়): %1$s</string>
     <string name="cart_failed_save_jpeg_toast">ইনভয়েস জেপিইজি সংরক্ষণ করতে ব্যর্থ</string>
     <string name="cart_save_button">সংরক্ষণ</string>
     <string name="cart_delete_button">মুছুন</string>

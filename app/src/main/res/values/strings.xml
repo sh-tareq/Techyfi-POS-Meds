@@ -649,6 +649,7 @@
     <string name="cart_thermal_receipt_preview">80mm Thermal Receipt Preview</string>
     <string name="cart_print_button">Print</string>
     <string name="cart_saved_jpeg_toast">Saved JPEG &amp; Copied to clipboard</string>
+    <string name="file_saved_private_fallback">Saved to app storage (not in public gallery): %1$s</string>
     <string name="cart_failed_save_jpeg_toast">Failed to save invoice JPEG</string>
     <string name="cart_save_button">Save</string>
     <string name="cart_delete_button">Delete</string>

@@ -96,6 +96,7 @@ import com.example.techyfipos.utils.openPhoneDialer
 import com.example.techyfipos.utils.openWhatsAppReminder
 import com.example.techyfipos.utils.printBillJpeg
 import com.example.techyfipos.utils.saveBillJpegToDownloads
+import com.example.techyfipos.utils.FileSaveResult
 import com.example.techyfipos.utils.shareBillJpeg
 import com.example.techyfipos.utils.shareReceiptAsText
 import com.example.techyfipos.utils.findActivity
@@ -6932,19 +6933,28 @@ fun DueRepaymentReceiptDialog(
                                         timestamp = data.timestamp,
                                         isReprint = data.isReprint
                                     )
-                                    val success = saveBillJpegToDownloads(context, file)
-                                    if (success) {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.repayment_receipt_saved_success),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    } else {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.receipt_save_failed),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+                                    when (val result = saveBillJpegToDownloads(context, file)) {
+                                        is FileSaveResult.PublicSaved -> {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.repayment_receipt_saved_success),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                        is FileSaveResult.PrivateFallback -> {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.file_saved_private_fallback, result.path),
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                        FileSaveResult.Failed -> {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.receipt_save_failed),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }
                                 } catch (e: Exception) {
                                     e.printStackTrace()
