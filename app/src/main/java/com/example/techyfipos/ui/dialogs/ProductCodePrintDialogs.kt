@@ -1062,9 +1062,9 @@ fun BatchProductCodePrintDialog(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(20.dp)
+                    .padding(16.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // Header
                 Row(
@@ -1126,13 +1126,27 @@ fun BatchProductCodePrintDialog(
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            stringResource(R.string.batch_print_all, products.count { it.barcode.isNotBlank() }),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 3.dp)
+                        ) {
+                            Text(
+                                stringResource(R.string.batch_print_scope_all),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                "(${products.count { it.barcode.isNotBlank() }})",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     SegmentedButton(
                         selected = scopeMode == BatchPrintScope.IN_STOCK,
@@ -1140,13 +1154,27 @@ fun BatchProductCodePrintDialog(
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            stringResource(R.string.batch_print_in_stock, products.count { it.barcode.isNotBlank() && it.stockQty > 0 }),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 3.dp)
+                        ) {
+                            Text(
+                                stringResource(R.string.batch_print_scope_in_stock),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                "(${products.count { it.barcode.isNotBlank() && it.stockQty > 0 }})",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     SegmentedButton(
                         selected = scopeMode == BatchPrintScope.CUSTOM,
@@ -1159,13 +1187,27 @@ fun BatchProductCodePrintDialog(
                         shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            stringResource(R.string.batch_print_custom, customSelectedBarcodes.size),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 3.dp)
+                        ) {
+                            Text(
+                                stringResource(R.string.batch_print_scope_custom),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                "(${customSelectedBarcodes.size})",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 

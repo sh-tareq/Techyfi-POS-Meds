@@ -339,7 +339,7 @@ fun DuesScreen(
             TopAppBar(
                 title = {
                     PosTopAppBarTitle(
-                        title = if (selectedCustomer != null) selectedCustomer!!.customerName else stringResource(R.string.dues_title),
+                        title = if (selectedCustomer != null) selectedCustomer!!.customerName else (if (isTablet) stringResource(R.string.dues_title) else stringResource(R.string.dues_list)),
                         metricBadge = if (selectedCustomer == null && outstandingDues.isNotEmpty()) formatTaka(totalOutstanding) else null,
                         badgeColor = PosSectionColors.Dues,
                         isTablet = isTablet,
@@ -358,19 +358,21 @@ fun DuesScreen(
                     }
                 },
                 actions = {
+                    val actionButtonSize = if (isTablet) 48.dp else 40.dp
+                    val actionIconSize = if (isTablet) 24.dp else 22.dp
                     if (selectedCustomer == null) {
                         // 1. Dues & Credit Audit Trail Ledger Icon
                         IconButton(
                             onClick = { showDuesAuditSheet = true },
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier.size(actionButtonSize)
                         ) {
-                            Realistic3DDigitalKhataIcon(size = 24.dp)
+                            Realistic3DDigitalKhataIcon(size = actionIconSize)
                         }
 
                         // 2. Permanent Reminder Bell Icon with BadgedBox
                         IconButton(
                             onClick = { showReminderHubSheet = true },
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier.size(actionButtonSize)
                         ) {
                             BadgedBox(
                                 badge = {
@@ -384,7 +386,7 @@ fun DuesScreen(
                                     }
                                 }
                             ) {
-                                Realistic3DReminderBellIcon(size = 24.dp, animate = scheduledReminders.isNotEmpty())
+                                Realistic3DReminderBellIcon(size = actionIconSize, animate = scheduledReminders.isNotEmpty())
                             }
                         }
 
@@ -394,9 +396,9 @@ fun DuesScreen(
                                 val cleanDate = DateFormatters.formatExportDateTime()
                                 exportDuesExcelLauncher.launch("dues-ledger-$cleanDate.xlsx")
                             },
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier.size(actionButtonSize)
                         ) {
-                            Realistic3DExcelSpreadsheetIcon(size = 24.dp)
+                            Realistic3DExcelSpreadsheetIcon(size = actionIconSize)
                         }
 
                         // 4. + Add Due (Compact filled icon button for owner or staff with DUES_ADD_DUE)
@@ -406,8 +408,8 @@ fun DuesScreen(
                                 shape = RoundedCornerShape(9.dp),
                                 colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primary),
                                 modifier = Modifier
-                                    .padding(start = 2.dp, end = 4.dp)
-                                    .size(48.dp)
+                                    .padding(start = 2.dp, end = 2.dp)
+                                    .size(actionButtonSize)
                             ) {
                                 Icon(
                                     Icons.Default.PersonAdd,

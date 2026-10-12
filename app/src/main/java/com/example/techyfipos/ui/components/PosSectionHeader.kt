@@ -62,14 +62,14 @@ fun PosTopAppBarTitle(
     subtitleMaxLines: Int = 1,
     icon: @Composable (size: Dp) -> Unit
 ) {
-    val badgeSize = if (isTablet) 48.dp else 40.dp
-    val iconSize = if (isTablet) 32.dp else 25.dp
-    val cornerRadius = if (isTablet) 16.dp else 12.dp
-    val titleFontSize = if (isTablet) 22.sp else 18.sp
-    val titleLineHeight = if (isTablet) 28.sp else 24.sp
-    val subtitleFontSize = if (isTablet) 13.sp else 11.5.sp
+    val badgeSize = if (isTablet) 48.dp else 34.dp
+    val iconSize = if (isTablet) 32.dp else 22.dp
+    val cornerRadius = if (isTablet) 16.dp else 10.dp
+    val titleFontSize = if (isTablet) 22.sp else 16.5.sp
+    val titleLineHeight = if (isTablet) 28.sp else 22.sp
+    val subtitleFontSize = if (isTablet) 13.sp else 11.sp
     val subtitleLineHeight = (subtitleFontSize.value * 1.30f).sp
-    val gap = if (isTablet) 14.dp else 10.dp
+    val gap = if (isTablet) 14.dp else 8.dp
 
     Row(
         modifier = modifier.padding(vertical = 2.dp),

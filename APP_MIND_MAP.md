@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-12 (app version 2.6.74-V12-10-2026, build `Techyfi-POS-Final-V12-10-2026.apk`; versionCode 220950; DB schema version 38)
+Last updated: 2026-10-12 (app version 2.6.75-V12-10-2026, build `Techyfi-POS-Final-V12-10-2026.apk`; versionCode 220951; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -2749,6 +2749,21 @@ mindmap
   - Strictly zero em dash characters throughout the repository.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V12-10-2026.apk` (versionCode 220950, versionName "2.6.74-V12-10-2026"), R8 minified, passing 108/108 unit tests.
+
+### Layout Truncation Remediation & Dialog Formatting Polish (Version 2.6.75-V12-10-2026, Build V12-10-2026)
+- **Zero-Truncation Batch Print Scope Segmented Buttons**:
+  - Restructured the 3-button segmented scope row in `BatchProductCodePrintDialog` into a 2-line vertical arrangement: title label (`All` / `In-Stock` / `Custom`) on line 1, and count badge (`(621)` / `(548)` / `(3)`) on line 2.
+  - Eliminated single-line string truncation (`All Products (6...`, `In-Stock Only (...`) across both English and Bengali locales.
+  - Optimized dialog container spacing (16dp padding, 10dp vertical item spacing) allowing the dialog content to display cleanly without awkward clipping on mobile screens.
+- **Top App Bar Title & Action Button Ergonomics**:
+  - Resolved `Dues & ...` top app bar truncation on phones by dynamically presenting `Dues` (`dues_list` / `বাকি`) on compact screens while retaining `Dues & Credit` on tablets.
+  - Optimized action button touch footprint to 40dp (from 48dp) across the 4 top bar action icons (Khata, Reminders, Excel, Add Due), liberating 32dp of horizontal clearance.
+  - Streamlined `PosTopAppBarTitle` squircle badge container to 34dp (from 40dp) and 16.5sp font size on compact screens, ensuring clean presentation for customer names and section headers.
+- **Bilingual String Parity & Zero Em Dashes**:
+  - Full 100% key parity (2,928 keys) between `values/strings.xml` and `values-bn/strings.xml`.
+  - Strictly zero em dash characters throughout the repository.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V12-10-2026.apk` (versionCode 220951, versionName "2.6.75-V12-10-2026"), R8 minified, passing 108/108 unit tests.
 
 ## Maintenance note
 

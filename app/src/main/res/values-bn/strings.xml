@@ -1615,9 +1615,12 @@
     <string name="products_batch_print_labels">একসাথে বারকোড প্রিন্ট</string>
     <string name="batch_print_title">একসাথে বারকোড লেবেল প্রিন্ট</string>
     <string name="batch_print_scope">পণ্য নির্বাচন করুন</string>
-    <string name="batch_print_all">সকল পণ্য (%1$d)</string>
-    <string name="batch_print_in_stock">শুধুমাত্র স্টকে থাকা পণ্য (%1$d)</string>
+    <string name="batch_print_all">সকল (%1$d)</string>
+    <string name="batch_print_in_stock">স্টকে (%1$d)</string>
     <string name="batch_print_custom">পছন্দমতো (%1$d)</string>
+    <string name="batch_print_scope_all">সকল</string>
+    <string name="batch_print_scope_in_stock">স্টকে</string>
+    <string name="batch_print_scope_custom">পছন্দ</string>
     <string name="batch_print_select_products_btn">পণ্য নির্বাচন করুন (%1$d টি নির্বাচিত)</string>
     <string name="batch_print_picker_title">লেবেল প্রিন্টের জন্য পণ্য বাছুন</string>
     <string name="batch_print_search_placeholder">নাম বা বারকোড দিয়ে খুঁজুন...</string>

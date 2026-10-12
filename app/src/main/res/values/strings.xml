@@ -1619,9 +1619,12 @@
     <string name="products_batch_print_labels">Batch Print Labels</string>
     <string name="batch_print_title">Batch Print Barcode Labels</string>
     <string name="batch_print_scope">Select Products</string>
-    <string name="batch_print_all">All Products (%1$d)</string>
-    <string name="batch_print_in_stock">In-Stock Only (%1$d)</string>
+    <string name="batch_print_all">All (%1$d)</string>
+    <string name="batch_print_in_stock">In-Stock (%1$d)</string>
     <string name="batch_print_custom">Custom (%1$d)</string>
+    <string name="batch_print_scope_all">All</string>
+    <string name="batch_print_scope_in_stock">In-Stock</string>
+    <string name="batch_print_scope_custom">Custom</string>
     <string name="batch_print_select_products_btn">Select Products (%1$d selected)</string>
     <string name="batch_print_picker_title">Select Products for Label Print</string>
     <string name="batch_print_search_placeholder">Search by name or barcode...</string>
