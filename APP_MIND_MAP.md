@@ -2765,6 +2765,43 @@ mindmap
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V12-10-2026.apk` (versionCode 220951, versionName "2.6.75-V12-10-2026"), R8 minified, passing 108/108 unit tests.
 
+### Comprehensive Printing System Hardening, Thermal Z/X Scaling & Bluetooth Batch Optimization (Version 2.6.76-V12-10-2026, Build V12-10-2026)
+- **Thermal Receipt Scaling & Store Branding on Z and X Reports**:
+  - Derived canvas width (`reportCanvasWidth`: 384 dots for 58mm vs 576 dots for 80mm) and PDF page width (`reportPdfPageWidthPoints`: 58mm vs 80mm points) dynamically in `generateZReportJpeg`, `generateXReportJpeg`, `generateZReportPdf`, and `generateXReportPdf`.
+  - Replaced hard-coded store brand header with `reportStoreName` (`storeName.ifBlank { "Techyfi POS" }`) and added configurable powered-by footer (`reportPoweredByText` honoring `settings.showPoweredBy` and `settings.poweredByText`).
+- **Printer Feedback Hardening & Test Receipt Busy Indicator**:
+  - `printBillJpeg` returns `Boolean` confirming print job submission, with asynchronous bitmap decoding and safe recycling in `PrintDocumentAdapter`.
+  - Added user feedback toasts across all callers (`ReceiptSummaryDialog`, `DuesScreen`, `RegisterCloseScreen`, `StoreCreditVoucherSlipDialog`).
+  - Added `isTestingReceipt` loading state and circular progress indicator to Settings test receipt button, matching test label behavior.
+- **Single Bluetooth Session Batch Label Printing**:
+  - Added `LabelJob`, `BatchLabelPrintResult`, and `printLabelsBatch` in `TsplLabelPrinterDriver` transmitting multi-product label batches in a single RFCOMM connection session with `onSegmentSent` callback.
+  - Eliminated repetitive Bluetooth reconnect overhead across `printLabelImages` and `ProductCodePrintDialogs`.
+- **Duplicate Print Prevention in Auto Mode**:
+  - Updated `decidePrintRouting` with `partialSuccessCount` tracking. If at least one label was dispatched successfully before connection failure, suppresses automatic PDF spooler fallback to prevent duplicate printing.
+- **Bluetooth Transport Robustness & RFCOMM Retries**:
+  - Added automatic connect retries (secure RFCOMM -> insecure RFCOMM fallback -> 500ms delay -> second attempt) before declaring connection failure in `BluetoothPrinterTransport`.
+  - Enhanced permission error handling to request `BLUETOOTH_CONNECT` runtime permission via `ActivityCompat.requestPermissions`, only deep-linking to app settings on permanent denial.
+- **Printer Picker Ergonomics & Configuration Safety**:
+  - Resolved bonded Bluetooth device names (`formatBluetoothDeviceDisplay`) displaying `name (address)` across picker dialogs and Settings printer cards.
+  - Added "None / not set" row to printer picker dialog allowing users to clear receipt/label printer selection.
+  - Case-insensitive address comparison (`equals(..., ignoreCase = true)`).
+  - Conflicting receipt printer disabled in label picker with clear warning note.
+- **TSPL Label Quality, Aspect-Ratio Scaling & Dynamic Test Labels**:
+  - Pure `labelLuminanceThreshold(darkness)` function mapping darkness slider (0-100) to luminance cutoff (110-230).
+  - Aspect-ratio preserving scaling with centered white letterboxing in `buildTsplPayload` preventing barcode stretching.
+  - Settings test label dynamically rendered using configured label dimensions.
+- **Legacy Settings Migration**:
+  - `InvoiceSettingsData.fromJson` seamlessly migrates legacy `directBluetoothPrintEnabled = true` to `receiptPrintMode = "BLUETOOTH"` when `receiptPrintMode` is absent, preserving JSON keys for backward backup compatibility.
+- **Public Storage vs App-Private Fallback Clarification**:
+  - `FileSaveResult` sealed hierarchy (`PublicSaved`, `PrivateFallback`, `Failed`) returned by `saveBillJpegToDownloads` and `saveBillPdfToDownloads`.
+  - Informs users with exact destination path when public MediaStore save falls back to app-private storage.
+- **Housekeeping, Cache Auto-Cleanup & 500-Label Batch Cap**:
+  - Added `cleanOldPrintCacheFiles` pruning cache folders (`bills`, `reports`, `receipts`, `product_codes`, loose PDFs/JPEGs) older than 7 days, executed automatically at app launch in `TechyfiPOSApplication` and after printing.
+  - Localized hardcoded strings (`"Invoice JPEG"`, `"Voucher Slip"`, `"Due Reminder"`, `"Customer phone"`, `"Print destination is unavailable"`, `"Could not decode receipt image file"`, job names) to both English and Bengali with strictly zero em dashes.
+  - Added inline note in summary badge and user warning toast in `ProductCodePrintDialogs` when batch label count exceeds the 500-label cap.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V12-10-2026.apk` (versionCode 220952, versionName "2.6.76-V12-10-2026"), R8 minified, passing 108/108 unit tests.
+
 ## Maintenance note
 
 Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
