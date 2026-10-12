@@ -44,7 +44,7 @@ import com.example.techyfipos.data.db.Product
 import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.data.SettingsDataStore
 import com.example.techyfipos.printer.DirectPrintResult
-import com.example.techyfipos.printer.LabelJob
+import com.example.techyfipos.printer.buildTsplPayload
 import com.example.techyfipos.printer.TsplLabelPrinterDriver
 import com.example.techyfipos.utils.*
 import androidx.activity.compose.LocalActivity
@@ -1896,9 +1896,9 @@ fun BatchProductCodePrintDialog(
                                 } else if (goDirect) {
                                     var totalSent = 0
                                     var failure: DirectPrintResult? = null
-                                    val bitmapsToRecycle = mutableListOf<Bitmap>()
                                     try {
-                                        val jobs = mutableListOf<LabelJob>()
+                                        val payloads = mutableListOf<ByteArray>()
+                                        val payloadCopies = mutableListOf<Int>()
                                         for ((idx, item) in items.withIndex()) {
                                             withContext(Dispatchers.Main) {
                                                 printingProgressText = context.getString(R.string.batch_print_printing, idx + 1, items.size)
@@ -1927,19 +1927,30 @@ fun BatchProductCodePrintDialog(
                                                 barcodeGraphicScale = barcodeGraphicScale
                                             )
                                             if (bitmap != null) {
-                                                bitmapsToRecycle.add(bitmap)
-                                                jobs.add(LabelJob(bitmap, item.quantity))
+                                                // Convert right away and free the full-resolution bitmap.
+                                                try {
+                                                    payloads.add(
+                                                        buildTsplPayload(
+                                                            labelBitmap = bitmap,
+                                                            widthMm = effectiveWidthMm,
+                                                            heightMm = effectiveHeightMm,
+                                                            gapMm = invoiceSettings.labelGapMm,
+                                                            copies = item.quantity,
+                                                            darkness = invoiceSettings.labelDarkness
+                                                        )
+                                                    )
+                                                    payloadCopies.add(item.quantity)
+                                                } finally {
+                                                    bitmap.recycle()
+                                                }
                                             }
                                         }
-                                        if (jobs.isNotEmpty()) {
-                                            val batchRes = TsplLabelPrinterDriver.printLabelsBatch(
+                                        if (payloads.isNotEmpty()) {
+                                            val batchRes = com.example.techyfipos.printer.printLabelPayloadsBatch(
                                                 context = context,
                                                 address = address,
-                                                jobs = jobs,
-                                                widthMm = effectiveWidthMm,
-                                                heightMm = effectiveHeightMm,
-                                                gapMm = invoiceSettings.labelGapMm,
-                                                darkness = invoiceSettings.labelDarkness
+                                                payloads = payloads,
+                                                copiesPerPayload = payloadCopies
                                             )
                                             totalSent = batchRes.successfulCount
                                             if (batchRes.result !is DirectPrintResult.Success) {
@@ -1951,9 +1962,6 @@ fun BatchProductCodePrintDialog(
                                         android.util.Log.e("ProductCodePrintDialogs", "Batch label print failed", e)
                                         failure = DirectPrintResult.Failed(e.localizedMessage ?: "Unknown error")
                                     } finally {
-                                        bitmapsToRecycle.forEach {
-                                            try { it.recycle() } catch (_: Exception) {}
-                                        }
                                         withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
                                             isPrinting = false
                                             printingProgressText = ""

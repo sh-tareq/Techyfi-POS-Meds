@@ -220,7 +220,7 @@ suspend fun printLabelsBatch(
         return@withContext BatchLabelPrintResult(DirectPrintResult.Success, 0)
     }
 
-    val segments = jobs.map { job ->
+    val payloads = jobs.map { job ->
         buildTsplPayload(
             labelBitmap = job.bitmap,
             widthMm = widthMm,
@@ -231,20 +231,33 @@ suspend fun printLabelsBatch(
             invertBits = invertBits
         )
     }
+    printLabelPayloadsBatch(context, address, payloads, jobs.map { it.copies })
+}
 
+/**
+ * Sends already-built TSPL payloads (see [buildTsplPayload]) in one RFCOMM session.
+ * Lets callers convert and recycle each label bitmap immediately, so large batches
+ * never hold every full-resolution bitmap in memory at once.
+ */
+suspend fun printLabelPayloadsBatch(
+    context: Context,
+    address: String,
+    payloads: List<ByteArray>,
+    copiesPerPayload: List<Int>
+): BatchLabelPrintResult = withContext(Dispatchers.IO) {
+    if (payloads.isEmpty()) {
+        return@withContext BatchLabelPrintResult(DirectPrintResult.Success, 0)
+    }
     var totalSuccessfulCopies = 0
-    val delays = List(segments.size) { 100L }
-
     val res = sendToBluetoothPrinter(
         context = context,
         address = address,
-        segments = segments,
-        perSegmentDelaysMs = delays,
+        segments = payloads,
+        perSegmentDelaysMs = List(payloads.size) { 100L },
         onSegmentSent = { index ->
-            totalSuccessfulCopies += jobs[index].copies
+            totalSuccessfulCopies += copiesPerPayload.getOrElse(index) { 1 }
         }
     )
-
     BatchLabelPrintResult(res, totalSuccessfulCopies)
 }
 

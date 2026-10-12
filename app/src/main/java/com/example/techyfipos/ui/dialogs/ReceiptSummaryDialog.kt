@@ -718,6 +718,7 @@ fun ReceiptSummaryDialog(
                                 try {
                                     printPressed = true
                                     delay(100)
+                                    printPressed = false
                                     val ok = com.example.techyfipos.utils.printReceiptWithBluetoothFallback(
                                         context = context,
                                         activity = activity,
