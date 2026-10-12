@@ -784,15 +784,28 @@ suspend fun showDirectPrintToast(context: Context, result: DirectPrintResult) = 
         is DirectPrintResult.Failed -> context.getString(R.string.direct_print_error_connection_failed, result.message)
     }
     Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-    if (result is DirectPrintResult.NoPermission) {
-        try {
-            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.fromParts("package", context.packageName, null)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    if (result is DirectPrintResult.NoPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val perm = android.Manifest.permission.BLUETOOTH_CONNECT
+        val activity = context.findActivity()
+        if (activity != null) {
+            val prefs = context.getSharedPreferences("printer_perms", Context.MODE_PRIVATE)
+            val alreadyRequested = prefs.getBoolean("bt_connect_requested", false)
+            val shouldShowRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(activity, perm)
+
+            if (!alreadyRequested || shouldShowRationale) {
+                prefs.edit().putBoolean("bt_connect_requested", true).apply()
+                androidx.core.app.ActivityCompat.requestPermissions(activity, arrayOf(perm), 1001)
+            } else {
+                try {
+                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    android.util.Log.w("BillActions", "Could not open app settings: ${e.message}")
+                }
             }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            android.util.Log.w("BillActions", "Could not open app settings: ${e.message}")
         }
     }
 }
