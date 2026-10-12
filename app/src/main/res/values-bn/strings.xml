@@ -2816,7 +2816,7 @@
     <string name="settings_label_printer_subtitle">বারকোড ও পণ্যের লেবেল প্রিন্টার সেটিংস নির্ধারণ করুন</string>
     <string name="settings_print_mode_auto">স্বয়ংক্রিয়</string>
     <string name="settings_print_mode_bluetooth">ব্লুটুথ</string>
-    <string name="settings_print_mode_system">অ্যান্ড্রয়েড প্রিন্ট সার্ভিস</string>
+    <string name="settings_print_mode_system">সিস্টেম প্রিন্ট</string>
     <string name="settings_print_method_label">প্রিন্ট পদ্ধতি</string>
     <string name="settings_receipt_bluetooth_device">রসিদ ব্লুটুথ প্রিন্টার</string>
     <string name="settings_label_bluetooth_device">লেবেল ব্লুটুথ প্রিন্টার</string>
@@ -3026,4 +3026,11 @@
     <string name="store_credit_pass_header">স্টোর ক্রেডিট পাস</string>
     <string name="cd_3d_share_hub">৩ডি শেয়ার হাব</string>
     <string name="copy">কপি</string>
+    <string name="label_copies_title">লেবেল কপি সংখ্যা</string>
+    <string name="decrease_copies">কপি সংখ্যা কমান</string>
+    <string name="increase_copies">কপি সংখ্যা বাড়ান</string>
+    <string name="preset_stock_copies_fmt">স্টক (%1$d)</string>
+    <string name="labels_sent_to_printer_fmt">প্রিন্টারে %1$dটি লেবেল পাঠানো হয়েছে</string>
+    <string name="settings_test_label_success">টেস্ট লেবেল প্রিন্টারে পাঠানো হয়েছে</string>
+    <string name="settings_test_label_failed">টেস্ট লেবেল প্রিন্ট করতে ব্যর্থ হয়েছে</string>
 </resources>

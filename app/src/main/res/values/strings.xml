@@ -2814,7 +2814,7 @@
     <string name="settings_label_printer_subtitle">Configure barcode and product label printer settings</string>
     <string name="settings_print_mode_auto">Auto</string>
     <string name="settings_print_mode_bluetooth">Bluetooth</string>
-    <string name="settings_print_mode_system">Android Print Service</string>
+    <string name="settings_print_mode_system">System Print</string>
     <string name="settings_print_method_label">Print Method</string>
     <string name="settings_receipt_bluetooth_device">Receipt Bluetooth Printer</string>
     <string name="settings_label_bluetooth_device">Label Bluetooth Printer</string>
@@ -3024,6 +3024,13 @@
     <string name="store_credit_pass_header">STORE CREDIT PASS</string>
     <string name="cd_3d_share_hub">3D Share Hub</string>
     <string name="copy">Copy</string>
+    <string name="label_copies_title">Label Copies</string>
+    <string name="decrease_copies">Decrease copies</string>
+    <string name="increase_copies">Increase copies</string>
+    <string name="preset_stock_copies_fmt">Stock (%1$d)</string>
+    <string name="labels_sent_to_printer_fmt">Sent %1$d label(s) to printer</string>
+    <string name="settings_test_label_success">Test label sent to printer</string>
+    <string name="settings_test_label_failed">Failed to print test label</string>
 </resources>
 
 

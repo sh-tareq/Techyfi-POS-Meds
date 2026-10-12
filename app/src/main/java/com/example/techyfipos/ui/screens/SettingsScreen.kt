@@ -854,6 +854,7 @@ private fun OptimizedSettingsHome(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            var isTestingLabel by remember { mutableStateOf(false) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Realistic3DPrinterIcon(size = 32.dp)
                 Spacer(modifier = Modifier.width(12.dp))
@@ -1023,9 +1024,10 @@ private fun OptimizedSettingsHome(
             OutlinedButton(
                 onClick = {
                     scope.launch(Dispatchers.IO) {
+                        isTestingLabel = true
                         val testBitmap = buildTestLabelBitmap(currentSettings.storeName)
                         val dummyPdf = buildTestLabelPdf(testBitmap, context.cacheDir)
-                        printLabelImages(
+                        val ok = printLabelImages(
                             context = context,
                             activity = context as? Activity,
                             labels = listOf(testBitmap),
@@ -1036,12 +1038,25 @@ private fun OptimizedSettingsHome(
                             jobName = "Test_Label",
                             settings = currentSettings
                         )
+                        withContext(Dispatchers.Main) {
+                            isTestingLabel = false
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.settings_test_label_success), Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.settings_test_label_failed), Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 },
+                enabled = !isTestingLabel,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                if (isTestingLabel) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.settings_test_label_button), fontWeight = FontWeight.Bold)
             }

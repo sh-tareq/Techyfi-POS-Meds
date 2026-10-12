@@ -977,6 +977,9 @@ fun ProductCodeImageDialog(
     var labelSizeMenuExpanded by remember { mutableStateOf(false) }
     var actionStatus by remember { mutableStateOf<String?>(null) }
     var isSaving by remember { mutableStateOf(false) }
+    var isPrinting by remember { mutableStateOf(false) }
+    var printCopies by rememberSaveable { mutableIntStateOf(1) }
+    var copiesInputText by rememberSaveable { mutableStateOf("1") }
 
     val codeType = ProductCodeType.entries.firstOrNull { it.name == codeTypeName } ?: ProductCodeType.BARCODE
     val labelSize = ProductCodeLabelSize.entries.firstOrNull { it.name == labelSizeName }
@@ -1399,6 +1402,138 @@ fun ProductCodeImageDialog(
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
+                // Label Copies Control Card
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.ContentCopy,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.label_copies_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            // Stepper controls: [-] [ 1 ] [+]
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        if (printCopies > 1) {
+                                            printCopies--
+                                            copiesInputText = printCopies.toString()
+                                        }
+                                    },
+                                    enabled = printCopies > 1,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease_copies))
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                                    modifier = Modifier.width(64.dp).height(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        BasicTextField(
+                                            value = copiesInputText,
+                                            onValueChange = { newVal ->
+                                                val filtered = newVal.filter { it.isDigit() }.take(3)
+                                                copiesInputText = filtered
+                                                val parsed = filtered.toIntOrNull()
+                                                if (parsed != null && parsed in 1..500) {
+                                                    printCopies = parsed
+                                                }
+                                            },
+                                            singleLine = true,
+                                            textStyle = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center,
+                                                color = MaterialTheme.colorScheme.primary
+                                            ),
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        if (printCopies < 500) {
+                                            printCopies++
+                                            copiesInputText = printCopies.toString()
+                                        }
+                                    },
+                                    enabled = printCopies < 500,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase_copies))
+                                }
+                            }
+                        }
+
+                        // Quick Preset Chips: 1, 5, 10, 20, and Stock Qty if available
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            listOf(1, 5, 10, 20).forEach { preset ->
+                                FilterChip(
+                                    selected = printCopies == preset,
+                                    onClick = {
+                                        printCopies = preset
+                                        copiesInputText = preset.toString()
+                                    },
+                                    label = { Text("$preset") },
+                                    modifier = Modifier.height(30.dp)
+                                )
+                            }
+
+                            val stockCount = product.stockQty.toInt()
+                            if (stockCount > 0 && stockCount !in listOf(1, 5, 10, 20)) {
+                                val clampedStock = stockCount.coerceIn(1, 500)
+                                FilterChip(
+                                    selected = printCopies == clampedStock,
+                                    onClick = {
+                                        printCopies = clampedStock
+                                        copiesInputText = clampedStock.toString()
+                                    },
+                                    label = { Text(stringResource(R.string.preset_stock_copies_fmt, clampedStock)) },
+                                    modifier = Modifier.height(30.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
                 if (bitmap != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
@@ -1461,6 +1596,7 @@ fun ProductCodeImageDialog(
                             onClick = {
                                 scope.launch {
                                     if (bitmap != null) {
+                                        isPrinting = true
                                         val cached = withContext(Dispatchers.IO) {
                                             cacheProductCodeLabelPdf(
                                                 context = context,
@@ -1480,23 +1616,34 @@ fun ProductCodeImageDialog(
                                                 pdfFallback = pdfFallback,
                                                 widthMm = selectedLabelWidthMm,
                                                 heightMm = selectedLabelHeightMm,
-                                                copies = 1,
+                                                copies = printCopies,
                                                 jobName = "${product.name} label",
                                                 settings = invoiceSettings
                                             )
-                                            if (!opened) {
+                                            isPrinting = false
+                                            if (opened) {
+                                                val msg = context.getString(R.string.labels_sent_to_printer_fmt, printCopies)
+                                                actionStatus = msg
+                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                            } else {
                                                 actionStatus = context.getString(R.string.code_image_print_failed)
                                             }
                                         } else {
+                                            isPrinting = false
                                             actionStatus = context.getString(R.string.code_image_print_failed)
                                         }
                                     } else {
                                         actionStatus = context.getString(R.string.code_image_print_failed)
                                     }
                                 }
-                            }
+                            },
+                            enabled = !isPrinting
                         ) {
-                            Icon(Icons.Default.Print, contentDescription = stringResource(R.string.print_label))
+                            if (isPrinting) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.Print, contentDescription = stringResource(R.string.print_label))
+                            }
                         }
                     }
                 }
