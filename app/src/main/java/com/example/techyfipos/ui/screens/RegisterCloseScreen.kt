@@ -1218,7 +1218,7 @@ fun RegisterCloseScreen(
                 coroutineScope.launch {
                     try {
                         val jpegFile = withContext(Dispatchers.IO) {
-                            generateXReportJpeg(context, r, rangeLabel)
+                            generateXReportJpeg(context, r, rangeLabel, settings = invoiceSettings)
                         }
                         printReceiptImage(
                             context = context,
@@ -1235,7 +1235,7 @@ fun RegisterCloseScreen(
             },
             onSave = {
                 try {
-                    val jpegFile = generateXReportJpeg(context, r, rangeLabel)
+                    val jpegFile = generateXReportJpeg(context, r, rangeLabel, settings = invoiceSettings)
                     val ok = saveBillJpegToDownloads(context, jpegFile)
                     if (ok) {
                         Toast.makeText(context, context.getString(R.string.z_report_x_saved_toast), Toast.LENGTH_LONG).show()
@@ -1258,7 +1258,7 @@ fun RegisterCloseScreen(
             onDismiss = { showXShareFormatDialog = false },
             onFormatSelected = { format ->
                 showXShareFormatDialog = false
-                shareReport(context, r, rangeLabel, isInterimX = true, format = format)
+                shareReport(context, r, rangeLabel, isInterimX = true, format = format, settings = invoiceSettings)
             }
         )
     }
@@ -1281,7 +1281,7 @@ fun RegisterCloseScreen(
                 coroutineScope.launch {
                     try {
                         val jpegFile = withContext(Dispatchers.IO) {
-                            generateZReportJpeg(context, r, label)
+                            generateZReportJpeg(context, r, label, settings = invoiceSettings)
                         }
                         printReceiptImage(
                             context = context,
@@ -1298,7 +1298,7 @@ fun RegisterCloseScreen(
             },
             onSave = {
                 try {
-                    val jpegFile = generateZReportJpeg(context, r, label)
+                    val jpegFile = generateZReportJpeg(context, r, label, settings = invoiceSettings)
                     val ok = saveBillJpegToDownloads(context, jpegFile)
                     if (ok) {
                         Toast.makeText(context, context.getString(R.string.z_report_z_saved_toast), Toast.LENGTH_LONG).show()
@@ -1329,7 +1329,7 @@ fun RegisterCloseScreen(
                 if (!showPnlZReportDialog) {
                     closedShiftZReport = null
                 }
-                shareReport(context, r, label, isInterimX = false, format = format)
+                shareReport(context, r, label, isInterimX = false, format = format, settings = invoiceSettings)
             }
         )
     }
@@ -3112,7 +3112,14 @@ fun ShareZReportFormatDialog(
     }
 }
 
-private fun shareReport(context: android.content.Context, r: SalesReportData, rangeLabel: String, isInterimX: Boolean, format: ZReportFormat) {
+private fun shareReport(
+    context: android.content.Context,
+    r: SalesReportData,
+    rangeLabel: String,
+    isInterimX: Boolean,
+    format: ZReportFormat,
+    settings: InvoiceSettingsData = InvoiceSettingsData()
+) {
     try {
         val subject = if (isInterimX) {
             context.getString(R.string.register_close_mid_shift_x_report_subject, rangeLabel)
@@ -3122,7 +3129,11 @@ private fun shareReport(context: android.content.Context, r: SalesReportData, ra
         val chooserTitle = context.getString(R.string.register_close_share_report_chooser_title)
         when (format) {
             ZReportFormat.JPEG -> {
-                val file = if (isInterimX) generateXReportJpeg(context, r, rangeLabel) else generateZReportJpeg(context, r, rangeLabel)
+                val file = if (isInterimX) {
+                    generateXReportJpeg(context, r, rangeLabel, settings = settings)
+                } else {
+                    generateZReportJpeg(context, r, rangeLabel, settings = settings)
+                }
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent = Intent(Intent.ACTION_SEND).apply {
                     type = "image/jpeg"
@@ -3135,7 +3146,11 @@ private fun shareReport(context: android.content.Context, r: SalesReportData, ra
                 context.startActivity(Intent.createChooser(intent, chooserTitle))
             }
             ZReportFormat.PDF -> {
-                val file = if (isInterimX) generateXReportPdf(context, r, rangeLabel) else generateZReportPdf(context, r, rangeLabel)
+                val file = if (isInterimX) {
+                    generateXReportPdf(context, r, rangeLabel, settings = settings)
+                } else {
+                    generateZReportPdf(context, r, rangeLabel, settings = settings)
+                }
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent = Intent(Intent.ACTION_SEND).apply {
                     type = "application/pdf"

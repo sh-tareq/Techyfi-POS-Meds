@@ -1085,65 +1085,84 @@ fun getBillImageUri(context: Context, file: File): Uri =
 
 fun getBillPdfUri(context: Context, file: File): Uri = getBillImageUri(context, file)
 
-fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: String, isBangla: Boolean = com.example.techyfipos.utils.isAppBangla()): File {
-    val width = 576
-    val doubleDivider = "=========================================="
-    val singleDivider = "------------------------------------------"
+fun reportCanvasWidth(settings: InvoiceSettingsData): Int =
+    if (settings.paperRollWidthMm == 58) 384 else 576
+
+fun reportPdfPageWidthPoints(settings: InvoiceSettingsData): Int {
+    val rollMm = if (settings.paperRollWidthMm == 58) 58f else 80f
+    return (rollMm / 25.4f * 72f).toInt().coerceAtLeast(1)
+}
+
+fun generateZReportJpeg(
+    context: Context,
+    data: SalesReportData,
+    rangeLabel: String,
+    isBangla: Boolean = com.example.techyfipos.utils.isAppBangla(),
+    settings: InvoiceSettingsData = InvoiceSettingsData()
+): File {
+    val is58 = settings.paperRollWidthMm == 58
+    val width = reportCanvasWidth(settings)
+    val sidePad = if (is58) 14f else 24f
+    val doubleDivider = if (is58) "================================" else "=========================================="
+    val singleDivider = if (is58) "--------------------------------" else "------------------------------------------"
+    val lineH = if (is58) 25f else 30f
+    val dividerH = if (is58) 32f else 40f
+    val sectionHeaderH = if (is58) 28f else 34f
 
     // Measure dynamic canvas height
-    var totalHeight = 40f
+    var totalHeight = if (is58) 32f else 40f
 
     // 1. Header
-    totalHeight += 45f // TECHYFI POS
-    totalHeight += 35f // DAILY CLOSING Z-REPORT
-    totalHeight += 40f // Double divider
+    totalHeight += if (is58) 36f else 45f // TECHYFI POS
+    totalHeight += if (is58) 28f else 35f // DAILY CLOSING Z-REPORT
+    totalHeight += dividerH // Double divider
 
     // 2. Meta
-    totalHeight += 30f // Period: ...
-    totalHeight += 30f // Generated: ...
-    totalHeight += 30f // Invoices: ... | Units: ...
-    totalHeight += 40f // Single divider
+    totalHeight += lineH // Period: ...
+    totalHeight += lineH // Generated: ...
+    totalHeight += lineH // Invoices: ... | Units: ...
+    totalHeight += dividerH // Single divider
 
     // 3. Financial Summary
-    totalHeight += 34f // Section header
-    totalHeight += 30f // Gross Sales
-    if (data.totalRefunds > 0.0) totalHeight += 30f // Returns / Refunds
-    totalHeight += 30f // Net Sales
-    if (data.totalTax > 0.0) totalHeight += 30f // Tax / VAT
-    if (data.totalDiscount > 0.0) totalHeight += 30f // Discounts Given
-    if (data.totalLoyaltyDiscount > 0.0) totalHeight += 30f // Loyalty Redeemed
-    totalHeight += 30f // Gross Margin
-    totalHeight += 30f // Expenses
-    totalHeight += 30f // Net Profit
-    totalHeight += 40f // Single divider
+    totalHeight += sectionHeaderH // Section header
+    totalHeight += lineH // Gross Sales
+    if (data.totalRefunds > 0.0) totalHeight += lineH // Returns / Refunds
+    totalHeight += lineH // Net Sales
+    if (data.totalTax > 0.0) totalHeight += lineH // Tax / VAT
+    if (data.totalDiscount > 0.0) totalHeight += lineH // Discounts Given
+    if (data.totalLoyaltyDiscount > 0.0) totalHeight += lineH // Loyalty Redeemed
+    totalHeight += lineH // Gross Margin
+    totalHeight += lineH // Expenses
+    totalHeight += lineH // Net Profit
+    totalHeight += dividerH // Single divider
 
     // 4. Payments
-    totalHeight += 32f // PAYMENTS:
+    totalHeight += sectionHeaderH // PAYMENTS:
     val payments = if (data.paymentBreakdown.isEmpty()) 1 else data.paymentBreakdown.size
-    totalHeight += payments * 30f
-    totalHeight += 40f // Single divider
+    totalHeight += payments * lineH
+    totalHeight += dividerH // Single divider
 
     // 4.5 Cash Reconciliation
     if (data.hasCashReconciliation) {
-        totalHeight += 32f // CASH RECONCILIATION
-        totalHeight += 9 * 30f // items + divider + expected cash
+        totalHeight += sectionHeaderH // CASH RECONCILIATION
+        totalHeight += 9 * lineH // items + divider + expected cash
         if (data.countedCash != null) {
-            totalHeight += 3 * 30f // counted cash + variance + reason
+            totalHeight += 3 * lineH // counted cash + variance + reason
         }
-        totalHeight += 40f
+        totalHeight += dividerH
     }
 
     // 5. Top Products (if any)
     if (data.topProducts.isNotEmpty()) {
-        totalHeight += 32f // TOP PRODUCTS:
-        totalHeight += data.topProducts.take(8).size * 30f
-        totalHeight += 40f // Single divider
+        totalHeight += sectionHeaderH // TOP PRODUCTS:
+        totalHeight += data.topProducts.take(8).size * lineH
+        totalHeight += dividerH // Single divider
     }
 
     // 6. Footer
-    totalHeight += 35f // *** END OF Z-REPORT ***
-    totalHeight += 30f // Techyfi POS • Smart Store System
-    totalHeight += 40f // Bottom padding
+    totalHeight += if (is58) 28f else 35f // *** END OF Z-REPORT ***
+    totalHeight += if (is58) 24f else 30f // Techyfi POS • Smart Store System
+    totalHeight += if (is58) 32f else 40f // Bottom padding
 
     val bitmap = Bitmap.createBitmap(width, totalHeight.toInt(), Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
@@ -1161,49 +1180,50 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
     }
 
-    var y = 45f
+    var y = if (is58) 36f else 45f
 
     // Header
-    boldPaint.textSize = 28f
+    boldPaint.textSize = if (is58) 22f else 28f
     boldPaint.textAlign = Paint.Align.CENTER
     canvas.drawText("TECHYFI POS", width / 2f, y, boldPaint)
-    y += 35f
+    y += if (is58) 28f else 35f
 
-    boldPaint.textSize = 22f
+    boldPaint.textSize = if (is58) 17f else 22f
     canvas.drawText(if (isBangla) "দৈনিক ক্লোজিং (জেড-রিপোর্ট)" else "DAILY CLOSING Z-REPORT", width / 2f, y, boldPaint)
-    y += 35f
+    y += if (is58) 28f else 35f
 
-    paint.textSize = 20f
+    paint.textSize = if (is58) 16f else 20f
     paint.textAlign = Paint.Align.CENTER
     canvas.drawText(doubleDivider, width / 2f, y, paint)
-    y += 35f
+    y += if (is58) 28f else 35f
 
     // Meta
     paint.textAlign = Paint.Align.LEFT
-    canvas.drawText(if (isBangla) "সময়কাল   : $rangeLabel" else "Period    : $rangeLabel", 24f, y, paint)
-    y += 30f
+    canvas.drawText(if (isBangla) "সময়কাল   : $rangeLabel" else "Period    : $rangeLabel", sidePad, y, paint)
+    y += lineH
     val generatedDate = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US).format(Date())
-    canvas.drawText(if (isBangla) "প্রস্তুত  : $generatedDate" else "Generated : $generatedDate", 24f, y, paint)
-    y += 30f
-    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: ${data.itemsSold}" else "Invoices  : ${data.transactionCount} | Units Sold: ${data.itemsSold}", 24f, y, paint)
-    y += 35f
+    canvas.drawText(if (isBangla) "প্রস্তুত  : $generatedDate" else "Generated : $generatedDate", sidePad, y, paint)
+    y += lineH
+    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: ${data.itemsSold}" else "Invoices  : ${data.transactionCount} | Units Sold: ${data.itemsSold}", sidePad, y, paint)
+    y += if (is58) 28f else 35f
 
-    canvas.drawText(singleDivider, 24f, y, paint)
-    y += 35f
+    paint.textAlign = Paint.Align.CENTER
+    canvas.drawText(singleDivider, width / 2f, y, paint)
+    y += if (is58) 28f else 35f
 
     // Financials
     boldPaint.textAlign = Paint.Align.LEFT
-    boldPaint.textSize = 21f
-    canvas.drawText(if (isBangla) "আর্থিক বিবরণী" else "FINANCIAL SUMMARY", 24f, y, boldPaint)
-    y += 32f
+    boldPaint.textSize = if (is58) 17f else 21f
+    canvas.drawText(if (isBangla) "আর্থিক বিবরণী" else "FINANCIAL SUMMARY", sidePad, y, boldPaint)
+    y += if (is58) 26f else 32f
 
-    paint.textSize = 20f
+    paint.textSize = if (is58) 16f else 20f
     fun drawKeyValue(label: String, value: String) {
         paint.textAlign = Paint.Align.LEFT
-        canvas.drawText(label, 24f, y, paint)
+        canvas.drawText(label, sidePad, y, paint)
         paint.textAlign = Paint.Align.RIGHT
-        canvas.drawText(value, width - 24f, y, paint)
-        y += 30f
+        canvas.drawText(value, width - sidePad, y, paint)
+        y += lineH
     }
 
     drawKeyValue(if (isBangla) "মোট বিক্রয়" else "Gross Sales", formatTaka(data.grossSales, isBangla = isBangla))
@@ -1222,19 +1242,20 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
     drawKeyValue(if (isBangla) "খরচ" else "Expenses", formatTaka(data.totalExpenses, isBangla = isBangla))
     drawKeyValue(if (isBangla) "নীট লাভ" else "Net Profit", formatTaka(data.netProfit, isBangla = isBangla))
 
-    paint.textAlign = Paint.Align.LEFT
-    canvas.drawText(singleDivider, 24f, y, paint)
-    y += 35f
+    paint.textAlign = Paint.Align.CENTER
+    canvas.drawText(singleDivider, width / 2f, y, paint)
+    y += if (is58) 28f else 35f
 
     // Payments
-    boldPaint.textSize = 21f
-    canvas.drawText(if (isBangla) "মূল্য পরিশোধ বিবরণী" else "PAYMENT BREAKDOWN", 24f, y, boldPaint)
-    y += 32f
+    boldPaint.textAlign = Paint.Align.LEFT
+    boldPaint.textSize = if (is58) 17f else 21f
+    canvas.drawText(if (isBangla) "মূল্য পরিশোধ বিবরণী" else "PAYMENT BREAKDOWN", sidePad, y, boldPaint)
+    y += if (is58) 26f else 32f
 
     if (data.paymentBreakdown.isEmpty()) {
         paint.textAlign = Paint.Align.LEFT
-        canvas.drawText(if (isBangla) "কোনো মূল্য পরিশোধ নেই" else "No payments recorded", 24f, y, paint)
-        y += 30f
+        canvas.drawText(if (isBangla) "কোনো মূল্য পরিশোধ নেই" else "No payments recorded", sidePad, y, paint)
+        y += lineH
     } else {
         data.paymentBreakdown.forEach { p ->
             drawKeyValue("${p.method} (${p.transactionCount})", formatTaka(p.amount, isBangla = isBangla))
@@ -1243,15 +1264,16 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
 
     // Cash Reconciliation
     if (data.hasCashReconciliation) {
-        paint.textAlign = Paint.Align.LEFT
-        canvas.drawText(singleDivider, 24f, y, paint)
-        y += 35f
+        paint.textAlign = Paint.Align.CENTER
+        canvas.drawText(singleDivider, width / 2f, y, paint)
+        y += if (is58) 28f else 35f
 
-        boldPaint.textSize = 21f
-        canvas.drawText(if (isBangla) "ক্যাশ সমন্বয়" else "CASH RECONCILIATION", 24f, y, boldPaint)
-        y += 32f
+        boldPaint.textAlign = Paint.Align.LEFT
+        boldPaint.textSize = if (is58) 17f else 21f
+        canvas.drawText(if (isBangla) "ক্যাশ সমন্বয়" else "CASH RECONCILIATION", sidePad, y, boldPaint)
+        y += if (is58) 26f else 32f
 
-        paint.textSize = 20f
+        paint.textSize = if (is58) 16f else 20f
         drawKeyValue(if (isBangla) "শুরুর ক্যাশ ফ্লোট" else "Starting Float", "+${formatTaka(data.startingFloat, isBangla = isBangla)}")
         drawKeyValue(if (isBangla) "ক্যাশ বিক্রয়" else "Cash Sales", "+${formatTaka(data.cashSales, isBangla = isBangla)}")
         if (data.cashIn > 0.0) drawKeyValue(if (isBangla) "ক্যাশ-ইন" else "Cash-In", "+${formatTaka(data.cashIn, isBangla = isBangla)}")
@@ -1260,16 +1282,16 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
         if (data.cashOut > 0.0) drawKeyValue(if (isBangla) "ক্যাশ-আউট (খরচ)" else "Cash-Out (Expenses)", "-${formatTaka(data.cashOut, isBangla = isBangla)}")
         if (data.supplierCashPaid > 0.0) drawKeyValue(if (isBangla) "সাপ্লায়ার ক্যাশ প্রদান" else "Supplier Cash Paid", "-${formatTaka(data.supplierCashPaid, isBangla = isBangla)}")
 
-        paint.textAlign = Paint.Align.LEFT
-        canvas.drawText(singleDivider, 24f, y, paint)
-        y += 35f
+        paint.textAlign = Paint.Align.CENTER
+        canvas.drawText(singleDivider, width / 2f, y, paint)
+        y += if (is58) 28f else 35f
 
-        boldPaint.textSize = 20f
+        boldPaint.textSize = if (is58) 16f else 20f
         paint.textAlign = Paint.Align.LEFT
-        canvas.drawText(if (isBangla) "ক্যাশ ড্রয়ারে প্রত্যাশিত টাকা" else "Expected Cash in Till", 24f, y, boldPaint)
+        canvas.drawText(if (isBangla) "ক্যাশ ড্রয়ারে প্রত্যাশিত টাকা" else "Expected Cash in Till", sidePad, y, boldPaint)
         paint.textAlign = Paint.Align.RIGHT
-        canvas.drawText(formatTaka(data.expectedCash, isBangla = isBangla), width - 24f, y, boldPaint)
-        y += 32f
+        canvas.drawText(formatTaka(data.expectedCash, isBangla = isBangla), width - sidePad, y, boldPaint)
+        y += if (is58) 26f else 32f
 
         if (data.countedCash != null) {
             drawKeyValue(if (isBangla) "গণনাকৃত প্রকৃত ক্যাশ" else "Actual Counted Cash", formatTaka(data.countedCash, isBangla = isBangla))
@@ -1278,26 +1300,28 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
             drawKeyValue(if (isBangla) "ক্যাশ পার্থক্য / গড়মিল" else "Cash Variance", "$varianceSign${formatTaka(variance, isBangla = isBangla)}")
             if (!data.varianceReason.isNullOrBlank()) {
                 paint.textAlign = Paint.Align.LEFT
-                paint.textSize = 17f
-                canvas.drawText("${if (isBangla) "পার্থক্য কারণ: " else "Variance Reason: "}${data.varianceReason}", 24f, y, paint)
-                paint.textSize = 20f
-                y += 28f
+                paint.textSize = if (is58) 14f else 17f
+                canvas.drawText("${if (isBangla) "পার্থক্য কারণ: " else "Variance Reason: "}${data.varianceReason}", sidePad, y, paint)
+                paint.textSize = if (is58) 16f else 20f
+                y += if (is58) 24f else 28f
             }
         }
     }
 
     // Top Products
     if (data.topProducts.isNotEmpty()) {
-        paint.textAlign = Paint.Align.LEFT
-        canvas.drawText(singleDivider, 24f, y, paint)
-        y += 35f
+        paint.textAlign = Paint.Align.CENTER
+        canvas.drawText(singleDivider, width / 2f, y, paint)
+        y += if (is58) 28f else 35f
 
-        boldPaint.textSize = 21f
-        canvas.drawText(if (isBangla) "শীর্ষ বিক্রিত পণ্যসমূহ" else "TOP SELLING PRODUCTS", 24f, y, boldPaint)
-        y += 32f
+        boldPaint.textAlign = Paint.Align.LEFT
+        boldPaint.textSize = if (is58) 17f else 21f
+        canvas.drawText(if (isBangla) "শীর্ষ বিক্রিত পণ্যসমূহ" else "TOP SELLING PRODUCTS", sidePad, y, boldPaint)
+        y += if (is58) 26f else 32f
 
+        val maxNameLen = if (is58) 14 else 20
         data.topProducts.take(8).forEach { prod ->
-            val name = if (prod.name.length > 20) prod.name.take(18) + ".." else prod.name
+            val name = if (prod.name.length > maxNameLen) prod.name.take(maxNameLen - 2) + ".." else prod.name
             val qStr = if (prod.quantity % 1.0 == 0.0) prod.quantity.toLong().toString() else String.format(Locale.US, "%.2f", prod.quantity).trimEnd('0').trimEnd('.')
             drawKeyValue("${qStr}x $name", formatTaka(prod.revenue, isBangla = isBangla))
         }
@@ -1305,15 +1329,15 @@ fun generateZReportJpeg(context: Context, data: SalesReportData, rangeLabel: Str
 
     paint.textAlign = Paint.Align.CENTER
     canvas.drawText(doubleDivider, width / 2f, y, paint)
-    y += 35f
+    y += if (is58) 28f else 35f
 
     boldPaint.textAlign = Paint.Align.CENTER
-    boldPaint.textSize = 20f
+    boldPaint.textSize = if (is58) 16f else 20f
     canvas.drawText(if (isBangla) "*** জেড-রিপোর্ট সমাপ্ত ***" else "*** END OF Z-REPORT ***", width / 2f, y, boldPaint)
-    y += 30f
+    y += if (is58) 24f else 30f
 
     paint.textAlign = Paint.Align.CENTER
-    paint.textSize = 16f
+    paint.textSize = if (is58) 13f else 16f
     canvas.drawText("Techyfi POS • Smart Store System", width / 2f, y, paint)
 
     val dir = File(context.cacheDir, "reports").apply { mkdirs() }
@@ -1329,12 +1353,13 @@ fun generateZReportPdf(
     context: Context,
     data: SalesReportData,
     rangeLabel: String,
-    isBangla: Boolean = com.example.techyfipos.utils.isAppBangla()
+    isBangla: Boolean = com.example.techyfipos.utils.isAppBangla(),
+    settings: InvoiceSettingsData = InvoiceSettingsData()
 ): File {
-    val imageFile = generateZReportJpeg(context, data, rangeLabel, isBangla = isBangla)
+    val imageFile = generateZReportJpeg(context, data, rangeLabel, isBangla = isBangla, settings = settings)
     val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
         ?: throw IllegalStateException("Unable to render Z-Report image for PDF")
-    val pageWidthPoints = (80f / 25.4f * 72f).toInt().coerceAtLeast(1)
+    val pageWidthPoints = reportPdfPageWidthPoints(settings)
     val pageHeightPoints = (
         pageWidthPoints.toFloat() * bitmap.height.toFloat() / bitmap.width.toFloat()
         ).toInt().coerceAtLeast(1)
@@ -1364,38 +1389,48 @@ fun generateXReportJpeg(
     context: Context,
     data: SalesReportData,
     rangeLabel: String,
-    isBangla: Boolean = com.example.techyfipos.utils.isAppBangla()
+    isBangla: Boolean = com.example.techyfipos.utils.isAppBangla(),
+    settings: InvoiceSettingsData = InvoiceSettingsData()
 ): File {
-    val width = 576
-    val doubleDivider = "=========================================="
-    val singleDivider = "------------------------------------------"
+    val is58 = settings.paperRollWidthMm == 58
+    val width = reportCanvasWidth(settings)
+    val sidePad = if (is58) 14f else 24f
+    val doubleDivider = if (is58) "================================" else "=========================================="
+    val singleDivider = if (is58) "--------------------------------" else "------------------------------------------"
+    val lineH = if (is58) 25f else 30f
+    val dividerH = if (is58) 32f else 40f
+    val sectionHeaderH = if (is58) 28f else 34f
 
-    var totalHeight = 40f
-    totalHeight += 45f // TECHYFI POS
-    totalHeight += 35f // MID-SHIFT X-REPORT (INTERIM)
-    totalHeight += 40f // Double divider
-    totalHeight += 30f // Period
-    totalHeight += 30f // Generated
-    totalHeight += 30f // Invoices & Units
-    totalHeight += 40f // Single divider
-    totalHeight += 34f // Gross Sales
-    totalHeight += 34f // Discounts
-    totalHeight += 34f // Gross Margin
-    totalHeight += 34f // Expenses
-    totalHeight += 34f // Net Profit
-    totalHeight += 40f // Single divider
-    totalHeight += 32f // PAYMENTS header
+    var totalHeight = if (is58) 32f else 40f
+    totalHeight += if (is58) 36f else 45f // TECHYFI POS
+    totalHeight += if (is58) 28f else 35f // MID-SHIFT X-REPORT (INTERIM)
+    totalHeight += dividerH // Double divider
+    totalHeight += lineH // Period
+    totalHeight += lineH // Generated
+    totalHeight += lineH // Invoices & Units
+    totalHeight += dividerH // Single divider
+    totalHeight += sectionHeaderH // Section header
+    totalHeight += lineH // Gross Sales
+    if (data.totalRefunds > 0.0) totalHeight += lineH
+    totalHeight += lineH // Net Sales
+    if (data.totalTax > 0.0) totalHeight += lineH
+    totalHeight += lineH // Discounts
+    totalHeight += lineH // Gross Margin
+    totalHeight += lineH // Expenses
+    totalHeight += lineH // Net Profit
+    totalHeight += dividerH // Single divider
+    totalHeight += sectionHeaderH // PAYMENTS header
     val payments = if (data.paymentBreakdown.isEmpty()) 1 else data.paymentBreakdown.size
-    totalHeight += payments * 30f
-    totalHeight += 40f // Single divider
+    totalHeight += payments * lineH
+    totalHeight += dividerH // Single divider
     if (data.topProducts.isNotEmpty()) {
-        totalHeight += 32f
-        totalHeight += data.topProducts.take(8).size * 30f
-        totalHeight += 40f
+        totalHeight += sectionHeaderH
+        totalHeight += data.topProducts.take(8).size * lineH
+        totalHeight += dividerH
     }
-    totalHeight += 35f // *** END OF X-REPORT (INTERIM) ***
-    totalHeight += 30f // Techyfi POS • Smart Store System
-    totalHeight += 40f
+    totalHeight += if (is58) 28f else 35f // *** END OF X-REPORT (INTERIM) ***
+    totalHeight += if (is58) 24f else 30f // Techyfi POS • Smart Store System
+    totalHeight += if (is58) 32f else 40f
 
     val bitmap = Bitmap.createBitmap(width, totalHeight.toInt(), Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
@@ -1413,45 +1448,46 @@ fun generateXReportJpeg(
         typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
     }
 
-    var y = 45f
-    boldPaint.textSize = 28f
+    var y = if (is58) 36f else 45f
+    boldPaint.textSize = if (is58) 22f else 28f
     boldPaint.textAlign = Paint.Align.CENTER
     canvas.drawText("TECHYFI POS", width / 2f, y, boldPaint)
-    y += 35f
+    y += if (is58) 28f else 35f
 
-    boldPaint.textSize = 22f
+    boldPaint.textSize = if (is58) 17f else 22f
     canvas.drawText(if (isBangla) "মিড-শিফট এক্স-রিপোর্ট (সাময়িক)" else "MID-SHIFT X-REPORT (INTERIM)", width / 2f, y, boldPaint)
-    y += 35f
+    y += if (is58) 28f else 35f
 
-    paint.textSize = 20f
+    paint.textSize = if (is58) 16f else 20f
     paint.textAlign = Paint.Align.CENTER
     canvas.drawText(doubleDivider, width / 2f, y, paint)
-    y += 35f
+    y += if (is58) 28f else 35f
 
     paint.textAlign = Paint.Align.LEFT
-    canvas.drawText(if (isBangla) "সময়কাল   : $rangeLabel" else "Period    : $rangeLabel", 24f, y, paint)
-    y += 30f
+    canvas.drawText(if (isBangla) "সময়কাল   : $rangeLabel" else "Period    : $rangeLabel", sidePad, y, paint)
+    y += lineH
     val generatedDate = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US).format(Date())
-    canvas.drawText(if (isBangla) "প্রস্তুত  : $generatedDate" else "Generated : $generatedDate", 24f, y, paint)
-    y += 30f
-    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: ${data.itemsSold}" else "Invoices  : ${data.transactionCount} | Units Sold: ${data.itemsSold}", 24f, y, paint)
-    y += 35f
+    canvas.drawText(if (isBangla) "প্রস্তুত  : $generatedDate" else "Generated : $generatedDate", sidePad, y, paint)
+    y += lineH
+    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: ${data.itemsSold}" else "Invoices  : ${data.transactionCount} | Units Sold: ${data.itemsSold}", sidePad, y, paint)
+    y += if (is58) 28f else 35f
 
-    canvas.drawText(singleDivider, 24f, y, paint)
-    y += 35f
+    paint.textAlign = Paint.Align.CENTER
+    canvas.drawText(singleDivider, width / 2f, y, paint)
+    y += if (is58) 28f else 35f
 
     boldPaint.textAlign = Paint.Align.LEFT
-    boldPaint.textSize = 21f
-    canvas.drawText(if (isBangla) "বর্তমান ক্যাশ সামারি (সাময়িক)" else "CURRENT TILL SUMMARY (INTERIM)", 24f, y, boldPaint)
-    y += 32f
+    boldPaint.textSize = if (is58) 17f else 21f
+    canvas.drawText(if (isBangla) "বর্তমান ক্যাশ সামারি (সাময়িক)" else "CURRENT TILL SUMMARY (INTERIM)", sidePad, y, boldPaint)
+    y += if (is58) 26f else 32f
 
-    paint.textSize = 20f
+    paint.textSize = if (is58) 16f else 20f
     fun drawKeyValue(label: String, value: String) {
         paint.textAlign = Paint.Align.LEFT
-        canvas.drawText(label, 24f, y, paint)
+        canvas.drawText(label, sidePad, y, paint)
         paint.textAlign = Paint.Align.RIGHT
-        canvas.drawText(value, width - 24f, y, paint)
-        y += 30f
+        canvas.drawText(value, width - sidePad, y, paint)
+        y += lineH
     }
 
     drawKeyValue(if (isBangla) "মোট বিক্রয়" else "Gross Sales", formatTaka(data.grossSales, isBangla = isBangla))
@@ -1467,18 +1503,19 @@ fun generateXReportJpeg(
     drawKeyValue(if (isBangla) "খরচ" else "Expenses", formatTaka(data.totalExpenses, isBangla = isBangla))
     drawKeyValue(if (isBangla) "নীট লাভ" else "Net Profit", formatTaka(data.netProfit, isBangla = isBangla))
 
-    paint.textAlign = Paint.Align.LEFT
-    canvas.drawText(singleDivider, 24f, y, paint)
-    y += 35f
+    paint.textAlign = Paint.Align.CENTER
+    canvas.drawText(singleDivider, width / 2f, y, paint)
+    y += if (is58) 28f else 35f
 
-    boldPaint.textSize = 21f
-    canvas.drawText(if (isBangla) "মূল্য পরিশোধ বিবরণী" else "PAYMENT BREAKDOWN", 24f, y, boldPaint)
-    y += 32f
+    boldPaint.textAlign = Paint.Align.LEFT
+    boldPaint.textSize = if (is58) 17f else 21f
+    canvas.drawText(if (isBangla) "মূল্য পরিশোধ বিবরণী" else "PAYMENT BREAKDOWN", sidePad, y, boldPaint)
+    y += if (is58) 26f else 32f
 
     if (data.paymentBreakdown.isEmpty()) {
         paint.textAlign = Paint.Align.LEFT
-        canvas.drawText(if (isBangla) "কোনো মূল্য পরিশোধ নেই" else "No payments recorded", 24f, y, paint)
-        y += 30f
+        canvas.drawText(if (isBangla) "কোনো মূল্য পরিশোধ নেই" else "No payments recorded", sidePad, y, paint)
+        y += lineH
     } else {
         data.paymentBreakdown.forEach { p ->
             drawKeyValue("${p.method} (${p.transactionCount})", formatTaka(p.amount, isBangla = isBangla))
@@ -1486,32 +1523,34 @@ fun generateXReportJpeg(
     }
 
     if (data.topProducts.isNotEmpty()) {
-        paint.textAlign = Paint.Align.LEFT
-        canvas.drawText(singleDivider, 24f, y, paint)
-        y += 35f
+        paint.textAlign = Paint.Align.CENTER
+        canvas.drawText(singleDivider, width / 2f, y, paint)
+        y += if (is58) 28f else 35f
 
-        boldPaint.textSize = 21f
-        canvas.drawText(if (isBangla) "শীর্ষ বিক্রিত পণ্যসমূহ" else "TOP SELLING PRODUCTS", 24f, y, boldPaint)
-        y += 32f
+        boldPaint.textAlign = Paint.Align.LEFT
+        boldPaint.textSize = if (is58) 17f else 21f
+        canvas.drawText(if (isBangla) "শীর্ষ বিক্রিত পণ্যসমূহ" else "TOP SELLING PRODUCTS", sidePad, y, boldPaint)
+        y += if (is58) 26f else 32f
 
+        val maxNameLen = if (is58) 14 else 20
         data.topProducts.take(8).forEach { prod ->
-            val name = if (prod.name.length > 20) prod.name.take(18) + ".." else prod.name
+            val name = if (prod.name.length > maxNameLen) prod.name.take(maxNameLen - 2) + ".." else prod.name
             val qStr = if (prod.quantity % 1.0 == 0.0) prod.quantity.toLong().toString() else String.format(Locale.US, "%.2f", prod.quantity).trimEnd('0').trimEnd('.')
             drawKeyValue("${qStr}x $name", formatTaka(prod.revenue, isBangla = isBangla))
         }
     }
 
-    paint.textAlign = Paint.Align.LEFT
-    canvas.drawText(doubleDivider, 24f, y, paint)
-    y += 35f
+    paint.textAlign = Paint.Align.CENTER
+    canvas.drawText(doubleDivider, width / 2f, y, paint)
+    y += if (is58) 28f else 35f
 
     boldPaint.textAlign = Paint.Align.CENTER
-    boldPaint.textSize = 20f
+    boldPaint.textSize = if (is58) 16f else 20f
     canvas.drawText(if (isBangla) "*** সাময়িক রিডিং (দিন বন্ধ হবে না) ***" else "*** INTERIM READING (DOES NOT CLOSE DAY) ***", width / 2f, y, boldPaint)
-    y += 30f
+    y += if (is58) 24f else 30f
 
     paint.textAlign = Paint.Align.CENTER
-    paint.textSize = 16f
+    paint.textSize = if (is58) 13f else 16f
     canvas.drawText("Techyfi POS • Smart Store System", width / 2f, y, paint)
 
     val dir = File(context.cacheDir, "reports").apply { mkdirs() }
@@ -1527,12 +1566,13 @@ fun generateXReportPdf(
     context: Context,
     data: SalesReportData,
     rangeLabel: String,
-    isBangla: Boolean = com.example.techyfipos.utils.isAppBangla()
+    isBangla: Boolean = com.example.techyfipos.utils.isAppBangla(),
+    settings: InvoiceSettingsData = InvoiceSettingsData()
 ): File {
-    val imageFile = generateXReportJpeg(context, data, rangeLabel, isBangla = isBangla)
+    val imageFile = generateXReportJpeg(context, data, rangeLabel, isBangla = isBangla, settings = settings)
     val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
         ?: throw IllegalStateException("Unable to render X-Report image for PDF")
-    val pageWidthPoints = (80f / 25.4f * 72f).toInt().coerceAtLeast(1)
+    val pageWidthPoints = reportPdfPageWidthPoints(settings)
     val pageHeightPoints = (
         pageWidthPoints.toFloat() * bitmap.height.toFloat() / bitmap.width.toFloat()
         ).toInt().coerceAtLeast(1)

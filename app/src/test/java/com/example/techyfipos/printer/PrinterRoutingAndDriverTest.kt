@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.utils.RoutingDecision
 import com.example.techyfipos.utils.decidePrintRouting
+import com.example.techyfipos.utils.reportCanvasWidth
+import com.example.techyfipos.utils.reportPdfPageWidthPoints
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -236,4 +238,20 @@ class PrinterRoutingAndDriverTest {
         val rasterOutput = EscPosPrinterDriver.bitmapToEscPosRaster(src = mockBitmap, targetWidthDots = 16, darkness = 8)
         assertArrayEquals(concatenated, rasterOutput)
     }
+
+    // 8. Tests for reportCanvasWidth and reportPdfPageWidthPoints (58mm vs 80mm roll setting)
+    @Test
+    fun `reportCanvasWidth returns 384 for 58mm and 576 for other widths`() {
+        assertEquals(384, reportCanvasWidth(InvoiceSettingsData(paperRollWidthMm = 58)))
+        assertEquals(576, reportCanvasWidth(InvoiceSettingsData(paperRollWidthMm = 80)))
+    }
+
+    @Test
+    fun `reportPdfPageWidthPoints returns correct points for 58mm and 80mm`() {
+        val expected58 = (58f / 25.4f * 72f).toInt()
+        val expected80 = (80f / 25.4f * 72f).toInt()
+        assertEquals(expected58, reportPdfPageWidthPoints(InvoiceSettingsData(paperRollWidthMm = 58)))
+        assertEquals(expected80, reportPdfPageWidthPoints(InvoiceSettingsData(paperRollWidthMm = 80)))
+    }
 }
+
