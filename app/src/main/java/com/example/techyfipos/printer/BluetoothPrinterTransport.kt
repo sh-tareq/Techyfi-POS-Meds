@@ -39,6 +39,39 @@ fun isSamePrinter(a: String, b: String): Boolean {
     return trimmedA.equals(trimmedB, ignoreCase = true)
 }
 
+/**
+ * Pure function that formats a Bluetooth device name and address.
+ * Returns "name (address)" if name is present and distinct from address, or trimmed address alone.
+ */
+fun formatBluetoothDeviceDisplay(name: String?, address: String): String {
+    val trimmed = address.trim()
+    if (trimmed.isBlank()) return ""
+    val trimmedName = name?.trim().orEmpty()
+    return if (trimmedName.isNotBlank() && !trimmedName.equals(trimmed, ignoreCase = true)) {
+        "$trimmedName ($trimmed)"
+    } else {
+        trimmed
+    }
+}
+
+/**
+ * Resolves the bonded Bluetooth device name from [address].
+ * Returns "name (address)" if name is known, otherwise the trimmed address.
+ */
+fun getBluetoothDeviceDisplayName(context: Context, address: String): String {
+    val trimmed = address.trim()
+    if (trimmed.isBlank()) return ""
+    return try {
+        val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+        val device = adapter?.bondedDevices?.firstOrNull { it.address.equals(trimmed, ignoreCase = true) }
+        formatBluetoothDeviceDisplay(device?.name, trimmed)
+    } catch (_: SecurityException) {
+        trimmed
+    } catch (_: Exception) {
+        trimmed
+    }
+}
+
 private const val TAG = "BtPrinterTransport"
 private const val SPP_UUID = "00001101-0000-1000-8000-00805F9B34FB"
 private const val CHUNK_SIZE = 512

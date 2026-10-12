@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import com.example.techyfipos.BuildConfig
 import com.example.techyfipos.data.DataRepository
+import com.example.techyfipos.printer.getBluetoothDeviceDisplayName
 import com.example.techyfipos.printer.isSamePrinter
 import com.example.techyfipos.ui.components.*
 import androidx.compose.material.icons.Icons
@@ -738,7 +739,7 @@ private fun OptimizedSettingsHome(
                                 Text(
                                     if (currentSettings.directBluetoothPrinterAddress.isBlank())
                                         stringResource(R.string.settings_bluetooth_not_paired)
-                                    else currentSettings.directBluetoothPrinterAddress,
+                                    else getBluetoothDeviceDisplayName(context, currentSettings.directBluetoothPrinterAddress),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray
                                 )
@@ -963,7 +964,7 @@ private fun OptimizedSettingsHome(
                                 Text(
                                     if (currentSettings.labelPrinterAddress.isBlank())
                                         stringResource(R.string.settings_bluetooth_not_paired)
-                                    else currentSettings.labelPrinterAddress,
+                                    else getBluetoothDeviceDisplayName(context, currentSettings.labelPrinterAddress),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray
                                 )
@@ -1148,10 +1149,10 @@ private fun OptimizedSettingsHome(
                         Text(stringResource(R.string.settings_bluetooth_printer_label), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                         val displayAddress = if (cashDrawerPrinterAddress.isBlank()) {
                             val resolved = currentSettings.resolvedReceiptPrinterAddress()
-                            if (resolved.isNotBlank()) stringResource(R.string.settings_cash_drawer_same_as_receipt) + " ($resolved)"
+                            if (resolved.isNotBlank()) stringResource(R.string.settings_cash_drawer_same_as_receipt) + " (${getBluetoothDeviceDisplayName(context, resolved)})"
                             else stringResource(R.string.settings_cash_drawer_same_as_receipt)
                         } else {
-                            cashDrawerPrinterAddress
+                            getBluetoothDeviceDisplayName(context, cashDrawerPrinterAddress)
                         }
                         Text(
                             displayAddress,
@@ -1210,6 +1211,7 @@ private fun OptimizedSettingsHome(
     if (showReceiptPrinterPicker) {
         BluetoothPrinterPickerDialog(
             currentAddress = currentSettings.directBluetoothPrinterAddress,
+            disabledPrinterAddress = currentSettings.labelPrinterAddress,
             onSelected = { address ->
                 if (isSamePrinter(address, currentSettings.labelPrinterAddress)) {
                     printerConflictDialogMessage = context.getString(R.string.settings_receipt_picker_same_as_label_dialog)
@@ -1225,6 +1227,7 @@ private fun OptimizedSettingsHome(
     if (showLabelPrinterPicker) {
         BluetoothPrinterPickerDialog(
             currentAddress = currentSettings.labelPrinterAddress,
+            disabledPrinterAddress = currentSettings.resolvedReceiptPrinterAddress(),
             onSelected = { address ->
                 if (isSamePrinter(address, currentSettings.resolvedReceiptPrinterAddress())) {
                     printerConflictDialogMessage = context.getString(R.string.settings_label_picker_same_as_receipt_dialog)
@@ -1416,6 +1419,7 @@ private fun BluetoothPrinterPickerDialog(
     currentAddress: String,
     showSameAsReceiptOption: Boolean = false,
     receiptPrinterAddress: String = "",
+    disabledPrinterAddress: String = "",
     onSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -1478,7 +1482,7 @@ private fun BluetoothPrinterPickerDialog(
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.error
                     )
-                } else if (devices.isEmpty() && !showSameAsReceiptOption) {
+                } else if (devices.isEmpty() && !showSameAsReceiptOption && currentAddress.isBlank()) {
                     Text(
                         stringResource(R.string.settings_bt_no_devices_found),
                         fontSize = 13.sp,
@@ -1509,7 +1513,7 @@ private fun BluetoothPrinterPickerDialog(
                                             fontSize = 14.sp
                                         )
                                         Text(
-                                            if (receiptPrinterAddress.isNotBlank()) receiptPrinterAddress else stringResource(R.string.settings_bluetooth_not_paired),
+                                            if (receiptPrinterAddress.isNotBlank()) getBluetoothDeviceDisplayName(context, receiptPrinterAddress) else stringResource(R.string.settings_bluetooth_not_paired),
                                             fontSize = 11.sp,
                                             color = Color.Gray
                                         )
@@ -1520,13 +1524,12 @@ private fun BluetoothPrinterPickerDialog(
                                 }
                             }
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        }
-                        devices.forEach { device ->
-                            val name = try { device.name ?: device.address } catch (e: SecurityException) { device.address }
+                        } else {
+                            val isNoneSelected = currentAddress.isBlank()
                             Surface(
-                                onClick = { onSelected(device.address) },
+                                onClick = { onSelected("") },
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (device.address == currentAddress) {
+                                color = if (isNoneSelected) {
                                     MaterialTheme.colorScheme.primaryContainer
                                 } else Color.Transparent
                             ) {
@@ -1536,10 +1539,62 @@ private fun BluetoothPrinterPickerDialog(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                        Text(device.address, fontSize = 11.sp, color = Color.Gray)
+                                        Text(
+                                            stringResource(R.string.settings_printer_none_not_set),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            stringResource(R.string.settings_bluetooth_not_paired),
+                                            fontSize = 11.sp,
+                                            color = Color.Gray
+                                        )
                                     }
-                                    if (device.address == currentAddress) {
+                                    if (isNoneSelected) {
+                                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        }
+                        devices.forEach { device ->
+                            val isConflict = disabledPrinterAddress.isNotBlank() && isSamePrinter(device.address, disabledPrinterAddress)
+                            val isSelected = device.address.equals(currentAddress.trim(), ignoreCase = true)
+                            val name = try { device.name ?: device.address } catch (e: SecurityException) { device.address }
+                            Surface(
+                                onClick = {
+                                    if (!isConflict) {
+                                        onSelected(device.address)
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                enabled = !isConflict,
+                                color = if (isSelected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else Color.Transparent
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            name,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = if (isConflict) Color.Gray else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(device.address, fontSize = 11.sp, color = Color.Gray)
+                                        if (isConflict) {
+                                            Text(
+                                                stringResource(R.string.settings_label_printer_same_as_receipt_warning),
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                    if (isSelected) {
                                         Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                     }
                                 }

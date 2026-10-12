@@ -327,6 +327,19 @@ class PrinterRoutingAndDriverTest {
         assertTrue(textHigh.contains("GAP 3 mm,0 mm\r\n"))
         assertTrue(textHigh.contains("PRINT 1,5\r\n"))
     }
+
+    // 11. Tests for formatBluetoothDeviceDisplay()
+    @Test
+    fun `formatBluetoothDeviceDisplay formats name and address correctly`() {
+        assertEquals("Deli E886BW (AA:BB:CC:DD:EE:FF)", formatBluetoothDeviceDisplay("Deli E886BW", "AA:BB:CC:DD:EE:FF"))
+        assertEquals("AA:BB:CC:DD:EE:FF", formatBluetoothDeviceDisplay(null, "AA:BB:CC:DD:EE:FF"))
+        assertEquals("AA:BB:CC:DD:EE:FF", formatBluetoothDeviceDisplay("", "AA:BB:CC:DD:EE:FF"))
+        assertEquals("AA:BB:CC:DD:EE:FF", formatBluetoothDeviceDisplay("   ", "AA:BB:CC:DD:EE:FF"))
+        assertEquals("AA:BB:CC:DD:EE:FF", formatBluetoothDeviceDisplay("AA:BB:CC:DD:EE:FF", "AA:BB:CC:DD:EE:FF"))
+        assertEquals("AA:BB:CC:DD:EE:FF", formatBluetoothDeviceDisplay("aa:bb:cc:dd:ee:ff", "AA:BB:CC:DD:EE:FF"))
+        assertEquals("", formatBluetoothDeviceDisplay("Deli E886BW", ""))
+        assertEquals("", formatBluetoothDeviceDisplay("Deli E886BW", "   "))
+    }
 }
 
 

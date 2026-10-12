@@ -938,7 +938,8 @@
     <string name="settings_backup_meta_sales">🧾 বিক্রয় রেকর্ড: %1$d বিক্রয়</string>
     <string name="settings_backup_meta_store">🏪 দোকান: %1$s (v%2$s)</string>
     <string name="settings_backup_meta_suppliers_expenses">🚚 সরবরাহকারী: %1$d • খরচ: %2$d</string>
-    <string name="settings_bluetooth_not_paired">যুক্ত করা হয়নি — নির্বাচন করতে ট্যাপ করুন</string>
+    <string name="settings_bluetooth_not_paired">যুক্ত করা হয়নি - নির্বাচন করতে ট্যাপ করুন</string>
+    <string name="settings_printer_none_not_set">কিছুই নির্বাচন করা নেই</string>
     <string name="settings_bluetooth_printer_label">ব্লুটুথ প্রিন্টার</string>
     <string name="settings_brand_badge">টেকিফাই পিওএস সিস্টেম</string>
     <string name="settings_bt_no_devices_found">কোনো যুক্ত ব্লুটুথ ডিভাইস পাওয়া যায়নি। প্রথমে অ্যান্ড্রয়েডের ব্লুটুথ সেটিংস থেকে আপনার প্রিন্টার যুক্ত করুন।</string>

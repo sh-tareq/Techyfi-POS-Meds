@@ -938,7 +938,8 @@
     <string name="settings_backup_meta_sales">🧾 Sales Records: %1$d sales</string>
     <string name="settings_backup_meta_store">🏪 Store: %1$s (v%2$s)</string>
     <string name="settings_backup_meta_suppliers_expenses">🚚 Suppliers: %1$d • Expenses: %2$d</string>
-    <string name="settings_bluetooth_not_paired">Not paired — tap to select</string>
+    <string name="settings_bluetooth_not_paired">Not paired - tap to select</string>
+    <string name="settings_printer_none_not_set">None / not set</string>
     <string name="settings_bluetooth_printer_label">Bluetooth Printer</string>
     <string name="settings_brand_badge">TECHYFI POS SYSTEM</string>
     <string name="settings_bt_no_devices_found">No paired Bluetooth devices found. Pair your printer from Android\'s Bluetooth settings first.</string>
