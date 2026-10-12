@@ -1863,57 +1863,85 @@ fun BatchProductCodePrintDialog(
                                 val mode = invoiceSettings.labelPrintMode.trim().uppercase()
                                 val address = invoiceSettings.labelPrinterAddress.trim()
 
-                                if (mode == "BLUETOOTH" && address.isNotBlank()) {
-                                    var totalSent = 0
-                                    for ((idx, item) in items.withIndex()) {
-                                        withContext(Dispatchers.Main) {
-                                            printingProgressText = context.getString(R.string.batch_print_printing, idx + 1, items.size)
-                                        }
-                                        val bitmap = generateProductCodeLabelBitmap(
-                                            productName = item.productName,
-                                            barcode = item.barcode,
-                                            formattedPrice = item.formattedPrice,
-                                            codeType = codeType,
-                                            labelSize = labelSize,
-                                            showPrice = showPrice,
-                                            showCodeNumber = showCodeNumber,
-                                            customWidthMm = customWidthMm,
-                                            customHeightMm = customHeightMm,
-                                            productNameTextScale = productNameTextScale,
-                                            priceTextScale = priceTextScale,
-                                            codeNumberTextScale = codeNumberTextScale,
-                                            showStoreName = showStoreName,
-                                            storeName = storeNameInput,
-                                            storeNameTextScale = storeNameTextScale,
-                                            showDateTracking = showDateTracking,
-                                            mfgOrPkgType = mfgOrPkgType,
-                                            mfgOrPkgDate = mfgOrPkgDate,
-                                            expDate = expDate,
-                                            dateTrackingTextScale = dateTrackingTextScale,
-                                            barcodeGraphicScale = barcodeGraphicScale
-                                        )
-                                        if (bitmap != null) {
-                                            val res = TsplLabelPrinterDriver.printLabel(
-                                                context = context,
-                                                address = address,
-                                                labelBitmap = bitmap,
-                                                widthMm = effectiveWidthMm,
-                                                heightMm = effectiveHeightMm,
-                                                gapMm = invoiceSettings.labelGapMm,
-                                                copies = item.quantity,
-                                                darkness = invoiceSettings.labelDarkness
-                                            )
-                                            if (res is DirectPrintResult.Success) {
-                                                totalSent += item.quantity
-                                            }
-                                        }
-                                    }
+                                val goDirect = mode != "SYSTEM" && address.isNotBlank()
+                                if (goDirect && com.example.techyfipos.printer.isSamePrinter(address, invoiceSettings.resolvedReceiptPrinterAddress())) {
+                                    // Never send TSPL to the ESC/POS receipt printer (prints garbage).
                                     withContext(Dispatchers.Main) {
                                         isPrinting = false
                                         printingProgressText = ""
-                                        val msg = context.getString(R.string.batch_print_success_fmt, totalSent)
-                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                        onDismiss()
+                                        Toast.makeText(context, context.getString(R.string.direct_print_error_label_same_as_receipt), Toast.LENGTH_LONG).show()
+                                    }
+                                } else if (goDirect) {
+                                    var totalSent = 0
+                                    var failure: DirectPrintResult? = null
+                                    try {
+                                        for ((idx, item) in items.withIndex()) {
+                                            withContext(Dispatchers.Main) {
+                                                printingProgressText = context.getString(R.string.batch_print_printing, idx + 1, items.size)
+                                            }
+                                            val bitmap = generateProductCodeLabelBitmap(
+                                                productName = item.productName,
+                                                barcode = item.barcode,
+                                                formattedPrice = item.formattedPrice,
+                                                codeType = codeType,
+                                                labelSize = labelSize,
+                                                showPrice = showPrice,
+                                                showCodeNumber = showCodeNumber,
+                                                customWidthMm = customWidthMm,
+                                                customHeightMm = customHeightMm,
+                                                productNameTextScale = productNameTextScale,
+                                                priceTextScale = priceTextScale,
+                                                codeNumberTextScale = codeNumberTextScale,
+                                                showStoreName = showStoreName,
+                                                storeName = storeNameInput,
+                                                storeNameTextScale = storeNameTextScale,
+                                                showDateTracking = showDateTracking,
+                                                mfgOrPkgType = mfgOrPkgType,
+                                                mfgOrPkgDate = mfgOrPkgDate,
+                                                expDate = expDate,
+                                                dateTrackingTextScale = dateTrackingTextScale,
+                                                barcodeGraphicScale = barcodeGraphicScale
+                                            )
+                                            if (bitmap != null) {
+                                                val res = TsplLabelPrinterDriver.printLabel(
+                                                    context = context,
+                                                    address = address,
+                                                    labelBitmap = bitmap,
+                                                    widthMm = effectiveWidthMm,
+                                                    heightMm = effectiveHeightMm,
+                                                    gapMm = invoiceSettings.labelGapMm,
+                                                    copies = item.quantity,
+                                                    darkness = invoiceSettings.labelDarkness
+                                                )
+                                                bitmap.recycle()
+                                                if (res is DirectPrintResult.Success) {
+                                                    totalSent += item.quantity
+                                                } else {
+                                                    // Stop at the first failure instead of retrying every product.
+                                                    failure = res
+                                                    break
+                                                }
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        if (e is kotlinx.coroutines.CancellationException) throw e
+                                        android.util.Log.e("ProductCodePrintDialogs", "Batch label print failed", e)
+                                        failure = DirectPrintResult.Failed(e.localizedMessage ?: "Unknown error")
+                                    } finally {
+                                        withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
+                                            isPrinting = false
+                                            printingProgressText = ""
+                                        }
+                                    }
+                                    val failed = failure
+                                    if (failed != null) {
+                                        showDirectPrintToast(context, failed)
+                                    } else {
+                                        withContext(Dispatchers.Main) {
+                                            val msg = context.getString(R.string.batch_print_success_fmt, totalSent)
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                            onDismiss()
+                                        }
                                     }
                                 } else {
                                     val pdfResult = cacheBatchProductCodeLabelsPdf(

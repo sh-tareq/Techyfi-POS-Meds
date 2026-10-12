@@ -74,6 +74,9 @@ fun buildTsplPayload(
     darkness: Int,
     invertBits: Boolean = TSPL_INVERT_BITS
 ): ByteArray {
+    val safeCopies = copies.coerceAtLeast(1)
+    val safeDarkness = darkness.coerceIn(0, 15)
+    val safeGapMm = gapMm.coerceAtLeast(0f)
     val targetWidthDots = maxOf(1, (widthMm * 8f).roundToInt())
     val targetHeightDots = maxOf(1, (heightMm * 8f).roundToInt())
     val widthBytes = (targetWidthDots + 7) / 8
@@ -90,13 +93,13 @@ fun buildTsplPayload(
     }
 
     val header = "SIZE ${formatMm(widthMm)} mm,${formatMm(heightMm)} mm\r\n" +
-        "GAP ${formatMm(gapMm)} mm,0 mm\r\n" +
+        "GAP ${formatMm(safeGapMm)} mm,0 mm\r\n" +
         "DIRECTION 1\r\n" +
-        "DENSITY $darkness\r\n" +
+        "DENSITY $safeDarkness\r\n" +
         "CLS\r\n" +
         "BITMAP 0,0,$widthBytes,$targetHeightDots,0,"
 
-    val footer = "\r\nPRINT 1,$copies\r\n"
+    val footer = "\r\nPRINT 1,$safeCopies\r\n"
 
     val headerBytes = header.toByteArray(Charsets.US_ASCII)
     val footerBytes = footer.toByteArray(Charsets.US_ASCII)

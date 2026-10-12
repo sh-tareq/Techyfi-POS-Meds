@@ -607,7 +607,10 @@ fun CartScreen(
             cartViewModel.setCashierName(currentDisplayCashier)
             val saleId = cartViewModel.completeSale()
             if (invoiceSettingsData.cashDrawerKickEnabled && (snapshotPaymentMethod == "Cash" || snapshotPaymentMethod == "Split")) {
-                triggerCashDrawerKick(context, invoiceSettingsData.cashDrawerPrinterAddress)
+                triggerCashDrawerKick(
+                    context,
+                    invoiceSettingsData.cashDrawerPrinterAddress.ifBlank { invoiceSettingsData.resolvedReceiptPrinterAddress() }
+                )
             }
             // Re-fetch the authoritative post-sale balance so the receipt shows the true total due.
             val updatedTotalDue = if (snapshotHasDueInPayment && snapshotCustomerPhone.isNotBlank()) {

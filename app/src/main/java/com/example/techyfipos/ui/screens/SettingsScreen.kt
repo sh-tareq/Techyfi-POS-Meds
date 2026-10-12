@@ -825,7 +825,7 @@ private fun OptimizedSettingsHome(
                         val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
                         printReceiptImage(
                             context = context,
-                            activity = context as? Activity,
+                            activity = context.findActivity(),
                             imageFile = testFile,
                             jobName = "Test_Receipt",
                             settings = currentSettings,
@@ -963,8 +963,13 @@ private fun OptimizedSettingsHome(
             }
 
             // Label gap field (mm)
-            var gapText by remember(currentSettings.labelGapMm) {
-                mutableStateOf(currentSettings.labelGapMm.toString())
+            var gapText by remember { mutableStateOf(currentSettings.labelGapMm.toString()) }
+            LaunchedEffect(currentSettings.labelGapMm) {
+                // Only resync when the stored value differs from what the user has typed,
+                // so typing "3." does not get rewritten to "3.0" mid-edit.
+                if (gapText.toFloatOrNull() != currentSettings.labelGapMm) {
+                    gapText = currentSettings.labelGapMm.toString()
+                }
             }
             OutlinedTextField(
                 value = gapText,
@@ -1025,19 +1030,25 @@ private fun OptimizedSettingsHome(
                 onClick = {
                     scope.launch(Dispatchers.IO) {
                         isTestingLabel = true
-                        val testBitmap = buildTestLabelBitmap(currentSettings.storeName)
-                        val dummyPdf = buildTestLabelPdf(testBitmap, context.cacheDir)
-                        val ok = printLabelImages(
-                            context = context,
-                            activity = context as? Activity,
-                            labels = listOf(testBitmap),
-                            pdfFallback = dummyPdf,
-                            widthMm = 40f,
-                            heightMm = 30f,
-                            copies = 1,
-                            jobName = "Test_Label",
-                            settings = currentSettings
-                        )
+                        val ok = try {
+                            val testBitmap = buildTestLabelBitmap(currentSettings.storeName)
+                            val dummyPdf = buildTestLabelPdf(testBitmap, context.cacheDir)
+                            printLabelImages(
+                                context = context,
+                                activity = context.findActivity(),
+                                labels = listOf(testBitmap),
+                                pdfFallback = dummyPdf,
+                                widthMm = 40f,
+                                heightMm = 30f,
+                                copies = 1,
+                                jobName = "Test_Label",
+                                settings = currentSettings
+                            )
+                        } catch (e: Exception) {
+                            if (e is kotlinx.coroutines.CancellationException) throw e
+                            android.util.Log.e("SettingsScreen", "Test label failed", e)
+                            false
+                        }
                         withContext(Dispatchers.Main) {
                             isTestingLabel = false
                             if (ok) {

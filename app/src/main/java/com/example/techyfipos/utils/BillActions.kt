@@ -154,7 +154,7 @@ fun printBillJpeg(context: Context, imageFile: File, jobName: String, paperRollW
         }
 
         // Build print attributes with custom page size matching receipt dimensions
-        val customSize = PrintAttributes.MediaSize("RECEIPT_80MM", "80mm Receipt",
+        val customSize = PrintAttributes.MediaSize("RECEIPT_${paperRollWidthMm}MM", "${if (paperRollWidthMm == 58) 58 else 80}mm Receipt",
             pageWidthMils, pageHeightMils)
         val attrs = PrintAttributes.Builder()
             .setMediaSize(customSize)

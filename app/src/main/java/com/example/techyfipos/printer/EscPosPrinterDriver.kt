@@ -33,7 +33,7 @@ object EscPosPrinterDriver {
      */
     fun bitmapToEscPosBands(src: Bitmap, targetWidthDots: Int = 384, darkness: Int = 8): List<ByteArray> {
         val aspect = src.height.toFloat() / src.width.toFloat()
-        val targetHeightDots = (targetWidthDots * aspect).toInt()
+        val targetHeightDots = (targetWidthDots * aspect).toInt().coerceAtLeast(1)
         val scaled = if (src.width == targetWidthDots && src.height == targetHeightDots) {
             src
         } else {
