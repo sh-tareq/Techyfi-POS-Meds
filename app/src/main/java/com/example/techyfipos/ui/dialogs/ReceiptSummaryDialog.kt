@@ -815,11 +815,11 @@ fun ReceiptSummaryDialog(
                                     withJpeg { file ->
                                         when (val result = saveBillJpegToDownloads(context, file)) {
                                             is FileSaveResult.PublicSaved -> {
-                                                copyImageUriToClipboard(context, getBillImageUri(context, file), "Invoice #${bill.saleId}")
+                                                copyImageUriToClipboard(context, getBillImageUri(context, file), context.getString(R.string.print_job_invoice_fmt, bill.saleId.toString()))
                                                 Toast.makeText(context, context.getString(R.string.cart_saved_jpeg_toast), Toast.LENGTH_SHORT).show()
                                             }
                                             is FileSaveResult.PrivateFallback -> {
-                                                copyImageUriToClipboard(context, getBillImageUri(context, file), "Invoice #${bill.saleId}")
+                                                copyImageUriToClipboard(context, getBillImageUri(context, file), context.getString(R.string.print_job_invoice_fmt, bill.saleId.toString()))
                                                 Toast.makeText(context, context.getString(R.string.file_saved_private_fallback, result.path), Toast.LENGTH_LONG).show()
                                             }
                                             FileSaveResult.Failed -> {

@@ -28,6 +28,7 @@ class TechyfiPOSApplication : Application() {
             repository.removeLegacyDemoDuesIfUntouched()
             repository.backfillLegacyTaxInclusiveIfConfigured()
             repository.recomputeCustomerLoyaltyTiersWithConfiguredThresholds()
+            com.example.techyfipos.utils.cleanOldPrintCacheFiles(this@TechyfiPOSApplication)
         }
 
         // Ensure periodic work exists.

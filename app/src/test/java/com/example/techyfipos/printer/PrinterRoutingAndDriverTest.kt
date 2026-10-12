@@ -400,6 +400,58 @@ class PrinterRoutingAndDriverTest {
 
         assertFalse(failedResult.isSuccessful)
     }
+
+    // 15. Tests for cleanOldPrintCacheFiles
+    @Test
+    fun `cleanOldPrintCacheFiles deletes files older than threshold and preserves newer files`() {
+        val tempDir = java.nio.file.Files.createTempDirectory("cache_test").toFile()
+        try {
+            val billsDir = java.io.File(tempDir, "bills").apply { mkdirs() }
+            val reportsDir = java.io.File(tempDir, "reports").apply { mkdirs() }
+            val receiptsDir = java.io.File(tempDir, "receipts").apply { mkdirs() }
+            val productCodesDir = java.io.File(tempDir, "product_codes").apply { mkdirs() }
+
+            val now = System.currentTimeMillis()
+            val oldTime = now - (8 * 24 * 60 * 60 * 1000L) // 8 days ago
+            val freshTime = now - (1 * 24 * 60 * 60 * 1000L) // 1 day ago
+
+            val oldBill = java.io.File(billsDir, "old_bill.pdf").apply {
+                createNewFile()
+                setLastModified(oldTime)
+            }
+            val freshBill = java.io.File(billsDir, "fresh_bill.pdf").apply {
+                createNewFile()
+                setLastModified(freshTime)
+            }
+            val oldReport = java.io.File(reportsDir, "old_report.jpg").apply {
+                createNewFile()
+                setLastModified(oldTime)
+            }
+            val freshReceipt = java.io.File(receiptsDir, "fresh_receipt.jpg").apply {
+                createNewFile()
+                setLastModified(freshTime)
+            }
+            val oldProductCode = java.io.File(productCodesDir, "old_barcode.pdf").apply {
+                createNewFile()
+                setLastModified(oldTime)
+            }
+            val oldLoosePdf = java.io.File(tempDir, "test_label_fallback.pdf").apply {
+                createNewFile()
+                setLastModified(oldTime)
+            }
+
+            val deletedCount = com.example.techyfipos.utils.cleanOldPrintCacheFiles(tempDir, 7 * 24 * 60 * 60 * 1000L)
+            assertEquals(4, deletedCount)
+            assertFalse(oldBill.exists())
+            assertTrue(freshBill.exists())
+            assertFalse(oldReport.exists())
+            assertTrue(freshReceipt.exists())
+            assertFalse(oldProductCode.exists())
+            assertFalse(oldLoosePdf.exists())
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
 }
 
 

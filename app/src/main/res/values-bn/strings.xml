@@ -650,6 +650,16 @@
     <string name="cart_print_button">প্রিন্ট</string>
     <string name="cart_saved_jpeg_toast">জেপিইজি সংরক্ষিত হয়েছে এবং ক্লিপবোর্ডে কপি হয়েছে</string>
     <string name="file_saved_private_fallback">অ্যাপ স্টোরেজে সংরক্ষিত (গ্যালারিতে নয়): %1$s</string>
+    <string name="clip_invoice_jpeg">ইনভয়েস জেপিইজি</string>
+    <string name="clip_voucher_slip">ভাউচার স্লিপ</string>
+    <string name="clip_due_reminder">বকেয়া তাগাদা</string>
+    <string name="clip_customer_phone">গ্রাহকের ফোন নম্বর</string>
+    <string name="print_destination_unavailable">প্রিন্ট গন্তব্য উপলব্ধ নয়</string>
+    <string name="print_could_not_decode_receipt_image">রশিদ ইমেজ ফাইল ডিকোড করা যায়নি</string>
+    <string name="print_job_invoice_fmt">ইনভয়েস #%1$s</string>
+    <string name="print_job_voucher_fmt">ভাউচার-%1$s</string>
+    <string name="print_job_batch_labels">ব্যাচ লেবেল</string>
+    <string name="print_job_product_label_fmt">%1$s লেবেল</string>
     <string name="cart_failed_save_jpeg_toast">ইনভয়েস জেপিইজি সংরক্ষণ করতে ব্যর্থ</string>
     <string name="cart_save_button">সংরক্ষণ</string>
     <string name="cart_delete_button">মুছুন</string>
@@ -1643,6 +1653,8 @@
     <string name="batch_print_printing">প্রিন্ট হচ্ছে %1$d / %2$d...</string>
     <string name="batch_print_success_fmt">%1$d টি লেবেল প্রিন্টারে পাঠানো হয়েছে</string>
     <string name="batch_print_partial_failure">%1$dটি লেবেল প্রিন্ট হওয়ার পর প্রিন্টারে সমস্যা হয়েছে</string>
+    <string name="batch_print_capped_500_toast">ব্যাচ প্রিন্ট সর্বোচ্চ ৫০০ লেবেলে সীমাবদ্ধ (%1$d চাওয়া হয়েছে)। কেবল প্রথম ৫০০টি প্রক্রিয়া করা হবে।</string>
+    <string name="batch_print_capped_500_note">সর্বোচ্চ ৫০০ লেবেলে সীমাবদ্ধ (%1$d চাওয়া হয়েছে)</string>
     <string name="print_copies_button_fmt">প্রিন্ট (%1$d)</string>
     <string name="batch_print_generating">লেবেল পিডিএফ তৈরি হচ্ছে...</string>
     <string name="batch_print_no_products">প্রিন্ট করার মতো বারকোডযুক্ত পণ্য নেই</string>

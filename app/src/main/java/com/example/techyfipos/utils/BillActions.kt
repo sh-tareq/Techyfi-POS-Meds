@@ -37,7 +37,9 @@ import android.print.PrintDocumentInfo
 import android.print.PrintManager
 import android.provider.MediaStore
 import android.widget.Toast
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
@@ -128,7 +130,7 @@ fun printBillJpeg(context: Context, imageFile: File, jobName: String, paperRollW
                 }
                 val output = destination
                 if (output == null) {
-                    callback?.onWriteFailed("Print destination is unavailable")
+                    callback?.onWriteFailed(context.getString(R.string.print_destination_unavailable))
                     return
                 }
                 Thread {
@@ -142,7 +144,7 @@ fun printBillJpeg(context: Context, imageFile: File, jobName: String, paperRollW
                             decodedBitmap = it
                         }
                         if (bmp == null) {
-                            callback?.onWriteFailed("Could not decode receipt image file")
+                            callback?.onWriteFailed(context.getString(R.string.print_could_not_decode_receipt_image))
                             output.close()
                             return@Thread
                         }
@@ -282,7 +284,7 @@ fun printPdfDocument(
                 }
                 val output = destination
                 if (output == null) {
-                    callback?.onWriteFailed("Print destination is unavailable")
+                    callback?.onWriteFailed(context.getString(R.string.print_destination_unavailable))
                     return
                 }
                 Thread {
@@ -493,7 +495,7 @@ fun shareBillJpeg(context: Context, imageUri: Uri, targetPackage: String? = null
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "image/jpeg"
         putExtra(Intent.EXTRA_STREAM, imageUri)
-        clipData = ClipData.newUri(context.contentResolver, "Invoice JPEG", imageUri)
+        clipData = ClipData.newUri(context.contentResolver, context.getString(R.string.clip_invoice_jpeg), imageUri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (targetPackage != null) setPackage(targetPackage)
@@ -594,7 +596,7 @@ fun shareReceiptAsText(context: Context, text: String): Boolean {
         true
     } catch (_: Exception) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        clipboard?.setPrimaryClip(ClipData.newPlainText("Due Reminder", text))
+        clipboard?.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_due_reminder), text))
         Toast.makeText(context, context.getString(R.string.message_copied_clipboard), Toast.LENGTH_SHORT).show()
         false
     }
@@ -617,7 +619,7 @@ fun openPhoneDialer(context: Context, phone: String): Boolean {
         true
     } catch (_: Exception) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        clipboard?.setPrimaryClip(ClipData.newPlainText("Customer phone", normalizedPhone))
+        clipboard?.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_customer_phone), normalizedPhone))
         Toast.makeText(context, context.getString(R.string.no_dialer_found_phone_copied), Toast.LENGTH_LONG).show()
         false
     }
@@ -924,7 +926,11 @@ suspend fun printReceiptImage(
             darkness = settings.receiptDarkness
         )
     } else {
-        DirectPrintResult.Failed("Could not decode receipt image file")
+        DirectPrintResult.Failed(context.getString(R.string.print_could_not_decode_receipt_image))
+    }
+
+    kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+        cleanOldPrintCacheFiles(context)
     }
 
     val decision = decidePrintRouting(mode, address, directResult)
@@ -947,6 +953,45 @@ suspend fun printReceiptImage(
         }
     }
 }
+
+/**
+ * Deletes print cache files (bills, reports, receipts, product_codes, loose PDFs/JPEGs)
+ * that are older than [maxAgeMillis] (default 7 days).
+ */
+fun cleanOldPrintCacheFiles(cacheDir: File, maxAgeMillis: Long = 7 * 24 * 60 * 60 * 1000L): Int {
+    var deletedCount = 0
+    try {
+        val now = System.currentTimeMillis()
+        val targetDirs = listOf(
+            File(cacheDir, "bills"),
+            File(cacheDir, "reports"),
+            File(cacheDir, "receipts"),
+            File(cacheDir, "product_codes")
+        )
+        for (dir in targetDirs) {
+            if (dir.exists() && dir.isDirectory) {
+                dir.listFiles()?.forEach { file ->
+                    if (file.isFile && (now - file.lastModified() > maxAgeMillis)) {
+                        if (file.delete()) deletedCount++
+                    }
+                }
+            }
+        }
+        cacheDir.listFiles()?.forEach { file ->
+            if (file.isFile && (file.extension.equals("pdf", ignoreCase = true) || file.extension.equals("jpg", ignoreCase = true))) {
+                if (now - file.lastModified() > maxAgeMillis) {
+                    if (file.delete()) deletedCount++
+                }
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return deletedCount
+}
+
+fun cleanOldPrintCacheFiles(context: Context, maxAgeMillis: Long = 7 * 24 * 60 * 60 * 1000L): Int =
+    cleanOldPrintCacheFiles(context.cacheDir, maxAgeMillis)
 
 /**
  * Unified entry point for printing label images.
@@ -1067,7 +1112,7 @@ suspend fun printReceiptWithBluetoothFallback(
         context = context,
         activity = activity,
         imageFile = jpegFile,
-        jobName = "Invoice #${bill.saleId}",
+        jobName = context.getString(R.string.print_job_invoice_fmt, bill.saleId.toString()),
         settings = settings,
         kickDrawer = kickDrawer
     )
@@ -1086,7 +1131,7 @@ suspend fun printStoreCreditVoucherSlip(
         context = context,
         activity = context.findActivity(),
         imageFile = voucherFile,
-        jobName = "Voucher-$voucherCode",
+        jobName = context.getString(R.string.print_job_voucher_fmt, voucherCode),
         settings = settings,
         kickDrawer = false
     )
@@ -1107,7 +1152,7 @@ fun shareStoreCreditVoucherSlip(
         putExtra(Intent.EXTRA_STREAM, uri)
         putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.store_credit_voucher_subject_fmt, voucherCode))
         putExtra(Intent.EXTRA_TEXT, context.getString(R.string.store_credit_voucher_text_fmt, voucherCode, formatTaka(voucherAmount, isBangla = false)))
-        clipData = ClipData.newUri(context.contentResolver, "Voucher Slip", uri)
+        clipData = ClipData.newUri(context.contentResolver, context.getString(R.string.clip_voucher_slip), uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }

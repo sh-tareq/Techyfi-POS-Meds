@@ -992,13 +992,16 @@ fun BatchProductCodePrintDialog(
         }
     }
 
-    val totalLabelCount = remember(candidateProducts, copiesModeByStock, batchCopies) {
-        val count = if (copiesModeByStock) {
+    val unconstrainedLabelCount = remember(candidateProducts, copiesModeByStock, batchCopies) {
+        if (copiesModeByStock) {
             candidateProducts.sumOf { kotlin.math.max(1, it.stockQty.toInt()) }
         } else {
             candidateProducts.size * batchCopies
         }
-        count.coerceAtMost(500)
+    }
+    val isBatchTruncated = unconstrainedLabelCount > 500
+    val totalLabelCount = remember(unconstrainedLabelCount) {
+        unconstrainedLabelCount.coerceAtMost(500)
     }
 
     // Live preview sample label
@@ -1803,23 +1806,34 @@ fun BatchProductCodePrintDialog(
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            stringResource(R.string.product_code_total_pages_labels_label),
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            stringResource(R.string.product_code_labels_count_fmt, totalLabelCount),
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                stringResource(R.string.product_code_total_pages_labels_label),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                stringResource(R.string.product_code_labels_count_fmt, totalLabelCount),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        if (isBatchTruncated) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.batch_print_capped_500_note, unconstrainedLabelCount),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
 
@@ -1833,6 +1847,13 @@ fun BatchProductCodePrintDialog(
                             if (candidateProducts.isEmpty()) {
                                 Toast.makeText(context, context.getString(R.string.batch_print_no_products), Toast.LENGTH_SHORT).show()
                                 return@Button
+                            }
+                            if (isBatchTruncated) {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.batch_print_capped_500_toast, unconstrainedLabelCount),
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                             isPrinting = true
                             scope.launch(Dispatchers.IO) {
@@ -1984,7 +2005,7 @@ fun BatchProductCodePrintDialog(
                                             val opened = printPdfDocument(
                                                 context = activity ?: context,
                                                 pdfFile = pdfResult.first,
-                                                jobName = "Batch Labels",
+                                                jobName = context.getString(R.string.print_job_batch_labels),
                                                 widthMm = effectiveWidthMm,
                                                 heightMm = effectiveHeightMm
                                             )
@@ -2024,6 +2045,13 @@ fun BatchProductCodePrintDialog(
                             if (candidateProducts.isEmpty()) {
                                 Toast.makeText(context, context.getString(R.string.batch_print_no_products), Toast.LENGTH_SHORT).show()
                                 return@OutlinedButton
+                            }
+                            if (isBatchTruncated) {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.batch_print_capped_500_toast, unconstrainedLabelCount),
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                             isGenerating = true
                             scope.launch(Dispatchers.IO) {
@@ -2561,7 +2589,7 @@ fun ProductCodeImageDialog(
                                                 widthMm = selectedLabelWidthMm,
                                                 heightMm = selectedLabelHeightMm,
                                                 copies = printCopies,
-                                                jobName = "${product.name} label",
+                                                jobName = context.getString(R.string.print_job_product_label_fmt, product.name),
                                                 settings = invoiceSettings
                                             )
                                             isPrinting = false
@@ -2938,7 +2966,7 @@ fun ProductCodeImageDialog(
                                                 widthMm = selectedLabelWidthMm,
                                                 heightMm = selectedLabelHeightMm,
                                                 copies = printCopies,
-                                                jobName = "${product.name} label",
+                                                jobName = context.getString(R.string.print_job_product_label_fmt, product.name),
                                                 settings = invoiceSettings
                                             )
                                             isPrinting = false

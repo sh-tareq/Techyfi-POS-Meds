@@ -650,6 +650,16 @@
     <string name="cart_print_button">Print</string>
     <string name="cart_saved_jpeg_toast">Saved JPEG &amp; Copied to clipboard</string>
     <string name="file_saved_private_fallback">Saved to app storage (not in public gallery): %1$s</string>
+    <string name="clip_invoice_jpeg">Invoice JPEG</string>
+    <string name="clip_voucher_slip">Voucher Slip</string>
+    <string name="clip_due_reminder">Due Reminder</string>
+    <string name="clip_customer_phone">Customer phone</string>
+    <string name="print_destination_unavailable">Print destination is unavailable</string>
+    <string name="print_could_not_decode_receipt_image">Could not decode receipt image file</string>
+    <string name="print_job_invoice_fmt">Invoice #%1$s</string>
+    <string name="print_job_voucher_fmt">Voucher-%1$s</string>
+    <string name="print_job_batch_labels">Batch Labels</string>
+    <string name="print_job_product_label_fmt">%1$s label</string>
     <string name="cart_failed_save_jpeg_toast">Failed to save invoice JPEG</string>
     <string name="cart_save_button">Save</string>
     <string name="cart_delete_button">Delete</string>
@@ -1647,6 +1657,8 @@
     <string name="batch_print_printing">Printing %1$d of %2$d...</string>
     <string name="batch_print_success_fmt">Sent %1$d labels to printer</string>
     <string name="batch_print_partial_failure">Sent %1$d labels before printer error</string>
+    <string name="batch_print_capped_500_toast">Batch print is capped at 500 labels (%1$d requested). Only the first 500 will be processed.</string>
+    <string name="batch_print_capped_500_note">Capped at 500 labels max (%1$d requested)</string>
     <string name="print_copies_button_fmt">Print (%1$d)</string>
     <string name="batch_print_generating">Generating Labels PDF...</string>
     <string name="batch_print_no_products">No products with barcodes to print</string>
