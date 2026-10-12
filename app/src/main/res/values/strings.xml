@@ -3051,6 +3051,9 @@
     <string name="labels_sent_to_printer_fmt">Sent %1$d label(s) to printer</string>
     <string name="settings_test_label_success">Test label sent to printer</string>
     <string name="settings_test_label_failed">Failed to print test label</string>
+    <string name="print_sent_to_printer">Sent to printer</string>
+    <string name="settings_test_receipt_success">Test receipt sent to printer</string>
+    <string name="settings_test_receipt_failed">Failed to print test receipt</string>
 </resources>
 
 

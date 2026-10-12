@@ -3053,4 +3053,7 @@
     <string name="labels_sent_to_printer_fmt">প্রিন্টারে %1$dটি লেবেল পাঠানো হয়েছে</string>
     <string name="settings_test_label_success">টেস্ট লেবেল প্রিন্টারে পাঠানো হয়েছে</string>
     <string name="settings_test_label_failed">টেস্ট লেবেল প্রিন্ট করতে ব্যর্থ হয়েছে</string>
+    <string name="print_sent_to_printer">প্রিন্টারে পাঠানো হয়েছে</string>
+    <string name="settings_test_receipt_success">টেস্ট রসিদ প্রিন্টারে পাঠানো হয়েছে</string>
+    <string name="settings_test_receipt_failed">টেস্ট রসিদ প্রিন্ট করতে ব্যর্থ হয়েছে</string>
 </resources>

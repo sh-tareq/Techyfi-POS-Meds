@@ -650,6 +650,7 @@ private fun OptimizedSettingsHome(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            var isTestingReceipt by remember { mutableStateOf(false) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Realistic3DPrinterIcon(size = 32.dp)
                 Spacer(modifier = Modifier.width(12.dp))
@@ -822,21 +823,41 @@ private fun OptimizedSettingsHome(
             OutlinedButton(
                 onClick = {
                     scope.launch(Dispatchers.IO) {
-                        val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
-                        printReceiptImage(
-                            context = context,
-                            activity = context.findActivity(),
-                            imageFile = testFile,
-                            jobName = "Test_Receipt",
-                            settings = currentSettings,
-                            kickDrawer = false
-                        )
+                        isTestingReceipt = true
+                        val ok = try {
+                            val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
+                            printReceiptImage(
+                                context = context,
+                                activity = context.findActivity(),
+                                imageFile = testFile,
+                                jobName = "Test_Receipt",
+                                settings = currentSettings,
+                                kickDrawer = false
+                            )
+                        } catch (e: Exception) {
+                            if (e is kotlinx.coroutines.CancellationException) throw e
+                            android.util.Log.e("SettingsScreen", "Test receipt failed", e)
+                            false
+                        }
+                        withContext(Dispatchers.Main) {
+                            isTestingReceipt = false
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.settings_test_receipt_success), Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.settings_test_receipt_failed), Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 },
+                enabled = !isTestingReceipt,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                if (isTestingReceipt) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.settings_test_receipt_button), fontWeight = FontWeight.Bold)
             }

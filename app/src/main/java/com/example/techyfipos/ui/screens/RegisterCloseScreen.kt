@@ -1220,7 +1220,7 @@ fun RegisterCloseScreen(
                         val jpegFile = withContext(Dispatchers.IO) {
                             generateXReportJpeg(context, r, rangeLabel, settings = invoiceSettings)
                         }
-                        printReceiptImage(
+                        val ok = printReceiptImage(
                             context = context,
                             activity = context.findActivity(),
                             imageFile = jpegFile,
@@ -1228,6 +1228,9 @@ fun RegisterCloseScreen(
                             settings = invoiceSettings,
                             kickDrawer = false
                         )
+                        if (ok) {
+                            Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                        }
                     } catch (e: Exception) {
                         Toast.makeText(context, context.getString(R.string.toast_print_error_fmt, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                     }
@@ -1283,7 +1286,7 @@ fun RegisterCloseScreen(
                         val jpegFile = withContext(Dispatchers.IO) {
                             generateZReportJpeg(context, r, label, settings = invoiceSettings)
                         }
-                        printReceiptImage(
+                        val ok = printReceiptImage(
                             context = context,
                             activity = context.findActivity(),
                             imageFile = jpegFile,
@@ -1291,6 +1294,9 @@ fun RegisterCloseScreen(
                             settings = invoiceSettings,
                             kickDrawer = false
                         )
+                        if (ok) {
+                            Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                        }
                     } catch (e: Exception) {
                         Toast.makeText(context, context.getString(R.string.z_report_print_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                     }

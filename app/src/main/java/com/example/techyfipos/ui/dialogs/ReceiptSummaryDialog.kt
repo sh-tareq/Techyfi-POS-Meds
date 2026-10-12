@@ -718,8 +718,7 @@ fun ReceiptSummaryDialog(
                                 try {
                                     printPressed = true
                                     delay(100)
-                                    printPressed = false
-                                    com.example.techyfipos.utils.printReceiptWithBluetoothFallback(
+                                    val ok = com.example.techyfipos.utils.printReceiptWithBluetoothFallback(
                                         context = context,
                                         activity = activity,
                                         bill = activeBill,
@@ -727,6 +726,13 @@ fun ReceiptSummaryDialog(
                                         receiptLanguage = receiptLanguage,
                                         kickDrawer = false
                                     )
+                                    if (ok) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            context.getString(R.string.print_sent_to_printer),
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 } catch (e: Exception) {
                                     if (e is kotlinx.coroutines.CancellationException) throw e
                                     android.util.Log.e("ReceiptSummaryDialog", "Printing failed", e)

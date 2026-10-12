@@ -6816,7 +6816,7 @@ fun DueRepaymentReceiptDialog(
                                 val fileToPrint = receiptFile
                                 if (fileToPrint != null) {
                                     coroutineScope.launch {
-                                        printReceiptImage(
+                                        val ok = printReceiptImage(
                                             context = context,
                                             activity = context.findActivity(),
                                             imageFile = fileToPrint,
@@ -6824,6 +6824,9 @@ fun DueRepaymentReceiptDialog(
                                             settings = settings.copy(paperRollWidthMm = selectedRollWidth),
                                             kickDrawer = false
                                         )
+                                        if (ok) {
+                                            Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                                 }
                             },

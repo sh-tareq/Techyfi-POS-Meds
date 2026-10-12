@@ -68,7 +68,7 @@ fun Context.findActivity(): Activity? {
  * The page height is derived from the image aspect ratio so the printer
  * feeds only exactly enough paper for the content.
  */
-fun printBillJpeg(context: Context, imageFile: File, jobName: String, paperRollWidthMm: Int = 80) {
+fun printBillJpeg(context: Context, imageFile: File, jobName: String, paperRollWidthMm: Int = 80): Boolean {
     try {
         val activity = context.findActivity()
         val printManager = (activity?.getSystemService(Context.PRINT_SERVICE)
@@ -77,21 +77,26 @@ fun printBillJpeg(context: Context, imageFile: File, jobName: String, paperRollW
 
         if (printManager == null) {
             Toast.makeText(context, context.getString(R.string.print_service_unavailable), Toast.LENGTH_SHORT).show()
-            return
+            return false
         }
-        val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
-        if (bitmap == null) {
+        val bounds = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        BitmapFactory.decodeFile(imageFile.absolutePath, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
             Toast.makeText(context, context.getString(R.string.print_image_load_failed), Toast.LENGTH_SHORT).show()
-            return
+            return false
         }
 
         // 80mm in points: 80mm / 25.4 * 72 ≈ 226.77 → 3150 mils
         // 58mm in points: 58mm / 25.4 * 72 ≈ 164.41 → 2283 mils
         val pageWidthMils = if (paperRollWidthMm == 58) 2283 else 3150
-        val aspectRatio = bitmap.height.toFloat() / bitmap.width.toFloat()
-        val pageHeightMils = (pageWidthMils * aspectRatio).toInt()
+        val aspectRatio = bounds.outHeight.toFloat() / bounds.outWidth.toFloat()
+        val pageHeightMils = (pageWidthMils * aspectRatio).toInt().coerceAtLeast(1)
 
         val adapter = object : PrintDocumentAdapter() {
+            private var decodedBitmap: Bitmap? = null
+
             override fun onLayout(
                 oldAttributes: PrintAttributes?,
                 newAttributes: PrintAttributes?,
@@ -120,36 +125,61 @@ fun printBillJpeg(context: Context, imageFile: File, jobName: String, paperRollW
                     callback?.onWriteCancelled()
                     return
                 }
-                try {
-                    // Convert mils to points for the PDF page: 1 point = 1/72 inch = 1000/72 mils
-                    val pageWidthPt = (pageWidthMils / 1000.0 * 72.0).toInt()
-                    val pageHeightPt = (pageHeightMils / 1000.0 * 72.0).toInt()
+                val output = destination
+                if (output == null) {
+                    callback?.onWriteFailed("Print destination is unavailable")
+                    return
+                }
+                Thread {
+                    try {
+                        if (cancellationSignal?.isCanceled == true) {
+                            callback?.onWriteCancelled()
+                            output.close()
+                            return@Thread
+                        }
+                        val bmp = decodedBitmap ?: BitmapFactory.decodeFile(imageFile.absolutePath).also {
+                            decodedBitmap = it
+                        }
+                        if (bmp == null) {
+                            callback?.onWriteFailed("Could not decode receipt image file")
+                            output.close()
+                            return@Thread
+                        }
 
-                    val pdfDocument = PdfDocument()
-                    val pageInfo = PdfDocument.PageInfo.Builder(pageWidthPt, pageHeightPt, 0).create()
-                    val page = pdfDocument.startPage(pageInfo)
-                    val canvas = page.canvas
+                        val pageWidthPt = (pageWidthMils / 1000.0 * 72.0).toInt().coerceAtLeast(1)
+                        val pageHeightPt = (pageHeightMils / 1000.0 * 72.0).toInt().coerceAtLeast(1)
 
-                    // Scale bitmap to fill the entire page with no margins
-                    val scaleX = pageWidthPt.toFloat() / bitmap.width.toFloat()
-                    val scaleY = pageHeightPt.toFloat() / bitmap.height.toFloat()
-                    val matrix = Matrix()
-                    matrix.setScale(scaleX, scaleY)
-                    canvas.drawBitmap(bitmap, matrix, null)
+                        val pdfDocument = PdfDocument()
+                        val pageInfo = PdfDocument.PageInfo.Builder(pageWidthPt, pageHeightPt, 0).create()
+                        val page = pdfDocument.startPage(pageInfo)
+                        val canvas = page.canvas
 
-                    pdfDocument.finishPage(page)
+                        // Scale bitmap to fill the entire page with no margins
+                        val scaleX = pageWidthPt.toFloat() / bmp.width.toFloat()
+                        val scaleY = pageHeightPt.toFloat() / bmp.height.toFloat()
+                        val matrix = Matrix().apply { setScale(scaleX, scaleY) }
+                        canvas.drawBitmap(bmp, matrix, null)
 
-                    destination?.let { fd ->
-                        FileOutputStream(fd.fileDescriptor).use { out ->
+                        pdfDocument.finishPage(page)
+
+                        FileOutputStream(output.fileDescriptor).use { out ->
                             pdfDocument.writeTo(out)
                         }
+                        pdfDocument.close()
+                        output.close()
+                        callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
+                    } catch (e: Exception) {
+                        callback?.onWriteFailed(e.localizedMessage)
+                        try { output.close() } catch (_: Exception) {}
+                        e.printStackTrace()
                     }
-                    pdfDocument.close()
-                    callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
-                } catch (e: Exception) {
-                    callback?.onWriteFailed(e.localizedMessage)
-                    e.printStackTrace()
-                }
+                }.start()
+            }
+
+            override fun onFinish() {
+                super.onFinish()
+                decodedBitmap?.recycle()
+                decodedBitmap = null
             }
         }
 
@@ -162,10 +192,12 @@ fun printBillJpeg(context: Context, imageFile: File, jobName: String, paperRollW
             .setResolution(PrintAttributes.Resolution("receipt", "Receipt", 203, 203)) // 203 DPI typical for thermal
             .build()
 
-        printManager.print(jobName, adapter, attrs)
+        val printJob = printManager.print(jobName, adapter, attrs)
+        return printJob != null
     } catch (e: Exception) {
         e.printStackTrace()
         Toast.makeText(context, context.getString(R.string.print_error_message, e.localizedMessage ?: ""), Toast.LENGTH_SHORT).show()
+        return false
     }
 }
 
@@ -821,10 +853,9 @@ suspend fun printReceiptImage(
     val address = settings.resolvedReceiptPrinterAddress()
 
     if (mode == "SYSTEM") {
-        withContext(Dispatchers.Main) {
+        return withContext(Dispatchers.Main) {
             printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
         }
-        return true
     }
 
     if (address.isBlank()) {
@@ -839,7 +870,6 @@ suspend fun printReceiptImage(
                 withContext(Dispatchers.Main) {
                     printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
                 }
-                true
             }
             RoutingDecision.DIRECT_OK -> true
         }
@@ -874,13 +904,11 @@ suspend fun printReceiptImage(
             withContext(Dispatchers.Main) {
                 printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
             }
-            true
         }
         RoutingDecision.SYSTEM_DIALOG -> {
             withContext(Dispatchers.Main) {
                 printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
             }
-            true
         }
     }
 }
