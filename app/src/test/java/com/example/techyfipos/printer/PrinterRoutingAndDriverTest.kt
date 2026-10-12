@@ -6,6 +6,8 @@ import com.example.techyfipos.utils.RoutingDecision
 import com.example.techyfipos.utils.decidePrintRouting
 import com.example.techyfipos.utils.reportCanvasWidth
 import com.example.techyfipos.utils.reportPdfPageWidthPoints
+import com.example.techyfipos.utils.reportPoweredByText
+import com.example.techyfipos.utils.reportStoreName
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -253,5 +255,21 @@ class PrinterRoutingAndDriverTest {
         assertEquals(expected58, reportPdfPageWidthPoints(InvoiceSettingsData(paperRollWidthMm = 58)))
         assertEquals(expected80, reportPdfPageWidthPoints(InvoiceSettingsData(paperRollWidthMm = 80)))
     }
+
+    // 9. Tests for reportStoreName and reportPoweredByText
+    @Test
+    fun `reportStoreName uses settings storeName or falls back to default brand`() {
+        assertEquals("Techyfi Grocery", reportStoreName(InvoiceSettingsData(storeName = "Techyfi Grocery")))
+        assertEquals("TECHYFI POS", reportStoreName(InvoiceSettingsData(storeName = "")))
+        assertEquals("TECHYFI POS", reportStoreName(InvoiceSettingsData(storeName = "   ")))
+    }
+
+    @Test
+    fun `reportPoweredByText uses settings poweredByText or falls back to default`() {
+        assertEquals("Custom POS Systems", reportPoweredByText(InvoiceSettingsData(poweredByText = "Custom POS Systems")))
+        assertEquals("Powered by Techyfi POS", reportPoweredByText(InvoiceSettingsData(poweredByText = "")))
+        assertEquals("Powered by Techyfi POS", reportPoweredByText(InvoiceSettingsData(poweredByText = "   ")))
+    }
 }
+
 

@@ -1085,6 +1085,12 @@ fun getBillImageUri(context: Context, file: File): Uri =
 
 fun getBillPdfUri(context: Context, file: File): Uri = getBillImageUri(context, file)
 
+fun reportStoreName(settings: InvoiceSettingsData): String =
+    settings.storeName.ifBlank { "TECHYFI POS" }
+
+fun reportPoweredByText(settings: InvoiceSettingsData): String =
+    settings.poweredByText.ifBlank { "Powered by Techyfi POS" }
+
 fun reportCanvasWidth(settings: InvoiceSettingsData): Int =
     if (settings.paperRollWidthMm == 58) 384 else 576
 
@@ -1113,7 +1119,7 @@ fun generateZReportJpeg(
     var totalHeight = if (is58) 32f else 40f
 
     // 1. Header
-    totalHeight += if (is58) 36f else 45f // TECHYFI POS
+    totalHeight += if (is58) 36f else 45f // Store Name
     totalHeight += if (is58) 28f else 35f // DAILY CLOSING Z-REPORT
     totalHeight += dividerH // Double divider
 
@@ -1161,7 +1167,9 @@ fun generateZReportJpeg(
 
     // 6. Footer
     totalHeight += if (is58) 28f else 35f // *** END OF Z-REPORT ***
-    totalHeight += if (is58) 24f else 30f // Techyfi POS • Smart Store System
+    if (settings.showPoweredBy) {
+        totalHeight += if (is58) 24f else 30f // Powered by footer
+    }
     totalHeight += if (is58) 32f else 40f // Bottom padding
 
     val bitmap = Bitmap.createBitmap(width, totalHeight.toInt(), Bitmap.Config.ARGB_8888)
@@ -1185,7 +1193,7 @@ fun generateZReportJpeg(
     // Header
     boldPaint.textSize = if (is58) 22f else 28f
     boldPaint.textAlign = Paint.Align.CENTER
-    canvas.drawText("TECHYFI POS", width / 2f, y, boldPaint)
+    canvas.drawText(reportStoreName(settings), width / 2f, y, boldPaint)
     y += if (is58) 28f else 35f
 
     boldPaint.textSize = if (is58) 17f else 22f
@@ -1334,11 +1342,12 @@ fun generateZReportJpeg(
     boldPaint.textAlign = Paint.Align.CENTER
     boldPaint.textSize = if (is58) 16f else 20f
     canvas.drawText(if (isBangla) "*** জেড-রিপোর্ট সমাপ্ত ***" else "*** END OF Z-REPORT ***", width / 2f, y, boldPaint)
-    y += if (is58) 24f else 30f
-
-    paint.textAlign = Paint.Align.CENTER
-    paint.textSize = if (is58) 13f else 16f
-    canvas.drawText("Techyfi POS • Smart Store System", width / 2f, y, paint)
+    if (settings.showPoweredBy) {
+        y += if (is58) 24f else 30f
+        paint.textAlign = Paint.Align.CENTER
+        paint.textSize = if (is58) 13f else 16f
+        canvas.drawText(reportPoweredByText(settings), width / 2f, y, paint)
+    }
 
     val dir = File(context.cacheDir, "reports").apply { mkdirs() }
     val file = File(dir, "techyfi-z-report-${System.currentTimeMillis()}.jpg")
@@ -1402,7 +1411,7 @@ fun generateXReportJpeg(
     val sectionHeaderH = if (is58) 28f else 34f
 
     var totalHeight = if (is58) 32f else 40f
-    totalHeight += if (is58) 36f else 45f // TECHYFI POS
+    totalHeight += if (is58) 36f else 45f // Store Name
     totalHeight += if (is58) 28f else 35f // MID-SHIFT X-REPORT (INTERIM)
     totalHeight += dividerH // Double divider
     totalHeight += lineH // Period
@@ -1429,7 +1438,9 @@ fun generateXReportJpeg(
         totalHeight += dividerH
     }
     totalHeight += if (is58) 28f else 35f // *** END OF X-REPORT (INTERIM) ***
-    totalHeight += if (is58) 24f else 30f // Techyfi POS • Smart Store System
+    if (settings.showPoweredBy) {
+        totalHeight += if (is58) 24f else 30f // Powered by footer
+    }
     totalHeight += if (is58) 32f else 40f
 
     val bitmap = Bitmap.createBitmap(width, totalHeight.toInt(), Bitmap.Config.ARGB_8888)
@@ -1451,11 +1462,11 @@ fun generateXReportJpeg(
     var y = if (is58) 36f else 45f
     boldPaint.textSize = if (is58) 22f else 28f
     boldPaint.textAlign = Paint.Align.CENTER
-    canvas.drawText("TECHYFI POS", width / 2f, y, boldPaint)
+    canvas.drawText(reportStoreName(settings), width / 2f, y, boldPaint)
     y += if (is58) 28f else 35f
 
     boldPaint.textSize = if (is58) 17f else 22f
-    canvas.drawText(if (isBangla) "মিড-শিফট এক্স-রিপোর্ট (সাময়িক)" else "MID-SHIFT X-REPORT (INTERIM)", width / 2f, y, boldPaint)
+    canvas.drawText(if (isBangla) "মিড-শিフト এক্স-রিপোর্ট (সাময়িক)" else "MID-SHIFT X-REPORT (INTERIM)", width / 2f, y, boldPaint)
     y += if (is58) 28f else 35f
 
     paint.textSize = if (is58) 16f else 20f
@@ -1547,11 +1558,12 @@ fun generateXReportJpeg(
     boldPaint.textAlign = Paint.Align.CENTER
     boldPaint.textSize = if (is58) 16f else 20f
     canvas.drawText(if (isBangla) "*** সাময়িক রিডিং (দিন বন্ধ হবে না) ***" else "*** INTERIM READING (DOES NOT CLOSE DAY) ***", width / 2f, y, boldPaint)
-    y += if (is58) 24f else 30f
-
-    paint.textAlign = Paint.Align.CENTER
-    paint.textSize = if (is58) 13f else 16f
-    canvas.drawText("Techyfi POS • Smart Store System", width / 2f, y, paint)
+    if (settings.showPoweredBy) {
+        y += if (is58) 24f else 30f
+        paint.textAlign = Paint.Align.CENTER
+        paint.textSize = if (is58) 13f else 16f
+        canvas.drawText(reportPoweredByText(settings), width / 2f, y, paint)
+    }
 
     val dir = File(context.cacheDir, "reports").apply { mkdirs() }
     val file = File(dir, "techyfi-x-report-${System.currentTimeMillis()}.jpg")
