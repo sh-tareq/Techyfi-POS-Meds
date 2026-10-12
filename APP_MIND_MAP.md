@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-12 (app version 2.6.73-V12-10-2026, build `Techyfi-POS-Final-V12-10-2026.apk`; versionCode 220949; DB schema version 38)
+Last updated: 2026-10-12 (app version 2.6.74-V12-10-2026, build `Techyfi-POS-Final-V12-10-2026.apk`; versionCode 220950; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -2728,6 +2728,27 @@ mindmap
     - **R8 Minification & Deliverable**:
       - `Techyfi-POS-Final-V12-10-2026.apk` (versionCode 220949, versionName "2.6.73-V12-10-2026") - R8 minified release build with comprehensive label copies controls across single-product (ProductCodeImageDialog) and batch printing (BatchProductCodePrintDialog), direct Bluetooth TSPL print dispatch, multi-page PrintDocumentAdapter layout support, and Settings test label feedback.
       - Unit tests: 108/108 passing (`testDebugUnitTest`).
+
+### Batch Print Feature Completeness, Custom Product Picker & Preset Copies (Version 2.6.74-V12-10-2026, Build V12-10-2026)
+- **3-Way Scope & Custom Product Selection**:
+  - Upgraded Batch Print scope from binary (All / In-Stock) to a 3-way segmented control: `All Products`, `In-Stock Only`, and `Custom Selection`.
+  - Added dedicated `BatchProductPickerSheet` modal with instant search (name or barcode), quick action assist chips (`Select All`, `Clear Selection`, `In-Stock Only`), interactive product checkboxes with stock pills and price indicators, and a live selection counter.
+  - Pre-populates custom selection automatically when launching batch print with products already selected in `ProductsScreen`.
+- **Complete Parity with Single-Product Code Image Settings**:
+  - Code Type toggle: seamlessly switch between Barcode and QR Code generation.
+  - Store Name: toggleable switch plus editable store name text field, persisting to `product_code_image_settings` SharedPreferences.
+  - Date Tracking: toggleable switch with Manufacturing vs Packaging type chips, Mfg/Pkg date input, and Expiry date input.
+  - Label Dimensions: dropdown supporting all standard sizes plus `Custom Size` with Width (mm) and Height (mm) inputs.
+  - Expandable Typography & Graphic Sizing: collapsible section with fine-grained sliders for product name, price, code number, store name, date tracking text scale, and barcode graphic height.
+  - Live Sample Label Preview: real-time bitmap preview dynamically rendering the candidate label with all active styles and custom sizes.
+- **Scrollable Preset Copies**:
+  - Transformed preset copies chip rows in both `BatchProductCodePrintDialog` and `ProductCodeImageDialog` into smooth horizontally scrollable rows (`Modifier.horizontalScroll(rememberScrollState())`).
+  - Expanded quick presets to `1, 2, 3, 5, 10, 20, 50, 100` eliminating screen edge clipping and ensuring copies after 10 are readily accessible on all devices.
+- **Bilingual String Parity & Zero Em Dashes**:
+  - Full 100% key parity (2,925 keys) across `values/strings.xml` and `values-bn/strings.xml`.
+  - Strictly zero em dash characters throughout the repository.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V12-10-2026.apk` (versionCode 220950, versionName "2.6.74-V12-10-2026"), R8 minified, passing 108/108 unit tests.
 
 ## Maintenance note
 

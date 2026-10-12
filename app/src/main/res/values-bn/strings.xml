@@ -1617,6 +1617,17 @@
     <string name="batch_print_scope">পণ্য নির্বাচন করুন</string>
     <string name="batch_print_all">সকল পণ্য (%1$d)</string>
     <string name="batch_print_in_stock">শুধুমাত্র স্টকে থাকা পণ্য (%1$d)</string>
+    <string name="batch_print_custom">পছন্দমতো (%1$d)</string>
+    <string name="batch_print_select_products_btn">পণ্য নির্বাচন করুন (%1$d টি নির্বাচিত)</string>
+    <string name="batch_print_picker_title">লেবেল প্রিন্টের জন্য পণ্য বাছুন</string>
+    <string name="batch_print_search_placeholder">নাম বা বারকোড দিয়ে খুঁজুন...</string>
+    <string name="batch_print_select_all">সব নির্বাচন</string>
+    <string name="batch_print_deselect_all">সব বাতিল</string>
+    <string name="batch_print_preview_sample">নমুনা লেবেল প্রিভিউ</string>
+    <string name="batch_print_advanced_settings">লেবেল সাইজ ও ফন্ট স্টাইল</string>
+    <string name="batch_print_no_custom_selected">অনুগ্রহ করে অন্তত একটি পণ্য নির্বাচন করুন</string>
+    <string name="batch_print_code_type">কোডের ধরন</string>
+    <string name="done">সম্পন্ন</string>
     <string name="batch_print_copies_mode">কপির সংখ্যা</string>
     <string name="batch_print_fixed_copies">নির্দিষ্ট কপি</string>
     <string name="batch_print_one_each">পণ্য প্রতি ১টি</string>

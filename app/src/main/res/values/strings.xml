@@ -1621,6 +1621,17 @@
     <string name="batch_print_scope">Select Products</string>
     <string name="batch_print_all">All Products (%1$d)</string>
     <string name="batch_print_in_stock">In-Stock Only (%1$d)</string>
+    <string name="batch_print_custom">Custom (%1$d)</string>
+    <string name="batch_print_select_products_btn">Select Products (%1$d selected)</string>
+    <string name="batch_print_picker_title">Select Products for Label Print</string>
+    <string name="batch_print_search_placeholder">Search by name or barcode...</string>
+    <string name="batch_print_select_all">Select All</string>
+    <string name="batch_print_deselect_all">Clear Selection</string>
+    <string name="batch_print_preview_sample">Sample Label Preview</string>
+    <string name="batch_print_advanced_settings">Label Styling &amp; Sizing</string>
+    <string name="batch_print_no_custom_selected">Please select at least one product</string>
+    <string name="batch_print_code_type">Code Type</string>
+    <string name="done">Done</string>
     <string name="batch_print_copies_mode">Copies Per Item</string>
     <string name="batch_print_fixed_copies">Fixed Copies</string>
     <string name="batch_print_one_each">1 per product</string>
