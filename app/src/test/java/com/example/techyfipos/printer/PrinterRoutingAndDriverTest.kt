@@ -350,6 +350,40 @@ class PrinterRoutingAndDriverTest {
         assertEquals(110, labelLuminanceThreshold(-5))
         assertEquals(230, labelLuminanceThreshold(99))
     }
+
+    // 13. Tests for legacy directBluetoothPrintEnabled migration
+    @Test
+    fun `fromJson migrates legacy directBluetoothPrintEnabled true without receiptPrintMode to BLUETOOTH`() {
+        val legacyJson = org.json.JSONObject().apply {
+            put("storeName", "Legacy Shop")
+            put("directBluetoothPrintEnabled", true)
+        }.toString()
+
+        val loaded = InvoiceSettingsData.fromJson(legacyJson)
+        assertEquals("BLUETOOTH", loaded.receiptPrintMode)
+    }
+
+    @Test
+    fun `fromJson preserves explicit receiptPrintMode even if legacy directBluetoothPrintEnabled is present`() {
+        val jsonWithBoth = org.json.JSONObject().apply {
+            put("storeName", "Modern Shop")
+            put("directBluetoothPrintEnabled", true)
+            put("receiptPrintMode", "SYSTEM")
+        }.toString()
+
+        val loaded = InvoiceSettingsData.fromJson(jsonWithBoth)
+        assertEquals("SYSTEM", loaded.receiptPrintMode)
+    }
+
+    @Test
+    fun `fromJson defaults receiptPrintMode to AUTO when neither legacy nor modern mode is set`() {
+        val defaultJson = org.json.JSONObject().apply {
+            put("storeName", "Default Shop")
+        }.toString()
+
+        val loaded = InvoiceSettingsData.fromJson(defaultJson)
+        assertEquals("AUTO", loaded.receiptPrintMode)
+    }
 }
 
 

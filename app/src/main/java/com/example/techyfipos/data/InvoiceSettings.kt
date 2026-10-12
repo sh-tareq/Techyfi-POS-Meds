@@ -210,6 +210,13 @@ data class InvoiceSettingsData(
                     }
                 }
 
+                val directBtEnabled = json.optBoolean("directBluetoothPrintEnabled", false)
+                val resolvedReceiptPrintMode = if ((!json.has("receiptPrintMode") || json.optString("receiptPrintMode").isBlank()) && directBtEnabled) {
+                    "BLUETOOTH"
+                } else {
+                    json.optString("receiptPrintMode", "AUTO").ifBlank { "AUTO" }
+                }
+
                 val fallback = InvoiceSettingsData()
                 InvoiceSettingsData(
                     storeName = json.optString("storeName", fallback.storeName),
@@ -246,9 +253,9 @@ data class InvoiceSettingsData(
                     taxInclusive = json.optBoolean("taxInclusive", false),
                     cashDrawerKickEnabled = json.optBoolean("cashDrawerKickEnabled", true),
                     cashDrawerPrinterAddress = json.optString("cashDrawerPrinterAddress", ""),
-                    directBluetoothPrintEnabled = json.optBoolean("directBluetoothPrintEnabled", false),
+                    directBluetoothPrintEnabled = directBtEnabled || resolvedReceiptPrintMode == "BLUETOOTH",
                     directBluetoothPrinterAddress = json.optString("directBluetoothPrinterAddress", ""),
-                    receiptPrintMode = json.optString("receiptPrintMode", "AUTO").ifBlank { "AUTO" },
+                    receiptPrintMode = resolvedReceiptPrintMode,
                     receiptDarkness = json.optInt("receiptDarkness", 8),
                     labelPrintMode = json.optString("labelPrintMode", "AUTO").ifBlank { "AUTO" },
                     labelPrinterAddress = json.optString("labelPrinterAddress", ""),
