@@ -1622,9 +1622,15 @@
     <string name="batch_print_all">All Products (%1$d)</string>
     <string name="batch_print_in_stock">In-Stock Only (%1$d)</string>
     <string name="batch_print_copies_mode">Copies Per Item</string>
+    <string name="batch_print_fixed_copies">Fixed Copies</string>
     <string name="batch_print_one_each">1 per product</string>
     <string name="batch_print_stock_qty">Match stock quantity</string>
     <string name="batch_print_generate_btn">Generate &amp; Print PDF</string>
+    <string name="batch_print_direct_print_btn">Print Labels</string>
+    <string name="batch_print_share_pdf_btn">Share PDF</string>
+    <string name="batch_print_printing">Printing %1$d of %2$d...</string>
+    <string name="batch_print_success_fmt">Sent %1$d labels to printer</string>
+    <string name="print_copies_button_fmt">Print (%1$d)</string>
     <string name="batch_print_generating">Generating Labels PDF...</string>
     <string name="batch_print_no_products">No products with barcodes to print</string>
     <string name="products_import_success">Imported %1$d products successfully</string>

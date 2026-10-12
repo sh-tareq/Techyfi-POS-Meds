@@ -508,24 +508,28 @@ fun cacheProductCodeLabelPdf(
     productName: String,
     codeType: ProductCodeType,
     widthMm: Float,
-    heightMm: Float
+    heightMm: Float,
+    copies: Int = 1
 ): Pair<File, Uri>? {
     return try {
         val directory = File(context.cacheDir, "product_codes").apply { mkdirs() }
         val file = File(directory, "${sharedProductFileStem(productName)}.pdf")
         val (pageWidthPoints, pageHeightPoints) = productCodeLabelPdfPageSize(widthMm, heightMm)
         val document = PdfDocument()
+        val totalCopies = copies.coerceIn(1, 500)
         try {
-            val pageInfo = PdfDocument.PageInfo.Builder(pageWidthPoints, pageHeightPoints, 1).create()
-            val page = document.startPage(pageInfo)
-            page.canvas.drawColor(Color.WHITE)
-            page.canvas.drawBitmap(
-                bitmap,
-                null,
-                RectF(0f, 0f, pageWidthPoints.toFloat(), pageHeightPoints.toFloat()),
-                Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-            )
-            document.finishPage(page)
+            for (i in 1..totalCopies) {
+                val pageInfo = PdfDocument.PageInfo.Builder(pageWidthPoints, pageHeightPoints, i).create()
+                val page = document.startPage(pageInfo)
+                page.canvas.drawColor(Color.WHITE)
+                page.canvas.drawBitmap(
+                    bitmap,
+                    null,
+                    RectF(0f, 0f, pageWidthPoints.toFloat(), pageHeightPoints.toFloat()),
+                    Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+                )
+                document.finishPage(page)
+            }
             FileOutputStream(file).use { output -> document.writeTo(output) }
         } finally {
             document.close()

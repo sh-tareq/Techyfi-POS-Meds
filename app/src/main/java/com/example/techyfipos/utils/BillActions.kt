@@ -22,6 +22,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.pdf.PdfDocument
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -218,10 +219,19 @@ fun printPdfDocument(
                     callback?.onLayoutCancelled()
                     return
                 }
+                val pageCount = try {
+                    ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
+                        PdfRenderer(pfd).use { renderer ->
+                            renderer.pageCount
+                        }
+                    }
+                } catch (e: Exception) {
+                    PrintDocumentInfo.PAGE_COUNT_UNKNOWN
+                }
                 callback?.onLayoutFinished(
                     PrintDocumentInfo.Builder(jobName)
                         .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-                        .setPageCount(1)
+                        .setPageCount(pageCount)
                         .build(),
                     true
                 )
