@@ -2,6 +2,7 @@ package com.example.techyfipos.printer
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -14,6 +15,12 @@ private fun formatMm(value: Float): String =
     if (value % 1f == 0f) value.toInt().toString() else String.format(Locale.US, "%.1f", value)
 
 /**
+ * Calculates luminance threshold for TSPL label binarization from darkness setting (0..15).
+ * Higher darkness setting results in higher threshold (more pixels treated as black).
+ */
+fun labelLuminanceThreshold(darkness: Int): Int = 110 + darkness.coerceIn(0, 15) * 8
+
+/**
  * Pure function converting pixel coordinates into TSPL raster BITMAP payload bytes.
  * In TSPL BITMAP data, bit 0 = black (printed) and bit 1 = white (blank), opposite of ESC/POS.
  * TSPL_INVERT_BITS constant allows flipping the polarity in one place if needed.
@@ -22,8 +29,10 @@ fun tsplBitmapBytes(
     widthDots: Int,
     heightDots: Int,
     invertBits: Boolean = TSPL_INVERT_BITS,
+    darkness: Int = 8,
     getPixel: (x: Int, y: Int) -> Int
 ): ByteArray {
+    val threshold = labelLuminanceThreshold(darkness)
     val widthBytes = (widthDots + 7) / 8
     val out = ByteArray(widthBytes * heightDots)
     var outIndex = 0
@@ -40,7 +49,7 @@ fun tsplBitmapBytes(
                     val green = (pixel shr 8) and 0xFF
                     val blue = pixel and 0xFF
                     val luminance = (0.299 * red + 0.587 * green + 0.114 * blue).toInt()
-                    alpha > 40 && luminance < 170
+                    alpha > 40 && luminance < threshold
                 } else {
                     false
                 }
@@ -59,8 +68,11 @@ fun tsplBitmapBytes(
 /**
  * Pure function converting a Bitmap into TSPL raster BITMAP payload bytes.
  */
-fun tsplBitmapBytes(bitmap: Bitmap, invertBits: Boolean = TSPL_INVERT_BITS): ByteArray =
-    tsplBitmapBytes(bitmap.width, bitmap.height, invertBits) { x, y -> bitmap.getPixel(x, y) }
+fun tsplBitmapBytes(
+    bitmap: Bitmap,
+    invertBits: Boolean = TSPL_INVERT_BITS,
+    darkness: Int = 8
+): ByteArray = tsplBitmapBytes(bitmap.width, bitmap.height, invertBits, darkness) { x, y -> bitmap.getPixel(x, y) }
 
 /**
  * Builds the complete TSPL binary command stream for printing a label from pre-rendered bitmap bytes.
@@ -116,13 +128,37 @@ fun buildTsplPayload(
     val targetWidthDots = maxOf(1, (widthMm * 8f).roundToInt())
     val targetHeightDots = maxOf(1, (heightMm * 8f).roundToInt())
 
-    val scaled = if (labelBitmap.width == targetWidthDots && labelBitmap.height == targetHeightDots) {
+    val srcAspect = labelBitmap.width.toFloat() / labelBitmap.height.toFloat()
+    val targetAspect = targetWidthDots.toFloat() / targetHeightDots.toFloat()
+
+    val scaled: Bitmap = if (labelBitmap.width == targetWidthDots && labelBitmap.height == targetHeightDots) {
         labelBitmap
-    } else {
+    } else if (kotlin.math.abs(srcAspect - targetAspect) < 0.02f) {
         Bitmap.createScaledBitmap(labelBitmap, targetWidthDots, targetHeightDots, true)
+    } else {
+        // Aspect-preserving fit and center onto white canvas to avoid stretching
+        val scale = minOf(
+            targetWidthDots.toFloat() / labelBitmap.width.toFloat(),
+            targetHeightDots.toFloat() / labelBitmap.height.toFloat()
+        )
+        val fitWidth = (labelBitmap.width * scale).roundToInt().coerceAtLeast(1)
+        val fitHeight = (labelBitmap.height * scale).roundToInt().coerceAtLeast(1)
+
+        val tempScaled = Bitmap.createScaledBitmap(labelBitmap, fitWidth, fitHeight, true)
+        val canvasBitmap = Bitmap.createBitmap(targetWidthDots, targetHeightDots, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(canvasBitmap)
+        canvas.drawColor(android.graphics.Color.WHITE)
+        val left = (targetWidthDots - fitWidth) / 2f
+        val top = (targetHeightDots - fitHeight) / 2f
+        canvas.drawBitmap(tempScaled, left, top, null)
+        if (tempScaled != labelBitmap) {
+            tempScaled.recycle()
+        }
+        canvasBitmap
     }
 
-    val rawBytes = tsplBitmapBytes(scaled, invertBits)
+    val safeDarkness = darkness.coerceIn(0, 15)
+    val rawBytes = tsplBitmapBytes(scaled, invertBits, safeDarkness)
     if (scaled != labelBitmap) {
         scaled.recycle()
     }
@@ -132,7 +168,7 @@ fun buildTsplPayload(
         heightMm = heightMm,
         gapMm = gapMm,
         copies = copies,
-        darkness = darkness,
+        darkness = safeDarkness,
         bitmapBytes = rawBytes,
         targetWidthDots = targetWidthDots,
         targetHeightDots = targetHeightDots

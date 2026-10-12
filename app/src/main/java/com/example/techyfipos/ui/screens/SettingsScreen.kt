@@ -69,6 +69,7 @@ import com.example.techyfipos.utils.generateDueRepaymentJpeg
 import com.example.techyfipos.utils.printBillJpeg
 import com.example.techyfipos.utils.printReceiptImage
 import com.example.techyfipos.utils.printLabelImages
+import com.example.techyfipos.utils.ProductCodeLabelSize
 import com.example.techyfipos.utils.findActivity
 import kotlin.math.roundToInt
 import com.example.techyfipos.utils.convertToMonochromeThresholdBitmap
@@ -243,27 +244,48 @@ private fun SettingsMasterCard(
     }
 }
 
-private fun buildTestLabelBitmap(storeName: String): android.graphics.Bitmap {
-    val bmp = android.graphics.Bitmap.createBitmap(320, 240, android.graphics.Bitmap.Config.ARGB_8888)
+fun getConfiguredLabelDimensions(context: Context): Pair<Float, Float> {
+    val prefs = context.getSharedPreferences("product_code_image_settings", Context.MODE_PRIVATE)
+    val sizeName = prefs.getString("label_size", ProductCodeLabelSize.SIZE_50_X_30.name)
+    val size = ProductCodeLabelSize.entries.firstOrNull { it.name == sizeName } ?: ProductCodeLabelSize.SIZE_50_X_30
+    return if (size == ProductCodeLabelSize.CUSTOM) {
+        val w = prefs.getFloat("custom_width_mm", 50f).coerceAtLeast(10f)
+        val h = prefs.getFloat("custom_height_mm", 30f).coerceAtLeast(10f)
+        Pair(w, h)
+    } else {
+        Pair(size.widthMm, size.heightMm)
+    }
+}
+
+private fun buildTestLabelBitmap(
+    storeName: String,
+    widthMm: Float = 50f,
+    heightMm: Float = 30f
+): android.graphics.Bitmap {
+    val targetWidthDots = maxOf(1, (widthMm * 8f).toInt())
+    val targetHeightDots = maxOf(1, (heightMm * 8f).toInt())
+    val bmp = android.graphics.Bitmap.createBitmap(targetWidthDots, targetHeightDots, android.graphics.Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bmp)
     canvas.drawColor(android.graphics.Color.WHITE)
+    val centerX = targetWidthDots / 2f
     val paint = android.graphics.Paint().apply {
         color = android.graphics.Color.BLACK
         isAntiAlias = true
         textAlign = android.graphics.Paint.Align.CENTER
-        textSize = 24f
+        textSize = (targetHeightDots * 0.12f).coerceIn(14f, 32f)
         isFakeBoldText = true
     }
-    canvas.drawText(storeName.ifBlank { "Techyfi POS" }, 160f, 60f, paint)
-    paint.textSize = 20f
+    canvas.drawText(storeName.ifBlank { "Techyfi POS" }, centerX, targetHeightDots * 0.25f, paint)
+    paint.textSize = (targetHeightDots * 0.10f).coerceIn(12f, 26f)
     paint.isFakeBoldText = false
-    canvas.drawText("TEST LABEL", 160f, 110f, paint)
-    paint.textSize = 16f
-    canvas.drawText("40 x 30 mm", 160f, 150f, paint)
+    canvas.drawText("TEST LABEL", centerX, targetHeightDots * 0.48f, paint)
+    paint.textSize = (targetHeightDots * 0.08f).coerceIn(10f, 20f)
+    val sizeText = "${if (widthMm % 1f == 0f) widthMm.toInt() else widthMm} x ${if (heightMm % 1f == 0f) heightMm.toInt() else heightMm} mm"
+    canvas.drawText(sizeText, centerX, targetHeightDots * 0.68f, paint)
     canvas.drawText(
         java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()),
-        160f,
-        190f,
+        centerX,
+        targetHeightDots * 0.88f,
         paint
     )
     return bmp
@@ -1053,15 +1075,16 @@ private fun OptimizedSettingsHome(
                     scope.launch(Dispatchers.IO) {
                         isTestingLabel = true
                         val ok = try {
-                            val testBitmap = buildTestLabelBitmap(currentSettings.storeName)
+                            val (labelW, labelH) = getConfiguredLabelDimensions(context)
+                            val testBitmap = buildTestLabelBitmap(currentSettings.storeName, labelW, labelH)
                             val dummyPdf = buildTestLabelPdf(testBitmap, context.cacheDir)
                             printLabelImages(
                                 context = context,
                                 activity = context.findActivity(),
                                 labels = listOf(testBitmap),
                                 pdfFallback = dummyPdf,
-                                widthMm = 40f,
-                                heightMm = 30f,
+                                widthMm = labelW,
+                                heightMm = labelH,
                                 copies = 1,
                                 jobName = "Test_Label",
                                 settings = currentSettings

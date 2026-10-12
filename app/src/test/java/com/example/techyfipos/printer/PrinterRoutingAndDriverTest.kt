@@ -340,6 +340,16 @@ class PrinterRoutingAndDriverTest {
         assertEquals("", formatBluetoothDeviceDisplay("Deli E886BW", ""))
         assertEquals("", formatBluetoothDeviceDisplay("Deli E886BW", "   "))
     }
+
+    // 12. Tests for labelLuminanceThreshold()
+    @Test
+    fun `labelLuminanceThreshold maps values correctly and clamps out of bounds inputs`() {
+        assertEquals(110, labelLuminanceThreshold(0))
+        assertEquals(174, labelLuminanceThreshold(8))
+        assertEquals(230, labelLuminanceThreshold(15))
+        assertEquals(110, labelLuminanceThreshold(-5))
+        assertEquals(230, labelLuminanceThreshold(99))
+    }
 }
 
 
