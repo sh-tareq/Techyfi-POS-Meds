@@ -245,6 +245,8 @@ suspend fun sendToBluetoothPrinter(
         delay(CONNECT_SETTLE_MS)
 
         val os: OutputStream = socket.outputStream
+        val totalBytes = segments.sumOf { it.size }
+        val writeStartTime = System.currentTimeMillis()
         for ((index, segment) in segments.withIndex()) {
             var offset = 0
             while (offset < segment.size) {
@@ -263,7 +265,13 @@ suspend fun sendToBluetoothPrinter(
             }
         }
         os.flush()
-        delay(bluetoothPostPrintDrainMs(segments.sumOf { it.size }))
+        val writeElapsedMs = System.currentTimeMillis() - writeStartTime
+        val drainMs = bluetoothPostPrintDrainMs(totalBytes)
+        delay(drainMs)
+        Log.d(
+            TAG,
+            "sendToBluetoothPrinter: totalBytes=$totalBytes, writeElapsedMs=$writeElapsedMs, drainMs=$drainMs"
+        )
         DirectPrintResult.Success
     } catch (e: Exception) {
         Log.e(TAG, "Bluetooth communication failed: ${e.message}", e)

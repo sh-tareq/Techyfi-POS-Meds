@@ -2904,6 +2904,9 @@
     <string name="settings_test_cut_button">Test Cut</string>
     <string name="settings_test_cut_success">Test cut sent successfully</string>
     <string name="settings_test_cut_success_none">Test line fed successfully (cut disabled)</string>
+    <string name="settings_test_cut_long_button">Test Cut (Long Receipt)</string>
+    <string name="settings_test_cut_long_success">Long test receipt cut sent successfully</string>
+    <string name="settings_test_cut_long_success_none">Long test receipt fed successfully (cut disabled)</string>
     <string name="settings_receipt_cut_system_note">Paper cut control only applies to direct printing.</string>
     <string name="settings_label_picker_same_as_receipt_dialog">This device is already your receipt printer. A receipt printer cannot print labels. Choose your label printer, such as the Deli E886BW.</string>
     <string name="settings_receipt_picker_same_as_label_dialog">This device is already your label printer.</string>

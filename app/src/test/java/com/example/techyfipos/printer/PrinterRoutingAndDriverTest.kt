@@ -879,4 +879,32 @@ class PrinterRoutingAndDriverTest {
         assertEquals(4000L, bluetoothPostPrintDrainMs(Int.MAX_VALUE))
         assertTrue(bluetoothPostPrintDrainMs(60_000) > bluetoothPostPrintDrainMs(5_000))
     }
+
+    @Test
+    fun `toHexString formats byte arrays to uppercase hex accurately`() {
+        assertEquals("", byteArrayOf().toHexString())
+        assertEquals("1D5601", byteArrayOf(0x1D, 0x56, 0x01).toHexString())
+        assertEquals("00FF0A", byteArrayOf(0x00, 0xFF.toByte(), 0x0A).toHexString())
+    }
+
+    @Test
+    fun `buildCutTestSegments preserves all raster bands and appends correct end segment`() {
+        val dummyBands = listOf(byteArrayOf(1, 2, 3), byteArrayOf(4, 5, 6))
+        val (segments, delays) = EscPosPrinterDriver.buildCutTestSegments(
+            bands = dummyBands,
+            cutMode = ReceiptCutMode.PARTIAL,
+            feedLines = 4,
+            cutCommandStyle = "GS_V"
+        )
+        // CMD_INIT, CMD_ALIGN_CENTER, 2 bands, endSegment = 5 segments
+        assertEquals(5, segments.size)
+        assertEquals(5, delays.size)
+        assertArrayEquals(EscPosPrinterDriver.CMD_INIT, segments[0])
+        assertArrayEquals(EscPosPrinterDriver.CMD_ALIGN_CENTER, segments[1])
+        assertArrayEquals(dummyBands[0], segments[2])
+        assertArrayEquals(dummyBands[1], segments[3])
+        // End segment should be ESC d 4 + GS V 1 (CMD_PARTIAL_CUT)
+        val expectedEnd = byteArrayOf(0x1B, 0x64, 0x04, 0x1D, 0x56, 0x01)
+        assertArrayEquals(expectedEnd, segments[4])
+    }
 }

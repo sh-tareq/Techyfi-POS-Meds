@@ -755,6 +755,7 @@ private fun OptimizedSettingsHome(
         ) {
             var isTestingReceipt by remember { mutableStateOf(false) }
             var isTestingCut by remember { mutableStateOf(false) }
+            var isTestingLongCut by remember { mutableStateOf(false) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Realistic3DPrinterIcon(size = 32.dp)
                 Spacer(modifier = Modifier.width(12.dp))
@@ -895,6 +896,12 @@ private fun OptimizedSettingsHome(
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold
                         )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         OutlinedButton(
                             onClick = {
                                 scope.launch(Dispatchers.IO) {
@@ -906,7 +913,8 @@ private fun OptimizedSettingsHome(
                                             settings = currentSettings,
                                             cutMode = cutModeEnum,
                                             feedLines = currentSettings.receiptFeedLinesBeforeCut,
-                                            cutCommandStyle = currentSettings.receiptCutCommandStyle
+                                            cutCommandStyle = currentSettings.receiptCutCommandStyle,
+                                            isLong = false
                                         )
                                     } catch (e: Exception) {
                                         if (e is kotlinx.coroutines.CancellationException) throw e
@@ -928,10 +936,10 @@ private fun OptimizedSettingsHome(
                                     }
                                 }
                             },
-                            enabled = !isTestingCut && !isTestingReceipt,
+                            enabled = !isTestingCut && !isTestingLongCut && !isTestingReceipt,
                             shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                            modifier = Modifier.height(32.dp)
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.weight(1f).height(36.dp)
                         ) {
                             if (isTestingCut) {
                                 CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
@@ -939,7 +947,61 @@ private fun OptimizedSettingsHome(
                                 Text(
                                     stringResource(R.string.settings_test_cut_button),
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    isTestingLongCut = true
+                                    val cutModeEnum = ReceiptCutMode.fromString(currentSettings.receiptCutMode)
+                                    val res = try {
+                                        executeReceiptCutTest(
+                                            context = context,
+                                            settings = currentSettings,
+                                            cutMode = cutModeEnum,
+                                            feedLines = currentSettings.receiptFeedLinesBeforeCut,
+                                            cutCommandStyle = currentSettings.receiptCutCommandStyle,
+                                            isLong = true
+                                        )
+                                    } catch (e: Exception) {
+                                        if (e is kotlinx.coroutines.CancellationException) throw e
+                                        android.util.Log.e("SettingsScreen", "Long test cut failed", e)
+                                        DirectPrintResult.Failed(e.message ?: "Long cut test failed")
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        isTestingLongCut = false
+                                        if (res is DirectPrintResult.Success) {
+                                            val msg = if (cutModeEnum == ReceiptCutMode.NONE) {
+                                                context.getString(R.string.settings_test_cut_long_success_none)
+                                            } else {
+                                                context.getString(R.string.settings_test_cut_long_success)
+                                            }
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            showDirectPrintToast(context, res)
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isTestingCut && !isTestingLongCut && !isTestingReceipt,
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.weight(1f).height(36.dp)
+                        ) {
+                            if (isTestingLongCut) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(
+                                    stringResource(R.string.settings_test_cut_long_button),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -1083,7 +1145,7 @@ private fun OptimizedSettingsHome(
                         }
                     }
                 },
-                enabled = !isTestingReceipt && !isTestingCut,
+                enabled = !isTestingReceipt && !isTestingCut && !isTestingLongCut,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp)
             ) {

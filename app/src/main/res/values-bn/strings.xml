@@ -2906,6 +2906,9 @@
     <string name="settings_test_cut_button">কাট টেস্ট</string>
     <string name="settings_test_cut_success">কাট কমান্ড সফলভাবে পাঠানো হয়েছে</string>
     <string name="settings_test_cut_success_none">টেস্ট লাইন কাগজ সফলভাবে বের হয়েছে (কাটিং বন্ধ)</string>
+    <string name="settings_test_cut_long_button">কাট টেস্ট (লম্বা রশিদ)</string>
+    <string name="settings_test_cut_long_success">লম্বা টেস্ট রশিদের কাট কমান্ড সফলভাবে পাঠানো হয়েছে</string>
+    <string name="settings_test_cut_long_success_none">লম্বা টেস্ট রশিদের কাগজ বের হয়েছে (কাটিং বন্ধ)</string>
     <string name="settings_receipt_cut_system_note">কাগজ কাটার নিয়ন্ত্রণ শুধুমাত্র সরাসরি প্রিন্টিংয়ের জন্য প্রযোজ্য।</string>
     <string name="settings_label_picker_same_as_receipt_dialog">এই ডিভাইসটি ইতিমধ্যে আপনার রসিদ প্রিন্টার হিসেবে নির্ধারিত। রসিদ প্রিন্টারে লেবেল প্রিন্ট করা যায় না। আপনার লেবেল প্রিন্টার নির্বাচন করুন, যেমন Deli E886BW।</string>
     <string name="settings_receipt_picker_same_as_label_dialog">এই ডিভাইসটি ইতিমধ্যে আপনার লেবেল প্রিন্টার হিসেবে নির্ধারিত।</string>

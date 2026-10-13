@@ -3,6 +3,7 @@ package com.example.techyfipos.printer
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -20,6 +21,8 @@ enum class ReceiptCutMode {
         }
     }
 }
+
+fun ByteArray.toHexString(): String = joinToString("") { "%02X".format(it) }
 
 object EscPosPrinterDriver {
     private const val TAG = "EscPosPrinterDriver"
@@ -217,14 +220,16 @@ object EscPosPrinterDriver {
     }
 
     /**
-     * Generates a compact test banner bitmap for cutter verification.
+     * Generates a test banner bitmap for cutter verification.
+     * When [isLong] is true, generates a 1200 rows tall bitmap simulating a 10-item receipt payload.
      */
     fun createCutTestBitmap(
         cutMode: ReceiptCutMode,
         feedLines: Int,
-        targetWidthDots: Int = 384
+        targetWidthDots: Int = 384,
+        isLong: Boolean = false
     ): Bitmap {
-        val height = 72
+        val height = if (isLong) 1200 else 72
         val bitmap = Bitmap.createBitmap(targetWidthDots, height, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bitmap)
         canvas.drawColor(Color.WHITE)
@@ -243,14 +248,98 @@ object EscPosPrinterDriver {
             ReceiptCutMode.NONE -> "NO CUT (FEED ONLY)"
         }
         val clampedFeed = feedLines.coerceIn(0, 10)
-        val text = "CUT TEST: $modeLabel ($clampedFeed L)"
-        // Shrink the text until it fits the roll width (58mm is only 384 dots).
-        while (paint.textSize > 12f && paint.measureText(text) > targetWidthDots - 16f) {
-            paint.textSize -= 1f
+
+        if (!isLong) {
+            val text = "CUT TEST: $modeLabel ($clampedFeed L)"
+            // Shrink the text until it fits the roll width (58mm is only 384 dots).
+            while (paint.textSize > 12f && paint.measureText(text) > targetWidthDots - 16f) {
+                paint.textSize -= 1f
+            }
+            val x = targetWidthDots / 2f
+            val y = (height / 2f) - ((paint.descent() + paint.ascent()) / 2f)
+            canvas.drawText(text, x, y, paint)
+            return bitmap
         }
-        val x = targetWidthDots / 2f
-        val y = (height / 2f) - ((paint.descent() + paint.ascent()) / 2f)
-        canvas.drawText(text, x, y, paint)
+
+        // Long receipt test (1200 rows tall): simulates 10 items, patterns, and totals
+        val linePaint = android.graphics.Paint().apply {
+            color = Color.BLACK
+            strokeWidth = 2f
+        }
+        val textPaint = android.graphics.Paint().apply {
+            color = Color.BLACK
+            textSize = 18f
+            isAntiAlias = true
+        }
+
+        // Header
+        paint.textSize = 22f
+        canvas.drawText("LONG RECEIPT CUT TEST", targetWidthDots / 2f, 40f, paint)
+        paint.textSize = 15f
+        canvas.drawText("Payload: 1200 rows (approx 10 items)", targetWidthDots / 2f, 68f, paint)
+        canvas.drawText("Mode: $modeLabel ($clampedFeed L)", targetWidthDots / 2f, 92f, paint)
+        canvas.drawLine(10f, 110f, targetWidthDots - 10f, 110f, linePaint)
+
+        // 10 simulated item rows
+        var curY = 140f
+        for (i in 1..10) {
+            textPaint.isFakeBoldText = true
+            textPaint.textAlign = android.graphics.Paint.Align.LEFT
+            canvas.drawText("Item #$i: Test Product $i", 15f, curY, textPaint)
+            textPaint.textAlign = android.graphics.Paint.Align.RIGHT
+            canvas.drawText("${i * 125}.00", targetWidthDots - 15f, curY, textPaint)
+
+            textPaint.isFakeBoldText = false
+            textPaint.textAlign = android.graphics.Paint.Align.LEFT
+            canvas.drawText("Qty: 1 x ${i * 125}.00  CODE-$i", 15f, curY + 22f, textPaint)
+
+            // Pattern stripes
+            for (barX in 15 until (targetWidthDots - 15) step 6) {
+                canvas.drawLine(barX.toFloat(), curY + 32f, barX.toFloat() + 2f, curY + 44f, linePaint)
+            }
+            curY += 62f
+        }
+
+        // Subtotal & Grand Total
+        canvas.drawLine(10f, curY, targetWidthDots - 10f, curY, linePaint)
+        curY += 28f
+        textPaint.isFakeBoldText = true
+        textPaint.textAlign = android.graphics.Paint.Align.LEFT
+        canvas.drawText("Subtotal (10 items):", 15f, curY, textPaint)
+        textPaint.textAlign = android.graphics.Paint.Align.RIGHT
+        canvas.drawText("6875.00", targetWidthDots - 15f, curY, textPaint)
+
+        curY += 28f
+        textPaint.textAlign = android.graphics.Paint.Align.LEFT
+        canvas.drawText("Grand Total:", 15f, curY, textPaint)
+        textPaint.textAlign = android.graphics.Paint.Align.RIGHT
+        canvas.drawText("6875.00", targetWidthDots - 15f, curY, textPaint)
+
+        // Checkerboard pattern area
+        curY += 35f
+        canvas.drawLine(10f, curY, targetWidthDots - 10f, curY, linePaint)
+        curY += 15f
+        val patternStartX = 15
+        val patternEndX = targetWidthDots - 15
+        var py = curY
+        while (py < 1110f) {
+            var px = patternStartX
+            while (px < patternEndX) {
+                if (((px / 8) + (py.toInt() / 8)) % 2 == 0) {
+                    canvas.drawRect(px.toFloat(), py, (px + 8).toFloat().coerceAtMost(patternEndX.toFloat()), (py + 8).coerceAtMost(1110f), paint)
+                }
+                px += 8
+            }
+            py += 8f
+        }
+
+        // Footer banner
+        paint.textSize = 20f
+        paint.textAlign = android.graphics.Paint.Align.CENTER
+        canvas.drawText("END OF TEST RECEIPT", targetWidthDots / 2f, 1145f, paint)
+        paint.textSize = 15f
+        canvas.drawText("FEED AND CUT FOLLOWS", targetWidthDots / 2f, 1172f, paint)
+
         return bitmap
     }
 
@@ -301,6 +390,11 @@ object EscPosPrinterDriver {
 
             Pair(segList, delayList)
         }
+        val endSegmentHex = segments.lastOrNull()?.toHexString().orEmpty()
+        Log.d(
+            TAG,
+            "printReceiptDirect: route=direct, target=${target::class.simpleName}(${target.identifier}), cutMode=$cutMode, cutStyle=$cutCommandStyle, feedLines=$feedLines, bands=${segments.size - 3}, totalBytes=${segments.sumOf { it.size }}, endSegmentHex=$endSegmentHex"
+        )
         return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays)
     }
 
@@ -336,7 +430,8 @@ object EscPosPrinterDriver {
     }
 
     /**
-     * Prints a short test cut banner and exercises the cutter according to cutMode and feedLines.
+     * Prints a test cut banner and exercises the cutter according to cutMode and feedLines.
+     * When [isLong] is true, prints a 1200 rows tall test receipt simulating a 10-item job.
      */
     suspend fun printCutTestDirect(
         context: Context,
@@ -345,13 +440,19 @@ object EscPosPrinterDriver {
         darkness: Int = 8,
         cutMode: ReceiptCutMode = ReceiptCutMode.PARTIAL,
         feedLines: Int = 4,
-        cutCommandStyle: String = "GS_V"
+        cutCommandStyle: String = "GS_V",
+        isLong: Boolean = false
     ): DirectPrintResult {
-        val bitmap = createCutTestBitmap(cutMode, feedLines, paperWidthDots)
+        val bitmap = createCutTestBitmap(cutMode, feedLines, paperWidthDots, isLong = isLong)
         val (segments, delays) = withContext(Dispatchers.Default) {
             val bands = bitmapToEscPosBands(bitmap, paperWidthDots, darkness)
             buildCutTestSegments(bands, cutMode, feedLines, cutCommandStyle)
         }
+        val endSegmentHex = segments.lastOrNull()?.toHexString().orEmpty()
+        Log.d(
+            TAG,
+            "printCutTestDirect: target=${target::class.simpleName}(${target.identifier}), isLong=$isLong, cutMode=$cutMode, cutStyle=$cutCommandStyle, feedLines=$feedLines, bands=${segments.size - 3}, totalBytes=${segments.sumOf { it.size }}, endSegmentHex=$endSegmentHex"
+        )
         return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays)
     }
 
@@ -362,7 +463,8 @@ object EscPosPrinterDriver {
         darkness: Int = 8,
         cutMode: ReceiptCutMode = ReceiptCutMode.PARTIAL,
         feedLines: Int = 4,
-        cutCommandStyle: String = "GS_V"
+        cutCommandStyle: String = "GS_V",
+        isLong: Boolean = false
     ): DirectPrintResult {
         val target = if (printerAddress.trim().startsWith("usb:", ignoreCase = true)) {
             PrinterTarget.Usb(printerAddress.trim())
@@ -378,7 +480,8 @@ object EscPosPrinterDriver {
             darkness = darkness,
             cutMode = cutMode,
             feedLines = feedLines,
-            cutCommandStyle = cutCommandStyle
+            cutCommandStyle = cutCommandStyle,
+            isLong = isLong
         )
     }
 }

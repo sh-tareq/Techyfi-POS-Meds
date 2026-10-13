@@ -33,6 +33,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.CancellationSignal
 import android.os.Environment
+import android.util.Log
 import android.os.ParcelFileDescriptor
 import android.print.PageRange
 import android.print.PrintAttributes
@@ -945,13 +946,23 @@ suspend fun printReceiptImage(
     val target = settings.resolvedReceiptPrinterTarget()
 
     if (mode == "SYSTEM") {
+        Log.d(
+            "BillActions",
+            "printReceiptImage: route=system, target=${target::class.simpleName}(${target.identifier}), cutMode=${settings.receiptCutMode}, cutStyle=${settings.receiptCutCommandStyle}, feedLines=${settings.receiptFeedLinesBeforeCut}, jobName=$jobName"
+        )
         return withContext(Dispatchers.Main) {
             printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
         }
     }
 
+    Log.d(
+        "BillActions",
+        "printReceiptImage: route=direct, target=${target::class.simpleName}(${target.identifier}), cutMode=${settings.receiptCutMode}, cutStyle=${settings.receiptCutCommandStyle}, feedLines=${settings.receiptFeedLinesBeforeCut}, jobName=$jobName"
+    )
+
     if (target is PrinterTarget.None || target.identifier.isBlank()) {
         val decision = decidePrintRouting(mode, "", DirectPrintResult.NoAddress)
+        Log.d("BillActions", "printReceiptImage: directResult=NoAddress, decision=$decision")
         return when (decision) {
             RoutingDecision.SHOW_ERROR -> {
                 showDirectPrintToast(context, DirectPrintResult.NoAddress)
@@ -992,6 +1003,7 @@ suspend fun printReceiptImage(
     }
 
     val decision = decidePrintRouting(mode, target.identifier, directResult)
+    Log.d("BillActions", "printReceiptImage: directResult=$directResult, decision=$decision")
     return when (decision) {
         RoutingDecision.DIRECT_OK -> true
         RoutingDecision.SHOW_ERROR -> {
@@ -1014,13 +1026,15 @@ suspend fun printReceiptImage(
 
 /**
  * Executes a receipt cut test banner job using the given settings.
+ * When [isLong] is true, prints a 1200 rows tall test receipt simulating a 10-item job.
  */
 suspend fun executeReceiptCutTest(
     context: Context,
     settings: InvoiceSettingsData,
     cutMode: ReceiptCutMode = ReceiptCutMode.fromString(settings.receiptCutMode),
     feedLines: Int = settings.receiptFeedLinesBeforeCut,
-    cutCommandStyle: String = settings.receiptCutCommandStyle
+    cutCommandStyle: String = settings.receiptCutCommandStyle,
+    isLong: Boolean = false
 ): DirectPrintResult {
     val target = settings.resolvedReceiptPrinterTarget()
     if (target is PrinterTarget.None || target.identifier.isBlank()) {
@@ -1034,7 +1048,8 @@ suspend fun executeReceiptCutTest(
         darkness = settings.receiptDarkness,
         cutMode = cutMode,
         feedLines = feedLines,
-        cutCommandStyle = cutCommandStyle
+        cutCommandStyle = cutCommandStyle,
+        isLong = isLong
     )
 }
 
