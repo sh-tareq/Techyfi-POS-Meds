@@ -136,16 +136,26 @@ private const val CHUNK_DELAY_MS = 15L
 private const val CONNECT_SETTLE_MS = 250L
 private const val POST_PRINT_DRAIN_MS = 300L
 private const val POST_PRINT_DRAIN_MAX_MS = 4000L
+private const val STATUS_TIMEOUT_MIN_MS = 3000L
+private const val STATUS_TIMEOUT_MAX_MS = 8000L
 private const val DRAIN_BYTES_PER_MS = 25
 
 /**
- * How long to keep the Bluetooth socket open after the last write.
+ * How long to keep the Bluetooth socket open after the last write when no status reply is received.
  * Closing the RFCOMM socket drops bytes still queued in the phone's Bluetooth stack. A long receipt
  * leaves tens of KB queued, so a fixed short wait loses the tail of the job (the feed and cut command).
  * Scales with the payload size, between 300 ms and 4 s.
  */
 fun bluetoothPostPrintDrainMs(totalBytes: Int): Long =
     (POST_PRINT_DRAIN_MS + totalBytes.coerceAtLeast(0) / DRAIN_BYTES_PER_MS).coerceIn(POST_PRINT_DRAIN_MS, POST_PRINT_DRAIN_MAX_MS)
+
+/**
+ * Timeout for awaiting a response to a buffered ESC/POS status query (GS r 1).
+ * Scales with payload size from 3 s to 8 s, ensuring that long jobs have ample time
+ * for the printer to finish burning raster data and cutting before answering.
+ */
+fun bluetoothResponseTimeoutMs(totalBytes: Int): Long =
+    (STATUS_TIMEOUT_MIN_MS + totalBytes.coerceAtLeast(0) / DRAIN_BYTES_PER_MS).coerceIn(STATUS_TIMEOUT_MIN_MS, STATUS_TIMEOUT_MAX_MS)
 
 @SuppressLint("MissingPermission")
 suspend fun sendToBluetoothPrinter(
@@ -266,11 +276,46 @@ suspend fun sendToBluetoothPrinter(
         }
         os.flush()
         val writeElapsedMs = System.currentTimeMillis() - writeStartTime
-        val drainMs = bluetoothPostPrintDrainMs(totalBytes)
+
+        // Query status deterministically with GS r 1 (transmit paper sensor status).
+        // Since ESC/POS commands are executed sequentially, receiving a response byte
+        // proves that all preceding commands (raster bands, feed lines, and cut) were consumed.
+        var replyReceived = false
+        val timeoutMs = bluetoothResponseTimeoutMs(totalBytes)
+        try {
+            val inputStream = socket.inputStream
+            while (inputStream.available() > 0) {
+                inputStream.read()
+            }
+            os.write(byteArrayOf(0x1D, 0x72, 0x01))
+            os.flush()
+
+            val deadline = System.currentTimeMillis() + timeoutMs
+            while (System.currentTimeMillis() < deadline) {
+                if (inputStream.available() > 0) {
+                    val b = inputStream.read()
+                    if (b != -1) {
+                        replyReceived = true
+                        break
+                    }
+                }
+                delay(50L)
+            }
+        } catch (queryEx: Exception) {
+            Log.w(TAG, "Status query check skipped or errored: ${queryEx.message}")
+        }
+
+        val drainMs = if (replyReceived) {
+            // Reply received: printer finished job and cutter. Brief settle for blade retraction.
+            150L
+        } else {
+            // Fall back to payload-scaled drain for printers lacking bidirectional status support.
+            bluetoothPostPrintDrainMs(totalBytes)
+        }
         delay(drainMs)
         Log.d(
             TAG,
-            "sendToBluetoothPrinter: totalBytes=$totalBytes, writeElapsedMs=$writeElapsedMs, drainMs=$drainMs"
+            "sendToBluetoothPrinter: totalBytes=$totalBytes, writeElapsedMs=$writeElapsedMs, drainMs=$drainMs, replyReceived=$replyReceived"
         )
         DirectPrintResult.Success
     } catch (e: Exception) {

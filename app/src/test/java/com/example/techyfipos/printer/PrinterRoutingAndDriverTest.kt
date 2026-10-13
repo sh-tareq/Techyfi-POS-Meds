@@ -907,4 +907,17 @@ class PrinterRoutingAndDriverTest {
         val expectedEnd = byteArrayOf(0x1B, 0x64, 0x04, 0x1D, 0x56, 0x01)
         assertArrayEquals(expectedEnd, segments[4])
     }
+
+    @Test
+    fun `bluetoothResponseTimeoutMs scales with payload size and clamps between 3 and 8 seconds`() {
+        assertEquals(3000L, bluetoothResponseTimeoutMs(0))
+        assertEquals(3000L, bluetoothResponseTimeoutMs(-10))
+        // small job (5 KB) stays close to minimum
+        assertEquals(3000L + 5_000L / 25, bluetoothResponseTimeoutMs(5_000))
+        // 100 KB payload gets 7 seconds
+        assertEquals(3000L + 100_000L / 25, bluetoothResponseTimeoutMs(100_000))
+        // very large jobs clamp at 8000L
+        assertEquals(8000L, bluetoothResponseTimeoutMs(200_000))
+        assertEquals(8000L, bluetoothResponseTimeoutMs(Int.MAX_VALUE))
+    }
 }
