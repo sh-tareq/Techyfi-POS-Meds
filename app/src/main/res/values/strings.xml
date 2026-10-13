@@ -2912,6 +2912,7 @@
     <string name="settings_cut_style_legacy">ESC i/m</string>
     <string name="settings_cut_style_gs_v_feed">GS V n</string>
     <string name="settings_cut_command_style_hint">Only change this if your printer does not cut paper with the standard GS V command.</string>
+    <string name="settings_save_failed">Failed to save settings</string>
     <string name="settings_receipt_cut_system_note">Paper cut control only applies to direct printing.</string>
     <string name="settings_label_picker_same_as_receipt_dialog">This device is already your receipt printer. A receipt printer cannot print labels. Choose your label printer, such as the Deli E886BW.</string>
     <string name="settings_receipt_picker_same_as_label_dialog">This device is already your label printer.</string>

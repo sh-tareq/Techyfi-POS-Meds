@@ -4800,6 +4800,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val signingSha1 = remember(context) { SigningCertificateHelper.sha1Fingerprint(context) }
     val canBackup = isOwner || activePermissions.contains(com.example.techyfipos.data.AppPermissions.SYSTEM_BACKUP_RESTORE)
+    val canEditSettings = isOwner || activePermissions.contains(com.example.techyfipos.data.AppPermissions.SYSTEM_SHOP_SETTINGS)
 
     val currentLang by settingsViewModel.language.collectAsStateWithLifecycle()
     val currentThemeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
@@ -5245,8 +5246,17 @@ fun SettingsScreen(
                 SettingsPage.HOME -> OptimizedSettingsHome(
                     currentSettings = currentSettings,
                     onUpdateSettings = { updated ->
-                        currentSettings = updated
-                        settingsViewModel.saveInvoiceSettingsData(updated)
+                        if (!canEditSettings) {
+                            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
+                        } else {
+                            currentSettings = updated
+                            settingsViewModel.saveInvoiceSettingsData(updated) { ok ->
+                                if (!ok) {
+                                    Toast.makeText(context, context.getString(R.string.settings_save_failed), Toast.LENGTH_SHORT).show()
+                                    currentSettings = invoiceSettingsData
+                                }
+                            }
+                        }
                     },
                     storeName = currentSettings.storeName,
                     address = currentSettings.address,
@@ -5258,21 +5268,48 @@ fun SettingsScreen(
                     taxEnabled = currentSettings.taxEnabled,
                     allowNegativeInventory = currentSettings.allowNegativeInventory,
                     onAllowNegativeInventoryChanged = { enabled ->
-                        val updated = currentSettings.copy(allowNegativeInventory = enabled)
-                        currentSettings = updated
-                        settingsViewModel.saveInvoiceSettingsData(updated)
+                        if (!canEditSettings) {
+                            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
+                        } else {
+                            val updated = currentSettings.copy(allowNegativeInventory = enabled)
+                            currentSettings = updated
+                            settingsViewModel.saveInvoiceSettingsData(updated) { ok ->
+                                if (!ok) {
+                                    Toast.makeText(context, context.getString(R.string.settings_save_failed), Toast.LENGTH_SHORT).show()
+                                    currentSettings = invoiceSettingsData
+                                }
+                            }
+                        }
                     },
                     cashDrawerKickEnabled = currentSettings.cashDrawerKickEnabled,
                     onCashDrawerKickChanged = { enabled ->
-                        val updated = currentSettings.copy(cashDrawerKickEnabled = enabled)
-                        currentSettings = updated
-                        settingsViewModel.saveInvoiceSettingsData(updated)
+                        if (!canEditSettings) {
+                            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
+                        } else {
+                            val updated = currentSettings.copy(cashDrawerKickEnabled = enabled)
+                            currentSettings = updated
+                            settingsViewModel.saveInvoiceSettingsData(updated) { ok ->
+                                if (!ok) {
+                                    Toast.makeText(context, context.getString(R.string.settings_save_failed), Toast.LENGTH_SHORT).show()
+                                    currentSettings = invoiceSettingsData
+                                }
+                            }
+                        }
                     },
                     cashDrawerPrinterAddress = currentSettings.cashDrawerPrinterAddress,
                     onCashDrawerPrinterSelected = { address ->
-                        val updated = currentSettings.copy(cashDrawerPrinterAddress = address)
-                        currentSettings = updated
-                        settingsViewModel.saveInvoiceSettingsData(updated)
+                        if (!canEditSettings) {
+                            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
+                        } else {
+                            val updated = currentSettings.copy(cashDrawerPrinterAddress = address)
+                            currentSettings = updated
+                            settingsViewModel.saveInvoiceSettingsData(updated) { ok ->
+                                if (!ok) {
+                                    Toast.makeText(context, context.getString(R.string.settings_save_failed), Toast.LENGTH_SHORT).show()
+                                    currentSettings = invoiceSettingsData
+                                }
+                            }
+                        }
                     },
                     onLanguageSelected = settingsViewModel::saveLanguage,
                     onThemeModeSelected = settingsViewModel::saveThemeMode,

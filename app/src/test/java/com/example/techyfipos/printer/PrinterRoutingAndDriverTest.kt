@@ -926,4 +926,38 @@ class PrinterRoutingAndDriverTest {
         assertEquals(8000L, bluetoothResponseTimeoutMs(200_000))
         assertEquals(8000L, bluetoothResponseTimeoutMs(Int.MAX_VALUE))
     }
+
+    @Test
+    fun `InvoiceSettingsData toJson and fromJson preserves cut settings accurately`() {
+        val original = InvoiceSettingsData(
+            receiptCutMode = "FULL",
+            receiptFeedLinesBeforeCut = 7,
+            receiptCutCommandStyle = "LEGACY_ESC"
+        )
+        val json = original.toJson()
+        val restored = InvoiceSettingsData.fromJson(json)
+
+        assertEquals("FULL", restored.receiptCutMode)
+        assertEquals(7, restored.receiptFeedLinesBeforeCut)
+        assertEquals("LEGACY_ESC", restored.receiptCutCommandStyle)
+    }
+
+    @Test
+    fun `InvoiceSettingsData fromJson clamps feed lines and validates cut modes and styles`() {
+        val jsonClamped = """
+            {
+                "receiptCutMode": "UNKNOWN_MODE",
+                "receiptFeedLinesBeforeCut": 25,
+                "receiptCutCommandStyle": "INVALID_STYLE"
+            }
+        """.trimIndent()
+        val restored = InvoiceSettingsData.fromJson(jsonClamped)
+
+        // Invalid mode falls back to PARTIAL
+        assertEquals("PARTIAL", restored.receiptCutMode)
+        // Feed lines clamped to 0..10
+        assertEquals(10, restored.receiptFeedLinesBeforeCut)
+        // Invalid cut style falls back to GS_V
+        assertEquals("GS_V", restored.receiptCutCommandStyle)
+    }
 }

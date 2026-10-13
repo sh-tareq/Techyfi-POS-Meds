@@ -2914,6 +2914,7 @@
     <string name="settings_cut_style_legacy">ESC i/m</string>
     <string name="settings_cut_style_gs_v_feed">GS V n</string>
     <string name="settings_cut_command_style_hint">আপনার প্রিন্টার স্ট্যান্ডার্ড GS V কমান্ডে কাগজ না কাটলে তবেই এটি পরিবর্তন করুন।</string>
+    <string name="settings_save_failed">সেটিংস সংরক্ষণ ব্যর্থ হয়েছে</string>
     <string name="settings_receipt_cut_system_note">কাগজ কাটার নিয়ন্ত্রণ শুধুমাত্র সরাসরি প্রিন্টিংয়ের জন্য প্রযোজ্য।</string>
     <string name="settings_label_picker_same_as_receipt_dialog">এই ডিভাইসটি ইতিমধ্যে আপনার রসিদ প্রিন্টার হিসেবে নির্ধারিত। রসিদ প্রিন্টারে লেবেল প্রিন্ট করা যায় না। আপনার লেবেল প্রিন্টার নির্বাচন করুন, যেমন Deli E886BW।</string>
     <string name="settings_receipt_picker_same_as_label_dialog">এই ডিভাইসটি ইতিমধ্যে আপনার লেবেল প্রিন্টার হিসেবে নির্ধারিত।</string>
