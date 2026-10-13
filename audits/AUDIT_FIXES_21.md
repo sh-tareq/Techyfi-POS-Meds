@@ -207,7 +207,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 ---
 
-## Decisions needed from the owner (do not implement without an answer)
-- **R20-29 Owner accounts.** One owner or several? If one: hide OWNER in Add and Edit, and reject promotion to OWNER in `updateStaff`. If several: the device-credential PIN reset needs an owner picker. Must be decided before R21-14 opens staff management to managers.
-- **R20-30 Owner PIN reset with the device screen lock.** Option A: a one-time recovery code shown at owner setup. Option B: keep the device-credential reset but write an audit row and notify the owner on next login.
-- **R21-01 idle lock duration.** 15 minutes is hard-coded. Should it be a setting (off / 5 / 15 / 30 minutes)?
+## Decisions from the owner (Implemented)
+- [x] **R20-29 Owner accounts.** (Implemented in `52b355e`, tested in `OwnerDecisionsTest.kt:testR20_29_singleOwnerPromotionPolicy`). Only one owner account supported. OWNER role hidden in `AddStaffDialog`, fixed in `EditStaffDialog`, and promotion of non-owner to OWNER rejected in `DataRepository.updateStaff`.
+- [x] **R20-30 Owner PIN reset with the device screen lock.** (Implemented in `52b355e`, tested in `OwnerDecisionsTest.kt:testR20_30_ownerPinResetAcknowledgment`). Option B implemented: retains device-credential reset, timestamps the reset, and prompts the owner with a high-priority security alert dialog on next login that requires explicit acknowledgment.
+- [x] **R21-01 Idle lock duration.** (Implemented in `52b355e`, tested in `OwnerDecisionsTest.kt:testR21_01_*`). Configurable in Settings (Off / 5m / 15m / 30m / 60m), serialized in `InvoiceSettingsData.idleLockDurationMinutes`, and dynamically observed by `AuthViewModel.checkIdleAutoLock`.
