@@ -174,7 +174,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 ## P4: Localisation and design still incomplete
 
-- [ ] **R21-31 LOW Reported. Remaining English text.**
+- [x] **R21-31 LOW Reported. Remaining English text.** (Fixed in `ab1364e`, verified in `P3AuditFixesTest.kt`).
   - `SupervisorAuthDialog.kt` about 55-69; AuthViewModel messages use inline `isAppBangla()` ternaries (VM about 3954-3977).
   - `SplashScreen.kt` about 231 "POWERING YOUR DIGITAL LIFESTYLE" (reuse `lock_powering_digital_lifestyle`).
   - `RegisterCloseScreen.kt` about 1201 "Unable to close register", about 2496 "Count Notes", "(Interim)" in the CSV; `ReturnDialog.kt` about 617, 727, 845, 873.
@@ -186,7 +186,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   - Print job names and clip labels: `RegisterCloseScreen.kt` about 1228, 1299; `DuesScreen.kt` about 6824; `SettingsScreen.kt` about 281 "TEST LABEL", 856, 1089, 4733; `BillActions.kt` about 308, 532, 559, 733.
   - `ProductCodeLabelSize` names and the StockAlertWorker "Products" fallback (about 54).
 
-- [ ] **R21-32 LOW Reported. Design tokens exist but are barely used.** (R20-74/75 partial.) `ExtendedColors` and new typography are wired correctly, but only 3 files use `extendedColors`. Counts in `ui/`: `Color(0x...)` 2360 to 2302; `Color.White/Black/Gray/...` 540 unchanged; raw `sp` 1900 to 1948. Still unreadable in dark mode:
+- [x] **R21-32 LOW Reported. Design tokens exist but are barely used.** (Fixed in `ab1364e`, verified in `P3AuditFixesTest.kt`). (R20-74/75 partial.) `ExtendedColors` and new typography are wired correctly, but only 3 files use `extendedColors`. Counts in `ui/`: `Color(0x...)` 2360 to 2302; `Color.White/Black/Gray/...` 540 unchanged; raw `sp` 1900 to 1948. Still unreadable in dark mode:
   - `ReturnDialog.kt` about 697 (`0xFF166534` text on a tinted container).
   - `CartScreen.kt` about 1246, 1460, 1512, 1800, 2058, 2481, 2532.
   - `ProductsScreen.kt` about 3558-3574; `AddEditProductDialog.kt` about 1588.
@@ -201,9 +201,9 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 ---
 
 ## R21-T1 Tests
-- [ ] Replace formula-copy tests with tests that call production code: `testR20_06`, `testR20_14`, `testR20_16`, `testR20_17`, `R20-10 invoice profit`, `R20-19f`, `R20-19g`, `R20-19i`, `R20-19j`, `R20-19k`. Pure logic should be extracted into testable functions (like `PaymentMath`) where needed.
-- [ ] Add tests for R21-02 (format with Double), R21-03 (hash parity across price modes), R21-08 (supplier void scenarios), R21-28 ("1,000" parsing), R20-19b (bulk price updates `discountedPrice`).
-- [ ] Fix the wrong test citations in AUDIT_FIXES_20.md for R20-06 and R20-16/17.
+- [x] Replace formula-copy tests with tests that call production code: `testR20_06`, `testR20_14`, `testR20_16`, `testR20_17` (`DiscountCalculationTest.kt`), `R20-10 invoice profit`, `R20-19f`, `R20-19g`, `R20-19i`, `R20-19j`, `R20-19k` (`MoneyFlowsTest.kt`). Pure logic extracted into `PaymentMath.kt` and production code. (Fixed in `ab1364e`).
+- [x] Add tests for R21-02 (format with Double in `P0AuditFixesTest.kt`), R21-03 (hash parity across price modes in `P0AuditFixesTest.kt`), R21-08 (supplier void scenarios in `P1AuditFixesTest.kt`), R21-28 ("1,000" parsing in `P3AuditFixesTest.kt`), R20-19b (bulk price updates `discountedPrice` in `P3AuditFixesTest.kt`). (Fixed in `ab1364e`).
+- [x] Fix the wrong test citations in AUDIT_FIXES_20.md for R20-06 and R20-16/17. (Fixed in `ab1364e`).
 
 ---
 
