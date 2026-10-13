@@ -5,6 +5,7 @@ import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.printer.DirectPrintResult
 import com.example.techyfipos.printer.EscPosPrinterDriver
 import com.example.techyfipos.printer.LabelJob
+import com.example.techyfipos.printer.ReceiptCutMode
 import com.example.techyfipos.printer.TsplLabelPrinterDriver
 import com.example.techyfipos.printer.isSamePrinter
 import com.example.techyfipos.printer.sendToBluetoothPrinter
@@ -860,7 +861,10 @@ suspend fun printReceiptDirectBluetooth(
     printerAddress: String,
     paperRollWidthMm: Int = 80,
     autoKickDrawer: Boolean = false,
-    darkness: Int = 8
+    darkness: Int = 8,
+    cutMode: String = "PARTIAL",
+    feedLines: Int = 4,
+    cutCommandStyle: String = "GS_V"
 ): Boolean {
     val dots = if (paperRollWidthMm == 58) 384 else 576
     val res = EscPosPrinterDriver.printReceiptDirect(
@@ -869,7 +873,10 @@ suspend fun printReceiptDirectBluetooth(
         bitmap = bitmap,
         paperWidthDots = dots,
         autoKickDrawer = autoKickDrawer,
-        darkness = darkness
+        darkness = darkness,
+        cutMode = ReceiptCutMode.fromString(cutMode),
+        feedLines = feedLines,
+        cutCommandStyle = cutCommandStyle
     )
     return res is DirectPrintResult.Success
 }
@@ -923,7 +930,10 @@ suspend fun printReceiptImage(
             bitmap = bitmap,
             paperWidthDots = paperDots,
             autoKickDrawer = kickDrawer,
-            darkness = settings.receiptDarkness
+            darkness = settings.receiptDarkness,
+            cutMode = ReceiptCutMode.fromString(settings.receiptCutMode),
+            feedLines = settings.receiptFeedLinesBeforeCut,
+            cutCommandStyle = settings.receiptCutCommandStyle
         )
     } else {
         DirectPrintResult.Failed(context.getString(R.string.print_could_not_decode_receipt_image))
@@ -952,6 +962,32 @@ suspend fun printReceiptImage(
             }
         }
     }
+}
+
+/**
+ * Executes a receipt cut test banner job using the given settings.
+ */
+suspend fun executeReceiptCutTest(
+    context: Context,
+    settings: InvoiceSettingsData,
+    cutMode: ReceiptCutMode = ReceiptCutMode.fromString(settings.receiptCutMode),
+    feedLines: Int = settings.receiptFeedLinesBeforeCut,
+    cutCommandStyle: String = settings.receiptCutCommandStyle
+): DirectPrintResult {
+    val address = settings.resolvedReceiptPrinterAddress()
+    if (address.isBlank()) {
+        return DirectPrintResult.NoAddress
+    }
+    val paperDots = if (settings.paperRollWidthMm == 58) 384 else 576
+    return EscPosPrinterDriver.printCutTestDirect(
+        context = context,
+        printerAddress = address,
+        paperWidthDots = paperDots,
+        darkness = settings.receiptDarkness,
+        cutMode = cutMode,
+        feedLines = feedLines,
+        cutCommandStyle = cutCommandStyle
+    )
 }
 
 /**

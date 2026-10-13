@@ -452,6 +452,190 @@ class PrinterRoutingAndDriverTest {
             tempDir.deleteRecursively()
         }
     }
+
+    // 16. Tests for receiptCutBytes pure function
+    @Test
+    fun `receiptCutBytes produces expected bytes for FULL, PARTIAL, and NONE modes`() {
+        assertArrayEquals(byteArrayOf(0x1D, 0x56, 0x00), EscPosPrinterDriver.receiptCutBytes(ReceiptCutMode.FULL))
+        assertArrayEquals(byteArrayOf(0x1D, 0x56, 0x01), EscPosPrinterDriver.receiptCutBytes(ReceiptCutMode.PARTIAL))
+        assertArrayEquals(byteArrayOf(), EscPosPrinterDriver.receiptCutBytes(ReceiptCutMode.NONE))
+
+        // Advanced legacy ESC style
+        assertArrayEquals(byteArrayOf(0x1B, 0x69), EscPosPrinterDriver.receiptCutBytes(ReceiptCutMode.FULL, "LEGACY_ESC"))
+        assertArrayEquals(byteArrayOf(0x1B, 0x6D), EscPosPrinterDriver.receiptCutBytes(ReceiptCutMode.PARTIAL, "LEGACY_ESC"))
+    }
+
+    // 17. Tests for receiptFeedBytes pure function and clamping
+    @Test
+    fun `receiptFeedBytes produces ESC d n bytes and clamps out of bounds inputs`() {
+        assertArrayEquals(byteArrayOf(), EscPosPrinterDriver.receiptFeedBytes(0))
+        assertArrayEquals(byteArrayOf(), EscPosPrinterDriver.receiptFeedBytes(-4))
+        assertArrayEquals(byteArrayOf(0x1B, 0x64, 0x04), EscPosPrinterDriver.receiptFeedBytes(4))
+        assertArrayEquals(byteArrayOf(0x1B, 0x64, 0x0A), EscPosPrinterDriver.receiptFeedBytes(10))
+        assertArrayEquals(byteArrayOf(0x1B, 0x64, 0x0A), EscPosPrinterDriver.receiptFeedBytes(99))
+    }
+
+    // 18. Tests for buildReceiptEndSegment
+    @Test
+    fun `buildReceiptEndSegment ends with cut bytes for FULL and PARTIAL and no cut bytes for NONE`() {
+        val fullSegment = EscPosPrinterDriver.buildReceiptEndSegment(
+            cutMode = ReceiptCutMode.FULL,
+            feedLines = 4,
+            autoKickDrawer = false
+        )
+        // Feed 4 lines (1B 64 04) followed by Full cut (1D 56 00)
+        assertArrayEquals(byteArrayOf(0x1B, 0x64, 0x04, 0x1D, 0x56, 0x00), fullSegment)
+
+        val partialSegment = EscPosPrinterDriver.buildReceiptEndSegment(
+            cutMode = ReceiptCutMode.PARTIAL,
+            feedLines = 2,
+            autoKickDrawer = false
+        )
+        // Feed 2 lines (1B 64 02) followed by Partial cut (1D 56 01)
+        assertArrayEquals(byteArrayOf(0x1B, 0x64, 0x02, 0x1D, 0x56, 0x01), partialSegment)
+
+        val noneSegment = EscPosPrinterDriver.buildReceiptEndSegment(
+            cutMode = ReceiptCutMode.NONE,
+            feedLines = 5,
+            autoKickDrawer = false
+        )
+        // Feed 5 lines (1B 64 05) and no cut bytes
+        assertArrayEquals(byteArrayOf(0x1B, 0x64, 0x05), noneSegment)
+    }
+
+    // 19. Tests for drawer kick in buildReceiptEndSegment
+    @Test
+    fun `buildReceiptEndSegment appends drawer kick after cut when autoKickDrawer is true and omits when false`() {
+        val withKick = EscPosPrinterDriver.buildReceiptEndSegment(
+            cutMode = ReceiptCutMode.FULL,
+            feedLines = 3,
+            autoKickDrawer = true
+        )
+        // Expected: Feed (1B 64 03) + Cut (1D 56 00) + Kick (1B 70 00 19 FA)
+        val expectedWithKick = byteArrayOf(
+            0x1B, 0x64, 0x03,
+            0x1D, 0x56, 0x00,
+            0x1B, 0x70, 0x00, 0x19, 0xFA.toByte()
+        )
+        assertArrayEquals(expectedWithKick, withKick)
+
+        val withoutKick = EscPosPrinterDriver.buildReceiptEndSegment(
+            cutMode = ReceiptCutMode.FULL,
+            feedLines = 3,
+            autoKickDrawer = false
+        )
+        val expectedWithoutKick = byteArrayOf(
+            0x1B, 0x64, 0x03,
+            0x1D, 0x56, 0x00
+        )
+        assertArrayEquals(expectedWithoutKick, withoutKick)
+    }
+
+    // 20. Tests for buildCutTestSegments
+    @Test
+    fun `buildCutTestSegments for each mode ends with correct cut bytes and never contains drawer kick`() {
+        val dummyBands = listOf(byteArrayOf(0x01, 0x02))
+
+        for (mode in listOf(ReceiptCutMode.FULL, ReceiptCutMode.PARTIAL, ReceiptCutMode.NONE)) {
+            val (segments, delays) = EscPosPrinterDriver.buildCutTestSegments(
+                bands = dummyBands,
+                cutMode = mode,
+                feedLines = 4
+            )
+            // Segments: Init, Align, 1 band, End segment
+            assertEquals(4, segments.size)
+            assertEquals(4, delays.size)
+
+            assertArrayEquals(byteArrayOf(0x1B, 0x40), segments[0])
+            assertEquals(100L, delays[0])
+
+            assertArrayEquals(byteArrayOf(0x1B, 0x61, 0x01), segments[1])
+            assertEquals(20L, delays[1])
+
+            assertArrayEquals(dummyBands[0], segments[2])
+            assertEquals(20L, delays[2])
+
+            val endSeg = segments[3]
+            assertEquals(0L, delays[3])
+
+            // Verify drawer kick bytes are never present in cut test
+            val kickBytes = byteArrayOf(0x1B, 0x70, 0x00, 0x19, 0xFA.toByte())
+            var foundKick = false
+            for (i in 0..endSeg.size - kickBytes.size) {
+                if (endSeg.copyOfRange(i, i + kickBytes.size).contentEquals(kickBytes)) {
+                    foundKick = true
+                    break
+                }
+            }
+            assertFalse(foundKick)
+
+            // Verify cut bytes
+            when (mode) {
+                ReceiptCutMode.FULL -> {
+                    assertEquals(0x1D.toByte(), endSeg[endSeg.size - 3])
+                    assertEquals(0x56.toByte(), endSeg[endSeg.size - 2])
+                    assertEquals(0x00.toByte(), endSeg[endSeg.size - 1])
+                }
+                ReceiptCutMode.PARTIAL -> {
+                    assertEquals(0x1D.toByte(), endSeg[endSeg.size - 3])
+                    assertEquals(0x56.toByte(), endSeg[endSeg.size - 2])
+                    assertEquals(0x01.toByte(), endSeg[endSeg.size - 1])
+                }
+                ReceiptCutMode.NONE -> {
+                    // Ends with feed command, no cut bytes
+                    assertEquals(0x1B.toByte(), endSeg[endSeg.size - 3])
+                    assertEquals(0x64.toByte(), endSeg[endSeg.size - 2])
+                    assertEquals(0x04.toByte(), endSeg[endSeg.size - 1])
+                }
+            }
+        }
+    }
+
+    // 21. Tests for InvoiceSettingsData cut mode JSON round trip
+    @Test
+    fun `InvoiceSettingsData JSON round trip preserves receiptCutMode, feedLines, and cutCommandStyle`() {
+        val original = InvoiceSettingsData(
+            receiptCutMode = "FULL",
+            receiptFeedLinesBeforeCut = 6,
+            receiptCutCommandStyle = "LEGACY_ESC"
+        )
+        val jsonString = original.toJson()
+        val loaded = InvoiceSettingsData.fromJson(jsonString)
+
+        assertEquals("FULL", loaded.receiptCutMode)
+        assertEquals(6, loaded.receiptFeedLinesBeforeCut)
+        assertEquals("LEGACY_ESC", loaded.receiptCutCommandStyle)
+    }
+
+    // 22. Tests for InvoiceSettingsData cut mode JSON defaults and fallback
+    @Test
+    fun `InvoiceSettingsData fromJson without cut settings defaults to PARTIAL, 4 feed lines, and clamps invalid feed lines`() {
+        val jsonWithoutCut = org.json.JSONObject().apply {
+            put("storeName", "Old Backup Shop")
+        }.toString()
+        val loadedDefault = InvoiceSettingsData.fromJson(jsonWithoutCut)
+        assertEquals("PARTIAL", loadedDefault.receiptCutMode)
+        assertEquals(4, loadedDefault.receiptFeedLinesBeforeCut)
+        assertEquals("GS_V", loadedDefault.receiptCutCommandStyle)
+
+        // Invalid cut mode and out of range feed lines
+        val jsonInvalid = org.json.JSONObject().apply {
+            put("storeName", "Clamping Shop")
+            put("receiptCutMode", "INVALID_MODE")
+            put("receiptFeedLinesBeforeCut", 99)
+            put("receiptCutCommandStyle", "UNKNOWN_STYLE")
+        }.toString()
+        val loadedInvalid = InvoiceSettingsData.fromJson(jsonInvalid)
+        assertEquals("PARTIAL", loadedInvalid.receiptCutMode)
+        assertEquals(10, loadedInvalid.receiptFeedLinesBeforeCut)
+        assertEquals("GS_V", loadedInvalid.receiptCutCommandStyle)
+
+        val jsonNegative = org.json.JSONObject().apply {
+            put("receiptFeedLinesBeforeCut", -8)
+        }.toString()
+        val loadedNegative = InvoiceSettingsData.fromJson(jsonNegative)
+        assertEquals(0, loadedNegative.receiptFeedLinesBeforeCut)
+    }
 }
 
 

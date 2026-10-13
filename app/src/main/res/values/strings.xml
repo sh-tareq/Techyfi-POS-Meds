@@ -2870,6 +2870,16 @@
     <string name="settings_darkness_lighter">Lighter</string>
     <string name="settings_darkness_darker">Darker</string>
     <string name="settings_receipt_darkness_system_note">Darkness for Android print service printers is set in the printer\'s print service app.</string>
+    <string name="settings_paper_cut_label">Paper Cut</string>
+    <string name="settings_cut_mode_full">Full Cut</string>
+    <string name="settings_cut_mode_partial">Half Cut</string>
+    <string name="settings_cut_mode_none">No Cut</string>
+    <string name="settings_feed_lines_label">Feed Before Cut (%1$d lines)</string>
+    <string name="settings_cut_helper_note">Only works on printers with an auto-cutter. Other printers ignore the cut command.</string>
+    <string name="settings_test_cut_button">Test Cut</string>
+    <string name="settings_test_cut_success">Test cut sent successfully</string>
+    <string name="settings_test_cut_success_none">Test line fed successfully (cut disabled)</string>
+    <string name="settings_receipt_cut_system_note">Paper cut control only applies to direct printing.</string>
     <string name="settings_label_picker_same_as_receipt_dialog">This device is already your receipt printer. A receipt printer cannot print labels. Choose your label printer, such as the Deli E886BW.</string>
     <string name="settings_receipt_picker_same_as_label_dialog">This device is already your label printer.</string>
     <string name="settings_label_printer_same_as_receipt_warning">Same device as the receipt printer. Labels will print as garbage. Choose a different label printer.</string>

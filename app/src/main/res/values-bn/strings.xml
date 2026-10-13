@@ -2872,6 +2872,16 @@
     <string name="settings_darkness_lighter">হালকা</string>
     <string name="settings_darkness_darker">গাঢ়</string>
     <string name="settings_receipt_darkness_system_note">অ্যান্ড্রয়েড প্রিন্ট সার্ভিসের প্রিন্টারের কালির ঘনত্ব সংশ্লিষ্ট প্রিন্ট সার্ভিস অ্যাপ থেকে নির্ধারণ করতে হয়।</string>
+    <string name="settings_paper_cut_label">কাগজ কাটা</string>
+    <string name="settings_cut_mode_full">পুরো কাটা</string>
+    <string name="settings_cut_mode_partial">অর্ধেক কাটা</string>
+    <string name="settings_cut_mode_none">কাটা বন্ধ</string>
+    <string name="settings_feed_lines_label">কাটার পূর্বে কাগজ ফিড (%1$d লাইন)</string>
+    <string name="settings_cut_helper_note">শুধুমাত্র অটো-কাটার সুবিধা যুক্ত প্রিন্টারে কাজ করবে। অন্য প্রিন্টার এই কমান্ড উপেক্ষা করবে।</string>
+    <string name="settings_test_cut_button">কাট টেস্ট</string>
+    <string name="settings_test_cut_success">কাট কমান্ড সফলভাবে পাঠানো হয়েছে</string>
+    <string name="settings_test_cut_success_none">টেস্ট লাইন কাগজ সফলভাবে বের হয়েছে (কাটিং বন্ধ)</string>
+    <string name="settings_receipt_cut_system_note">কাগজ কাটার নিয়ন্ত্রণ শুধুমাত্র সরাসরি প্রিন্টিংয়ের জন্য প্রযোজ্য।</string>
     <string name="settings_label_picker_same_as_receipt_dialog">এই ডিভাইসটি ইতিমধ্যে আপনার রসিদ প্রিন্টার হিসেবে নির্ধারিত। রসিদ প্রিন্টারে লেবেল প্রিন্ট করা যায় না। আপনার লেবেল প্রিন্টার নির্বাচন করুন, যেমন Deli E886BW।</string>
     <string name="settings_receipt_picker_same_as_label_dialog">এই ডিভাইসটি ইতিমধ্যে আপনার লেবেল প্রিন্টার হিসেবে নির্ধারিত।</string>
     <string name="settings_label_printer_same_as_receipt_warning">রসিদ প্রিন্টারের অনুরূপ ডিভাইস। লেবেল প্রিন্ট করলে এলোমেলো লেখা আসবে। ভিন্ন লেবেল প্রিন্টার বেছে নিন।</string>

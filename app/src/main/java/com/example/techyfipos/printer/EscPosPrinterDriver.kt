@@ -7,18 +7,33 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 
+enum class ReceiptCutMode {
+    FULL,
+    PARTIAL,
+    NONE;
+
+    companion object {
+        fun fromString(value: String?): ReceiptCutMode = when (value?.trim()?.uppercase()) {
+            "FULL" -> FULL
+            "NONE" -> NONE
+            else -> PARTIAL
+        }
+    }
+}
+
 object EscPosPrinterDriver {
     private const val TAG = "EscPosPrinterDriver"
     private const val SPP_UUID = "00001101-0000-1000-8000-00805F9B34FB"
 
     // Standard ESC/POS commands
-    private val CMD_INIT = byteArrayOf(0x1B, 0x40)
-    private val CMD_ALIGN_CENTER = byteArrayOf(0x1B, 0x61, 0x01)
-    private val CMD_ALIGN_LEFT = byteArrayOf(0x1B, 0x61, 0x00)
-    private val CMD_FEED_3_LINES = byteArrayOf(0x1B, 0x64, 0x03)
-    private val CMD_FEED_4_LINES = byteArrayOf(0x1B, 0x64, 0x04)
-    private val CMD_PARTIAL_CUT = byteArrayOf(0x1D, 0x56, 0x01)
-    private val CMD_DRAWER_KICK = byteArrayOf(0x1B, 0x70, 0x00, 0x19, 0xFA.toByte())
+    val CMD_INIT = byteArrayOf(0x1B, 0x40)
+    val CMD_ALIGN_CENTER = byteArrayOf(0x1B, 0x61, 0x01)
+    val CMD_ALIGN_LEFT = byteArrayOf(0x1B, 0x61, 0x00)
+    val CMD_FEED_3_LINES = byteArrayOf(0x1B, 0x64, 0x03)
+    val CMD_FEED_4_LINES = byteArrayOf(0x1B, 0x64, 0x04)
+    val CMD_PARTIAL_CUT = byteArrayOf(0x1D, 0x56, 0x01)
+    val CMD_FULL_CUT = byteArrayOf(0x1D, 0x56, 0x00)
+    val CMD_DRAWER_KICK = byteArrayOf(0x1B, 0x70, 0x00, 0x19, 0xFA.toByte())
 
     /**
      * Pure function returning the grayscale luminance cutoff (0-255) for black dots.
@@ -107,6 +122,131 @@ object EscPosPrinterDriver {
     }
 
     /**
+     * Pure function returning the ESC/POS cut bytes for a given cut mode and command style.
+     */
+    fun receiptCutBytes(cutMode: ReceiptCutMode, cutCommandStyle: String = "GS_V", feedLines: Int = 4): ByteArray {
+        return when (cutMode) {
+            ReceiptCutMode.NONE -> byteArrayOf()
+            ReceiptCutMode.FULL -> when (cutCommandStyle.trim().uppercase()) {
+                "LEGACY_ESC" -> byteArrayOf(0x1B, 0x69)
+                "GS_V_FEED" -> byteArrayOf(0x1D, 0x56, 0x41, feedLines.coerceIn(0, 10).toByte())
+                else -> CMD_FULL_CUT
+            }
+            ReceiptCutMode.PARTIAL -> when (cutCommandStyle.trim().uppercase()) {
+                "LEGACY_ESC" -> byteArrayOf(0x1B, 0x6D)
+                "GS_V_FEED" -> byteArrayOf(0x1D, 0x56, 0x42, feedLines.coerceIn(0, 10).toByte())
+                else -> CMD_PARTIAL_CUT
+            }
+        }
+    }
+
+    /**
+     * Pure function returning the ESC/POS feed bytes (ESC d n) clamped to 0..10 lines.
+     * Returns empty byte array if feedLines <= 0.
+     */
+    fun receiptFeedBytes(feedLines: Int): ByteArray {
+        val lines = feedLines.coerceIn(0, 10)
+        return if (lines > 0) byteArrayOf(0x1B, 0x64, lines.toByte()) else byteArrayOf()
+    }
+
+    /**
+     * Builds the final receipt segment: feed, then cut, then optional drawer kick.
+     */
+    fun buildReceiptEndSegment(
+        cutMode: ReceiptCutMode,
+        feedLines: Int,
+        autoKickDrawer: Boolean = false,
+        cutCommandStyle: String = "GS_V"
+    ): ByteArray {
+        val out = ByteArrayOutputStream()
+        val feed = receiptFeedBytes(feedLines)
+        if (feed.isNotEmpty()) {
+            out.write(feed)
+        }
+        val cut = receiptCutBytes(cutMode, cutCommandStyle, feedLines)
+        if (cut.isNotEmpty()) {
+            out.write(cut)
+        }
+        if (autoKickDrawer) {
+            out.write(CMD_DRAWER_KICK)
+        }
+        return out.toByteArray()
+    }
+
+    /**
+     * Pure function assembling timed byte segments for a cut test job.
+     * Segment 1: CMD_INIT (delay 100 ms)
+     * Segment 2: CMD_ALIGN_CENTER (delay 20 ms)
+     * Segments 3..n: raster image bands (delay 20 ms each)
+     * Last segment: feed + cut (delay 0 ms, never kicks drawer)
+     */
+    fun buildCutTestSegments(
+        bands: List<ByteArray>,
+        cutMode: ReceiptCutMode,
+        feedLines: Int,
+        cutCommandStyle: String = "GS_V"
+    ): Pair<List<ByteArray>, List<Long>> {
+        val segList = ArrayList<ByteArray>(bands.size + 3)
+        val delayList = ArrayList<Long>(bands.size + 3)
+
+        segList.add(CMD_INIT)
+        delayList.add(100L)
+
+        segList.add(CMD_ALIGN_CENTER)
+        delayList.add(20L)
+
+        for (band in bands) {
+            segList.add(band)
+            delayList.add(20L)
+        }
+
+        val endSegment = buildReceiptEndSegment(
+            cutMode = cutMode,
+            feedLines = feedLines,
+            autoKickDrawer = false,
+            cutCommandStyle = cutCommandStyle
+        )
+        segList.add(endSegment)
+        delayList.add(0L)
+
+        return Pair(segList, delayList)
+    }
+
+    /**
+     * Generates a compact test banner bitmap for cutter verification.
+     */
+    fun createCutTestBitmap(
+        cutMode: ReceiptCutMode,
+        feedLines: Int,
+        targetWidthDots: Int = 384
+    ): Bitmap {
+        val height = 72
+        val bitmap = Bitmap.createBitmap(targetWidthDots, height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        canvas.drawColor(Color.WHITE)
+
+        val paint = android.graphics.Paint().apply {
+            color = Color.BLACK
+            textSize = 24f
+            isFakeBoldText = true
+            isAntiAlias = true
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+
+        val modeLabel = when (cutMode) {
+            ReceiptCutMode.FULL -> "FULL CUT"
+            ReceiptCutMode.PARTIAL -> "HALF CUT"
+            ReceiptCutMode.NONE -> "NO CUT (FEED ONLY)"
+        }
+        val clampedFeed = feedLines.coerceIn(0, 10)
+        val text = "CUT TEST: $modeLabel ($clampedFeed L)"
+        val x = targetWidthDots / 2f
+        val y = (height / 2f) - ((paint.descent() + paint.ascent()) / 2f)
+        canvas.drawText(text, x, y, paint)
+        return bitmap
+    }
+
+    /**
      * Direct Bluetooth SPP printing over RFCOMM socket using shared BluetoothPrinterTransport.
      * Runs rasterization off the main thread on Dispatchers.Default.
      * Transmits receipt commands and bands as distinct timed segments to protect printer buffers.
@@ -117,7 +257,10 @@ object EscPosPrinterDriver {
         bitmap: Bitmap,
         paperWidthDots: Int = 384,
         autoKickDrawer: Boolean = false,
-        darkness: Int = 8
+        darkness: Int = 8,
+        cutMode: ReceiptCutMode = ReceiptCutMode.PARTIAL,
+        feedLines: Int = 4,
+        cutCommandStyle: String = "GS_V"
     ): DirectPrintResult {
         val (segments, delays) = withContext(Dispatchers.Default) {
             val bands = bitmapToEscPosBands(bitmap, paperWidthDots, darkness)
@@ -139,16 +282,36 @@ object EscPosPrinterDriver {
             }
 
             // Last segment: feed, cut, and optional drawer kick
-            val endOut = ByteArrayOutputStream()
-            endOut.write(CMD_FEED_4_LINES)
-            endOut.write(CMD_PARTIAL_CUT)
-            if (autoKickDrawer) {
-                endOut.write(CMD_DRAWER_KICK)
-            }
-            segList.add(endOut.toByteArray())
+            val endSegment = buildReceiptEndSegment(
+                cutMode = cutMode,
+                feedLines = feedLines,
+                autoKickDrawer = autoKickDrawer,
+                cutCommandStyle = cutCommandStyle
+            )
+            segList.add(endSegment)
             delayList.add(0L)
 
             Pair(segList, delayList)
+        }
+        return sendToBluetoothPrinter(context, printerAddress, segments, delays)
+    }
+
+    /**
+     * Prints a short test cut banner and exercises the cutter according to cutMode and feedLines.
+     */
+    suspend fun printCutTestDirect(
+        context: Context,
+        printerAddress: String,
+        paperWidthDots: Int = 384,
+        darkness: Int = 8,
+        cutMode: ReceiptCutMode = ReceiptCutMode.PARTIAL,
+        feedLines: Int = 4,
+        cutCommandStyle: String = "GS_V"
+    ): DirectPrintResult {
+        val bitmap = createCutTestBitmap(cutMode, feedLines, paperWidthDots)
+        val (segments, delays) = withContext(Dispatchers.Default) {
+            val bands = bitmapToEscPosBands(bitmap, paperWidthDots, darkness)
+            buildCutTestSegments(bands, cutMode, feedLines, cutCommandStyle)
         }
         return sendToBluetoothPrinter(context, printerAddress, segments, delays)
     }

@@ -74,6 +74,9 @@ data class InvoiceSettingsData(
     val directBluetoothPrinterAddress: String = "",
     val receiptPrintMode: String = "AUTO", // "BLUETOOTH", "SYSTEM", "AUTO"
     val receiptDarkness: Int = 8,
+    val receiptCutMode: String = "PARTIAL", // "FULL", "PARTIAL", "NONE"
+    val receiptFeedLinesBeforeCut: Int = 4,
+    val receiptCutCommandStyle: String = "GS_V", // "GS_V", "LEGACY_ESC", "GS_V_FEED"
     val labelPrintMode: String = "AUTO", // "BLUETOOTH", "SYSTEM", "AUTO"
     val labelPrinterAddress: String = "",
     val labelGapMm: Float = 2f,
@@ -157,6 +160,9 @@ data class InvoiceSettingsData(
             put("directBluetoothPrinterAddress", directBluetoothPrinterAddress)
             put("receiptPrintMode", receiptPrintMode)
             put("receiptDarkness", receiptDarkness)
+            put("receiptCutMode", receiptCutMode)
+            put("receiptFeedLinesBeforeCut", receiptFeedLinesBeforeCut)
+            put("receiptCutCommandStyle", receiptCutCommandStyle)
             put("labelPrintMode", labelPrintMode)
             put("labelPrinterAddress", labelPrinterAddress)
             put("labelGapMm", labelGapMm.toDouble())
@@ -257,6 +263,13 @@ data class InvoiceSettingsData(
                     directBluetoothPrinterAddress = json.optString("directBluetoothPrinterAddress", ""),
                     receiptPrintMode = resolvedReceiptPrintMode,
                     receiptDarkness = json.optInt("receiptDarkness", 8),
+                    receiptCutMode = json.optString("receiptCutMode", "PARTIAL").trim().uppercase().let {
+                        if (it in listOf("FULL", "PARTIAL", "NONE")) it else "PARTIAL"
+                    },
+                    receiptFeedLinesBeforeCut = json.optInt("receiptFeedLinesBeforeCut", 4).coerceIn(0, 10),
+                    receiptCutCommandStyle = json.optString("receiptCutCommandStyle", "GS_V").trim().uppercase().let {
+                        if (it in listOf("GS_V", "LEGACY_ESC", "GS_V_FEED")) it else "GS_V"
+                    },
                     labelPrintMode = json.optString("labelPrintMode", "AUTO").ifBlank { "AUTO" },
                     labelPrinterAddress = json.optString("labelPrinterAddress", ""),
                     labelGapMm = json.optDouble("labelGapMm", 2.0).toFloat(),

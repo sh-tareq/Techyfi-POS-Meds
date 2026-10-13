@@ -29,6 +29,10 @@ import com.example.techyfipos.BuildConfig
 import com.example.techyfipos.data.DataRepository
 import com.example.techyfipos.printer.getBluetoothDeviceDisplayName
 import com.example.techyfipos.printer.isSamePrinter
+import com.example.techyfipos.printer.ReceiptCutMode
+import com.example.techyfipos.printer.DirectPrintResult
+import com.example.techyfipos.utils.executeReceiptCutTest
+import com.example.techyfipos.utils.showDirectPrintToast
 import com.example.techyfipos.ui.components.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -674,6 +678,7 @@ private fun OptimizedSettingsHome(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             var isTestingReceipt by remember { mutableStateOf(false) }
+            var isTestingCut by remember { mutableStateOf(false) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Realistic3DPrinterIcon(size = 32.dp)
                 Spacer(modifier = Modifier.width(12.dp))
@@ -797,6 +802,132 @@ private fun OptimizedSettingsHome(
                 }
             }
 
+            // Paper Cut Section (only when direct print, not SYSTEM)
+            if (currentSettings.receiptPrintMode != "SYSTEM") {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            stringResource(R.string.settings_paper_cut_label),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    isTestingCut = true
+                                    val cutModeEnum = ReceiptCutMode.fromString(currentSettings.receiptCutMode)
+                                    val res = try {
+                                        executeReceiptCutTest(
+                                            context = context,
+                                            settings = currentSettings,
+                                            cutMode = cutModeEnum,
+                                            feedLines = currentSettings.receiptFeedLinesBeforeCut,
+                                            cutCommandStyle = currentSettings.receiptCutCommandStyle
+                                        )
+                                    } catch (e: Exception) {
+                                        if (e is kotlinx.coroutines.CancellationException) throw e
+                                        android.util.Log.e("SettingsScreen", "Test cut failed", e)
+                                        DirectPrintResult.Failed(e.message ?: "Cut test failed")
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        isTestingCut = false
+                                        if (res is DirectPrintResult.Success) {
+                                            val msg = if (cutModeEnum == ReceiptCutMode.NONE) {
+                                                context.getString(R.string.settings_test_cut_success_none)
+                                            } else {
+                                                context.getString(R.string.settings_test_cut_success)
+                                            }
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            showDirectPrintToast(context, res)
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isTestingCut && !isTestingReceipt,
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            if (isTestingCut) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(
+                                    stringResource(R.string.settings_test_cut_button),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        val currentCut = currentSettings.receiptCutMode.ifBlank { "PARTIAL" }
+                        SegmentedButton(
+                            selected = currentCut == "FULL",
+                            onClick = { onUpdateSettings(currentSettings.copy(receiptCutMode = "FULL")) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.settings_cut_mode_full), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        SegmentedButton(
+                            selected = currentCut == "PARTIAL",
+                            onClick = { onUpdateSettings(currentSettings.copy(receiptCutMode = "PARTIAL")) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.settings_cut_mode_partial), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        SegmentedButton(
+                            selected = currentCut == "NONE",
+                            onClick = { onUpdateSettings(currentSettings.copy(receiptCutMode = "NONE")) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.settings_cut_mode_none), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+
+                    Text(
+                        text = stringResource(R.string.settings_cut_helper_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    var localFeedLines by remember(currentSettings.receiptFeedLinesBeforeCut) {
+                        mutableStateOf(currentSettings.receiptFeedLinesBeforeCut.toFloat().coerceIn(0f, 10f))
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = stringResource(R.string.settings_feed_lines_label, localFeedLines.roundToInt().coerceIn(0, 10)),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Slider(
+                            value = localFeedLines,
+                            onValueChange = { v -> localFeedLines = v },
+                            onValueChangeFinished = {
+                                onUpdateSettings(currentSettings.copy(receiptFeedLinesBeforeCut = localFeedLines.roundToInt().coerceIn(0, 10)))
+                            },
+                            valueRange = 0f..10f,
+                            steps = 9,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = stringResource(R.string.settings_receipt_cut_system_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             // Receipt print darkness slider (0-15) or system note
             if (currentSettings.receiptPrintMode != "SYSTEM") {
                 var localReceiptDarkness by remember(currentSettings.receiptDarkness) {
@@ -872,7 +1003,7 @@ private fun OptimizedSettingsHome(
                         }
                     }
                 },
-                enabled = !isTestingReceipt,
+                enabled = !isTestingReceipt && !isTestingCut,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp)
             ) {
