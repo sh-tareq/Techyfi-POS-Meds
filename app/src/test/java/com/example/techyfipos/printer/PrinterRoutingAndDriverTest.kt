@@ -18,6 +18,7 @@ import org.junit.Test
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
 
 class PrinterRoutingAndDriverTest {
 
@@ -1076,5 +1077,46 @@ class PrinterRoutingAndDriverTest {
         // Known insecure address resolves to INSECURE_FIRST regardless of case or whitespace
         assertEquals(SocketConnectPreference.INSECURE_FIRST, resolveSocketPreference("00:11:22:33:44:55", knownInsecure))
         assertEquals(SocketConnectPreference.INSECURE_FIRST, resolveSocketPreference("  AA:BB:CC:DD:EE:FF  ", knownInsecure))
+    }
+
+    // 17. Tests for ReceiptBitmapCache
+    @Test
+    fun `ReceiptBitmapCache buildKey formats deterministic uppercase key`() {
+        assertEquals("101_EN_80", ReceiptBitmapCache.buildKey(101L, "en", 80))
+        assertEquals("101_BN_58", ReceiptBitmapCache.buildKey(101L, "  bn  ", 58))
+    }
+
+    @Test
+    fun `ReceiptBitmapCache caches bitmap and clear recycles it`() {
+        val mockBitmap = mock(Bitmap::class.java)
+        `when`(mockBitmap.isRecycled).thenReturn(false)
+
+        ReceiptBitmapCache.put(200L, "EN", 80, mockBitmap)
+        assertEquals(mockBitmap, ReceiptBitmapCache.get(200L, "EN", 80))
+        assertNull(ReceiptBitmapCache.get(200L, "BN", 80))
+        assertNull(ReceiptBitmapCache.get(201L, "EN", 80))
+        assertNull(ReceiptBitmapCache.get(200L, "EN", 58))
+
+        ReceiptBitmapCache.clear()
+        assertNull(ReceiptBitmapCache.get(200L, "EN", 80))
+        verify(mockBitmap).recycle()
+    }
+
+    @Test
+    fun `ReceiptBitmapCache put recycles old bitmap when key changes`() {
+        val oldBitmap = mock(Bitmap::class.java)
+        val newBitmap = mock(Bitmap::class.java)
+        `when`(oldBitmap.isRecycled).thenReturn(false)
+        `when`(newBitmap.isRecycled).thenReturn(false)
+
+        ReceiptBitmapCache.put(301L, "EN", 80, oldBitmap)
+        assertEquals(oldBitmap, ReceiptBitmapCache.get(301L, "EN", 80))
+
+        ReceiptBitmapCache.put(302L, "EN", 80, newBitmap)
+        assertEquals(newBitmap, ReceiptBitmapCache.get(302L, "EN", 80))
+        verify(oldBitmap).recycle()
+
+        ReceiptBitmapCache.clear()
+        verify(newBitmap).recycle()
     }
 }

@@ -7,6 +7,7 @@ import com.example.techyfipos.printer.DirectPrintResult
 import com.example.techyfipos.printer.EscPosPrinterDriver
 import com.example.techyfipos.printer.LabelJob
 import com.example.techyfipos.printer.PrinterTarget
+import com.example.techyfipos.printer.ReceiptBitmapCache
 import com.example.techyfipos.printer.ReceiptCutMode
 import com.example.techyfipos.printer.TsplLabelPrinterDriver
 import com.example.techyfipos.printer.isSamePrinter
@@ -938,24 +939,38 @@ suspend fun printReceiptDirectBluetooth(
 suspend fun printReceiptImage(
     context: Context,
     activity: Activity?,
-    imageFile: File,
+    imageFile: File?,
     jobName: String,
     settings: InvoiceSettingsData,
     kickDrawer: Boolean,
-    timing: PrintTiming? = null
+    timing: PrintTiming? = null,
+    cachedBitmap: Bitmap? = null,
+    billForFallback: BillData? = null,
+    receiptLanguage: String = "EN"
 ): Boolean {
     val effectiveTiming = timing ?: PrintTiming()
     val mode = settings.receiptPrintMode.trim().uppercase()
     val target = settings.resolvedReceiptPrinterTarget()
+
+    val resolveFallbackFile: suspend () -> File? = {
+        imageFile ?: if (billForFallback != null) {
+            withContext(Dispatchers.IO) {
+                generateBillJpeg(context, billForFallback, receiptLanguage)
+            }
+        } else null
+    }
 
     if (mode == "SYSTEM") {
         Log.d(
             "BillActions",
             "printReceiptImage: route=system, target=${target::class.simpleName}(${target.identifier}), cutMode=${settings.receiptCutMode}, cutStyle=${settings.receiptCutCommandStyle}, feedLines=${settings.receiptFeedLinesBeforeCut}, jobName=$jobName"
         )
-        return withContext(Dispatchers.Main) {
-            printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
-        }
+        val fileToPrint = resolveFallbackFile()
+        return if (fileToPrint != null) {
+            withContext(Dispatchers.Main) {
+                printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
+            }
+        } else false
     }
 
     Log.d(
@@ -973,18 +988,30 @@ suspend fun printReceiptImage(
             }
             RoutingDecision.SYSTEM_DIALOG,
             RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
-                withContext(Dispatchers.Main) {
-                    printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
-                }
+                val fileToPrint = resolveFallbackFile()
+                if (fileToPrint != null) {
+                    withContext(Dispatchers.Main) {
+                        printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
+                    }
+                } else false
             }
             RoutingDecision.DIRECT_OK -> true
         }
     }
 
-    val bitmap = withContext(Dispatchers.IO) {
-        BitmapFactory.decodeFile(imageFile.absolutePath)
+    val bitmap = if (cachedBitmap != null && !cachedBitmap.isRecycled) {
+        effectiveTiming.recordDecodeDone()
+        cachedBitmap
+    } else if (imageFile != null) {
+        val decoded = withContext(Dispatchers.IO) {
+            BitmapFactory.decodeFile(imageFile.absolutePath)
+        }
+        effectiveTiming.recordDecodeDone()
+        decoded
+    } else {
+        effectiveTiming.recordDecodeDone()
+        null
     }
-    effectiveTiming.recordDecodeDone()
     val directResult: DirectPrintResult = if (bitmap != null) {
         val paperDots = if (settings.paperRollWidthMm == 58) 384 else 576
         EscPosPrinterDriver.printReceiptDirect(
@@ -1017,14 +1044,20 @@ suspend fun printReceiptImage(
         }
         RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
             showDirectPrintToast(context, directResult)
-            withContext(Dispatchers.Main) {
-                printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
-            }
+            val fileToPrint = resolveFallbackFile()
+            if (fileToPrint != null) {
+                withContext(Dispatchers.Main) {
+                    printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
+                }
+            } else false
         }
         RoutingDecision.SYSTEM_DIALOG -> {
-            withContext(Dispatchers.Main) {
-                printBillJpeg(activity ?: context, imageFile, jobName, settings.paperRollWidthMm)
-            }
+            val fileToPrint = resolveFallbackFile()
+            if (fileToPrint != null) {
+                withContext(Dispatchers.Main) {
+                    printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
+                }
+            } else false
         }
     }
 }
@@ -1208,26 +1241,40 @@ suspend fun printReceiptWithBluetoothFallback(
     timing: PrintTiming? = null
 ): Boolean {
     val effectiveTiming = timing ?: PrintTiming()
-    val jpegStartMs = System.currentTimeMillis()
-    val jpegFile = try {
-        withContext(Dispatchers.IO) {
-            generateBillJpeg(context, bill, receiptLanguage)
+    val bitmapStartMs = System.currentTimeMillis()
+    val paperWidth = settings.paperRollWidthMm
+    val cached = ReceiptBitmapCache.get(bill.saleId, receiptLanguage, paperWidth)
+    val bitmapToPrint: Bitmap = if (cached != null) {
+        effectiveTiming.recordGenerateDone()
+        Log.d("BillActions", "PrintTiming: receipt bitmap cache hit (0 ms)")
+        cached
+    } else {
+        val bmp = try {
+            withContext(Dispatchers.IO) {
+                generateBillBitmap(context, bill, receiptLanguage)
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            android.util.Log.e("BillActions", "Failed to generate bill bitmap", e)
+            return false
         }
-    } catch (e: Exception) {
-        if (e is kotlinx.coroutines.CancellationException) throw e
-        android.util.Log.e("BillActions", "Failed to generate bill JPEG", e)
-        return false
+        ReceiptBitmapCache.put(bill.saleId, receiptLanguage, paperWidth, bmp)
+        effectiveTiming.recordGenerateDone()
+        Log.d("BillActions", "PrintTiming: receipt bitmap generated in ${System.currentTimeMillis() - bitmapStartMs} ms")
+        bmp
     }
-    effectiveTiming.recordGenerateDone()
-    Log.d("BillActions", "PrintTiming: receipt image generated in ${System.currentTimeMillis() - jpegStartMs} ms")
+
     return printReceiptImage(
         context = context,
         activity = activity,
-        imageFile = jpegFile,
+        imageFile = null,
         jobName = context.getString(R.string.print_job_invoice_fmt, bill.saleId.toString()),
         settings = settings,
         kickDrawer = kickDrawer,
-        timing = effectiveTiming
+        timing = effectiveTiming,
+        cachedBitmap = bitmapToPrint,
+        billForFallback = bill,
+        receiptLanguage = receiptLanguage
     )
 }
 

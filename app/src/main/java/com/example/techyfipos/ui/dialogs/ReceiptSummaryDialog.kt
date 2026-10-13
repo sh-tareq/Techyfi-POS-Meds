@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.R
+import com.example.techyfipos.printer.ReceiptBitmapCache
 import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.viewmodel.InvoiceProfitSummary
 import com.example.techyfipos.ui.viewmodel.SaleReturnSummary
@@ -195,6 +196,28 @@ fun ReceiptSummaryDialog(
         start = Offset(shimmerOffset - 400f, shimmerOffset - 400f),
         end = Offset(shimmerOffset, shimmerOffset)
     )
+
+    LaunchedEffect(activeBill.saleId, receiptLanguage, activeBill.settingsData.paperRollWidthMm) {
+        val paperWidth = activeBill.settingsData.paperRollWidthMm
+        if (ReceiptBitmapCache.get(activeBill.saleId, receiptLanguage, paperWidth) == null) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val bmp = generateBillBitmap(context, activeBill, receiptLanguage)
+                    ReceiptBitmapCache.put(activeBill.saleId, receiptLanguage, paperWidth, bmp)
+                    android.util.Log.d("ReceiptSummaryDialog", "Receipt bitmap pre-rendered in background for saleId=${activeBill.saleId}")
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    android.util.Log.w("ReceiptSummaryDialog", "Background receipt pre-render failed: ${e.message}")
+                }
+            }
+        }
+    }
+
+    DisposableEffect(activeBill.saleId) {
+        onDispose {
+            ReceiptBitmapCache.clear()
+        }
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -718,8 +741,10 @@ fun ReceiptSummaryDialog(
                             scope.launch {
                                 try {
                                     printPressed = true
-                                    delay(100)
-                                    printPressed = false
+                                    scope.launch {
+                                        delay(100)
+                                        printPressed = false
+                                    }
                                     val ok = com.example.techyfipos.utils.printReceiptWithBluetoothFallback(
                                         context = context,
                                         activity = activity,

@@ -416,10 +416,10 @@ fun generateQrBitmap(content: String, size: Int): Bitmap? {
 }
 
 /**
- * Renders the bill as an 80mm ESC/POS thermal receipt image (576 dots printable width),
+ * Renders the bill as an ESC/POS thermal receipt bitmap (576 or 384 dots printable width),
  * adhering to high contrast monochrome standards, dynamic toggles, and multi-line item formatting.
  */
-fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String = "EN"): File {
+fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String = "EN"): Bitmap {
     val isBn = receiptLanguage.equals("BN", ignoreCase = true)
     val settings = bill.settingsData
     val is58 = settings.paperRollWidthMm == 58
@@ -1034,16 +1034,28 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
         canvas.drawText(pillText, pillX + 24f, currentY + 29f, pillTextPaint)
     }
 
-    // Save Output JPEG
+    logoBitmap?.recycle()
+    qrBmp?.recycle()
+    return bitmap
+}
+
+/**
+ * Renders the bill as an ESC/POS thermal receipt image and compresses it to a JPEG file on disk.
+ * Used for sharing, saving, or fallback printing.
+ */
+fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String = "EN"): File {
+    val isBn = receiptLanguage.equals("BN", ignoreCase = true)
+    val bitmap = generateBillBitmap(context, bill, receiptLanguage)
     val dir = File(context.cacheDir, "bills").apply { mkdirs() }
     val langSuffix = if (isBn) "_bn" else ""
     val file = File(dir, "invoice_${bill.saleId}$langSuffix.jpg")
-    FileOutputStream(file).use { out ->
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+    try {
+        FileOutputStream(file).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+        }
+    } finally {
+        bitmap.recycle()
     }
-    logoBitmap?.recycle()
-    qrBmp?.recycle()
-    bitmap.recycle()
     return file
 }
 
