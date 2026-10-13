@@ -783,9 +783,21 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     val heldCartCount: StateFlow<Int> = repository.heldCartCount
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
-    fun holdCurrentCart(title: String? = null, note: String? = null, context: Context? = null) {
+    fun grantHoldCartOverride(durationMs: Long = 60_000L) {
+        repository.grantHoldCartOverride(durationMs)
+    }
+
+    fun holdCurrentCart(
+        title: String? = null,
+        note: String? = null,
+        context: Context? = null,
+        onResult: ((Boolean) -> Unit)? = null
+    ) {
         val items = _cartItems.value
-        if (items.isEmpty()) return
+        if (items.isEmpty()) {
+            onResult?.invoke(false)
+            return
+        }
 
         val curCustomerName = customerName.value.trim()
         val curCustomerPhone = customerPhone.value.trim()
@@ -837,9 +849,21 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val prevItems = items
         val prevDiscount = _discountAmount.value
         val prevIsPercentage = _isPercentageDiscount.value
-        val prevPriceMode = priceMode.value
+        val prevPriceMode = _priceMode.value
         val prevCustomerName = curCustomerName
         val prevCustomerPhone = curCustomerPhone
+        val prevPaymentMethod = _paymentMethod.value
+        val prevWalletPhone = _walletPhone.value
+        val prevCardType = _cardType.value
+        val prevCardLastFour = _cardLastFour.value
+        val prevAmountPaid = _amountPaid.value
+        val prevIsSplitPayment = _isSplitPayment.value
+        val prevSplitPayments = _splitPayments.value
+        val prevLoyaltyDiscount = _loyaltyDiscount.value
+        val prevLoyaltyCustomer = _loyaltyCustomer.value
+        val prevStoreCreditApplied = _storeCreditApplied.value
+        val prevRedeemedVoucher = _redeemedVoucher.value
+        val prevResolvedCustomer = _resolvedCustomer.value
 
         _cartItems.value = emptyList()
         _discountAmount.value = 0.0
@@ -866,7 +890,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             try {
                 repository.insertHeldCart(heldCart)
-                persistCartSnapshotSync(emptyList())
+                persistCartSnapshotSync(_cartItems.value)
+                onResult?.invoke(true)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 if (_cartItems.value.isEmpty()) {
@@ -876,9 +901,22 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                     _priceMode.value = prevPriceMode
                     _customerName.value = prevCustomerName
                     _customerPhone.value = prevCustomerPhone
+                    _paymentMethod.value = prevPaymentMethod
+                    _walletPhone.value = prevWalletPhone
+                    _cardType.value = prevCardType
+                    _cardLastFour.value = prevCardLastFour
+                    _amountPaid.value = prevAmountPaid
+                    _isSplitPayment.value = prevIsSplitPayment
+                    _splitPayments.value = prevSplitPayments
+                    _loyaltyDiscount.value = prevLoyaltyDiscount
+                    _loyaltyCustomer.value = prevLoyaltyCustomer
+                    _storeCreditApplied.value = prevStoreCreditApplied
+                    _redeemedVoucher.value = prevRedeemedVoucher
+                    _resolvedCustomer.value = prevResolvedCustomer
                     persistCartSnapshotSync(prevItems)
                 }
                 com.example.techyfipos.utils.RepositoryErrorBus.report(e)
+                onResult?.invoke(false)
             }
         }
     }

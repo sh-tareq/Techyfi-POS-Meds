@@ -1300,7 +1300,7 @@ fun AddEditProductDialog(
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
-                                        val stockEditable = !isEdit || canAdjustStock
+                                        val stockEditable = canAdjustStock
                                         BasicTextField(
                                             value = stockQty,
                                             readOnly = !stockEditable,

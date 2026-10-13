@@ -88,7 +88,7 @@ fun SuppliersScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val canManageSuppliers = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
+    val canManageSuppliers = isOwner || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
     var showSupervisorAuthDialog by remember { mutableStateOf(false) }
     var pendingSupervisorAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var pendingSupervisorDesc by remember { mutableStateOf("") }

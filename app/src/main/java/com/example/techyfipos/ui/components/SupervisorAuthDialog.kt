@@ -35,6 +35,7 @@ fun SupervisorAuthDialog(
     onDismiss: () -> Unit,
     onAuthorized: (User) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var pin by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isChecking by remember { mutableStateOf(false) }
@@ -51,24 +52,24 @@ fun SupervisorAuthDialog(
                 }
                 is SupervisorVerifyResult.Locked -> {
                     pin = ""
-                    val s = (result.remainingMillis + 999L) / 1000L
-                    errorMessage = "Locked for ${s}s. Try again later."
+                    val s = ((result.remainingMillis + 999L) / 1000L).toInt()
+                    errorMessage = context.getString(R.string.auth_locked_out_seconds, s)
                 }
                 is SupervisorVerifyResult.Deactivated -> {
                     pin = ""
-                    errorMessage = "Account is deactivated"
+                    errorMessage = context.getString(R.string.users_supervisor_auth_failed)
                 }
                 SupervisorVerifyResult.NotSupervisor -> {
                     pin = ""
-                    errorMessage = "User is not a supervisor or owner"
+                    errorMessage = context.getString(R.string.users_supervisor_auth_failed)
                 }
                 is SupervisorVerifyResult.Invalid -> {
                     pin = ""
-                    val s = (result.remainingMillis + 999L) / 1000L
-                    errorMessage = if (s > 0L) {
-                        "Locked for ${s}s. Try again later."
+                    val s = ((result.remainingMillis + 999L) / 1000L).toInt()
+                    errorMessage = if (s > 0) {
+                        context.getString(R.string.auth_locked_out_seconds, s)
                     } else {
-                        "Invalid Supervisor / Owner PIN"
+                        context.getString(R.string.users_supervisor_auth_failed)
                     }
                 }
             }

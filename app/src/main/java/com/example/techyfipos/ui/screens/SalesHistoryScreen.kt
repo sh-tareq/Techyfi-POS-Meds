@@ -146,8 +146,8 @@ fun SalesHistoryScreen(
     var pendingSupervisorAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var pendingSupervisorDesc by remember { mutableStateOf("") }
 
-    val canReturn = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_PROCESS)
-    val canDelete = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
+    val canReturn = isOwner || activePermissions.contains(AppPermissions.RETURNS_PROCESS)
+    val canDelete = isOwner || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
 
     val now by produceState(initialValue = System.currentTimeMillis()) {
         while (true) {
@@ -1818,9 +1818,9 @@ private fun SaleDetailDialog(
     val resources = LocalResources.current
     var showEditConfirm by remember { mutableStateOf(false) }
 
-    val canReturn = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_PROCESS)
-    val canDelete = isOwner || isSupervisor || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
-    val canEdit = isOwner || isSupervisor || activePermissions.contains(AppPermissions.SALES_EDIT_INVOICE)
+    val canReturn = isOwner || activePermissions.contains(AppPermissions.RETURNS_PROCESS)
+    val canDelete = isOwner || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
+    val canEdit = isOwner || activePermissions.contains(AppPermissions.SALES_EDIT_INVOICE)
 
     // BillData.totalOutstandingDue isn't stored on the Sale row — it's only meaningful at the
     // moment of checkout — so reopening an old Due invoice from History must re-fetch the

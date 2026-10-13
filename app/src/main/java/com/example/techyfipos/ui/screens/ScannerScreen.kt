@@ -166,6 +166,7 @@ fun ScannerScreen(
 
     val canVoidCart = CartAuthHelper.canVoidCart(isOwner, isSupervisor, effectivePermissions)
     val canRemoveItem = CartAuthHelper.canRemoveItem(isOwner, isSupervisor, effectivePermissions)
+    val canHoldCart = isOwner || isSupervisor || effectivePermissions.contains(AppPermissions.SALES_HOLD_CART)
     var showClearCartConfirm by remember { mutableStateOf(false) }
     var itemToRemoveConfirm by remember { mutableStateOf<Product?>(null) }
 
@@ -199,6 +200,31 @@ fun ScannerScreen(
                 showSupervisorAuthDialog = true
             }
         )
+    }
+
+    val handleHoldCartRequest = {
+        if (canHoldCart) {
+            cartViewModel.holdCurrentCart { success ->
+                if (success) {
+                    showCartPreview = false
+                    Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else if (authViewModel != null) {
+            pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_hold_cart)
+            pendingSupervisorAction = {
+                cartViewModel.grantHoldCartOverride()
+                cartViewModel.holdCurrentCart { success ->
+                    if (success) {
+                        showCartPreview = false
+                        Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            showSupervisorAuthDialog = true
+        } else {
+            Toast.makeText(context, context.getString(R.string.permission_required_hold_cart), Toast.LENGTH_SHORT).show()
+        }
     }
 
     // Snackbar states
@@ -298,6 +324,7 @@ fun ScannerScreen(
                 onNavigateToCart = onNavigateToCart,
                 onClearCartRequested = handleClearCartRequest,
                 onRemoveItemRequested = handleRemoveItemRequest,
+                onHoldCartRequested = handleHoldCartRequest,
                 modifier = Modifier.fillMaxSize()
             )
             SnackbarHost(
@@ -550,15 +577,15 @@ fun ScannerScreen(
                     total = grandTotal,
                     allowNegativeInventory = allowNegativeInventory,
                     onQuantityChanged = { prod, qty ->
-                        cartViewModel.setQuantity(prod, qty, allowNegative = allowNegativeInventory)
+                        if (qty <= 0.0) {
+                            handleRemoveItemRequest(prod)
+                        } else {
+                            cartViewModel.setQuantity(prod, qty, allowNegative = allowNegativeInventory)
+                        }
                     },
                     onRemove = { prod -> handleRemoveItemRequest(prod) },
                     onDismiss = { showCartPreview = false },
-                    onHoldCart = {
-                        cartViewModel.holdCurrentCart()
-                        showCartPreview = false
-                        Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
-                    },
+                    onHoldCart = handleHoldCartRequest,
                     onContinue = {
                         showCartPreview = false
                         onNavigateToCart()
@@ -957,6 +984,7 @@ private fun TabletSplitTerminal(
     onNavigateToCart: () -> Unit,
     onClearCartRequested: () -> Unit,
     onRemoveItemRequested: (com.example.techyfipos.data.db.Product) -> Unit,
+    onHoldCartRequested: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -1248,10 +1276,7 @@ private fun TabletSplitTerminal(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Surface(
-                                    onClick = {
-                                        cartViewModel.holdCurrentCart()
-                                        Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
-                                    },
+                                    onClick = onHoldCartRequested,
                                     shape = RoundedCornerShape(8.dp),
                                     color = TabletTerminalColors.CardBg,
                                     border = BorderStroke(1.dp, TabletTerminalColors.CardBorder),
@@ -1577,10 +1602,7 @@ private fun TabletSplitTerminal(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Surface(
-                                onClick = {
-                                    cartViewModel.holdCurrentCart()
-                                    Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
-                                },
+                                onClick = onHoldCartRequested,
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(48.dp),

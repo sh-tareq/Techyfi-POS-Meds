@@ -733,13 +733,20 @@ fun CartScreen(
                         IconButton(
                             onClick = {
                                 if (canHoldCart) {
-                                    cartViewModel.holdCurrentCart()
-                                    Toast.makeText(context, heldCartHoldSuccessMessage, Toast.LENGTH_SHORT).show()
+                                    cartViewModel.holdCurrentCart { success ->
+                                        if (success) {
+                                            Toast.makeText(context, heldCartHoldSuccessMessage, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
                                 } else if (authViewModel != null) {
                                     pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_hold_cart)
                                     pendingSupervisorAction = {
-                                        cartViewModel.holdCurrentCart()
-                                        Toast.makeText(context, heldCartHoldSuccessMessage, Toast.LENGTH_SHORT).show()
+                                        cartViewModel.grantHoldCartOverride()
+                                        cartViewModel.holdCurrentCart { success ->
+                                            if (success) {
+                                                Toast.makeText(context, heldCartHoldSuccessMessage, Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
                                     }
                                     showSupervisorAuthDialog = true
                                 } else {
@@ -3053,9 +3060,12 @@ fun CartScreen(
                 Button(
                     onClick = {
                         val finalTitle = holdCustomerName.ifBlank { heldCartQuickHoldTag }
-                        cartViewModel.holdCurrentCart(title = finalTitle)
-                        showHoldCartDialog = false
-                        Toast.makeText(context, context.getString(R.string.held_cart_held_toast, finalTitle), Toast.LENGTH_SHORT).show()
+                        cartViewModel.holdCurrentCart(title = finalTitle) { success ->
+                            if (success) {
+                                showHoldCartDialog = false
+                                Toast.makeText(context, context.getString(R.string.held_cart_held_toast, finalTitle), Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706), contentColor = MaterialTheme.colorScheme.onPrimary),
                     shape = RoundedCornerShape(10.dp)

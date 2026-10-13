@@ -2727,7 +2727,7 @@ fun ProductsScreen(
                         category = cat,
                         purchasePrice = pPrice,
                         sellingPrice = sPrice,
-                        stockQty = qty,
+                        stockQty = if (canAdjustStock) qty else 0.0,
                         reorderLevel = reorder,
                         imageUri = imageUri,
                         mfgOrPkgType = mfgType,
@@ -2741,7 +2741,7 @@ fun ProductsScreen(
                     )
                     val success = productsViewModel.addProduct(p)
                     if (success) {
-                        if (qty > 0.0) {
+                        if (canAdjustStock && qty > 0.0) {
                             productsViewModel.recordInventoryAdjustment(
                                 productBarcode = p.barcode,
                                 productName = p.name,
@@ -2813,26 +2813,28 @@ fun ProductsScreen(
             onSave = { name, barcode, cat, pPrice, sPrice, mrp, disc, qty, reorder, imageUri, mfgType, mfgDate, expDate, unit, wPrice, reason, note, onResult ->
                 val prevStock = prod.stockQty
                 val diff = qty - prevStock
-                val p = Product(
-                    barcode = barcode,
-                    name = name,
-                    category = cat,
-                    purchasePrice = pPrice,
-                    sellingPrice = sPrice,
-                    stockQty = qty,
-                    reorderLevel = reorder,
-                    imageUri = imageUri,
-                    mfgOrPkgType = mfgType,
-                    mfgOrPkgDate = mfgDate,
-                    expiryDate = expDate,
-                    unit = unit,
-                    wholesalePrice = wPrice,
-                    mrpPrice = mrp,
-                    discountedPrice = disc,
-                    createdAt = prod.createdAt
-                )
                 scope.launch {
-                    val adjustment = if (kotlin.math.abs(diff) > 0.0001) {
+                    val currentDb = productsViewModel.getProductByBarcode(prod.barcode)
+                    val liveStock = if (!canAdjustStock) (currentDb?.stockQty ?: prod.stockQty) else qty
+                    val p = Product(
+                        barcode = barcode,
+                        name = name,
+                        category = cat,
+                        purchasePrice = pPrice,
+                        sellingPrice = sPrice,
+                        stockQty = liveStock,
+                        reorderLevel = reorder,
+                        imageUri = imageUri,
+                        mfgOrPkgType = mfgType,
+                        mfgOrPkgDate = mfgDate,
+                        expiryDate = expDate,
+                        unit = unit,
+                        wholesalePrice = wPrice,
+                        mrpPrice = mrp,
+                        discountedPrice = disc,
+                        createdAt = prod.createdAt
+                    )
+                    val adjustment = if (canAdjustStock && kotlin.math.abs(diff) > 0.0001) {
                         InventoryAdjustment(
                             productBarcode = p.barcode,
                             productName = name,

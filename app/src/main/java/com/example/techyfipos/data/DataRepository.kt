@@ -339,6 +339,7 @@ class DataRepository(
                 if (AppPermissions.isSupervisor(res.user)) {
                     SupervisorVerifyResult.Success(res.user)
                 } else {
+                    recordFailedPinAttempt()
                     SupervisorVerifyResult.NotSupervisor
                 }
             }
@@ -372,12 +373,29 @@ class DataRepository(
     val allHeldCarts: Flow<List<HeldCart>> = heldCartDao.getAllHeldCarts()
     val heldCartCount: Flow<Int> = heldCartDao.getHeldCartCount()
 
+    @Volatile
+    private var pendingHoldCartOverrideExpiresAt: Long = 0L
+
+    fun grantHoldCartOverride(durationMs: Long = 60_000L) = synchronized(this) {
+        pendingHoldCartOverrideExpiresAt = System.currentTimeMillis() + durationMs
+    }
+
+    internal fun consumeHoldCartOverride(): Boolean = synchronized(this) {
+        val valid = pendingHoldCartOverrideExpiresAt >= System.currentTimeMillis()
+        if (valid) {
+            pendingHoldCartOverrideExpiresAt = 0L
+        }
+        valid
+    }
+
     suspend fun getHeldCartById(id: Long): HeldCart? = withContext(Dispatchers.IO) {
         heldCartDao.getHeldCartById(id)
     }
 
     suspend fun insertHeldCart(heldCart: HeldCart): Long = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.SALES_HOLD_CART)
+        if (!consumeHoldCartOverride()) {
+            requirePermission(AppPermissions.SALES_HOLD_CART)
+        }
         heldCartDao.insertHeldCart(heldCart)
     }
 
@@ -425,14 +443,18 @@ class DataRepository(
     }
 
     /** Updates a product and records its inventory audit entry as a single transaction, so a manual stock edit can never leave stock changed without an audit row (or vice versa). */
-    suspend fun updateProductWithInventoryAdjustment(product: Product, adjustment: InventoryAdjustment) = withContext(Dispatchers.IO) {
+    suspend fun updateProductWithInventoryAdjustment(product: Product, adjustment: InventoryAdjustment?) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
-        requirePermission(AppPermissions.INVENTORY_ADJUST_STOCK)
+        if (adjustment != null) {
+            requirePermission(AppPermissions.INVENTORY_ADJUST_STOCK)
+        }
         val normalized = product.copy(barcode = toEnglishDigits(product.barcode.trim()).lowercase())
-        val cashier = adjustment.cashierName.ifBlank { sessionUser?.name ?: "Admin" }
         database.withDriverTransaction {
             productDao.updateProduct(normalized)
-            inventoryAdjustmentDao.insertAdjustment(adjustment.copy(cashierName = cashier))
+            if (adjustment != null) {
+                val cashier = adjustment.cashierName.ifBlank { sessionUser?.name ?: "Admin" }
+                inventoryAdjustmentDao.insertAdjustment(adjustment.copy(cashierName = cashier))
+            }
         }
     }
 
@@ -2062,7 +2084,7 @@ class DataRepository(
             }
             val existingDue = existing?.outstandingAmount ?: 0.0
             if (effectiveLimit > 0.0 && existingDue + amount > effectiveLimit + 0.001) {
-                require(isSessionManagerOrOwner() || consumeCreditLimitOverride(cleanPhone)) {
+                require(hasPermission(AppPermissions.DUES_OVERRIDE_LIMIT) || consumeCreditLimitOverride(cleanPhone)) {
                     "Supervisor authorization required to exceed customer credit limit"
                 }
             }
@@ -4243,23 +4265,7 @@ class DataRepository(
         true
     }
 
-    suspend fun verifyPinDetailed(pin: String): PinVerifyResult = withContext(Dispatchers.IO) {
-        val remainingLock = loginLockRemainingMillis()
-        if (remainingLock > 0L) return@withContext PinVerifyResult.Locked(remainingLock)
-
-        val all = userDao.getAllUsersOnce()
-        val matchingUser = all.firstOrNull { pinMatches(pin, it.pinHash) }
-        if (matchingUser != null) {
-            if (!matchingUser.isActive) {
-                return@withContext PinVerifyResult.Deactivated(matchingUser)
-            }
-            if (!matchingUser.pinHash.startsWith("pbkdf2$")) {
-                userDao.updatePinHash(matchingUser.id, hashPin(pin))
-            }
-            context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit().clear().apply()
-            return@withContext PinVerifyResult.Success(matchingUser)
-        }
-
+    private fun recordFailedPinAttempt(): Long {
         val securityPrefs = context.getSharedPreferences("auth_security", Context.MODE_PRIVATE)
         val nowElapsed = android.os.SystemClock.elapsedRealtime()
         val nowWall = System.currentTimeMillis()
@@ -4282,6 +4288,28 @@ class DataRepository(
                 .putInt("failed_attempts", 0)
         }
         editor.apply()
+        return newLockMs
+    }
+
+    suspend fun verifyPinDetailed(pin: String): PinVerifyResult = withContext(Dispatchers.IO) {
+        val remainingLock = loginLockRemainingMillis()
+        if (remainingLock > 0L) return@withContext PinVerifyResult.Locked(remainingLock)
+
+        val all = userDao.getAllUsersOnce()
+        val matchingUser = all.firstOrNull { pinMatches(pin, it.pinHash) }
+        if (matchingUser != null) {
+            if (!matchingUser.isActive) {
+                recordFailedPinAttempt()
+                return@withContext PinVerifyResult.Deactivated(matchingUser)
+            }
+            if (!matchingUser.pinHash.startsWith("pbkdf2$")) {
+                userDao.updatePinHash(matchingUser.id, hashPin(pin))
+            }
+            context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit().clear().apply()
+            return@withContext PinVerifyResult.Success(matchingUser)
+        }
+
+        val newLockMs = recordFailedPinAttempt()
         PinVerifyResult.Invalid(newLockMs)
     }
 
