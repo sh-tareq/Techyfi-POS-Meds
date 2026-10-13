@@ -470,7 +470,7 @@ private fun AddStaffDialog(
 
                 RoleSelectorRow(
                     selectedRole = selectedRole,
-                    allowOwnerRole = isOwner,
+                    allowOwnerRole = false,
                     onRoleSelected = { role ->
                         selectedRole = role
                         maxDiscount = when (role) {
@@ -611,11 +611,20 @@ private fun EditStaffDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
+                val isEditingOwner = user.role == AppRoles.OWNER
                 RoleSelectorRow(
                     selectedRole = editRole,
-                    allowOwnerRole = isOwner,
-                    onRoleSelected = { editRole = it }
+                    allowOwnerRole = isEditingOwner,
+                    onRoleSelected = { if (!isEditingOwner) editRole = it }
                 )
+                if (isEditingOwner) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.users_owner_role_fixed_note),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 if (editRole == AppRoles.CASHIER) {
                     OutlinedTextField(

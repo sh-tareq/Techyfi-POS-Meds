@@ -3106,6 +3106,20 @@
     <string name="print_sent_to_printer">Sent to printer</string>
     <string name="settings_test_receipt_success">Test receipt sent to printer</string>
     <string name="settings_test_receipt_failed">Failed to print test receipt</string>
+
+    <!-- Owner Decision Implementations (R20-29, R20-30, R21-01) -->
+    <string name="users_cannot_promote_to_owner">Cannot promote staff to owner; only one owner account is supported</string>
+    <string name="users_owner_role_fixed_note">The Owner role is permanently assigned to the shop proprietor</string>
+    <string name="owner_pin_reset_alert_title">Security Alert: PIN Reset</string>
+    <string name="owner_pin_reset_alert_message">The Owner PIN was recently reset using device lock credentials on %1$s. If you did not perform this, change your PIN immediately.</string>
+    <string name="owner_pin_reset_alert_dismiss">I Understand</string>
+    <string name="settings_idle_lock_title">Auto Screen Lock</string>
+    <string name="settings_idle_lock_subtitle">Automatically lock register after inactivity</string>
+    <string name="settings_idle_lock_never">Off</string>
+    <string name="settings_idle_lock_5m">5 min</string>
+    <string name="settings_idle_lock_15m">15 min</string>
+    <string name="settings_idle_lock_30m">30 min</string>
+    <string name="settings_idle_lock_60m">60 min</string>
 </resources>
 
 

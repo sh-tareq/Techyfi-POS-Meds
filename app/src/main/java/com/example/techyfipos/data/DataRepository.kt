@@ -4266,8 +4266,25 @@ class DataRepository(
         val owner = users.firstOrNull { it.role == AppRoles.OWNER } ?: return@withContext false
         if (users.any { it.id != owner.id && pinMatches(newPin, it.pinHash) }) return@withContext false
         userDao.updatePinHash(owner.id, hashPin(newPin))
-        context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit().clear().apply()
+        val now = System.currentTimeMillis()
+        context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit()
+            .clear()
+            .putLong("owner_device_pin_reset_timestamp", now)
+            .putBoolean("owner_device_pin_reset_acknowledged", false)
+            .apply()
         true
+    }
+
+    fun getUnacknowledgedOwnerPinResetTimestamp(): Long {
+        val prefs = context.getSharedPreferences("auth_security", Context.MODE_PRIVATE)
+        val acknowledged = prefs.getBoolean("owner_device_pin_reset_acknowledged", true)
+        return if (!acknowledged) prefs.getLong("owner_device_pin_reset_timestamp", 0L) else 0L
+    }
+
+    fun acknowledgeOwnerPinReset() {
+        context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit()
+            .putBoolean("owner_device_pin_reset_acknowledged", true)
+            .apply()
     }
 
     private fun recordFailedPinAttempt(): Long {
@@ -4391,11 +4408,11 @@ class DataRepository(
             "Unsupported user role: $targetRole"
         }
 
-        if (targetRole == AppRoles.OWNER && !isSessionOwner()) {
-            throw UnauthorizedException("Non-owners cannot assign the owner role")
+        if (targetRole == AppRoles.OWNER && existing.role != AppRoles.OWNER) {
+            throw IllegalStateException("Cannot promote staff to owner; only one owner account is supported")
         }
 
-        if (existing.role == AppRoles.OWNER && targetRole != AppRoles.OWNER && userDao.getOwnerCount() <= 1) {
+        if (existing.role == AppRoles.OWNER && targetRole != AppRoles.OWNER) {
             throw IllegalStateException("The only owner account cannot be changed to another role")
         }
 

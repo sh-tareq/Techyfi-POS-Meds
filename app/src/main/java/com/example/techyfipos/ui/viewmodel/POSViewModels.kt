@@ -3832,15 +3832,30 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         Companion.recordUserActivity()
     }
 
-    fun checkIdleAutoLock(timeoutMinutes: Long = 15): Boolean {
+    private var currentIdleLockMinutes: Int = 15
+
+    init {
+        viewModelScope.launch {
+            repository.invoiceSettingsDataFlow.collect { settings ->
+                currentIdleLockMinutes = settings.idleLockDurationMinutes
+            }
+        }
+    }
+
+    fun checkIdleAutoLock(timeoutMinutes: Long? = null): Boolean {
         if (_currentUser.value == null) return false
+        val timeout = timeoutMinutes ?: currentIdleLockMinutes.toLong()
+        if (timeout <= 0L) return false
         val idleMillis = android.os.SystemClock.elapsedRealtime() - lastUserActivityElapsed
-        if (idleMillis >= timeoutMinutes * 60_000L) {
+        if (idleMillis >= timeout * 60_000L) {
             logout()
             return true
         }
         return false
     }
+
+    fun getUnacknowledgedOwnerPinResetTimestamp(): Long = repository.getUnacknowledgedOwnerPinResetTimestamp()
+    fun acknowledgeOwnerPinReset() = repository.acknowledgeOwnerPinReset()
 
     val isOwner: StateFlow<Boolean> = _currentUser
         .map { it?.role == AppRoles.OWNER }

@@ -103,6 +103,7 @@ data class InvoiceSettingsData(
     val showDueReceiptCustomNotes: Boolean = false,
     val dueReceiptCustomTitle: String = "Notice & Terms",
     val dueReceiptCustomNotes: String = "Received with thanks. All credit adjustments are final. Keep this slip for record.",
+    val idleLockDurationMinutes: Int = 15,
     val customInfoBlocks: List<CustomInfoBlock> = listOf(
         CustomInfoBlock(
             id = "return-policy",
@@ -257,6 +258,7 @@ data class InvoiceSettingsData(
             put("showDueReceiptCustomNotes", showDueReceiptCustomNotes)
             put("dueReceiptCustomTitle", dueReceiptCustomTitle)
             put("dueReceiptCustomNotes", dueReceiptCustomNotes)
+            put("idleLockDurationMinutes", idleLockDurationMinutes)
 
             val blocksArr = JSONArray()
             customInfoBlocks.forEach { blocksArr.put(it.toJsonObject()) }
@@ -376,6 +378,7 @@ data class InvoiceSettingsData(
                     showDueReceiptCustomNotes = json.optBoolean("showDueReceiptCustomNotes", false),
                     dueReceiptCustomTitle = json.optString("dueReceiptCustomTitle", fallback.dueReceiptCustomTitle),
                     dueReceiptCustomNotes = json.optString("dueReceiptCustomNotes", fallback.dueReceiptCustomNotes),
+                    idleLockDurationMinutes = json.optInt("idleLockDurationMinutes", fallback.idleLockDurationMinutes),
                     customInfoBlocks = if (blocksList.isNotEmpty()) blocksList else InvoiceSettingsData().customInfoBlocks
                 )
             } catch (e: Exception) {

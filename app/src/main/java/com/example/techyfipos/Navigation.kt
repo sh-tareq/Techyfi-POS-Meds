@@ -400,7 +400,7 @@ fun MainNavigation() {
             if (currentUser != null) {
                 while (true) {
                     kotlinx.coroutines.delay(60_000L)
-                    if (!cartViewModel.isCompletingSale.value && authViewModel.checkIdleAutoLock(15)) {
+                    if (!cartViewModel.isCompletingSale.value && authViewModel.checkIdleAutoLock()) {
                         com.example.techyfipos.utils.HardwareBarcodeScanner.clearPendingInput()
                         while (backStack.isNotEmpty()) backStack.removeLastOrNull()
                         backStack.add(Lock)
@@ -482,6 +482,16 @@ fun MainNavigation() {
         var showMoreHubSheet by remember { mutableStateOf(false) }
         var showUserDropdown by remember { mutableStateOf(false) }
         var showLogoutConfirmDialog by remember { mutableStateOf(false) }
+        var unacknowledgedPinResetTime by remember { mutableStateOf<Long?>(null) }
+
+        LaunchedEffect(currentUser, isOwner) {
+            if (isOwner) {
+                val resetTs = authViewModel.getUnacknowledgedOwnerPinResetTimestamp()
+                if (resetTs > 0L) {
+                    unacknowledgedPinResetTime = resetTs
+                }
+            }
+        }
 
         BackHandler(enabled = showMoreHubSheet || (backStack.size > 1 && currentKey != Splash && currentKey != Lock)) {
             if (showMoreHubSheet) {
@@ -695,6 +705,46 @@ fun MainNavigation() {
                     dismissButton = {
                         OutlinedButton(onClick = { showLogoutConfirmDialog = false }) {
                             Text(text = stringResource(R.string.cancel))
+                        }
+                    }
+                )
+            }
+
+            if (unacknowledgedPinResetTime != null) {
+                val ts = unacknowledgedPinResetTime ?: 0L
+                val dateStr = remember(ts) {
+                    java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault())
+                        .format(java.util.Date(ts))
+                }
+                AlertDialog(
+                    onDismissRequest = { /* Force explicit user acknowledgment */ },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    title = {
+                        Text(
+                            stringResource(R.string.owner_pin_reset_alert_title),
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        Text(
+                            stringResource(R.string.owner_pin_reset_alert_message, dateStr),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                authViewModel.acknowledgeOwnerPinReset()
+                                unacknowledgedPinResetTime = null
+                            }
+                        ) {
+                            Text(stringResource(R.string.owner_pin_reset_alert_dismiss))
                         }
                     }
                 )

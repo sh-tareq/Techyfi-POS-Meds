@@ -529,6 +529,74 @@ private fun OptimizedSettingsHome(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        stringResource(R.string.settings_idle_lock_title),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        stringResource(R.string.settings_idle_lock_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            val timeoutOptions = listOf(0, 5, 15, 30, 60)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                timeoutOptions.forEachIndexed { index, minutes ->
+                    val isSelected = currentSettings.idleLockDurationMinutes == minutes
+                    SegmentedButton(
+                        selected = isSelected,
+                        onClick = {
+                            onUpdateSettings(currentSettings.copy(idleLockDurationMinutes = minutes))
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = timeoutOptions.size),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = when (minutes) {
+                                0 -> stringResource(R.string.settings_idle_lock_never)
+                                5 -> stringResource(R.string.settings_idle_lock_5m)
+                                15 -> stringResource(R.string.settings_idle_lock_15m)
+                                30 -> stringResource(R.string.settings_idle_lock_30m)
+                                else -> stringResource(R.string.settings_idle_lock_60m)
+                            },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
                         imageVector = Icons.Default.Analytics,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,

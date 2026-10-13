@@ -3108,4 +3108,18 @@
     <string name="print_sent_to_printer">প্রিন্টারে পাঠানো হয়েছে</string>
     <string name="settings_test_receipt_success">টেস্ট রসিদ প্রিন্টারে পাঠানো হয়েছে</string>
     <string name="settings_test_receipt_failed">টেস্ট রসিদ প্রিন্ট করতে ব্যর্থ হয়েছে</string>
+
+    <!-- Owner Decision Implementations (R20-29, R20-30, R21-01) -->
+    <string name="users_cannot_promote_to_owner">কর্মীকে মালিক পদে উন্নীত করা যাবে না; শুধুমাত্র একজন মালিক অ্যাকাউন্ট অনুমোদিত</string>
+    <string name="users_owner_role_fixed_note">মালিক পদটি স্থায়ীভাবে দোকানের স্বত্বাধিকারীর জন্য সংরক্ষিত</string>
+    <string name="owner_pin_reset_alert_title">নিরাপত্তা সতর্কতা: পিন রিসেট</string>
+    <string name="owner_pin_reset_alert_message">ডিভাইস স্ক্রিন লক ব্যবহার করে %1$s তারিখে ওনার পিন রিসেট করা হয়েছে। আপনি এই কাজটি না করে থাকলে এখনই পিন পরিবর্তন করুন।</string>
+    <string name="owner_pin_reset_alert_dismiss">আমি বুঝতে পেরেছি</string>
+    <string name="settings_idle_lock_title">স্বয়ংক্রিয় স্ক্রিন লক</string>
+    <string name="settings_idle_lock_subtitle">নিষ্ক্রিয়তার পর স্বয়ংক্রিয়ভাবে রেজিস্টার লক করুন</string>
+    <string name="settings_idle_lock_never">বন্ধ</string>
+    <string name="settings_idle_lock_5m">৫ মি.</string>
+    <string name="settings_idle_lock_15m">১৫ মি.</string>
+    <string name="settings_idle_lock_30m">৩০ মি.</string>
+    <string name="settings_idle_lock_60m">৬০ মি.</string>
 </resources>
