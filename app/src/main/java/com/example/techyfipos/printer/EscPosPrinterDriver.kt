@@ -399,7 +399,7 @@ object EscPosPrinterDriver {
             TAG,
             "printReceiptDirect: route=direct, target=${target::class.simpleName}(${target.identifier}), cutMode=$cutMode, cutStyle=$cutCommandStyle, feedLines=$feedLines, bands=${segments.size - 3}, totalBytes=${segments.sumOf { it.size }}, endSegmentHex=$endSegmentHex"
         )
-        return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays)
+        return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays, awaitStatusReply = true)
     }
 
     suspend fun printReceiptDirect(
@@ -457,7 +457,7 @@ object EscPosPrinterDriver {
             TAG,
             "printCutTestDirect: target=${target::class.simpleName}(${target.identifier}), isLong=$isLong, cutMode=$cutMode, cutStyle=$cutCommandStyle, feedLines=$feedLines, bands=${segments.size - 3}, totalBytes=${segments.sumOf { it.size }}, endSegmentHex=$endSegmentHex"
         )
-        return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays)
+        return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays, awaitStatusReply = true)
     }
 
     suspend fun printCutTestDirect(

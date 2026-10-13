@@ -175,6 +175,13 @@ fun bluetoothPostPrintDrainMs(totalBytes: Int): Long =
 fun bluetoothResponseTimeoutMs(totalBytes: Int): Long =
     (STATUS_TIMEOUT_MIN_MS + totalBytes.coerceAtLeast(0) / DRAIN_BYTES_PER_MS).coerceIn(STATUS_TIMEOUT_MIN_MS, STATUS_TIMEOUT_MAX_MS)
 
+/**
+ * Printers (by lower-cased MAC) that did not answer the GS r 1 status query. They are remembered for the
+ * life of the process so every later receipt skips the 3 to 8 s wait and goes straight to the scaled drain.
+ */
+private val statusReplyUnsupported: MutableSet<String> =
+    java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+
 @SuppressLint("MissingPermission")
 suspend fun sendToBluetoothPrinter(
     context: Context,
@@ -182,7 +189,10 @@ suspend fun sendToBluetoothPrinter(
     segments: List<ByteArray>,
     delayBetweenSegmentsMs: Long = 0L,
     perSegmentDelaysMs: List<Long>? = null,
-    onSegmentSent: ((index: Int) -> Unit)? = null
+    onSegmentSent: ((index: Int) -> Unit)? = null,
+    // Only ESC/POS receipt jobs may set this. The GS r 1 query is meaningless (and waits for a reply that
+    // never comes) on TSPL label printers and for the cash drawer pulse.
+    awaitStatusReply: Boolean = false
 ): DirectPrintResult = printerHardwareMutex.withLock {
     withContext(Dispatchers.IO) {
     val trimmedAddress = address.trim()
@@ -300,8 +310,10 @@ suspend fun sendToBluetoothPrinter(
         // Since ESC/POS commands are executed sequentially, receiving a response byte
         // proves that all preceding commands (raster bands, feed lines, and cut) were consumed.
         var replyReceived = false
+        val statusKey = trimmedAddress.lowercase()
         val timeoutMs = bluetoothResponseTimeoutMs(totalBytes)
-        try {
+        val queryStatus = awaitStatusReply && !statusReplyUnsupported.contains(statusKey)
+        if (queryStatus) try {
             val inputStream = socket.inputStream
             while (inputStream.available() > 0) {
                 inputStream.read()
@@ -323,18 +335,24 @@ suspend fun sendToBluetoothPrinter(
         } catch (queryEx: Exception) {
             Log.w(TAG, "Status query check skipped or errored: ${queryEx.message}")
         }
+        if (queryStatus) {
+            if (replyReceived) statusReplyUnsupported.remove(statusKey) else statusReplyUnsupported.add(statusKey)
+        }
 
         val drainMs = if (replyReceived) {
             // Reply received: printer finished job and cutter. Brief settle for blade retraction.
             150L
+        } else if (queryStatus) {
+            // The query already waited the full (size scaled) timeout without a reply, so only settle briefly.
+            POST_PRINT_DRAIN_MS
         } else {
-            // Fall back to payload-scaled drain for printers lacking bidirectional status support.
+            // Labels, drawer pulse, or a printer known not to answer: payload-scaled drain.
             bluetoothPostPrintDrainMs(totalBytes)
         }
         delay(drainMs)
         Log.d(
             TAG,
-            "sendToBluetoothPrinter: totalBytes=$totalBytes, chunkDelayMs=$chunkDelayMs, writeElapsedMs=$writeElapsedMs, drainMs=$drainMs, replyReceived=$replyReceived"
+            "sendToBluetoothPrinter: totalBytes=$totalBytes, chunkDelayMs=$chunkDelayMs, writeElapsedMs=$writeElapsedMs, queryStatus=$queryStatus, drainMs=$drainMs, replyReceived=$replyReceived"
         )
         DirectPrintResult.Success
     } catch (e: Exception) {
@@ -428,7 +446,8 @@ suspend fun sendToPrinter(
     segments: List<ByteArray>,
     delayBetweenSegmentsMs: Long = 0L,
     perSegmentDelaysMs: List<Long>? = null,
-    onSegmentSent: ((index: Int) -> Unit)? = null
+    onSegmentSent: ((index: Int) -> Unit)? = null,
+    awaitStatusReply: Boolean = false
 ): DirectPrintResult {
     return when (target) {
         is PrinterTarget.None -> DirectPrintResult.NoAddress
@@ -438,7 +457,8 @@ suspend fun sendToPrinter(
             segments = segments,
             delayBetweenSegmentsMs = delayBetweenSegmentsMs,
             perSegmentDelaysMs = perSegmentDelaysMs,
-            onSegmentSent = onSegmentSent
+            onSegmentSent = onSegmentSent,
+            awaitStatusReply = awaitStatusReply
         )
         is PrinterTarget.Usb -> sendToUsbPrinter(
             context = context,
@@ -460,7 +480,8 @@ suspend fun sendToPrinter(
     segments: List<ByteArray>,
     delayBetweenSegmentsMs: Long = 0L,
     perSegmentDelaysMs: List<Long>? = null,
-    onSegmentSent: ((index: Int) -> Unit)? = null
+    onSegmentSent: ((index: Int) -> Unit)? = null,
+    awaitStatusReply: Boolean = false
 ): DirectPrintResult {
     val trimmed = addressOrKey.trim()
     if (trimmed.isBlank()) return DirectPrintResult.NoAddress
@@ -475,6 +496,7 @@ suspend fun sendToPrinter(
         segments = segments,
         delayBetweenSegmentsMs = delayBetweenSegmentsMs,
         perSegmentDelaysMs = perSegmentDelaysMs,
-        onSegmentSent = onSegmentSent
+        onSegmentSent = onSegmentSent,
+        awaitStatusReply = awaitStatusReply
     )
 }
