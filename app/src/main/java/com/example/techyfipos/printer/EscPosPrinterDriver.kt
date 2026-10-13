@@ -386,7 +386,8 @@ object EscPosPrinterDriver {
         darkness: Int = 8,
         cutMode: ReceiptCutMode = ReceiptCutMode.PARTIAL,
         feedLines: Int = 4,
-        cutCommandStyle: String = "GS_V"
+        cutCommandStyle: String = "GS_V",
+        timing: PrintTiming? = null
     ): DirectPrintResult {
         val rasterStartMs = System.currentTimeMillis()
         val (segments, delays) = withContext(Dispatchers.Default) {
@@ -421,13 +422,20 @@ object EscPosPrinterDriver {
 
             Pair(segList, delayList)
         }
+        timing?.recordRasterDone(
+            bands = segments.size - 3,
+            bytes = segments.sumOf { it.size },
+            width = bitmap.width,
+            height = bitmap.height,
+            paperDots = paperWidthDots
+        )
         Log.d(TAG, "PrintTiming: receipt rasterized in ${System.currentTimeMillis() - rasterStartMs} ms")
         val endSegmentHex = segments.lastOrNull()?.toHexString().orEmpty()
         Log.d(
             TAG,
             "printReceiptDirect: route=direct, target=${target::class.simpleName}(${target.identifier}), cutMode=$cutMode, cutStyle=$cutCommandStyle, feedLines=$feedLines, bands=${segments.size - 3}, totalBytes=${segments.sumOf { it.size }}, endSegmentHex=$endSegmentHex"
         )
-        return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays, awaitStatusReply = true)
+        return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays, awaitStatusReply = true, timing = timing)
     }
 
     suspend fun printReceiptDirect(
@@ -439,7 +447,8 @@ object EscPosPrinterDriver {
         darkness: Int = 8,
         cutMode: ReceiptCutMode = ReceiptCutMode.PARTIAL,
         feedLines: Int = 4,
-        cutCommandStyle: String = "GS_V"
+        cutCommandStyle: String = "GS_V",
+        timing: PrintTiming? = null
     ): DirectPrintResult {
         val target = if (printerAddress.trim().startsWith("usb:", ignoreCase = true)) {
             PrinterTarget.Usb(printerAddress.trim())
@@ -457,7 +466,8 @@ object EscPosPrinterDriver {
             darkness = darkness,
             cutMode = cutMode,
             feedLines = feedLines,
-            cutCommandStyle = cutCommandStyle
+            cutCommandStyle = cutCommandStyle,
+            timing = timing
         )
     }
 
@@ -473,19 +483,27 @@ object EscPosPrinterDriver {
         cutMode: ReceiptCutMode = ReceiptCutMode.PARTIAL,
         feedLines: Int = 4,
         cutCommandStyle: String = "GS_V",
-        isLong: Boolean = false
+        isLong: Boolean = false,
+        timing: PrintTiming? = null
     ): DirectPrintResult {
         val bitmap = createCutTestBitmap(cutMode, feedLines, paperWidthDots, isLong = isLong)
         val (segments, delays) = withContext(Dispatchers.Default) {
             val bands = bitmapToEscPosBands(bitmap, paperWidthDots, darkness)
             buildCutTestSegments(bands, cutMode, feedLines, cutCommandStyle)
         }
+        timing?.recordRasterDone(
+            bands = segments.size - 3,
+            bytes = segments.sumOf { it.size },
+            width = bitmap.width,
+            height = bitmap.height,
+            paperDots = paperWidthDots
+        )
         val endSegmentHex = segments.lastOrNull()?.toHexString().orEmpty()
         Log.d(
             TAG,
             "printCutTestDirect: target=${target::class.simpleName}(${target.identifier}), isLong=$isLong, cutMode=$cutMode, cutStyle=$cutCommandStyle, feedLines=$feedLines, bands=${segments.size - 3}, totalBytes=${segments.sumOf { it.size }}, endSegmentHex=$endSegmentHex"
         )
-        return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays, awaitStatusReply = true)
+        return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays, awaitStatusReply = true, timing = timing)
     }
 
     suspend fun printCutTestDirect(
@@ -496,7 +514,8 @@ object EscPosPrinterDriver {
         cutMode: ReceiptCutMode = ReceiptCutMode.PARTIAL,
         feedLines: Int = 4,
         cutCommandStyle: String = "GS_V",
-        isLong: Boolean = false
+        isLong: Boolean = false,
+        timing: PrintTiming? = null
     ): DirectPrintResult {
         val target = if (printerAddress.trim().startsWith("usb:", ignoreCase = true)) {
             PrinterTarget.Usb(printerAddress.trim())
@@ -513,7 +532,8 @@ object EscPosPrinterDriver {
             cutMode = cutMode,
             feedLines = feedLines,
             cutCommandStyle = cutCommandStyle,
-            isLong = isLong
+            isLong = isLong,
+            timing = timing
         )
     }
 }

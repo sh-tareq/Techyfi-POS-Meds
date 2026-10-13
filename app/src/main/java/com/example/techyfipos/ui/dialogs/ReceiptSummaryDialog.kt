@@ -713,6 +713,7 @@ fun ReceiptSummaryDialog(
                     Button(
                         onClick = {
                             if (isPrinting) return@Button
+                            val timing = com.example.techyfipos.printer.PrintTiming()
                             isPrinting = true
                             scope.launch {
                                 try {
@@ -725,7 +726,8 @@ fun ReceiptSummaryDialog(
                                         bill = activeBill,
                                         settings = activeBill.settingsData,
                                         receiptLanguage = receiptLanguage,
-                                        kickDrawer = false
+                                        kickDrawer = false,
+                                        timing = timing
                                     )
                                     if (ok) {
                                         android.widget.Toast.makeText(

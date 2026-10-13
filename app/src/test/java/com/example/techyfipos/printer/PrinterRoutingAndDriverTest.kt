@@ -1014,4 +1014,55 @@ class PrinterRoutingAndDriverTest {
         assertEquals(0xFF.toByte(), offsetOut[2])
         assertEquals(0.toByte(), offsetOut[3])
     }
+
+    @Test
+    fun `PrintTiming formatSummary computes stage deltas and formats line without em dashes`() {
+        val timing = PrintTiming(startMs = 1000L).apply {
+            recordButtonTap(1000L)
+            recordGenerateDone(1500L) // generate = 500 ms
+            recordDecodeDone(1600L)   // decode = 100 ms
+            recordRasterDone(bands = 10, bytes = 15000, width = 576, height = 800, paperDots = 576, ms = 2100L) // raster = 500 ms
+            recordMutexAcquired(waitMs = 15L, ms = 2115L) // mutexWait = 15 ms
+            recordConnected("Bluetooth", attempts = 1, insecure = false, ms = 3115L) // connect = 1000 ms
+            recordSettleDone(3365L) // settle = 250 ms
+            recordFirstChunkWritten(3400L) // firstWrite = 2400 ms from tap
+            recordLastChunkWritten(5000L) // write = 1600 ms
+            recordDrainDone(reply = true, ms = 5150L) // drain = 150 ms
+            recordSocketClosed(5200L) // close = 50 ms, total = 4200 ms
+        }
+
+        val summary = timing.formatSummary()
+        assertTrue(summary.contains("TOTAL=4200ms"))
+        assertTrue(summary.contains("generate=500"))
+        assertTrue(summary.contains("decode=100"))
+        assertTrue(summary.contains("raster=500"))
+        assertTrue(summary.contains("mutexWait=15"))
+        assertTrue(summary.contains("connect=1000"))
+        assertTrue(summary.contains("settle=250"))
+        assertTrue(summary.contains("firstWrite=2400"))
+        assertTrue(summary.contains("write=1600"))
+        assertTrue(summary.contains("drain=150"))
+        assertTrue(summary.contains("close=50"))
+        assertFalse(summary.contains("\u2014"))
+    }
+
+    @Test
+    fun `PrintTiming formatDetailedLog includes metadata and flags without em dashes`() {
+        val timing = PrintTiming(startMs = 1000L).apply {
+            recordRasterDone(bands = 12, bytes = 24000, width = 576, height = 900, paperDots = 576)
+            recordMutexAcquired(waitMs = 50L)
+            recordConnected("Bluetooth", attempts = 2, insecure = true)
+            recordDrainDone(reply = false)
+        }
+
+        val details = timing.formatDetailedLog()
+        assertTrue(details.contains("target=Bluetooth(attempts=2, insecure=true)"))
+        assertTrue(details.contains("bitmap=576x900"))
+        assertTrue(details.contains("paperWidth=576dots"))
+        assertTrue(details.contains("bands=12"))
+        assertTrue(details.contains("totalBytes=24000"))
+        assertTrue(details.contains("mutexContended=true"))
+        assertTrue(details.contains("replyReceived=false"))
+        assertFalse(details.contains("\u2014"))
+    }
 }

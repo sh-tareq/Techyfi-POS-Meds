@@ -237,73 +237,87 @@ suspend fun sendToUsbPrinter(
     segments: List<ByteArray>,
     delayBetweenSegmentsMs: Long = 0L,
     perSegmentDelaysMs: List<Long>? = null,
-    onSegmentSent: ((index: Int) -> Unit)? = null
-): DirectPrintResult = printerHardwareMutex.withLock {
-    withContext(Dispatchers.IO) {
-        if (deviceKey.isBlank()) {
-            return@withContext DirectPrintResult.NoAddress
-        }
-
-        val usbManager = context.getSystemService(Context.USB_SERVICE) as? UsbManager
-            ?: return@withContext DirectPrintResult.UsbNotSupported
-
-        val device = findUsbDeviceByKey(usbManager, deviceKey)
-            ?: return@withContext DirectPrintResult.UsbDeviceNotFound
-
-        if (!usbManager.hasPermission(device)) {
-            val granted = requestUsbPermission(context, usbManager, device)
-            if (!granted) {
-                return@withContext DirectPrintResult.UsbNoPermission
+    onSegmentSent: ((index: Int) -> Unit)? = null,
+    timing: PrintTiming? = null
+): DirectPrintResult {
+    val mutexReqMs = System.currentTimeMillis()
+    return printerHardwareMutex.withLock {
+        timing?.recordMutexAcquired(System.currentTimeMillis() - mutexReqMs)
+        withContext(Dispatchers.IO) {
+            if (deviceKey.isBlank()) {
+                return@withContext DirectPrintResult.NoAddress
             }
-        }
 
-        val pair = findPrinterInterfaceAndEndpoint(device)
-            ?: return@withContext DirectPrintResult.UsbNoPrinterInterface
+            val usbManager = context.getSystemService(Context.USB_SERVICE) as? UsbManager
+                ?: return@withContext DirectPrintResult.UsbNotSupported
 
-        val iface = pair.first
-        val endpoint = pair.second
+            val device = findUsbDeviceByKey(usbManager, deviceKey)
+                ?: return@withContext DirectPrintResult.UsbDeviceNotFound
 
-        val connection = usbManager.openDevice(device)
-            ?: return@withContext DirectPrintResult.Failed("Could not open USB printer connection")
-
-        val claimed = connection.claimInterface(iface, true)
-        if (!claimed) {
-            connection.close()
-            return@withContext DirectPrintResult.Failed("Could not claim USB printer interface")
-        }
-
-        val maxPacketSize = endpoint.maxPacketSize.coerceAtLeast(64)
-        val chunkSize = ((4096 / maxPacketSize) * maxPacketSize).coerceAtLeast(maxPacketSize)
-
-        try {
-            for ((index, segment) in segments.withIndex()) {
-                var offset = 0
-                while (offset < segment.size) {
-                    val length = minOf(chunkSize, segment.size - offset)
-                    val transferred = connection.bulkTransfer(endpoint, segment, offset, length, USB_TRANSFER_TIMEOUT_MS)
-                    if (transferred <= 0) {
-                        return@withContext DirectPrintResult.Failed("USB transfer failed (code $transferred)")
-                    }
-                    offset += transferred
-                }
-                onSegmentSent?.invoke(index)
-                val delayMs = perSegmentDelaysMs?.getOrNull(index) ?: delayBetweenSegmentsMs
-                if (delayMs > 0L) {
-                    delay(delayMs)
+            if (!usbManager.hasPermission(device)) {
+                val granted = requestUsbPermission(context, usbManager, device)
+                if (!granted) {
+                    return@withContext DirectPrintResult.UsbNoPermission
                 }
             }
-            delay(POST_PRINT_DRAIN_MS)
-            DirectPrintResult.Success
-        } catch (e: Exception) {
-            Log.e(TAG, "USB communication failed: ${e.message}", e)
-            DirectPrintResult.Failed(e.localizedMessage ?: e.message ?: "USB communication error")
-        } finally {
-            try {
-                connection.releaseInterface(iface)
-            } catch (_: Exception) {}
-            try {
+
+            val pair = findPrinterInterfaceAndEndpoint(device)
+                ?: return@withContext DirectPrintResult.UsbNoPrinterInterface
+
+            val iface = pair.first
+            val endpoint = pair.second
+
+            val connection = usbManager.openDevice(device)
+                ?: return@withContext DirectPrintResult.Failed("Could not open USB printer connection")
+
+            val claimed = connection.claimInterface(iface, true)
+            if (!claimed) {
                 connection.close()
-            } catch (_: Exception) {}
+                return@withContext DirectPrintResult.Failed("Could not claim USB printer interface")
+            }
+
+            timing?.recordConnected("USB", 1, false)
+            timing?.recordSettleDone()
+
+            val maxPacketSize = endpoint.maxPacketSize.coerceAtLeast(64)
+            val chunkSize = ((4096 / maxPacketSize) * maxPacketSize).coerceAtLeast(maxPacketSize)
+
+            try {
+                for ((index, segment) in segments.withIndex()) {
+                    var offset = 0
+                    while (offset < segment.size) {
+                        if (index == 0 && offset == 0) {
+                            timing?.recordFirstChunkWritten()
+                        }
+                        val length = minOf(chunkSize, segment.size - offset)
+                        val transferred = connection.bulkTransfer(endpoint, segment, offset, length, USB_TRANSFER_TIMEOUT_MS)
+                        if (transferred <= 0) {
+                            return@withContext DirectPrintResult.Failed("USB transfer failed (code $transferred)")
+                        }
+                        offset += transferred
+                    }
+                    onSegmentSent?.invoke(index)
+                    val delayMs = perSegmentDelaysMs?.getOrNull(index) ?: delayBetweenSegmentsMs
+                    if (delayMs > 0L) {
+                        delay(delayMs)
+                    }
+                }
+                timing?.recordLastChunkWritten()
+                delay(POST_PRINT_DRAIN_MS)
+                timing?.recordDrainDone(false)
+                DirectPrintResult.Success
+            } catch (e: Exception) {
+                Log.e(TAG, "USB communication failed: ${e.message}", e)
+                DirectPrintResult.Failed(e.localizedMessage ?: e.message ?: "USB communication error")
+            } finally {
+                try {
+                    connection.releaseInterface(iface)
+                } catch (_: Exception) {}
+                try {
+                    connection.close()
+                } catch (_: Exception) {}
+                timing?.recordSocketClosed()
+            }
         }
     }
 }

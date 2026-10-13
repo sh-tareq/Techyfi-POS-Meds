@@ -2,6 +2,7 @@ package com.example.techyfipos.utils
 
 import com.example.techyfipos.R
 import com.example.techyfipos.data.InvoiceSettingsData
+import com.example.techyfipos.printer.PrintTiming
 import com.example.techyfipos.printer.DirectPrintResult
 import com.example.techyfipos.printer.EscPosPrinterDriver
 import com.example.techyfipos.printer.LabelJob
@@ -940,8 +941,10 @@ suspend fun printReceiptImage(
     imageFile: File,
     jobName: String,
     settings: InvoiceSettingsData,
-    kickDrawer: Boolean
+    kickDrawer: Boolean,
+    timing: PrintTiming? = null
 ): Boolean {
+    val effectiveTiming = timing ?: PrintTiming()
     val mode = settings.receiptPrintMode.trim().uppercase()
     val target = settings.resolvedReceiptPrinterTarget()
 
@@ -981,6 +984,7 @@ suspend fun printReceiptImage(
     val bitmap = withContext(Dispatchers.IO) {
         BitmapFactory.decodeFile(imageFile.absolutePath)
     }
+    effectiveTiming.recordDecodeDone()
     val directResult: DirectPrintResult = if (bitmap != null) {
         val paperDots = if (settings.paperRollWidthMm == 58) 384 else 576
         EscPosPrinterDriver.printReceiptDirect(
@@ -992,7 +996,8 @@ suspend fun printReceiptImage(
             darkness = settings.receiptDarkness,
             cutMode = ReceiptCutMode.fromString(settings.receiptCutMode),
             feedLines = settings.receiptFeedLinesBeforeCut,
-            cutCommandStyle = settings.receiptCutCommandStyle
+            cutCommandStyle = settings.receiptCutCommandStyle,
+            timing = effectiveTiming
         )
     } else {
         DirectPrintResult.Failed(context.getString(R.string.print_could_not_decode_receipt_image))
@@ -1034,7 +1039,8 @@ suspend fun executeReceiptCutTest(
     cutMode: ReceiptCutMode = ReceiptCutMode.fromString(settings.receiptCutMode),
     feedLines: Int = settings.receiptFeedLinesBeforeCut,
     cutCommandStyle: String = settings.receiptCutCommandStyle,
-    isLong: Boolean = false
+    isLong: Boolean = false,
+    timing: PrintTiming? = null
 ): DirectPrintResult {
     val target = settings.resolvedReceiptPrinterTarget()
     if (target is PrinterTarget.None || target.identifier.isBlank()) {
@@ -1049,7 +1055,8 @@ suspend fun executeReceiptCutTest(
         cutMode = cutMode,
         feedLines = feedLines,
         cutCommandStyle = cutCommandStyle,
-        isLong = isLong
+        isLong = isLong,
+        timing = timing
     )
 }
 
@@ -1197,8 +1204,10 @@ suspend fun printReceiptWithBluetoothFallback(
     bill: BillData,
     settings: InvoiceSettingsData,
     receiptLanguage: String = "EN",
-    kickDrawer: Boolean = false
+    kickDrawer: Boolean = false,
+    timing: PrintTiming? = null
 ): Boolean {
+    val effectiveTiming = timing ?: PrintTiming()
     val jpegStartMs = System.currentTimeMillis()
     val jpegFile = try {
         withContext(Dispatchers.IO) {
@@ -1209,6 +1218,7 @@ suspend fun printReceiptWithBluetoothFallback(
         android.util.Log.e("BillActions", "Failed to generate bill JPEG", e)
         return false
     }
+    effectiveTiming.recordGenerateDone()
     Log.d("BillActions", "PrintTiming: receipt image generated in ${System.currentTimeMillis() - jpegStartMs} ms")
     return printReceiptImage(
         context = context,
@@ -1216,7 +1226,8 @@ suspend fun printReceiptWithBluetoothFallback(
         imageFile = jpegFile,
         jobName = context.getString(R.string.print_job_invoice_fmt, bill.saleId.toString()),
         settings = settings,
-        kickDrawer = kickDrawer
+        kickDrawer = kickDrawer,
+        timing = effectiveTiming
     )
 }
 

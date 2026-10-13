@@ -192,180 +192,198 @@ suspend fun sendToBluetoothPrinter(
     onSegmentSent: ((index: Int) -> Unit)? = null,
     // Only ESC/POS receipt jobs may set this. The GS r 1 query is meaningless (and waits for a reply that
     // never comes) on TSPL label printers and for the cash drawer pulse.
-    awaitStatusReply: Boolean = false
-): DirectPrintResult = printerHardwareMutex.withLock {
-    withContext(Dispatchers.IO) {
-    val trimmedAddress = address.trim()
-    if (trimmedAddress.isBlank()) {
-        Log.w(TAG, "No printer address configured")
-        return@withContext DirectPrintResult.NoAddress
-    }
-
-    val hasBtPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-        ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-    if (!hasBtPermission) {
-        Log.w(TAG, "BLUETOOTH_CONNECT permission not granted")
-        return@withContext DirectPrintResult.NoPermission
-    }
-
-    val bm = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-    val adapter = bm?.adapter
-    if (adapter == null || !adapter.isEnabled) {
-        Log.w(TAG, "Bluetooth adapter is off or unavailable")
-        return@withContext DirectPrintResult.BluetoothOff
-    }
-
-    val device = try {
-        adapter.bondedDevices?.firstOrNull { it.address.equals(trimmedAddress, ignoreCase = true) }
-    } catch (e: SecurityException) {
-        Log.e(TAG, "SecurityException listing bonded devices", e)
-        return@withContext DirectPrintResult.NoPermission
-    }
-
-    if (device == null) {
-        Log.w(TAG, "Device $trimmedAddress not found in bonded devices")
-        return@withContext DirectPrintResult.DeviceNotPaired
-    }
-
-    try {
-        adapter.cancelDiscovery()
-    } catch (e: Exception) {
-        Log.w(TAG, "Error cancelling discovery: ${e.message}")
-    }
-
-    val uuid = UUID.fromString(SPP_UUID)
-    var socket: BluetoothSocket? = null
-    var lastConnectEx: Exception? = null
-    val connectStartMs = System.currentTimeMillis()
-
-    try {
-        for (attempt in 1..2) {
-            if (attempt > 1) {
-                delay(500L)
-                try { adapter.cancelDiscovery() } catch (_: Exception) {}
-            }
-            var secureSocket: BluetoothSocket? = null
-            socket = try {
-                val s = device.createRfcommSocketToServiceRecord(uuid)
-                secureSocket = s
-                s.connect()
-                s
-            } catch (firstEx: Exception) {
-                try {
-                    secureSocket?.close()
-                } catch (closeEx: Exception) {
-                    Log.w(TAG, "Error closing secure socket before fallback: ${closeEx.message}")
-                }
-                Log.w(TAG, "Standard RFCOMM socket failed (attempt $attempt), retrying insecure RFCOMM socket: ${firstEx.message}")
-                var inSec: BluetoothSocket? = null
-                try {
-                    val insecureSocket = device.createInsecureRfcommSocketToServiceRecord(uuid)
-                    inSec = insecureSocket
-                    insecureSocket.connect()
-                    insecureSocket
-                } catch (secEx: Exception) {
-                    try {
-                        inSec?.close()
-                    } catch (closeEx: Exception) {
-                        Log.w(TAG, "Error closing insecure socket after failure: ${closeEx.message}")
-                    }
-                    lastConnectEx = secEx
-                    null
-                }
-            }
-            if (socket != null) break
+    awaitStatusReply: Boolean = false,
+    timing: PrintTiming? = null
+): DirectPrintResult {
+    val mutexReqMs = System.currentTimeMillis()
+    return printerHardwareMutex.withLock {
+        timing?.recordMutexAcquired(System.currentTimeMillis() - mutexReqMs)
+        withContext(Dispatchers.IO) {
+        val trimmedAddress = address.trim()
+        if (trimmedAddress.isBlank()) {
+            Log.w(TAG, "No printer address configured")
+            return@withContext DirectPrintResult.NoAddress
         }
 
-        if (socket == null) {
-            throw (lastConnectEx ?: java.io.IOException("Bluetooth connection failed"))
+        val hasBtPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        if (!hasBtPermission) {
+            Log.w(TAG, "BLUETOOTH_CONNECT permission not granted")
+            return@withContext DirectPrintResult.NoPermission
         }
 
-        Log.d(TAG, "PrintTiming: bluetooth connect took ${System.currentTimeMillis() - connectStartMs} ms")
-
-        // Allow printer firmware and buffer to settle after connection establishment
-        delay(CONNECT_SETTLE_MS)
-
-        val os: OutputStream = socket.outputStream
-        val totalBytes = segments.sumOf { it.size }
-        val chunkDelayMs = bluetoothChunkDelayMs(totalBytes)
-        val writeStartTime = System.currentTimeMillis()
-        for ((index, segment) in segments.withIndex()) {
-            var offset = 0
-            while (offset < segment.size) {
-                val length = minOf(CHUNK_SIZE, segment.size - offset)
-                os.write(segment, offset, length)
-                offset += length
-                if (offset < segment.size) {
-                    delay(chunkDelayMs)
-                }
-            }
-            onSegmentSent?.invoke(index)
-            val delayMs = perSegmentDelaysMs?.getOrNull(index) ?: delayBetweenSegmentsMs
-            if (delayMs > 0L) {
-                os.flush()
-                delay(delayMs)
-            }
-        }
-        os.flush()
-        val writeElapsedMs = System.currentTimeMillis() - writeStartTime
-
-        // Query status deterministically with GS r 1 (transmit paper sensor status).
-        // Since ESC/POS commands are executed sequentially, receiving a response byte
-        // proves that all preceding commands (raster bands, feed lines, and cut) were consumed.
-        var replyReceived = false
-        val statusKey = trimmedAddress.lowercase()
-        val timeoutMs = bluetoothResponseTimeoutMs(totalBytes)
-        val queryStatus = awaitStatusReply && !statusReplyUnsupported.contains(statusKey)
-        if (queryStatus) try {
-            val inputStream = socket.inputStream
-            while (inputStream.available() > 0) {
-                inputStream.read()
-            }
-            os.write(byteArrayOf(0x1D, 0x72, 0x01))
-            os.flush()
-
-            val deadline = System.currentTimeMillis() + timeoutMs
-            while (System.currentTimeMillis() < deadline) {
-                if (inputStream.available() > 0) {
-                    val b = inputStream.read()
-                    if (b != -1) {
-                        replyReceived = true
-                        break
-                    }
-                }
-                delay(50L)
-            }
-        } catch (queryEx: Exception) {
-            Log.w(TAG, "Status query check skipped or errored: ${queryEx.message}")
-        }
-        if (queryStatus) {
-            if (replyReceived) statusReplyUnsupported.remove(statusKey) else statusReplyUnsupported.add(statusKey)
+        val bm = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val adapter = bm?.adapter
+        if (adapter == null || !adapter.isEnabled) {
+            Log.w(TAG, "Bluetooth adapter is off or unavailable")
+            return@withContext DirectPrintResult.BluetoothOff
         }
 
-        val drainMs = if (replyReceived) {
-            // Reply received: printer finished job and cutter. Brief settle for blade retraction.
-            150L
-        } else if (queryStatus) {
-            // The query already waited the full (size scaled) timeout without a reply, so only settle briefly.
-            POST_PRINT_DRAIN_MS
-        } else {
-            // Labels, drawer pulse, or a printer known not to answer: payload-scaled drain.
-            bluetoothPostPrintDrainMs(totalBytes)
+        val device = try {
+            adapter.bondedDevices?.firstOrNull { it.address.equals(trimmedAddress, ignoreCase = true) }
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException listing bonded devices", e)
+            return@withContext DirectPrintResult.NoPermission
         }
-        delay(drainMs)
-        Log.d(
-            TAG,
-            "sendToBluetoothPrinter: totalBytes=$totalBytes, chunkDelayMs=$chunkDelayMs, writeElapsedMs=$writeElapsedMs, queryStatus=$queryStatus, drainMs=$drainMs, replyReceived=$replyReceived"
-        )
-        DirectPrintResult.Success
-    } catch (e: Exception) {
-        Log.e(TAG, "Bluetooth communication failed: ${e.message}", e)
-        DirectPrintResult.Failed(e.localizedMessage ?: e.message ?: "Bluetooth communication error")
-    } finally {
+
+        if (device == null) {
+            Log.w(TAG, "Device $trimmedAddress not found in bonded devices")
+            return@withContext DirectPrintResult.DeviceNotPaired
+        }
+
         try {
-            socket?.close()
-        } catch (closeEx: Exception) {
-            Log.w(TAG, "Error closing socket: ${closeEx.message}")
+            adapter.cancelDiscovery()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error cancelling discovery: ${e.message}")
+        }
+
+        val uuid = UUID.fromString(SPP_UUID)
+        var socket: BluetoothSocket? = null
+        var lastConnectEx: Exception? = null
+        val connectStartMs = System.currentTimeMillis()
+        var finalAttempt = 1
+        var usedInsecure = false
+
+        try {
+            for (attempt in 1..2) {
+                finalAttempt = attempt
+                if (attempt > 1) {
+                    delay(500L)
+                    try { adapter.cancelDiscovery() } catch (_: Exception) {}
+                }
+                var secureSocket: BluetoothSocket? = null
+                socket = try {
+                    val s = device.createRfcommSocketToServiceRecord(uuid)
+                    secureSocket = s
+                    s.connect()
+                    usedInsecure = false
+                    s
+                } catch (firstEx: Exception) {
+                    try {
+                        secureSocket?.close()
+                    } catch (closeEx: Exception) {
+                        Log.w(TAG, "Error closing secure socket before fallback: ${closeEx.message}")
+                    }
+                    Log.w(TAG, "Standard RFCOMM socket failed (attempt $attempt), retrying insecure RFCOMM socket: ${firstEx.message}")
+                    var inSec: BluetoothSocket? = null
+                    try {
+                        val insecureSocket = device.createInsecureRfcommSocketToServiceRecord(uuid)
+                        inSec = insecureSocket
+                        insecureSocket.connect()
+                        usedInsecure = true
+                        insecureSocket
+                    } catch (secEx: Exception) {
+                        try {
+                            inSec?.close()
+                        } catch (closeEx: Exception) {
+                            Log.w(TAG, "Error closing insecure socket after failure: ${closeEx.message}")
+                        }
+                        lastConnectEx = secEx
+                        null
+                    }
+                }
+                if (socket != null) break
+            }
+
+            if (socket == null) {
+                throw (lastConnectEx ?: java.io.IOException("Bluetooth connection failed"))
+            }
+
+            timing?.recordConnected("Bluetooth", finalAttempt, usedInsecure)
+            Log.d(TAG, "PrintTiming: bluetooth connect took ${System.currentTimeMillis() - connectStartMs} ms")
+
+            // Allow printer firmware and buffer to settle after connection establishment
+            delay(CONNECT_SETTLE_MS)
+            timing?.recordSettleDone()
+
+            val os: OutputStream = socket.outputStream
+            val totalBytes = segments.sumOf { it.size }
+            val chunkDelayMs = bluetoothChunkDelayMs(totalBytes)
+            val writeStartTime = System.currentTimeMillis()
+            for ((index, segment) in segments.withIndex()) {
+                var offset = 0
+                while (offset < segment.size) {
+                    val length = minOf(CHUNK_SIZE, segment.size - offset)
+                    if (index == 0 && offset == 0) {
+                        timing?.recordFirstChunkWritten()
+                    }
+                    os.write(segment, offset, length)
+                    offset += length
+                    if (offset < segment.size) {
+                        delay(chunkDelayMs)
+                    }
+                }
+                onSegmentSent?.invoke(index)
+                val delayMs = perSegmentDelaysMs?.getOrNull(index) ?: delayBetweenSegmentsMs
+                if (delayMs > 0L) {
+                    os.flush()
+                    delay(delayMs)
+                }
+            }
+            os.flush()
+            timing?.recordLastChunkWritten()
+            val writeElapsedMs = System.currentTimeMillis() - writeStartTime
+
+            // Query status deterministically with GS r 1 (transmit paper sensor status).
+            // Since ESC/POS commands are executed sequentially, receiving a response byte
+            // proves that all preceding commands (raster bands, feed lines, and cut) were consumed.
+            var replyReceived = false
+            val statusKey = trimmedAddress.lowercase()
+            val timeoutMs = bluetoothResponseTimeoutMs(totalBytes)
+            val queryStatus = awaitStatusReply && !statusReplyUnsupported.contains(statusKey)
+            if (queryStatus) try {
+                val inputStream = socket.inputStream
+                while (inputStream.available() > 0) {
+                    inputStream.read()
+                }
+                os.write(byteArrayOf(0x1D, 0x72, 0x01))
+                os.flush()
+
+                val deadline = System.currentTimeMillis() + timeoutMs
+                while (System.currentTimeMillis() < deadline) {
+                    if (inputStream.available() > 0) {
+                        val b = inputStream.read()
+                        if (b != -1) {
+                            replyReceived = true
+                            break
+                        }
+                    }
+                    delay(50L)
+                }
+            } catch (queryEx: Exception) {
+                Log.w(TAG, "Status query check skipped or errored: ${queryEx.message}")
+            }
+            if (queryStatus) {
+                if (replyReceived) statusReplyUnsupported.remove(statusKey) else statusReplyUnsupported.add(statusKey)
+            }
+
+            val drainMs = if (replyReceived) {
+                // Reply received: printer finished job and cutter. Brief settle for blade retraction.
+                150L
+            } else if (queryStatus) {
+                // The query already waited the full (size scaled) timeout without a reply, so only settle briefly.
+                POST_PRINT_DRAIN_MS
+            } else {
+                // Labels, drawer pulse, or a printer known not to answer: payload-scaled drain.
+                bluetoothPostPrintDrainMs(totalBytes)
+            }
+            delay(drainMs)
+            timing?.recordDrainDone(replyReceived)
+            Log.d(
+                TAG,
+                "sendToBluetoothPrinter: totalBytes=$totalBytes, chunkDelayMs=$chunkDelayMs, writeElapsedMs=$writeElapsedMs, queryStatus=$queryStatus, drainMs=$drainMs, replyReceived=$replyReceived"
+            )
+            DirectPrintResult.Success
+        } catch (e: Exception) {
+            Log.e(TAG, "Bluetooth communication failed: ${e.message}", e)
+            DirectPrintResult.Failed(e.localizedMessage ?: e.message ?: "Bluetooth communication error")
+        } finally {
+            try {
+                socket?.close()
+            } catch (closeEx: Exception) {
+                Log.w(TAG, "Error closing socket: ${closeEx.message}")
+            }
+            timing?.recordSocketClosed()
         }
     }
 }
@@ -450,7 +468,8 @@ suspend fun sendToPrinter(
     delayBetweenSegmentsMs: Long = 0L,
     perSegmentDelaysMs: List<Long>? = null,
     onSegmentSent: ((index: Int) -> Unit)? = null,
-    awaitStatusReply: Boolean = false
+    awaitStatusReply: Boolean = false,
+    timing: PrintTiming? = null
 ): DirectPrintResult {
     return when (target) {
         is PrinterTarget.None -> DirectPrintResult.NoAddress
@@ -461,7 +480,8 @@ suspend fun sendToPrinter(
             delayBetweenSegmentsMs = delayBetweenSegmentsMs,
             perSegmentDelaysMs = perSegmentDelaysMs,
             onSegmentSent = onSegmentSent,
-            awaitStatusReply = awaitStatusReply
+            awaitStatusReply = awaitStatusReply,
+            timing = timing
         )
         is PrinterTarget.Usb -> sendToUsbPrinter(
             context = context,
@@ -469,7 +489,8 @@ suspend fun sendToPrinter(
             segments = segments,
             delayBetweenSegmentsMs = delayBetweenSegmentsMs,
             perSegmentDelaysMs = perSegmentDelaysMs,
-            onSegmentSent = onSegmentSent
+            onSegmentSent = onSegmentSent,
+            timing = timing
         )
     }
 }
@@ -484,7 +505,8 @@ suspend fun sendToPrinter(
     delayBetweenSegmentsMs: Long = 0L,
     perSegmentDelaysMs: List<Long>? = null,
     onSegmentSent: ((index: Int) -> Unit)? = null,
-    awaitStatusReply: Boolean = false
+    awaitStatusReply: Boolean = false,
+    timing: PrintTiming? = null
 ): DirectPrintResult {
     val trimmed = addressOrKey.trim()
     if (trimmed.isBlank()) return DirectPrintResult.NoAddress
@@ -500,6 +522,7 @@ suspend fun sendToPrinter(
         delayBetweenSegmentsMs = delayBetweenSegmentsMs,
         perSegmentDelaysMs = perSegmentDelaysMs,
         onSegmentSent = onSegmentSent,
-        awaitStatusReply = awaitStatusReply
+        awaitStatusReply = awaitStatusReply,
+        timing = timing
     )
 }
