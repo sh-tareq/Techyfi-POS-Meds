@@ -45,13 +45,24 @@ Key files (under `app/src/main/java/com/example/techyfipos/`):
    - A small stepper or slider for "Feed before cut" (0 to 10 lines), disabled or hidden when cut mode is NONE is NOT required (feed still matters), keep it always visible.
    - A one-line helper text: "Only works on printers with an auto-cutter. Other printers ignore the cut command."
    - Persist instantly via `onUpdateSettings(currentSettings.copy(...))` like the other printer settings.
-5. **Test receipt.** The existing "Test Receipt" button must honour the new setting so the user can verify the cut.
+5. **Test receipt and dedicated cut test.**
+   - The existing "Test Receipt" button must honour the new cut setting.
+   - Add a dedicated "Test cut" button in the same Paper cut section, next to the cut mode selector, so the user can check the cutter without printing a full receipt. It must work for every cut mode and show clear feedback:
+     - Builds a tiny job: init (`ESC @`), a short centered text or raster line such as "CUT TEST" plus the selected mode name and feed lines (render it as a small bitmap and reuse the existing raster path so Bengali and the printer code page are not a problem), then the configured feed and the cut bytes for the selected mode. For NONE, print the same line and feed only, and say so in the result message.
+     - Uses the currently selected (even if just changed) mode, feed lines and cut command style, not a stale saved value, so users can compare modes quickly.
+     - Goes through the same routing as real receipts (direct Bluetooth or USB when selected). In SYSTEM mode, disable the button and show the note that cut control only applies to direct printing.
+     - Shows a spinner while sending and a success or failure toast (reuse the pattern of the test label and test receipt buttons, with try/finally so the spinner always resets). Failure reuses `showDirectPrintToast`.
+     - Prevents double taps while a test is running.
+     - Do not trigger the cash drawer during the cut test.
+   - Optionally, if the advanced cut command style setting is implemented, add a short hint under the button: "If the paper does not cut, try another cut command style."
+   - Add a pure function that builds the cut test byte segments so it can be unit tested without a Bluetooth or USB device.
 6. **Strings.** Add English and Bengali strings for the section title, the three options, the feed label and the helper text.
-7. **Tests** (in `PrinterRoutingAndDriverTest.kt`): bytes for each cut mode, feed line clamping, final segment ends with the cut bytes (or has none for NONE), kick appended after the cut, and JSON round trip plus default for old JSON without the new keys.
+7. **Tests** (in `PrinterRoutingAndDriverTest.kt`): cut test segments for each mode (ends with the right cut bytes, none for NONE, never contains the drawer kick bytes), bytes for each cut mode, feed line clamping, final segment ends with the cut bytes (or has none for NONE), kick appended after the cut, and JSON round trip plus default for old JSON without the new keys.
 
 ### Acceptance
 
 - Choosing Full cut sends `1D 56 00`, Half cut sends `1D 56 01`, No cut sends no cut bytes.
+- The "Test cut" button prints a short test line and cuts (or only feeds for No cut) using the mode currently selected on screen, with spinner and success/failure feedback, and never kicks the drawer.
 - Old backups load as Half cut with 4 feed lines.
 - Unit tests pass.
 
@@ -108,7 +119,7 @@ Key files (under `app/src/main/java/com/example/techyfipos/`):
 
 ### Acceptance
 
-- A USB receipt printer can be selected in Settings, a test receipt prints, and the cut and drawer kick work.
+- A USB receipt printer can be selected in Settings, a test receipt prints, and the cut (including the "Test cut" button) and drawer kick work.
 - A USB label printer (TSPL) can be selected for labels, single and batch label printing work, and the same-printer guard blocks assigning the same USB device to both roles.
 - The USB permission prompt appears the first time, and printing resumes after the user allows it.
 - Existing Bluetooth setups, old backups and the system print dialog fallback keep working unchanged.
