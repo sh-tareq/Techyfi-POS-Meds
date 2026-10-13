@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-13 (app version 2.6.78-V13-10-2026, build `Techyfi-POS-Final-V13-10-2026.apk`; versionCode 220954; DB schema version 38)
+Last updated: 2026-10-14 (app version 2.6.79-V14-10-2026, build `Techyfi-POS-Final-V14-10-2026.apk`; versionCode 220955; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -635,7 +635,11 @@ mindmap
             Print method selector: Direct (Bluetooth/USB), Android print service, Auto
             Direct ESC/POS driver for Bluetooth SPP and USB Host (58mm / 80mm roll width)
             Paper auto-cut configuration: Full cut, Half cut, or No cut with feed lines slider (0-10)
-            Dedicated Test Cut button sending test line feed and cut commands
+            Cut command style selector: GS V (Standard), ESC i / m (Legacy), GS V n (Function B)
+            Dual test cut actions: Short Test Cut and 1200px Long Receipt Test Cut with real-time feedback
+            Deterministic socket drain: GS r 1 sequential status query before closing RFCOMM socket
+            Adaptive Bluetooth chunk pacing (15-35 ms) matching printer UART speed to prevent buffer overruns
+            Post-raster settling delay (250 ms) allowing thermal printhead to complete printing before cutter actuation
             Receipt print darkness slider (0-15) with software luminance thresholding
             System print service note when in SYSTEM mode
             Test receipt button with real-time feedback
@@ -1032,15 +1036,15 @@ mindmap
 ## Current Android package
 
 - Application ID: `com.techyfi.pos`
-- Version code: `220954`
-- Version name: `2.6.78-V13-10-2026`
+- Version code: `220955`
+- Version name: `2.6.79-V14-10-2026`
 - Upgrade rule: retain the same application ID and signing identity, and always increase the version code.
 - Signing SHA-1:
   - Active key (from Sep 29, 2026 onwards): `08:4A:15:4B:BB:A4:61:B7:98:C7:E2:62:F8:CE:C3:BA:8B:52:3A:FA` (keystore at `~/.android/debug.keystore`).
   - Legacy key (prior to Sep 29, 2026): `D6:7B:BD:1C:48:92:D4:FC:7F:D5:1F:D1:CB:22:79:B5:6F:C8:AD:9C`.
   - Both must be registered as Android OAuth 2.0 Client IDs in Google Cloud Console under `com.techyfi.pos` for Google Drive backup/restore.
 - Database version: `38` (v15→16 reminder tracking, v16→17 purchasePriceAtSale snapshot, v17→18 return refund-splitting, v18→19 register shift states, v19→20 due reminders, v20→21 unified customers CRM, v21→22 users RBAC, v24→25 sale audit logs, v33→34, v34→35, v35→36, v36→37, and v37→38 cleaning legacy voucher phone fallback with nullable customerPhone support).
-- Current build: `Techyfi-POS-Final-V13-10-2026.apk` (versionCode 220954) - R8 minified and resource-shrunk, Round 21 audit hardening, single owner security enforcement, device-credential PIN reset alert, configurable auto-lock duration, and full bilingual design token reconciliation. Dual Printer Architecture (Direct Bluetooth & USB ESC/POS for Receipts with auto-cut and feed lines, TSPL for Labels, Android Print Service fallback, thread-safe dispatch & reliable chunked transport, printer conflict guard). Full single and batch label copy selector (1-500, presets 1, 2, 3, 5, 10, 20, stock qty), direct Bluetooth and USB TSPL dispatch & PDF share, and multi-page print document layout adapter.
+- Current build: `Techyfi-POS-Final-V14-10-2026.apk` (versionCode 220955) - R8 minified and resource-shrunk, Receipt Auto-Cut reliability hardening, deterministic GS r 1 status query socket drain, adaptive Bluetooth chunk pacing (15-35 ms), post-raster settling delay (250 ms), Cut Command Style selector UI, settings RBAC enforcement, and long receipt cut diagnostics. Dual Printer Architecture (Direct Bluetooth & USB ESC/POS for Receipts with auto-cut and feed lines, TSPL for Labels, Android Print Service fallback, thread-safe dispatch & reliable chunked transport, printer conflict guard). Full single and batch label copy selector (1-500, presets 1, 2, 3, 5, 10, 20, stock qty), direct Bluetooth and USB TSPL dispatch & PDF share, and multi-page print document layout adapter.
 - This is the project's only mind map and the single source of truth for architecture, workflows, limitations, business rules, release metadata, and verification history.
 
 ## Primary code map
@@ -2852,6 +2856,30 @@ mindmap
   - Passing all 184 unit tests across `P0AuditFixesTest`, `P1AuditFixesTest`, `P2AuditFixesTest`, `P3AuditFixesTest`, and `OwnerDecisionsTest`, calling production code directly.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V13-10-2026.apk` (versionCode 220954, versionName "2.6.78-V13-10-2026"), R8 minified and resource-shrunk, ready as an update to the existing installed app.
+
+### Receipt Auto-Cut Reliability Hardening & Adaptive Bluetooth Pacing (Version 2.6.79-V14-10-2026, Build V14-10-2026)
+- **Deterministic Socket Drain via Status Query (`GS r 1`)**:
+  - Diagnosed real receipt cut failures where closing the RFCOMM socket dropped queued tail bytes (line feeds and cut command) on large (60-120 KB) receipts while short 3.6 KB test receipts succeeded.
+  - Implemented sequential paper sensor query `GS r 1` (`1D 72 01`) after the payload and polled `socket.inputStream.available()` up to a dynamic deadline (`bluetoothResponseTimeoutMs`, scaling 3 to 8 seconds).
+  - Receiving a reply byte proves the printer consumed all preceding raster bands, feed lines, and cutter commands; allows 150 ms settle for blade retraction.
+  - Falls back gracefully to payload-scaled drain delay (`bluetoothPostPrintDrainMs`) if the printer firmware lacks bidirectional status support.
+- **Post-Raster Settling Delay & Cut Command Style UI**:
+  - Added `POST_RASTER_DELAY_MS = 250L` after the final raster graphics band before dispatching `endSegment` (feed lines and cut command), giving thermal printheads time to finish burning and stepper motors time to settle before the cutter solenoid fires.
+  - Added user-facing "Cut Command Style" segmented control in Settings (`SettingsScreen.kt`) with choices for `GS V` (Standard, `1D 56`), `ESC i / m` (Legacy, `1B 69` / `1B 6D`), and `GS V n` (Function B, `1D 56 42 n`).
+  - Added bilingual strings in both English and Bengali with zero em dashes.
+- **Settings Persistence & RBAC Security Governance**:
+  - Gated printer cut settings edits behind `canEditSettings` (`SYSTEM_SHOP_SETTINGS` permission).
+  - Unauthenticated edits or DataStore persistence failures now display an error toast (`settings_save_failed`) and roll back in-memory state to persisted `InvoiceSettingsData`, preventing desync between test prints and production receipt generation.
+  - Added unit test coverage for `InvoiceSettingsData` JSON round-trip serialization and fallback sanitization.
+- **Adaptive Bluetooth Chunk Pacing**:
+  - Added pure function `bluetoothChunkDelayMs` dynamically scaling chunk delay from 15 ms (short cut test jobs <= 8 KB, ~34 KB/s) up to 35 ms (full receipt jobs ~60-120 KB, ~14.6 KB/s).
+  - Matches 115200 baud UART reception limits of thermal printer microcontrollers, preventing buffer overflow drops at the tail of long print jobs.
+- **Diagnostics & Testing Infrastructure**:
+  - Added comprehensive tag-based logging (`BtPrinterTransport`, `EscPosDriver`, `BillActions`) tracing route, target, cut mode, cut style, feed lines, band counts, total payload bytes, chunk delays, and end segment hex.
+  - Added "Test Cut (Long Receipt)" button in Settings generating a 1200 px test receipt with diagnostic rulers to simulate full receipt payload conditions.
+  - Pure logic unit tests in `PrinterRoutingAndDriverTest.kt` passing 100%.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V14-10-2026.apk` (versionCode 220955, versionName "2.6.79-V14-10-2026"), R8 minified and resource-shrunk, prepared as an in-place update for the existing installed app.
 
 ## Maintenance note
 
