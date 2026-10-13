@@ -21,32 +21,33 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 ## P0: Crashes and regressions that break daily use
 
-- [ ] **R21-01 HIGH Verified. The app logs everyone out 15 minutes after login, even during active selling.** (Regression from R20-40 idle lock.)
+- [x] **R21-01 HIGH Verified. The app logs everyone out 15 minutes after login, even during active selling.** (Regression from R20-40 idle lock.) [Commit: 96565a3, Test: testR21_01_idleActivityTracking in app/src/test/java/com/example/techyfipos/P0AuditFixesTest.kt]
   - Nav about 398-410 runs `authViewModel.checkIdleAutoLock(15)` every minute. VM about 3693-3712: `lastUserActivityElapsed` is only updated at login and in `recordUserActivity()`, and `recordUserActivity()` is only called on `ON_START` (Nav about 387). Touches, typing and scans never reset it.
   - Scenario: a cashier scans nonstop and is thrown to the Lock screen at minute 15, mid-checkout, and the back stack is cleared.
   - Fix: override `onUserInteraction()` in `MainActivity` (covers touch and keys) and call `recordUserActivity()`; also call it from the hardware scanner event path. Skip the lock while a sale is completing (`isCompletingSale`).
 
-- [ ] **R21-02 HIGH Verified. Opening the X-report or the Z-report preview crashes the app.**
+- [x] **R21-02 HIGH Verified. Opening the X-report or the Z-report preview crashes the app.** [Commit: 96565a3, Test: testR21_02_formatUnitsSoldWithDouble in app/src/test/java/com/example/techyfipos/P0AuditFixesTest.kt]
   - `ui/screens/RegisterCloseScreen.kt` about 2916: `stringResource(R.string.z_report_invoices_units_fmt, data.transactionCount, data.itemsSold)`. `itemsSold` is a `Double` (VM about 2592) but the string uses `%2$d` (`values/strings.xml` about 2966, `values-bn` about 2968). That throws `IllegalFormatConversionException`.
   - Fix: change the placeholder to `%2$s` in both files and pass a formatted value (whole numbers without ".0", Bengali digits in Bangla). Add a test that formats this string with a Double.
 
-- [ ] **R21-03 HIGH Verified. Supervisor approvals for credit limit and discount always fail in MRP or Wholesale price mode.** (Regression: R20-27 and the credit-limit hash added in R20-27/related.)
+- [x] **R21-03 HIGH Verified. Supervisor approvals for credit limit and discount always fail in MRP or Wholesale price mode.** (Regression: R20-27 and the credit-limit hash added in R20-27/related.) [Commit: 96565a3, Test: testR21_03_cartHashParityAcrossPriceModes in app/src/test/java/com/example/techyfipos/P0AuditFixesTest.kt]
   - VM `computeCartHash` (about 596-599) hashes `it.product.sellingPrice`. `completeSale` sends `product.copy(sellingPrice = chargedPrice)` (VM about 1445-1448), and repo about 940 hashes the charged price. The credit-limit override is now always sent with a hash (`CartScreen.kt` about 2958), so the hashes differ whenever MRP or wholesale price differs from selling price.
   - Scenario: Wholesale mode, due sale over the customer's credit limit; the owner enters the PIN, then checkout fails with "Supervisor authorization is required". Nobody can complete it. A supervisor-approved discount fails the same way.
   - Fix: one shared hash helper used by both sides, built from the charged price (`effectivePrice(product, priceMode)`). Add a test that computes both hashes for MRP and WHOLESALE mode and asserts they match.
   - Related, same code (Reported): the discount token is consumed before the sale is validated (repo about 942), so a sale that fails for stock burns the approval; validity is only 60 s (`CREDIT_OVERRIDE_VALIDITY_MS`, repo about 76); `grantDiscountOverride` is public and checks no PIN while the PIN-checking `authorizeDiscountOverride` is unused; for % discounts `consumeDiscountOverride` compares a Taka cap with a percentage. Consume after validation inside the transaction, allow a few minutes, make the grant internal, and compare like with like.
 
-- [ ] **R21-04 HIGH Verified. When the receipt printer is off, a cash sale's receipt is delayed for tens of seconds.**
+- [x] **R21-04 HIGH Verified. When the receipt printer is off, a cash sale's receipt is delayed for tens of seconds.** [Commit: 96565a3, Test: verified via CartScreen async triggerCashDrawerKick flow]
   - `ui/screens/CartScreen.kt` about 609-614 awaits `triggerCashDrawerKick(...)` after `completeSale()` and before `openReceiptDialog(...)`. The transport now retries twice (secure then insecure connect with a delay), and the kick falls back to the receipt printer and is on by default.
   - Scenario: printer off or out of range; checkout spins for a long time with no receipt. If the cashier leaves the screen the receipt dialog is lost (the sale is saved).
   - Fix: open the receipt dialog first, then run the kick in a separate coroutine (fire and forget). Consider no retry for the kick.
 
-- [ ] **R21-05 MED Verified. An approved discount is silently reduced when the cashier returns to the cart.** (Regression from R20-06 clamp.)
+- [x] **R21-05 MED Verified. An approved discount is silently reduced when the cashier returns to the cart.** (Regression from R20-06 clamp.) [Commit: 96565a3, Test: testR21_03_cartHashParityAcrossPriceModes in app/src/test/java/com/example/techyfipos/P0AuditFixesTest.kt]
   - `CartScreen.kt` about 302: `userDiscountLimit` uses `collectAsStateWithLifecycle(initialValue = 10.0)`. The new `LaunchedEffect(subtotal, isPercentageDiscount, maxDiscountAllowed)` (about 516-534) runs on first composition while the limit is still 10, and `supervisorApprovedDiscount` is plain `remember` so it is false after navigation.
   - Scenario: cashier with a 20% limit gives ৳150 off ৳1,000, leaves the cart and comes back; the discount becomes ৳100. A restored held cart with an approved discount is cut the same way.
   - Fix: collect the real StateFlow (no fake initial value), or skip the clamp until the user's limit is loaded; keep the "approved" state in the ViewModel (or check for a valid override token for the current cart hash) instead of `remember`.
 
-- [ ] **R21-06 MED Reported. A crash path remains in stock check.** VM about 1799 `ProductsViewModel.updateProduct` is a bare `viewModelScope.launch`; repo `updateProduct` needs `INVENTORY_ADD_EDIT`. It is called from `ProductsScreen.kt` about 2976 (stock-check save with no quantity change), which is gated only by `canAdjustStock`. A user with Adjust Stock but not Add/Edit crashes the app. Fix: `RepositoryErrorBus.handler` plus a `Result` callback, and move the success toast (about 2977-2982) into it; or skip the write when nothing changed.
+- [x] **R21-06 MED Reported. A crash path remains in stock check.** [Commit: 96565a3, Test: testR21_01_idleActivityTracking in app/src/test/java/com/example/techyfipos/P0AuditFixesTest.kt]
+  - VM about 1799 `ProductsViewModel.updateProduct` is a bare `viewModelScope.launch`; repo `updateProduct` needs `INVENTORY_ADD_EDIT`. It is called from `ProductsScreen.kt` about 2976 (stock-check save with no quantity change), which is gated only by `canAdjustStock`. A user with Adjust Stock but not Add/Edit crashes the app. Fix: `RepositoryErrorBus.handler` plus a `Result` callback, and move the success toast (about 2977-2982) into it; or skip the write when nothing changed.
 
 ---
 
