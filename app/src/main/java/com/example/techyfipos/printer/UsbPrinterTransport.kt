@@ -87,12 +87,16 @@ fun findPrinterInterfaceAndEndpoint(device: UsbDevice): Pair<UsbInterface, UsbEn
     }
 
     val selected = selectPrinterInterfaceAndEndpoint(interfaceInfos) ?: return null
-    val iface = device.getInterface(selected.first.id)
-    val ep = (0 until iface.endpointCount).map { iface.getEndpoint(it) }.firstOrNull {
-        it.direction == UsbConstants.USB_DIR_OUT && it.type == UsbConstants.USB_ENDPOINT_XFER_BULK
-    } ?: return null
-
-    return Pair(iface, ep)
+    // UsbDevice.getInterface() takes an index, not the interface number, so match by id and a bulk OUT endpoint.
+    for (i in 0 until device.interfaceCount) {
+        val iface = device.getInterface(i)
+        if (iface.id != selected.first.id) continue
+        val ep = (0 until iface.endpointCount).map { iface.getEndpoint(it) }.firstOrNull {
+            it.direction == UsbConstants.USB_DIR_OUT && it.type == UsbConstants.USB_ENDPOINT_XFER_BULK
+        }
+        if (ep != null) return Pair(iface, ep)
+    }
+    return null
 }
 
 /**
@@ -277,7 +281,7 @@ suspend fun sendToUsbPrinter(
                 while (offset < segment.size) {
                     val length = minOf(chunkSize, segment.size - offset)
                     val transferred = connection.bulkTransfer(endpoint, segment, offset, length, USB_TRANSFER_TIMEOUT_MS)
-                    if (transferred < 0) {
+                    if (transferred <= 0) {
                         return@withContext DirectPrintResult.Failed("USB transfer failed (code $transferred)")
                     }
                     offset += transferred

@@ -240,6 +240,10 @@ object EscPosPrinterDriver {
         }
         val clampedFeed = feedLines.coerceIn(0, 10)
         val text = "CUT TEST: $modeLabel ($clampedFeed L)"
+        // Shrink the text until it fits the roll width (58mm is only 384 dots).
+        while (paint.textSize > 12f && paint.measureText(text) > targetWidthDots - 16f) {
+            paint.textSize -= 1f
+        }
         val x = targetWidthDots / 2f
         val y = (height / 2f) - ((paint.descent() + paint.ascent()) / 2f)
         canvas.drawText(text, x, y, paint)
