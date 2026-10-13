@@ -232,6 +232,14 @@ class PrinterRoutingAndDriverTest {
         `when`(mockBitmap.width).thenReturn(16)
         `when`(mockBitmap.height).thenReturn(150)
         `when`(mockBitmap.getPixel(anyInt(), anyInt())).thenReturn(-0x1000000 /* black pixel */)
+        // bitmapToEscPosBands reads one band at a time with getPixels(); fill it with black
+        org.mockito.Mockito.doAnswer { invocation ->
+            java.util.Arrays.fill(invocation.arguments[0] as IntArray, -0x1000000)
+            null
+        }.`when`(mockBitmap).getPixels(
+            org.mockito.ArgumentMatchers.any(IntArray::class.java),
+            anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt()
+        )
 
         val bands = EscPosPrinterDriver.bitmapToEscPosBands(src = mockBitmap, targetWidthDots = 16, darkness = 8)
 
@@ -973,5 +981,37 @@ class PrinterRoutingAndDriverTest {
         // Clamps at 35 ms maximum
         assertEquals(35L, bluetoothChunkDelayMs(75000))
         assertEquals(35L, bluetoothChunkDelayMs(Int.MAX_VALUE))
+    }
+
+    @Test
+    fun `fillRasterBandRows maps black white and transparent pixels and honours the threshold`() {
+        val black = -0x1000000        // 0xFF000000
+        val white = -0x1             // 0xFFFFFFFF
+        val transparentBlack = 0x00000000
+        val gray = (0xFF shl 24) or (170 shl 16) or (170 shl 8) or 170 // luminance 170
+
+        // one row, 10 dots wide, so 2 bytes per row (last byte is padded with white)
+        val pixels = intArrayOf(black, white, black, white, black, white, black, white, black, transparentBlack)
+        val out = ByteArray(2)
+        EscPosPrinterDriver.fillRasterBandRows(pixels, widthDots = 10, rows = 1, widthBytes = 2, threshold = 174, out = out, outOffset = 0)
+        assertEquals(0b10101010.toByte(), out[0])
+        assertEquals(0b10000000.toByte(), out[1])
+
+        // gray 170 is black at threshold 174 (darkness 8) and white at threshold 110 (lightest)
+        val grayRow = IntArray(8) { gray }
+        val darkOut = ByteArray(1)
+        EscPosPrinterDriver.fillRasterBandRows(grayRow, 8, 1, 1, 174, darkOut, 0)
+        assertEquals(0xFF.toByte(), darkOut[0])
+        val lightOut = ByteArray(1)
+        EscPosPrinterDriver.fillRasterBandRows(grayRow, 8, 1, 1, 110, lightOut, 0)
+        assertEquals(0x00.toByte(), lightOut[0])
+
+        // writes at the requested offset and handles several rows
+        val twoRows = IntArray(16) { if (it < 8) black else white }
+        val offsetOut = ByteArray(4)
+        EscPosPrinterDriver.fillRasterBandRows(twoRows, 8, 2, 1, 174, offsetOut, 2)
+        assertEquals(0.toByte(), offsetOut[0])
+        assertEquals(0xFF.toByte(), offsetOut[2])
+        assertEquals(0.toByte(), offsetOut[3])
     }
 }

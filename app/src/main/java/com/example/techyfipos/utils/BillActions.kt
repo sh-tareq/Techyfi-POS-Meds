@@ -1199,6 +1199,7 @@ suspend fun printReceiptWithBluetoothFallback(
     receiptLanguage: String = "EN",
     kickDrawer: Boolean = false
 ): Boolean {
+    val jpegStartMs = System.currentTimeMillis()
     val jpegFile = try {
         withContext(Dispatchers.IO) {
             generateBillJpeg(context, bill, receiptLanguage)
@@ -1208,6 +1209,7 @@ suspend fun printReceiptWithBluetoothFallback(
         android.util.Log.e("BillActions", "Failed to generate bill JPEG", e)
         return false
     }
+    Log.d("BillActions", "PrintTiming: receipt image generated in ${System.currentTimeMillis() - jpegStartMs} ms")
     return printReceiptImage(
         context = context,
         activity = activity,

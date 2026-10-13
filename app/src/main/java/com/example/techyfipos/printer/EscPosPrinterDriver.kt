@@ -45,6 +45,48 @@ object EscPosPrinterDriver {
     fun receiptLuminanceThreshold(darkness: Int): Int = 110 + darkness.coerceIn(0, 15) * 8
 
     /**
+     * Pure function turning ARGB pixels (row major, [widthDots] per row) into ESC/POS raster rows.
+     * A dot is black when it is opaque enough and its luminance is under [threshold].
+     * Writes [rows] * [widthBytes] bytes into [out] starting at [outOffset].
+     */
+    fun fillRasterBandRows(
+        pixels: IntArray,
+        widthDots: Int,
+        rows: Int,
+        widthBytes: Int,
+        threshold: Int,
+        out: ByteArray,
+        outOffset: Int
+    ) {
+        var o = outOffset
+        for (y in 0 until rows) {
+            val rowStart = y * widthDots
+            for (byteIndex in 0 until widthBytes) {
+                var b = 0
+                val xStart = byteIndex * 8
+                for (bit in 0 until 8) {
+                    val x = xStart + bit
+                    if (x < widthDots) {
+                        val pixel = pixels[rowStart + x]
+                        val alpha = (pixel ushr 24) and 0xFF
+                        if (alpha > 40) {
+                            val red = (pixel shr 16) and 0xFF
+                            val green = (pixel shr 8) and 0xFF
+                            val blue = pixel and 0xFF
+                            // Luminance: 0.299R + 0.587G + 0.114B
+                            val luminance = (299 * red + 587 * green + 114 * blue) / 1000
+                            if (luminance < threshold) {
+                                b = b or (1 shl (7 - bit))
+                            }
+                        }
+                    }
+                }
+                out[o++] = b.toByte()
+            }
+        }
+    }
+
+    /**
      * Converts a Bitmap into a list of ESC/POS GS v 0 raster bit image bands.
      * Supports 384 dots (58mm) or 576 dots (80mm).
      * Bands are capped at 64 rows to ensure yH = 0 and minimize corrupted rows on packet drop.
@@ -60,47 +102,31 @@ object EscPosPrinterDriver {
 
         val widthBytes = (targetWidthDots + 7) / 8
         val bands = mutableListOf<ByteArray>()
+        val threshold = receiptLuminanceThreshold(darkness)
+        val pixels = IntArray(targetWidthDots * 64)
 
         // Process in horizontal bands of up to 64 rows so every band header has yH = 0
         val maxBandHeight = 64
         var yOffset = 0
         while (yOffset < targetHeightDots) {
             val bandHeight = minOf(maxBandHeight, targetHeightDots - yOffset)
-            val bandOut = ByteArrayOutputStream(8 + widthBytes * bandHeight)
+            val bandBytes = ByteArray(8 + widthBytes * bandHeight)
 
             // GS v 0 m xL xH yL yH
-            val xL = (widthBytes and 0xFF).toByte()
-            val xH = ((widthBytes shr 8) and 0xFF).toByte()
-            val yL = (bandHeight and 0xFF).toByte()
-            val yH = ((bandHeight shr 8) and 0xFF).toByte()
+            bandBytes[0] = 0x1D
+            bandBytes[1] = 0x76
+            bandBytes[2] = 0x30
+            bandBytes[3] = 0x00
+            bandBytes[4] = (widthBytes and 0xFF).toByte()
+            bandBytes[5] = ((widthBytes shr 8) and 0xFF).toByte()
+            bandBytes[6] = (bandHeight and 0xFF).toByte()
+            bandBytes[7] = ((bandHeight shr 8) and 0xFF).toByte()
 
-            bandOut.write(byteArrayOf(0x1D, 0x76, 0x30, 0x00, xL, xH, yL, yH))
-
-            for (y in 0 until bandHeight) {
-                val actualY = yOffset + y
-                for (byteIndex in 0 until widthBytes) {
-                    var b = 0
-                    for (bit in 0 until 8) {
-                        val x = byteIndex * 8 + bit
-                        if (x < targetWidthDots) {
-                            val pixel = scaled.getPixel(x, actualY)
-                            val alpha = (pixel shr 24) and 0xFF
-                            val red = (pixel shr 16) and 0xFF
-                            val green = (pixel shr 8) and 0xFF
-                            val blue = pixel and 0xFF
-                            // Luminance: 0.299R + 0.587G + 0.114B
-                            val luminance = (0.299 * red + 0.587 * green + 0.114 * blue).toInt()
-                            // In ESC/POS raster, 1 is black (dot printed), 0 is white (blank)
-                            val isBlack = alpha > 40 && luminance < receiptLuminanceThreshold(darkness)
-                            if (isBlack) {
-                                b = b or (1 shl (7 - bit))
-                            }
-                        }
-                    }
-                    bandOut.write(b)
-                }
-            }
-            bands.add(bandOut.toByteArray())
+            // One bulk read per band. Bitmap.getPixel() per dot is a JNI call and made a long receipt
+            // take several seconds to convert on low end tablets before anything reached the printer.
+            scaled.getPixels(pixels, 0, targetWidthDots, 0, yOffset, targetWidthDots, bandHeight)
+            fillRasterBandRows(pixels, targetWidthDots, bandHeight, widthBytes, threshold, bandBytes, 8)
+            bands.add(bandBytes)
             yOffset += bandHeight
         }
 
@@ -362,6 +388,7 @@ object EscPosPrinterDriver {
         feedLines: Int = 4,
         cutCommandStyle: String = "GS_V"
     ): DirectPrintResult {
+        val rasterStartMs = System.currentTimeMillis()
         val (segments, delays) = withContext(Dispatchers.Default) {
             val bands = bitmapToEscPosBands(bitmap, paperWidthDots, darkness)
             val segList = ArrayList<ByteArray>(bands.size + 3)
@@ -394,6 +421,7 @@ object EscPosPrinterDriver {
 
             Pair(segList, delayList)
         }
+        Log.d(TAG, "PrintTiming: receipt rasterized in ${System.currentTimeMillis() - rasterStartMs} ms")
         val endSegmentHex = segments.lastOrNull()?.toHexString().orEmpty()
         Log.d(
             TAG,

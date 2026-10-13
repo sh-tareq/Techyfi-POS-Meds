@@ -236,6 +236,7 @@ suspend fun sendToBluetoothPrinter(
     val uuid = UUID.fromString(SPP_UUID)
     var socket: BluetoothSocket? = null
     var lastConnectEx: Exception? = null
+    val connectStartMs = System.currentTimeMillis()
 
     try {
         for (attempt in 1..2) {
@@ -278,6 +279,8 @@ suspend fun sendToBluetoothPrinter(
         if (socket == null) {
             throw (lastConnectEx ?: java.io.IOException("Bluetooth connection failed"))
         }
+
+        Log.d(TAG, "PrintTiming: bluetooth connect took ${System.currentTimeMillis() - connectStartMs} ms")
 
         // Allow printer firmware and buffer to settle after connection establishment
         delay(CONNECT_SETTLE_MS)
