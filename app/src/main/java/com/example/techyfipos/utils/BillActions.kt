@@ -5,10 +5,13 @@ import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.printer.DirectPrintResult
 import com.example.techyfipos.printer.EscPosPrinterDriver
 import com.example.techyfipos.printer.LabelJob
+import com.example.techyfipos.printer.PrinterTarget
 import com.example.techyfipos.printer.ReceiptCutMode
 import com.example.techyfipos.printer.TsplLabelPrinterDriver
 import com.example.techyfipos.printer.isSamePrinter
+import com.example.techyfipos.printer.isSamePrinterTarget
 import com.example.techyfipos.printer.sendToBluetoothPrinter
+import com.example.techyfipos.printer.sendToPrinter
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -791,7 +794,7 @@ fun decidePrintRouting(
 }
 
 /**
- * Displays a localized Toast message explaining why direct Bluetooth printing failed.
+ * Displays a localized Toast message explaining why direct printing failed.
  */
 suspend fun showDirectPrintToast(context: Context, result: DirectPrintResult) = withContext(Dispatchers.Main) {
     val message = when (result) {
@@ -800,6 +803,10 @@ suspend fun showDirectPrintToast(context: Context, result: DirectPrintResult) = 
         is DirectPrintResult.NoPermission -> context.getString(R.string.direct_print_error_no_permission)
         is DirectPrintResult.BluetoothOff -> context.getString(R.string.direct_print_error_bluetooth_off)
         is DirectPrintResult.DeviceNotPaired -> context.getString(R.string.direct_print_error_not_paired)
+        is DirectPrintResult.UsbDeviceNotFound -> context.getString(R.string.direct_print_error_usb_device_not_found)
+        is DirectPrintResult.UsbNoPermission -> context.getString(R.string.direct_print_error_usb_no_permission)
+        is DirectPrintResult.UsbNoPrinterInterface -> context.getString(R.string.direct_print_error_usb_no_printer_interface)
+        is DirectPrintResult.UsbNotSupported -> context.getString(R.string.direct_print_error_usb_not_supported)
         is DirectPrintResult.Failed -> context.getString(R.string.direct_print_error_connection_failed, result.message)
     }
     Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -830,20 +837,20 @@ suspend fun showDirectPrintToast(context: Context, result: DirectPrintResult) = 
 }
 
 /**
- * Sends the ESC/POS drawer-kick pulse over Bluetooth SPP socket to [printerAddress].
+ * Sends the ESC/POS drawer-kick pulse over Bluetooth SPP socket or USB bulk endpoint.
  */
 @SuppressLint("MissingPermission")
-suspend fun triggerCashDrawerKick(context: Context, printerAddress: String) = withContext(Dispatchers.IO) {
+suspend fun triggerCashDrawerKick(context: Context, target: PrinterTarget) = withContext(Dispatchers.IO) {
     suspend fun toast(message: String) = withContext(Dispatchers.Main) {
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
-    if (printerAddress.isBlank()) {
+    if (target is PrinterTarget.None || target.identifier.isBlank()) {
         toast(context.getString(R.string.cash_drawer_no_printer_paired))
         return@withContext
     }
 
-    val result = sendToBluetoothPrinter(context, printerAddress, getCashDrawerKickCommand())
+    val result = sendToPrinter(context, target, listOf(getCashDrawerKickCommand()))
     withContext(Dispatchers.Main) {
         when (result) {
             is DirectPrintResult.Success -> toast(context.getString(R.string.cash_drawer_kick_sent))
@@ -852,9 +859,45 @@ suspend fun triggerCashDrawerKick(context: Context, printerAddress: String) = wi
     }
 }
 
+@SuppressLint("MissingPermission")
+suspend fun triggerCashDrawerKick(context: Context, printerAddress: String) {
+    val target = when {
+        printerAddress.trim().startsWith("usb:", ignoreCase = true) -> PrinterTarget.Usb(printerAddress.trim())
+        printerAddress.isNotBlank() -> PrinterTarget.Bluetooth(printerAddress.trim())
+        else -> PrinterTarget.None
+    }
+    triggerCashDrawerKick(context, target)
+}
+
 /**
- * Prints receipt bitmap directly via Bluetooth ESC/POS without launching system print dialog.
+ * Prints receipt bitmap directly via ESC/POS without launching system print dialog.
  */
+suspend fun printReceiptDirect(
+    context: Context,
+    bitmap: Bitmap,
+    target: PrinterTarget,
+    paperRollWidthMm: Int = 80,
+    autoKickDrawer: Boolean = false,
+    darkness: Int = 8,
+    cutMode: String = "PARTIAL",
+    feedLines: Int = 4,
+    cutCommandStyle: String = "GS_V"
+): Boolean {
+    val dots = if (paperRollWidthMm == 58) 384 else 576
+    val res = EscPosPrinterDriver.printReceiptDirect(
+        context = context,
+        target = target,
+        bitmap = bitmap,
+        paperWidthDots = dots,
+        autoKickDrawer = autoKickDrawer,
+        darkness = darkness,
+        cutMode = ReceiptCutMode.fromString(cutMode),
+        feedLines = feedLines,
+        cutCommandStyle = cutCommandStyle
+    )
+    return res is DirectPrintResult.Success
+}
+
 suspend fun printReceiptDirectBluetooth(
     context: Context,
     bitmap: Bitmap,
@@ -866,19 +909,24 @@ suspend fun printReceiptDirectBluetooth(
     feedLines: Int = 4,
     cutCommandStyle: String = "GS_V"
 ): Boolean {
-    val dots = if (paperRollWidthMm == 58) 384 else 576
-    val res = EscPosPrinterDriver.printReceiptDirect(
+    val target = if (printerAddress.trim().startsWith("usb:", ignoreCase = true)) {
+        PrinterTarget.Usb(printerAddress.trim())
+    } else if (printerAddress.isNotBlank()) {
+        PrinterTarget.Bluetooth(printerAddress.trim())
+    } else {
+        PrinterTarget.None
+    }
+    return printReceiptDirect(
         context = context,
-        printerAddress = printerAddress,
         bitmap = bitmap,
-        paperWidthDots = dots,
+        target = target,
+        paperRollWidthMm = paperRollWidthMm,
         autoKickDrawer = autoKickDrawer,
         darkness = darkness,
-        cutMode = ReceiptCutMode.fromString(cutMode),
+        cutMode = cutMode,
         feedLines = feedLines,
         cutCommandStyle = cutCommandStyle
     )
-    return res is DirectPrintResult.Success
 }
 
 /**
@@ -894,7 +942,7 @@ suspend fun printReceiptImage(
     kickDrawer: Boolean
 ): Boolean {
     val mode = settings.receiptPrintMode.trim().uppercase()
-    val address = settings.resolvedReceiptPrinterAddress()
+    val target = settings.resolvedReceiptPrinterTarget()
 
     if (mode == "SYSTEM") {
         return withContext(Dispatchers.Main) {
@@ -902,8 +950,8 @@ suspend fun printReceiptImage(
         }
     }
 
-    if (address.isBlank()) {
-        val decision = decidePrintRouting(mode, address, DirectPrintResult.NoAddress)
+    if (target is PrinterTarget.None || target.identifier.isBlank()) {
+        val decision = decidePrintRouting(mode, "", DirectPrintResult.NoAddress)
         return when (decision) {
             RoutingDecision.SHOW_ERROR -> {
                 showDirectPrintToast(context, DirectPrintResult.NoAddress)
@@ -926,7 +974,7 @@ suspend fun printReceiptImage(
         val paperDots = if (settings.paperRollWidthMm == 58) 384 else 576
         EscPosPrinterDriver.printReceiptDirect(
             context = context,
-            printerAddress = address,
+            target = target,
             bitmap = bitmap,
             paperWidthDots = paperDots,
             autoKickDrawer = kickDrawer,
@@ -943,7 +991,7 @@ suspend fun printReceiptImage(
         cleanOldPrintCacheFiles(context)
     }
 
-    val decision = decidePrintRouting(mode, address, directResult)
+    val decision = decidePrintRouting(mode, target.identifier, directResult)
     return when (decision) {
         RoutingDecision.DIRECT_OK -> true
         RoutingDecision.SHOW_ERROR -> {
@@ -974,14 +1022,14 @@ suspend fun executeReceiptCutTest(
     feedLines: Int = settings.receiptFeedLinesBeforeCut,
     cutCommandStyle: String = settings.receiptCutCommandStyle
 ): DirectPrintResult {
-    val address = settings.resolvedReceiptPrinterAddress()
-    if (address.isBlank()) {
+    val target = settings.resolvedReceiptPrinterTarget()
+    if (target is PrinterTarget.None || target.identifier.isBlank()) {
         return DirectPrintResult.NoAddress
     }
     val paperDots = if (settings.paperRollWidthMm == 58) 384 else 576
     return EscPosPrinterDriver.printCutTestDirect(
         context = context,
-        printerAddress = address,
+        target = target,
         paperWidthDots = paperDots,
         darkness = settings.receiptDarkness,
         cutMode = cutMode,
@@ -1045,7 +1093,8 @@ suspend fun printLabelImages(
     settings: InvoiceSettingsData
 ): Boolean {
     val mode = settings.labelPrintMode.trim().uppercase()
-    val address = settings.labelPrinterAddress.trim()
+    val labelTarget = settings.resolvedLabelPrinterTarget()
+    val receiptTarget = settings.resolvedReceiptPrinterTarget()
 
     if (mode == "SYSTEM") {
         return withContext(Dispatchers.Main) {
@@ -1053,7 +1102,7 @@ suspend fun printLabelImages(
         }
     }
 
-    if (isSamePrinter(settings.labelPrinterAddress, settings.resolvedReceiptPrinterAddress())) {
+    if (isSamePrinterTarget(labelTarget, receiptTarget) || isSamePrinter(settings.labelPrinterAddress, settings.resolvedReceiptPrinterAddress())) {
         withContext(Dispatchers.Main) {
             Toast.makeText(
                 context,
@@ -1064,8 +1113,8 @@ suspend fun printLabelImages(
         return false
     }
 
-    if (address.isBlank()) {
-        val decision = decidePrintRouting(mode, address, DirectPrintResult.NoAddress)
+    if (labelTarget is PrinterTarget.None || labelTarget.identifier.isBlank()) {
+        val decision = decidePrintRouting(mode, "", DirectPrintResult.NoAddress)
         return when (decision) {
             RoutingDecision.SHOW_ERROR -> {
                 showDirectPrintToast(context, DirectPrintResult.NoAddress)
@@ -1084,7 +1133,7 @@ suspend fun printLabelImages(
     val jobs = labels.map { LabelJob(it, copies) }
     val batchResult = TsplLabelPrinterDriver.printLabelsBatch(
         context = context,
-        address = address,
+        target = labelTarget,
         jobs = jobs,
         widthMm = widthMm,
         heightMm = heightMm,
@@ -1103,7 +1152,7 @@ suspend fun printLabelImages(
         }
     }
 
-    val decision = decidePrintRouting(mode, address, directResult, batchResult.successfulCount)
+    val decision = decidePrintRouting(mode, labelTarget.identifier, directResult, batchResult.successfulCount)
     return when (decision) {
         RoutingDecision.DIRECT_OK -> true
         RoutingDecision.SHOW_ERROR -> {

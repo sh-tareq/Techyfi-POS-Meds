@@ -186,8 +186,22 @@ data class BatchLabelPrintResult(
 )
 
 /**
- * Prints label directly to a Bluetooth TSPL printer (e.g. Deli E886BW).
+ * Prints label directly to a TSPL printer (Bluetooth or USB).
  */
+suspend fun printLabel(
+    context: Context,
+    target: PrinterTarget,
+    labelBitmap: Bitmap,
+    widthMm: Float,
+    heightMm: Float,
+    gapMm: Float,
+    copies: Int,
+    darkness: Int
+): DirectPrintResult = withContext(Dispatchers.IO) {
+    val payload = buildTsplPayload(labelBitmap, widthMm, heightMm, gapMm, copies, darkness)
+    sendToPrinter(context, target, listOf(payload))
+}
+
 suspend fun printLabel(
     context: Context,
     address: String,
@@ -197,18 +211,24 @@ suspend fun printLabel(
     gapMm: Float,
     copies: Int,
     darkness: Int
-): DirectPrintResult = withContext(Dispatchers.IO) {
-    val payload = buildTsplPayload(labelBitmap, widthMm, heightMm, gapMm, copies, darkness)
-    sendToBluetoothPrinter(context, address, payload)
+): DirectPrintResult {
+    val target = if (address.trim().startsWith("usb:", ignoreCase = true)) {
+        PrinterTarget.Usb(address.trim())
+    } else if (address.isNotBlank()) {
+        PrinterTarget.Bluetooth(address.trim())
+    } else {
+        PrinterTarget.None
+    }
+    return printLabel(context, target, labelBitmap, widthMm, heightMm, gapMm, copies, darkness)
 }
 
 /**
- * Prints a batch of label jobs to a Bluetooth TSPL printer in a single RFCOMM session.
+ * Prints a batch of label jobs to a TSPL printer in a single session.
  * Avoids repeated connect / settle / drain overhead per label.
  */
 suspend fun printLabelsBatch(
     context: Context,
-    address: String,
+    target: PrinterTarget,
     jobs: List<LabelJob>,
     widthMm: Float,
     heightMm: Float,
@@ -231,17 +251,37 @@ suspend fun printLabelsBatch(
             invertBits = invertBits
         )
     }
-    printLabelPayloadsBatch(context, address, payloads, jobs.map { it.copies })
+    printLabelPayloadsBatch(context, target, payloads, jobs.map { it.copies })
+}
+
+suspend fun printLabelsBatch(
+    context: Context,
+    address: String,
+    jobs: List<LabelJob>,
+    widthMm: Float,
+    heightMm: Float,
+    gapMm: Float,
+    darkness: Int,
+    invertBits: Boolean = TSPL_INVERT_BITS
+): BatchLabelPrintResult {
+    val target = if (address.trim().startsWith("usb:", ignoreCase = true)) {
+        PrinterTarget.Usb(address.trim())
+    } else if (address.isNotBlank()) {
+        PrinterTarget.Bluetooth(address.trim())
+    } else {
+        PrinterTarget.None
+    }
+    return printLabelsBatch(context, target, jobs, widthMm, heightMm, gapMm, darkness, invertBits)
 }
 
 /**
- * Sends already-built TSPL payloads (see [buildTsplPayload]) in one RFCOMM session.
+ * Sends already-built TSPL payloads (see [buildTsplPayload]) in one session.
  * Lets callers convert and recycle each label bitmap immediately, so large batches
  * never hold every full-resolution bitmap in memory at once.
  */
 suspend fun printLabelPayloadsBatch(
     context: Context,
-    address: String,
+    target: PrinterTarget,
     payloads: List<ByteArray>,
     copiesPerPayload: List<Int>
 ): BatchLabelPrintResult = withContext(Dispatchers.IO) {
@@ -249,9 +289,9 @@ suspend fun printLabelPayloadsBatch(
         return@withContext BatchLabelPrintResult(DirectPrintResult.Success, 0)
     }
     var totalSuccessfulCopies = 0
-    val res = sendToBluetoothPrinter(
+    val res = sendToPrinter(
         context = context,
-        address = address,
+        target = target,
         segments = payloads,
         perSegmentDelaysMs = List(payloads.size) { 100L },
         onSegmentSent = { index ->
@@ -261,7 +301,36 @@ suspend fun printLabelPayloadsBatch(
     BatchLabelPrintResult(res, totalSuccessfulCopies)
 }
 
+suspend fun printLabelPayloadsBatch(
+    context: Context,
+    address: String,
+    payloads: List<ByteArray>,
+    copiesPerPayload: List<Int>
+): BatchLabelPrintResult {
+    val target = if (address.trim().startsWith("usb:", ignoreCase = true)) {
+        PrinterTarget.Usb(address.trim())
+    } else if (address.isNotBlank()) {
+        PrinterTarget.Bluetooth(address.trim())
+    } else {
+        PrinterTarget.None
+    }
+    return printLabelPayloadsBatch(context, target, payloads, copiesPerPayload)
+}
+
 object TsplLabelPrinterDriver {
+    suspend fun printLabel(
+        context: Context,
+        target: PrinterTarget,
+        labelBitmap: Bitmap,
+        widthMm: Float,
+        heightMm: Float,
+        gapMm: Float,
+        copies: Int,
+        darkness: Int
+    ): DirectPrintResult = com.example.techyfipos.printer.printLabel(
+        context, target, labelBitmap, widthMm, heightMm, gapMm, copies, darkness
+    )
+
     suspend fun printLabel(
         context: Context,
         address: String,
@@ -273,6 +342,18 @@ object TsplLabelPrinterDriver {
         darkness: Int
     ): DirectPrintResult = com.example.techyfipos.printer.printLabel(
         context, address, labelBitmap, widthMm, heightMm, gapMm, copies, darkness
+    )
+
+    suspend fun printLabelsBatch(
+        context: Context,
+        target: PrinterTarget,
+        jobs: List<LabelJob>,
+        widthMm: Float,
+        heightMm: Float,
+        gapMm: Float,
+        darkness: Int
+    ): BatchLabelPrintResult = com.example.techyfipos.printer.printLabelsBatch(
+        context, target, jobs, widthMm, heightMm, gapMm, darkness
     )
 
     suspend fun printLabelsBatch(

@@ -4,6 +4,8 @@ package com.example.techyfipos.ui.screens
 
 import android.app.Activity
 import android.content.Context
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -31,6 +33,12 @@ import com.example.techyfipos.printer.getBluetoothDeviceDisplayName
 import com.example.techyfipos.printer.isSamePrinter
 import com.example.techyfipos.printer.ReceiptCutMode
 import com.example.techyfipos.printer.DirectPrintResult
+import com.example.techyfipos.printer.PrinterTarget
+import com.example.techyfipos.printer.isSamePrinterTarget
+import com.example.techyfipos.printer.formatPrinterTargetDisplay
+import com.example.techyfipos.printer.formatUsbDeviceDisplay
+import com.example.techyfipos.printer.buildUsbDeviceKey
+import com.example.techyfipos.printer.isLikelyUsbPrinter
 import com.example.techyfipos.utils.executeReceiptCutTest
 import com.example.techyfipos.utils.showDirectPrintToast
 import com.example.techyfipos.ui.components.*
@@ -719,7 +727,7 @@ private fun OptimizedSettingsHome(
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(stringResource(R.string.settings_print_mode_bluetooth), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.settings_print_mode_direct), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     SegmentedButton(
                         selected = currentMode == "SYSTEM",
@@ -732,8 +740,9 @@ private fun OptimizedSettingsHome(
                 }
             }
 
-            // Bluetooth device picker (shown for Bluetooth and Auto)
+            // Printer device picker (shown for Direct and Auto)
             if (currentSettings.receiptPrintMode != "SYSTEM") {
+                val receiptTarget = currentSettings.resolvedReceiptPrinterTarget()
                 Surface(
                     onClick = { showReceiptPrinterPicker = true },
                     shape = RoundedCornerShape(12.dp),
@@ -754,25 +763,28 @@ private fun OptimizedSettingsHome(
                         ) {
                             Realistic3DBluetoothPrinterIcon(
                                 size = 28.dp,
-                                isConnected = currentSettings.directBluetoothPrinterAddress.isNotBlank()
+                                isConnected = receiptTarget !is PrinterTarget.None
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    stringResource(R.string.settings_receipt_bluetooth_device),
+                                    stringResource(R.string.settings_receipt_printer_device),
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold
                                 )
+                                val receiptDisplay = formatPrinterTargetDisplay(context, receiptTarget)
                                 Text(
-                                    if (currentSettings.directBluetoothPrinterAddress.isBlank())
-                                        stringResource(R.string.settings_bluetooth_not_paired)
-                                    else getBluetoothDeviceDisplayName(context, currentSettings.directBluetoothPrinterAddress),
+                                    if (receiptDisplay.isNotBlank()) receiptDisplay else stringResource(R.string.settings_bluetooth_not_paired),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray
                                 )
                             }
                         }
-                        Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        if (receiptTarget is PrinterTarget.Usb) {
+                            Icon(Icons.Default.Usb, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        } else {
+                            Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
             }
@@ -1070,7 +1082,7 @@ private fun OptimizedSettingsHome(
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(stringResource(R.string.settings_print_mode_bluetooth), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.settings_print_mode_direct), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     SegmentedButton(
                         selected = currentMode == "SYSTEM",
@@ -1083,8 +1095,9 @@ private fun OptimizedSettingsHome(
                 }
             }
 
-            // Bluetooth device picker (shown for Bluetooth and Auto)
+            // Printer device picker (shown for Direct and Auto)
             if (currentSettings.labelPrintMode != "SYSTEM") {
+                val labelTarget = currentSettings.resolvedLabelPrinterTarget()
                 Surface(
                     onClick = { showLabelPrinterPicker = true },
                     shape = RoundedCornerShape(12.dp),
@@ -1105,29 +1118,32 @@ private fun OptimizedSettingsHome(
                         ) {
                             Realistic3DBluetoothPrinterIcon(
                                 size = 28.dp,
-                                isConnected = currentSettings.labelPrinterAddress.isNotBlank()
+                                isConnected = labelTarget !is PrinterTarget.None
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    stringResource(R.string.settings_label_bluetooth_device),
+                                    stringResource(R.string.settings_label_printer_device),
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold
                                 )
+                                val labelDisplay = formatPrinterTargetDisplay(context, labelTarget)
                                 Text(
-                                    if (currentSettings.labelPrinterAddress.isBlank())
-                                        stringResource(R.string.settings_bluetooth_not_paired)
-                                    else getBluetoothDeviceDisplayName(context, currentSettings.labelPrinterAddress),
+                                    if (labelDisplay.isNotBlank()) labelDisplay else stringResource(R.string.settings_bluetooth_not_paired),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray
                                 )
                             }
                         }
-                        Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        if (labelTarget is PrinterTarget.Usb) {
+                            Icon(Icons.Default.Usb, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        } else {
+                            Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
 
-                if (isSamePrinter(currentSettings.labelPrinterAddress, currentSettings.resolvedReceiptPrinterAddress())) {
+                if (isSamePrinterTarget(labelTarget, currentSettings.resolvedReceiptPrinterTarget())) {
                     Text(
                         text = stringResource(R.string.settings_label_printer_same_as_receipt_warning),
                         style = MaterialTheme.typography.bodySmall,
@@ -1293,20 +1309,22 @@ private fun OptimizedSettingsHome(
                     modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val hasDrawerPrinter = cashDrawerPrinterAddress.isNotBlank() || currentSettings.resolvedReceiptPrinterAddress().isNotBlank()
+                    val drawerTarget = currentSettings.resolvedCashDrawerPrinterTarget()
+                    val hasDrawerPrinter = drawerTarget !is PrinterTarget.None
                     Realistic3DBluetoothPrinterIcon(
                         size = 32.dp,
                         isConnected = hasDrawerPrinter
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(stringResource(R.string.settings_bluetooth_printer_label), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                        val displayAddress = if (cashDrawerPrinterAddress.isBlank()) {
-                            val resolved = currentSettings.resolvedReceiptPrinterAddress()
-                            if (resolved.isNotBlank()) stringResource(R.string.settings_cash_drawer_same_as_receipt) + " (${getBluetoothDeviceDisplayName(context, resolved)})"
+                        Text(stringResource(R.string.settings_cash_drawer_device), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        val displayAddress = if (currentSettings.cashDrawerPrinterAddress.isBlank() && currentSettings.cashDrawerUsbDeviceKey.isBlank()) {
+                            val receiptTarget = currentSettings.resolvedReceiptPrinterTarget()
+                            val formattedReceipt = formatPrinterTargetDisplay(context, receiptTarget)
+                            if (formattedReceipt.isNotBlank()) stringResource(R.string.settings_cash_drawer_same_as_receipt) + " ($formattedReceipt)"
                             else stringResource(R.string.settings_cash_drawer_same_as_receipt)
                         } else {
-                            getBluetoothDeviceDisplayName(context, cashDrawerPrinterAddress)
+                            formatPrinterTargetDisplay(context, drawerTarget)
                         }
                         Text(
                             displayAddress,
@@ -1315,7 +1333,12 @@ private fun OptimizedSettingsHome(
                         )
                     }
                 }
-                Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                val drawerTarget = currentSettings.resolvedCashDrawerPrinterTarget()
+                if (drawerTarget is PrinterTarget.Usb) {
+                    Icon(Icons.Default.Usb, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                } else {
+                    Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             Row(
@@ -1333,11 +1356,10 @@ private fun OptimizedSettingsHome(
                 OutlinedButton(
                     onClick = {
                         scope.launch {
-                            val addr = cashDrawerPrinterAddress.ifBlank { currentSettings.resolvedReceiptPrinterAddress() }
-                            triggerCashDrawerKick(context, addr)
+                            triggerCashDrawerKick(context, currentSettings.resolvedCashDrawerPrinterTarget())
                         }
                     },
-                    enabled = cashDrawerPrinterAddress.isNotBlank() || currentSettings.resolvedReceiptPrinterAddress().isNotBlank(),
+                    enabled = currentSettings.resolvedCashDrawerPrinterTarget() !is PrinterTarget.None,
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                 ) {
@@ -1350,12 +1372,30 @@ private fun OptimizedSettingsHome(
     }
 
     if (showPrinterPicker) {
-        BluetoothPrinterPickerDialog(
-            currentAddress = cashDrawerPrinterAddress,
+        CombinedPrinterPickerDialog(
+            currentTarget = currentSettings.resolvedCashDrawerPrinterTarget(),
             showSameAsReceiptOption = true,
-            receiptPrinterAddress = currentSettings.resolvedReceiptPrinterAddress(),
-            onSelected = { address ->
-                onCashDrawerPrinterSelected(address)
+            receiptPrinterTarget = currentSettings.resolvedReceiptPrinterTarget(),
+            onSelected = { target ->
+                val updated = when (target) {
+                    is PrinterTarget.Usb -> currentSettings.copy(
+                        cashDrawerPrinterConnection = "USB",
+                        cashDrawerUsbDeviceKey = target.deviceKey,
+                        cashDrawerPrinterAddress = ""
+                    )
+                    is PrinterTarget.Bluetooth -> currentSettings.copy(
+                        cashDrawerPrinterConnection = "BLUETOOTH",
+                        cashDrawerPrinterAddress = target.address,
+                        cashDrawerUsbDeviceKey = ""
+                    )
+                    is PrinterTarget.None -> currentSettings.copy(
+                        cashDrawerPrinterConnection = "BLUETOOTH",
+                        cashDrawerPrinterAddress = "",
+                        cashDrawerUsbDeviceKey = ""
+                    )
+                }
+                onUpdateSettings(updated)
+                onCashDrawerPrinterSelected(target.identifier)
                 showPrinterPicker = false
             },
             onDismiss = { showPrinterPicker = false }
@@ -1363,14 +1403,30 @@ private fun OptimizedSettingsHome(
     }
 
     if (showReceiptPrinterPicker) {
-        BluetoothPrinterPickerDialog(
-            currentAddress = currentSettings.directBluetoothPrinterAddress,
-            disabledPrinterAddress = currentSettings.labelPrinterAddress,
-            onSelected = { address ->
-                if (isSamePrinter(address, currentSettings.labelPrinterAddress)) {
+        CombinedPrinterPickerDialog(
+            currentTarget = currentSettings.resolvedReceiptPrinterTarget(),
+            disabledPrinterTarget = currentSettings.resolvedLabelPrinterTarget(),
+            onSelected = { target ->
+                if (isSamePrinterTarget(target, currentSettings.resolvedLabelPrinterTarget())) {
                     printerConflictDialogMessage = context.getString(R.string.settings_receipt_picker_same_as_label_dialog)
                 } else {
-                    onUpdateSettings(currentSettings.copy(directBluetoothPrinterAddress = address))
+                    val updated = when (target) {
+                        is PrinterTarget.Usb -> currentSettings.copy(
+                            receiptPrinterConnection = "USB",
+                            receiptUsbDeviceKey = target.deviceKey
+                        )
+                        is PrinterTarget.Bluetooth -> currentSettings.copy(
+                            receiptPrinterConnection = "BLUETOOTH",
+                            directBluetoothPrinterAddress = target.address,
+                            receiptUsbDeviceKey = ""
+                        )
+                        is PrinterTarget.None -> currentSettings.copy(
+                            receiptPrinterConnection = "BLUETOOTH",
+                            directBluetoothPrinterAddress = "",
+                            receiptUsbDeviceKey = ""
+                        )
+                    }
+                    onUpdateSettings(updated)
                 }
                 showReceiptPrinterPicker = false
             },
@@ -1379,14 +1435,30 @@ private fun OptimizedSettingsHome(
     }
 
     if (showLabelPrinterPicker) {
-        BluetoothPrinterPickerDialog(
-            currentAddress = currentSettings.labelPrinterAddress,
-            disabledPrinterAddress = currentSettings.resolvedReceiptPrinterAddress(),
-            onSelected = { address ->
-                if (isSamePrinter(address, currentSettings.resolvedReceiptPrinterAddress())) {
+        CombinedPrinterPickerDialog(
+            currentTarget = currentSettings.resolvedLabelPrinterTarget(),
+            disabledPrinterTarget = currentSettings.resolvedReceiptPrinterTarget(),
+            onSelected = { target ->
+                if (isSamePrinterTarget(target, currentSettings.resolvedReceiptPrinterTarget())) {
                     printerConflictDialogMessage = context.getString(R.string.settings_label_picker_same_as_receipt_dialog)
                 } else {
-                    onUpdateSettings(currentSettings.copy(labelPrinterAddress = address))
+                    val updated = when (target) {
+                        is PrinterTarget.Usb -> currentSettings.copy(
+                            labelPrinterConnection = "USB",
+                            labelUsbDeviceKey = target.deviceKey
+                        )
+                        is PrinterTarget.Bluetooth -> currentSettings.copy(
+                            labelPrinterConnection = "BLUETOOTH",
+                            labelPrinterAddress = target.address,
+                            labelUsbDeviceKey = ""
+                        )
+                        is PrinterTarget.None -> currentSettings.copy(
+                            labelPrinterConnection = "BLUETOOTH",
+                            labelPrinterAddress = "",
+                            labelUsbDeviceKey = ""
+                        )
+                    }
+                    onUpdateSettings(updated)
                 }
                 showLabelPrinterPicker = false
             },
@@ -1567,22 +1639,25 @@ private fun OptimizedSettingsHome(
     }
 }
 
-/** Lists the phone's already-paired (bonded) Bluetooth devices so the owner can pick the receipt printer the cash-drawer ESC/POS pulse is sent to. Pairing itself is done from Android's own Bluetooth settings, not here. */
+/** Lists available printers across Bluetooth bonded devices and USB connected devices. */
 @Composable
-private fun BluetoothPrinterPickerDialog(
-    currentAddress: String,
+private fun CombinedPrinterPickerDialog(
+    currentTarget: PrinterTarget,
     showSameAsReceiptOption: Boolean = false,
-    receiptPrinterAddress: String = "",
-    disabledPrinterAddress: String = "",
-    onSelected: (String) -> Unit,
+    receiptPrinterTarget: PrinterTarget = PrinterTarget.None,
+    disabledPrinterTarget: PrinterTarget = PrinterTarget.None,
+    onSelected: (PrinterTarget) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    var devices by remember { mutableStateOf<List<android.bluetooth.BluetoothDevice>>(emptyList()) }
+    var selectedTab by remember { mutableStateOf(if (currentTarget is PrinterTarget.Usb) 1 else 0) }
+
+    // Bluetooth state
+    var btDevices by remember { mutableStateOf<List<android.bluetooth.BluetoothDevice>>(emptyList()) }
     var permissionDenied by remember { mutableStateOf(false) }
     var bluetoothOff by remember { mutableStateOf(false) }
 
-    fun loadDevices() {
+    fun loadBtDevices() {
         val hasPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
             androidx.core.content.ContextCompat.checkSelfPermission(
                 context, android.Manifest.permission.BLUETOOTH_CONNECT
@@ -1596,160 +1671,340 @@ private fun BluetoothPrinterPickerDialog(
             val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter
             if (adapter == null || !adapter.isEnabled) {
                 bluetoothOff = true
-                devices = emptyList()
+                btDevices = emptyList()
                 return
             }
             bluetoothOff = false
-            devices = adapter.bondedDevices?.toList().orEmpty()
-        } catch (e: SecurityException) {
+            btDevices = adapter.bondedDevices?.toList().orEmpty()
+        } catch (_: SecurityException) {
             permissionDenied = true
         }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted -> if (granted) loadDevices() else permissionDenied = true }
+    ) { granted -> if (granted) loadBtDevices() else permissionDenied = true }
 
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             permissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
         } else {
-            loadDevices()
+            loadBtDevices()
         }
+    }
+
+    // USB state
+    val usbManager = remember { context.getSystemService(Context.USB_SERVICE) as? UsbManager }
+    var showAllUsb by remember { mutableStateOf(false) }
+    var usbDevices by remember { mutableStateOf<List<UsbDevice>>(emptyList()) }
+
+    fun refreshUsbDevices() {
+        val all = usbManager?.deviceList?.values?.toList().orEmpty()
+        usbDevices = if (showAllUsb) {
+            all
+        } else {
+            all.filter { isLikelyUsbPrinter(it) }
+        }
+    }
+
+    LaunchedEffect(showAllUsb) {
+        refreshUsbDevices()
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(dismissOnClickOutside = false),
-        title = { Text(stringResource(R.string.settings_dialog_select_bt_printer_title)) },
+        title = { Text(stringResource(R.string.settings_select_printer_title)) },
         text = {
             Column {
-                if (permissionDenied) {
-                    Text(
-                        stringResource(R.string.settings_bt_permission_required),
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 13.sp
+                TabRow(selectedTabIndex = selectedTab) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text(stringResource(R.string.settings_tab_bluetooth), fontWeight = FontWeight.Bold) },
+                        icon = { Icon(Icons.Default.Bluetooth, contentDescription = null, modifier = Modifier.size(18.dp)) }
                     )
-                } else if (bluetoothOff) {
-                    Text(
-                        stringResource(R.string.settings_bt_bluetooth_off),
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.error
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text(stringResource(R.string.settings_tab_usb), fontWeight = FontWeight.Bold) },
+                        icon = { Icon(Icons.Default.Usb, contentDescription = null, modifier = Modifier.size(18.dp)) }
                     )
-                } else if (devices.isEmpty() && !showSameAsReceiptOption && currentAddress.isBlank()) {
-                    Text(
-                        stringResource(R.string.settings_bt_no_devices_found),
-                        fontSize = 13.sp,
-                        color = Color.Gray
-                    )
-                } else {
-                    Column(
-                        modifier = Modifier.verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        if (showSameAsReceiptOption) {
-                            Surface(
-                                onClick = { onSelected("") },
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (currentAddress.isBlank()) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else Color.Transparent
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (selectedTab == 0) {
+                    // Bluetooth Tab Content
+                    if (permissionDenied) {
+                        Text(
+                            stringResource(R.string.settings_bt_permission_required),
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 13.sp
+                        )
+                    } else if (bluetoothOff) {
+                        Text(
+                            stringResource(R.string.settings_bt_bluetooth_off),
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else if (btDevices.isEmpty() && !showSameAsReceiptOption && currentTarget is PrinterTarget.None) {
+                        Text(
+                            stringResource(R.string.settings_bt_no_devices_found),
+                            fontSize = 13.sp,
+                            color = Color.Gray
+                        )
+                    } else {
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (showSameAsReceiptOption) {
+                                val isSelected = currentTarget is PrinterTarget.None
+                                Surface(
+                                    onClick = { onSelected(PrinterTarget.None) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            stringResource(R.string.settings_cash_drawer_same_as_receipt),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp
-                                        )
-                                        Text(
-                                            if (receiptPrinterAddress.isNotBlank()) getBluetoothDeviceDisplayName(context, receiptPrinterAddress) else stringResource(R.string.settings_bluetooth_not_paired),
-                                            fontSize = 11.sp,
-                                            color = Color.Gray
-                                        )
-                                    }
-                                    if (currentAddress.isBlank()) {
-                                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                    }
-                                }
-                            }
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        } else {
-                            val isNoneSelected = currentAddress.isBlank()
-                            Surface(
-                                onClick = { onSelected("") },
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isNoneSelected) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else Color.Transparent
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            stringResource(R.string.settings_printer_none_not_set),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp
-                                        )
-                                        Text(
-                                            stringResource(R.string.settings_bluetooth_not_paired),
-                                            fontSize = 11.sp,
-                                            color = Color.Gray
-                                        )
-                                    }
-                                    if (isNoneSelected) {
-                                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                    }
-                                }
-                            }
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        }
-                        devices.forEach { device ->
-                            val isConflict = disabledPrinterAddress.isNotBlank() && isSamePrinter(device.address, disabledPrinterAddress)
-                            val isSelected = device.address.equals(currentAddress.trim(), ignoreCase = true)
-                            val name = try { device.name ?: device.address } catch (e: SecurityException) { device.address }
-                            Surface(
-                                onClick = {
-                                    if (!isConflict) {
-                                        onSelected(device.address)
-                                    }
-                                },
-                                shape = RoundedCornerShape(8.dp),
-                                enabled = !isConflict,
-                                color = if (isSelected) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else Color.Transparent
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            name,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = if (isConflict) Color.Gray else MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(device.address, fontSize = 11.sp, color = Color.Gray)
-                                        if (isConflict) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                stringResource(R.string.settings_label_printer_same_as_receipt_warning),
+                                                stringResource(R.string.settings_cash_drawer_same_as_receipt),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                            val receiptDisplay = formatPrinterTargetDisplay(context, receiptPrinterTarget)
+                                            Text(
+                                                if (receiptDisplay.isNotBlank()) receiptDisplay else stringResource(R.string.settings_bluetooth_not_paired),
                                                 fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.error
+                                                color = Color.Gray
                                             )
                                         }
+                                        if (isSelected) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        }
                                     }
-                                    if (isSelected) {
-                                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            } else {
+                                val isNoneSelected = currentTarget is PrinterTarget.None
+                                Surface(
+                                    onClick = { onSelected(PrinterTarget.None) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isNoneSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                stringResource(R.string.settings_printer_none_not_set),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                            Text(
+                                                stringResource(R.string.settings_bluetooth_not_paired),
+                                                fontSize = 11.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                        if (isNoneSelected) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            }
+
+                            btDevices.forEach { device ->
+                                val target = PrinterTarget.Bluetooth(device.address)
+                                val isConflict = disabledPrinterTarget !is PrinterTarget.None && isSamePrinterTarget(target, disabledPrinterTarget)
+                                val isSelected = currentTarget is PrinterTarget.Bluetooth && currentTarget.address.equals(device.address, ignoreCase = true)
+                                val name = try { device.name ?: device.address } catch (_: SecurityException) { device.address }
+
+                                Surface(
+                                    onClick = { if (!isConflict) onSelected(target) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    enabled = !isConflict,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = if (isConflict) Color.Gray else MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(device.address, fontSize = 11.sp, color = Color.Gray)
+                                            if (isConflict) {
+                                                Text(
+                                                    stringResource(R.string.settings_label_printer_same_as_receipt_warning),
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
+                                        if (isSelected) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // USB Tab Content
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Switch(
+                                    checked = showAllUsb,
+                                    onCheckedChange = { showAllUsb = it }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.settings_usb_show_all),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            IconButton(onClick = { refreshUsbDevices() }) {
+                                Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.settings_usb_device_refresh))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (showSameAsReceiptOption) {
+                                val isSelected = currentTarget is PrinterTarget.None
+                                Surface(
+                                    onClick = { onSelected(PrinterTarget.None) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                stringResource(R.string.settings_cash_drawer_same_as_receipt),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                            val receiptDisplay = formatPrinterTargetDisplay(context, receiptPrinterTarget)
+                                            Text(
+                                                if (receiptDisplay.isNotBlank()) receiptDisplay else stringResource(R.string.settings_bluetooth_not_paired),
+                                                fontSize = 11.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                        if (isSelected) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            } else {
+                                val isNoneSelected = currentTarget is PrinterTarget.None
+                                Surface(
+                                    onClick = { onSelected(PrinterTarget.None) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isNoneSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                stringResource(R.string.settings_printer_none_not_set),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                            Text(
+                                                stringResource(R.string.settings_bluetooth_not_paired),
+                                                fontSize = 11.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                        if (isNoneSelected) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            }
+
+                            if (usbDevices.isEmpty()) {
+                                Text(
+                                    stringResource(R.string.settings_usb_no_devices_found),
+                                    fontSize = 13.sp,
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            } else {
+                                usbDevices.forEach { dev ->
+                                    val deviceKey = buildUsbDeviceKey(dev)
+                                    val target = PrinterTarget.Usb(deviceKey)
+                                    val isConflict = disabledPrinterTarget !is PrinterTarget.None && isSamePrinterTarget(target, disabledPrinterTarget)
+                                    val isSelected = currentTarget is PrinterTarget.Usb && isSamePrinterTarget(currentTarget, target)
+                                    val prodName = try { dev.productName } catch (_: Exception) { null }
+                                    val mfgName = try { dev.manufacturerName } catch (_: Exception) { null }
+                                    val displayName = formatUsbDeviceDisplay(prodName, mfgName, dev.vendorId, dev.productId)
+
+                                    Surface(
+                                        onClick = { if (!isConflict) onSelected(target) },
+                                        shape = RoundedCornerShape(8.dp),
+                                        enabled = !isConflict,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    displayName,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 14.sp,
+                                                    color = if (isConflict) Color.Gray else MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(deviceKey, fontSize = 11.sp, color = Color.Gray)
+                                                if (isConflict) {
+                                                    Text(
+                                                        stringResource(R.string.settings_label_printer_same_as_receipt_warning),
+                                                        fontSize = 11.sp,
+                                                        color = MaterialTheme.colorScheme.error
+                                                    )
+                                                }
+                                            }
+                                            if (isSelected) {
+                                                Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1761,6 +2016,36 @@ private fun BluetoothPrinterPickerDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_button_close)) }
         }
+    )
+}
+
+/** Legacy compatibility wrapper for Bluetooth printer picker dialog. */
+@Composable
+private fun BluetoothPrinterPickerDialog(
+    currentAddress: String,
+    showSameAsReceiptOption: Boolean = false,
+    receiptPrinterAddress: String = "",
+    disabledPrinterAddress: String = "",
+    onSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val currentTarget = if (currentAddress.startsWith("usb:", ignoreCase = true)) PrinterTarget.Usb(currentAddress)
+        else if (currentAddress.isNotBlank()) PrinterTarget.Bluetooth(currentAddress)
+        else PrinterTarget.None
+    val receiptTarget = if (receiptPrinterAddress.startsWith("usb:", ignoreCase = true)) PrinterTarget.Usb(receiptPrinterAddress)
+        else if (receiptPrinterAddress.isNotBlank()) PrinterTarget.Bluetooth(receiptPrinterAddress)
+        else PrinterTarget.None
+    val disabledTarget = if (disabledPrinterAddress.startsWith("usb:", ignoreCase = true)) PrinterTarget.Usb(disabledPrinterAddress)
+        else if (disabledPrinterAddress.isNotBlank()) PrinterTarget.Bluetooth(disabledPrinterAddress)
+        else PrinterTarget.None
+
+    CombinedPrinterPickerDialog(
+        currentTarget = currentTarget,
+        showSameAsReceiptOption = showSameAsReceiptOption,
+        receiptPrinterTarget = receiptTarget,
+        disabledPrinterTarget = disabledTarget,
+        onSelected = { target -> onSelected(target.identifier) },
+        onDismiss = onDismiss
     )
 }
 

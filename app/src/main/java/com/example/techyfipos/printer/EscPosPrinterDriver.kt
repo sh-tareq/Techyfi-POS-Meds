@@ -247,13 +247,13 @@ object EscPosPrinterDriver {
     }
 
     /**
-     * Direct Bluetooth SPP printing over RFCOMM socket using shared BluetoothPrinterTransport.
+     * Direct thermal receipt printing over RFCOMM socket or USB bulk endpoint.
      * Runs rasterization off the main thread on Dispatchers.Default.
      * Transmits receipt commands and bands as distinct timed segments to protect printer buffers.
      */
     suspend fun printReceiptDirect(
         context: Context,
-        printerAddress: String,
+        target: PrinterTarget,
         bitmap: Bitmap,
         paperWidthDots: Int = 384,
         autoKickDrawer: Boolean = false,
@@ -293,7 +293,38 @@ object EscPosPrinterDriver {
 
             Pair(segList, delayList)
         }
-        return sendToBluetoothPrinter(context, printerAddress, segments, delays)
+        return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays)
+    }
+
+    suspend fun printReceiptDirect(
+        context: Context,
+        printerAddress: String,
+        bitmap: Bitmap,
+        paperWidthDots: Int = 384,
+        autoKickDrawer: Boolean = false,
+        darkness: Int = 8,
+        cutMode: ReceiptCutMode = ReceiptCutMode.PARTIAL,
+        feedLines: Int = 4,
+        cutCommandStyle: String = "GS_V"
+    ): DirectPrintResult {
+        val target = if (printerAddress.trim().startsWith("usb:", ignoreCase = true)) {
+            PrinterTarget.Usb(printerAddress.trim())
+        } else if (printerAddress.isNotBlank()) {
+            PrinterTarget.Bluetooth(printerAddress.trim())
+        } else {
+            PrinterTarget.None
+        }
+        return printReceiptDirect(
+            context = context,
+            target = target,
+            bitmap = bitmap,
+            paperWidthDots = paperWidthDots,
+            autoKickDrawer = autoKickDrawer,
+            darkness = darkness,
+            cutMode = cutMode,
+            feedLines = feedLines,
+            cutCommandStyle = cutCommandStyle
+        )
     }
 
     /**
@@ -301,7 +332,7 @@ object EscPosPrinterDriver {
      */
     suspend fun printCutTestDirect(
         context: Context,
-        printerAddress: String,
+        target: PrinterTarget,
         paperWidthDots: Int = 384,
         darkness: Int = 8,
         cutMode: ReceiptCutMode = ReceiptCutMode.PARTIAL,
@@ -313,6 +344,33 @@ object EscPosPrinterDriver {
             val bands = bitmapToEscPosBands(bitmap, paperWidthDots, darkness)
             buildCutTestSegments(bands, cutMode, feedLines, cutCommandStyle)
         }
-        return sendToBluetoothPrinter(context, printerAddress, segments, delays)
+        return sendToPrinter(context, target, segments, perSegmentDelaysMs = delays)
+    }
+
+    suspend fun printCutTestDirect(
+        context: Context,
+        printerAddress: String,
+        paperWidthDots: Int = 384,
+        darkness: Int = 8,
+        cutMode: ReceiptCutMode = ReceiptCutMode.PARTIAL,
+        feedLines: Int = 4,
+        cutCommandStyle: String = "GS_V"
+    ): DirectPrintResult {
+        val target = if (printerAddress.trim().startsWith("usb:", ignoreCase = true)) {
+            PrinterTarget.Usb(printerAddress.trim())
+        } else if (printerAddress.isNotBlank()) {
+            PrinterTarget.Bluetooth(printerAddress.trim())
+        } else {
+            PrinterTarget.None
+        }
+        return printCutTestDirect(
+            context = context,
+            target = target,
+            paperWidthDots = paperWidthDots,
+            darkness = darkness,
+            cutMode = cutMode,
+            feedLines = feedLines,
+            cutCommandStyle = cutCommandStyle
+        )
     }
 }

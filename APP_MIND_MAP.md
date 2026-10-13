@@ -629,27 +629,29 @@ mindmap
       Hardware and cash drawer
         Printers settings card
           Receipt printer
-            Print method selector: Bluetooth, Android print service, Auto
-            Direct Bluetooth ESC/POS driver (58mm / 80mm roll width)
+            Print method selector: Direct (Bluetooth/USB), Android print service, Auto
+            Direct ESC/POS driver for Bluetooth SPP and USB Host (58mm / 80mm roll width)
+            Paper auto-cut configuration: Full cut, Half cut, or No cut with feed lines slider (0-10)
+            Dedicated Test Cut button sending test line feed and cut commands
             Receipt print darkness slider (0-15) with software luminance thresholding
             System print service note when in SYSTEM mode
             Test receipt button with real-time feedback
           Label printer
-            Print method selector: Bluetooth, Android print service, Auto
-            Direct Bluetooth TSPL driver (Deli E886BW support at 203 DPI)
+            Print method selector: Direct (Bluetooth/USB), Android print service, Auto
+            Direct TSPL driver for Bluetooth SPP and USB Host (Deli E886BW and standard TSPL at 203 DPI)
             Label gap adjustment (mm) and darkness slider (0-15)
             Test label button with real-time feedback
             Printer conflict warning banner if set to the same device as receipt printer
           Printer conflict prevention
-            Validation dialog blocks assigning the same Bluetooth printer to both receipt and label roles
+            Validation dialog blocks assigning the same Bluetooth or USB printer to both receipt and label roles
             Direct print dispatch guard prevents TSPL garbage output on ESC/POS receipt printers
           Deferred slider persistence: local Compose state during drag and save on onValueChangeFinished
           Cash drawer kick
-            Option for Same as receipt printer or custom address
+            Option for Same as receipt printer or custom address/device key
             Enable or disable automatic drawer kick for Cash and Split sales
-            Test Kick sends the ESC/POS pulse through Bluetooth SPP
+            Test Kick sends the ESC/POS pulse through Bluetooth SPP or USB bulk endpoint
           Instant persistence on all printer settings via SettingsViewModel
-          Bluetooth device picker with Bluetooth-off guidance
+          Combined printer picker dialog with Bluetooth and USB tabs, refresh button, and show-all toggle
       Shop and invoice setup
         Shop name
         Address
@@ -1018,7 +1020,7 @@ mindmap
 - A day can have multiple `RegisterClosing` records for multiple shifts; each closing only includes activity after today's previous closing timestamp. There is no lock preventing further sales after a close.
 - Expense and register-closing audit names are overwritten at repository entry with the authenticated owner's session name; UI/default `"Admin"` values cannot spoof the stored operator.
 - A Quick Sale line item creates an ephemeral, non-persisted `Product` (barcode `CUSTOM-<timestamp>`, `stockQty = 999999`) that is never written to the `products` table; it never decrements real inventory, and two quick-sales with the same title are still distinct barcodes (different timestamps), so they will never match a prior sale's line item by barcode.
-- Cash Drawer Kick uses Bluetooth SPP to write the ESC/POS pulse bytes to a paired thermal printer. Pairing itself remains in Android Bluetooth settings; the app only lists bonded devices and stores the selected MAC address.
+- Cash Drawer Kick uses Bluetooth SPP or USB bulk transfer to write the ESC/POS pulse bytes to a paired or connected thermal printer. Bluetooth pairing remains in Android Bluetooth settings while USB printers are detected via Android USB Host with runtime permission prompts.
 - Fractional/decimal quantity support (`Product.stockQty`, `SaleItem.quantity`, `ReturnItem.quantity`, `CartItem.quantity` are all `Double`) is inferred purely from the product's `unit` string matching a fixed list (kg, gm/g, ltr/liter/litre, ml, mtr/meter/metre) everywhere it's used — there is no explicit `isFractional` flag on `Product`.
 - Price Mode (Sale/MRP/Bulk) reads `Product.sellingPrice` / `mrpPrice` / `wholesalePrice` respectively, each falling back to `sellingPrice` when the tier-specific field is 0/unset.
 - A Due Reminder can only have one pending scheduled instance per customer phone number at a time (WorkManager unique work keyed by normalized phone digits); scheduling a new one replaces the previous one. Pending reminders are mirrored in Room and can be listed/cancelled from Dues; the worker removes its tracking row after completion.

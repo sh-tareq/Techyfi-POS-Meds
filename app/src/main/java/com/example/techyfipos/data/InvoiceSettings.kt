@@ -1,5 +1,6 @@
 package com.example.techyfipos.data
 
+import com.example.techyfipos.printer.PrinterTarget
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -68,15 +69,21 @@ data class InvoiceSettingsData(
     val taxLabel: String = "VAT",
     val taxInclusive: Boolean = false,
     val cashDrawerKickEnabled: Boolean = true,
+    val cashDrawerPrinterConnection: String = "BLUETOOTH", // "BLUETOOTH", "USB"
+    val cashDrawerUsbDeviceKey: String = "",
     // MAC address of the paired Bluetooth (SPP) receipt printer the cash-drawer ESC/POS pulse is sent to.
     val cashDrawerPrinterAddress: String = "",
     val directBluetoothPrintEnabled: Boolean = false,
+    val receiptPrinterConnection: String = "BLUETOOTH", // "BLUETOOTH", "USB"
+    val receiptUsbDeviceKey: String = "",
     val directBluetoothPrinterAddress: String = "",
     val receiptPrintMode: String = "AUTO", // "BLUETOOTH", "SYSTEM", "AUTO"
     val receiptDarkness: Int = 8,
     val receiptCutMode: String = "PARTIAL", // "FULL", "PARTIAL", "NONE"
     val receiptFeedLinesBeforeCut: Int = 4,
     val receiptCutCommandStyle: String = "GS_V", // "GS_V", "LEGACY_ESC", "GS_V_FEED"
+    val labelPrinterConnection: String = "BLUETOOTH", // "BLUETOOTH", "USB"
+    val labelUsbDeviceKey: String = "",
     val labelPrintMode: String = "AUTO", // "BLUETOOTH", "SYSTEM", "AUTO"
     val labelPrinterAddress: String = "",
     val labelGapMm: Float = 2f,
@@ -113,9 +120,72 @@ data class InvoiceSettingsData(
         )
     )
 ) {
-    fun resolvedReceiptPrinterAddress(): String {
+    fun resolvedReceiptPrinterTarget(): PrinterTarget {
+        val conn = receiptPrinterConnection.trim().uppercase()
+        if (conn == "USB" && receiptUsbDeviceKey.isNotBlank()) {
+            return PrinterTarget.Usb(receiptUsbDeviceKey.trim())
+        }
         val direct = directBluetoothPrinterAddress.trim()
-        return if (direct.isNotBlank()) direct else cashDrawerPrinterAddress.trim()
+        if (direct.isNotBlank()) {
+            return if (direct.startsWith("usb:", ignoreCase = true)) {
+                PrinterTarget.Usb(direct)
+            } else {
+                PrinterTarget.Bluetooth(direct)
+            }
+        }
+        val drawerConn = cashDrawerPrinterConnection.trim().uppercase()
+        if (drawerConn == "USB" && cashDrawerUsbDeviceKey.isNotBlank()) {
+            return PrinterTarget.Usb(cashDrawerUsbDeviceKey.trim())
+        }
+        val drawer = cashDrawerPrinterAddress.trim()
+        if (drawer.isNotBlank()) {
+            return if (drawer.startsWith("usb:", ignoreCase = true)) {
+                PrinterTarget.Usb(drawer)
+            } else {
+                PrinterTarget.Bluetooth(drawer)
+            }
+        }
+        return PrinterTarget.None
+    }
+
+    fun resolvedLabelPrinterTarget(): PrinterTarget {
+        val conn = labelPrinterConnection.trim().uppercase()
+        if (conn == "USB" && labelUsbDeviceKey.isNotBlank()) {
+            return PrinterTarget.Usb(labelUsbDeviceKey.trim())
+        }
+        val addr = labelPrinterAddress.trim()
+        if (addr.isNotBlank()) {
+            return if (addr.startsWith("usb:", ignoreCase = true)) {
+                PrinterTarget.Usb(addr)
+            } else {
+                PrinterTarget.Bluetooth(addr)
+            }
+        }
+        return PrinterTarget.None
+    }
+
+    fun resolvedCashDrawerPrinterTarget(): PrinterTarget {
+        val conn = cashDrawerPrinterConnection.trim().uppercase()
+        if (conn == "USB" && cashDrawerUsbDeviceKey.isNotBlank()) {
+            return PrinterTarget.Usb(cashDrawerUsbDeviceKey.trim())
+        }
+        val addr = cashDrawerPrinterAddress.trim()
+        if (addr.isNotBlank()) {
+            return if (addr.startsWith("usb:", ignoreCase = true)) {
+                PrinterTarget.Usb(addr)
+            } else {
+                PrinterTarget.Bluetooth(addr)
+            }
+        }
+        return resolvedReceiptPrinterTarget()
+    }
+
+    fun resolvedReceiptPrinterAddress(): String {
+        return when (val target = resolvedReceiptPrinterTarget()) {
+            is PrinterTarget.Bluetooth -> target.macAddress
+            is PrinterTarget.Usb -> target.deviceKey
+            is PrinterTarget.None -> ""
+        }
     }
 
     fun toJson(): String {
@@ -155,14 +225,20 @@ data class InvoiceSettingsData(
             put("taxLabel", taxLabel)
             put("taxInclusive", taxInclusive)
             put("cashDrawerKickEnabled", cashDrawerKickEnabled)
+            put("cashDrawerPrinterConnection", cashDrawerPrinterConnection)
+            put("cashDrawerUsbDeviceKey", cashDrawerUsbDeviceKey)
             put("cashDrawerPrinterAddress", cashDrawerPrinterAddress)
             put("directBluetoothPrintEnabled", directBluetoothPrintEnabled)
+            put("receiptPrinterConnection", receiptPrinterConnection)
+            put("receiptUsbDeviceKey", receiptUsbDeviceKey)
             put("directBluetoothPrinterAddress", directBluetoothPrinterAddress)
             put("receiptPrintMode", receiptPrintMode)
             put("receiptDarkness", receiptDarkness)
             put("receiptCutMode", receiptCutMode)
             put("receiptFeedLinesBeforeCut", receiptFeedLinesBeforeCut)
             put("receiptCutCommandStyle", receiptCutCommandStyle)
+            put("labelPrinterConnection", labelPrinterConnection)
+            put("labelUsbDeviceKey", labelUsbDeviceKey)
             put("labelPrintMode", labelPrintMode)
             put("labelPrinterAddress", labelPrinterAddress)
             put("labelGapMm", labelGapMm.toDouble())
@@ -258,8 +334,16 @@ data class InvoiceSettingsData(
                     taxLabel = json.optString("taxLabel", "VAT").ifBlank { "VAT" },
                     taxInclusive = json.optBoolean("taxInclusive", false),
                     cashDrawerKickEnabled = json.optBoolean("cashDrawerKickEnabled", true),
+                    cashDrawerPrinterConnection = json.optString("cashDrawerPrinterConnection", "BLUETOOTH").trim().uppercase().let {
+                        if (it in listOf("BLUETOOTH", "USB")) it else "BLUETOOTH"
+                    },
+                    cashDrawerUsbDeviceKey = json.optString("cashDrawerUsbDeviceKey", "").trim(),
                     cashDrawerPrinterAddress = json.optString("cashDrawerPrinterAddress", ""),
                     directBluetoothPrintEnabled = directBtEnabled || resolvedReceiptPrintMode == "BLUETOOTH",
+                    receiptPrinterConnection = json.optString("receiptPrinterConnection", "BLUETOOTH").trim().uppercase().let {
+                        if (it in listOf("BLUETOOTH", "USB")) it else "BLUETOOTH"
+                    },
+                    receiptUsbDeviceKey = json.optString("receiptUsbDeviceKey", "").trim(),
                     directBluetoothPrinterAddress = json.optString("directBluetoothPrinterAddress", ""),
                     receiptPrintMode = resolvedReceiptPrintMode,
                     receiptDarkness = json.optInt("receiptDarkness", 8),
@@ -270,6 +354,10 @@ data class InvoiceSettingsData(
                     receiptCutCommandStyle = json.optString("receiptCutCommandStyle", "GS_V").trim().uppercase().let {
                         if (it in listOf("GS_V", "LEGACY_ESC", "GS_V_FEED")) it else "GS_V"
                     },
+                    labelPrinterConnection = json.optString("labelPrinterConnection", "BLUETOOTH").trim().uppercase().let {
+                        if (it in listOf("BLUETOOTH", "USB")) it else "BLUETOOTH"
+                    },
+                    labelUsbDeviceKey = json.optString("labelUsbDeviceKey", "").trim(),
                     labelPrintMode = json.optString("labelPrintMode", "AUTO").ifBlank { "AUTO" },
                     labelPrinterAddress = json.optString("labelPrinterAddress", ""),
                     labelGapMm = json.optDouble("labelGapMm", 2.0).toFloat(),

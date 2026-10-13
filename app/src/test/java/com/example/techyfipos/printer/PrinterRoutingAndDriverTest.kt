@@ -11,6 +11,8 @@ import com.example.techyfipos.utils.reportStoreName
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyInt
@@ -635,6 +637,230 @@ class PrinterRoutingAndDriverTest {
         }.toString()
         val loadedNegative = InvoiceSettingsData.fromJson(jsonNegative)
         assertEquals(0, loadedNegative.receiptFeedLinesBeforeCut)
+    }
+
+    // 23. Tests for buildUsbDeviceKey and parseUsbDeviceKey
+    @Test
+    fun `buildUsbDeviceKey and parseUsbDeviceKey work symmetrically for VID, PID, and serial`() {
+        val keyWithoutSerial = buildUsbDeviceKey(1046, 20490)
+        assertEquals("usb:1046:20490", keyWithoutSerial)
+        val parsedNoSerial = parseUsbDeviceKey(keyWithoutSerial)
+        assertNotNull(parsedNoSerial)
+        assertEquals(1046, parsedNoSerial!!.vendorId)
+        assertEquals(20490, parsedNoSerial.productId)
+        assertEquals("", parsedNoSerial.serialNumber)
+
+        val keyWithSerial = buildUsbDeviceKey(1046, 20490, "SN98765")
+        assertEquals("usb:1046:20490:SN98765", keyWithSerial)
+        val parsedWithSerial = parseUsbDeviceKey(keyWithSerial)
+        assertNotNull(parsedWithSerial)
+        assertEquals(1046, parsedWithSerial!!.vendorId)
+        assertEquals(20490, parsedWithSerial.productId)
+        assertEquals("SN98765", parsedWithSerial.serialNumber)
+
+        // Serial number with colons
+        val keyMultiColon = buildUsbDeviceKey(1234, 5678, "ABC:123:XYZ")
+        assertEquals("usb:1234:5678:ABC:123:XYZ", keyMultiColon)
+        val parsedMultiColon = parseUsbDeviceKey(keyMultiColon)
+        assertNotNull(parsedMultiColon)
+        assertEquals("ABC:123:XYZ", parsedMultiColon!!.serialNumber)
+
+        // Invalid keys return null
+        assertNull(parseUsbDeviceKey(""))
+        assertNull(parseUsbDeviceKey("   "))
+        assertNull(parseUsbDeviceKey("00:11:22:33:44:55"))
+        assertNull(parseUsbDeviceKey("usb"))
+        assertNull(parseUsbDeviceKey("usb:notanumber:20490"))
+        assertNull(parseUsbDeviceKey("usb:1046:notanumber"))
+    }
+
+    // 24. Tests for isSamePrinterTarget()
+    @Test
+    fun `isSamePrinterTarget correctly compares Bluetooth, USB, and None targets`() {
+        val bt1 = PrinterTarget.Bluetooth("00:11:22:33:44:55")
+        val bt1Lower = PrinterTarget.Bluetooth("00:11:22:33:44:55")
+        val bt2 = PrinterTarget.Bluetooth("AA:BB:CC:DD:EE:FF")
+        val usb1 = PrinterTarget.Usb("usb:1046:20490")
+        val usb1WithSerial = PrinterTarget.Usb("usb:1046:20490:SN1")
+        val usb1WithSerialUpper = PrinterTarget.Usb("usb:1046:20490:sn1")
+        val usb2DiffSerial = PrinterTarget.Usb("usb:1046:20490:SN2")
+        val usb3DiffPid = PrinterTarget.Usb("usb:1046:9999")
+        val none = PrinterTarget.None
+
+        // Same Bluetooth targets
+        assertTrue(isSamePrinterTarget(bt1, bt1Lower))
+        // Different Bluetooth targets
+        assertFalse(isSamePrinterTarget(bt1, bt2))
+
+        // Same USB targets
+        assertTrue(isSamePrinterTarget(usb1, PrinterTarget.Usb("usb:1046:20490")))
+        assertTrue(isSamePrinterTarget(usb1WithSerial, usb1WithSerialUpper))
+
+        // Different USB targets
+        assertFalse(isSamePrinterTarget(usb1WithSerial, usb2DiffSerial))
+        assertFalse(isSamePrinterTarget(usb1, usb3DiffPid))
+
+        // Cross-protocol comparisons
+        assertFalse(isSamePrinterTarget(bt1, usb1))
+        assertFalse(isSamePrinterTarget(usb1, bt1))
+
+        // None comparisons
+        assertFalse(isSamePrinterTarget(none, none))
+        assertFalse(isSamePrinterTarget(none, bt1))
+        assertFalse(isSamePrinterTarget(usb1, none))
+    }
+
+    // 25. Tests for isSamePrinter() string comparison with USB keys
+    @Test
+    fun `isSamePrinter supports usb key format and compares VID, PID, and serial`() {
+        assertTrue(isSamePrinter("usb:1046:20490", "usb:1046:20490"))
+        assertTrue(isSamePrinter("  USB:1046:20490  ", "usb:1046:20490"))
+        assertTrue(isSamePrinter("usb:1046:20490:sn123", "USB:1046:20490:SN123"))
+
+        assertFalse(isSamePrinter("usb:1046:20490", "usb:1046:20491"))
+        assertFalse(isSamePrinter("usb:1046:20490:SN1", "usb:1046:20490:SN2"))
+        assertFalse(isSamePrinter("00:11:22:33:44:55", "usb:1046:20490"))
+    }
+
+    // 26. Tests for selectPrinterInterfaceAndEndpoint()
+    @Test
+    fun `selectPrinterInterfaceAndEndpoint selects printer class bulk OUT interface or falls back to vendor specific`() {
+        val printerBulkOutEp = UsbEndpointInfo(endpointNumber = 1, direction = 0 /* OUT */, type = 2 /* BULK */, maxPacketSize = 64)
+        val interruptInEp = UsbEndpointInfo(endpointNumber = 2, direction = 128 /* IN */, type = 3 /* INTERRUPT */, maxPacketSize = 8)
+
+        val printerIface = UsbInterfaceInfo(
+            id = 0,
+            interfaceClass = 7, /* USB_CLASS_PRINTER */
+            interfaceSubclass = 1,
+            interfaceProtocol = 2,
+            endpoints = listOf(printerBulkOutEp, interruptInEp)
+        )
+        val otherIface = UsbInterfaceInfo(
+            id = 1,
+            interfaceClass = 3, /* HID */
+            interfaceSubclass = 0,
+            interfaceProtocol = 0,
+            endpoints = listOf(interruptInEp)
+        )
+
+        // Selects printer class interface
+        val selectedPrinter = selectPrinterInterfaceAndEndpoint(listOf(otherIface, printerIface))
+        assertNotNull(selectedPrinter)
+        assertEquals(0, selectedPrinter!!.first.id)
+        assertEquals(1, selectedPrinter.second.endpointNumber)
+
+        // Vendor-specific (255) fallback when no printer class exists
+        val vendorSpecificBulkOut = UsbInterfaceInfo(
+            id = 2,
+            interfaceClass = 255,
+            interfaceSubclass = 255,
+            interfaceProtocol = 255,
+            endpoints = listOf(printerBulkOutEp)
+        )
+        val selectedVendor = selectPrinterInterfaceAndEndpoint(listOf(otherIface, vendorSpecificBulkOut))
+        assertNotNull(selectedVendor)
+        assertEquals(2, selectedVendor!!.first.id)
+
+        // Returns null if no interface has bulk OUT endpoint
+        val noBulkOutIface = UsbInterfaceInfo(
+            id = 3,
+            interfaceClass = 7,
+            interfaceSubclass = 1,
+            interfaceProtocol = 2,
+            endpoints = listOf(interruptInEp)
+        )
+        assertNull(selectPrinterInterfaceAndEndpoint(listOf(noBulkOutIface, otherIface)))
+        assertNull(selectPrinterInterfaceAndEndpoint(emptyList()))
+    }
+
+    // 27. Tests for InvoiceSettingsData USB JSON round trip
+    @Test
+    fun `InvoiceSettingsData JSON round trip preserves USB connections and keys`() {
+        val settings = InvoiceSettingsData(
+            receiptPrinterConnection = "USB",
+            receiptUsbDeviceKey = "usb:1046:20490:REC01",
+            labelPrinterConnection = "USB",
+            labelUsbDeviceKey = "usb:4505:180:LBL02",
+            cashDrawerPrinterConnection = "USB",
+            cashDrawerUsbDeviceKey = "usb:1046:20490:REC01"
+        )
+        val json = settings.toJson()
+        val loaded = InvoiceSettingsData.fromJson(json)
+
+        assertEquals("USB", loaded.receiptPrinterConnection)
+        assertEquals("usb:1046:20490:REC01", loaded.receiptUsbDeviceKey)
+        assertEquals("USB", loaded.labelPrinterConnection)
+        assertEquals("usb:4505:180:LBL02", loaded.labelUsbDeviceKey)
+        assertEquals("USB", loaded.cashDrawerPrinterConnection)
+        assertEquals("usb:1046:20490:REC01", loaded.cashDrawerUsbDeviceKey)
+    }
+
+    // 28. Tests for InvoiceSettingsData resolved target fallback logic
+    @Test
+    fun `InvoiceSettingsData resolved targets handle USB and fallback cleanly`() {
+        // USB configured and key non-blank
+        val usbSettings = InvoiceSettingsData(
+            receiptPrinterConnection = "USB",
+            receiptUsbDeviceKey = "usb:1046:20490",
+            labelPrinterConnection = "USB",
+            labelUsbDeviceKey = "usb:4505:180",
+            cashDrawerPrinterConnection = "USB",
+            cashDrawerUsbDeviceKey = "usb:1046:20490"
+        )
+        assertEquals(PrinterTarget.Usb("usb:1046:20490"), usbSettings.resolvedReceiptPrinterTarget())
+        assertEquals(PrinterTarget.Usb("usb:4505:180"), usbSettings.resolvedLabelPrinterTarget())
+        assertEquals(PrinterTarget.Usb("usb:1046:20490"), usbSettings.resolvedCashDrawerPrinterTarget())
+        assertEquals("usb:1046:20490", usbSettings.resolvedReceiptPrinterAddress())
+
+        // USB connection selected but key is blank -> falls back to Bluetooth address
+        val emptyUsbSettings = InvoiceSettingsData(
+            receiptPrinterConnection = "USB",
+            receiptUsbDeviceKey = "",
+            directBluetoothPrinterAddress = "00:11:22:33:44:55"
+        )
+        assertEquals(PrinterTarget.Bluetooth("00:11:22:33:44:55"), emptyUsbSettings.resolvedReceiptPrinterTarget())
+
+        // Cash drawer "Same as receipt printer" (blank address and blank USB key) inherits receipt target
+        val inheritedDrawerSettings = InvoiceSettingsData(
+            receiptPrinterConnection = "USB",
+            receiptUsbDeviceKey = "usb:1046:20490",
+            cashDrawerPrinterConnection = "BLUETOOTH",
+            cashDrawerPrinterAddress = "",
+            cashDrawerUsbDeviceKey = ""
+        )
+        assertEquals(PrinterTarget.Usb("usb:1046:20490"), inheritedDrawerSettings.resolvedCashDrawerPrinterTarget())
+    }
+
+    // 29. Tests for decidePrintRouting with USB targets
+    @Test
+    fun `decidePrintRouting handles USB targets with correct error and fallback decisions`() {
+        val usbTarget = "usb:1046:20490"
+
+        // Success in DIRECT (BLUETOOTH) or AUTO mode -> DIRECT_OK
+        assertEquals(RoutingDecision.DIRECT_OK, decidePrintRouting("BLUETOOTH", usbTarget, DirectPrintResult.Success))
+        assertEquals(RoutingDecision.DIRECT_OK, decidePrintRouting("AUTO", usbTarget, DirectPrintResult.Success))
+
+        // UsbDeviceNotFound in DIRECT mode -> SHOW_ERROR
+        assertEquals(
+            RoutingDecision.SHOW_ERROR,
+            decidePrintRouting("BLUETOOTH", usbTarget, DirectPrintResult.UsbDeviceNotFound)
+        )
+
+        // UsbDeviceNotFound in AUTO mode -> SHOW_ERROR_THEN_SYSTEM_DIALOG
+        assertEquals(
+            RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG,
+            decidePrintRouting("AUTO", usbTarget, DirectPrintResult.UsbDeviceNotFound)
+        )
+
+        // UsbNoPermission in DIRECT mode -> SHOW_ERROR
+        assertEquals(
+            RoutingDecision.SHOW_ERROR,
+            decidePrintRouting("BLUETOOTH", usbTarget, DirectPrintResult.UsbNoPermission)
+        )
+
+        // Blank target -> NoAddress -> SHOW_ERROR in DIRECT, SYSTEM_DIALOG in AUTO
+        assertEquals(RoutingDecision.SHOW_ERROR, decidePrintRouting("BLUETOOTH", "", DirectPrintResult.NoAddress))
+        assertEquals(RoutingDecision.SYSTEM_DIALOG, decidePrintRouting("AUTO", "", DirectPrintResult.NoAddress))
     }
 }
 
