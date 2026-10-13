@@ -135,6 +135,17 @@ private const val CHUNK_SIZE = 512
 private const val CHUNK_DELAY_MS = 15L
 private const val CONNECT_SETTLE_MS = 250L
 private const val POST_PRINT_DRAIN_MS = 300L
+private const val POST_PRINT_DRAIN_MAX_MS = 4000L
+private const val DRAIN_BYTES_PER_MS = 25
+
+/**
+ * How long to keep the Bluetooth socket open after the last write.
+ * Closing the RFCOMM socket drops bytes still queued in the phone's Bluetooth stack. A long receipt
+ * leaves tens of KB queued, so a fixed short wait loses the tail of the job (the feed and cut command).
+ * Scales with the payload size, between 300 ms and 4 s.
+ */
+fun bluetoothPostPrintDrainMs(totalBytes: Int): Long =
+    (POST_PRINT_DRAIN_MS + totalBytes.coerceAtLeast(0) / DRAIN_BYTES_PER_MS).coerceIn(POST_PRINT_DRAIN_MS, POST_PRINT_DRAIN_MAX_MS)
 
 @SuppressLint("MissingPermission")
 suspend fun sendToBluetoothPrinter(
@@ -252,7 +263,7 @@ suspend fun sendToBluetoothPrinter(
             }
         }
         os.flush()
-        delay(POST_PRINT_DRAIN_MS)
+        delay(bluetoothPostPrintDrainMs(segments.sumOf { it.size }))
         DirectPrintResult.Success
     } catch (e: Exception) {
         Log.e(TAG, "Bluetooth communication failed: ${e.message}", e)

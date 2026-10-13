@@ -867,6 +867,16 @@ class PrinterRoutingAndDriverTest {
         assertEquals(RoutingDecision.SHOW_ERROR, decidePrintRouting("BLUETOOTH", "", DirectPrintResult.NoAddress))
         assertEquals(RoutingDecision.SYSTEM_DIALOG, decidePrintRouting("AUTO", "", DirectPrintResult.NoAddress))
     }
+
+    @Test
+    fun `bluetoothPostPrintDrainMs scales with payload size and is clamped`() {
+        assertEquals(300L, bluetoothPostPrintDrainMs(0))
+        assertEquals(300L, bluetoothPostPrintDrainMs(-5))
+        // small cut test job keeps the short wait
+        assertEquals(300L + 5_000L / 25, bluetoothPostPrintDrainMs(5_000))
+        // a long receipt (about 100 KB) waits much longer so the feed and cut bytes are not dropped
+        assertEquals(4000L, bluetoothPostPrintDrainMs(100_000))
+        assertEquals(4000L, bluetoothPostPrintDrainMs(Int.MAX_VALUE))
+        assertTrue(bluetoothPostPrintDrainMs(60_000) > bluetoothPostPrintDrainMs(5_000))
+    }
 }
-
-
