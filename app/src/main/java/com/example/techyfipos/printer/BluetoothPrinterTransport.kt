@@ -161,6 +161,20 @@ fun bluetoothChunkDelayMs(totalBytes: Int): Long {
 }
 
 /**
+ * Resolves the chunk delay in milliseconds.
+ * Initial payload chunks (up to [CHUNK_DELAY_THRESHOLD_BYTES]) burst at [CHUNK_DELAY_MIN_MS] (15 ms)
+ * to fill the printer input buffer rapidly so paper starts moving immediately.
+ * Subsequent chunks apply adaptive pacing based on total payload size to protect against UART buffer overruns.
+ */
+fun resolveBluetoothChunkDelayMs(bytesWrittenSoFar: Int, totalBytes: Int): Long {
+    return if (bytesWrittenSoFar <= CHUNK_DELAY_THRESHOLD_BYTES) {
+        CHUNK_DELAY_MIN_MS
+    } else {
+        bluetoothChunkDelayMs(totalBytes)
+    }
+}
+
+/**
  * How long to keep the Bluetooth socket open after the last write when no status reply is received.
  * Closing the RFCOMM socket drops bytes still queued in the phone's Bluetooth stack. A long receipt
  * leaves tens of KB queued, so a fixed short wait loses the tail of the job (the feed and cut command).
@@ -367,6 +381,7 @@ suspend fun sendToBluetoothPrinter(
             val totalBytes = segments.sumOf { it.size }
             val chunkDelayMs = bluetoothChunkDelayMs(totalBytes)
             val writeStartTime = System.currentTimeMillis()
+            var bytesWrittenSoFar = 0
             for ((index, segment) in segments.withIndex()) {
                 var offset = 0
                 while (offset < segment.size) {
@@ -376,8 +391,9 @@ suspend fun sendToBluetoothPrinter(
                     }
                     os.write(segment, offset, length)
                     offset += length
+                    bytesWrittenSoFar += length
                     if (offset < segment.size) {
-                        delay(chunkDelayMs)
+                        delay(resolveBluetoothChunkDelayMs(bytesWrittenSoFar, totalBytes))
                     }
                 }
                 onSegmentSent?.invoke(index)

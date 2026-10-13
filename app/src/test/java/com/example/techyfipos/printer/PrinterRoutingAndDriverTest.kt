@@ -1119,4 +1119,18 @@ class PrinterRoutingAndDriverTest {
         ReceiptBitmapCache.clear()
         verify(newBitmap).recycle()
     }
+
+    // 18. Tests for resolveBluetoothChunkDelayMs
+    @Test
+    fun `resolveBluetoothChunkDelayMs bursts initial chunks at 15ms and applies payload scaling thereafter`() {
+        // Under 8192 bytes: always 15ms
+        assertEquals(15L, resolveBluetoothChunkDelayMs(bytesWrittenSoFar = 512, totalBytes = 50000))
+        assertEquals(15L, resolveBluetoothChunkDelayMs(bytesWrittenSoFar = 4096, totalBytes = 50000))
+        assertEquals(15L, resolveBluetoothChunkDelayMs(bytesWrittenSoFar = 8192, totalBytes = 50000))
+
+        // After 8192 bytes: matches bluetoothChunkDelayMs(totalBytes)
+        val expectedDelay = bluetoothChunkDelayMs(50000)
+        assertEquals(expectedDelay, resolveBluetoothChunkDelayMs(bytesWrittenSoFar = 8193, totalBytes = 50000))
+        assertEquals(expectedDelay, resolveBluetoothChunkDelayMs(bytesWrittenSoFar = 20000, totalBytes = 50000))
+    }
 }
