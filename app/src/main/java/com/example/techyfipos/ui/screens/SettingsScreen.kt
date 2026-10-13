@@ -1061,6 +1061,63 @@ private fun OptimizedSettingsHome(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+
+                    if (currentSettings.receiptCutMode != "NONE") {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = stringResource(R.string.settings_cut_command_style_label),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                                val currentStyle = currentSettings.receiptCutCommandStyle.ifBlank { "GS_V" }
+                                SegmentedButton(
+                                    selected = currentStyle == "GS_V",
+                                    onClick = { onUpdateSettings(currentSettings.copy(receiptCutCommandStyle = "GS_V")) },
+                                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.settings_cut_style_gs_v),
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                SegmentedButton(
+                                    selected = currentStyle == "LEGACY_ESC",
+                                    onClick = { onUpdateSettings(currentSettings.copy(receiptCutCommandStyle = "LEGACY_ESC")) },
+                                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.settings_cut_style_legacy),
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                SegmentedButton(
+                                    selected = currentStyle == "GS_V_FEED",
+                                    onClick = { onUpdateSettings(currentSettings.copy(receiptCutCommandStyle = "GS_V_FEED")) },
+                                    shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.settings_cut_style_gs_v_feed),
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            Text(
+                                text = stringResource(R.string.settings_cut_command_style_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             } else {
                 Text(

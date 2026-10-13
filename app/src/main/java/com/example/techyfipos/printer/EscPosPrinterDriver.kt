@@ -180,11 +180,13 @@ object EscPosPrinterDriver {
         return out.toByteArray()
     }
 
+    const val POST_RASTER_DELAY_MS = 250L
+
     /**
      * Pure function assembling timed byte segments for a cut test job.
      * Segment 1: CMD_INIT (delay 100 ms)
      * Segment 2: CMD_ALIGN_CENTER (delay 20 ms)
-     * Segments 3..n: raster image bands (delay 20 ms each)
+     * Segments 3..n: raster image bands (delay 20 ms each, 250 ms on final band before cut)
      * Last segment: feed + cut (delay 0 ms, never kicks drawer)
      */
     fun buildCutTestSegments(
@@ -202,9 +204,10 @@ object EscPosPrinterDriver {
         segList.add(CMD_ALIGN_CENTER)
         delayList.add(20L)
 
-        for (band in bands) {
+        for ((idx, band) in bands.withIndex()) {
             segList.add(band)
-            delayList.add(20L)
+            val delay = if (idx == bands.lastIndex) POST_RASTER_DELAY_MS else 20L
+            delayList.add(delay)
         }
 
         val endSegment = buildReceiptEndSegment(
@@ -372,10 +375,11 @@ object EscPosPrinterDriver {
             segList.add(CMD_ALIGN_CENTER)
             delayList.add(20L)
 
-            // Segments 3..n: one segment per GS v 0 band (header + its rows)
-            for (band in bands) {
+            // Segments 3..n: one segment per GS v 0 band (header + its rows, 250 ms delay after last band)
+            for ((idx, band) in bands.withIndex()) {
                 segList.add(band)
-                delayList.add(20L)
+                val delay = if (idx == bands.lastIndex) POST_RASTER_DELAY_MS else 20L
+                delayList.add(delay)
             }
 
             // Last segment: feed, cut, and optional drawer kick

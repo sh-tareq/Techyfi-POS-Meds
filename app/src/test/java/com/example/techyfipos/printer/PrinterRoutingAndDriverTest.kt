@@ -560,7 +560,7 @@ class PrinterRoutingAndDriverTest {
             assertEquals(20L, delays[1])
 
             assertArrayEquals(dummyBands[0], segments[2])
-            assertEquals(20L, delays[2])
+            assertEquals(EscPosPrinterDriver.POST_RASTER_DELAY_MS, delays[2])
 
             val endSeg = segments[3]
             assertEquals(0L, delays[3])
@@ -888,7 +888,7 @@ class PrinterRoutingAndDriverTest {
     }
 
     @Test
-    fun `buildCutTestSegments preserves all raster bands and appends correct end segment`() {
+    fun `buildCutTestSegments preserves all raster bands and appends correct end segment with settling delay`() {
         val dummyBands = listOf(byteArrayOf(1, 2, 3), byteArrayOf(4, 5, 6))
         val (segments, delays) = EscPosPrinterDriver.buildCutTestSegments(
             bands = dummyBands,
@@ -900,12 +900,18 @@ class PrinterRoutingAndDriverTest {
         assertEquals(5, segments.size)
         assertEquals(5, delays.size)
         assertArrayEquals(EscPosPrinterDriver.CMD_INIT, segments[0])
+        assertEquals(100L, delays[0])
         assertArrayEquals(EscPosPrinterDriver.CMD_ALIGN_CENTER, segments[1])
+        assertEquals(20L, delays[1])
         assertArrayEquals(dummyBands[0], segments[2])
+        assertEquals(20L, delays[2])
         assertArrayEquals(dummyBands[1], segments[3])
+        // Final raster band before cut must pause by POST_RASTER_DELAY_MS (250 ms)
+        assertEquals(EscPosPrinterDriver.POST_RASTER_DELAY_MS, delays[3])
         // End segment should be ESC d 4 + GS V 1 (CMD_PARTIAL_CUT)
         val expectedEnd = byteArrayOf(0x1B, 0x64, 0x04, 0x1D, 0x56, 0x01)
         assertArrayEquals(expectedEnd, segments[4])
+        assertEquals(0L, delays[4])
     }
 
     @Test
