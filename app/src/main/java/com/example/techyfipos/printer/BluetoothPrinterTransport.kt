@@ -14,6 +14,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import java.io.OutputStream
 import java.util.UUID
 
@@ -176,6 +178,71 @@ fun bluetoothResponseTimeoutMs(totalBytes: Int): Long =
     (STATUS_TIMEOUT_MIN_MS + totalBytes.coerceAtLeast(0) / DRAIN_BYTES_PER_MS).coerceIn(STATUS_TIMEOUT_MIN_MS, STATUS_TIMEOUT_MAX_MS)
 
 /**
+ * Connect preference for RFCOMM sockets.
+ */
+enum class SocketConnectPreference {
+    SECURE_FIRST,
+    INSECURE_FIRST
+}
+
+/**
+ * Pure function that resolves whether to attempt standard secure RFCOMM or insecure RFCOMM first.
+ */
+fun resolveSocketPreference(address: String, insecureSet: Set<String>): SocketConnectPreference {
+    val key = address.trim().lowercase()
+    return if (insecureSet.contains(key)) {
+        SocketConnectPreference.INSECURE_FIRST
+    } else {
+        SocketConnectPreference.SECURE_FIRST
+    }
+}
+
+/**
+ * Printers (by lower-cased MAC) where standard secure RFCOMM failed and insecure RFCOMM succeeded.
+ * Stored in-memory so subsequent print jobs to the same printer try insecure RFCOMM first,
+ * avoiding the 4-6 second timeout penalty of the failing secure attempt.
+ */
+val insecureSocketPreferred: MutableSet<String> =
+    java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+
+private const val SOCKET_CONNECT_TIMEOUT_MS = 4500L
+
+private suspend fun tryConnectSocket(
+    createSocket: () -> BluetoothSocket,
+    timeoutMs: Long
+): BluetoothSocket? = withContext(Dispatchers.IO) {
+    var rawSocket: BluetoothSocket? = null
+    try {
+        val s = createSocket()
+        rawSocket = s
+        val connected = kotlinx.coroutines.withTimeoutOrNull(timeoutMs) {
+            suspendCancellableCoroutine<Boolean> { cont ->
+                val worker = Thread {
+                    try {
+                        s.connect()
+                        if (cont.isActive) cont.resume(true)
+                    } catch (_: Exception) {
+                        try { s.close() } catch (_: Exception) {}
+                        if (cont.isActive) cont.resume(false)
+                    }
+                }
+                cont.invokeOnCancellation {
+                    try { s.close() } catch (_: Exception) {}
+                }
+                worker.start()
+            }
+        } ?: false
+        if (connected) s else {
+            try { s.close() } catch (_: Exception) {}
+            null
+        }
+    } catch (e: Exception) {
+        try { rawSocket?.close() } catch (_: Exception) {}
+        null
+    }
+}
+
+/**
  * Printers (by lower-cased MAC) that did not answer the GS r 1 status query. They are remembered for the
  * life of the process so every later receipt skips the 3 to 8 s wait and goes straight to the scaled drain.
  */
@@ -239,54 +306,54 @@ suspend fun sendToBluetoothPrinter(
 
         val uuid = UUID.fromString(SPP_UUID)
         var socket: BluetoothSocket? = null
-        var lastConnectEx: Exception? = null
         val connectStartMs = System.currentTimeMillis()
         var finalAttempt = 1
         var usedInsecure = false
+        val statusKey = trimmedAddress.lowercase()
+        val preferInsecure = resolveSocketPreference(statusKey, insecureSocketPreferred) == SocketConnectPreference.INSECURE_FIRST
 
         try {
             for (attempt in 1..2) {
                 finalAttempt = attempt
                 if (attempt > 1) {
-                    delay(500L)
+                    delay(300L)
                     try { adapter.cancelDiscovery() } catch (_: Exception) {}
                 }
-                var secureSocket: BluetoothSocket? = null
-                socket = try {
-                    val s = device.createRfcommSocketToServiceRecord(uuid)
-                    secureSocket = s
-                    s.connect()
-                    usedInsecure = false
-                    s
-                } catch (firstEx: Exception) {
-                    try {
-                        secureSocket?.close()
-                    } catch (closeEx: Exception) {
-                        Log.w(TAG, "Error closing secure socket before fallback: ${closeEx.message}")
-                    }
-                    Log.w(TAG, "Standard RFCOMM socket failed (attempt $attempt), retrying insecure RFCOMM socket: ${firstEx.message}")
-                    var inSec: BluetoothSocket? = null
-                    try {
-                        val insecureSocket = device.createInsecureRfcommSocketToServiceRecord(uuid)
-                        inSec = insecureSocket
-                        insecureSocket.connect()
+
+                if (preferInsecure) {
+                    // Try insecure first based on prior successful connection
+                    socket = tryConnectSocket({ device.createInsecureRfcommSocketToServiceRecord(uuid) }, SOCKET_CONNECT_TIMEOUT_MS)
+                    if (socket != null) {
                         usedInsecure = true
-                        insecureSocket
-                    } catch (secEx: Exception) {
-                        try {
-                            inSec?.close()
-                        } catch (closeEx: Exception) {
-                            Log.w(TAG, "Error closing insecure socket after failure: ${closeEx.message}")
+                        insecureSocketPreferred.add(statusKey)
+                    } else {
+                        Log.w(TAG, "Insecure RFCOMM failed (attempt $attempt), trying secure fallback")
+                        socket = tryConnectSocket({ device.createRfcommSocketToServiceRecord(uuid) }, SOCKET_CONNECT_TIMEOUT_MS)
+                        if (socket != null) {
+                            usedInsecure = false
+                            insecureSocketPreferred.remove(statusKey)
                         }
-                        lastConnectEx = secEx
-                        null
+                    }
+                } else {
+                    // Standard: try secure first
+                    socket = tryConnectSocket({ device.createRfcommSocketToServiceRecord(uuid) }, SOCKET_CONNECT_TIMEOUT_MS)
+                    if (socket != null) {
+                        usedInsecure = false
+                        insecureSocketPreferred.remove(statusKey)
+                    } else {
+                        Log.w(TAG, "Standard RFCOMM socket failed (attempt $attempt), retrying insecure RFCOMM socket")
+                        socket = tryConnectSocket({ device.createInsecureRfcommSocketToServiceRecord(uuid) }, SOCKET_CONNECT_TIMEOUT_MS)
+                        if (socket != null) {
+                            usedInsecure = true
+                            insecureSocketPreferred.add(statusKey)
+                        }
                     }
                 }
                 if (socket != null) break
             }
 
             if (socket == null) {
-                throw (lastConnectEx ?: java.io.IOException("Bluetooth connection failed"))
+                throw java.io.IOException("Bluetooth connection failed after $finalAttempt attempt(s)")
             }
 
             timing?.recordConnected("Bluetooth", finalAttempt, usedInsecure)

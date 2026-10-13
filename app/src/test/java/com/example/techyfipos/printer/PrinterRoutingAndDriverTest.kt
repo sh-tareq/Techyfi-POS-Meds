@@ -1065,4 +1065,16 @@ class PrinterRoutingAndDriverTest {
         assertTrue(details.contains("replyReceived=false"))
         assertFalse(details.contains("\u2014"))
     }
+
+    @Test
+    fun `resolveSocketPreference prefers secure by default and insecure when known to require insecure RFCOMM`() {
+        val knownInsecure = setOf("00:11:22:33:44:55", "aa:bb:cc:dd:ee:ff")
+
+        // Default unknown address resolves to SECURE_FIRST
+        assertEquals(SocketConnectPreference.SECURE_FIRST, resolveSocketPreference("12:34:56:78:9A:BC", knownInsecure))
+
+        // Known insecure address resolves to INSECURE_FIRST regardless of case or whitespace
+        assertEquals(SocketConnectPreference.INSECURE_FIRST, resolveSocketPreference("00:11:22:33:44:55", knownInsecure))
+        assertEquals(SocketConnectPreference.INSECURE_FIRST, resolveSocketPreference("  AA:BB:CC:DD:EE:FF  ", knownInsecure))
+    }
 }
