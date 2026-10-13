@@ -102,7 +102,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 ## P3: Feedback, state and missing pieces
 
-- [ ] **R21-21 MED Reported. Success shown before the result is known (shared-fix gaps).**
+- [x] **R21-21 MED Reported. Success shown before the result is known (shared-fix gaps).** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt`, `SettingsViewModelCrashTest.kt`)
   - Settings: `SettingsScreen.kt` about 4235, 4710, 4746, 4768, 4789, 4826, 4844, 4852, 4919 toast "saved" right after the fire-and-forget save. Add `onResult` to `saveInvoiceSettingsData`, `saveShopInfo`, `saveInvoiceSettings`.
   - The backup page is not gated by `SYSTEM_BACKUP_RESTORE`, so a manager's toggle errors and snaps back. Hide or disable it.
   - `previewDuplicateDueLedgers`, `resetFactoryDefaults`, `fetchDriveBackups` never call back on error: the progress dialog (`SettingsScreen.kt` about 5780, `onDismissRequest = {}`), the reset dialog (about 5756) and `_isLoadingBackups` (VM about 3502) get stuck. Use try/finally or `Result` callbacks.
@@ -112,9 +112,9 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   - Other bare launches with low risk today: DuesViewModel about 2702, 2718, 2724, 2895; `CartViewModel.deleteHeldCart` about 1017.
   - The error-bus collector (Nav about 335) is `LaunchedEffect(Unit)` and keeps the first context, so error toasts stay in the old language after a switch. Key it on `localizedContext`. Gate and hub toasts in Nav use the application `context`, not the localized one.
 
-- [ ] **R21-22 MED Reported. Sale completion can still be cancelled in one path.** (R20-33 partial.) The credit-limit "Authorize" path (`CartScreen.kt` about 2979-2981) runs plain `scope.launch { doCompleteSale(...) }` without `NonCancellable`. Wrap it like `executeSaleAction`.
+- [x] **R21-22 MED Reported. Sale completion can still be cancelled in one path.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt`) (R20-33 partial.) The credit-limit "Authorize" path (`CartScreen.kt` about 2979-2981) runs plain `scope.launch { doCompleteSale(...) }` without `NonCancellable`. Wrap it like `executeSaleAction`.
 
-- [ ] **R21-23 MED Reported. Printing gaps.**
+- [x] **R21-23 MED Reported. Printing gaps.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt`)
   - Print buttons with no busy guard (double tap prints twice): Z/X Print (`RegisterCloseScreen.kt` about 1218-1239, 1289-1310), due receipt Print (`DuesScreen.kt` about 6814-6832), Settings `onTestPrint` (5 places, `SettingsScreen.kt` about 4708-4838; these also have no try/catch, so a generation error crashes, and no spinner or result toast).
   - One app-wide `Mutex` is held across blocking `connect()`/`write()` with no timeout (`printer/BluetoothPrinterTransport.kt` about 90, 135-198); a stalled write blocks every later print. The outer `catch (e: Exception)` (about 200) swallows `CancellationException`. Add `withTimeout`, close the socket from a watchdog, rethrow cancellation.
   - Batch Direct Print (`ui/dialogs/ProductCodePrintDialogs.kt` about 1886-2022) ignores `decidePrintRouting`: BLUETOOTH mode with no address opens the PDF dialog instead of the error; AUTO mode with 0 sent never falls back to PDF. No Cancel button; Back is allowed while printing and aborts mid-label; progress text stays at "N of N".
@@ -126,7 +126,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   - The ESC/POS receipt bitmap is never recycled (`BillActions.kt` about 915-930). `printBillJpeg` recycles the bitmap in `onFinish` on the main thread while a worker may still be drawing (about 136-186). Single-label print always builds the fallback PDF first, up to 500 pages, even in BLUETOOTH mode (`ProductCodePrintDialogs.kt` about 2575-2590, 2955-2965). Batch keeps all TSPL payloads in memory (about 60 MB at 500 large labels). `getBluetoothDeviceDisplayName` runs a binder call every recomposition (`SettingsScreen.kt` about 764, 989, 1175-1178, 1539). Z/X Save and Share render on the main thread (`RegisterCloseScreen.kt` about 1242, 1313, 3150-3169).
   - When receipt JPEG generation fails, `printReceiptWithBluetoothFallback` returns false with no toast (`BillActions.kt` about 1094-1117).
 
-- [ ] **R21-24 MED Reported. Backup leftovers.** (R20-36/37/39 partial.)
+- [x] **R21-24 MED Reported. Backup leftovers.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt`) (R20-36/37/39 partial.)
   - Offline still shows the false "Reconnect Google Drive" alert: `AutoBackupWorker.kt` about 105 checks for `IOException`, but `Tasks.await` throws `ExecutionException` wrapping `ApiException(NETWORK_ERROR)`. Check the cause's status code.
   - On that network retry the local backup runs again and writes a duplicate (about 144).
   - The UI still calls the error-swallowing `listBackups` (VM about 3504), not `listBackupsResult`.
@@ -135,17 +135,17 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   - Dead or half-wired settings: `websiteUrl` has an input (`SettingsScreen.kt` about 2156) but is printed nowhere; `decimalQuantitiesEnabled` is still dead; `driveBackupTime` has no UI (Drive schedule fixed at 02:00).
   - Loyalty "EXPIRING_SOON" now selects points that have already expired (`updatedAt < now - expiryDays`, VM about 4670), not ones about to expire.
 
-- [ ] **R21-25 MED Reported. Supplier detail sheet shows stale data.** `SuppliersScreen.kt` about 711 stores a supplier snapshot, so the balance (about 1529) doesn't update after a void or payment; `getInvoicesForSupplier`/`getSupplierPayments` (about 1462-1463) create new Flows every recomposition. Fix: store the id, read the live supplier from the VM, and `remember(supplier.id)` the flows. Void failure toasts show raw English (about 1396, 1433).
+- [x] **R21-25 MED Reported. Supplier detail sheet shows stale data.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt`) `SuppliersScreen.kt` about 711 stores a supplier snapshot, so the balance (about 1529) doesn't update after a void or payment; `getInvoicesForSupplier`/`getSupplierPayments` (about 1462-1463) create new Flows every recomposition. Fix: store the id, read the live supplier from the VM, and `remember(supplier.id)` the flows. Void failure toasts show raw English (about 1396, 1433).
 
-- [ ] **R21-26 MED Reported. Khata statement balance doesn't match Outstanding Due.** `shareCustomerStatement` (`DuesScreen.kt` about 1660) omits return due reductions (`Return.dueAdjustmentAmount`) and probably legacy credit sales without a "Sale" charge row. Add them, or seed the opening balance so it reconciles. Also `DuesScreen.kt` date pickers at about 1586, 1601, 1622, 1641 still have the one-day UTC shift fixed elsewhere in R20-19l.
+- [x] **R21-26 MED Reported. Khata statement balance doesn't match Outstanding Due.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt:testR21_26_customerStatementRunningBalanceReconciliation`) `shareCustomerStatement` (`DuesScreen.kt` about 1660) omits return due reductions (`Return.dueAdjustmentAmount`) and probably legacy credit sales without a "Sale" charge row. Add them, or seed the opening balance so it reconciles. Also `DuesScreen.kt` date pickers at about 1586, 1601, 1622, 1641 still have the one-day UTC shift fixed elsewhere in R20-19l.
 
-- [ ] **R21-27 MED Reported. Stock alerts no longer fire for out-of-stock or expired items.** (R20-59 regression.) `utils/StockAlertWorker.kt` about 37-41 filters `stockQty > 0.0` and `exp > now`. Keep those items and rely on the new signature de-duplication alone. The worker also uses the system locale; build a localized context from `languageFlow` as `AutoBackupWorker` does.
+- [x] **R21-27 MED Reported. Stock alerts no longer fire for out-of-stock or expired items.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt:testR21_27_stockAlertOutOfStockAndExpiredIncluded`) (R20-59 regression.) `utils/StockAlertWorker.kt` about 37-41 filters `stockQty > 0.0` and `exp > now`. Keep those items and rely on the new signature de-duplication alone. The worker also uses the system locale; build a localized context from `languageFlow` as `AutoBackupWorker` does.
 
-- [ ] **R21-28 MED Reported. "1,000" is read as 1.** `utils/AppUtils.kt` about 399 `sanitizeNumericInput` turns `,` into a decimal point. Typing "1,000" or "1,500" into cash received, prices or expenses gives 1.0 or 1.5 with no warning. Fix: drop commas (thousands separator), accept only `.` as decimal. Add a unit test.
+- [x] **R21-28 MED Reported. "1,000" is read as 1.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt:testR21_28_sanitizeNumericInputCommas`) `utils/AppUtils.kt` about 399 `sanitizeNumericInput` turns `,` into a decimal point. Typing "1,000" or "1,500" into cash received, prices or expenses gives 1.0 or 1.5 with no warning. Fix: drop commas (thousands separator), accept only `.` as decimal. Add a unit test.
 
-- [ ] **R21-29 MED Reported. Light mode: status bar icons invisible on Splash and Lock.** The bars now follow the app theme (R20-76), but `SplashScreen.kt` about 95 and `LockScreen.kt` about 270 always draw dark backgrounds, so in light mode the icons are dark on near black. Force light icons while those routes show. Also the window background is now light in light mode, so cold start goes white, then dark splash, then light app.
+- [x] **R21-29 MED Reported. Light mode: status bar icons invisible on Splash and Lock.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt`) The bars now follow the app theme (R20-76), but `SplashScreen.kt` about 95 and `LockScreen.kt` about 270 always draw dark backgrounds, so in light mode the icons are dark on near black. Force light icons while those routes show. Also the window background is now light in light mode, so cold start goes white, then dark splash, then light app.
 
-- [ ] **R21-30 LOW Reported. Smaller leftovers from round 20.**
+- [x] **R21-30 LOW Reported. Smaller leftovers from round 20.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt:testR21_30_cartItemRestoreIndex`, `P3AuditFixesTest.kt:testR21_30_expenseDateLabelDiffAcrossYearBoundary`)
   - Cart undo (R20-45) uses `addToCart`, losing `taxable`, line position, and failing silently above stock (`CartScreen.kt` about 669-693, VM about 1316). Add `restoreCartItem(item, index)`.
   - Lock (R20-32): the shared logout confirm (Nav about 678-683) doesn't call `HardwareBarcodeScanner.clearPendingInput()`.
   - Gate toasts (R20-35): on logout or auto-lock while a gated screen is on top, a spurious "Only owner can access" toast appears. Toast only when `currentUser != null && backStack.lastOrNull() == Key`. R20-31 effect: also check `authViewModel.currentUser.value` inside the effect.
