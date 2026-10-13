@@ -81,8 +81,7 @@ object ExcelHelper {
                 } else {
                     val numValue = cell.numericCellValue
                     if (numValue == numValue.toLong().toDouble()) {
-                        val str = numValue.toLong().toString()
-                        if (isBarcode) preserveLeadingZeros(str) else str
+                        numValue.toLong().toString()
                     } else {
                         numValue.toString()
                     }
@@ -100,8 +99,7 @@ object ExcelHelper {
                         } else {
                             val numValue = cell.numericCellValue
                             if (numValue == numValue.toLong().toDouble()) {
-                                val str = numValue.toLong().toString()
-                                if (isBarcode) preserveLeadingZeros(str) else str
+                                numValue.toLong().toString()
                             } else {
                                 numValue.toString()
                             }
@@ -363,14 +361,14 @@ object ExcelHelper {
 
                     val category = colMap["category"]?.let { getCellStringValue(row.getCell(it)) } ?: "General"
                     
-                    val pPriceStr = colMap["purchasePrice"]?.let { getCellStringValue(row.getCell(it)) } ?: "0.0"
-                    val parsedPPrice = parseDouble(pPriceStr)
-                    if (pPriceStr.isNotBlank() && parsedPPrice == null) {
+                    val pPriceStr = colMap["purchasePrice"]?.let { getCellStringValue(row.getCell(it)) }.orEmpty()
+                    val parsedPPrice = if (pPriceStr.isBlank()) null else parseDouble(pPriceStr)
+                    if (pPriceStr.isNotBlank() && (parsedPPrice == null || parsedPPrice < 0.0)) {
                         failCount++
                         failures.add("Row ${rowIdx + 1}: Invalid purchase price '$pPriceStr'.")
                         continue
                     }
-                    val purchasePrice = (parsedPPrice ?: 0.0).coerceAtLeast(0.0)
+                    val purchasePrice = if (pPriceStr.isBlank()) -1.0 else (parsedPPrice ?: 0.0).coerceAtLeast(0.0)
 
                     val sPriceStr = colMap["sellingPrice"]?.let { getCellStringValue(row.getCell(it)) } ?: "0.0"
                     val sellingPrice = parseDouble(sPriceStr)
@@ -380,14 +378,14 @@ object ExcelHelper {
                         continue
                     }
 
-                    val stockStr = colMap["stockQty"]?.let { getCellStringValue(row.getCell(it)) } ?: "0"
-                    val parsedStock = parseDouble(stockStr)
+                    val stockStr = colMap["stockQty"]?.let { getCellStringValue(row.getCell(it)) }.orEmpty()
+                    val parsedStock = if (stockStr.isBlank()) null else parseDouble(stockStr)
                     if (stockStr.isNotBlank() && (parsedStock == null || parsedStock < 0.0)) {
                         failCount++
                         failures.add("Row ${rowIdx + 1}: Invalid stock quantity '$stockStr'.")
                         continue
                     }
-                    val stockQty = (parsedStock ?: 0.0).coerceAtLeast(0.0)
+                    val stockQty = if (stockStr.isBlank()) -1.0 else (parsedStock ?: 0.0).coerceAtLeast(0.0)
 
                     val reorderStr = colMap["reorderLevel"]?.let { getCellStringValue(row.getCell(it)) } ?: "0"
                     val reorderLevel = (parseInt(reorderStr) ?: 0).coerceAtLeast(0)

@@ -1491,6 +1491,7 @@
     <string name="products_reason_sample">Sample</string>
     <string name="products_reason_store_use">Store Use</string>
     <string name="products_reason_internal_use">Internal Use</string>
+    <string name="products_reason_import">Import</string>
     <string name="products_reason_other">Other</string>
     <string name="products_clear_cd">Clear</string>
     <string name="cart_confirm_due_sale_title">Confirm Due Sale</string>
@@ -1725,6 +1726,7 @@
     <string name="customer_deleted_toast">Customer deleted</string>
     <string name="customer_cannot_delete_title">Cannot Delete Customer</string>
     <string name="customer_cannot_delete_due_desc">Cannot delete customer \"%1$s\" because they have an outstanding due of %2$s. All dues must be cleared or settled before deleting the customer.</string>
+    <string name="customer_cannot_delete_credit_desc">Cannot delete customer \"%1$s\" because they have a store credit balance of %2$s. Store credit must be refunded or settled before deleting the customer.</string>
     <string name="customer_delete_confirm_desc">Are you sure you want to delete customer \"%1$s\"? This action cannot be undone.</string>
     <string name="register_close_held_carts_title">Pending Held Carts</string>
     <string name="register_close_held_carts_desc">You have %1$d held cart(s) pending in checkout. Closing the register without completing or voiding them may cause inventory inconsistencies. Do you want to proceed anyway?</string>

@@ -457,8 +457,13 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val oldClean = _customerPhone.value.trim()
         _customerPhone.value = phone
         val clean = phone.trim()
-        if (clean != oldClean && _redeemedVoucher.value == null) {
-            _storeCreditApplied.value = 0.0
+        if (clean != oldClean) {
+            val voucher = _redeemedVoucher.value
+            if (voucher == null) {
+                _storeCreditApplied.value = 0.0
+            } else {
+                _storeCreditApplied.value = minOf(_storeCreditApplied.value, voucher.remainingBalance)
+            }
         }
         customerLookupJob?.cancel()
         if (clean.isBlank()) {
@@ -2068,16 +2073,10 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun calculateInvoiceProfit(saleWithItems: SaleWithItems, returnSummary: SaleReturnSummary? = null): InvoiceProfitSummary {
         val sale = saleWithItems.sale
-        val grossRevenue = if (sale.isTaxInclusive && sale.taxAmount > 0.0) {
-            (sale.subtotal - sale.taxAmount).coerceAtLeast(0.0)
-        } else {
-            sale.subtotal
-        }
         val discount = calculateDiscountValue(sale.subtotal, sale.discountAmount, sale.isPercentageDiscount)
         val ptCashVal = repository.getLoyaltySettings().pointCashValue.takeIf { it > 0.0 } ?: 1.0
         val loyaltyDiscount = (sale.loyaltyPointsRedeemed * ptCashVal).coerceAtLeast(0.0)
         val totalDiscounts = discount + loyaltyDiscount
-        val netRevBeforeRefund = (grossRevenue - totalDiscounts).coerceAtLeast(0.0)
 
         val productMap = allProductsForProfit.value.associateBy { it.barcode }
         var totalGrossCogs = 0.0
@@ -2107,6 +2106,13 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
                 lineMarginPercent = lineMargin
             )
         }
+
+        val grossRevenue = if (sale.isTaxInclusive) {
+            itemsProfitList.sumOf { it.lineRevenue }
+        } else {
+            sale.subtotal
+        }
+        val netRevBeforeRefund = (grossRevenue - totalDiscounts).coerceAtLeast(0.0)
 
         val maxProfit = itemsProfitList.maxOfOrNull { it.lineProfit } ?: 0.0
         val taggedItems = itemsProfitList.map {
@@ -2417,26 +2423,20 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
 
         // Apply return adjustments
         returnedQtyByBarcode.forEach { (barcode, qty) ->
-            val existing = productTotals.getOrPut(barcode) {
-                val prod = repository.getProductByBarcode(barcode)
-                ProductReportData(
-                    barcode = barcode,
-                    name = prod?.name ?: "Unknown ($barcode)",
-                    quantity = 0.0,
-                    revenue = 0.0
+            val existing = productTotals[barcode]
+            if (existing != null) {
+                productTotals[barcode] = existing.copy(
+                    quantity = existing.quantity - qty,
+                    revenue = existing.revenue - (returnedRevenueByBarcode[barcode] ?: 0.0)
                 )
             }
-            productTotals[barcode] = existing.copy(
-                quantity = (existing.quantity - qty).coerceAtLeast(0.0),
-                revenue = (existing.revenue - (returnedRevenueByBarcode[barcode] ?: 0.0)).coerceAtLeast(0.0)
-            )
         }
         returnedByDay.forEach { (day, revenueProfit) ->
             val existing = dailyTotals.getOrPut(day) {
                 DailyReportData(timestamp = day, revenue = 0.0, profit = 0.0, transactionCount = 0)
             }
             dailyTotals[day] = existing.copy(
-                revenue = (existing.revenue - revenueProfit.first).coerceAtLeast(0.0),
+                revenue = existing.revenue - revenueProfit.first,
                 profit = existing.profit - revenueProfit.second,
                 refunds = existing.refunds + revenueProfit.first
             )
@@ -2465,7 +2465,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         returnedByHour.forEach { (hour, adjustment) ->
             val existing = hourlyTotals[hour] ?: return@forEach
             hourlyTotals[hour] = existing.copy(
-                revenue = (existing.revenue - adjustment.first).coerceAtLeast(0.0),
+                revenue = existing.revenue - adjustment.first,
                 profit = existing.profit - adjustment.second,
                 itemsSold = (existing.itemsSold - adjustment.third).coerceAtLeast(0.0)
             )
@@ -2525,7 +2525,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             netProfit = grossMargin - totalDiscount - totalLoyaltyDiscount - totalExpenses,
             totalRefunds = totalRefunds,
             itemsSold = (itemsSold - totalReturnedQty).coerceAtLeast(0.0),
-            topProducts = productTotals.values.sortedByDescending { it.revenue },
+            topProducts = productTotals.values.filter { it.quantity > 0.0 || it.revenue > 0.0 }.sortedByDescending { it.revenue },
             paymentBreakdown = paymentBreakdownList.sortedByDescending { it.amount },
             dailyBreakdown = dailyTotals.values.toList(),
             hourlyBreakdown = hourlyTotals.values.toList(),
@@ -3830,8 +3830,12 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                if (!repository.isSessionOwner()) {
-                    onComplete(false, "Owner privileges required")
+                if (!repository.isSessionOwner() && !hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
+                    onComplete(false, "Staff management permission required")
+                    return@launch
+                }
+                if (role == AppRoles.OWNER && !repository.isSessionOwner()) {
+                    onComplete(false, "Owner privileges required to add an owner")
                     return@launch
                 }
                 repository.createUser(
@@ -3866,8 +3870,12 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                if (!repository.isSessionOwner()) {
-                    onComplete(false, "Owner privileges required")
+                if (!repository.isSessionOwner() && !hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
+                    onComplete(false, "Staff management permission required")
+                    return@launch
+                }
+                if (customPermissions != null && !repository.isSessionOwner() && !hasPermission(AppPermissions.SYSTEM_PERMISSIONS)) {
+                    onComplete(false, "Permission management privileges required")
                     return@launch
                 }
                 repository.updateStaff(
@@ -3882,10 +3890,17 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
                 )
                 // If editing current logged-in user, refresh currentUser state
                 if (_currentUser.value?.id == userId) {
+                    val updatedPerms = if (customPermissions != null) {
+                        AppPermissions.serializePermissions(customPermissions)
+                    } else if (role != _currentUser.value?.role) {
+                        null
+                    } else {
+                        _currentUser.value?.customPermissions
+                    }
                     val updated = _currentUser.value?.copy(
                         name = name.trim(),
                         role = role,
-                        customPermissions = AppPermissions.serializePermissions(customPermissions),
+                        customPermissions = updatedPerms,
                         isActive = isActive,
                         maxDiscountPercent = maxDiscount
                     )
@@ -3902,7 +3917,7 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
     fun updateCashier(userId: Long, newName: String, newPin: String?, oldPin: String? = null, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
-                if (!repository.isSessionOwner()) {
+                if (!repository.isSessionOwner() && !hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
                     onComplete(false)
                     return@launch
                 }
@@ -3918,8 +3933,8 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
     fun setStaffActive(userId: Long, isActive: Boolean, onComplete: (Boolean, String?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
             try {
-                if (!repository.isSessionOwner()) {
-                    onComplete(false, "Owner privileges required")
+                if (!repository.isSessionOwner() && !hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
+                    onComplete(false, "Staff management permission required")
                     return@launch
                 }
                 repository.setStaffActive(userId, isActive)
@@ -3934,7 +3949,11 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
     fun updateStaffPermissions(userId: Long, permissions: Set<String>?, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
-                if (!repository.isSessionOwner()) {
+                if (!repository.isSessionOwner() && !hasPermission(AppPermissions.SYSTEM_PERMISSIONS)) {
+                    onComplete(false)
+                    return@launch
+                }
+                if (_currentUser.value?.id == userId) {
                     onComplete(false)
                     return@launch
                 }
@@ -3969,6 +3988,18 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun deleteUser(user: User, onComplete: (Boolean, String?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
+            if (!repository.isSessionOwner() && !hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
+                onComplete(false, "Staff management permission required")
+                return@launch
+            }
+            if (_currentUser.value?.id == user.id) {
+                onComplete(false, "Cannot delete your own account")
+                return@launch
+            }
+            if (user.role == AppRoles.OWNER && !repository.isSessionOwner()) {
+                onComplete(false, "Non-owners cannot delete owner accounts")
+                return@launch
+            }
             if (user.role == AppRoles.OWNER && repository.getOwnerCount() <= 1) {
                 onComplete(false, "The last owner account cannot be deleted")
                 return@launch

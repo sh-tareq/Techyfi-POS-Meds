@@ -64,6 +64,7 @@ fun ManageUsersScreen(
 
     val context = LocalContext.current
     val users by authViewModel.users.collectAsStateWithLifecycle()
+    val currentUser by authViewModel.currentUser.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var userToEdit by remember { mutableStateOf<User?>(null) }
     var userForPermissions by remember { mutableStateOf<User?>(null) }
@@ -128,9 +129,19 @@ fun ManageUsersScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(users, key = { it.id }) { user ->
+                        val isTargetOwner = user.role == AppRoles.OWNER
+                        val isSelf = currentUser?.id == user.id
+                        val canEditUser = isOwner || !isTargetOwner
+                        val canDeleteUser = (isOwner || !isTargetOwner) && !isSelf
+                        val canToggleUserActive = (isOwner || !isTargetOwner) && !isSelf
+                        val canManageUserPermissions = canEditPermissions && (isOwner || !isTargetOwner) && !isSelf
+
                         StaffUserCard(
                             user = user,
-                            canEditPermissions = canEditPermissions,
+                            canEdit = canEditUser,
+                            canDelete = canDeleteUser,
+                            canToggleActive = canToggleUserActive,
+                            canEditPermissions = canManageUserPermissions,
                             onEdit = { userToEdit = user },
                             onPermissions = { userForPermissions = user },
                             onToggleActive = { isActive ->
@@ -152,6 +163,7 @@ fun ManageUsersScreen(
     if (showAddDialog) {
         AddStaffDialog(
             authViewModel = authViewModel,
+            isOwner = isOwner,
             onDismiss = { showAddDialog = false },
             onSuccess = {
                 showAddDialog = false
@@ -164,6 +176,7 @@ fun ManageUsersScreen(
         EditStaffDialog(
             user = user,
             authViewModel = authViewModel,
+            isOwner = isOwner,
             onDismiss = { userToEdit = null },
             onSuccess = {
                 userToEdit = null
@@ -215,6 +228,9 @@ fun ManageUsersScreen(
 @Composable
 private fun StaffUserCard(
     user: User,
+    canEdit: Boolean = true,
+    canDelete: Boolean = true,
+    canToggleActive: Boolean = true,
     canEditPermissions: Boolean = true,
     onEdit: () -> Unit,
     onPermissions: () -> Unit,
@@ -331,6 +347,7 @@ private fun StaffUserCard(
                 // Active Switch
                 Switch(
                     checked = user.isActive,
+                    enabled = canToggleActive,
                     onCheckedChange = onToggleActive,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
@@ -373,19 +390,23 @@ private fun StaffUserCard(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = stringResource(R.string.users_edit_staff_title),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    if (canEdit) {
+                        IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.users_edit_staff_title),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.users_remove),
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                    if (canDelete) {
+                        IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.users_remove),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
@@ -396,6 +417,7 @@ private fun StaffUserCard(
 @Composable
 private fun AddStaffDialog(
     authViewModel: AuthViewModel,
+    isOwner: Boolean = false,
     onDismiss: () -> Unit,
     onSuccess: () -> Unit
 ) {
@@ -448,6 +470,7 @@ private fun AddStaffDialog(
 
                 RoleSelectorRow(
                     selectedRole = selectedRole,
+                    allowOwnerRole = isOwner,
                     onRoleSelected = { role ->
                         selectedRole = role
                         maxDiscount = when (role) {
@@ -521,6 +544,7 @@ private fun AddStaffDialog(
 private fun EditStaffDialog(
     user: User,
     authViewModel: AuthViewModel,
+    isOwner: Boolean = false,
     onDismiss: () -> Unit,
     onSuccess: () -> Unit
 ) {
@@ -589,6 +613,7 @@ private fun EditStaffDialog(
 
                 RoleSelectorRow(
                     selectedRole = editRole,
+                    allowOwnerRole = isOwner,
                     onRoleSelected = { editRole = it }
                 )
 
@@ -682,13 +707,15 @@ private fun EditStaffDialog(
 @Composable
 private fun RoleSelectorRow(
     selectedRole: String,
+    allowOwnerRole: Boolean = true,
     onRoleSelected: (String) -> Unit
 ) {
-    val roles = listOf(
+    val allRoles = listOf(
         Triple(AppRoles.CASHIER, stringResource(R.string.role_cashier), Color(0xFF10B981)),
         Triple(AppRoles.MANAGER, stringResource(R.string.role_manager), Color(0xFF6366F1)),
         Triple(AppRoles.OWNER, stringResource(R.string.role_owner), Color(0xFFF59E0B))
     )
+    val roles = if (allowOwnerRole) allRoles else allRoles.filter { it.first != AppRoles.OWNER }
 
     Row(
         modifier = Modifier.fillMaxWidth(),

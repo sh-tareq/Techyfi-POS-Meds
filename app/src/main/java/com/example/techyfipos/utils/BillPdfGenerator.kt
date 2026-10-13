@@ -1104,6 +1104,7 @@ fun generateZReportJpeg(
     data: SalesReportData,
     rangeLabel: String,
     isBangla: Boolean = com.example.techyfipos.utils.isAppBangla(),
+    canViewPnl: Boolean = true,
     settings: InvoiceSettingsData = InvoiceSettingsData()
 ): File {
     val is58 = settings.paperRollWidthMm == 58
@@ -1135,11 +1136,11 @@ fun generateZReportJpeg(
     if (data.totalRefunds > 0.0) totalHeight += lineH // Returns / Refunds
     totalHeight += lineH // Net Sales
     if (data.totalTax > 0.0) totalHeight += lineH // Tax / VAT
-    if (data.totalDiscount > 0.0) totalHeight += lineH // Discounts Given
+    totalHeight += lineH // Discounts Given
     if (data.totalLoyaltyDiscount > 0.0) totalHeight += lineH // Loyalty Redeemed
-    totalHeight += lineH // Gross Margin
+    if (canViewPnl) totalHeight += lineH // Gross Margin
     totalHeight += lineH // Expenses
-    totalHeight += lineH // Net Profit
+    if (canViewPnl) totalHeight += lineH // Net Profit
     totalHeight += dividerH // Single divider
 
     // 4. Payments
@@ -1246,9 +1247,13 @@ fun generateZReportJpeg(
     if (data.totalLoyaltyDiscount > 0.0) {
         drawKeyValue(if (isBangla) "লয়্যালটি পয়েন্ট ছাড়" else "Loyalty Redeemed", "-${formatTaka(data.totalLoyaltyDiscount, isBangla = isBangla)}")
     }
-    drawKeyValue(if (isBangla) "মোট লাভ" else "Gross Margin", formatTaka(data.totalProfit, isBangla = isBangla))
+    if (canViewPnl) {
+        drawKeyValue(if (isBangla) "মোট লাভ" else "Gross Margin", formatTaka(data.totalProfit, isBangla = isBangla))
+    }
     drawKeyValue(if (isBangla) "খরচ" else "Expenses", formatTaka(data.totalExpenses, isBangla = isBangla))
-    drawKeyValue(if (isBangla) "নীট লাভ" else "Net Profit", formatTaka(data.netProfit, isBangla = isBangla))
+    if (canViewPnl) {
+        drawKeyValue(if (isBangla) "নীট লাভ" else "Net Profit", formatTaka(data.netProfit, isBangla = isBangla))
+    }
 
     paint.textAlign = Paint.Align.CENTER
     canvas.drawText(singleDivider, width / 2f, y, paint)
@@ -1363,9 +1368,10 @@ fun generateZReportPdf(
     data: SalesReportData,
     rangeLabel: String,
     isBangla: Boolean = com.example.techyfipos.utils.isAppBangla(),
+    canViewPnl: Boolean = true,
     settings: InvoiceSettingsData = InvoiceSettingsData()
 ): File {
-    val imageFile = generateZReportJpeg(context, data, rangeLabel, isBangla = isBangla, settings = settings)
+    val imageFile = generateZReportJpeg(context, data, rangeLabel, isBangla = isBangla, canViewPnl = canViewPnl, settings = settings)
     val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
         ?: throw IllegalStateException("Unable to render Z-Report image for PDF")
     val pageWidthPoints = reportPdfPageWidthPoints(settings)
@@ -1399,6 +1405,7 @@ fun generateXReportJpeg(
     data: SalesReportData,
     rangeLabel: String,
     isBangla: Boolean = com.example.techyfipos.utils.isAppBangla(),
+    canViewPnl: Boolean = true,
     settings: InvoiceSettingsData = InvoiceSettingsData()
 ): File {
     val is58 = settings.paperRollWidthMm == 58
@@ -1424,9 +1431,9 @@ fun generateXReportJpeg(
     totalHeight += lineH // Net Sales
     if (data.totalTax > 0.0) totalHeight += lineH
     totalHeight += lineH // Discounts
-    totalHeight += lineH // Gross Margin
+    if (canViewPnl) totalHeight += lineH // Gross Margin
     totalHeight += lineH // Expenses
-    totalHeight += lineH // Net Profit
+    if (canViewPnl) totalHeight += lineH // Net Profit
     totalHeight += dividerH // Single divider
     totalHeight += sectionHeaderH // PAYMENTS header
     val payments = if (data.paymentBreakdown.isEmpty()) 1 else data.paymentBreakdown.size
@@ -1510,9 +1517,13 @@ fun generateXReportJpeg(
         drawKeyValue(if (isBangla) "কর / ভ্যাট" else "Tax (VAT)", formatTaka(data.totalTax, isBangla = isBangla))
     }
     drawKeyValue(if (isBangla) "প্রদত্ত ছাড়" else "Discounts Given", formatTaka(data.totalDiscount, isBangla = isBangla))
-    drawKeyValue(if (isBangla) "মোট লাভ" else "Gross Margin", formatTaka(data.totalProfit, isBangla = isBangla))
+    if (canViewPnl) {
+        drawKeyValue(if (isBangla) "মোট লাভ" else "Gross Margin", formatTaka(data.totalProfit, isBangla = isBangla))
+    }
     drawKeyValue(if (isBangla) "খরচ" else "Expenses", formatTaka(data.totalExpenses, isBangla = isBangla))
-    drawKeyValue(if (isBangla) "নীট লাভ" else "Net Profit", formatTaka(data.netProfit, isBangla = isBangla))
+    if (canViewPnl) {
+        drawKeyValue(if (isBangla) "নীট লাভ" else "Net Profit", formatTaka(data.netProfit, isBangla = isBangla))
+    }
 
     paint.textAlign = Paint.Align.CENTER
     canvas.drawText(singleDivider, width / 2f, y, paint)
@@ -1579,9 +1590,10 @@ fun generateXReportPdf(
     data: SalesReportData,
     rangeLabel: String,
     isBangla: Boolean = com.example.techyfipos.utils.isAppBangla(),
+    canViewPnl: Boolean = true,
     settings: InvoiceSettingsData = InvoiceSettingsData()
 ): File {
-    val imageFile = generateXReportJpeg(context, data, rangeLabel, isBangla = isBangla, settings = settings)
+    val imageFile = generateXReportJpeg(context, data, rangeLabel, isBangla = isBangla, canViewPnl = canViewPnl, settings = settings)
     val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
         ?: throw IllegalStateException("Unable to render X-Report image for PDF")
     val pageWidthPoints = reportPdfPageWidthPoints(settings)

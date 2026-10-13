@@ -1487,6 +1487,7 @@
     <string name="products_reason_sample">নমুনা</string>
     <string name="products_reason_store_use">দোকানে ব্যবহার</string>
     <string name="products_reason_internal_use">অভ্যন্তরীণ ব্যবহার</string>
+    <string name="products_reason_import">আমদানি</string>
     <string name="products_reason_other">অন্যান্য</string>
     <string name="products_clear_cd">মুছুন</string>
     <string name="cart_confirm_due_sale_title">বকেয়া বিক্রয় নিশ্চিত করুন</string>
@@ -1721,6 +1722,7 @@
     <string name="customer_deleted_toast">গ্রাহক মুছে ফেলা হয়েছে</string>
     <string name="customer_cannot_delete_title">গ্রাহক মুছে ফেলা সম্ভব নয়</string>
     <string name="customer_cannot_delete_due_desc">গ্রাহক \"%1$s\" মুছে ফেলা সম্ভব নয় কারণ তার বকেয়া রয়েছে %2$s। গ্রাহক মুছে ফেলার আগে বকেয়া পরিশোধ করতে হবে।</string>
+    <string name="customer_cannot_delete_credit_desc">গ্রাহক \"%1$s\" মুছে ফেলা সম্ভব নয় কারণ তার স্টোর ক্রেডিট ব্যালেন্স রয়েছে %2$s। গ্রাহক মুছে ফেলার আগে স্টোর ক্রেডিট রিফান্ড বা সমন্বয় করতে হবে।</string>
     <string name="customer_delete_confirm_desc">আপনি কি নিশ্চিত যে আপনি গ্রাহক \"%1$s\" মুছে ফেলতে চান? এই পরিবর্তনটি পুনরুদ্ধার করা যাবে না।</string>
     <string name="register_close_held_carts_title">হোল্ড করা কার্ট বিদ্যমান</string>
     <string name="register_close_held_carts_desc">চেকআউটে %1$dটি হোল্ড করা কার্ট রয়েছে। এগুলো সম্পন্ন বা বাতিল না করে রেজিস্টার বন্ধ করলে স্টক ও বিক্রিতে গরমিল হতে পারে। আপনি কি রেজিস্টার বন্ধ করতে চান?</string>

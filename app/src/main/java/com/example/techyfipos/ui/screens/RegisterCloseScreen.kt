@@ -156,6 +156,8 @@ fun RegisterCloseScreen(
     salesViewModel: SalesViewModel,
     settingsViewModel: SettingsViewModel? = null,
     canViewZReport: Boolean = true,
+    canViewPnl: Boolean = true,
+    canExport: Boolean = true,
     onBack: () -> Unit,
     onNavigateToExpenses: () -> Unit = {},
     isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
@@ -319,28 +321,30 @@ fun RegisterCloseScreen(
                         modifier = Modifier.padding(end = if (showFullReportLabel) 8.dp else 4.dp)
                     ) {
                         // Mid-Shift X-Report Action
-                        Surface(
-                            onClick = { showXReportDialog = true },
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFF0F766E),
-                            border = BorderStroke(1.dp, Color(0x5599F6E4)),
-                            shadowElevation = 2.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(
-                                    horizontal = if (showFullReportLabel) 9.dp else 7.dp,
-                                    vertical = if (showFullReportLabel) 6.dp else 5.dp
-                                ),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(if (showFullReportLabel) 4.dp else 2.dp)
+                        if (canViewZReport) {
+                            Surface(
+                                onClick = { showXReportDialog = true },
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF0F766E),
+                                border = BorderStroke(1.dp, Color(0x5599F6E4)),
+                                shadowElevation = 2.dp
                             ) {
-                                Realistic3DClipboardDuesIcon(size = if (showFullReportLabel) 16.dp else 14.dp)
-                                Text(
-                                    text = if (showFullReportLabel) stringResource(R.string.register_close_x_report_btn) else stringResource(R.string.register_close_x_report_short_btn),
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
+                                Row(
+                                    modifier = Modifier.padding(
+                                        horizontal = if (showFullReportLabel) 9.dp else 7.dp,
+                                        vertical = if (showFullReportLabel) 6.dp else 5.dp
+                                    ),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(if (showFullReportLabel) 4.dp else 2.dp)
+                                ) {
+                                    Realistic3DClipboardDuesIcon(size = if (showFullReportLabel) 16.dp else 14.dp)
+                                    Text(
+                                        text = if (showFullReportLabel) stringResource(R.string.register_close_x_report_btn) else stringResource(R.string.register_close_x_report_short_btn),
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
                             }
                         }
 
@@ -1193,7 +1197,7 @@ fun RegisterCloseScreen(
                         result.onSuccess {
                             closedShiftZReport = snapshotZ
                             showCloseReconcileDialog = false
-                            showPnlZReportDialog = true
+                            showPnlZReportDialog = canViewZReport
                             coroutineScope.launch { snackbarHostState.showSnackbar(successMessage) }
                         }.onFailure {
                             onError()
@@ -1214,12 +1218,14 @@ fun RegisterCloseScreen(
             data = r,
             rangeLabel = rangeLabel,
             isInterimX = true,
+            canViewPnl = canViewPnl,
+            canExport = canExport,
             onDismiss = { showXReportDialog = false },
             onPrint = {
                 coroutineScope.launch {
                     try {
                         val jpegFile = withContext(Dispatchers.IO) {
-                            generateXReportJpeg(context, r, rangeLabel, settings = invoiceSettings)
+                            generateXReportJpeg(context, r, rangeLabel, canViewPnl = canViewPnl, settings = invoiceSettings)
                         }
                         val ok = printReceiptImage(
                             context = context,
@@ -1239,7 +1245,7 @@ fun RegisterCloseScreen(
             },
             onSave = {
                 try {
-                    val jpegFile = generateXReportJpeg(context, r, rangeLabel, settings = invoiceSettings)
+                    val jpegFile = generateXReportJpeg(context, r, rangeLabel, canViewPnl = canViewPnl, settings = invoiceSettings)
                     when (val res = saveBillJpegToDownloads(context, jpegFile)) {
                         is FileSaveResult.PublicSaved -> {
                             Toast.makeText(context, context.getString(R.string.z_report_x_saved_toast), Toast.LENGTH_LONG).show()
@@ -1267,7 +1273,7 @@ fun RegisterCloseScreen(
             onDismiss = { showXShareFormatDialog = false },
             onFormatSelected = { format ->
                 showXShareFormatDialog = false
-                shareReport(context, r, rangeLabel, isInterimX = true, format = format, settings = invoiceSettings)
+                shareReport(context, r, rangeLabel, isInterimX = true, format = format, canViewPnl = canViewPnl, settings = invoiceSettings)
             }
         )
     }
@@ -1280,6 +1286,8 @@ fun RegisterCloseScreen(
             data = r,
             rangeLabel = label,
             isInterimX = false,
+            canViewPnl = canViewPnl,
+            canExport = canExport,
             onDismiss = {
                 showPnlZReportDialog = false
                 if (!showShareFormatDialog) {
@@ -1290,7 +1298,7 @@ fun RegisterCloseScreen(
                 coroutineScope.launch {
                     try {
                         val jpegFile = withContext(Dispatchers.IO) {
-                            generateZReportJpeg(context, r, label, settings = invoiceSettings)
+                            generateZReportJpeg(context, r, label, canViewPnl = canViewPnl, settings = invoiceSettings)
                         }
                         val ok = printReceiptImage(
                             context = context,
@@ -1310,7 +1318,7 @@ fun RegisterCloseScreen(
             },
             onSave = {
                 try {
-                    val jpegFile = generateZReportJpeg(context, r, label, settings = invoiceSettings)
+                    val jpegFile = generateZReportJpeg(context, r, label, canViewPnl = canViewPnl, settings = invoiceSettings)
                     when (val res = saveBillJpegToDownloads(context, jpegFile)) {
                         is FileSaveResult.PublicSaved -> {
                             Toast.makeText(context, context.getString(R.string.z_report_z_saved_toast), Toast.LENGTH_LONG).show()
@@ -1346,7 +1354,7 @@ fun RegisterCloseScreen(
                 if (!showPnlZReportDialog) {
                     closedShiftZReport = null
                 }
-                shareReport(context, r, label, isInterimX = false, format = format, settings = invoiceSettings)
+                shareReport(context, r, label, isInterimX = false, format = format, canViewPnl = canViewPnl, settings = invoiceSettings)
             }
         )
     }
@@ -2808,6 +2816,8 @@ fun ZReportDialog(
     data: SalesReportData,
     rangeLabel: String,
     isInterimX: Boolean = false,
+    canViewPnl: Boolean = true,
+    canExport: Boolean = true,
     onDismiss: () -> Unit,
     onPrint: () -> Unit,
     onSave: () -> Unit,
@@ -2924,11 +2934,11 @@ fun ZReportDialog(
                                 (if (data.totalRefunds > 0.0) "$returnsLabel: -${formatTaka(data.totalRefunds)}\n" else "") +
                                 "$netSalesLabel:        ${formatTaka(data.totalRevenue)}\n" +
                                 (if (data.totalTax > 0.0) "$taxVatLabel:        ${formatTaka(data.totalTax)}\n" else "") +
-                                "$grossMarginLabel:     ${formatTaka(data.totalProfit)}\n" +
+                                (if (canViewPnl) "$grossMarginLabel:     ${formatTaka(data.totalProfit)}\n" else "") +
                                 "$discountsLabel:  ${formatTaka(data.totalDiscount)}\n" +
                                 (if (data.totalLoyaltyDiscount > 0.0) "$loyaltyRedeemedLabel: -${formatTaka(data.totalLoyaltyDiscount)}\n" else "") +
                                 "$expensesLabel:         ${formatTaka(data.totalExpenses)}\n" +
-                                "$netProfitLabel: ${formatTaka(data.netProfit)}\n" +
+                                (if (canViewPnl) "$netProfitLabel: ${formatTaka(data.netProfit)}\n" else "") +
                                 "--------------------------------\n" +
                                 "$paymentsHeader\n" +
                                 data.paymentBreakdown.joinToString("\n") {
@@ -2955,14 +2965,16 @@ fun ZReportDialog(
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.print), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
-                    FilledTonalButton(
-                        onClick = onSave,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(17.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.save), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    if (canExport) {
+                        FilledTonalButton(
+                            onClick = onSave,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.save), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
                     }
                 }
 
@@ -2978,15 +2990,17 @@ fun ZReportDialog(
                     ) {
                         Text(stringResource(R.string.close), fontWeight = FontWeight.SemiBold)
                     }
-                    Button(
-                        onClick = onShare,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
-                        modifier = Modifier.weight(1.3f)
-                    ) {
-                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(17.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.share), fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                    if (canExport) {
+                        Button(
+                            onClick = onShare,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
+                            modifier = Modifier.weight(1.3f)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.share), fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                        }
                     }
                 }
             }
@@ -3136,6 +3150,7 @@ private fun shareReport(
     rangeLabel: String,
     isInterimX: Boolean,
     format: ZReportFormat,
+    canViewPnl: Boolean = true,
     settings: InvoiceSettingsData = InvoiceSettingsData()
 ) {
     try {
@@ -3148,9 +3163,9 @@ private fun shareReport(
         when (format) {
             ZReportFormat.JPEG -> {
                 val file = if (isInterimX) {
-                    generateXReportJpeg(context, r, rangeLabel, settings = settings)
+                    generateXReportJpeg(context, r, rangeLabel, canViewPnl = canViewPnl, settings = settings)
                 } else {
-                    generateZReportJpeg(context, r, rangeLabel, settings = settings)
+                    generateZReportJpeg(context, r, rangeLabel, canViewPnl = canViewPnl, settings = settings)
                 }
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent = Intent(Intent.ACTION_SEND).apply {
@@ -3165,9 +3180,9 @@ private fun shareReport(
             }
             ZReportFormat.PDF -> {
                 val file = if (isInterimX) {
-                    generateXReportPdf(context, r, rangeLabel, settings = settings)
+                    generateXReportPdf(context, r, rangeLabel, canViewPnl = canViewPnl, settings = settings)
                 } else {
-                    generateZReportPdf(context, r, rangeLabel, settings = settings)
+                    generateZReportPdf(context, r, rangeLabel, canViewPnl = canViewPnl, settings = settings)
                 }
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent = Intent(Intent.ACTION_SEND).apply {
@@ -3183,7 +3198,7 @@ private fun shareReport(
             ZReportFormat.CSV -> {
                 val directory = File(context.cacheDir, "reports").apply { mkdirs() }
                 val file = File(directory, "techyfi-${if (isInterimX) "x" else "z"}-report-${System.currentTimeMillis()}.csv")
-                file.writeText(buildReportCsv(r, if (isInterimX) "$rangeLabel (Interim)" else rangeLabel))
+                file.writeText(buildReportCsv(r, if (isInterimX) "$rangeLabel (Interim)" else rangeLabel, canViewPnl = canViewPnl))
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/csv"
@@ -3202,7 +3217,7 @@ private fun shareReport(
     }
 }
 
-private fun buildReportCsv(data: SalesReportData, rangeLabel: String): String {
+private fun buildReportCsv(data: SalesReportData, rangeLabel: String, canViewPnl: Boolean = true): String {
     fun csv(value: Any): String = "\"${value.toString().replace("\"", "\"\"")}\""
     return buildString {
         appendLine("Report period,${csv(rangeLabel)}")
@@ -3210,10 +3225,14 @@ private fun buildReportCsv(data: SalesReportData, rangeLabel: String): String {
         appendLine("Returns & refunds,${data.totalRefunds}")
         appendLine("Net sales,${data.totalRevenue}")
         appendLine("Tax (VAT),${data.totalTax}")
-        appendLine("Gross margin,${data.totalProfit}")
+        if (canViewPnl) {
+            appendLine("Gross margin,${data.totalProfit}")
+        }
         appendLine("Discounts,${data.totalDiscount}")
         appendLine("Expenses,${data.totalExpenses}")
-        appendLine("Net profit,${data.netProfit}")
+        if (canViewPnl) {
+            appendLine("Net profit,${data.netProfit}")
+        }
         appendLine("Transactions,${data.transactionCount}")
         appendLine("Items sold,${data.itemsSold}")
         appendLine()

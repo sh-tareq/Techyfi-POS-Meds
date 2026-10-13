@@ -253,25 +253,27 @@ fun SalesReportScreen(
                 },
                 actions = {
                     val hasTransactions = report != null && (report!!.transactionCount > 0 || report!!.totalRefunds > 0.0 || report!!.totalExpenses > 0.0)
-                    IconButton(
-                        onClick = {
-                            if (report != null) {
-                                val textReport = generateStructuredReportText(report!!, rangeLabel, periodExpenseTotal)
-                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Techyfi POS Sales Report ($rangeLabel)")
-                                    putExtra(android.content.Intent.EXTRA_TEXT, textReport)
+                    if (canExport) {
+                        IconButton(
+                            onClick = {
+                                if (report != null) {
+                                    val textReport = generateStructuredReportText(report!!, rangeLabel, periodExpenseTotal, canViewPnl)
+                                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(android.content.Intent.EXTRA_SUBJECT, "Techyfi POS Sales Report ($rangeLabel)")
+                                        putExtra(android.content.Intent.EXTRA_TEXT, textReport)
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Sales Report"))
                                 }
-                                context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Sales Report"))
-                            }
-                        },
-                        enabled = hasTransactions
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.share),
-                            tint = if (hasTransactions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                        )
+                            },
+                            enabled = hasTransactions
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = stringResource(R.string.share),
+                                tint = if (hasTransactions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
+                        }
                     }
                     if (canExport) {
                         IconButton(
@@ -566,7 +568,8 @@ fun SalesReportScreen(
 private fun generateStructuredReportText(
     report: SalesReportData,
     rangeLabel: String,
-    periodExpenseTotal: Double
+    periodExpenseTotal: Double,
+    canViewPnl: Boolean = true
 ): String {
     val sb = StringBuilder()
     sb.appendLine("=== Techyfi POS Sales Report ===")
@@ -574,7 +577,9 @@ private fun generateStructuredReportText(
     sb.appendLine("--------------------------------")
     sb.appendLine("Total Revenue: ${formatTaka(report.totalRevenue)}")
     sb.appendLine("Net Sales: ${formatTaka((report.totalRevenue - report.totalTax).coerceAtLeast(0.0))}")
-    sb.appendLine("Gross Profit: ${formatTaka(report.grossProfit)}")
+    if (canViewPnl) {
+        sb.appendLine("Gross Profit: ${formatTaka(report.grossProfit)}")
+    }
     sb.appendLine("Invoices / Bills: ${report.transactionCount}")
     val itemsSoldStr = if (report.itemsSold % 1.0 == 0.0) report.itemsSold.toLong().toString() else String.format(Locale.US, "%.2f", report.itemsSold).trimEnd('0').trimEnd('.')
     sb.appendLine("Items Sold: $itemsSoldStr")
@@ -583,8 +588,10 @@ private fun generateStructuredReportText(
     sb.appendLine("Total Refunds: ${formatTaka(report.totalRefunds)}")
     val effectiveExpense = if (periodExpenseTotal > 0.0) periodExpenseTotal else report.totalExpenses
     sb.appendLine("Expenses: ${formatTaka(effectiveExpense)}")
-    val netOperatingProfit = report.grossProfit - effectiveExpense
-    sb.appendLine("Net Operating Profit: ${formatTaka(netOperatingProfit)}")
+    if (canViewPnl) {
+        val netOperatingProfit = report.grossProfit - effectiveExpense
+        sb.appendLine("Net Operating Profit: ${formatTaka(netOperatingProfit)}")
+    }
     if (report.paymentBreakdown.isNotEmpty()) {
         sb.appendLine("--------------------------------")
         sb.appendLine("Payment Breakdown:")
@@ -1676,12 +1683,14 @@ private fun HourlyPanel(data: SalesReportData, canViewPnl: Boolean = true) {
                                         fontWeight = FontWeight.ExtraBold,
                                         color = MaterialTheme.colorScheme.primary
                                     )
-                                    Text(
-                                        text = stringResource(R.string.sales_report_profit_prefix, formatTaka(hourData.profit)),
-                                        fontSize = 10.5.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF059669)
-                                    )
+                                    if (canViewPnl) {
+                                        Text(
+                                            text = stringResource(R.string.sales_report_profit_prefix, formatTaka(hourData.profit)),
+                                            fontSize = 10.5.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFF059669)
+                                        )
+                                    }
                                 }
                             }
 

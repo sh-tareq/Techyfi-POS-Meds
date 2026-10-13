@@ -1600,6 +1600,14 @@ class DataRepository(
         if (outstanding > 0.001 || totalDue > 0.001) {
             throw IllegalStateException("Cannot delete or archive customer with outstanding dues")
         }
+        val storeCredit = customer?.storeCredit ?: 0.0
+        if (storeCredit > 0.001) {
+            throw IllegalStateException("Cannot delete or archive customer with store credit balance")
+        }
+        val vouchers = storeCreditVoucherDao.getVouchersByPhone(normalized)
+        if (vouchers.any { it.status == "ACTIVE" && it.remainingBalance > 0.001 }) {
+            throw IllegalStateException("Cannot delete or archive customer with active voucher balance")
+        }
         customerDao.archiveCustomer(normalized, System.currentTimeMillis())
     }
 
@@ -1613,13 +1621,21 @@ class DataRepository(
         if (outstanding > 0.001 || totalDue > 0.001) {
             throw IllegalStateException("Cannot permanently delete customer with outstanding dues")
         }
+        val storeCredit = customer?.storeCredit ?: 0.0
+        if (storeCredit > 0.001) {
+            throw IllegalStateException("Cannot permanently delete customer with store credit balance")
+        }
+        val customerVouchers = storeCreditVoucherDao.getVouchersByPhone(normalized)
+        if (customerVouchers.any { it.status == "ACTIVE" && it.remainingBalance > 0.001 }) {
+            throw IllegalStateException("Cannot permanently delete customer with active voucher balance")
+        }
         database.withDriverTransaction {
             customerDao.deleteCustomerPermanently(normalized)
             customerDueDao.deleteCustomerDue(normalized)
             customerLoyaltyDao.delete(normalized)
             scheduledDueReminderDao.deleteByPhone(normalized)
             storeCreditVoucherDao.deleteVouchersByPhone(normalized)
-            storeCreditLedgerDao.deleteLedgerByPhone(normalized)
+            // Note: storeCreditLedgerDao rows are retained to preserve audit trail
         }
     }
 
@@ -3943,9 +3959,13 @@ class DataRepository(
         database.withDriverTransaction {
             for (p in products) {
                 val normBarcode = com.example.techyfipos.utils.toEnglishDigits(p.barcode.trim()).lowercase()
-                val existing = productDao.getProductByBarcode(normBarcode)
+                var existing = productDao.getProductByBarcode(normBarcode)
+                if (existing == null && normBarcode.length == 12 && normBarcode.all { it.isDigit() }) {
+                    existing = productDao.getProductByBarcode("0$normBarcode")
+                }
                 if (existing != null) {
-                    val updatedStock = if ("stockQty" in presentFields) p.stockQty else existing.stockQty
+                    val updatedStock = if ("stockQty" in presentFields && p.stockQty >= 0.0) p.stockQty else existing.stockQty
+                    val updatedPurchasePrice = if ("purchasePrice" in presentFields && p.purchasePrice >= 0.0) p.purchasePrice else existing.purchasePrice
                     if (kotlin.math.abs(updatedStock - existing.stockQty) > 0.0001) {
                         inventoryAdjustmentDao.insertAdjustment(
                             InventoryAdjustment(
@@ -3965,7 +3985,7 @@ class DataRepository(
                             barcode = existing.barcode,
                             createdAt = existing.createdAt,
                             category = if ("category" in presentFields) p.category else existing.category,
-                            purchasePrice = if ("purchasePrice" in presentFields) p.purchasePrice else existing.purchasePrice,
+                            purchasePrice = updatedPurchasePrice,
                             sellingPrice = if ("sellingPrice" in presentFields) p.sellingPrice else existing.sellingPrice,
                             stockQty = updatedStock,
                             reorderLevel = if ("reorderLevel" in presentFields) p.reorderLevel else existing.reorderLevel,
@@ -3980,7 +4000,28 @@ class DataRepository(
                         )
                     )
                 } else {
-                    productDao.insertProduct(p.copy(barcode = normBarcode))
+                    val finalStock = p.stockQty.coerceAtLeast(0.0)
+                    val finalPurchase = p.purchasePrice.coerceAtLeast(0.0)
+                    val newProduct = p.copy(
+                        barcode = normBarcode,
+                        stockQty = finalStock,
+                        purchasePrice = finalPurchase
+                    )
+                    productDao.insertProduct(newProduct)
+                    if (finalStock > 0.0001) {
+                        inventoryAdjustmentDao.insertAdjustment(
+                            InventoryAdjustment(
+                                productBarcode = newProduct.barcode,
+                                productName = newProduct.name,
+                                previousStock = 0.0,
+                                newStock = finalStock,
+                                difference = finalStock,
+                                reason = "Import",
+                                timestamp = System.currentTimeMillis(),
+                                cashierName = sessionUser?.name ?: ""
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -4279,6 +4320,12 @@ class DataRepository(
         if (!hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
             requireOwnerSession()
         }
+        if (user.role == AppRoles.OWNER && !isSessionOwner()) {
+            throw UnauthorizedException("Non-owners cannot delete owner accounts")
+        }
+        if (sessionUser?.id == user.id) {
+            throw IllegalStateException("Cannot delete your own account")
+        }
         if (user.role == AppRoles.OWNER && userDao.getOwnerCount() <= 1) {
             throw IllegalStateException("The last owner account cannot be deleted")
         }
@@ -4302,9 +4349,17 @@ class DataRepository(
         val existing = all.firstOrNull { it.id == userId } ?: error("User not found")
         require(newName.isNotBlank()) { "Staff name cannot be blank" }
 
+        if (existing.role == AppRoles.OWNER && !isSessionOwner()) {
+            throw UnauthorizedException("Non-owners cannot modify owner accounts")
+        }
+
         val targetRole = newRole ?: existing.role
         require(targetRole == AppRoles.OWNER || targetRole == AppRoles.MANAGER || targetRole == AppRoles.CASHIER) {
             "Unsupported user role: $targetRole"
+        }
+
+        if (targetRole == AppRoles.OWNER && !isSessionOwner()) {
+            throw UnauthorizedException("Non-owners cannot assign the owner role")
         }
 
         if (existing.role == AppRoles.OWNER && targetRole != AppRoles.OWNER && userDao.getOwnerCount() <= 1) {
@@ -4320,9 +4375,9 @@ class DataRepository(
             require(newPin.length == 4 && newPin.all(Char::isDigit)) { "PIN must be 4 digits" }
             require(!oldPin.isNullOrBlank()) { "Current PIN is required to change PIN" }
             val currentOwner = sessionUser
-            val matchesExisting = pinMatches(oldPin, existing.pinHash)
-            val matchesSessionOwner = currentOwner != null && pinMatches(oldPin, currentOwner.pinHash)
-            require(matchesExisting || matchesSessionOwner) { "Current PIN is incorrect" }
+            val matchesTarget = pinMatches(oldPin, existing.pinHash)
+            val matchesSessionOwner = isSessionOwner() && currentOwner != null && pinMatches(oldPin, currentOwner.pinHash)
+            require(matchesTarget || matchesSessionOwner) { "Current PIN is incorrect" }
             require(all.none { it.id != userId && pinMatches(newPin, it.pinHash) }) {
                 "PIN already in use by another user"
             }
@@ -4331,8 +4386,19 @@ class DataRepository(
             existing.pinHash
         }
 
+        if (customPermissions != null) {
+            if (!hasPermission(AppPermissions.SYSTEM_PERMISSIONS) && !isSessionOwner()) {
+                throw UnauthorizedException("Permission SYSTEM_PERMISSIONS required to change custom permissions")
+            }
+            if (sessionUser?.id == userId) {
+                throw UnauthorizedException("Users cannot edit their own permissions")
+            }
+        }
+
         val updatedPermissionsJson = if (customPermissions != null) {
             AppPermissions.serializePermissions(customPermissions)
+        } else if (targetRole != existing.role) {
+            null
         } else {
             existing.customPermissions
         }
@@ -4359,6 +4425,12 @@ class DataRepository(
         }
         val all = userDao.getAllUsersOnce()
         val existing = all.firstOrNull { it.id == userId } ?: error("User not found")
+        if (existing.role == AppRoles.OWNER && !isSessionOwner()) {
+            throw UnauthorizedException("Non-owners cannot modify owner accounts")
+        }
+        if (sessionUser?.id == userId && !isActive) {
+            throw IllegalStateException("Cannot deactivate your own account")
+        }
         if (existing.role == AppRoles.OWNER && !isActive && userDao.getActiveOwnerCount() <= 1) {
             throw IllegalStateException("The only owner account cannot be deactivated")
         }
@@ -4368,6 +4440,14 @@ class DataRepository(
     suspend fun updateStaffPermissions(userId: Long, permissions: Set<String>?) = withContext(Dispatchers.IO) {
         if (!hasPermission(AppPermissions.SYSTEM_PERMISSIONS)) {
             requireOwnerSession()
+        }
+        val all = userDao.getAllUsersOnce()
+        val existing = all.firstOrNull { it.id == userId } ?: error("User not found")
+        if (existing.role == AppRoles.OWNER && !isSessionOwner()) {
+            throw UnauthorizedException("Non-owners cannot modify owner permissions")
+        }
+        if (sessionUser?.id == userId) {
+            throw UnauthorizedException("Users cannot edit their own permissions")
         }
         val permissionsJson = AppPermissions.serializePermissions(permissions)
         userDao.updatePermissions(userId, permissionsJson)
@@ -4957,6 +5037,7 @@ class DataRepository(
                 require(line.unitCost.isFinite() && line.unitCost >= 0.0) { "Unit cost cannot be negative" }
             }
             val due = (totalAmount - paidAmount).coerceAtLeast(0.0)
+            val writeTimestamp = System.currentTimeMillis()
             val invId = purchaseInvoiceDao.insertPurchaseInvoice(
                 PurchaseInvoice(
                     supplierId = supplierId,
@@ -4974,7 +5055,7 @@ class DataRepository(
                     supplierId = supplierId,
                     purchaseAmount = totalAmount,
                     dueChange = due,
-                    timestamp = System.currentTimeMillis()
+                    timestamp = writeTimestamp
                 ) == 1
             ) { "Supplier no longer exists" }
             if (paidAmount > 0.0) {
@@ -4984,7 +5065,7 @@ class DataRepository(
                         amountPaid = paidAmount,
                         paymentMethod = paymentMethod,
                         referenceNote = "Paid on Invoice #$invoiceNumber${if (!note.isNullOrBlank()) " - $note" else ""}",
-                        timestamp = System.currentTimeMillis(),
+                        timestamp = writeTimestamp,
                         performedByName = sessionUser?.name
                     )
                 )
@@ -4997,7 +5078,7 @@ class DataRepository(
                             amount = paidAmount,
                             paymentSource = "Cash",
                             note = "Paid to supplier on Invoice #$invoiceNumber${if (!note.isNullOrBlank()) " - $note" else ""}",
-                            timestamp = System.currentTimeMillis(),
+                            timestamp = writeTimestamp,
                             cashierName = sessionUser?.name.orEmpty().also {
                                 if (sessionUser == null) Log.w("DataRepository", "sessionUser null at write time")
                             }
@@ -5115,6 +5196,9 @@ class DataRepository(
         database.withDriverTransaction {
             val payment = supplierDao.getSupplierPaymentById(paymentId)
                 ?: throw IllegalArgumentException("Supplier payment not found")
+            if (payment.referenceNote?.startsWith("Paid on Invoice #") == true) {
+                throw IllegalStateException("Cannot void invoice payments directly. Void the purchase invoice instead.")
+            }
             val supplier = supplierDao.getSupplierById(payment.supplierId)
             if (supplier != null) {
                 supplierDao.updateSupplierBalances(
@@ -5172,10 +5256,13 @@ class DataRepository(
                     )
                 }
             }
+            val supplier = supplierDao.getSupplierById(invoice.supplierId)
+            val currentSupplierDue = supplier?.totalDue ?: 0.0
+            val dueReduction = minOf(invoice.dueAmount, maxOf(0.0, currentSupplierDue))
             supplierDao.updateSupplierBalances(
                 supplierId = invoice.supplierId,
                 purchaseAmount = -invoice.totalAmount,
-                dueChange = -invoice.dueAmount,
+                dueChange = -dueReduction,
                 timestamp = System.currentTimeMillis()
             )
             purchaseInvoiceDao.deleteItemsForInvoice(invoiceId)
@@ -5183,9 +5270,11 @@ class DataRepository(
 
             if (invoice.paidAmount > 0.0) {
                 val payments = supplierDao.getPaymentsForSupplierOnce(invoice.supplierId)
+                val targetRef = "Paid on Invoice #${invoice.invoiceNumber}"
                 val matchingPayment = payments.firstOrNull {
-                    it.referenceNote?.contains("#${invoice.invoiceNumber}") == true &&
-                    kotlin.math.abs(it.amountPaid - invoice.paidAmount) < 0.01
+                    val ref = it.referenceNote.orEmpty()
+                    val matchesPrefix = ref == targetRef || ref.startsWith("$targetRef - ")
+                    matchesPrefix && kotlin.math.abs(it.amountPaid - invoice.paidAmount) < 0.01
                 }
                 if (matchingPayment != null) {
                     supplierDao.deleteSupplierPaymentById(matchingPayment.id)

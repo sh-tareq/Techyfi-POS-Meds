@@ -64,9 +64,8 @@ fun OwnerProfitAnalyticsContent(
     // Calculate line profits and metrics
     val itemsWithProfit = remember(bill, returnSummary, profitSummary) {
         if (profitSummary != null) {
-            val summaryItemsByBarcode = profitSummary.itemsProfit.associateBy { it.barcode }
-            bill.items.map { item ->
-                val matching = summaryItemsByBarcode[item.barcode]
+            bill.items.mapIndexed { index, item ->
+                val matching = profitSummary.itemsProfit.getOrNull(index) ?: profitSummary.itemsProfit.find { it.barcode == item.barcode }
                 val unitCost = matching?.unitCost ?: item.purchasePrice ?: (item.unitPrice * 0.75)
                 val lineCost = matching?.lineCost ?: (unitCost * item.quantity)
                 val lineProfit = matching?.lineProfit ?: (item.lineTotal - lineCost)
@@ -93,7 +92,7 @@ fun OwnerProfitAnalyticsContent(
         itemsWithProfit.sumOf { it.second.second }
     }
     val grossRevenue = profitSummary?.grossRevenue ?: bill.subtotal
-    val discountVal = profitSummary?.discountAmount ?: bill.discountValue
+    val discountVal = (profitSummary?.discountAmount ?: bill.discountValue) + (profitSummary?.loyaltyDiscount ?: 0.0)
     val netRevBeforeRefund = (grossRevenue - discountVal).coerceAtLeast(0.0)
 
     val refundAmount = profitSummary?.returnRefundTotal ?: returnSummary?.totalRefundAmount ?: bill.returnRefundAmount

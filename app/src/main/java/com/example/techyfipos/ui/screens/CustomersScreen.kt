@@ -1468,6 +1468,7 @@ fun CustomerAddEditDialog(
     var creditLimitStr by remember { mutableStateOf(if ((customer?.creditLimit ?: 0.0) > 0) customer!!.creditLimit.toString() else "") }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showDueBlockedDialog by remember { mutableStateOf(false) }
+    var showCreditBlockedDialog by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1564,6 +1565,8 @@ fun CustomerAddEditDialog(
                         onClick = {
                             if (customer.totalDue > 0.001) {
                                 showDueBlockedDialog = true
+                            } else if (customer.storeCredit > 0.001) {
+                                showCreditBlockedDialog = true
                             } else {
                                 showDeleteConfirmDialog = true
                             }
@@ -1588,6 +1591,20 @@ fun CustomerAddEditDialog(
             text = { Text(stringResource(R.string.customer_cannot_delete_due_desc, customer.name, formatTaka(customer.totalDue))) },
             confirmButton = {
                 Button(onClick = { showDueBlockedDialog = false }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        )
+    }
+
+    if (showCreditBlockedDialog && customer != null) {
+        AlertDialog(
+            onDismissRequest = { showCreditBlockedDialog = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
+            title = { Text(stringResource(R.string.customer_cannot_delete_title), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.customer_cannot_delete_credit_desc, customer.name, formatTaka(customer.storeCredit))) },
+            confirmButton = {
+                Button(onClick = { showCreditBlockedDialog = false }) {
                     Text(stringResource(R.string.ok))
                 }
             }

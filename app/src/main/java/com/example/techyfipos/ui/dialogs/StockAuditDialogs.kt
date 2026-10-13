@@ -39,7 +39,7 @@ fun StockAuditHistorySheet(
     var searchQuery by remember { mutableStateOf("") }
     var selectedReasonFilter by remember { mutableStateOf("All") }
     var showProductPicker by remember { mutableStateOf(false) }
-    val reasons = listOf("All", "Restock", "Damage", "Expired", "Discrepancy", "Sample", "Store Use", "Internal Use")
+    val reasons = listOf("All", "Restock", "Damage", "Expired", "Discrepancy", "Sample", "Store Use", "Internal Use", "Import", "Other")
 
     val filtered = remember(adjustments, searchQuery, selectedReasonFilter) {
         adjustments.filter { adj ->

@@ -179,6 +179,7 @@ internal fun localizedAdjustmentReasonLabel(reason: String): String = when (reas
     "Sample" -> stringResource(R.string.products_reason_sample)
     "Store Use" -> stringResource(R.string.products_reason_store_use)
     "Internal Use" -> stringResource(R.string.products_reason_internal_use)
+    "Import" -> stringResource(R.string.products_reason_import)
     "Other" -> stringResource(R.string.products_reason_other)
     else -> reason
 }

@@ -1486,6 +1486,8 @@ fun MainNavigation() {
                                     salesViewModel = salesViewModel,
                                     settingsViewModel = settingsViewModel,
                                     canViewZReport = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_Z_REPORT),
+                                    canViewPnl = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL),
+                                    canExport = isOwner || activePermissions.contains(AppPermissions.REPORTS_EXPORT_EXCEL),
                                     onBack = { backStack.removeLastOrNull() },
                                     onNavigateToExpenses = {
                                         if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
