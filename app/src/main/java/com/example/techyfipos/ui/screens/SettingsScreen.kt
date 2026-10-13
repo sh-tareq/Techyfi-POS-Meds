@@ -1394,8 +1394,9 @@ private fun OptimizedSettingsHome(
                         cashDrawerUsbDeviceKey = ""
                     )
                 }
+                // onUpdateSettings already persists every drawer field; do not also write the
+                // selection into the legacy Bluetooth address field (it would hold a USB key).
                 onUpdateSettings(updated)
-                onCashDrawerPrinterSelected(target.identifier)
                 showPrinterPicker = false
             },
             onDismiss = { showPrinterPicker = false }

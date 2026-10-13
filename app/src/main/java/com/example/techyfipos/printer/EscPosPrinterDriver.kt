@@ -123,18 +123,22 @@ object EscPosPrinterDriver {
 
     /**
      * Pure function returning the ESC/POS cut bytes for a given cut mode and command style.
+     * The "GS_V_FEED" style (GS V 65/66 n) uses n = 0, meaning "feed to the cutting position, then cut".
+     * The user-visible feed lines are already sent separately as ESC d n, because n in GS V is a printer
+     * specific motion unit and not a line count. [feedLines] is kept only for call compatibility.
      */
+    @Suppress("UNUSED_PARAMETER")
     fun receiptCutBytes(cutMode: ReceiptCutMode, cutCommandStyle: String = "GS_V", feedLines: Int = 4): ByteArray {
         return when (cutMode) {
             ReceiptCutMode.NONE -> byteArrayOf()
             ReceiptCutMode.FULL -> when (cutCommandStyle.trim().uppercase()) {
                 "LEGACY_ESC" -> byteArrayOf(0x1B, 0x69)
-                "GS_V_FEED" -> byteArrayOf(0x1D, 0x56, 0x41, feedLines.coerceIn(0, 10).toByte())
+                "GS_V_FEED" -> byteArrayOf(0x1D, 0x56, 0x41, 0x00)
                 else -> CMD_FULL_CUT
             }
             ReceiptCutMode.PARTIAL -> when (cutCommandStyle.trim().uppercase()) {
                 "LEGACY_ESC" -> byteArrayOf(0x1B, 0x6D)
-                "GS_V_FEED" -> byteArrayOf(0x1D, 0x56, 0x42, feedLines.coerceIn(0, 10).toByte())
+                "GS_V_FEED" -> byteArrayOf(0x1D, 0x56, 0x42, 0x00)
                 else -> CMD_PARTIAL_CUT
             }
         }

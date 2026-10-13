@@ -465,6 +465,11 @@ class PrinterRoutingAndDriverTest {
         // Advanced legacy ESC style
         assertArrayEquals(byteArrayOf(0x1B, 0x69), EscPosPrinterDriver.receiptCutBytes(ReceiptCutMode.FULL, "LEGACY_ESC"))
         assertArrayEquals(byteArrayOf(0x1B, 0x6D), EscPosPrinterDriver.receiptCutBytes(ReceiptCutMode.PARTIAL, "LEGACY_ESC"))
+
+        // GS V 65/66 feed style always uses n = 0, regardless of the configured feed lines
+        assertArrayEquals(byteArrayOf(0x1D, 0x56, 0x41, 0x00), EscPosPrinterDriver.receiptCutBytes(ReceiptCutMode.FULL, "GS_V_FEED", 7))
+        assertArrayEquals(byteArrayOf(0x1D, 0x56, 0x42, 0x00), EscPosPrinterDriver.receiptCutBytes(ReceiptCutMode.PARTIAL, "GS_V_FEED", 7))
+        assertArrayEquals(byteArrayOf(), EscPosPrinterDriver.receiptCutBytes(ReceiptCutMode.NONE, "GS_V_FEED", 7))
     }
 
     // 17. Tests for receiptFeedBytes pure function and clamping
