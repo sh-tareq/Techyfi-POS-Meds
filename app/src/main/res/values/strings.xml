@@ -2786,6 +2786,13 @@
     <string name="return_reason_changed_mind">Changed mind</string>
     <string name="return_reason_color_mismatch">Color mismatch</string>
     <string name="return_select_quantities_header">1. SELECT RETURN QUANTITIES</string>
+    <string name="return_reason_for_return_header">2. REASON FOR RETURN</string>
+    <string name="return_audit_note_header">3. AUDIT NOTE</string>
+    <string name="return_audit_note_placeholder">e.g. Customer tested and found seal broken</string>
+    <string name="return_settlement_method_header">4. SETTLEMENT METHOD (REFUND DESTINATION)</string>
+    <string name="settings_standby">Standby</string>
+    <string name="register_close_failed">Unable to close register</string>
+    <string name="register_close_count_notes">🧮 Count Notes</string>
     <string name="return_will_restock">Will increment stock count automatically</string>
     <string name="return_will_not_restock">Will NOT add defective item back into shelf stock</string>
     <string name="return_active_register">Active Register</string>

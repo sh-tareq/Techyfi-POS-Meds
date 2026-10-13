@@ -127,4 +127,34 @@ class P3AuditFixesTest {
         val diffDays2 = (jan2 - dec31) / dayMs
         assertEquals(1L, diffDays2)
     }
+
+    @Test
+    fun testR20_19b_bulkPriceUpdatesDiscountedPrice() {
+        // Product with discountedPrice > 0.0: percent increase updates both sellingPrice and discountedPrice
+        val (newSell, newDisc) = com.example.techyfipos.utils.PaymentMath.computeBulkUpdatedPrices(
+            currentSellingPrice = 100.0,
+            currentDiscountedPrice = 100.0,
+            percentDelta = 10.0
+        )
+        assertEquals(110.0, newSell, 0.001)
+        assertEquals(110.0, newDisc, 0.001)
+
+        // Product with discountedPrice == 0.0: discountedPrice remains 0.0
+        val (newSellZero, newDiscZero) = com.example.techyfipos.utils.PaymentMath.computeBulkUpdatedPrices(
+            currentSellingPrice = 100.0,
+            currentDiscountedPrice = 0.0,
+            percentDelta = 10.0
+        )
+        assertEquals(110.0, newSellZero, 0.001)
+        assertEquals(0.0, newDiscZero, 0.001)
+
+        // Fixed delta
+        val (newSellFixed, newDiscFixed) = com.example.techyfipos.utils.PaymentMath.computeBulkUpdatedPrices(
+            currentSellingPrice = 100.0,
+            currentDiscountedPrice = 100.0,
+            fixedDelta = 25.0
+        )
+        assertEquals(125.0, newSellFixed, 0.001)
+        assertEquals(125.0, newDiscFixed, 0.001)
+    }
 }

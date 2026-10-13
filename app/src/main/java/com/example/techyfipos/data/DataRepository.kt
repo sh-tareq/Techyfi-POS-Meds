@@ -2181,11 +2181,12 @@ class DataRepository(
             require(charge.customerPhone == cleanPhone) { "Charge does not belong to this customer" }
             val currentDue = customerDueDao.getCustomerDueByPhone(cleanPhone)
             if (currentDue != null) {
-                val newOutstanding = currentDue.outstandingAmount - charge.amount
-                val excess = if (newOutstanding < 0.0) -newOutstanding else 0.0
+                val reversal = com.example.techyfipos.utils.PaymentMath.computeDueChargeReversal(currentDue.outstandingAmount, charge.amount)
+                val newOutstanding = reversal.newOutstanding
+                val excess = reversal.storeCreditExcess
                 customerDueDao.upsertCustomerDue(
                     currentDue.copy(
-                        outstandingAmount = newOutstanding.coerceAtLeast(0.0),
+                        outstandingAmount = newOutstanding,
                         updatedAt = System.currentTimeMillis()
                     )
                 )
@@ -4064,14 +4065,12 @@ class DataRepository(
         database.withDriverTransaction {
             for (barcode in barcodes) {
                 val p = productDao.getProductByBarcode(barcode) ?: continue
-                var newPrice = p.sellingPrice
-                if (percentDelta != null) {
-                    newPrice = (newPrice * (1.0 + percentDelta / 100.0)).coerceAtLeast(0.0)
-                } else if (fixedDelta != null) {
-                    newPrice = (newPrice + fixedDelta).coerceAtLeast(0.0)
-                }
-                val rounded = kotlin.math.round(newPrice * 100.0) / 100.0
-                val newDiscounted = if (p.discountedPrice > 0.0) rounded else 0.0
+                val (rounded, newDiscounted) = com.example.techyfipos.utils.PaymentMath.computeBulkUpdatedPrices(
+                    currentSellingPrice = p.sellingPrice,
+                    currentDiscountedPrice = p.discountedPrice,
+                    percentDelta = percentDelta,
+                    fixedDelta = fixedDelta
+                )
                 productDao.updateProduct(p.copy(sellingPrice = rounded, discountedPrice = newDiscounted))
             }
         }
@@ -5292,7 +5291,7 @@ class DataRepository(
             }
             val supplier = supplierDao.getSupplierById(invoice.supplierId)
             val currentSupplierDue = supplier?.totalDue ?: 0.0
-            val dueReduction = minOf(invoice.dueAmount, maxOf(0.0, currentSupplierDue))
+            val dueReduction = com.example.techyfipos.utils.PaymentMath.computeSupplierInvoiceVoidDueReduction(invoice.dueAmount, currentSupplierDue)
             supplierDao.updateSupplierBalances(
                 supplierId = invoice.supplierId,
                 purchaseAmount = -invoice.totalAmount,

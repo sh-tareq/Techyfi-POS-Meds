@@ -712,20 +712,22 @@ class MoneyFlowsTest {
         val discount = 10.0
         val loyaltyDiscount = 10.0
         val grandTotal = 200.0
-
         val refundAmount = 100.0
         val returnedCost = 60.0
-        val retTaxPortion = (refundAmount / grandTotal) * taxAmount
-        val effectiveRefundRevenue = refundAmount - retTaxPortion
 
-        // 1. calculateInvoiceProfit formula
-        val totalDiscounts = discount + loyaltyDiscount
-        val netRevBeforeRefund = subtotal - totalDiscounts
-        val invoiceNetRev = netRevBeforeRefund - effectiveRefundRevenue
-        val invoiceNetCogs = grossCogs - returnedCost
-        val invoiceNetProfit = invoiceNetRev - invoiceNetCogs
+        val pureResult = com.example.techyfipos.utils.PaymentMath.calculateInvoiceProfitSummary(
+            subtotal = subtotal,
+            grossCogs = grossCogs,
+            taxAmount = taxAmount,
+            discount = discount,
+            loyaltyDiscount = loyaltyDiscount,
+            grandTotal = grandTotal,
+            refundAmount = refundAmount,
+            returnedCost = returnedCost
+        )
 
         // 2. buildReport formula
+        val retTaxPortion = (refundAmount / grandTotal) * taxAmount
         val lineRev = 200.0
         val profitSum = lineRev - grossCogs
         val refundedProfit = (refundAmount - retTaxPortion) - returnedCost
@@ -733,9 +735,9 @@ class MoneyFlowsTest {
         val reportNetProfit = grossMargin - discount - loyaltyDiscount
 
         // 3. Assert all views agree
-        assertEquals(30.0, invoiceNetProfit, 0.001)
+        assertEquals(30.0, pureResult.netProfit, 0.001)
         assertEquals(30.0, reportNetProfit, 0.001)
-        assertEquals(invoiceNetProfit, reportNetProfit, 0.001)
+        assertEquals(pureResult.netProfit, reportNetProfit, 0.001)
     }
 
     @Test
@@ -744,7 +746,7 @@ class MoneyFlowsTest {
         var callCount = 0
 
         fun triggerPay() {
-            if (!isSaving) {
+            if (com.example.techyfipos.utils.PaymentMath.canSubmitSupplierPayment(isSaving)) {
                 isSaving = true
                 callCount++
             }
@@ -762,11 +764,12 @@ class MoneyFlowsTest {
         // Callback completes
         isSaving = false
         assertFalse(isSaving)
+        assertTrue(com.example.techyfipos.utils.PaymentMath.canSubmitSupplierPayment(isSaving))
     }
 
     @Test
     fun `R20-19g manual expense categories exclude Supplier Payment`() {
-        val manualExpenseCategories = listOf("Tea & Refreshments", "Staff Meal", "Electricity (Token)", "Transport", "Shop Rent", "Cleaning", "Other")
+        val manualExpenseCategories = com.example.techyfipos.ui.components.MANUAL_EXPENSE_CATEGORIES
         assertFalse(manualExpenseCategories.contains("Supplier Payment"))
 
         val supplierPaymentExpense = com.example.techyfipos.data.db.Expense(
@@ -834,35 +837,33 @@ class MoneyFlowsTest {
     fun `R20-19i due charge deletion transfers excess overpayment to store credit`() {
         val currentOutstanding = 100.0
         val chargeAmount = 250.0
-        val newOutstanding = currentOutstanding - chargeAmount
-        val excess = if (newOutstanding < 0.0) -newOutstanding else 0.0
+        val reversal = com.example.techyfipos.utils.PaymentMath.computeDueChargeReversal(currentOutstanding, chargeAmount)
 
-        assertEquals(-150.0, newOutstanding, 0.001)
-        assertEquals(150.0, excess, 0.001)
-        assertEquals(0.0, newOutstanding.coerceAtLeast(0.0), 0.001)
+        assertEquals(0.0, reversal.newOutstanding, 0.001)
+        assertEquals(150.0, reversal.storeCreditExcess, 0.001)
     }
 
     @Test
     fun `R20-19j add customer checks existing phone while edit mode allows it`() {
         val existingCustomer = Customer(phone = "01712345678", name = "Rahim", storeCredit = 0.0)
-        
-        fun validateUpsert(isEdit: Boolean, phone: String): String? {
-            val existing = if (phone == existingCustomer.phone) existingCustomer else null
-            if (!isEdit && existing != null) {
-                return "A customer with this phone number already exists (${existing.name})"
-            }
-            return null
-        }
 
-        val addCollisionError = validateUpsert(isEdit = false, phone = "01712345678")
-        assertNotNull(addCollisionError)
-        assertTrue(addCollisionError!!.contains("Rahim"))
+        val duplicateAdd = com.example.techyfipos.utils.PaymentMath.validateCustomerPhoneUniqueness(
+            isEdit = false,
+            existingCustomer = existingCustomer
+        )
+        assertEquals("Rahim", duplicateAdd)
 
-        val addFreshError = validateUpsert(isEdit = false, phone = "01899999999")
-        assertEquals(null, addFreshError)
+        val freshAdd = com.example.techyfipos.utils.PaymentMath.validateCustomerPhoneUniqueness(
+            isEdit = false,
+            existingCustomer = null
+        )
+        assertEquals(null, freshAdd)
 
-        val editError = validateUpsert(isEdit = true, phone = "01712345678")
-        assertEquals(null, editError)
+        val editAllowed = com.example.techyfipos.utils.PaymentMath.validateCustomerPhoneUniqueness(
+            isEdit = true,
+            existingCustomer = existingCustomer
+        )
+        assertEquals(null, editAllowed)
     }
 
     @Test
@@ -872,7 +873,7 @@ class MoneyFlowsTest {
             com.example.techyfipos.data.db.Return(id = 2, saleId = 20, refundMethod = "Cash", refundAmount = 70.0, timestamp = 200L)
         )
         val sourceSaleIds = setOf(10L)
-        val filteredReturns = allReturns.filter { it.saleId in sourceSaleIds }
+        val filteredReturns = com.example.techyfipos.utils.PaymentMath.filterReturnsByAllowedSaleIds(allReturns, sourceSaleIds)
         assertEquals(1, filteredReturns.size)
         assertEquals(10L, filteredReturns.first().saleId)
         assertEquals(50.0, filteredReturns.first().refundAmount, 0.001)

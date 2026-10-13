@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material3.*
 import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
+import com.example.techyfipos.theme.extendedColors
 import com.example.techyfipos.data.AppPermissions
 import android.widget.Toast
 import androidx.compose.runtime.*
@@ -250,8 +251,8 @@ fun SuppliersScreen(
                     // Live Hub Status Pill
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = Color(0xFFF0F9FF),
-                        border = BorderStroke(1.dp, Color(0xFFBAE6FD)),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
                         Row(
@@ -263,13 +264,13 @@ fun SuppliersScreen(
                                 modifier = Modifier
                                     .size(6.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF0284C7))
+                                    .background(MaterialTheme.colorScheme.primary)
                             )
                             Text(
                                 text = stringResource(R.string.supplier_active_hub),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF0284C7)
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     }
@@ -735,9 +736,9 @@ fun SuppliersScreen(
                                     if (isOwner) {
                                         IconButton(
                                             onClick = { invoiceToVoid = invoice },
-                                            modifier = Modifier.size(32.dp)
+                                            modifier = Modifier.size(48.dp)
                                         ) {
-                                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.supplier_void_button), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.supplier_void_button), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                                         }
                                     }
                                 }
@@ -794,13 +795,13 @@ fun SuppliersScreen(
                                 payment.referenceNote?.takeIf { it.isNotBlank() }?.let { Text(it, fontSize = 11.sp) }
                             }
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(formatTaka(payment.amountPaid), fontWeight = FontWeight.ExtraBold, color = Color(0xFF10B981))
+                                Text(formatTaka(payment.amountPaid), fontWeight = FontWeight.ExtraBold, color = MaterialTheme.extendedColors.success)
                                 if (isOwner) {
                                     IconButton(
                                         onClick = { paymentToVoid = payment },
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(48.dp)
                                     ) {
-                                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.supplier_void_button), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.supplier_void_button), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                                     }
                                 }
                             }
@@ -1186,7 +1187,7 @@ fun SuppliersScreen(
                                             formatTaka(sup.totalDue),
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.ExtraBold,
-                                            color = if (sup.totalDue > 0) MaterialTheme.colorScheme.error else Color(0xFF059669)
+                                            color = if (sup.totalDue > 0) MaterialTheme.colorScheme.error else MaterialTheme.extendedColors.success
                                         )
                                     }
                                 }
@@ -1242,7 +1243,7 @@ fun SuppliersScreen(
                     )
                     Text(
                         text = stringResource(R.string.supplier_outstanding_due_amount, formatTaka(sup.totalDue)),
-                        color = Color(0xFFEF4444),
+                        color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Black,
                         fontSize = 14.sp
                     )
@@ -1315,9 +1316,9 @@ fun SuppliersScreen(
                         }
                     },
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.extendedColors.success)
                 ) {
-                    Text(stringResource(R.string.record_payment), fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Text(stringResource(R.string.record_payment), fontWeight = FontWeight.ExtraBold, color = MaterialTheme.extendedColors.onSuccess)
                 }
             },
             dismissButton = {
@@ -1531,7 +1532,7 @@ fun SupplierDetailSheet(
                 }
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = if (supplier.totalDue > 0) Color(0xFFFEF3C7) else Color(0xFFDCFCE7),
+                    color = if (supplier.totalDue > 0) MaterialTheme.extendedColors.warningContainer else MaterialTheme.extendedColors.successContainer,
                     modifier = Modifier.weight(1f)
                 ) {
                     Column(modifier = Modifier.padding(10.dp)) {
@@ -1539,13 +1540,13 @@ fun SupplierDetailSheet(
                             text = stringResource(R.string.dues_current_due_label),
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (supplier.totalDue > 0) Color(0xFF92400E) else Color(0xFF166534)
+                            color = if (supplier.totalDue > 0) MaterialTheme.extendedColors.onWarningContainer else MaterialTheme.extendedColors.onSuccessContainer
                         )
                         Text(
                             text = formatTaka(supplier.totalDue),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = if (supplier.totalDue > 0) Color(0xFF92400E) else Color(0xFF166534)
+                            color = if (supplier.totalDue > 0) MaterialTheme.extendedColors.onWarningContainer else MaterialTheme.extendedColors.onSuccessContainer
                         )
                     }
                 }
@@ -1615,7 +1616,7 @@ fun SupplierDetailSheet(
                                             if (isOwner) {
                                                 IconButton(
                                                     onClick = { onVoidInvoice(invoice) },
-                                                    modifier = Modifier.size(32.dp)
+                                                    modifier = Modifier.size(48.dp)
                                                 ) {
                                                     Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.supplier_void_button), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                                                 }
@@ -1683,11 +1684,11 @@ fun SupplierDetailSheet(
                                         }
                                     }
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(formatTaka(payment.amountPaid), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color(0xFF10B981))
+                                        Text(formatTaka(payment.amountPaid), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = MaterialTheme.extendedColors.success)
                                         if (isOwner) {
                                             IconButton(
                                                 onClick = { onVoidPayment(payment) },
-                                                modifier = Modifier.size(32.dp)
+                                                modifier = Modifier.size(48.dp)
                                             ) {
                                                 Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.supplier_void_button), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                                             }
@@ -1715,10 +1716,10 @@ fun SupplierDetailSheet(
                     Button(
                         onClick = onPayDue,
                         shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.extendedColors.success),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(stringResource(R.string.pay_due), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.pay_due), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.extendedColors.onSuccess)
                     }
                 }
             }

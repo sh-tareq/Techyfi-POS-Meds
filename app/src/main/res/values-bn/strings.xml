@@ -2788,6 +2788,13 @@
     <string name="return_reason_changed_mind">পছন্দ পরিবর্তন</string>
     <string name="return_reason_color_mismatch">ভুল কালার</string>
     <string name="return_select_quantities_header">১. ফেরত পণ্যের পরিমাণ নির্ধারণ</string>
+    <string name="return_reason_for_return_header">২. ফেরতের কারণ</string>
+    <string name="return_audit_note_header">৩. অডিট নোট</string>
+    <string name="return_audit_note_placeholder">যেমন: কাস্টমার টেস্ট করে সিল ভাঙা পেয়েছেন</string>
+    <string name="return_settlement_method_header">৪. ফেরত প্রদানের মাধ্যম</string>
+    <string name="settings_standby">স্ট্যান্ডবাই</string>
+    <string name="register_close_failed">রেজিস্টার বন্ধ করা যায়নি</string>
+    <string name="register_close_count_notes">🧮 নোট গণনা</string>
     <string name="return_will_restock">স্বয়ংক্রিয়ভাবে স্টকের পরিমাণ বৃদ্ধি পাবে</string>
     <string name="return_will_not_restock">ত্রুটিযুক্ত পণ্য স্টকে ফেরত যোগ হবে না</string>
     <string name="return_active_register">সক্রিয় ক্যাশ রেজিস্টার</string>

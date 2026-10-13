@@ -57,7 +57,7 @@ Suggested shape (one small new file plus a collector):
 
 ## P1: Money, stock and data integrity
 
-- [x] **R20-06 HIGH Verified. The %/৳ discount toggle bypasses the discount limit.** (Fixed in `a95f026`, test: `DiscountInputTest`).
+- [x] **R20-06 HIGH Verified. The %/৳ discount toggle bypasses the discount limit.** (Fixed in `a95f026`, test: `DiscountCalculationTest`).
   - `CartScreen.kt` about 1283: the trailing toggle calls `cartViewModel.toggleDiscountUnit()` (VM about 1256), which only flips the flag. The limit and supervisor check only run in the text field's `onValueChange` (about 1258-1278).
   - Scenario: cashier with a 10% limit types 50 in ৳ mode on a ৳1,000 bill (5%, allowed) and taps the toggle; the discount becomes 50%. Typing 100 then toggling gives 100%.
   - Fix: in the toggle's onClick set `discountInput = ""`, call `cartViewModel.setDiscountAmount(0.0)`, then toggle; the next entry re-runs the check. Also re-check the limit when the subtotal changes (removing items or changing price mode after a fixed ৳ discount raises its percentage).
@@ -105,11 +105,11 @@ Suggested shape (one small new file plus a collector):
   - `CartScreen.kt` about 1011 passes `discountAmount` (for example `10` meaning 10%) to `CartTotalSummaryCard`. 10% off ৳500 shows "-৳10" while the total uses ৳50.
   - Fix: pass `discountVal` (collected at about 319).
 
-- [x] **R20-16 MED Verified. Store credit applied for one customer is charged to another.** (Fixed in `442eb1a`, test: `MoneyFlowsTest`).
+- [x] **R20-16 MED Verified. Store credit applied for one customer is charged to another.** (Fixed in `442eb1a`, test: `DiscountCalculationTest`).
   - VM `onCustomerPhoneChanged` (about 455), `selectCustomerSuggestion` (about 520) and `clearCustomerDetails` (about 526) never reset `_storeCreditApplied`. Apply ৳500 of A's credit, change the phone to B, and checkout takes ৳500 from B. Clearing the phone makes the sale fail.
   - Fix: when the trimmed phone actually changes (note `refreshResolvedCustomer` calls `onCustomerPhoneChanged` with the same phone) and `_redeemedVoucher.value == null`, set `_storeCreditApplied.value = 0.0`. Same in the other two functions.
 
-- [x] **R20-17 MED Reported. Store credit, loyalty and voucher amounts are not re-capped when the total drops.** (Fixed in `442eb1a`, test: `MoneyFlowsTest`).
+- [x] **R20-17 MED Reported. Store credit, loyalty and voucher amounts are not re-capped when the total drops.** (Fixed in `442eb1a`, test: `DiscountCalculationTest`).
   - `storeCreditApplied` is never re-capped after a later discount, price-mode change or removed line (`CartScreen.kt` about 537-541, 582-584, 620-624; VM about 393-396). The receipt shows ৳500 credit on a ৳300 bill and prints the voucher's remaining balance too low (the database is correct).
   - `loyaltyDiscount` is fixed when redeemed (VM about 548-564); if the cart shrinks it can exceed `maxBillPercentPayable` and the repo rejects the sale.
   - `restoreHeldCart` (about 897-921): an expired or used-up voucher leaves the cap at `Double.MAX_VALUE`, so the full credit is restored without a voucher. `restoreCartSnapshot` (about 1109) restores it with no check.

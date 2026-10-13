@@ -592,4 +592,104 @@ object PaymentMath {
 
         return paymentTotals
     }
+
+    data class PureInvoiceProfitResult(
+        val netRevenue: Double,
+        val netCogs: Double,
+        val netProfit: Double
+    )
+
+    fun calculateInvoiceProfitSummary(
+        subtotal: Double,
+        grossCogs: Double,
+        taxAmount: Double,
+        discount: Double,
+        loyaltyDiscount: Double,
+        grandTotal: Double,
+        refundAmount: Double = 0.0,
+        returnedCost: Double = 0.0
+    ): PureInvoiceProfitResult {
+        val totalDiscounts = discount + loyaltyDiscount
+        val retTaxPortion = if (grandTotal > 0.0 && taxAmount > 0.0) {
+            (refundAmount / grandTotal) * taxAmount
+        } else 0.0
+        val effectiveRefundRevenue = (refundAmount - retTaxPortion).coerceAtLeast(0.0)
+        val netRevBeforeRefund = (subtotal - totalDiscounts).coerceAtLeast(0.0)
+        val netRev = (netRevBeforeRefund - effectiveRefundRevenue).coerceAtLeast(0.0)
+        val netCogs = (grossCogs - returnedCost).coerceAtLeast(0.0)
+        val netProfit = netRev - netCogs
+        return PureInvoiceProfitResult(
+            netRevenue = netRev,
+            netCogs = netCogs,
+            netProfit = netProfit
+        )
+    }
+
+    fun computeRemainingAfterStoreCredit(grandTotal: Double, storeCreditApplied: Double): Double {
+        val sc = storeCreditApplied.coerceAtMost(grandTotal)
+        return (grandTotal - sc).coerceAtLeast(0.0)
+    }
+
+    fun resetDiscountOnUnitToggle(): Double = 0.0
+
+    fun resolveStoreCreditOnPhoneChange(oldPhone: String, newPhone: String, currentCredit: Double, hasRedeemedVoucher: Boolean): Double {
+        return if (newPhone != oldPhone && !hasRedeemedVoucher) 0.0 else currentCredit
+    }
+
+    fun computeEffectiveStoreCredit(requestedCredit: Double, grandTotal: Double): Double {
+        return requestedCredit.coerceAtMost(grandTotal)
+    }
+
+    fun computeVoucherDeduction(effectiveStoreCredit: Double, voucherRemainingBalance: Double): Double {
+        return effectiveStoreCredit.coerceAtMost(voucherRemainingBalance)
+    }
+
+    fun computePostSaleVoucherBalance(voucherRemainingBalance: Double, voucherDeduction: Double): Double {
+        return (voucherRemainingBalance - voucherDeduction).coerceAtLeast(0.0)
+    }
+
+    fun canSubmitSupplierPayment(isSaving: Boolean): Boolean = !isSaving
+
+    data class DueChargeReversalResult(
+        val newOutstanding: Double,
+        val storeCreditExcess: Double
+    )
+
+    fun computeDueChargeReversal(currentOutstanding: Double, chargeAmount: Double): DueChargeReversalResult {
+        val rawOutstanding = currentOutstanding - chargeAmount
+        val excess = if (rawOutstanding < 0.0) -rawOutstanding else 0.0
+        return DueChargeReversalResult(
+            newOutstanding = rawOutstanding.coerceAtLeast(0.0),
+            storeCreditExcess = excess
+        )
+    }
+
+    fun validateCustomerPhoneUniqueness(isEdit: Boolean, existingCustomer: com.example.techyfipos.data.db.Customer?): String? {
+        return if (!isEdit && existingCustomer != null) existingCustomer.name else null
+    }
+
+    fun filterReturnsByAllowedSaleIds(returns: List<com.example.techyfipos.data.db.Return>, allowedSaleIds: Set<Long>?): List<com.example.techyfipos.data.db.Return> {
+        return if (allowedSaleIds != null) returns.filter { it.saleId in allowedSaleIds } else returns
+    }
+
+    fun computeSupplierInvoiceVoidDueReduction(invoiceDue: Double, currentSupplierDue: Double): Double {
+        return minOf(invoiceDue, maxOf(0.0, currentSupplierDue))
+    }
+
+    fun computeBulkUpdatedPrices(
+        currentSellingPrice: Double,
+        currentDiscountedPrice: Double,
+        percentDelta: Double? = null,
+        fixedDelta: Double? = null
+    ): Pair<Double, Double> {
+        var newPrice = currentSellingPrice
+        if (percentDelta != null) {
+            newPrice = (newPrice * (1.0 + percentDelta / 100.0)).coerceAtLeast(0.0)
+        } else if (fixedDelta != null) {
+            newPrice = (newPrice + fixedDelta).coerceAtLeast(0.0)
+        }
+        val rounded = kotlin.math.round(newPrice * 100.0) / 100.0
+        val newDiscounted = if (currentDiscountedPrice > 0.0) rounded else 0.0
+        return Pair(rounded, newDiscounted)
+    }
 }

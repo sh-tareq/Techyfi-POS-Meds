@@ -2181,13 +2181,19 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             returnCogsReversal += unitCost * retItem.quantity
         }
 
-        val retTaxPortion = if (sale.grandTotal > 0.0 && sale.taxAmount > 0.0) {
-            refundAmount / sale.grandTotal * sale.taxAmount
-        } else 0.0
-        val effectiveRefundRevenue = (refundAmount - retTaxPortion).coerceAtLeast(0.0)
-        val netRev = (netRevBeforeRefund - effectiveRefundRevenue).coerceAtLeast(0.0)
-        val netCogs = (totalGrossCogs - returnCogsReversal).coerceAtLeast(0.0)
-        val netProfit = netRev - netCogs
+        val pureProfit = com.example.techyfipos.utils.PaymentMath.calculateInvoiceProfitSummary(
+            subtotal = grossRevenue,
+            grossCogs = totalGrossCogs,
+            taxAmount = sale.taxAmount,
+            discount = discount,
+            loyaltyDiscount = loyaltyDiscount,
+            grandTotal = sale.grandTotal,
+            refundAmount = refundAmount,
+            returnedCost = returnCogsReversal
+        )
+        val netRev = pureProfit.netRevenue
+        val netCogs = pureProfit.netCogs
+        val netProfit = pureProfit.netProfit
         val netMargin = if (netRev > 0) (netProfit / netRev) * 100.0 else 0.0
         val markup = if (netCogs > 0) (netProfit / netCogs) * 100.0 else 0.0
 
@@ -2294,12 +2300,8 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         // Reports reconcile with register close: returns occurring within [startMillis, endMillis)
         // are applied according to when they impacted the till and actual refund payment methods.
         val rawReturnsInPeriod = allReturns.value.filter { it.timestamp in startMillis until endMillis }
-        val returnsInPeriod = if (sourceList != null) {
-            val allowedSaleIds = sourceList.map { it.sale.id }.toSet()
-            rawReturnsInPeriod.filter { it.saleId in allowedSaleIds }
-        } else {
-            rawReturnsInPeriod
-        }
+        val allowedSaleIds = sourceList?.map { it.sale.id }?.toSet()
+        val returnsInPeriod = com.example.techyfipos.utils.PaymentMath.filterReturnsByAllowedSaleIds(rawReturnsInPeriod, allowedSaleIds)
         val totalRefunds = returnsInPeriod.sumOf { it.refundAmount }
 
         var refundedProfit = 0.0
@@ -5494,8 +5496,9 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                     return@launch
                 }
                 val existing = repository.getCustomerByPhone(cleanPhone)
-                if (!isEdit && existing != null) {
-                    onError(repository.context.getString(R.string.customer_phone_already_exists_error, existing.name))
+                val duplicateName = com.example.techyfipos.utils.PaymentMath.validateCustomerPhoneUniqueness(isEdit, existing)
+                if (duplicateName != null) {
+                    onError(repository.context.getString(R.string.customer_phone_already_exists_error, duplicateName))
                     return@launch
                 }
                 val customer = (existing ?: Customer(phone = cleanPhone, name = cleanName)).copy(

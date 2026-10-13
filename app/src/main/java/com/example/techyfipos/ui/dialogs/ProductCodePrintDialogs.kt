@@ -3,6 +3,7 @@ package com.example.techyfipos.ui.dialogs
 import android.content.Context
 import android.graphics.Bitmap
 import android.widget.Toast
+import com.example.techyfipos.utils.getLocalizedName
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -1449,7 +1450,7 @@ fun BatchProductCodePrintDialog(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            labelSize.displayName,
+                            labelSize.getLocalizedName(context),
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Start,
                             fontWeight = FontWeight.SemiBold
@@ -1462,7 +1463,7 @@ fun BatchProductCodePrintDialog(
                     ) {
                         ProductCodeLabelSize.entries.forEach { size ->
                             DropdownMenuItem(
-                                text = { Text(size.displayName) },
+                                text = { Text(size.getLocalizedName(context)) },
                                 leadingIcon = if (size == labelSize) {
                                     { Icon(Icons.Default.Check, contentDescription = null) }
                                 } else null,
@@ -2843,7 +2844,7 @@ fun ProductCodeImageDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            labelSize.displayName,
+                            labelSize.getLocalizedName(context),
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Start
                         )
@@ -2856,7 +2857,7 @@ fun ProductCodeImageDialog(
                         ProductCodeLabelSize.entries.forEach { size ->
                             DropdownMenuItem(
                                 text = {
-                                    Text(size.displayName)
+                                    Text(size.getLocalizedName(context))
                                 },
                                 leadingIcon = if (size == labelSize) {
                                     { Icon(Icons.Default.Check, contentDescription = null) }

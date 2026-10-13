@@ -1260,9 +1260,9 @@ fun CartScreen(
                             val pct = if (mrpSubtotal > 0.0) Math.round((totalSavings / mrpSubtotal) * 100).toInt() else 0
                             val pctStr = if (isBn) com.example.techyfipos.utils.toBanglaDigits(pct.toString()) else "$pct"
                             Surface(
-                                color = Color(0xFFDCFCE7),
+                                color = MaterialTheme.extendedColors.successContainer,
                                 shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, Color(0xFF86EFAC)),
+                                border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 8.dp)
@@ -1274,7 +1274,7 @@ fun CartScreen(
                                 ) {
                                     Text(
                                         stringResource(R.string.cart_mrp_savings_badge, formatTaka(totalSavings), pctStr),
-                                        color = Color(0xFF15803D),
+                                        color = MaterialTheme.extendedColors.onSuccessContainer,
                                         fontSize = 12.5.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -1473,8 +1473,8 @@ fun CartScreen(
                         if (storeCreditApplied > 0.0) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFECFDF5),
-                                border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                                color = MaterialTheme.extendedColors.successContainer,
+                                border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 6.dp)
@@ -1497,7 +1497,7 @@ fun CartScreen(
                                                 text = stringResource(R.string.cart_store_credit_applied_label, formatTaka(storeCreditApplied)),
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.ExtraBold,
-                                                color = Color(0xFF065F46)
+                                                color = MaterialTheme.extendedColors.onSuccessContainer
                                             )
                                             val remainingToPay = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
                                             Text(
@@ -1505,7 +1505,7 @@ fun CartScreen(
                                                 else stringResource(R.string.cart_bill_covered_by_store_credit),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = if (remainingToPay > 0.0) Color(0xFF047857) else Color(0xFF059669)
+                                                color = if (remainingToPay > 0.0) MaterialTheme.extendedColors.onSuccessContainer.copy(alpha = 0.85f) else MaterialTheme.extendedColors.onSuccessContainer
                                             )
                                         }
                                     }
@@ -1514,8 +1514,8 @@ fun CartScreen(
                                         onClick = { cartViewModel.removeStoreCredit() },
                                         shape = RoundedCornerShape(8.dp),
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE11D48)),
-                                        border = BorderStroke(1.dp, Color(0xFFFECDD3)),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
                                         modifier = Modifier.heightIn(min = 48.dp)
                                     ) {
                                         Text(stringResource(R.string.cart_remove_store_credit), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
@@ -1813,8 +1813,8 @@ fun CartScreen(
                                 val availableCredit = (resolvedCustomer?.storeCredit ?: 0.0) + (redeemedVoucher?.remainingBalance ?: 0.0)
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = Color(0xFFE8F5E9),
-                                    border = BorderStroke(1.dp, Color(0xFFA5D6A7)),
+                                    color = MaterialTheme.extendedColors.successContainer,
+                                    border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
                                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                                 ) {
                                     Row(
@@ -1828,12 +1828,12 @@ fun CartScreen(
                                                 stringResource(R.string.cart_available_store_credit, formatTaka(availableCredit)),
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 13.sp,
-                                                color = Color(0xFF1B5E20)
+                                                color = MaterialTheme.extendedColors.onSuccessContainer
                                             )
                                             Text(
                                                 stringResource(R.string.cart_store_credit_direct_deduct_desc, formatTaka(grandTotal)),
                                                 fontSize = 11.5.sp,
-                                                color = Color(0xFF2E7D32)
+                                                color = MaterialTheme.extendedColors.onSuccessContainer.copy(alpha = 0.85f)
                                             )
                                         }
                                     }
@@ -2071,13 +2071,13 @@ fun CartScreen(
                                             if (resolvedCustomer!!.storeCredit > 0) {
                                                 Surface(
                                                     shape = RoundedCornerShape(6.dp),
-                                                    color = Color(0xFFE8F5E9)
+                                                    color = MaterialTheme.extendedColors.successContainer
                                                 ) {
                                                     Text(
                                                         text = stringResource(R.string.cart_customer_credit_badge, formatTaka(resolvedCustomer!!.storeCredit)),
                                                         fontSize = 10.sp,
                                                         fontWeight = FontWeight.Bold,
-                                                        color = Color(0xFF2E7D32),
+                                                        color = MaterialTheme.extendedColors.onSuccessContainer,
                                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                     )
                                                 }
@@ -2494,8 +2494,8 @@ fun CartScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 10.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
-                                border = BorderStroke(1.dp, Color(0xFFBBF7D0)),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.extendedColors.successContainer),
+                                border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.4f)),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2511,16 +2511,16 @@ fun CartScreen(
                                                 stringResource(R.string.cart_customer_savings_breakdown),
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 11.5.sp,
-                                                color = Color(0xFF166534)
+                                                color = MaterialTheme.extendedColors.onSuccessContainer
                                             )
                                         }
                                         Surface(
-                                            color = Color(0xFF16A34A),
+                                            color = MaterialTheme.extendedColors.success,
                                             shape = RoundedCornerShape(12.dp)
                                         ) {
                                             Text(
                                                 stringResource(R.string.cart_percent_off, pctStr),
-                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                color = MaterialTheme.extendedColors.onSuccess,
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 10.sp,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -2529,13 +2529,13 @@ fun CartScreen(
                                     }
 
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Text(stringResource(R.string.cart_original_mrp_subtotal), fontSize = 12.sp, color = Color(0xFF4B5563))
-                                        Text(formatTaka(mrpSubtotal), fontSize = 12.sp, color = Color(0xFF4B5563))
+                                        Text(stringResource(R.string.cart_original_mrp_subtotal), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(formatTaka(mrpSubtotal), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
 
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Text(stringResource(R.string.cart_store_sale_discount), fontSize = 12.sp, color = Color(0xFF15803D), fontWeight = FontWeight.SemiBold)
-                                        Text("-${formatTaka(saleModeMrpSavings)}", fontSize = 12.sp, color = Color(0xFF15803D), fontWeight = FontWeight.Bold)
+                                        Text(stringResource(R.string.cart_store_sale_discount), fontSize = 12.sp, color = MaterialTheme.extendedColors.onSuccessContainer, fontWeight = FontWeight.SemiBold)
+                                        Text("-${formatTaka(saleModeMrpSavings)}", fontSize = 12.sp, color = MaterialTheme.extendedColors.onSuccessContainer, fontWeight = FontWeight.Bold)
                                     }
 
                                     if (discountVal > 0.0) {

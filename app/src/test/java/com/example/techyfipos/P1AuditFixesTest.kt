@@ -15,21 +15,21 @@ class P1AuditFixesTest {
 
         // Case 1: Supplier due is already 0.0 because of later payment
         val currentDueZero = 0.0
-        val reductionZero = minOf(invoiceDue, maxOf(0.0, currentDueZero))
+        val reductionZero = com.example.techyfipos.utils.PaymentMath.computeSupplierInvoiceVoidDueReduction(invoiceDue, currentDueZero)
         assertEquals(0.0, reductionZero, 0.001)
         val newDueZero = maxOf(0.0, currentDueZero - reductionZero)
         assertEquals(0.0, newDueZero, 0.001)
 
         // Case 2: Supplier due is 400.0 (partial later payment)
         val currentDuePartial = 400.0
-        val reductionPartial = minOf(invoiceDue, maxOf(0.0, currentDuePartial))
+        val reductionPartial = com.example.techyfipos.utils.PaymentMath.computeSupplierInvoiceVoidDueReduction(invoiceDue, currentDuePartial)
         assertEquals(400.0, reductionPartial, 0.001)
         val newDuePartial = maxOf(0.0, currentDuePartial - reductionPartial)
         assertEquals(0.0, newDuePartial, 0.001)
 
         // Case 3: Supplier due is 1500.0 (other invoices exist)
         val currentDueHigher = 1500.0
-        val reductionHigher = minOf(invoiceDue, maxOf(0.0, currentDueHigher))
+        val reductionHigher = com.example.techyfipos.utils.PaymentMath.computeSupplierInvoiceVoidDueReduction(invoiceDue, currentDueHigher)
         assertEquals(1000.0, reductionHigher, 0.001)
         val newDueHigher = maxOf(0.0, currentDueHigher - reductionHigher)
         assertEquals(500.0, newDueHigher, 0.001)

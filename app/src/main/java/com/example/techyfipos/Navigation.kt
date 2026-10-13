@@ -59,6 +59,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.example.techyfipos.ui.components.*
 import com.example.techyfipos.ui.screens.*
 import com.example.techyfipos.ui.viewmodel.*
+import com.example.techyfipos.theme.extendedColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -946,8 +947,8 @@ fun MainNavigation() {
                                         modifier = Modifier
                                             .size(36.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0xFF10B981).copy(alpha = if (isDark) 0.18f else 0.12f))
-                                            .border(1.2.dp, Color(0xFF10B981).copy(alpha = if (isDark) 0.5f else 0.4f), CircleShape)
+                                            .background(MaterialTheme.extendedColors.success.copy(alpha = if (isDark) 0.18f else 0.12f))
+                                            .border(1.2.dp, MaterialTheme.extendedColors.success.copy(alpha = if (isDark) 0.5f else 0.4f), CircleShape)
                                             .clickable { showUserDropdown = true },
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -955,7 +956,7 @@ fun MainNavigation() {
                                             text = initials,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF10B981)
+                                            color = MaterialTheme.extendedColors.success
                                         )
                                     }
 
@@ -981,15 +982,15 @@ fun MainNavigation() {
                                                     modifier = Modifier
                                                         .size(38.dp)
                                                         .clip(CircleShape)
-                                                        .background(Color(0xFF10B981).copy(alpha = 0.18f))
-                                                        .border(1.dp, Color(0xFF10B981), CircleShape),
+                                                        .background(MaterialTheme.extendedColors.success.copy(alpha = 0.18f))
+                                                        .border(1.dp, MaterialTheme.extendedColors.success, CircleShape),
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     Text(
                                                         text = initials,
                                                         fontSize = 13.sp,
                                                         fontWeight = FontWeight.Bold,
-                                                        color = Color(0xFF10B981)
+                                                        color = MaterialTheme.extendedColors.success
                                                     )
                                                 }
                                                 Column {
@@ -1003,14 +1004,14 @@ fun MainNavigation() {
                                                     )
                                                     Surface(
                                                         shape = RoundedCornerShape(4.dp),
-                                                        color = Color(0xFF10B981).copy(alpha = 0.14f),
+                                                        color = MaterialTheme.extendedColors.success.copy(alpha = 0.14f),
                                                         modifier = Modifier.padding(top = 2.dp)
                                                     ) {
                                                         Text(
                                                             text = roleBadge,
                                                             fontSize = 10.sp,
                                                             fontWeight = FontWeight.SemiBold,
-                                                            color = Color(0xFF10B981),
+                                                            color = MaterialTheme.extendedColors.success,
                                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                         )
                                                     }

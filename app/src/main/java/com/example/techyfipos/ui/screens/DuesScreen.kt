@@ -38,6 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.example.techyfipos.theme.extendedColors
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -3126,10 +3127,10 @@ fun DuesAuditCard(
     entry: DuesAuditEntry
 ) {
     val (badgeBg, badgeFg, typeLabel) = when (entry.type) {
-        DuesAuditType.REPAYMENT -> Triple(Color(0xFFECFDF5), Color(0xFF059669), stringResource(R.string.dues_audit_type_repayment))
-        DuesAuditType.CREDIT_SALE -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), stringResource(R.string.dues_audit_type_credit_sale))
-        DuesAuditType.RETURN_ADJUSTMENT -> Triple(Color(0xFFEFF6FF), Color(0xFF2563EB), stringResource(R.string.dues_audit_type_return_settlement))
-        DuesAuditType.MANUAL_DUE -> Triple(Color(0xFFF3E8FF), Color(0xFF9333EA), stringResource(R.string.dues_audit_type_manual_due))
+        DuesAuditType.REPAYMENT -> Triple(MaterialTheme.extendedColors.successContainer, MaterialTheme.extendedColors.onSuccessContainer, stringResource(R.string.dues_audit_type_repayment))
+        DuesAuditType.CREDIT_SALE -> Triple(MaterialTheme.extendedColors.warningContainer, MaterialTheme.extendedColors.onWarningContainer, stringResource(R.string.dues_audit_type_credit_sale))
+        DuesAuditType.RETURN_ADJUSTMENT -> Triple(MaterialTheme.extendedColors.infoContainer, MaterialTheme.extendedColors.onInfoContainer, stringResource(R.string.dues_audit_type_return_settlement))
+        DuesAuditType.MANUAL_DUE -> Triple(MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer, stringResource(R.string.dues_audit_type_manual_due))
     }
 
     Surface(
@@ -6838,7 +6839,7 @@ fun DueRepaymentReceiptDialog(
                                             context = context,
                                             activity = context.findActivity(),
                                             imageFile = fileToPrint,
-                                            jobName = "Due_Voucher_${data.customerName}",
+                                            jobName = if (com.example.techyfipos.utils.isAppBangla()) "বকেয়া_ভাউচার_${data.customerName}" else "Due_Voucher_${data.customerName}",
                                             settings = settings.copy(paperRollWidthMm = selectedRollWidth),
                                             kickDrawer = false
                                         )

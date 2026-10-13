@@ -711,9 +711,9 @@ private fun RoleSelectorRow(
     onRoleSelected: (String) -> Unit
 ) {
     val allRoles = listOf(
-        Triple(AppRoles.CASHIER, stringResource(R.string.role_cashier), Color(0xFF10B981)),
-        Triple(AppRoles.MANAGER, stringResource(R.string.role_manager), Color(0xFF6366F1)),
-        Triple(AppRoles.OWNER, stringResource(R.string.role_owner), Color(0xFFF59E0B))
+        Triple(AppRoles.CASHIER, stringResource(R.string.role_cashier), MaterialTheme.extendedColors.success to MaterialTheme.extendedColors.onSuccessContainer),
+        Triple(AppRoles.MANAGER, stringResource(R.string.role_manager), MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimaryContainer),
+        Triple(AppRoles.OWNER, stringResource(R.string.role_owner), MaterialTheme.extendedColors.warning to MaterialTheme.extendedColors.onWarningContainer)
     )
     val roles = if (allowOwnerRole) allRoles else allRoles.filter { it.first != AppRoles.OWNER }
 
@@ -721,12 +721,13 @@ private fun RoleSelectorRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        roles.forEach { (role, label, color) ->
+        roles.forEach { (role, label, colors) ->
+            val (accentColor, textColor) = colors
             val isSelected = selectedRole == role
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = if (isSelected) color.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, color) else null,
+                color = if (isSelected) accentColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, accentColor) else null,
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = 48.dp)
@@ -741,7 +742,7 @@ private fun RoleSelectorRow(
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         ),
-                        color = if (isSelected) color else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (isSelected) textColor else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1
                     )
                 }

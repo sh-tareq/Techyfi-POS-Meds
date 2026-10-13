@@ -975,7 +975,7 @@ private fun Realistic3DNumpadButton(
                         Text(
                             text = subText,
                             color = Color(0xFF94A3B8),
-                            fontSize = if (isCompact) 7.5.sp else 8.5.sp,
+                            fontSize = if (isCompact) 10.sp else 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 1.sp,
                             textAlign = TextAlign.Center
@@ -992,7 +992,7 @@ private fun Realistic3DNumpadButton(
                     Text(
                         text = stringResource(R.string.lock_keypad_delete),
                         color = Color(0xFFFCA5A5).copy(alpha = 0.8f),
-                        fontSize = if (isCompact) 7.5.sp else 8.sp,
+                        fontSize = if (isCompact) 10.sp else 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp
                     )
@@ -1008,7 +1008,7 @@ private fun Realistic3DNumpadButton(
                     Text(
                         text = stringResource(R.string.lock_keypad_clear),
                         color = Color(0xFFFDE68A).copy(alpha = 0.8f),
-                        fontSize = if (isCompact) 7.5.sp else 8.sp,
+                        fontSize = if (isCompact) 10.sp else 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp
                     )

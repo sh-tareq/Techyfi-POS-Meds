@@ -290,7 +290,7 @@ private fun buildTestLabelBitmap(
     canvas.drawText(storeName.ifBlank { "Techyfi POS" }, centerX, targetHeightDots * 0.25f, paint)
     paint.textSize = (targetHeightDots * 0.10f).coerceIn(12f, 26f)
     paint.isFakeBoldText = false
-    canvas.drawText("TEST LABEL", centerX, targetHeightDots * 0.48f, paint)
+    canvas.drawText(if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট লেবেল" else "TEST LABEL", centerX, targetHeightDots * 0.48f, paint)
     paint.textSize = (targetHeightDots * 0.08f).coerceIn(10f, 20f)
     val sizeText = "${if (widthMm % 1f == 0f) widthMm.toInt() else widthMm} x ${if (heightMm % 1f == 0f) heightMm.toInt() else heightMm} mm"
     canvas.drawText(sizeText, centerX, targetHeightDots * 0.68f, paint)
@@ -996,7 +996,7 @@ private fun OptimizedSettingsHome(
                                 context = context,
                                 activity = context.findActivity(),
                                 imageFile = testFile,
-                                jobName = "Test_Receipt",
+                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ" else "Test_Receipt",
                                 settings = currentSettings,
                                 kickDrawer = false
                             )
@@ -1233,7 +1233,7 @@ private fun OptimizedSettingsHome(
                                 widthMm = labelW,
                                 heightMm = labelH,
                                 copies = 1,
-                                jobName = "Test_Label",
+                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_লেবেল" else "Test_Label",
                                 settings = currentSettings
                             )
                         } catch (e: Exception) {
@@ -3532,7 +3532,7 @@ private fun OptimizedBackupSettings(
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(stringResource(R.string.settings_label_security), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
-                            val securityText = if (lastDriveBackupTimestamp > 0L) stringResource(R.string.settings_value_aes256_armed) else "Standby"
+                            val securityText = if (lastDriveBackupTimestamp > 0L) stringResource(R.string.settings_value_aes256_armed) else stringResource(R.string.settings_standby)
                             Text(securityText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
                         }
                     }
@@ -5164,7 +5164,7 @@ fun SettingsScreen(
                                 context = context,
                                 activity = activity ?: context.findActivity(),
                                 imageFile = testFile,
-                                jobName = "Test_Repayment_#1",
+                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_পরিশোধ_#১" else "Test_Repayment_#1",
                                 settings = currentSettings,
                                 kickDrawer = false
                             )
@@ -5187,7 +5187,7 @@ fun SettingsScreen(
                                 context = context,
                                 activity = activity ?: context.findActivity(),
                                 imageFile = testFile,
-                                jobName = "Test_Receipt_#12",
+                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12",
                                 settings = currentSettings,
                                 kickDrawer = false
                             )
@@ -5213,7 +5213,7 @@ fun SettingsScreen(
                                 context = context,
                                 activity = activity ?: context.findActivity(),
                                 imageFile = testFile,
-                                jobName = "Test_Receipt_#12",
+                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12",
                                 settings = currentSettings,
                                 kickDrawer = false
                             )
@@ -5234,7 +5234,7 @@ fun SettingsScreen(
                                 context = context,
                                 activity = activity ?: context.findActivity(),
                                 imageFile = testFile,
-                                jobName = "Test_Receipt_#12",
+                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12",
                                 settings = currentSettings,
                                 kickDrawer = false
                             )
@@ -5271,7 +5271,7 @@ fun SettingsScreen(
                                 context = context,
                                 activity = activity ?: context.findActivity(),
                                 imageFile = testFile,
-                                jobName = "Test_Receipt_#12",
+                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12",
                                 settings = currentSettings,
                                 kickDrawer = false
                             )

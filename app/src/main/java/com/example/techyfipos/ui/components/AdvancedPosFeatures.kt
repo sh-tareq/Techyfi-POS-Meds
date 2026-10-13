@@ -1222,7 +1222,7 @@ fun AddExpenseDialog(
     val categories = if (isCashIn) {
         listOf("Float In", "Owner Capital", "Change Exchange", "Other")
     } else {
-        listOf("Tea & Refreshments", "Staff Meal", "Electricity (Token)", "Transport", "Shop Rent", "Cleaning", "Other")
+        MANUAL_EXPENSE_CATEGORIES
     }
 
     val sources = listOf("Cash", "bKash", "Nagad", "Bank")
@@ -2262,3 +2262,13 @@ fun LoyaltyRedeemCard(
         }
     }
 }
+
+val MANUAL_EXPENSE_CATEGORIES = listOf(
+    "Tea & Refreshments",
+    "Staff Meal",
+    "Electricity (Token)",
+    "Transport",
+    "Shop Rent",
+    "Cleaning",
+    "Other"
+)

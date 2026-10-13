@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.example.techyfipos.theme.extendedColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -1041,14 +1042,14 @@ fun CustomerDataTable(
                                     color = MaterialTheme.colorScheme.error
                                 )
                             } else {
-                                Text(stringResource(R.string.customers_table_zero_due), fontSize = 11.sp, color = Color(0xFF00875A))
+                                Text(stringResource(R.string.customers_table_zero_due), fontSize = 11.sp, color = MaterialTheme.extendedColors.success)
                             }
                             if (customer.storeCredit > 0) {
                                 Text(
                                     text = "🪙 ${formatTaka(customer.storeCredit)}",
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 11.sp,
-                                    color = Color(0xFF059669)
+                                    color = MaterialTheme.extendedColors.success
                                 )
                             }
                         }
@@ -1208,13 +1209,13 @@ fun CustomerCard(
                             if (customer.storeCredit > 0) {
                                 Surface(
                                     shape = RoundedCornerShape(4.dp),
-                                    color = Color(0xFFD1FAE5)
+                                    color = MaterialTheme.extendedColors.successContainer
                                 ) {
                                     Text(
                                         text = "🪙 ${formatTaka(customer.storeCredit)}",
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = Color(0xFF065F46),
+                                        color = MaterialTheme.extendedColors.onSuccessContainer,
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                     )
                                 }

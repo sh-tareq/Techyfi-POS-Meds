@@ -35,31 +35,36 @@ class DiscountCalculationTest {
     fun testR20_14_exactCashRespectsStoreCredit() {
         val grandTotal = 300.0
         val storeCreditApplied = 100.0
-        val remainingAfterSC = (grandTotal - storeCreditApplied).coerceAtLeast(0.0)
+        val remainingAfterSC = com.example.techyfipos.utils.PaymentMath.computeRemainingAfterStoreCredit(grandTotal, storeCreditApplied)
         assertEquals(200.0, remainingAfterSC, 0.001)
     }
 
     @Test
     fun testR20_06_toggleDiscountUnitResetsAmount() {
-        var isPercentage = false
-        var discountAmount = 50.0
-        discountAmount = 0.0
-        isPercentage = !isPercentage
-        assertEquals(true, isPercentage)
-        assertEquals(0.0, discountAmount, 0.001)
+        val resetAmount = com.example.techyfipos.utils.PaymentMath.resetDiscountOnUnitToggle()
+        assertEquals(0.0, resetAmount, 0.001)
     }
 
     @Test
     fun testR20_16_storeCreditResetsWhenPhoneChangesWithoutVoucher() {
         val oldPhone = "01711111111"
         val newPhone = "01822222222"
-        var storeCreditApplied = 500.0
-        val redeemedVoucherCode: String? = null
+        val storeCreditApplied = 500.0
+        val resolvedCredit = com.example.techyfipos.utils.PaymentMath.resolveStoreCreditOnPhoneChange(
+            oldPhone = oldPhone,
+            newPhone = newPhone,
+            currentCredit = storeCreditApplied,
+            hasRedeemedVoucher = false
+        )
+        assertEquals(0.0, resolvedCredit, 0.001)
 
-        if (newPhone != oldPhone && redeemedVoucherCode == null) {
-            storeCreditApplied = 0.0
-        }
-        assertEquals(0.0, storeCreditApplied, 0.001)
+        val preservedWithVoucher = com.example.techyfipos.utils.PaymentMath.resolveStoreCreditOnPhoneChange(
+            oldPhone = oldPhone,
+            newPhone = newPhone,
+            currentCredit = storeCreditApplied,
+            hasRedeemedVoucher = true
+        )
+        assertEquals(500.0, preservedWithVoucher, 0.001)
     }
 
     @Test
@@ -68,13 +73,13 @@ class DiscountCalculationTest {
         val requestedStoreCredit = 500.0
         val voucherRemainingBalance = 500.0
 
-        val effectiveStoreCredit = requestedStoreCredit.coerceAtMost(grandTotal)
+        val effectiveStoreCredit = com.example.techyfipos.utils.PaymentMath.computeEffectiveStoreCredit(requestedStoreCredit, grandTotal)
         assertEquals(300.0, effectiveStoreCredit, 0.001)
 
-        val voucherDeduction = effectiveStoreCredit.coerceAtMost(voucherRemainingBalance)
+        val voucherDeduction = com.example.techyfipos.utils.PaymentMath.computeVoucherDeduction(effectiveStoreCredit, voucherRemainingBalance)
         assertEquals(300.0, voucherDeduction, 0.001)
 
-        val postSaleVoucherBalance = (voucherRemainingBalance - voucherDeduction).coerceAtLeast(0.0)
+        val postSaleVoucherBalance = com.example.techyfipos.utils.PaymentMath.computePostSaleVoucherBalance(voucherRemainingBalance, voucherDeduction)
         assertEquals(200.0, postSaleVoucherBalance, 0.001)
     }
 }

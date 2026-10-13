@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import com.example.techyfipos.theme.extendedColors
 import com.example.techyfipos.ui.components.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -204,8 +205,8 @@ fun ExpensesScreen(
                     }
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = Color(0xFFECFDF5),
-                        border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                        color = MaterialTheme.extendedColors.successContainer,
+                        border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.5f)),
                         modifier = Modifier.padding(end = 12.dp)
                     ) {
                         Row(
@@ -216,13 +217,13 @@ fun ExpensesScreen(
                             Box(
                                 modifier = Modifier
                                     .size(6.dp)
-                                    .background(Color(0xFF10B981), CircleShape)
+                                    .background(MaterialTheme.extendedColors.success, CircleShape)
                             )
                             Text(
                                 text = stringResource(R.string.expense_shift_active),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF059669)
+                                color = MaterialTheme.extendedColors.onSuccessContainer
                             )
                         }
                     }
@@ -763,8 +764,8 @@ fun ExpenseRelocationNoticeBanner(
 ) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = Color(0xFFECFDF5),
-        border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
+        color = MaterialTheme.extendedColors.successContainer,
+        border = BorderStroke(1.dp, MaterialTheme.extendedColors.success.copy(alpha = 0.5f)),
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
@@ -783,7 +784,7 @@ fun ExpenseRelocationNoticeBanner(
                 Text(
                     text = stringResource(R.string.expense_cash_moved_banner),
                     fontSize = 11.5.sp,
-                    color = Color(0xFF065F46),
+                    color = MaterialTheme.extendedColors.onSuccessContainer,
                     fontWeight = FontWeight.SemiBold,
                     lineHeight = 15.sp
                 )
@@ -792,7 +793,7 @@ fun ExpenseRelocationNoticeBanner(
             Button(
                 onClick = onViewDrawer,
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.extendedColors.success),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                 modifier = Modifier.height(48.dp)
             ) {
@@ -800,7 +801,7 @@ fun ExpenseRelocationNoticeBanner(
                     text = stringResource(R.string.expense_view_drawer_btn),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color.White
+                    color = MaterialTheme.extendedColors.onSuccess
                 )
             }
         }

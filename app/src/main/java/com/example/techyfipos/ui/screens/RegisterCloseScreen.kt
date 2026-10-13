@@ -1202,7 +1202,7 @@ fun RegisterCloseScreen(
                         }.onFailure {
                             onError()
                             coroutineScope.launch {
-                                snackbarHostState.showSnackbar(it.localizedMessage ?: "Unable to close register")
+                                snackbarHostState.showSnackbar(it.localizedMessage ?: context.getString(R.string.register_close_failed))
                             }
                         }
                     }
@@ -1231,7 +1231,7 @@ fun RegisterCloseScreen(
                             context = context,
                             activity = context.findActivity(),
                             imageFile = jpegFile,
-                            jobName = "X-Report - $rangeLabel",
+                            jobName = if (com.example.techyfipos.utils.isAppBangla()) "এক্স-রিপোর্ট - $rangeLabel" else "X-Report - $rangeLabel",
                             settings = invoiceSettings,
                             kickDrawer = false
                         )
@@ -1304,7 +1304,7 @@ fun RegisterCloseScreen(
                             context = context,
                             activity = context.findActivity(),
                             imageFile = jpegFile,
-                            jobName = "Z-Report - $label",
+                            jobName = if (com.example.techyfipos.utils.isAppBangla()) "জেড-রিপোর্ট - $label" else "Z-Report - $label",
                             settings = invoiceSettings,
                             kickDrawer = false
                         )
@@ -2501,7 +2501,7 @@ fun CloseRegisterReconciliationDialog(
                             Text(formatTaka(expectedCash), fontSize = 18.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
                         }
                         TextButton(onClick = onOpenDenominationCounter) {
-                            Text("🧮 Count Notes", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.register_close_count_notes), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -3154,6 +3154,7 @@ private fun shareReport(
     settings: InvoiceSettingsData = InvoiceSettingsData()
 ) {
     try {
+        val isBangla = context.resources.configuration.locales[0]?.language == "bn"
         val subject = if (isInterimX) {
             context.getString(R.string.register_close_mid_shift_x_report_subject, rangeLabel)
         } else {
@@ -3172,7 +3173,7 @@ private fun shareReport(
                     type = "image/jpeg"
                     putExtra(Intent.EXTRA_SUBJECT, subject)
                     putExtra(Intent.EXTRA_STREAM, uri)
-                    clipData = ClipData.newUri(context.contentResolver, "Report JPEG", uri)
+                    clipData = ClipData.newUri(context.contentResolver, if (isBangla) "রিপোর্ট জেপিইজি" else "Report JPEG", uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     if (context.findActivity() == null) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
@@ -3189,7 +3190,7 @@ private fun shareReport(
                     type = "application/pdf"
                     putExtra(Intent.EXTRA_SUBJECT, subject)
                     putExtra(Intent.EXTRA_STREAM, uri)
-                    clipData = ClipData.newUri(context.contentResolver, "Report PDF", uri)
+                    clipData = ClipData.newUri(context.contentResolver, if (isBangla) "রিপোর্ট পিডিএফ" else "Report PDF", uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     if (context.findActivity() == null) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
@@ -3198,13 +3199,13 @@ private fun shareReport(
             ZReportFormat.CSV -> {
                 val directory = File(context.cacheDir, "reports").apply { mkdirs() }
                 val file = File(directory, "techyfi-${if (isInterimX) "x" else "z"}-report-${System.currentTimeMillis()}.csv")
-                file.writeText(buildReportCsv(r, if (isInterimX) "$rangeLabel (Interim)" else rangeLabel, canViewPnl = canViewPnl))
+                file.writeText(buildReportCsv(r, if (isInterimX) "$rangeLabel ${if (isBangla) "(সাময়িক)" else "(Interim)"}" else rangeLabel, canViewPnl = canViewPnl))
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/csv"
                     putExtra(Intent.EXTRA_SUBJECT, subject)
                     putExtra(Intent.EXTRA_STREAM, uri)
-                    clipData = ClipData.newUri(context.contentResolver, "Report CSV", uri)
+                    clipData = ClipData.newUri(context.contentResolver, if (isBangla) "রিপোর্ট সিএসভি" else "Report CSV", uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     if (context.findActivity() == null) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }

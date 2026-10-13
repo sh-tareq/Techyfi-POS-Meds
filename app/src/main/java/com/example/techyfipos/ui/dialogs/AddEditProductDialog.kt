@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.example.techyfipos.theme.extendedColors
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -1585,8 +1586,8 @@ fun AddEditProductDialog(
                                 if (isExpired) {
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
-                                        color = Color(0xFFFEF3C7),
-                                        border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                                        color = MaterialTheme.extendedColors.warningContainer,
+                                        border = BorderStroke(1.dp, MaterialTheme.extendedColors.warning.copy(alpha = 0.5f)),
                                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
                                     ) {
                                         Row(
@@ -1597,7 +1598,7 @@ fun AddEditProductDialog(
                                             Text("⚠️", fontSize = 12.sp)
                                             Text(
                                                 text = stringResource(R.string.product_expiry_past_warning),
-                                                color = Color(0xFF92400E),
+                                                color = MaterialTheme.extendedColors.onWarningContainer,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.SemiBold
                                             )

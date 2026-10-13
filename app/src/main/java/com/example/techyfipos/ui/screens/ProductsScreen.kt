@@ -80,6 +80,7 @@ import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material3.*
+import com.example.techyfipos.theme.extendedColors
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -3539,14 +3540,14 @@ private fun HardwareStockCheckDialog(
                             if (product.category.isNotBlank()) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = Color(0xFFEEF2FF),
-                                    border = BorderStroke(1.dp, Color(0xFFC7D2FE))
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f))
                                 ) {
                                     Text(
                                         text = getLocalizedCategoryName(product.category),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF4F46E5),
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                     )
                                 }
@@ -3557,9 +3558,9 @@ private fun HardwareStockCheckDialog(
 
                 // Inventory Level & Health Status Card
                 Surface(
-                    color = Color(0xFFF5F3FF),
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color(0xFFDDD6FE)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -3573,13 +3574,13 @@ private fun HardwareStockCheckDialog(
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF6B21A8)
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                             )
                             Text(
                                 stringResource(R.string.products_quantity_units, quantity.toString()),
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF3B0764)
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                         StockStatus3DBadge(
