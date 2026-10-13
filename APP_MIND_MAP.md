@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-12 (app version 2.6.75-V12-10-2026, build `Techyfi-POS-Final-V12-10-2026.apk`; versionCode 220951; DB schema version 38)
+Last updated: 2026-10-13 (app version 2.6.77-V13-10-2026, build `Techyfi-POS-Final-V13-10-2026.apk`; versionCode 220953; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -954,7 +954,7 @@ mindmap
 6. **Sale deletion:** delete a sale from History → restore its product quantities → reconcile any associated due → remove the sale.
 7. **Google Drive encrypted backup:** Settings → Backup & Restore → current Android `AuthorizationClient` grants app-data-only access → trigger manual backup or WorkManager trigger → a consistent SQLite snapshot containing all 18 Room tables is packaged with summary-count `metadata.json`, `preferences.json`, product images, and logo → encrypted with AES-256-GCM (key derived via PBKDF2 from the stable Google subject ID and a random per-backup salt) → uploaded to Google Drive `appDataFolder` → excess backups pruned according to retention policy (7/14/30).
 8. **Safe cloud restore with auto-rollback:** Settings → Backup & Restore → tap View Backups → select cloud backup → inspect table counts in confirmation dialog → app creates emergency `pre_restore_backup` snapshot → local database safely closed → backup decrypted, checksum verified, and unpacked → Room reopened → if any failure occurs, app instantly reverts to pre-restore snapshot.
-9. **Printing (Receipts & Labels):** Dual architecture chosen independently in Settings. Receipts: direct Bluetooth ESC/POS (58mm/80mm) or Android print service via PrintManager. Labels: direct Bluetooth TSPL (Deli E886BW at 203 DPI) or Android print service PDF. Modes supported: AUTO (direct Bluetooth if configured, fallback to system dialog on unconfigured or failed print), BLUETOOTH (direct only with localized error toast on failure), SYSTEM (Android print service dialog only). Unified entry points in BillActions.kt route all callers (sales receipts, store credit vouchers, Settings test prints, X/Z reports, due repayment slips, product code labels).
+9. **Printing (Receipts & Labels):** Dual architecture chosen independently in Settings. Receipts: direct Bluetooth and USB Host ESC/POS (58mm/80mm, with configurable auto-cut mode and feed lines) or Android print service via PrintManager. Labels: direct Bluetooth and USB Host TSPL (e.g. Deli E886BW at 203 DPI) or Android print service PDF. Modes supported: AUTO (direct Bluetooth or USB if configured, fallback to system dialog on unconfigured or failed print), BLUETOOTH (direct only with localized error toast on failure), SYSTEM (Android print service dialog only). Unified entry points in BillActions.kt route all callers (sales receipts, store credit vouchers, Settings test prints, X/Z reports, due repayment slips, product code labels).
 10. **First app launch:** splash screen → no users exist yet → Lock screen prompts to create the owner account (name + 4-digit PIN, entered twice to confirm) → owner is signed in and lands on Sell.
 11. **Return app launch:** splash screen → Lock screen requires an existing user's PIN → matching user is signed in and lands on Sell.
 12. **Adding & Managing Staff:** Settings → Staff & PINs (owner only) → tap "+ Add Staff Account" → specify Name, unique 4-digit PIN, Role (`Admin / Owner`, `Store Manager`, `Frontline Cashier`), and Cashier Max Discount Cap → customize any of the 33 permissions via the Permissions Matrix dialog → staff member can sign in with their unique PIN.
@@ -1029,15 +1029,15 @@ mindmap
 ## Current Android package
 
 - Application ID: `com.techyfi.pos`
-- Version code: `220949`
-- Version name: `2.6.73-V12-10-2026`
+- Version code: `220953`
+- Version name: `2.6.77-V13-10-2026`
 - Upgrade rule: retain the same application ID and signing identity, and always increase the version code.
 - Signing SHA-1:
   - Active key (from Sep 29, 2026 onwards): `08:4A:15:4B:BB:A4:61:B7:98:C7:E2:62:F8:CE:C3:BA:8B:52:3A:FA` (keystore at `~/.android/debug.keystore`).
   - Legacy key (prior to Sep 29, 2026): `D6:7B:BD:1C:48:92:D4:FC:7F:D5:1F:D1:CB:22:79:B5:6F:C8:AD:9C`.
   - Both must be registered as Android OAuth 2.0 Client IDs in Google Cloud Console under `com.techyfi.pos` for Google Drive backup/restore.
 - Database version: `38` (v15→16 reminder tracking, v16→17 purchasePriceAtSale snapshot, v17→18 return refund-splitting, v18→19 register shift states, v19→20 due reminders, v20→21 unified customers CRM, v21→22 users RBAC, v24→25 sale audit logs, v33→34, v34→35, v35→36, v36→37, and v37→38 cleaning legacy voucher phone fallback with nullable customerPhone support).
-- Current build: `Techyfi-POS-Final-V12-10-2026.apk` (versionCode 220949) - R8 minified and resource-shrunk, Dual Printer Architecture (Direct Bluetooth ESC/POS for Receipts with software darkness, TSPL for Labels, Android Print Service fallback, thread-safe dispatch & reliable chunked transport, printer conflict guard). Full single and batch label copy selector (1-500, presets 1, 2, 3, 5, 10, 20, stock qty), direct Bluetooth TSPL dispatch & PDF share, and multi-page print document layout adapter.
+- Current build: `Techyfi-POS-Final-V13-10-2026.apk` (versionCode 220953) - R8 minified and resource-shrunk, Dual Printer Architecture (Direct Bluetooth & USB ESC/POS for Receipts with auto-cut and feed lines, TSPL for Labels, Android Print Service fallback, thread-safe dispatch & reliable chunked transport, printer conflict guard). Full single and batch label copy selector (1-500, presets 1, 2, 3, 5, 10, 20, stock qty), direct Bluetooth and USB TSPL dispatch & PDF share, and multi-page print document layout adapter.
 - This is the project's only mind map and the single source of truth for architecture, workflows, limitations, business rules, release metadata, and verification history.
 
 ## Primary code map
@@ -1055,7 +1055,7 @@ mindmap
 - Automatic backup WorkManager: `app/src/main/java/com/example/techyfipos/utils/AutoBackupWorker.kt`
 - Backup scheduler: `app/src/main/java/com/example/techyfipos/utils/AutoBackupScheduler.kt`
 - Receipt generation: `app/src/main/java/com/example/techyfipos/utils/BillPdfGenerator.kt` (standard 80mm thermal bills, 80mm/58mm thermal Money Receipt vouchers, and PDF invoice generators)
-- Thermal printer architecture & byte formatting: `app/src/main/java/com/example/techyfipos/printer/` (`BluetoothPrinterTransport.kt` for shared resilient Bluetooth socket communication with insecure RFCOMM fallback, early secure socket closure, and 512-byte chunk throttling; `EscPosPrinterDriver.kt` for ESC/POS receipt raster generation with software luminance thresholding on `Dispatchers.Default`; `TsplLabelPrinterDriver.kt` for TSPL label raster and ASCII command generation)
+- Thermal printer architecture & byte formatting: `app/src/main/java/com/example/techyfipos/printer/` (`BluetoothPrinterTransport.kt` for shared resilient Bluetooth socket communication with insecure RFCOMM fallback; `UsbPrinterTransport.kt` for Android USB Host bulk transfer; `PrinterTarget.kt` for unified Bluetooth and USB printer addressing; `EscPosPrinterDriver.kt` for ESC/POS receipt raster generation with software luminance thresholding and GS V paper auto-cut; `TsplLabelPrinterDriver.kt` for TSPL label raster and ASCII command generation)
 - Excel import and export: `app/src/main/java/com/example/techyfipos/utils/ExcelHelper.kt`
 - PIN lock / first-run setup: `app/src/main/java/com/example/techyfipos/ui/screens/LockScreen.kt`
 - Staff management: `app/src/main/java/com/example/techyfipos/ui/screens/ManageUsersScreen.kt`
@@ -2803,6 +2803,27 @@ mindmap
   - Added inline note in summary badge and user warning toast in `ProductCodePrintDialogs` when batch label count exceeds the 500-label cap.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V12-10-2026.apk` (versionCode 220952, versionName "2.6.76-V12-10-2026"), R8 minified, passing 108/108 unit tests.
+
+### Receipt Auto-Cut Mode & USB Thermal/TSPL Printer Support (Version 2.6.77-V13-10-2026, Build V13-10-2026)
+- **Receipt Paper Auto-Cut & Feed Line Controls**:
+  - Added `ReceiptAutoCutMode` enum (`NONE`, `PARTIAL`, `FULL`) with standard ESC/POS GS V 0 / GS V 1 byte commands in `EscPosPrinterDriver.kt`.
+  - Added configurable `receiptAutoCutMode` and `receiptFeedLines` (0-10, default 4) to `InvoiceSettingsData`.
+  - Preserved legacy backup compatibility: `InvoiceSettingsData.fromJson` safely deserializes older backups and defaults gracefully when cut mode or feed lines are missing.
+  - Added auto-cut mode selector, feed lines slider, and instant "Test Receipt Cut" button in Settings printer management.
+  - All receipt print callers (`BillPdfGenerator.printBillJpeg`, summary dialogs, reports, and vouchers) append configurable feed lines and cut command to native ESC/POS print jobs.
+- **Android USB Host Thermal & TSPL Printer Support**:
+  - Added `PrinterTarget` domain model supporting both `Bluetooth(macAddress)` and `Usb(vendorId, productId, serialNumber, portPath)` targets with unified display names and serialization format (`usb:VID:PID[:SERIAL]`).
+  - Added `UsbPrinterTransport.kt` implementing robust USB printer communication via `UsbManager`:
+    - Automatic interface and bulk endpoint discovery (supports interface 0 or fallback printer class 7).
+    - Connection error recovery and safe device connection lifecycle management.
+    - Chunked bulk transfer throttling (`transferChunkSize = 16384` bytes) with timeout protection.
+    - Android USB runtime permission dispatch via `PendingIntent` and broadcast receiver with persistent permission checking.
+  - Unified printer picker dialogs for both ESC/POS receipt printers and TSPL label printers, showing both paired Bluetooth devices and plugged USB printers with device vendor/product metadata and connection icons.
+  - Updated `AndroidManifest.xml` with `android.hardware.usb.host` feature (optional) and USB permission intent filters.
+  - Settings printer status cards display active USB connection details, device vendor/product identifiers, and quick disconnect/test actions.
+  - Preserves existing Bluetooth printer configurations and backup compatibility transparently.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V13-10-2026.apk` (versionCode 220953, versionName "2.6.77-V13-10-2026"), R8 minified, passing all unit tests.
 
 ## Maintenance note
 
