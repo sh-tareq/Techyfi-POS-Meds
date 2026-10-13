@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-13 (app version 2.6.77-V13-10-2026, build `Techyfi-POS-Final-V13-10-2026.apk`; versionCode 220953; DB schema version 38)
+Last updated: 2026-10-13 (app version 2.6.78-V13-10-2026, build `Techyfi-POS-Final-V13-10-2026.apk`; versionCode 220954; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -41,6 +41,9 @@ mindmap
           Unauthenticated remote backup restore backdoor removed from MainActivity
           Strict PIN authentication enforced for database restore routines
           Low-stock notification deep-link route preserved across terminal lock and unlock
+          Single owner policy: cannot create duplicate owners or promote staff to owner
+          Device-credential PIN reset requires high-priority owner acknowledgment on next login
+          Configurable idle auto-lock with off / 5m / 15m / 30m / 60m thresholds
       Adaptive Layout Resolution Engine
         Breakpoints & Form Factor Detection
           Compact Phone (< 600dp)
@@ -1029,15 +1032,15 @@ mindmap
 ## Current Android package
 
 - Application ID: `com.techyfi.pos`
-- Version code: `220953`
-- Version name: `2.6.77-V13-10-2026`
+- Version code: `220954`
+- Version name: `2.6.78-V13-10-2026`
 - Upgrade rule: retain the same application ID and signing identity, and always increase the version code.
 - Signing SHA-1:
   - Active key (from Sep 29, 2026 onwards): `08:4A:15:4B:BB:A4:61:B7:98:C7:E2:62:F8:CE:C3:BA:8B:52:3A:FA` (keystore at `~/.android/debug.keystore`).
   - Legacy key (prior to Sep 29, 2026): `D6:7B:BD:1C:48:92:D4:FC:7F:D5:1F:D1:CB:22:79:B5:6F:C8:AD:9C`.
   - Both must be registered as Android OAuth 2.0 Client IDs in Google Cloud Console under `com.techyfi.pos` for Google Drive backup/restore.
 - Database version: `38` (v15→16 reminder tracking, v16→17 purchasePriceAtSale snapshot, v17→18 return refund-splitting, v18→19 register shift states, v19→20 due reminders, v20→21 unified customers CRM, v21→22 users RBAC, v24→25 sale audit logs, v33→34, v34→35, v35→36, v36→37, and v37→38 cleaning legacy voucher phone fallback with nullable customerPhone support).
-- Current build: `Techyfi-POS-Final-V13-10-2026.apk` (versionCode 220953) - R8 minified and resource-shrunk, Dual Printer Architecture (Direct Bluetooth & USB ESC/POS for Receipts with auto-cut and feed lines, TSPL for Labels, Android Print Service fallback, thread-safe dispatch & reliable chunked transport, printer conflict guard). Full single and batch label copy selector (1-500, presets 1, 2, 3, 5, 10, 20, stock qty), direct Bluetooth and USB TSPL dispatch & PDF share, and multi-page print document layout adapter.
+- Current build: `Techyfi-POS-Final-V13-10-2026.apk` (versionCode 220954) - R8 minified and resource-shrunk, Round 21 audit hardening, single owner security enforcement, device-credential PIN reset alert, configurable auto-lock duration, and full bilingual design token reconciliation. Dual Printer Architecture (Direct Bluetooth & USB ESC/POS for Receipts with auto-cut and feed lines, TSPL for Labels, Android Print Service fallback, thread-safe dispatch & reliable chunked transport, printer conflict guard). Full single and batch label copy selector (1-500, presets 1, 2, 3, 5, 10, 20, stock qty), direct Bluetooth and USB TSPL dispatch & PDF share, and multi-page print document layout adapter.
 - This is the project's only mind map and the single source of truth for architecture, workflows, limitations, business rules, release metadata, and verification history.
 
 ## Primary code map
@@ -2824,6 +2827,31 @@ mindmap
   - Preserves existing Bluetooth printer configurations and backup compatibility transparently.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V13-10-2026.apk` (versionCode 220953, versionName "2.6.77-V13-10-2026"), R8 minified, passing all unit tests.
+
+### Audit Round 21 Comprehensive Hardening & Security Governance (Version 2.6.78-V13-10-2026, Build V13-10-2026)
+- **Financial Integrity & Mathematical Parity**:
+  - Extracted centralized pure financial calculation logic into `PaymentMath.kt` with strictly unified Round-Half-Up banker calculations.
+  - Eliminated profit calculation discrepancies between cash/credit sales and ensured consistent rounding for unit prices, taxes, and margins.
+  - Fixed inventory and sales report profit parity under diverse discount and tax regimes.
+  - Hardened numeric sanitization in `AppUtils.sanitizeNumericInput` to cleanly drop thousands separators (commas) while strictly preserving decimal points.
+- **Transaction Safety & Mutability Safeguards**:
+  - Enforced `NonCancellable` coroutine scope boundaries around sales completion routines in `CartScreen` to prevent orphaned sales records or partial database writes on accidental dismissals or process interruptions.
+  - Implemented supplier invoice/payment transaction voiding with full atomic rollback, ledger reconciliation, and localized error feedback.
+  - Bound customer due statements with accurate initial balance seeding so that running balances match live receivables down to the paisa.
+  - Aligned Material 3 DatePicker UTC-midnight timestamps with local midnight across all Khata, Dues, and Report filter ranges.
+- **RBAC & Security Governance**:
+  - Enforced strict single-owner account architecture in `DataRepository.updateStaff`, hiding the Owner role from `AddStaffDialog` and preventing elevation of staff to Owner.
+  - Implemented device-credential PIN reset tracking: resets via Android lock screen now trigger a persistent unacknowledged flag and display an inescapable security warning dialog on the owner's next login until explicitly acknowledged.
+  - Added configurable idle screen lock (Off, 5m, 15m, 30m, 60m) in System Settings, serialized in `InvoiceSettingsData` and dynamically monitored by `AuthViewModel`.
+- **UI/UX Polish & Cold Start Resilience**:
+  - Eliminated cold-start white flash by provisioning dark `#070709` window background in `values/themes.xml` and moving `windowLightNavigationBar` into `values-v27/themes.xml` for minSdk 24 compatibility.
+  - Added `ForceDarkSystemBars` Compose component enforcing dark system bars and light icons on Splash and Lock screens.
+  - Replaced low-contrast color tokens and raw `sp` sizes across `ReturnDialog`, `CartScreen`, `SuppliersScreen`, `ProductsScreen`, `DuesScreen`, `ExpensesScreen`, and `ManageUsersScreen` to meet WCAG AA standards.
+  - Reconciled 100% of bilingual string keys across English (`values/strings.xml`) and Bengali (`values-bn/strings.xml`) with zero em dashes.
+- **Verification & Test Suite**:
+  - Passing all 184 unit tests across `P0AuditFixesTest`, `P1AuditFixesTest`, `P2AuditFixesTest`, `P3AuditFixesTest`, and `OwnerDecisionsTest`, calling production code directly.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V13-10-2026.apk` (versionCode 220954, versionName "2.6.78-V13-10-2026"), R8 minified and resource-shrunk, ready as an update to the existing installed app.
 
 ## Maintenance note
 
