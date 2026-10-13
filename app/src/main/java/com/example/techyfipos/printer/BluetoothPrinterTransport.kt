@@ -133,12 +133,30 @@ private const val TAG = "BtPrinterTransport"
 private const val SPP_UUID = "00001101-0000-1000-8000-00805F9B34FB"
 private const val CHUNK_SIZE = 512
 private const val CHUNK_DELAY_MS = 15L
+private const val CHUNK_DELAY_MIN_MS = 15L
+private const val CHUNK_DELAY_MAX_MS = 35L
+private const val CHUNK_DELAY_THRESHOLD_BYTES = 8192
 private const val CONNECT_SETTLE_MS = 250L
 private const val POST_PRINT_DRAIN_MS = 300L
 private const val POST_PRINT_DRAIN_MAX_MS = 4000L
 private const val STATUS_TIMEOUT_MIN_MS = 3000L
 private const val STATUS_TIMEOUT_MAX_MS = 8000L
 private const val DRAIN_BYTES_PER_MS = 25
+
+/**
+ * Dynamically paces Bluetooth RFCOMM chunk transmission to prevent printer input buffer overruns.
+ * Short jobs (<= 8 KB, such as cut test banners) transmit fast with a 15 ms chunk delay (~34 KB/s).
+ * Larger jobs (full receipts with tens of KB of raster data) scale chunk delay up to 35 ms (~14.6 KB/s),
+ * matching thermal printing speed and printer microcontroller UART reception limits so the job tail is not dropped.
+ */
+fun bluetoothChunkDelayMs(totalBytes: Int): Long {
+    val bytes = totalBytes.coerceAtLeast(0)
+    return if (bytes <= CHUNK_DELAY_THRESHOLD_BYTES) {
+        CHUNK_DELAY_MIN_MS
+    } else {
+        (CHUNK_DELAY_MIN_MS + (bytes - CHUNK_DELAY_THRESHOLD_BYTES) / 3000L).coerceIn(CHUNK_DELAY_MIN_MS, CHUNK_DELAY_MAX_MS)
+    }
+}
 
 /**
  * How long to keep the Bluetooth socket open after the last write when no status reply is received.
@@ -256,6 +274,7 @@ suspend fun sendToBluetoothPrinter(
 
         val os: OutputStream = socket.outputStream
         val totalBytes = segments.sumOf { it.size }
+        val chunkDelayMs = bluetoothChunkDelayMs(totalBytes)
         val writeStartTime = System.currentTimeMillis()
         for ((index, segment) in segments.withIndex()) {
             var offset = 0
@@ -264,7 +283,7 @@ suspend fun sendToBluetoothPrinter(
                 os.write(segment, offset, length)
                 offset += length
                 if (offset < segment.size) {
-                    delay(CHUNK_DELAY_MS)
+                    delay(chunkDelayMs)
                 }
             }
             onSegmentSent?.invoke(index)
@@ -315,7 +334,7 @@ suspend fun sendToBluetoothPrinter(
         delay(drainMs)
         Log.d(
             TAG,
-            "sendToBluetoothPrinter: totalBytes=$totalBytes, writeElapsedMs=$writeElapsedMs, drainMs=$drainMs, replyReceived=$replyReceived"
+            "sendToBluetoothPrinter: totalBytes=$totalBytes, chunkDelayMs=$chunkDelayMs, writeElapsedMs=$writeElapsedMs, drainMs=$drainMs, replyReceived=$replyReceived"
         )
         DirectPrintResult.Success
     } catch (e: Exception) {

@@ -960,4 +960,18 @@ class PrinterRoutingAndDriverTest {
         // Invalid cut style falls back to GS_V
         assertEquals("GS_V", restored.receiptCutCommandStyle)
     }
+
+    @Test
+    fun `bluetoothChunkDelayMs paces larger jobs and preserves fast rate for short cut tests`() {
+        assertEquals(15L, bluetoothChunkDelayMs(0))
+        assertEquals(15L, bluetoothChunkDelayMs(-500))
+        assertEquals(15L, bluetoothChunkDelayMs(8192))
+        // Small increase for moderate jobs
+        assertEquals(18L, bluetoothChunkDelayMs(20000))
+        // High delay for large receipt images to avoid overflowing printer buffer
+        assertEquals(34L, bluetoothChunkDelayMs(68000))
+        // Clamps at 35 ms maximum
+        assertEquals(35L, bluetoothChunkDelayMs(75000))
+        assertEquals(35L, bluetoothChunkDelayMs(Int.MAX_VALUE))
+    }
 }
