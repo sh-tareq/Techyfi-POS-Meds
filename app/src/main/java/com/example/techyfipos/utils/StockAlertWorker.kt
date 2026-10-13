@@ -12,6 +12,7 @@ import androidx.work.WorkerParameters
 import com.example.techyfipos.MainActivity
 import com.example.techyfipos.R
 import com.example.techyfipos.data.db.AppDatabase
+import kotlinx.coroutines.flow.first
 
 class StockAlertWorker(
     context: Context,
@@ -28,16 +29,26 @@ class StockAlertWorker(
     override suspend fun doWork(): Result {
         return try {
             val context = applicationContext
+            val settings = com.example.techyfipos.data.SettingsDataStore(context)
+            val localizedContext = runCatching {
+                val lang = settings.languageFlow.first()
+                val locale = java.util.Locale.forLanguageTag(lang)
+                val config = android.content.res.Configuration(context.resources.configuration).apply {
+                    setLocale(locale)
+                }
+                context.createConfigurationContext(config)
+            }.getOrDefault(context)
+
             val db = AppDatabase.getDatabase(context)
             val products = db.productDao().getAllProductsList()
 
             val now = System.currentTimeMillis()
             val thirtyDaysMillis = 30L * 24 * 60 * 60 * 1000
 
-            val lowStockItems = products.filter { it.stockQty > 0.0 && it.stockQty <= it.reorderLevel }
+            val lowStockItems = products.filter { it.stockQty <= it.reorderLevel }
             val expiringItems = products.filter { p ->
                 val exp = parseExpiryDateToMillis(p.expiryDate)
-                exp != null && exp > now && exp <= (now + thirtyDaysMillis)
+                exp != null && exp <= (now + thirtyDaysMillis)
             }
 
             if (lowStockItems.isNotEmpty() || expiringItems.isNotEmpty()) {
@@ -45,11 +56,12 @@ class StockAlertWorker(
                 val prefs = context.getSharedPreferences("stock_alert_worker_prefs", Context.MODE_PRIVATE)
                 val lastSignature = prefs.getString("last_alert_signature", null)
                 if (alertSignature != lastSignature) {
+                    val fallbackSample = localizedContext.getString(R.string.notif_stock_fallback_sample_product)
                     sendStockNotification(
-                        context = context,
+                        context = localizedContext,
                         lowStockCount = lowStockItems.size,
                         expiringCount = expiringItems.size,
-                        sampleProduct = (lowStockItems + expiringItems).firstOrNull()?.name ?: "Products"
+                        sampleProduct = (lowStockItems + expiringItems).firstOrNull()?.name ?: fallbackSample
                     )
                     prefs.edit().putString("last_alert_signature", alertSignature).apply()
                 }

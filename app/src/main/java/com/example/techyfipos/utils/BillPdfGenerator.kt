@@ -626,9 +626,13 @@ fun generateBillJpeg(context: Context, bill: BillData, receiptLanguage: String =
 
     // 2. Draw Header
     val nameText = bill.shopName.ifBlank { settings.storeName }
-    val nameW = paintTitle.measureText(nameText)
-    canvas.drawText(nameText, (width - nameW) / 2f, currentY + 28f, paintTitle)
-    currentY += 45f
+    val nameLines = wrapItemNameByPixelWidth(nameText, width - 40f, paintTitle)
+    for (line in nameLines) {
+        val nameW = paintTitle.measureText(line)
+        canvas.drawText(line, (width - nameW) / 2f, currentY + 28f, paintTitle)
+        currentY += 34f
+    }
+    currentY += 11f
 
     val shopAddr = bill.shopAddress.ifBlank { settings.address }
     if (settings.showAddress && shopAddr.isNotBlank()) {
@@ -1194,8 +1198,11 @@ fun generateZReportJpeg(
     // Header
     boldPaint.textSize = if (is58) 22f else 28f
     boldPaint.textAlign = Paint.Align.CENTER
-    canvas.drawText(reportStoreName(settings), width / 2f, y, boldPaint)
-    y += if (is58) 28f else 35f
+    val zStoreLines = wrapItemNameByPixelWidth(reportStoreName(settings), width - (sidePad * 2), boldPaint)
+    for (sLine in zStoreLines) {
+        canvas.drawText(sLine, width / 2f, y, boldPaint)
+        y += if (is58) 28f else 35f
+    }
 
     boldPaint.textSize = if (is58) 17f else 22f
     canvas.drawText(if (isBangla) "দৈনিক ক্লোজিং (জেড-রিপোর্ট)" else "DAILY CLOSING Z-REPORT", width / 2f, y, boldPaint)
@@ -1314,9 +1321,14 @@ fun generateZReportJpeg(
             if (!data.varianceReason.isNullOrBlank()) {
                 paint.textAlign = Paint.Align.LEFT
                 paint.textSize = if (is58) 14f else 17f
-                canvas.drawText("${if (isBangla) "পার্থক্য কারণ: " else "Variance Reason: "}${data.varianceReason}", sidePad, y, paint)
+                val reasonFullText = "${if (isBangla) "পার্থক্য কারণ: " else "Variance Reason: "}${data.varianceReason}"
+                val reasonLines = wrapItemNameByPixelWidth(reasonFullText, width - (sidePad * 2), paint)
+                for (rLine in reasonLines) {
+                    canvas.drawText(rLine, sidePad, y, paint)
+                    y += if (is58) 20f else 24f
+                }
                 paint.textSize = if (is58) 16f else 20f
-                y += if (is58) 24f else 28f
+                y += if (is58) 4f else 4f
             }
         }
     }
@@ -1469,8 +1481,11 @@ fun generateXReportJpeg(
     var y = if (is58) 36f else 45f
     boldPaint.textSize = if (is58) 22f else 28f
     boldPaint.textAlign = Paint.Align.CENTER
-    canvas.drawText(reportStoreName(settings), width / 2f, y, boldPaint)
-    y += if (is58) 28f else 35f
+    val xStoreLines = wrapItemNameByPixelWidth(reportStoreName(settings), width - (sidePad * 2), boldPaint)
+    for (sLine in xStoreLines) {
+        canvas.drawText(sLine, width / 2f, y, boldPaint)
+        y += if (is58) 28f else 35f
+    }
 
     boldPaint.textSize = if (is58) 17f else 22f
     canvas.drawText(if (isBangla) "মিড-শিフト এক্স-রিপোর্ট (সাময়িক)" else "MID-SHIFT X-REPORT (INTERIM)", width / 2f, y, boldPaint)
@@ -1568,7 +1583,12 @@ fun generateXReportJpeg(
 
     boldPaint.textAlign = Paint.Align.CENTER
     boldPaint.textSize = if (is58) 16f else 20f
-    canvas.drawText(if (isBangla) "*** সাময়িক রিডিং (দিন বন্ধ হবে না) ***" else "*** INTERIM READING (DOES NOT CLOSE DAY) ***", width / 2f, y, boldPaint)
+    val xFooterText = if (isBangla) "*** সাময়িক রিডিং (দিন বন্ধ হবে না) ***" else "*** INTERIM READING (DOES NOT CLOSE DAY) ***"
+    val xFooterLines = wrapItemNameByPixelWidth(xFooterText, width - (sidePad * 2), boldPaint)
+    for (fLine in xFooterLines) {
+        canvas.drawText(fLine, width / 2f, y, boldPaint)
+        y += if (is58) 22f else 28f
+    }
     if (settings.showPoweredBy) {
         y += if (is58) 24f else 30f
         paint.textAlign = Paint.Align.CENTER

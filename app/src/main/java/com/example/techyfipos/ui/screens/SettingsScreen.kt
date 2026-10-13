@@ -2395,6 +2395,7 @@ private fun ShopIdentitySettings(
 @Composable
 private fun ShopLogoSettings(
     currentSettings: InvoiceSettingsData,
+    logoVersion: Int = 0,
     onSettingsChanged: (InvoiceSettingsData) -> Unit,
     onPickLogo: () -> Unit,
     onSave: () -> Unit,
@@ -2440,7 +2441,7 @@ private fun ShopLogoSettings(
                 var logoImageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
                 var monochromeLogoBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
-                LaunchedEffect(currentSettings.logoUri, File(context.filesDir, "store_logo.png").lastModified()) {
+                LaunchedEffect(currentSettings.logoUri, logoVersion) {
                     if (currentSettings.logoUri.isNotBlank()) {
                         val (orig, mono) = withContext(Dispatchers.IO) {
                             try {
@@ -4599,6 +4600,7 @@ fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
     isOwner: Boolean = true,
     isTablet: Boolean = LocalConfiguration.current.screenWidthDp >= 600,
+    activePermissions: Set<String> = emptySet(),
     onBack: () -> Unit,
     onExpensesClick: () -> Unit = {},
     onSuppliersClick: () -> Unit = {},
@@ -4610,6 +4612,7 @@ fun SettingsScreen(
     val activity = androidx.activity.compose.LocalActivity.current
     val scope = rememberCoroutineScope()
     val signingSha1 = remember(context) { SigningCertificateHelper.sha1Fingerprint(context) }
+    val canBackup = isOwner || activePermissions.contains(com.example.techyfipos.data.AppPermissions.SYSTEM_BACKUP_RESTORE)
 
     val currentLang by settingsViewModel.language.collectAsStateWithLifecycle()
     val currentThemeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
@@ -4617,6 +4620,7 @@ fun SettingsScreen(
     val currentDefaultCostPercentage by settingsViewModel.defaultCostPercentage.collectAsStateWithLifecycle()
     val invoiceSettingsData by settingsViewModel.invoiceSettingsData.collectAsStateWithLifecycle()
     var currentSettings by remember { mutableStateOf(InvoiceSettingsData()) }
+    var logoVersion by remember { mutableStateOf(0) }
 
     var showAddBlockDialog by remember { mutableStateOf(false) }
     var blockTitleInput by remember { mutableStateOf("") }
@@ -4628,6 +4632,13 @@ fun SettingsScreen(
     var isCheckingDuplicateLedgers by remember { mutableStateOf(false) }
     var importFailureDetails by remember { mutableStateOf<List<String>?>(null) }
     var settingsPage by remember { mutableStateOf(SettingsPage.HOME) }
+
+    LaunchedEffect(settingsPage, canBackup) {
+        if (settingsPage == SettingsPage.BACKUP && !canBackup) {
+            settingsPage = SettingsPage.HOME
+            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Sync state once ready
     LaunchedEffect(invoiceSettingsData) {
@@ -4647,6 +4658,7 @@ fun SettingsScreen(
                     inputStream?.use { input -> outputStream.use { output -> input.copyTo(output) } }
                     val savedUri = Uri.fromFile(file).toString()
                     withContext(Dispatchers.Main) {
+                        logoVersion++
                         currentSettings = currentSettings.copy(logoUri = savedUri)
                         settingsViewModel.saveInvoiceSettingsData(currentSettings)
                         Toast.makeText(context, context.getString(R.string.settings_toast_logo_updated), Toast.LENGTH_SHORT).show()
@@ -5087,7 +5099,13 @@ fun SettingsScreen(
                     onTaxClick = { settingsPage = SettingsPage.TAX },
                     onManageUsersClick = onManageUsersClick,
                     onLogoutClick = onLogout,
-                    onBackupClick = { settingsPage = SettingsPage.BACKUP },
+                    onBackupClick = {
+                        if (canBackup) {
+                            settingsPage = SettingsPage.BACKUP
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
+                        }
+                    },
                     onTransferClick = { settingsPage = SettingsPage.TRANSFER },
                     onAboutClick = { settingsPage = SettingsPage.ABOUT },
                     onResetClick = {
@@ -5178,11 +5196,15 @@ fun SettingsScreen(
                 )
                 SettingsPage.SHOP_LOGO -> ShopLogoSettings(
                     currentSettings = currentSettings,
+                    logoVersion = logoVersion,
                     onSettingsChanged = { currentSettings = it },
                     onPickLogo = { logoPickerLauncher.launch("image/*") },
                     onSave = {
-                        settingsViewModel.saveInvoiceSettingsData(currentSettings)
-                        Toast.makeText(context, context.getString(R.string.settings_toast_shop_logo_saved), Toast.LENGTH_SHORT).show()
+                        settingsViewModel.saveInvoiceSettingsData(currentSettings) { ok ->
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.settings_toast_shop_logo_saved), Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     },
                     onTestPrint = {
                         scope.launch(Dispatchers.IO) {
@@ -6196,7 +6218,7 @@ fun SettingsScreen(
 
     if (isCheckingDuplicateLedgers) {
         AlertDialog(
-            onDismissRequest = {},
+            onDismissRequest = { isCheckingDuplicateLedgers = false },
             properties = DialogProperties(dismissOnClickOutside = false),
             text = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

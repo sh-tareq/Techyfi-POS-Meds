@@ -683,8 +683,7 @@ fun CartScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     fun removeCartItemWithUndo(item: CartItem) {
         val removedProduct = item.product
-        val removedQty = item.quantity
-        val removedNote = item.note
+        val removedIndex = cartItems.indexOfFirst { it.product.barcode == item.product.barcode }
         cartViewModel.removeFromCart(removedProduct)
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -694,10 +693,7 @@ fun CartScreen(
                 duration = SnackbarDuration.Short
             )
             if (result == SnackbarResult.ActionPerformed) {
-                cartViewModel.addToCart(removedProduct, removedQty)
-                if (!removedNote.isNullOrBlank()) {
-                    cartViewModel.setItemNoteByBarcode(removedProduct.barcode, removedNote)
-                }
+                cartViewModel.restoreCartItem(item, removedIndex)
             }
         }
     }
@@ -2994,7 +2990,9 @@ fun CartScreen(
                     val snapshotAmountPaid = if (paymentMethod == "Cash" && !isSplitPayment) currentRawCash else currentPaymentBreakdown.amountPaidToRecord
                     val snapshotChange = currentPaymentBreakdown.changeAmount
                     scope.launch {
-                        doCompleteSale(snapshotAmountPaid, snapshotChange)
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                            doCompleteSale(snapshotAmountPaid, snapshotChange)
+                        }
                     }
                 }
             }

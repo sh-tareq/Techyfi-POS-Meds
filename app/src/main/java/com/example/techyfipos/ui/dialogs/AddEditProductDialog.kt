@@ -139,7 +139,7 @@ fun AddEditProductDialog(
     val settingsDataStore = remember { SettingsDataStore(context) }
     val customCategories by settingsDataStore.categoriesFlow.collectAsStateWithLifecycle(initialValue = CategoryItem.defaultCategories())
     val coroutineScope = rememberCoroutineScope()
-    var isSaving by rememberSaveable { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
     var showCategoryManagerDialog by rememberSaveable { mutableStateOf(false) }
     var categoryDropdownExpanded by rememberSaveable { mutableStateOf(false) }
     var category by rememberSaveable { mutableStateOf(initialCategory) }

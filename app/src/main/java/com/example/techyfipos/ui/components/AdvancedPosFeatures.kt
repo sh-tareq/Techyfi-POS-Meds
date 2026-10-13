@@ -1432,20 +1432,27 @@ fun ExpenseItemRow(
                             )
                         }
                     }
-                    val expenseDateLabel = remember(expense.timestamp) {
-                        val cal = java.util.Calendar.getInstance()
-                        val curYear = cal.get(java.util.Calendar.YEAR)
-                        val curDay = cal.get(java.util.Calendar.DAY_OF_YEAR)
-                        cal.timeInMillis = expense.timestamp
-                        val expYear = cal.get(java.util.Calendar.YEAR)
-                        val expDay = cal.get(java.util.Calendar.DAY_OF_YEAR)
-                        val timeStr = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(expense.timestamp))
-                        if (curYear == expYear && curDay == expDay) {
-                            timeStr
-                        } else if (curYear == expYear && curDay - expDay == 1) {
-                            "Yesterday, $timeStr"
-                        } else {
-                            "${SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(expense.timestamp))}, $timeStr"
+                    val isBangla = com.example.techyfipos.utils.isAppBangla()
+                    val expenseDateLabel = remember(expense.timestamp, isBangla) {
+                        val nowCal = java.util.Calendar.getInstance().apply {
+                            set(java.util.Calendar.HOUR_OF_DAY, 0)
+                            set(java.util.Calendar.MINUTE, 0)
+                            set(java.util.Calendar.SECOND, 0)
+                            set(java.util.Calendar.MILLISECOND, 0)
+                        }
+                        val expCal = java.util.Calendar.getInstance().apply {
+                            timeInMillis = expense.timestamp
+                            set(java.util.Calendar.HOUR_OF_DAY, 0)
+                            set(java.util.Calendar.MINUTE, 0)
+                            set(java.util.Calendar.SECOND, 0)
+                            set(java.util.Calendar.MILLISECOND, 0)
+                        }
+                        val diffDays = ((nowCal.timeInMillis - expCal.timeInMillis) / (24L * 60 * 60 * 1000)).toInt()
+                        val timeStr = SimpleDateFormat("hh:mm a", if (isBangla) Locale.forLanguageTag("bn") else Locale.getDefault()).format(Date(expense.timestamp))
+                        when (diffDays) {
+                            0 -> timeStr
+                            1 -> if (isBangla) "গতকাল, $timeStr" else "Yesterday, $timeStr"
+                            else -> "${SimpleDateFormat("dd MMM", if (isBangla) Locale.forLanguageTag("bn") else Locale.getDefault()).format(Date(expense.timestamp))}, $timeStr"
                         }
                     }
                     Text(

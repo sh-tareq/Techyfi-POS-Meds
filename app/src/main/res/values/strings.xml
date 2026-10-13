@@ -2911,6 +2911,8 @@
     <string name="supplier_void_payment_desc">Are you sure you want to void this payment of %1$s? This will re-add the due amount to the supplier and delete the linked expense.</string>
     <string name="supplier_void_payment_success">Payment voided successfully</string>
     <string name="supplier_void_button">Void</string>
+    <string name="supplier_void_failed">Void failed</string>
+    <string name="supplier_cannot_void_invoice_payment">Cannot void payment created automatically with invoice. Void the invoice instead.</string>
     <string name="supplier_detail_ledger_title">%1$s - Ledger</string>
     <string name="supplier_detail_tab_invoices">Invoices</string>
     <string name="supplier_detail_tab_payments">Payments</string>

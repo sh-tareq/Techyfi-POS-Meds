@@ -332,7 +332,7 @@ fun MainNavigation() {
         val scope = rememberCoroutineScope()
         val localizedContext = LocalContext.current
 
-        LaunchedEffect(Unit) {
+        LaunchedEffect(localizedContext) {
             com.example.techyfipos.utils.RepositoryErrorBus.errors.collect { error ->
                 val msg = com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(localizedContext, error)
                 android.widget.Toast.makeText(localizedContext, msg, android.widget.Toast.LENGTH_SHORT).show()
@@ -507,7 +507,7 @@ fun MainNavigation() {
                                     while (backStack.size > 1) { backStack.removeLastOrNull() }
                                     if (backStack.lastOrNull() != Products) { backStack.add(Products) }
                                 } else {
-                                    android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(localizedContext, localizedContext.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             },
                             Triple(Nav3DType.HISTORY, currentKey == SalesHistory, stringResource(R.string.sales_history)) to {
@@ -520,7 +520,7 @@ fun MainNavigation() {
                                     while (backStack.size > 1) { backStack.removeLastOrNull() }
                                     if (backStack.lastOrNull() != Dues) { backStack.add(Dues) }
                                 } else {
-                                    android.widget.Toast.makeText(context, context.getString(R.string.dues_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(localizedContext, localizedContext.getString(R.string.dues_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             },
                             Triple(Nav3DType.MORE, isMoreActive, stringResource(R.string.more_hub)) to {
@@ -574,7 +574,7 @@ fun MainNavigation() {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != SalesReport) { backStack.add(SalesReport) }
                         } else {
-                            android.widget.Toast.makeText(context, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(localizedContext, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     onNavigateToExpenses = {
@@ -584,7 +584,7 @@ fun MainNavigation() {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
                         } else {
-                            android.widget.Toast.makeText(context, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(localizedContext, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     onNavigateToSuppliers = {
@@ -594,7 +594,7 @@ fun MainNavigation() {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != Suppliers) { backStack.add(Suppliers) }
                         } else {
-                            android.widget.Toast.makeText(context, ownerOnlySuppliersText, android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(localizedContext, ownerOnlySuppliersText, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     onNavigateToSettings = {
@@ -604,7 +604,7 @@ fun MainNavigation() {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != Settings) { backStack.add(Settings) }
                         } else {
-                            android.widget.Toast.makeText(context, ownerOnlySettingsText, android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(localizedContext, ownerOnlySettingsText, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     onNavigateToRegisterClose = {
@@ -614,7 +614,7 @@ fun MainNavigation() {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != RegisterClose) { backStack.add(RegisterClose) }
                         } else {
-                            android.widget.Toast.makeText(context, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(localizedContext, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     onNavigateToLoyalty = {
@@ -624,7 +624,7 @@ fun MainNavigation() {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != Loyalty) { backStack.add(Loyalty) }
                         } else {
-                            android.widget.Toast.makeText(context, ownerOnlyLoyaltyText, android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(localizedContext, ownerOnlyLoyaltyText, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     onNavigateToCustomers = {
@@ -634,7 +634,7 @@ fun MainNavigation() {
                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                             if (backStack.lastOrNull() != Customers) { backStack.add(Customers) }
                         } else {
-                            android.widget.Toast.makeText(context, ownerOnlyCustomersText, android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(localizedContext, ownerOnlyCustomersText, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     onLockOrLogout = {
@@ -678,6 +678,7 @@ fun MainNavigation() {
                         Button(
                             onClick = {
                                 showLogoutConfirmDialog = false
+                                com.example.techyfipos.utils.HardwareBarcodeScanner.clearPendingInput()
                                 authViewModel.logout()
                                 while (backStack.size > 0) { backStack.removeLastOrNull() }
                                 backStack.add(Lock)
@@ -808,7 +809,7 @@ fun MainNavigation() {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != Products) { backStack.add(Products) }
                                         } else {
-                                            android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(localizedContext, localizedContext.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     Triple(Nav3DType.HISTORY, currentKey == SalesHistory, stringResource(R.string.sales_history)) to {
@@ -821,7 +822,7 @@ fun MainNavigation() {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != Dues) { backStack.add(Dues) }
                                         } else {
-                                            android.widget.Toast.makeText(context, context.getString(R.string.dues_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(localizedContext, localizedContext.getString(R.string.dues_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     Triple(Nav3DType.EXPENSES, currentKey == Expenses, stringResource(R.string.expenses)) to {
@@ -830,7 +831,7 @@ fun MainNavigation() {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
                                         } else {
-                                            android.widget.Toast.makeText(context, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     Triple(Nav3DType.REPORT, currentKey == SalesReport, stringResource(R.string.sales_report_section)) to {
@@ -839,7 +840,7 @@ fun MainNavigation() {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != SalesReport) { backStack.add(SalesReport) }
                                         } else {
-                                            android.widget.Toast.makeText(context, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     Triple(Nav3DType.SETTINGS, currentKey == Settings, stringResource(R.string.settings)) to {
@@ -848,7 +849,7 @@ fun MainNavigation() {
                                             while (backStack.size > 1) { backStack.removeLastOrNull() }
                                             if (backStack.lastOrNull() != Settings) { backStack.add(Settings) }
                                         } else {
-                                            android.widget.Toast.makeText(context, ownerOnlySettingsText, android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlySettingsText, android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     Triple(Nav3DType.MORE, currentKey in listOf(Suppliers, Loyalty, Customers, RegisterClose), stringResource(R.string.more_hub)) to {
@@ -1325,7 +1326,9 @@ fun MainNavigation() {
                                 val canReport = isOwner || activePermissions.contains(AppPermissions.REPORTS_VIEW_DAILY) || activePermissions.contains(AppPermissions.REPORTS_VIEW_PNL)
                                 LaunchedEffect(canReport) {
                                     if (!canReport) {
-                                        android.widget.Toast.makeText(context, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (authViewModel.currentUser.value != null && backStack.lastOrNull() == SalesReport) {
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                         if (backStack.lastOrNull() == SalesReport) {
                                             backStack.removeLastOrNull()
                                         }
@@ -1344,7 +1347,7 @@ fun MainNavigation() {
                                         if (canExpense) {
                                             if (backStack.lastOrNull() != Expenses) { backStack.add(Expenses) }
                                         } else {
-                                            android.widget.Toast.makeText(context, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     onNavigateToSuppliers = {
@@ -1352,7 +1355,7 @@ fun MainNavigation() {
                                         if (canSuppliers) {
                                             if (backStack.lastOrNull() != Suppliers) { backStack.add(Suppliers) }
                                         } else {
-                                            android.widget.Toast.makeText(context, ownerOnlySuppliersText, android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlySuppliersText, android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     onBack = { backStack.removeLastOrNull() },
@@ -1363,7 +1366,9 @@ fun MainNavigation() {
                                 val canExpense = isOwner || activePermissions.contains(AppPermissions.EXPENSES_MANAGE)
                                 LaunchedEffect(canExpense) {
                                     if (!canExpense) {
-                                        android.widget.Toast.makeText(context, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (authViewModel.currentUser.value != null && backStack.lastOrNull() == Expenses) {
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlyExpensesText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                         if (backStack.lastOrNull() == Expenses) {
                                             backStack.removeLastOrNull()
                                         }
@@ -1377,7 +1382,7 @@ fun MainNavigation() {
                                         if (isOwner || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)) {
                                             if (backStack.lastOrNull() != RegisterClose) { backStack.add(RegisterClose) }
                                         } else {
-                                            android.widget.Toast.makeText(context, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     isTablet = isTablet,
@@ -1388,7 +1393,9 @@ fun MainNavigation() {
                                 val canSuppliers = isOwner || activePermissions.contains(AppPermissions.SUPPLIERS_MANAGE)
                                 LaunchedEffect(canSuppliers) {
                                     if (!canSuppliers) {
-                                        android.widget.Toast.makeText(context, ownerOnlySuppliersText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (authViewModel.currentUser.value != null && backStack.lastOrNull() == Suppliers) {
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlySuppliersText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                         if (backStack.lastOrNull() == Suppliers) {
                                             backStack.removeLastOrNull()
                                         }
@@ -1410,7 +1417,9 @@ fun MainNavigation() {
                                 val canViewDues = isOwner || activePermissions.contains(AppPermissions.DUES_VIEW)
                                 LaunchedEffect(canViewDues) {
                                     if (!canViewDues) {
-                                        android.widget.Toast.makeText(context, ownerOnlyDuesText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (authViewModel.currentUser.value != null && backStack.lastOrNull() == Dues) {
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlyDuesText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                         if (backStack.lastOrNull() == Dues) {
                                             backStack.removeLastOrNull()
                                         }
@@ -1431,7 +1440,7 @@ fun MainNavigation() {
                                         cartViewModel.setCustomerName(customer.name)
                                         while (backStack.size > 1) { backStack.removeLastOrNull() }
                                         backStack.add(Scanner)
-                                        android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(localizedContext, localizedContext.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
                                     },
                                     isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
@@ -1441,7 +1450,9 @@ fun MainNavigation() {
                                 val canSettings = isOwner || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
                                 LaunchedEffect(canSettings) {
                                     if (!canSettings) {
-                                        android.widget.Toast.makeText(context, ownerOnlySettingsText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (authViewModel.currentUser.value != null && backStack.lastOrNull() == Settings) {
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlySettingsText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                         if (backStack.lastOrNull() == Settings) {
                                             backStack.removeLastOrNull()
                                         }
@@ -1451,6 +1462,7 @@ fun MainNavigation() {
                                 SettingsScreen(
                                     settingsViewModel = settingsViewModel,
                                     isOwner = isOwner,
+                                    activePermissions = activePermissions,
                                     onBack = { backStack.removeLastOrNull() },
                                     onExpensesClick = { backStack.add(Expenses) },
                                     onSuppliersClick = { backStack.add(Suppliers) },
@@ -1459,7 +1471,7 @@ fun MainNavigation() {
                                         if (canManageStaff) {
                                             backStack.add(ManageUsers)
                                         } else {
-                                            android.widget.Toast.makeText(context, context.getString(R.string.user_management_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(localizedContext, localizedContext.getString(R.string.user_management_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     onLogout = {
@@ -1473,7 +1485,9 @@ fun MainNavigation() {
                                 val canClose = isOwner || activePermissions.contains(AppPermissions.REPORTS_CLOSE_REGISTER)
                                 LaunchedEffect(canClose) {
                                     if (!canClose) {
-                                        android.widget.Toast.makeText(context, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (authViewModel.currentUser.value != null && backStack.lastOrNull() == RegisterClose) {
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlyRegisterCloseText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                         if (backStack.lastOrNull() == RegisterClose) {
                                             backStack.removeLastOrNull()
                                         }
@@ -1500,7 +1514,9 @@ fun MainNavigation() {
                                 val canLoyalty = isOwner || activePermissions.contains(AppPermissions.LOYALTY_MANAGE)
                                 LaunchedEffect(canLoyalty) {
                                     if (!canLoyalty) {
-                                        android.widget.Toast.makeText(context, ownerOnlyLoyaltyText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (authViewModel.currentUser.value != null && backStack.lastOrNull() == Loyalty) {
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlyLoyaltyText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                         if (backStack.lastOrNull() == Loyalty) {
                                             backStack.removeLastOrNull()
                                         }
@@ -1518,7 +1534,7 @@ fun MainNavigation() {
                                         cartViewModel.setCustomerName(customer.name)
                                         while (backStack.size > 1) { backStack.removeLastOrNull() }
                                         backStack.add(Scanner)
-                                        android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(localizedContext, localizedContext.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
                                     },
                                     isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)
@@ -1528,7 +1544,9 @@ fun MainNavigation() {
                                 val canCustomers = isOwner || activePermissions.contains(AppPermissions.CUSTOMERS_VIEW)
                                 LaunchedEffect(canCustomers) {
                                     if (!canCustomers) {
-                                        android.widget.Toast.makeText(context, ownerOnlyCustomersText, android.widget.Toast.LENGTH_SHORT).show()
+                                        if (authViewModel.currentUser.value != null && backStack.lastOrNull() == Customers) {
+                                            android.widget.Toast.makeText(localizedContext, ownerOnlyCustomersText, android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                         if (backStack.lastOrNull() == Customers) {
                                             backStack.removeLastOrNull()
                                         }
@@ -1545,7 +1563,7 @@ fun MainNavigation() {
                                         cartViewModel.setCustomerName(customer.name)
                                         while (backStack.size > 1) { backStack.removeLastOrNull() }
                                         backStack.add(Scanner)
-                                        android.widget.Toast.makeText(context, context.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(localizedContext, localizedContext.getString(R.string.sale_started_for_customer, customer.name), android.widget.Toast.LENGTH_SHORT).show()
                                     },
                                     isTablet = isTablet,
                                     modifier = Modifier.padding(contentPadding)

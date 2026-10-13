@@ -309,6 +309,12 @@ class DataRepository(
         if (!hasPermission(permissionKey)) throw UnauthorizedException("Permission '$permissionKey' required for this action")
     }
 
+    fun requireAnyPermission(vararg permissionKeys: String) {
+        if (permissionKeys.none { hasPermission(it) }) {
+            throw UnauthorizedException("One of permissions [${permissionKeys.joinToString()}] required for this action")
+        }
+    }
+
     /**
      * Verifies an owner or manager PIN without changing the signed-in cashier session, then grants one short-lived
      * scoped override for the specified customer, amount, and cart signature.
@@ -4956,7 +4962,7 @@ class DataRepository(
         expenseDao.getExpensesBetween(startTime, endTime)
 
     suspend fun insertExpense(expense: Expense): Long = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.EXPENSES_MANAGE)
+        requireAnyPermission(AppPermissions.EXPENSES_MANAGE, AppPermissions.REPORTS_CLOSE_REGISTER)
         expenseDao.insertExpense(expense.copy(cashierName = sessionUser?.name ?: expense.cashierName))
     }
 

@@ -400,9 +400,12 @@ fun sanitizeNumericInput(rawValue: String): String {
                     val digit = Character.getNumericValue(character)
                     if (digit in 0..9) append(digit)
                 }
-                (character == '.' || character == ',') && !hasDecimalSeparator -> {
+                character == '.' && !hasDecimalSeparator -> {
                     append('.')
                     hasDecimalSeparator = true
+                }
+                character == ',' -> {
+                    // Ignore commas as thousands separator
                 }
             }
         }
@@ -469,8 +472,10 @@ fun getLocalizedRepositoryErrorMessage(context: Context, error: Throwable?): Str
             context.getString(com.example.techyfipos.R.string.error_sale_not_found)
         msg.contains("Supplier not found", ignoreCase = true) ->
             context.getString(com.example.techyfipos.R.string.error_supplier_not_found)
-        msg.contains("constraint conflict", ignoreCase = true) || msg.contains("duplicate record", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_duplicate_record)
+        msg.contains("Cannot void payment created automatically with purchase invoice", ignoreCase = true) ->
+            context.getString(com.example.techyfipos.R.string.supplier_cannot_void_invoice_payment)
+        msg.contains("Void failed", ignoreCase = true) ->
+            context.getString(com.example.techyfipos.R.string.supplier_void_failed)
         msg.isNotBlank() -> msg
         else -> context.getString(com.example.techyfipos.R.string.error_generic)
     }

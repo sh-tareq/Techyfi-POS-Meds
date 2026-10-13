@@ -1,5 +1,6 @@
 package com.example.techyfipos.theme
 
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -82,6 +83,37 @@ internal val LightColorScheme = lightColorScheme(
     outlineVariant = LightOutlineVariant
 )
 
+val LocalDarkTheme = androidx.compose.runtime.compositionLocalOf { false }
+
+@Composable
+fun ForceDarkSystemBars() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isAppDark = LocalDarkTheme.current
+    androidx.compose.runtime.DisposableEffect(isAppDark) {
+        val activity = generateSequence(context) { (it as? android.content.ContextWrapper)?.baseContext }
+            .filterIsInstance<androidx.activity.ComponentActivity>()
+            .firstOrNull()
+        activity?.enableEdgeToEdge(
+            statusBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
+        onDispose {
+            activity?.enableEdgeToEdge(
+                statusBarStyle = if (isAppDark) {
+                    androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                } else {
+                    androidx.activity.SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+                },
+                navigationBarStyle = if (isAppDark) {
+                    androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                } else {
+                    androidx.activity.SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+                }
+            )
+        }
+    }
+}
+
 @Composable
 fun TechyfiPOSTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -91,7 +123,8 @@ fun TechyfiPOSTheme(
     val extendedColors = if (darkTheme) DarkExtendedColors else LightExtendedColors
 
     androidx.compose.runtime.CompositionLocalProvider(
-        LocalExtendedColors provides extendedColors
+        LocalExtendedColors provides extendedColors,
+        LocalDarkTheme provides darkTheme
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

@@ -3,6 +3,8 @@ package com.example.techyfipos.ui.screens
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.example.techyfipos.data.AppPermissions
+import com.example.techyfipos.utils.localMillisToUtcMidnight
+import com.example.techyfipos.utils.utcMidnightToLocalMidnight
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -1583,12 +1585,12 @@ fun DuesScreen(
     }
 
     if (showDuesStartPicker) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = customDueStart ?: now)
+        val state = rememberDatePickerState(initialSelectedDateMillis = localMillisToUtcMidnight(customDueStart ?: now))
         DatePickerDialog(
             onDismissRequest = { showDuesStartPicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    state.selectedDateMillis?.let { customDueStart = it }
+                    state.selectedDateMillis?.let { customDueStart = utcMidnightToLocalMidnight(it) }
                     showDuesStartPicker = false
                     showDuesEndPicker = true
                 }) { Text(stringResource(R.string.dues_next_end_date_button)) }
@@ -1598,12 +1600,12 @@ fun DuesScreen(
     }
 
     if (showDuesEndPicker) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = customDueEnd ?: customDueStart ?: now)
+        val state = rememberDatePickerState(initialSelectedDateMillis = localMillisToUtcMidnight(customDueEnd ?: customDueStart ?: now))
         DatePickerDialog(
             onDismissRequest = { showDuesEndPicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    state.selectedDateMillis?.let { customDueEnd = it }
+                    state.selectedDateMillis?.let { customDueEnd = utcMidnightToLocalMidnight(it) }
                     val s = customDueStart ?: now
                     val e = customDueEnd ?: now
                     if (s > e) {
@@ -1619,12 +1621,12 @@ fun DuesScreen(
     }
 
     if (showStartPicker) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = paymentStart)
+        val state = rememberDatePickerState(initialSelectedDateMillis = localMillisToUtcMidnight(paymentStart))
         DatePickerDialog(
             onDismissRequest = { showStartPicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    state.selectedDateMillis?.let { paymentStart = it }
+                    state.selectedDateMillis?.let { paymentStart = utcMidnightToLocalMidnight(it) }
                     if (paymentStart > paymentEnd) {
                         val swap = paymentStart
                         paymentStart = paymentEnd
@@ -1638,12 +1640,12 @@ fun DuesScreen(
     }
 
     if (showEndPicker) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = paymentEnd)
+        val state = rememberDatePickerState(initialSelectedDateMillis = localMillisToUtcMidnight(paymentEnd))
         DatePickerDialog(
             onDismissRequest = { showEndPicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    state.selectedDateMillis?.let { paymentEnd = it }
+                    state.selectedDateMillis?.let { paymentEnd = utcMidnightToLocalMidnight(it) }
                     if (paymentStart > paymentEnd) {
                         val swap = paymentStart
                         paymentStart = paymentEnd
@@ -1690,6 +1692,21 @@ private fun shareCustomerStatement(
         ledger.add(StatementLedgerEntry(p.timestamp, desc, debit = 0.0, credit = p.amountPaid))
     }
     ledger.sortBy { it.timestamp }
+
+    // Reconcile opening balance / return adjustments so running balance matches outstandingAmount exactly
+    val netLedger = charges.sumOf { it.amount } - payments.sumOf { it.amountPaid }
+    val openingBalance = customer.outstandingAmount - netLedger
+    if (kotlin.math.abs(openingBalance) > 0.001) {
+        val earliestTime = (charges.map { it.timestamp } + payments.map { it.timestamp }).minOrNull() ?: customer.createdAt
+        val desc = if (openingBalance > 0.0) {
+            if (isBangla) "পূর্ববর্তী জের / প্রারম্ভিক বকেয়া" else "Opening / Previous Due"
+        } else {
+            if (isBangla) "ফেরত সমন্বয় / ক্রেডিট" else "Return Adjustment / Credit"
+        }
+        val debit = if (openingBalance > 0.0) openingBalance else 0.0
+        val credit = if (openingBalance < 0.0) -openingBalance else 0.0
+        ledger.add(0, StatementLedgerEntry(earliestTime - 1000L, desc, debit = debit, credit = credit))
+    }
 
     val statement = buildString {
         appendLine("================================")

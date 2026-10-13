@@ -119,7 +119,7 @@ fun SuppliersScreen(
     var selectedSupplierForInflow by remember { mutableStateOf<Supplier?>(null) }
     var showSupplierPickerForInflow by remember { mutableStateOf(false) }
     var selectedSupplierForPayDue by remember { mutableStateOf<Supplier?>(null) }
-    var selectedSupplierForDetail by remember { mutableStateOf<Supplier?>(null) }
+    var selectedSupplierIdForDetail by remember { mutableStateOf<Long?>(null) }
     var invoiceToVoid by remember { mutableStateOf<PurchaseInvoice?>(null) }
     var paymentToVoid by remember { mutableStateOf<SupplierPayment?>(null) }
 
@@ -708,7 +708,7 @@ fun SuppliersScreen(
                         onPayDue = { runWithSupplierPermission(context.getString(R.string.supplier_auth_record_payment)) { selectedSupplierForPayDue = supplier } },
                         onEdit = { runWithSupplierPermission(context.getString(R.string.supplier_auth_edit_supplier)) { supplierToEdit = supplier } },
                         onDelete = { runWithSupplierPermission(context.getString(R.string.supplier_auth_delete_supplier)) { supplierToDelete = supplier } },
-                        onClick = { selectedSupplierForDetail = supplier }
+                        onClick = { selectedSupplierIdForDetail = supplier.id }
                     )
                 }
             }
@@ -1349,27 +1349,30 @@ fun SuppliersScreen(
         )
     }
 
-    selectedSupplierForDetail?.let { supplier ->
-        SupplierDetailSheet(
-            supplier = supplier,
-            supplierViewModel = supplierViewModel,
-            isOwner = isOwner,
-            onVoidInvoice = { inv -> invoiceToVoid = inv },
-            onVoidPayment = { p -> paymentToVoid = p },
-            onAddInflow = {
-                selectedSupplierForDetail = null
-                runWithSupplierPermission(context.getString(R.string.supplier_auth_receive_stock)) {
-                    selectedSupplierForInflow = supplier
-                }
-            },
-            onPayDue = {
-                selectedSupplierForDetail = null
-                runWithSupplierPermission(context.getString(R.string.supplier_auth_record_payment)) {
-                    selectedSupplierForPayDue = supplier
-                }
-            },
-            onDismiss = { selectedSupplierForDetail = null }
-        )
+    selectedSupplierIdForDetail?.let { supplierId ->
+        val liveSupplier = suppliers.firstOrNull { it.id == supplierId }
+        if (liveSupplier != null) {
+            SupplierDetailSheet(
+                supplier = liveSupplier,
+                supplierViewModel = supplierViewModel,
+                isOwner = isOwner,
+                onVoidInvoice = { inv -> invoiceToVoid = inv },
+                onVoidPayment = { p -> paymentToVoid = p },
+                onAddInflow = {
+                    selectedSupplierIdForDetail = null
+                    runWithSupplierPermission(context.getString(R.string.supplier_auth_receive_stock)) {
+                        selectedSupplierForInflow = liveSupplier
+                    }
+                },
+                onPayDue = {
+                    selectedSupplierIdForDetail = null
+                    runWithSupplierPermission(context.getString(R.string.supplier_auth_record_payment)) {
+                        selectedSupplierForPayDue = liveSupplier
+                    }
+                },
+                onDismiss = { selectedSupplierIdForDetail = null }
+            )
+        }
     }
 
     if (invoiceToVoid != null) {
@@ -1392,7 +1395,7 @@ fun SuppliersScreen(
                             result.onSuccess {
                                 Toast.makeText(context, context.getString(R.string.supplier_void_invoice_success), Toast.LENGTH_SHORT).show()
                             }.onFailure { e ->
-                                Toast.makeText(context, e.localizedMessage ?: "Void failed", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(context, e), Toast.LENGTH_LONG).show()
                             }
                         }
                     },
@@ -1429,7 +1432,7 @@ fun SuppliersScreen(
                             result.onSuccess {
                                 Toast.makeText(context, context.getString(R.string.supplier_void_payment_success), Toast.LENGTH_SHORT).show()
                             }.onFailure { e ->
-                                Toast.makeText(context, e.localizedMessage ?: "Void failed", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(context, e), Toast.LENGTH_LONG).show()
                             }
                         }
                     },
@@ -1459,8 +1462,10 @@ fun SupplierDetailSheet(
     onPayDue: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val invoices by supplierViewModel.getInvoicesForSupplier(supplier.id).collectAsStateWithLifecycle(emptyList())
-    val payments by supplierViewModel.getSupplierPayments(supplier.id).collectAsStateWithLifecycle(emptyList())
+    val invoicesFlow = remember(supplier.id) { supplierViewModel.getInvoicesForSupplier(supplier.id) }
+    val paymentsFlow = remember(supplier.id) { supplierViewModel.getSupplierPayments(supplier.id) }
+    val invoices by invoicesFlow.collectAsStateWithLifecycle(emptyList())
+    val payments by paymentsFlow.collectAsStateWithLifecycle(emptyList())
     var selectedTab by remember { mutableStateOf(0) }
 
     ModalBottomSheet(

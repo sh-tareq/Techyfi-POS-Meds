@@ -40,7 +40,7 @@ class AutoBackupWorker(
 
             val localRequested = scope != AutoBackupScheduler.SCOPE_DRIVE && localEnabled
             val driveRequested = scope != AutoBackupScheduler.SCOPE_LOCAL && driveEnabled
-            val localDue = localRequested && (
+            val localDue = localRequested && runAttemptCount == 0 && (
                 !respectDueTime || isDue(
                     now = now,
                     lastBackup = settings.lastLocalBackupTimestampFlow.first(),
@@ -102,7 +102,10 @@ class AutoBackupWorker(
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Drive authorization refresh failed", e)
-                        if (e is java.io.IOException || e.cause is java.io.IOException) {
+                        val isApiExceptionNetwork = (e is com.google.android.gms.common.api.ApiException &&
+                            (e.statusCode == com.google.android.gms.common.api.CommonStatusCodes.NETWORK_ERROR ||
+                             e.statusCode == com.google.android.gms.common.api.CommonStatusCodes.TIMEOUT))
+                        if (e is java.io.IOException || e.cause is java.io.IOException || isApiExceptionNetwork) {
                             authNetworkError = true
                         } else {
                             driveNeedsUserAuthorization = true

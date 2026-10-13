@@ -36,6 +36,7 @@ fun SplashScreen(
     isTablet: Boolean = false,
     onSplashFinished: () -> Unit
 ) {
+    com.example.techyfipos.theme.ForceDarkSystemBars()
     val configuration = LocalConfiguration.current
     val screenWidthDp = configuration.screenWidthDp
     val isTabletDevice = isTablet || screenWidthDp >= 600
@@ -228,7 +229,7 @@ private fun TechyfiSplashLogo(
         Spacer(modifier = Modifier.height(if (isTablet) 6.dp else 4.dp))
 
         Text(
-            text = "POWERING YOUR DIGITAL LIFESTYLE",
+            text = androidx.compose.ui.res.stringResource(R.string.lock_powering_digital_lifestyle),
             color = Color(0xFF94A3B8),
             fontSize = if (isTablet) 11.sp else 10.sp,
             fontWeight = FontWeight.Bold,

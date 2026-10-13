@@ -1461,6 +1461,20 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         persistCartSnapshot(currentList)
     }
 
+    fun restoreCartItem(item: CartItem, index: Int = -1): Boolean {
+        if (!item.quantity.isFinite() || item.quantity <= 0.0) return false
+        val currentList = _cartItems.value.toMutableList()
+        val existingIndex = currentList.indexOfFirst { it.product.barcode == item.product.barcode }
+        if (existingIndex != -1) {
+            currentList.removeAt(existingIndex)
+        }
+        val targetIndex = if (index in 0..currentList.size) index else currentList.size
+        currentList.add(targetIndex, item)
+        _cartItems.value = currentList
+        persistCartSnapshot(currentList)
+        return true
+    }
+
 
 
     fun toggleDiscountUnit() {
@@ -3325,21 +3339,42 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun saveShopInfo(name: String, address: String, phone: String) {
+    fun saveShopInfo(name: String, address: String, phone: String, onResult: ((Boolean) -> Unit)? = null) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            repository.saveShopInfo(name, address, phone)
+            val ok = try {
+                repository.saveShopInfo(name, address, phone)
+                true
+            } catch (e: Throwable) {
+                com.example.techyfipos.utils.RepositoryErrorBus.report(e)
+                false
+            }
+            onResult?.invoke(ok)
         }
     }
 
-    fun saveInvoiceSettings(logoUri: String, facebookUrl: String, qrCodeInfo: String, cashierName: String) {
+    fun saveInvoiceSettings(logoUri: String, facebookUrl: String, qrCodeInfo: String, cashierName: String, onResult: ((Boolean) -> Unit)? = null) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            repository.saveInvoiceSettings(logoUri, facebookUrl, qrCodeInfo, cashierName)
+            val ok = try {
+                repository.saveInvoiceSettings(logoUri, facebookUrl, qrCodeInfo, cashierName)
+                true
+            } catch (e: Throwable) {
+                com.example.techyfipos.utils.RepositoryErrorBus.report(e)
+                false
+            }
+            onResult?.invoke(ok)
         }
     }
 
-    fun saveInvoiceSettingsData(settings: com.example.techyfipos.data.InvoiceSettingsData) {
+    fun saveInvoiceSettingsData(settings: com.example.techyfipos.data.InvoiceSettingsData, onResult: ((Boolean) -> Unit)? = null) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            repository.saveInvoiceSettingsData(settings)
+            val ok = try {
+                repository.saveInvoiceSettingsData(settings)
+                true
+            } catch (e: Throwable) {
+                com.example.techyfipos.utils.RepositoryErrorBus.report(e)
+                false
+            }
+            onResult?.invoke(ok)
         }
     }
 
@@ -3357,14 +3392,21 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun resetFactoryDefaults(onComplete: () -> Unit) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            repository.resetFactoryDefaults()
-            onComplete()
+            try {
+                repository.resetFactoryDefaults()
+            } finally {
+                onComplete()
+            }
         }
     }
 
     fun previewDuplicateDueLedgers(onResult: (List<DataRepository.DuplicateDueLedgerGroup>) -> Unit) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            onResult(repository.previewDuplicatePhoneDueLedgers())
+            try {
+                onResult(repository.previewDuplicatePhoneDueLedgers())
+            } catch (e: Throwable) {
+                onResult(emptyList())
+            }
         }
     }
 
@@ -3569,9 +3611,16 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     fun fetchDriveBackups(driveService: com.google.api.services.drive.Drive) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO + com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             _isLoadingBackups.value = true
-            val list = com.example.techyfipos.utils.GoogleDriveHelper.listBackups(driveService)
-            _driveBackups.value = list
-            _isLoadingBackups.value = false
+            try {
+                val result = com.example.techyfipos.utils.GoogleDriveHelper.listBackupsResult(driveService)
+                if (result.isSuccess) {
+                    _driveBackups.value = result.getOrDefault(emptyList())
+                } else {
+                    result.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
+                }
+            } finally {
+                _isLoadingBackups.value = false
+            }
         }
     }
 

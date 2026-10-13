@@ -2913,6 +2913,8 @@
     <string name="supplier_void_payment_desc">আপনি কি নিশ্চিত যে %1$s টাকার পরিশোধটি বাতিল করতে চান? এতে সাপ্লায়ার বকেয়া পুনরায় যুক্ত হবে এবং খরচের রেকর্ড মুছে যাবে।</string>
     <string name="supplier_void_payment_success">পরিশোধ সফলভাবে বাতিল করা হয়েছে</string>
     <string name="supplier_void_button">বাতিল</string>
+    <string name="supplier_void_failed">বাতিলকরণ ব্যর্থ হয়েছে</string>
+    <string name="supplier_cannot_void_invoice_payment">ইনভয়েসের সাথে স্বয়ংক্রিয়ভাবে তৈরি পেমেন্ট বাতিল করা যাবে না। পরিবর্তে ইনভয়েসটি বাতিল করুন।</string>
     <string name="supplier_detail_ledger_title">%1$s - খতিয়ান</string>
     <string name="supplier_detail_tab_invoices">ইনভয়েস</string>
     <string name="supplier_detail_tab_payments">পরিশোধ</string>

@@ -69,6 +69,7 @@ fun LockScreen(
     onUnlocked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    com.example.techyfipos.theme.ForceDarkSystemBars()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -574,7 +575,7 @@ fun LockScreen(
                     OutlinedTextField(
                         value = recoveryPin,
                         onValueChange = { recoveryPin = it.filter(Char::isDigit).take(4) },
-                        label = { Text(stringResource(R.string.users_pin_label)) },
+                        label = { Text(stringResource(R.string.lock_new_pin_label)) },
                         singleLine = true,
                         visualTransformation = if (recoveryPinVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
