@@ -2991,7 +2991,7 @@
     <string name="z_report_cash_out_expenses">ক্যাশ-আউট (খরচ)</string>
     <string name="z_report_supplier_cash_paid">সাপ্লায়ার ক্যাশ প্রদান</string>
     <string name="z_report_loyalty_redeemed">লয়্যালটি পয়েন্ট ছাড়</string>
-    <string name="z_report_invoices_units_fmt">চালান: %1$d | পণ্য বিক্রয়: %2$d</string>
+    <string name="z_report_invoices_units_fmt">চালান: %1$d | পণ্য বিক্রয়: %2$s</string>
     <string name="register_close_mid_shift_x_report_subject">টেকিফাই পিওএস মিড-শিফট এক্স-রিপোর্ট - %1$s</string>
     <string name="register_close_daily_closing_z_report_subject">টেকিফাই পিওএস দৈনিক সমাপ্তি জেড-রিপোর্ট - %1$s</string>
     <string name="register_close_share_report_chooser_title">রিপোর্ট শেয়ার করুন</string>

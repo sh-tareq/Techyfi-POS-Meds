@@ -299,7 +299,13 @@ fun CartScreen(
     var pendingSupervisorAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var pendingSupervisorDesc by remember { mutableStateOf("") }
 
-    val userDiscountLimit by remember(authViewModel) { authViewModel?.maxDiscountPercent ?: kotlinx.coroutines.flow.MutableStateFlow(10.0) }.collectAsStateWithLifecycle(initialValue = 10.0)
+    val currentUser by remember(authViewModel) {
+        authViewModel?.currentUser ?: kotlinx.coroutines.flow.MutableStateFlow(null)
+    }.collectAsStateWithLifecycle(initialValue = authViewModel?.currentUser?.value)
+
+    val userDiscountLimit by remember(authViewModel) {
+        authViewModel?.maxDiscountPercent ?: kotlinx.coroutines.flow.MutableStateFlow(10.0)
+    }.collectAsStateWithLifecycle(initialValue = authViewModel?.maxDiscountPercent?.value ?: 10.0)
     val canVoidCart = isOwner || activePermissions.contains(AppPermissions.SALES_VOID_CART)
     val canRemoveItem = isOwner || activePermissions.contains(AppPermissions.SALES_VOID_CART)
     val canApplyDiscount = isOwner || activePermissions.contains(AppPermissions.SALES_APPLY_DISCOUNT)
@@ -464,7 +470,9 @@ fun CartScreen(
         cardLastFour = cardLastFour
     )
     var discountInput by rememberSaveable { mutableStateOf(editableAmount(discountAmount)) }
-    var supervisorApprovedDiscount by rememberSaveable { mutableStateOf(false) }
+    val isSupervisorApprovedDiscount by cartViewModel.supervisorApprovedDiscount.collectAsStateWithLifecycle()
+    val isOverrideValid = cartViewModel.hasValidDiscountOverride(discountAmount)
+    val hasApprovedDiscount = isSupervisorApprovedDiscount || isOverrideValid
     var scanUpdate by remember { mutableStateOf<CartScanUpdate?>(null) }
     var notFoundBarcode by remember { mutableStateOf<String?>(null) }
     var showCustomItemDialog by remember { mutableStateOf(false) }
@@ -513,7 +521,8 @@ fun CartScreen(
         }
     }
 
-    LaunchedEffect(subtotal, isPercentageDiscount, maxDiscountAllowed) {
+    LaunchedEffect(subtotal, isPercentageDiscount, maxDiscountAllowed, currentUser, hasApprovedDiscount) {
+        if (currentUser == null && authViewModel != null) return@LaunchedEffect
         if (discountAmount > 0.0) {
             if (subtotal <= 0.0) {
                 cartViewModel.setDiscountAmount(0.0)
@@ -521,7 +530,7 @@ fun CartScreen(
             } else if (discountAmount > subtotal && !isPercentageDiscount) {
                 cartViewModel.setDiscountAmount(subtotal)
                 discountInput = editableAmount(subtotal)
-            } else if (!isPercentageDiscount && !supervisorApprovedDiscount) {
+            } else if (!isPercentageDiscount && !hasApprovedDiscount) {
                 val pctEquiv = (discountAmount / subtotal) * 100.0
                 if (pctEquiv > maxDiscountAllowed) {
                     val clamped = (subtotal * (maxDiscountAllowed / 100.0)).coerceAtLeast(0.0)
@@ -606,9 +615,6 @@ fun CartScreen(
             cartViewModel.setAmountPaid(snapshotAmountPaid)
             cartViewModel.setCashierName(currentDisplayCashier)
             val saleId = cartViewModel.completeSale()
-            if (invoiceSettingsData.cashDrawerKickEnabled && (snapshotPaymentMethod == "Cash" || snapshotPaymentMethod == "Split")) {
-                triggerCashDrawerKick(context, invoiceSettingsData.resolvedCashDrawerPrinterTarget())
-            }
             // Re-fetch the authoritative post-sale balance so the receipt shows the true total due.
             val updatedTotalDue = if (snapshotHasDueInPayment && snapshotCustomerPhone.isNotBlank()) {
                 cartViewModel.getCustomerDue(snapshotCustomerPhone)?.outstandingAmount ?: 0.0
@@ -655,6 +661,17 @@ fun CartScreen(
                 customerRemainingStoreCredit = postSaleRemainingStoreCredit,
                 voucherRemainingBalance = postSaleRemainingVoucherBalance
             ))
+
+            if (invoiceSettingsData.cashDrawerKickEnabled && (snapshotPaymentMethod == "Cash" || snapshotPaymentMethod == "Split")) {
+                val kickTarget = invoiceSettingsData.resolvedCashDrawerPrinterTarget()
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        triggerCashDrawerKick(context, kickTarget)
+                    } catch (e: Throwable) {
+                        android.util.Log.w("CartScreen", "Cash drawer kick failed", e)
+                    }
+                }
+            }
         } catch (e: Exception) {
             android.util.Log.e("CartScreen", "Error completing sale", e)
             Toast.makeText(context, context.getString(R.string.cart_sale_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_LONG).show()
@@ -1325,7 +1342,7 @@ fun CartScreen(
                             OutlinedTextField(
                                 value = discountInput,
                                 onValueChange = { newValue ->
-                                    supervisorApprovedDiscount = false
+                                    cartViewModel.setSupervisorApprovedDiscount(false)
                                     val sanitized = sanitizeDiscountInput(newValue)
                                     val parsed = sanitized.toDoubleOrNull() ?: 0.0
                                     val pctEquiv = if (isPercentageDiscount) parsed else if (subtotal > 0.0) (parsed / subtotal) * 100.0 else 0.0
@@ -1334,7 +1351,6 @@ fun CartScreen(
                                             val discountFormatted = if (isPercentageDiscount) "$sanitized%" else formatTaka(parsed)
                                             pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_discount, discountFormatted, maxDiscountAllowed.toInt())
                                             pendingSupervisorAction = {
-                                                supervisorApprovedDiscount = true
                                                 discountInput = sanitized
                                                 cartViewModel.setDiscountAmount(parsed)
                                                 val maxDiscountTaka = if (isPercentageDiscount) (subtotal * parsed / 100.0) else parsed
@@ -1354,7 +1370,7 @@ fun CartScreen(
                                 trailingIcon = {
                                     Surface(
                                         onClick = {
-                                            supervisorApprovedDiscount = false
+                                            cartViewModel.setSupervisorApprovedDiscount(false)
                                             discountInput = ""
                                             cartViewModel.setDiscountAmount(0.0)
                                             cartViewModel.toggleDiscountUnit()

@@ -161,6 +161,11 @@ fun formatMoney(amount: Double, isBangla: Boolean = isAppBangla()): String =
 
 fun formatTakaBn(amount: Double): String = formatTaka(amount, isBangla = true)
 
+fun formatUnitsSold(units: Double, isBangla: Boolean = isAppBangla()): String {
+    val raw = if (units % 1.0 == 0.0) units.toLong().toString() else String.format(Locale.US, "%.2f", units).trimEnd('0').trimEnd('.')
+    return if (isBangla) toBanglaDigits(raw) else raw
+}
+
 /**
  * Checks whether a unit string represents a fractional/weighable quantity (e.g., Kg, Gram, Ltr, Mtr).
  * Case-insensitive and supports multiple aliases ("Gram", "gm", "g", "Kg", "Ltr", etc.).

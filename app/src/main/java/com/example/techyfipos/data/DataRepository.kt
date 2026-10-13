@@ -73,7 +73,7 @@ class DataRepository(
         val DEFAULT_PAYMENT_METHODS = listOf("Cash", "bKash", "Nagad", "Rocket", "Bank")
         // 1 loyalty point (redeemable 1:1 as taka off a future sale) per 100 taka of grand total.
         private const val LOYALTY_TAKA_PER_POINT = 100.0
-        private const val CREDIT_OVERRIDE_VALIDITY_MS = 60_000L
+        private const val CREDIT_OVERRIDE_VALIDITY_MS = 5 * 60_000L
     }
     val appContext: Context get() = context
     private val _loyaltySettingsFlow = MutableStateFlow(com.example.techyfipos.utils.LoyaltySettingsHelper.getSettings(context))
@@ -232,7 +232,7 @@ class DataRepository(
 
     @Volatile private var pendingDiscountOverride: DiscountOverrideToken? = null
 
-    fun grantDiscountOverride(maxDiscountAmount: Double, cartHash: String? = null) {
+    internal fun grantDiscountOverride(maxDiscountAmount: Double, cartHash: String? = null) {
         synchronized(this) {
             pendingDiscountOverride = DiscountOverrideToken(
                 maxDiscountAmount = maxDiscountAmount,
@@ -252,17 +252,25 @@ class DataRepository(
         true
     }
 
-    internal fun consumeDiscountOverride(
+    internal fun hasValidDiscountOverride(
         discountAmount: Double,
         cartHash: String? = null
     ): Boolean = synchronized(this) {
         val grant = pendingDiscountOverride
-        val valid = grant != null &&
+        grant != null &&
             grant.expiresAt >= System.currentTimeMillis() &&
             (grant.maxDiscountAmount >= discountAmount - 0.01) &&
             (grant.cartHash == null || cartHash == null || grant.cartHash == cartHash)
+    }
 
-        pendingDiscountOverride = null
+    internal fun consumeDiscountOverride(
+        discountAmount: Double,
+        cartHash: String? = null
+    ): Boolean = synchronized(this) {
+        val valid = hasValidDiscountOverride(discountAmount, cartHash)
+        if (valid) {
+            pendingDiscountOverride = null
+        }
         valid
     }
 
@@ -937,10 +945,17 @@ class DataRepository(
         isTaxInclusive: Boolean = false
     ): Long = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.SALES_SELL)
-        val computedCartHash = cartItemsWithNotes.sortedBy { it.first.barcode }
-            .joinToString("|") { "${it.first.barcode}:${it.second}:${it.first.sellingPrice}" }
-        if (discountAmount > 0.0 && !consumeDiscountOverride(discountAmount, computedCartHash)) {
-            requirePermission(AppPermissions.SALES_APPLY_DISCOUNT)
+        val computedCartHash = com.example.techyfipos.ui.viewmodel.CartViewModel.computeCartHashFromTriples(cartItemsWithNotes)
+        val regularDiscountTaka = if (isPercentage) {
+            (subtotal * (discountAmount.coerceIn(0.0, 100.0) / 100.0)).coerceAtLeast(0.0)
+        } else {
+            discountAmount.coerceAtMost(subtotal).coerceAtLeast(0.0)
+        }
+        val hasDiscountPermission = hasPermission(AppPermissions.SALES_APPLY_DISCOUNT)
+        if (regularDiscountTaka > 0.0 && !hasDiscountPermission) {
+            if (!hasValidDiscountOverride(regularDiscountTaka, computedCartHash)) {
+                requirePermission(AppPermissions.SALES_APPLY_DISCOUNT)
+            }
         }
         val normalizedCustomerPhone = customerPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) }
         val normalizedLoyaltyPhone = loyaltyPhone?.takeIf { it.isNotBlank() }?.let { normalizePhone(it) }
@@ -1160,6 +1175,12 @@ class DataRepository(
                         productDao.adjustStockQty(barcode, -requested, allowNegative)
                     }
                 }
+
+            if (regularDiscountTaka > 0.0 && !hasDiscountPermission) {
+                require(consumeDiscountOverride(regularDiscountTaka, cartHash)) {
+                    "Supervisor authorization is required to apply discount"
+                }
+            }
 
             val timestamp = System.currentTimeMillis()
             val finalCustomerCreditAmount = customerCreditToDeduct

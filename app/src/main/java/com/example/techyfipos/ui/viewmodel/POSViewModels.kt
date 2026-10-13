@@ -590,16 +590,42 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     ): Boolean =
         repository.authorizeCreditLimitOverride(pin, phone, maxAmount, cartHash)
 
-    fun computeCartHash(): String = computeCartHash(_cartItems.value)
+    fun computeCartHash(): String = computeCartHash(_cartItems.value, priceMode.value)
 
     companion object {
-        fun computeCartHash(items: List<CartItem>): String {
+        fun effectivePrice(product: Product, mode: PriceMode): Double = when (mode) {
+            PriceMode.MRP        -> if (product.mrpPrice > 0) product.mrpPrice else product.sellingPrice
+            PriceMode.WHOLESALE  -> if (product.wholesalePrice > 0) product.wholesalePrice else product.sellingPrice
+            PriceMode.DISCOUNTED -> product.sellingPrice
+        }
+
+        fun computeCartHash(items: List<CartItem>, mode: PriceMode = PriceMode.DISCOUNTED): String {
             return items.sortedBy { it.product.barcode }
-                .joinToString("|") { "${it.product.barcode}:${it.quantity}:${it.product.sellingPrice}" }
+                .joinToString("|") {
+                    val chargedPrice = effectivePrice(it.product, mode)
+                    "${it.product.barcode}:${it.quantity}:$chargedPrice"
+                }
+        }
+
+        fun computeCartHashFromTriples(items: List<Triple<Product, Double, String?>>): String {
+            return items.sortedBy { it.first.barcode }
+                .joinToString("|") { "${it.first.barcode}:${it.second}:${it.first.sellingPrice}" }
         }
     }
 
+    private val _supervisorApprovedDiscount = MutableStateFlow(false)
+    val supervisorApprovedDiscount: StateFlow<Boolean> = _supervisorApprovedDiscount.asStateFlow()
+
+    fun setSupervisorApprovedDiscount(approved: Boolean) {
+        _supervisorApprovedDiscount.value = approved
+    }
+
+    fun hasValidDiscountOverride(discountAmount: Double): Boolean {
+        return repository.hasValidDiscountOverride(discountAmount, computeCartHash())
+    }
+
     fun grantDiscountOverride(maxDiscountAmount: Double, cartHash: String? = null) {
+        _supervisorApprovedDiscount.value = true
         repository.grantDiscountOverride(maxDiscountAmount, cartHash)
     }
 
@@ -607,7 +633,13 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         pin: String,
         maxDiscountAmount: Double,
         cartHash: String? = null
-    ): Boolean = repository.authorizeDiscountOverride(pin, maxDiscountAmount, cartHash)
+    ): Boolean {
+        val ok = repository.authorizeDiscountOverride(pin, maxDiscountAmount, cartHash)
+        if (ok) {
+            _supervisorApprovedDiscount.value = true
+        }
+        return ok
+    }
 
     /**
      * Loads a past sale's items (looked up fresh by barcode, so current stock/price applies) plus
@@ -1400,6 +1432,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     fun clearCart() {
         _cartItems.value = emptyList()
         _discountAmount.value = 0.0
+        _supervisorApprovedDiscount.value = false
         _isPercentageDiscount.value = false
         _paymentMethod.value = "Cash"
         _customerName.value = ""
@@ -1423,11 +1456,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     /** Resolves the effective unit price for a product given the active price mode. */
-    private fun effectivePrice(product: Product, mode: PriceMode): Double = when (mode) {
-        PriceMode.MRP        -> if (product.mrpPrice > 0) product.mrpPrice else product.sellingPrice
-        PriceMode.WHOLESALE  -> if (product.wholesalePrice > 0) product.wholesalePrice else product.sellingPrice
-        PriceMode.DISCOUNTED -> product.sellingPrice
-    }
+    fun effectivePrice(product: Product, mode: PriceMode): Double = Companion.effectivePrice(product, mode)
 
     /** Public accessor so UI (cart rows, receipt line items) can display the same price mode-aware unit price used for the cart total. */
     fun effectivePriceFor(item: CartItem): Double = effectivePrice(item.product, priceMode.value)
@@ -1796,9 +1825,10 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
     ): Result<Unit> =
         runCatching { repository.replaceProductBarcode(oldBarcode, updatedProduct, adjustment) }
 
-    fun updateProduct(product: Product) {
-        viewModelScope.launch {
-            repository.updateProduct(product)
+    fun updateProduct(product: Product, onResult: ((Result<Unit>) -> Unit)? = null) {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val res = runCatching { repository.updateProduct(product) }
+            onResult?.invoke(res)
         }
     }
 
@@ -3690,14 +3720,27 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         _currentUser.value = user
         repository.setSessionUser(user)
         if (user != null) {
-            lastUserActivityElapsed = android.os.SystemClock.elapsedRealtime()
+            recordUserActivity()
         }
     }
 
-    private var lastUserActivityElapsed: Long = android.os.SystemClock.elapsedRealtime()
+    companion object {
+        @Volatile
+        private var lastUserActivityElapsed: Long = android.os.SystemClock.elapsedRealtime()
+
+        fun recordUserActivity() {
+            lastUserActivityElapsed = android.os.SystemClock.elapsedRealtime()
+        }
+
+        fun getLastUserActivityElapsed(): Long = lastUserActivityElapsed
+
+        fun setLastUserActivityElapsedForTesting(time: Long) {
+            lastUserActivityElapsed = time
+        }
+    }
 
     fun recordUserActivity() {
-        lastUserActivityElapsed = android.os.SystemClock.elapsedRealtime()
+        Companion.recordUserActivity()
     }
 
     fun checkIdleAutoLock(timeoutMinutes: Long = 15): Boolean {

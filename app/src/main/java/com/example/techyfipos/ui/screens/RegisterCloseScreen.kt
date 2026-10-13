@@ -2913,7 +2913,8 @@ fun ZReportDialog(
                             "$expectedCashLabel: ${formatTaka(data.expectedCash)}"
                         } else ""
 
-                        val invoicesUnitsLabel = stringResource(R.string.z_report_invoices_units_fmt, data.transactionCount, data.itemsSold)
+                        val formattedUnits = com.example.techyfipos.utils.formatUnitsSold(data.itemsSold)
+                        val invoicesUnitsLabel = stringResource(R.string.z_report_invoices_units_fmt, data.transactionCount, formattedUnits)
                         val loyaltyRedeemedLabel = stringResource(R.string.z_report_loyalty_redeemed)
                         Text(
                             text = stringResource(R.string.report_period_fmt, rangeLabel) + "\n" +

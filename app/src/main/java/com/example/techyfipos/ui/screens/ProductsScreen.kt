@@ -2973,7 +2973,6 @@ fun ProductsScreen(
                         }
                     )
                 } else {
-                    productsViewModel.updateProduct(updated)
                     val sStr = if (updated.stockQty % 1.0 == 0.0) updated.stockQty.toLong().toString() else String.format(Locale.US, "%.2f", updated.stockQty).trimEnd('0').trimEnd('.')
                     Toast.makeText(
                         context,

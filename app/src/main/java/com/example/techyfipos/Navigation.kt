@@ -399,7 +399,7 @@ fun MainNavigation() {
             if (currentUser != null) {
                 while (true) {
                     kotlinx.coroutines.delay(60_000L)
-                    if (authViewModel.checkIdleAutoLock(15)) {
+                    if (!cartViewModel.isCompletingSale.value && authViewModel.checkIdleAutoLock(15)) {
                         com.example.techyfipos.utils.HardwareBarcodeScanner.clearPendingInput()
                         while (backStack.isNotEmpty()) backStack.removeLastOrNull()
                         backStack.add(Lock)

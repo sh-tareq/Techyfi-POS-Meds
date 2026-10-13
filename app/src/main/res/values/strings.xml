@@ -2989,7 +2989,7 @@
     <string name="z_report_cash_out_expenses">Cash-Out (Expenses)</string>
     <string name="z_report_supplier_cash_paid">Supplier Cash Paid</string>
     <string name="z_report_loyalty_redeemed">Loyalty Redeemed</string>
-    <string name="z_report_invoices_units_fmt">Invoices: %1$d | Units: %2$d</string>
+    <string name="z_report_invoices_units_fmt">Invoices: %1$d | Units: %2$s</string>
     <string name="register_close_mid_shift_x_report_subject">Techyfi POS Mid-Shift X-Report - %1$s</string>
     <string name="register_close_daily_closing_z_report_subject">Techyfi POS Daily Closing Z-Report - %1$s</string>
     <string name="register_close_share_report_chooser_title">Share Report via</string>

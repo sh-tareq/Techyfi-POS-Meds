@@ -49,6 +49,7 @@ object HardwareBarcodeScanner {
         }
         lastEmittedCode = englishCode
         lastEmittedTime = now
+        com.example.techyfipos.ui.viewmodel.AuthViewModel.recordUserActivity()
         _barcodeEvents.tryEmit(englishCode)
     }
 

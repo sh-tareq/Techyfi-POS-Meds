@@ -96,6 +96,11 @@ class MainActivity : ComponentActivity() {
     currentActivity = java.lang.ref.WeakReference(this)
   }
 
+  override fun onUserInteraction() {
+    super.onUserInteraction()
+    com.example.techyfipos.ui.viewmodel.AuthViewModel.recordUserActivity()
+  }
+
   @SuppressLint("RestrictedApi")
   override fun dispatchKeyEvent(event: KeyEvent): Boolean {
     val focused = currentFocus
