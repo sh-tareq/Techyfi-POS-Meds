@@ -1241,6 +1241,26 @@ suspend fun printReceiptWithBluetoothFallback(
     timing: PrintTiming? = null
 ): Boolean {
     val effectiveTiming = timing ?: PrintTiming()
+
+    // The in-memory bitmap is only useful for direct ESC/POS printing. With the system print dialog or no
+    // configured printer it would be rendered for nothing and the JPEG rendered again, so skip it.
+    val goesDirect = settings.receiptPrintMode.trim().uppercase() != "SYSTEM" &&
+        settings.resolvedReceiptPrinterTarget().isConfigured
+    if (!goesDirect) {
+        return printReceiptImage(
+            context = context,
+            activity = activity,
+            imageFile = null,
+            jobName = context.getString(R.string.print_job_invoice_fmt, bill.saleId.toString()),
+            settings = settings,
+            kickDrawer = kickDrawer,
+            timing = effectiveTiming,
+            cachedBitmap = null,
+            billForFallback = bill,
+            receiptLanguage = receiptLanguage
+        )
+    }
+
     val bitmapStartMs = System.currentTimeMillis()
     val paperWidth = settings.paperRollWidthMm
     val cached = ReceiptBitmapCache.get(bill.saleId, receiptLanguage, paperWidth)
