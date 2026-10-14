@@ -2,6 +2,7 @@ package com.example.techyfipos.printer
 
 import android.annotation.SuppressLint
 import android.app.PendingIntent
+import androidx.core.content.ContextCompat
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -212,11 +213,12 @@ suspend fun requestUsbPermission(context: Context, usbManager: UsbManager, devic
         }
         val permissionIntent = PendingIntent.getBroadcast(context, 0, intent, flags)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, IntentFilter(ACTION_USB_PERMISSION), Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            context.registerReceiver(receiver, IntentFilter(ACTION_USB_PERMISSION))
-        }
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(ACTION_USB_PERMISSION),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         continuation.invokeOnCancellation {
             try {
