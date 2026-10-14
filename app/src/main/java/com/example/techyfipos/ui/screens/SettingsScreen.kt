@@ -907,6 +907,7 @@ private fun OptimizedSettingsHome(
                                 scope.launch(Dispatchers.IO) {
                                     isTestingCut = true
                                     val cutModeEnum = ReceiptCutMode.fromString(currentSettings.receiptCutMode)
+                                    val cutTiming = com.example.techyfipos.printer.PrintTiming()
                                     val res = try {
                                         executeReceiptCutTest(
                                             context = context,
@@ -914,7 +915,8 @@ private fun OptimizedSettingsHome(
                                             cutMode = cutModeEnum,
                                             feedLines = currentSettings.receiptFeedLinesBeforeCut,
                                             cutCommandStyle = currentSettings.receiptCutCommandStyle,
-                                            isLong = false
+                                            isLong = false,
+                                            timing = cutTiming
                                         )
                                     } catch (e: Exception) {
                                         if (e is kotlinx.coroutines.CancellationException) throw e
@@ -959,6 +961,7 @@ private fun OptimizedSettingsHome(
                                 scope.launch(Dispatchers.IO) {
                                     isTestingLongCut = true
                                     val cutModeEnum = ReceiptCutMode.fromString(currentSettings.receiptCutMode)
+                                    val cutTiming = com.example.techyfipos.printer.PrintTiming()
                                     val res = try {
                                         executeReceiptCutTest(
                                             context = context,
@@ -966,7 +969,8 @@ private fun OptimizedSettingsHome(
                                             cutMode = cutModeEnum,
                                             feedLines = currentSettings.receiptFeedLinesBeforeCut,
                                             cutCommandStyle = currentSettings.receiptCutCommandStyle,
-                                            isLong = true
+                                            isLong = true,
+                                            timing = cutTiming
                                         )
                                     } catch (e: Exception) {
                                         if (e is kotlinx.coroutines.CancellationException) throw e
