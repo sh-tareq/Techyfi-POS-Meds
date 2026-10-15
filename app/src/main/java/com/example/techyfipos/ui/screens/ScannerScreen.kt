@@ -162,11 +162,12 @@ fun ScannerScreen(
     
     var showSupervisorAuthDialog by remember { mutableStateOf(false) }
     var pendingSupervisorAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var pendingSupervisorActionPin by remember { mutableStateOf<((String) -> Unit)?>(null) }
     var pendingSupervisorDesc by remember { mutableStateOf("") }
 
     val canVoidCart = CartAuthHelper.canVoidCart(isOwner, isSupervisor, effectivePermissions)
     val canRemoveItem = CartAuthHelper.canRemoveItem(isOwner, isSupervisor, effectivePermissions)
-    val canHoldCart = isOwner || isSupervisor || effectivePermissions.contains(AppPermissions.SALES_HOLD_CART)
+    val canHoldCart = isOwner || effectivePermissions.contains(AppPermissions.SALES_HOLD_CART)
     var showClearCartConfirm by remember { mutableStateOf(false) }
     var itemToRemoveConfirm by remember { mutableStateOf<Product?>(null) }
 
@@ -212,12 +213,14 @@ fun ScannerScreen(
             }
         } else if (authViewModel != null) {
             pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_hold_cart)
-            pendingSupervisorAction = {
-                cartViewModel.grantHoldCartOverride()
-                cartViewModel.holdCurrentCart { success ->
-                    if (success) {
-                        showCartPreview = false
-                        Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
+            pendingSupervisorActionPin = { pin ->
+                scope.launch {
+                    cartViewModel.authorizeHoldCartOverride(pin)
+                    cartViewModel.holdCurrentCart { success ->
+                        if (success) {
+                            showCartPreview = false
+                            Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
@@ -701,10 +704,18 @@ fun ScannerScreen(
                         showSupervisorAuthDialog = false
                         pendingSupervisorAction?.invoke()
                         pendingSupervisorAction = null
+                        pendingSupervisorActionPin = null
+                    },
+                    onAuthorizedWithPin = { _, pin ->
+                        showSupervisorAuthDialog = false
+                        pendingSupervisorActionPin?.invoke(pin)
+                        pendingSupervisorActionPin = null
+                        pendingSupervisorAction = null
                     },
                     onDismiss = {
                         showSupervisorAuthDialog = false
                         pendingSupervisorAction = null
+                        pendingSupervisorActionPin = null
                     }
                 )
             }

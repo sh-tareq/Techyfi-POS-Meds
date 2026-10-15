@@ -427,6 +427,14 @@ private fun AddStaffDialog(
     var selectedRole by remember { mutableStateOf(AppRoles.CASHIER) }
     var maxDiscount by remember { mutableStateOf("10") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val currentUser by authViewModel.currentUser.collectAsState()
+    val callerRole = currentUser?.role ?: if (isOwner) AppRoles.OWNER else AppRoles.CASHIER
+    val allowedRoles = when (callerRole) {
+        AppRoles.OWNER -> listOf(AppRoles.CASHIER, AppRoles.MANAGER)
+        AppRoles.MANAGER -> listOf(AppRoles.CASHIER, AppRoles.MANAGER)
+        else -> listOf(AppRoles.CASHIER)
+    }
+
     val invalidUserMessage = stringResource(R.string.users_invalid_input)
     val addFailedMessage = stringResource(R.string.users_add_failed)
     val invalidDiscountMessage = stringResource(R.string.users_max_discount_invalid_error)
@@ -471,6 +479,7 @@ private fun AddStaffDialog(
                 RoleSelectorRow(
                     selectedRole = selectedRole,
                     allowOwnerRole = false,
+                    allowedRoles = allowedRoles,
                     onRoleSelected = { role ->
                         selectedRole = role
                         maxDiscount = when (role) {
@@ -556,6 +565,18 @@ private fun EditStaffDialog(
     var editActive by remember(user) { mutableStateOf(user.isActive) }
     var editDiscount by remember(user) { mutableStateOf(user.maxDiscountPercent.toInt().toString()) }
     var editError by remember(user) { mutableStateOf<String?>(null) }
+    val currentUser by authViewModel.currentUser.collectAsState()
+    val isSelf = user.id == currentUser?.id
+    val isEditingOwner = user.role == AppRoles.OWNER
+    val callerRole = currentUser?.role ?: if (isOwner) AppRoles.OWNER else AppRoles.CASHIER
+    val hasPermissionsCapability = isOwner || (currentUser != null && AppPermissions.hasPermission(currentUser!!, AppPermissions.SYSTEM_PERMISSIONS))
+    val canChangeRole = !isSelf && !isEditingOwner && hasPermissionsCapability
+    val allowedRoles = when (callerRole) {
+        AppRoles.OWNER -> listOf(AppRoles.CASHIER, AppRoles.MANAGER)
+        AppRoles.MANAGER -> listOf(AppRoles.CASHIER, AppRoles.MANAGER)
+        else -> listOf(AppRoles.CASHIER)
+    }
+
     val invalidUserMessage = stringResource(R.string.users_invalid_input)
     val addFailedMessage = stringResource(R.string.users_add_failed)
     val currentPinRequiredMessage = stringResource(R.string.users_current_pin_required)
@@ -611,11 +632,12 @@ private fun EditStaffDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                val isEditingOwner = user.role == AppRoles.OWNER
                 RoleSelectorRow(
                     selectedRole = editRole,
                     allowOwnerRole = isEditingOwner,
-                    onRoleSelected = { if (!isEditingOwner) editRole = it }
+                    allowedRoles = if (isEditingOwner) listOf(AppRoles.OWNER) else allowedRoles,
+                    enabled = canChangeRole,
+                    onRoleSelected = { if (canChangeRole) editRole = it }
                 )
                 if (isEditingOwner) {
                     Spacer(Modifier.height(4.dp))
@@ -630,6 +652,7 @@ private fun EditStaffDialog(
                     OutlinedTextField(
                         value = editDiscount,
                         onValueChange = { editDiscount = it },
+                        enabled = !isSelf,
                         label = { Text(stringResource(R.string.users_max_discount_label)) },
                         supportingText = {
                             if (!isDiscountValid) {
@@ -656,6 +679,7 @@ private fun EditStaffDialog(
                     )
                     Switch(
                         checked = editActive,
+                        enabled = !isSelf,
                         onCheckedChange = { editActive = it }
                     )
                 }
@@ -694,7 +718,7 @@ private fun EditStaffDialog(
                         pin = editPin.takeIf { it.isNotBlank() },
                         oldPin = editOldPin.takeIf { it.isNotBlank() },
                         role = editRole,
-                        customPermissions = if (editRole != user.role) null else AppPermissions.deserializePermissions(user.customPermissions),
+                        customPermissions = null,
                         isActive = editActive,
                         maxDiscount = disc
                     ) { success, err ->
@@ -717,6 +741,8 @@ private fun EditStaffDialog(
 private fun RoleSelectorRow(
     selectedRole: String,
     allowOwnerRole: Boolean = true,
+    allowedRoles: List<String>? = null,
+    enabled: Boolean = true,
     onRoleSelected: (String) -> Unit
 ) {
     val allRoles = listOf(
@@ -724,7 +750,9 @@ private fun RoleSelectorRow(
         Triple(AppRoles.MANAGER, stringResource(R.string.role_manager), MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimaryContainer),
         Triple(AppRoles.OWNER, stringResource(R.string.role_owner), MaterialTheme.extendedColors.warning to MaterialTheme.extendedColors.onWarningContainer)
     )
-    val roles = if (allowOwnerRole) allRoles else allRoles.filter { it.first != AppRoles.OWNER }
+    val roles = allRoles.filter { (role, _, _) ->
+        (allowedRoles == null || allowedRoles.contains(role)) && (allowOwnerRole || role != AppRoles.OWNER)
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -735,12 +763,12 @@ private fun RoleSelectorRow(
             val isSelected = selectedRole == role
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = if (isSelected) accentColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, accentColor) else null,
+                color = if (isSelected) accentColor.copy(alpha = if (enabled) 0.15f else 0.08f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, if (enabled) accentColor else accentColor.copy(alpha = 0.4f)) else null,
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = 48.dp)
-                    .clickable { onRoleSelected(role) }
+                    .clickable(enabled = enabled) { onRoleSelected(role) }
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
@@ -751,7 +779,7 @@ private fun RoleSelectorRow(
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         ),
-                        color = if (isSelected) textColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (isSelected) (if (enabled) textColor else textColor.copy(alpha = 0.6f)) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.5f),
                         maxLines = 1
                     )
                 }

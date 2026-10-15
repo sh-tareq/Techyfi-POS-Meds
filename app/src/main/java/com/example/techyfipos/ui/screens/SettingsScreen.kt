@@ -350,7 +350,8 @@ private fun OptimizedSettingsHome(
     onAboutClick: () -> Unit,
     onResetClick: () -> Unit,
     onRepairDuesClick: () -> Unit = {},
-    isOwner: Boolean = false
+    isOwner: Boolean = false,
+    ownerPinResetAudit: com.example.techyfipos.data.OwnerPinResetAudit? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -710,6 +711,44 @@ private fun OptimizedSettingsHome(
             statusColor = MaterialTheme.colorScheme.primary,
             onClick = onManageUsersClick
         )
+        if (isOwner && ownerPinResetAudit != null) {
+            val formattedDate = remember(ownerPinResetAudit.timestamp) {
+                java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault())
+                    .format(java.util.Date(ownerPinResetAudit.timestamp))
+            }
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Security,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = stringResource(R.string.owner_pin_reset_audit_title),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = stringResource(R.string.owner_pin_reset_audit_info, formattedDate, ownerPinResetAudit.device),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
         Row(
             modifier = Modifier
@@ -5355,7 +5394,8 @@ fun SettingsScreen(
                             Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
                         }
                     },
-                    isOwner = isOwner
+                    isOwner = isOwner,
+                    ownerPinResetAudit = remember { settingsViewModel.getOwnerPinResetAudit() }
                 )
                 SettingsPage.RECEIPT -> OptimizedReceiptOverview(
                     settings = currentSettings,

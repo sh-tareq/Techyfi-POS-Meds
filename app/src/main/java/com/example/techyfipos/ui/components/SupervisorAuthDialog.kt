@@ -33,7 +33,8 @@ fun SupervisorAuthDialog(
     actionDescription: String = stringResource(R.string.users_supervisor_auth_desc),
     authViewModel: AuthViewModel,
     onDismiss: () -> Unit,
-    onAuthorized: (User) -> Unit
+    onAuthorizedWithPin: ((User, String) -> Unit)? = null,
+    onAuthorized: (User) -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var pin by remember { mutableStateOf("") }
@@ -49,6 +50,7 @@ fun SupervisorAuthDialog(
             when (result) {
                 is SupervisorVerifyResult.Success -> {
                     onAuthorized(result.user)
+                    onAuthorizedWithPin?.invoke(result.user, currentPin)
                 }
                 is SupervisorVerifyResult.Locked -> {
                     pin = ""

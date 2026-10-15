@@ -2849,6 +2849,8 @@
     <string name="error_product_not_found">পণ্যটি আর খুঁজে পাওয়া যায়নি</string>
     <string name="error_sale_not_found">বিক্রয় রেকর্ডটি পাওয়া যায়নি</string>
     <string name="error_supplier_not_found">সাপ্লায়ার পাওয়া যায়নি</string>
+    <string name="error_invoice_not_found">চালান পাওয়া যায়নি</string>
+    <string name="error_supplier_payment_not_found">সরবরাহকারী পরিশোধ পাওয়া যায়নি</string>
     <string name="error_duplicate_record">সংরক্ষণ করা যায়নি: ডুপ্লিকেট তথ্যের দ্বন্দ্ব</string>
     <string name="error_generic">একটি সমস্যা দেখা দিয়েছে</string>
 
@@ -3131,4 +3133,6 @@
     <string name="settings_idle_lock_15m">১৫ মি.</string>
     <string name="settings_idle_lock_30m">৩০ মি.</string>
     <string name="settings_idle_lock_60m">৬০ মি.</string>
+    <string name="owner_pin_reset_audit_title">মালিকের পিন রিসেট হিস্ট্রি</string>
+    <string name="owner_pin_reset_audit_info">ডিভাইস ক্রেডেনশিয়াল দ্বারা সর্বশেষ রিসেট: %1$s, ডিভাইস %2$s</string>
 </resources>

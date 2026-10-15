@@ -107,7 +107,9 @@ internal data class HeldCartPayload(
     val voucherCode: String? = null,
     val voucherOriginalBalance: Double? = null,
     val voucherRemainingBalance: Double? = null,
-    val voucherCustomerPhone: String? = null
+    val voucherCustomerPhone: String? = null,
+    val approvedForHash: String? = null,
+    val approvedMaxTaka: Double = 0.0
 )
 
 /** Versioned payload stored inside HeldCart.itemsJson. Legacy array-only carts remain readable. */
@@ -127,6 +129,12 @@ internal fun encodeHeldCartPayload(payload: HeldCartPayload): String = JSONObjec
     put("loyaltyPhone", payload.loyaltyPhone ?: "")
     put("loyaltyDiscount", payload.loyaltyDiscount)
     put("storeCreditApplied", payload.storeCreditApplied)
+    if (!payload.approvedForHash.isNullOrBlank()) {
+        put("approvedForHash", payload.approvedForHash)
+    }
+    if (payload.approvedMaxTaka > 0.0) {
+        put("approvedMaxTaka", payload.approvedMaxTaka)
+    }
     if (!payload.voucherCode.isNullOrBlank()) {
         put("voucherCode", payload.voucherCode)
         payload.voucherOriginalBalance?.let { put("voucherOriginalBalance", it) }
@@ -244,7 +252,9 @@ internal fun decodeHeldCartPayload(json: String): HeldCartPayload {
         voucherCode = objectJson?.optString("voucherCode")?.takeIf(String::isNotBlank),
         voucherOriginalBalance = if (objectJson?.has("voucherOriginalBalance") == true) objectJson.optDouble("voucherOriginalBalance") else null,
         voucherRemainingBalance = if (objectJson?.has("voucherRemainingBalance") == true) objectJson.optDouble("voucherRemainingBalance") else null,
-        voucherCustomerPhone = objectJson?.optString("voucherCustomerPhone")?.takeIf(String::isNotBlank)
+        voucherCustomerPhone = objectJson?.optString("voucherCustomerPhone")?.takeIf(String::isNotBlank),
+        approvedForHash = objectJson?.optString("approvedForHash")?.takeIf(String::isNotBlank),
+        approvedMaxTaka = objectJson?.optDouble("approvedMaxTaka", 0.0) ?: 0.0
     )
 }
 
@@ -618,20 +628,42 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    private val _supervisorApprovedDiscount = MutableStateFlow(false)
-    val supervisorApprovedDiscount: StateFlow<Boolean> = _supervisorApprovedDiscount.asStateFlow()
+    private val _approvedForHash = MutableStateFlow<String?>(null)
+    private val _approvedMaxTaka = MutableStateFlow<Double>(0.0)
+
+    val supervisorApprovedDiscount: StateFlow<Boolean> = combine(
+        _approvedForHash,
+        _approvedMaxTaka,
+        _cartItems,
+        _priceMode,
+        _discountAmount,
+        _isPercentageDiscount
+    ) { args: Array<Any?> ->
+        val approvedHash = args[0] as? String
+        val maxTaka = (args[1] as? Double) ?: 0.0
+        @Suppress("UNCHECKED_CAST")
+        val items = args[2] as List<CartItem>
+        val mode = args[3] as PriceMode
+        val discAmt = (args[4] as? Double) ?: 0.0
+        val isPct = (args[5] as? Boolean) ?: false
+
+        if (approvedHash == null || maxTaka <= 0.0) return@combine false
+        val currentHash = computeCartHash(items, mode)
+        if (currentHash != approvedHash) return@combine false
+        val subtotal = items.sumOf { effectivePrice(it.product, mode) * it.quantity }
+        val discTaka = if (isPct) (subtotal * discAmt / 100.0) else discAmt
+        discTaka <= maxTaka + 0.01
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     fun setSupervisorApprovedDiscount(approved: Boolean) {
-        _supervisorApprovedDiscount.value = approved
+        if (!approved) {
+            _approvedForHash.value = null
+            _approvedMaxTaka.value = 0.0
+        }
     }
 
     fun hasValidDiscountOverride(discountAmount: Double): Boolean {
         return repository.hasValidDiscountOverride(discountAmount, computeCartHash())
-    }
-
-    fun grantDiscountOverride(maxDiscountAmount: Double, cartHash: String? = null) {
-        _supervisorApprovedDiscount.value = true
-        repository.grantDiscountOverride(maxDiscountAmount, cartHash)
     }
 
     suspend fun authorizeDiscountOverride(
@@ -639,11 +671,17 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         maxDiscountAmount: Double,
         cartHash: String? = null
     ): Boolean {
-        val ok = repository.authorizeDiscountOverride(pin, maxDiscountAmount, cartHash)
+        val targetHash = cartHash ?: computeCartHash()
+        val ok = repository.authorizeDiscountOverride(pin, maxDiscountAmount, targetHash)
         if (ok) {
-            _supervisorApprovedDiscount.value = true
+            _approvedForHash.value = targetHash
+            _approvedMaxTaka.value = maxDiscountAmount
         }
         return ok
+    }
+
+    suspend fun authorizeHoldCartOverride(pin: String): Boolean {
+        return repository.authorizeHoldCartOverride(pin)
     }
 
     /**
@@ -802,6 +840,10 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val curCustomerName = customerName.value.trim()
         val curCustomerPhone = customerPhone.value.trim()
 
+        val prevManualCashierName = _manualCashierName.value
+        val prevApprovedForHash = _approvedForHash.value
+        val prevApprovedMaxTaka = _approvedMaxTaka.value
+
         val payloadJson = encodeHeldCartPayload(
             HeldCartPayload(
                 items = items,
@@ -821,7 +863,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 voucherCode = redeemedVoucher.value?.code,
                 voucherOriginalBalance = redeemedVoucher.value?.initialAmount,
                 voucherRemainingBalance = redeemedVoucher.value?.remainingBalance,
-                voucherCustomerPhone = redeemedVoucher.value?.customerPhone
+                voucherCustomerPhone = redeemedVoucher.value?.customerPhone,
+                approvedForHash = prevApprovedForHash,
+                approvedMaxTaka = prevApprovedMaxTaka
             )
         )
 
@@ -867,6 +911,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
 
         _cartItems.value = emptyList()
         _discountAmount.value = 0.0
+        _approvedForHash.value = null
+        _approvedMaxTaka.value = 0.0
         _isPercentageDiscount.value = false
         _paymentMethod.value = "Cash"
         _customerName.value = ""
@@ -905,6 +951,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                     _walletPhone.value = prevWalletPhone
                     _cardType.value = prevCardType
                     _cardLastFour.value = prevCardLastFour
+                    _manualCashierName.value = prevManualCashierName
+                    _approvedForHash.value = prevApprovedForHash
+                    _approvedMaxTaka.value = prevApprovedMaxTaka
                     _amountPaid.value = prevAmountPaid
                     _isSplitPayment.value = prevIsSplitPayment
                     _splitPayments.value = prevSplitPayments
@@ -1014,6 +1063,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 _cartItems.value = restored
                 _discountAmount.value = heldCart.discountAmount
                 _isPercentageDiscount.value = heldCart.isPercentageDiscount
+                _approvedForHash.value = payload.approvedForHash
+                _approvedMaxTaka.value = payload.approvedMaxTaka
                 // Authoritative customer identity: DB entity row is the single source of truth.
                 // Fallback to legacy payload JSON only if the DB row column is null/blank (backwards-compatibility).
                 val authoritativeCustName = heldCart.customerName?.takeIf { it.isNotBlank() }
@@ -1489,7 +1540,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     fun clearCart() {
         _cartItems.value = emptyList()
         _discountAmount.value = 0.0
-        _supervisorApprovedDiscount.value = false
+        _approvedForHash.value = null
+        _approvedMaxTaka.value = 0.0
         _isPercentageDiscount.value = false
         _paymentMethod.value = "Cash"
         _customerName.value = ""
@@ -3317,6 +3369,8 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     private val _isLoadingBackups = MutableStateFlow(false)
     val isLoadingBackups: StateFlow<Boolean> = _isLoadingBackups.asStateFlow()
 
+    fun getOwnerPinResetAudit(): com.example.techyfipos.data.OwnerPinResetAudit? = repository.getOwnerPinResetAudit()
+
     fun saveLanguage(lang: String) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.saveLanguage(lang)
@@ -3856,6 +3910,7 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun getUnacknowledgedOwnerPinResetTimestamp(): Long = repository.getUnacknowledgedOwnerPinResetTimestamp()
     fun acknowledgeOwnerPinReset() = repository.acknowledgeOwnerPinReset()
+    fun getOwnerPinResetAudit(): com.example.techyfipos.data.OwnerPinResetAudit? = repository.getOwnerPinResetAudit()
 
     val isOwner: StateFlow<Boolean> = _currentUser
         .map { it?.role == AppRoles.OWNER }

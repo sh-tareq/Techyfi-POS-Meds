@@ -340,18 +340,29 @@ class DataRepository(
     }
 
     suspend fun verifySupervisorPinDetailed(pin: String): SupervisorVerifyResult = withContext(Dispatchers.IO) {
-        when (val res = verifyPinDetailed(pin)) {
+        when (val res = verifyPinDetailed(pin, clearOnSuccess = false)) {
             is PinVerifyResult.Success -> {
                 if (AppPermissions.isSupervisor(res.user)) {
+                    context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit().clear().apply()
                     SupervisorVerifyResult.Success(res.user)
                 } else {
-                    recordFailedPinAttempt()
-                    SupervisorVerifyResult.NotSupervisor
+                    val newLockMs = recordFailedPinAttempt()
+                    if (newLockMs > 0L) {
+                        SupervisorVerifyResult.Locked(newLockMs)
+                    } else {
+                        SupervisorVerifyResult.NotSupervisor
+                    }
                 }
             }
             is PinVerifyResult.Locked -> SupervisorVerifyResult.Locked(res.remainingMillis)
             is PinVerifyResult.Deactivated -> SupervisorVerifyResult.Deactivated(res.user)
-            is PinVerifyResult.Invalid -> SupervisorVerifyResult.Invalid(res.remainingMillis)
+            is PinVerifyResult.Invalid -> {
+                if (res.remainingMillis > 0L) {
+                    SupervisorVerifyResult.Locked(res.remainingMillis)
+                } else {
+                    SupervisorVerifyResult.Invalid(res.remainingMillis)
+                }
+            }
         }
     }
 
@@ -359,19 +370,28 @@ class DataRepository(
         (verifySupervisorPinDetailed(pin) as? SupervisorVerifyResult.Success)?.user
     }
 
-    private fun consumeCreditLimitOverride(
+    internal fun hasValidCreditLimitOverride(
         phone: String,
         requestedAmount: Double = 0.0,
         cartHash: String? = null
     ): Boolean = synchronized(this) {
         val grant = pendingCreditOverride
-        val valid = grant != null &&
+        grant != null &&
             grant.phone == phone &&
             grant.expiresAt >= System.currentTimeMillis() &&
             (grant.maxAmount >= requestedAmount - 0.01) &&
             (grant.cartHash == null || cartHash == null || grant.cartHash == cartHash)
+    }
 
-        pendingCreditOverride = null
+    private fun consumeCreditLimitOverride(
+        phone: String,
+        requestedAmount: Double = 0.0,
+        cartHash: String? = null
+    ): Boolean = synchronized(this) {
+        val valid = hasValidCreditLimitOverride(phone, requestedAmount, cartHash)
+        if (valid) {
+            pendingCreditOverride = null
+        }
         valid
     }
 
@@ -382,7 +402,18 @@ class DataRepository(
     @Volatile
     private var pendingHoldCartOverrideExpiresAt: Long = 0L
 
-    fun grantHoldCartOverride(durationMs: Long = 60_000L) = synchronized(this) {
+    suspend fun authorizeHoldCartOverride(
+        pin: String,
+        durationMs: Long = 60_000L
+    ): Boolean = withContext(Dispatchers.IO) {
+        val supervisor = verifySupervisorPin(pin) ?: return@withContext false
+        synchronized(this@DataRepository) {
+            pendingHoldCartOverrideExpiresAt = System.currentTimeMillis() + durationMs
+        }
+        true
+    }
+
+    internal fun grantHoldCartOverride(durationMs: Long = 60_000L) = synchronized(this) {
         pendingHoldCartOverrideExpiresAt = System.currentTimeMillis() + durationMs
     }
 
@@ -1171,7 +1202,7 @@ class DataRepository(
                     "Customer phone number is required for credit/due sales"
                 }
             }
-            if (dueAddition > 0.0 && !normalizedCustomerPhone.isNullOrBlank()) {
+            val needsCreditOverride = dueAddition > 0.0 && !normalizedCustomerPhone.isNullOrBlank() && run {
                 val currentDue = customerDueDao.getCustomerDueByPhone(normalizedCustomerPhone)
                 val customer = customerDao.getCustomerByPhone(normalizedCustomerPhone)
                 val outstanding = currentDue?.outstandingAmount ?: customer?.totalDue ?: 0.0
@@ -1180,10 +1211,11 @@ class DataRepository(
                     (customer?.creditLimit ?: 0.0) > 0.0 -> customer!!.creditLimit
                     else -> 0.0
                 }
-                if (creditLimit > 0.0 && outstanding + dueAddition > creditLimit + 0.001) {
-                    require(consumeCreditLimitOverride(normalizedCustomerPhone, dueAddition, cartHash)) {
-                        "Supervisor authorization is required to exceed the customer's credit limit"
-                    }
+                creditLimit > 0.0 && outstanding + dueAddition > creditLimit + 0.001
+            }
+            if (needsCreditOverride) {
+                require(hasValidCreditLimitOverride(normalizedCustomerPhone!!, dueAddition, cartHash)) {
+                    "Supervisor authorization is required to exceed the customer's credit limit"
                 }
             }
 
@@ -1204,8 +1236,12 @@ class DataRepository(
                     }
                 }
 
-            if (regularDiscountTaka > 0.0 && !hasDiscountPermission) {
-                require(consumeDiscountOverride(regularDiscountTaka, cartHash)) {
+            val maxAllowedPercent = if (isSessionOwner()) 100.0 else (sessionUser?.maxDiscountPercent ?: 10.0)
+            val subtotalForDiscount = cartItemsWithNotes.sumOf { it.first.sellingPrice * it.second }
+            val discountPercent = if (subtotalForDiscount > 0.0) (regularDiscountTaka / subtotalForDiscount) * 100.0 else 0.0
+            val requiresSupervisorDiscount = regularDiscountTaka > 0.0 && (!hasDiscountPermission || discountPercent > maxAllowedPercent + 0.01)
+            if (requiresSupervisorDiscount) {
+                require(hasValidDiscountOverride(regularDiscountTaka, cartHash)) {
                     "Supervisor authorization is required to apply discount"
                 }
             }
@@ -1397,6 +1433,12 @@ class DataRepository(
                         isArchived = false
                     )
                 )
+            }
+            if (needsCreditOverride) {
+                consumeCreditLimitOverride(normalizedCustomerPhone!!, dueAddition, cartHash)
+            }
+            if (requiresSupervisorDiscount) {
+                consumeDiscountOverride(regularDiscountTaka, cartHash)
             }
 
             saleId
@@ -4175,13 +4217,29 @@ class DataRepository(
     // Users & PIN authentication
     val allUsers: Flow<List<User>> = userDao.getAllUsers()
 
+    private fun base64Encode(bytes: ByteArray): String {
+        return try {
+            Base64.encodeToString(bytes, Base64.NO_WRAP)
+        } catch (_: Throwable) {
+            java.util.Base64.getEncoder().encodeToString(bytes)
+        }
+    }
+
+    private fun base64Decode(str: String): ByteArray {
+        return try {
+            Base64.decode(str, Base64.NO_WRAP)
+        } catch (_: Throwable) {
+            java.util.Base64.getDecoder().decode(str)
+        }
+    }
+
     private fun hashPin(pin: String): String {
         val iterations = 120_000
         val salt = ByteArray(16).also(SecureRandom()::nextBytes)
         val spec = PBEKeySpec(pin.toCharArray(), salt, iterations, 256)
         val hash = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
         spec.clearPassword()
-        return "pbkdf2\$$iterations\$${Base64.encodeToString(salt, Base64.NO_WRAP)}\$${Base64.encodeToString(hash, Base64.NO_WRAP)}"
+        return "pbkdf2\$$iterations\$${base64Encode(salt)}\$${base64Encode(hash)}"
     }
 
     private fun legacyHashPin(pin: String): String {
@@ -4200,8 +4258,8 @@ class DataRepository(
             val parts = storedHash.split('$', limit = 4)
             if (parts.size != 4) return false
             val iterations = parts[1].toInt()
-            val salt = Base64.decode(parts[2], Base64.NO_WRAP)
-            val expected = Base64.decode(parts[3], Base64.NO_WRAP)
+            val salt = base64Decode(parts[2])
+            val expected = base64Decode(parts[3])
             val spec = PBEKeySpec(pin.toCharArray(), salt, iterations, expected.size * 8)
             val actual = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
             spec.clearPassword()
@@ -4223,6 +4281,10 @@ class DataRepository(
         customPermissions: Set<String>? = null,
         maxDiscount: Double = 10.0
     ): Long = withContext(Dispatchers.IO) {
+        val remainingLock = loginLockRemainingMillis()
+        if (remainingLock > 0L) {
+            throw IllegalStateException("Authentication locked out for ${remainingLock / 1000} seconds due to repeated failed attempts")
+        }
         require(name.isNotBlank()) { "User name cannot be blank" }
         require(pin.length == 4 && pin.all(Char::isDigit)) { "PIN must be 4 digits" }
         require(role == AppRoles.OWNER || role == AppRoles.MANAGER || role == AppRoles.CASHIER) { "Unsupported user role: $role" }
@@ -4234,11 +4296,38 @@ class DataRepository(
                 requireOwnerSession()
             }
         }
+        if (!isSessionOwner() && users.isNotEmpty()) {
+            val callerRole = sessionUser?.role ?: AppRoles.CASHIER
+            if (callerRole == AppRoles.CASHIER && role != AppRoles.CASHIER) {
+                throw UnauthorizedException("Non-owners cannot create accounts with higher role than their own")
+            }
+            if (callerRole == AppRoles.MANAGER && role == AppRoles.OWNER) {
+                throw UnauthorizedException("Non-owners cannot create owner accounts")
+            }
+            val callerMaxDiscount = sessionUser?.maxDiscountPercent ?: 10.0
+            if (maxDiscount > callerMaxDiscount) {
+                throw UnauthorizedException("Cannot grant maximum discount higher than your own")
+            }
+        }
         if (role == AppRoles.OWNER && users.any { it.role == AppRoles.OWNER }) {
             throw IllegalStateException("An owner account already exists")
         }
+        if (customPermissions != null) {
+            if (!hasPermission(AppPermissions.SYSTEM_PERMISSIONS) && !isSessionOwner()) {
+                throw UnauthorizedException("Permission SYSTEM_PERMISSIONS required to set custom permissions")
+            }
+            if (!isSessionOwner()) {
+                if (customPermissions.any { !hasPermission(it) }) {
+                    throw UnauthorizedException("Cannot grant permissions that you do not hold")
+                }
+                if (customPermissions.any { it.startsWith("SYSTEM_") }) {
+                    throw UnauthorizedException("Only the owner may grant system administrative permissions")
+                }
+            }
+        }
         if (users.any { pinMatches(pin, it.pinHash) }) {
-            throw IllegalStateException("PIN already in use by another user")
+            recordFailedPinAttempt()
+            throw IllegalStateException("Invalid or unavailable PIN")
         }
         val permissionsJson = AppPermissions.serializePermissions(customPermissions)
         try {
@@ -4267,24 +4356,41 @@ class DataRepository(
         if (users.any { it.id != owner.id && pinMatches(newPin, it.pinHash) }) return@withContext false
         userDao.updatePinHash(owner.id, hashPin(newPin))
         val now = System.currentTimeMillis()
-        context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit()
-            .clear()
+        val device = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}".trim()
+        context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE).edit()
             .putLong("owner_device_pin_reset_timestamp", now)
             .putBoolean("owner_device_pin_reset_acknowledged", false)
+            .putBoolean("owner_pin_changed_after_reset", false)
+            .putString("owner_device_pin_reset_device", device)
             .apply()
         true
     }
 
     fun getUnacknowledgedOwnerPinResetTimestamp(): Long {
-        val prefs = context.getSharedPreferences("auth_security", Context.MODE_PRIVATE)
-        val acknowledged = prefs.getBoolean("owner_device_pin_reset_acknowledged", true)
-        return if (!acknowledged) prefs.getLong("owner_device_pin_reset_timestamp", 0L) else 0L
+        val prefs = context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE)
+        val ts = prefs.getLong("owner_device_pin_reset_timestamp", 0L)
+        if (ts == 0L) return 0L
+        val acknowledged = prefs.getBoolean("owner_device_pin_reset_acknowledged", false)
+        val pinChanged = prefs.getBoolean("owner_pin_changed_after_reset", false)
+        return if (!acknowledged || !pinChanged) ts else 0L
     }
 
     fun acknowledgeOwnerPinReset() {
-        context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit()
+        context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE).edit()
             .putBoolean("owner_device_pin_reset_acknowledged", true)
             .apply()
+    }
+
+    fun getOwnerPinResetAudit(): OwnerPinResetAudit? {
+        val prefs = context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE)
+        val ts = prefs.getLong("owner_device_pin_reset_timestamp", 0L)
+        if (ts == 0L) return null
+        return OwnerPinResetAudit(
+            timestamp = ts,
+            device = prefs.getString("owner_device_pin_reset_device", "Unknown Device") ?: "Unknown Device",
+            acknowledged = prefs.getBoolean("owner_device_pin_reset_acknowledged", false),
+            pinChangedAfterReset = prefs.getBoolean("owner_pin_changed_after_reset", false)
+        )
     }
 
     private fun recordFailedPinAttempt(): Long {
@@ -4313,7 +4419,7 @@ class DataRepository(
         return newLockMs
     }
 
-    suspend fun verifyPinDetailed(pin: String): PinVerifyResult = withContext(Dispatchers.IO) {
+    suspend fun verifyPinDetailed(pin: String, clearOnSuccess: Boolean = true): PinVerifyResult = withContext(Dispatchers.IO) {
         val remainingLock = loginLockRemainingMillis()
         if (remainingLock > 0L) return@withContext PinVerifyResult.Locked(remainingLock)
 
@@ -4321,18 +4427,20 @@ class DataRepository(
         val matchingUser = all.firstOrNull { pinMatches(pin, it.pinHash) }
         if (matchingUser != null) {
             if (!matchingUser.isActive) {
-                recordFailedPinAttempt()
-                return@withContext PinVerifyResult.Deactivated(matchingUser)
+                val newLockMs = recordFailedPinAttempt()
+                return@withContext if (newLockMs > 0L) PinVerifyResult.Locked(newLockMs) else PinVerifyResult.Deactivated(matchingUser)
             }
             if (!matchingUser.pinHash.startsWith("pbkdf2$")) {
                 userDao.updatePinHash(matchingUser.id, hashPin(pin))
             }
-            context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit().clear().apply()
+            if (clearOnSuccess) {
+                context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit().clear().apply()
+            }
             return@withContext PinVerifyResult.Success(matchingUser)
         }
 
         val newLockMs = recordFailedPinAttempt()
-        PinVerifyResult.Invalid(newLockMs)
+        if (newLockMs > 0L) PinVerifyResult.Locked(newLockMs) else PinVerifyResult.Invalid(newLockMs)
     }
 
     /** Returns the matching user for [pin], or null if no user has that PIN or account is inactive. */
@@ -4370,16 +4478,17 @@ class DataRepository(
         if (!hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
             requireOwnerSession()
         }
-        if (user.role == AppRoles.OWNER && !isSessionOwner()) {
+        val target = userDao.getUserById(user.id) ?: return@withContext
+        if (target.role == AppRoles.OWNER && !isSessionOwner()) {
             throw UnauthorizedException("Non-owners cannot delete owner accounts")
         }
-        if (sessionUser?.id == user.id) {
+        if (sessionUser?.id == target.id) {
             throw IllegalStateException("Cannot delete your own account")
         }
-        if (user.role == AppRoles.OWNER && userDao.getOwnerCount() <= 1) {
+        if (target.role == AppRoles.OWNER && userDao.getOwnerCount() <= 1) {
             throw IllegalStateException("The last owner account cannot be deleted")
         }
-        userDao.deleteUser(user)
+        userDao.deleteUser(target)
     }
 
     suspend fun updateStaff(
@@ -4392,12 +4501,18 @@ class DataRepository(
         isActive: Boolean? = null,
         maxDiscount: Double? = null
     ) = withContext(Dispatchers.IO) {
+        val remainingLock = loginLockRemainingMillis()
+        if (remainingLock > 0L) {
+            throw IllegalStateException("Authentication locked out for ${remainingLock / 1000} seconds due to repeated failed attempts")
+        }
         if (!hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
             requireOwnerSession()
         }
         val all = userDao.getAllUsersOnce()
         val existing = all.firstOrNull { it.id == userId } ?: error("User not found")
         require(newName.isNotBlank()) { "Staff name cannot be blank" }
+
+        val isSelf = sessionUser?.id == userId
 
         if (existing.role == AppRoles.OWNER && !isSessionOwner()) {
             throw UnauthorizedException("Non-owners cannot modify owner accounts")
@@ -4406,6 +4521,25 @@ class DataRepository(
         val targetRole = newRole ?: existing.role
         require(targetRole == AppRoles.OWNER || targetRole == AppRoles.MANAGER || targetRole == AppRoles.CASHIER) {
             "Unsupported user role: $targetRole"
+        }
+
+        if (isSelf && targetRole != existing.role) {
+            throw UnauthorizedException("Users cannot change their own role")
+        }
+
+        if (targetRole != existing.role) {
+            if (!hasPermission(AppPermissions.SYSTEM_PERMISSIONS) && !isSessionOwner()) {
+                throw UnauthorizedException("Permission SYSTEM_PERMISSIONS required to change user roles")
+            }
+            if (!isSessionOwner()) {
+                val callerRole = sessionUser?.role ?: AppRoles.CASHIER
+                if (callerRole == AppRoles.CASHIER && targetRole != AppRoles.CASHIER) {
+                    throw UnauthorizedException("Non-owners cannot assign roles higher than their own")
+                }
+                if (callerRole == AppRoles.MANAGER && targetRole == AppRoles.OWNER) {
+                    throw UnauthorizedException("Non-owners cannot assign owner role")
+                }
+            }
         }
 
         if (targetRole == AppRoles.OWNER && existing.role != AppRoles.OWNER) {
@@ -4417,8 +4551,18 @@ class DataRepository(
         }
 
         val targetActive = isActive ?: existing.isActive
+        if (isSelf && targetActive != existing.isActive) {
+            throw UnauthorizedException("Users cannot change their own active status")
+        }
         if (existing.role == AppRoles.OWNER && !targetActive && userDao.getActiveOwnerCount() <= 1) {
             throw IllegalStateException("The only owner account cannot be deactivated")
+        }
+
+        if (isSelf && maxDiscount != null && maxDiscount != existing.maxDiscountPercent) {
+            throw UnauthorizedException("Users cannot change their own maximum discount")
+        }
+        if (!isSessionOwner() && maxDiscount != null && maxDiscount > (sessionUser?.maxDiscountPercent ?: 10.0)) {
+            throw UnauthorizedException("Cannot grant maximum discount higher than your own")
         }
 
         val updatedPinHash = if (!newPin.isNullOrBlank()) {
@@ -4428,20 +4572,31 @@ class DataRepository(
             val matchesTarget = pinMatches(oldPin, existing.pinHash)
             val matchesSessionOwner = isSessionOwner() && currentOwner != null && pinMatches(oldPin, currentOwner.pinHash)
             require(matchesTarget || matchesSessionOwner) { "Current PIN is incorrect" }
-            require(all.none { it.id != userId && pinMatches(newPin, it.pinHash) }) {
-                "PIN already in use by another user"
+            if (all.any { it.id != userId && pinMatches(newPin, it.pinHash) }) {
+                recordFailedPinAttempt()
+                throw IllegalStateException("Invalid or unavailable PIN")
             }
             hashPin(newPin)
         } else {
             existing.pinHash
         }
 
-        if (customPermissions != null) {
+        val permissionsChanged = customPermissions != null &&
+            AppPermissions.serializePermissions(customPermissions) != existing.customPermissions
+        if (permissionsChanged) {
             if (!hasPermission(AppPermissions.SYSTEM_PERMISSIONS) && !isSessionOwner()) {
                 throw UnauthorizedException("Permission SYSTEM_PERMISSIONS required to change custom permissions")
             }
-            if (sessionUser?.id == userId) {
+            if (isSelf) {
                 throw UnauthorizedException("Users cannot edit their own permissions")
+            }
+            if (!isSessionOwner() && customPermissions != null) {
+                if (customPermissions.any { !hasPermission(it) }) {
+                    throw UnauthorizedException("Cannot grant permissions that you do not hold")
+                }
+                if (customPermissions.any { it.startsWith("SYSTEM_") }) {
+                    throw UnauthorizedException("Only the owner may grant system administrative permissions")
+                }
             }
         }
 
@@ -4463,6 +4618,12 @@ class DataRepository(
                 maxDiscountPercent = maxDiscount ?: existing.maxDiscountPercent
             )
         )
+
+        if (existing.role == AppRoles.OWNER && !newPin.isNullOrBlank()) {
+            context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE).edit()
+                .putBoolean("owner_pin_changed_after_reset", true)
+                .apply()
+        }
     }
 
     suspend fun updateCashier(userId: Long, newName: String, newPin: String? = null, oldPin: String? = null) = withContext(Dispatchers.IO) {
@@ -4472,6 +4633,9 @@ class DataRepository(
     suspend fun setStaffActive(userId: Long, isActive: Boolean) = withContext(Dispatchers.IO) {
         if (!hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
             requireOwnerSession()
+        }
+        if (sessionUser?.id == userId && !isActive) {
+            throw UnauthorizedException("Users cannot deactivate their own account")
         }
         val all = userDao.getAllUsersOnce()
         val existing = all.firstOrNull { it.id == userId } ?: error("User not found")
@@ -4978,7 +5142,13 @@ class DataRepository(
         expenseDao.getExpensesBetween(startTime, endTime)
 
     suspend fun insertExpense(expense: Expense): Long = withContext(Dispatchers.IO) {
-        requireAnyPermission(AppPermissions.EXPENSES_MANAGE, AppPermissions.REPORTS_CLOSE_REGISTER)
+        val isRegisterCashAction = expense.category.equals("Cash In", ignoreCase = true) ||
+            expense.category.equals("Safe Drop", ignoreCase = true)
+        if (isRegisterCashAction) {
+            requireAnyPermission(AppPermissions.EXPENSES_MANAGE, AppPermissions.REPORTS_CLOSE_REGISTER)
+        } else {
+            requirePermission(AppPermissions.EXPENSES_MANAGE)
+        }
         expenseDao.insertExpense(expense.copy(cashierName = sessionUser?.name ?: expense.cashierName))
     }
 
@@ -5615,3 +5785,11 @@ sealed class SupervisorVerifyResult {
     object NotSupervisor : SupervisorVerifyResult()
     data class Invalid(val remainingMillis: Long = 0L) : SupervisorVerifyResult()
 }
+
+data class OwnerPinResetAudit(
+    val timestamp: Long,
+    val device: String,
+    val acknowledged: Boolean,
+    val pinChangedAfterReset: Boolean
+)
+

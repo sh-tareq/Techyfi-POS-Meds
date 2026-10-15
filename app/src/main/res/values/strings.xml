@@ -2847,6 +2847,8 @@
     <string name="error_product_not_found">Product no longer exists</string>
     <string name="error_sale_not_found">Sale not found</string>
     <string name="error_supplier_not_found">Supplier not found</string>
+    <string name="error_invoice_not_found">Invoice not found</string>
+    <string name="error_supplier_payment_not_found">Supplier payment not found</string>
     <string name="error_duplicate_record">Failed to save: duplicate record conflict</string>
     <string name="error_generic">An error occurred</string>
 
@@ -3129,6 +3131,8 @@
     <string name="settings_idle_lock_15m">15 min</string>
     <string name="settings_idle_lock_30m">30 min</string>
     <string name="settings_idle_lock_60m">60 min</string>
+    <string name="owner_pin_reset_audit_title">Owner PIN Reset History</string>
+    <string name="owner_pin_reset_audit_info">Last reset via device credentials: %1$s on device %2$s</string>
 </resources>
 
 

@@ -458,12 +458,15 @@ fun getLocalizedRepositoryErrorMessage(context: Context, error: Throwable?): Str
             context.getString(com.example.techyfipos.R.string.error_supplier_has_dues)
         msg.contains("An owner account already exists", ignoreCase = true) ->
             context.getString(com.example.techyfipos.R.string.error_owner_exists)
-        msg.contains("PIN already in use", ignoreCase = true) ->
+        msg.contains("PIN already in use", ignoreCase = true) || msg.contains("Invalid or unavailable PIN", ignoreCase = true) ->
             context.getString(com.example.techyfipos.R.string.error_pin_in_use)
+        msg.contains("Cannot promote staff to owner", ignoreCase = true) ->
+            context.getString(com.example.techyfipos.R.string.users_cannot_promote_to_owner)
+        msg.contains("The only owner account cannot be changed", ignoreCase = true) ||
+            msg.contains("cannot be changed to another role", ignoreCase = true) ->
+            context.getString(com.example.techyfipos.R.string.error_cannot_change_role_last_owner)
         msg.contains("The last owner account cannot be deleted", ignoreCase = true) ->
             context.getString(com.example.techyfipos.R.string.error_cannot_delete_last_owner)
-        msg.contains("cannot be changed to another role", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_cannot_change_role_last_owner)
         msg.contains("cannot be deactivated", ignoreCase = true) ->
             context.getString(com.example.techyfipos.R.string.error_cannot_deactivate_last_owner)
         msg.contains("Product no longer exists", ignoreCase = true) || msg.contains("no longer exists", ignoreCase = true) ->
@@ -472,8 +475,17 @@ fun getLocalizedRepositoryErrorMessage(context: Context, error: Throwable?): Str
             context.getString(com.example.techyfipos.R.string.error_sale_not_found)
         msg.contains("Supplier not found", ignoreCase = true) ->
             context.getString(com.example.techyfipos.R.string.error_supplier_not_found)
-        msg.contains("Cannot void payment created automatically with purchase invoice", ignoreCase = true) ->
+        msg.contains("Invoice not found", ignoreCase = true) ->
+            context.getString(com.example.techyfipos.R.string.error_invoice_not_found)
+        msg.contains("Supplier payment not found", ignoreCase = true) ->
+            context.getString(com.example.techyfipos.R.string.error_supplier_payment_not_found)
+        msg.contains("Supervisor authorization is required to apply discount", ignoreCase = true) ->
+            context.getString(com.example.techyfipos.R.string.permission_required_discount_limit, 0)
+        msg.contains("Cannot void invoice payments directly", ignoreCase = true) ||
+            msg.contains("Cannot void payment created automatically with purchase invoice", ignoreCase = true) ->
             context.getString(com.example.techyfipos.R.string.supplier_cannot_void_invoice_payment)
+        msg.contains("constraint conflict", ignoreCase = true) || msg.contains("duplicate record", ignoreCase = true) ->
+            context.getString(com.example.techyfipos.R.string.error_duplicate_record)
         msg.contains("Void failed", ignoreCase = true) ->
             context.getString(com.example.techyfipos.R.string.supplier_void_failed)
         msg.isNotBlank() -> msg

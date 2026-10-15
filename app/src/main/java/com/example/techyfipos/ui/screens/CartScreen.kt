@@ -297,6 +297,7 @@ fun CartScreen(
 
     var showSupervisorAuthDialog by remember { mutableStateOf(false) }
     var pendingSupervisorAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var pendingSupervisorActionPin by remember { mutableStateOf<((String) -> Unit)?>(null) }
     var pendingSupervisorDesc by remember { mutableStateOf("") }
 
     val currentUser by remember(authViewModel) {
@@ -471,7 +472,8 @@ fun CartScreen(
     )
     var discountInput by rememberSaveable { mutableStateOf(editableAmount(discountAmount)) }
     val isSupervisorApprovedDiscount by cartViewModel.supervisorApprovedDiscount.collectAsStateWithLifecycle()
-    val isOverrideValid = cartViewModel.hasValidDiscountOverride(discountAmount)
+    val discountTaka = if (isPercentageDiscount) (subtotal * discountAmount / 100.0) else discountAmount
+    val isOverrideValid = cartViewModel.hasValidDiscountOverride(discountTaka)
     val hasApprovedDiscount = isSupervisorApprovedDiscount || isOverrideValid
     var scanUpdate by remember { mutableStateOf<CartScanUpdate?>(null) }
     var notFoundBarcode by remember { mutableStateOf<String?>(null) }
@@ -736,11 +738,13 @@ fun CartScreen(
                                     }
                                 } else if (authViewModel != null) {
                                     pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_hold_cart)
-                                    pendingSupervisorAction = {
-                                        cartViewModel.grantHoldCartOverride()
-                                        cartViewModel.holdCurrentCart { success ->
-                                            if (success) {
-                                                Toast.makeText(context, heldCartHoldSuccessMessage, Toast.LENGTH_SHORT).show()
+                                    pendingSupervisorActionPin = { pin ->
+                                        scope.launch {
+                                            cartViewModel.authorizeHoldCartOverride(pin)
+                                            cartViewModel.holdCurrentCart { success ->
+                                                if (success) {
+                                                    Toast.makeText(context, heldCartHoldSuccessMessage, Toast.LENGTH_SHORT).show()
+                                                }
                                             }
                                         }
                                     }
@@ -1114,7 +1118,12 @@ fun CartScreen(
                                         showHoldCartDialog = true
                                     } else if (authViewModel != null) {
                                         pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_hold_cart)
-                                        pendingSupervisorAction = { showHoldCartDialog = true }
+                                        pendingSupervisorActionPin = { pin ->
+                                            scope.launch {
+                                                cartViewModel.authorizeHoldCartOverride(pin)
+                                                showHoldCartDialog = true
+                                            }
+                                        }
                                         showSupervisorAuthDialog = true
                                     } else {
                                         Toast.makeText(context, context.getString(R.string.permission_required_hold_cart), Toast.LENGTH_SHORT).show()
@@ -1353,11 +1362,13 @@ fun CartScreen(
                                         if (authViewModel != null) {
                                             val discountFormatted = if (isPercentageDiscount) "$sanitized%" else formatTaka(parsed)
                                             pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_discount, discountFormatted, maxDiscountAllowed.toInt())
-                                            pendingSupervisorAction = {
+                                            pendingSupervisorActionPin = { pin ->
                                                 discountInput = sanitized
                                                 cartViewModel.setDiscountAmount(parsed)
                                                 val maxDiscountTaka = if (isPercentageDiscount) (subtotal * parsed / 100.0) else parsed
-                                                cartViewModel.grantDiscountOverride(maxDiscountTaka, cartViewModel.computeCartHash())
+                                                scope.launch {
+                                                    cartViewModel.authorizeDiscountOverride(pin, maxDiscountTaka, cartViewModel.computeCartHash())
+                                                }
                                             }
                                             showSupervisorAuthDialog = true
                                         } else {
@@ -3159,12 +3170,16 @@ fun CartScreen(
             onDismiss = {
                 showSupervisorAuthDialog = false
                 pendingSupervisorAction = null
+                pendingSupervisorActionPin = null
                 discountInput = editableAmount(discountAmount)
             },
-            onAuthorized = { supervisor ->
+            onAuthorizedWithPin = { _, pin ->
                 showSupervisorAuthDialog = false
+                val actionPin = pendingSupervisorActionPin
                 val action = pendingSupervisorAction
+                pendingSupervisorActionPin = null
                 pendingSupervisorAction = null
+                actionPin?.invoke(pin)
                 action?.invoke()
             }
         )
