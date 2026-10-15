@@ -485,7 +485,8 @@ fun ExpensesScreen(
                 }
             } else {
                 items(filteredExpenses, key = { it.id }) { expense ->
-                    val isSupplierPayment = expense.category.equals("Supplier Payment", ignoreCase = true)
+                    val isSupplierPayment = expense.category.equals("Supplier Payment", ignoreCase = true) &&
+                        (expense.title.startsWith("Supplier Invoice #") || expense.title.startsWith("Supplier Payment: "))
                     ExpenseItemRow(
                         expense = expense,
                         onEdit = if (!isSupplierPayment) { { expenseToEdit = expense } } else null,
@@ -508,8 +509,14 @@ fun ExpensesScreen(
             isCashIn = false,
             onDismiss = { showAddExpenseDialog = false },
             onSave = { title, cat, amt, src, note ->
-                expenseViewModel.recordExpense(title, cat, amt, src, note)
-                showAddExpenseDialog = false
+                expenseViewModel.recordExpense(title, cat, amt, src, note) { res ->
+                    res.onSuccess {
+                        showAddExpenseDialog = false
+                        Toast.makeText(context, context.getString(R.string.expense_add_success), Toast.LENGTH_SHORT).show()
+                    }.onFailure { err ->
+                        Toast.makeText(context, err.localizedMessage ?: "Failed to add expense", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         )
     }
@@ -519,8 +526,14 @@ fun ExpensesScreen(
             isCashIn = true,
             onDismiss = { showAddCashInDialog = false },
             onSave = { title, cat, amt, src, note ->
-                expenseViewModel.recordCashIn(title, amt, src, note)
-                showAddCashInDialog = false
+                expenseViewModel.recordCashIn(title, amt, src, note) { res ->
+                    res.onSuccess {
+                        showAddCashInDialog = false
+                        Toast.makeText(context, context.getString(R.string.expense_cash_in_success), Toast.LENGTH_SHORT).show()
+                    }.onFailure { err ->
+                        Toast.makeText(context, err.localizedMessage ?: "Failed to add cash-in", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         )
     }

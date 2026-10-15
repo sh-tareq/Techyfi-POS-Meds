@@ -314,6 +314,7 @@ fun MainNavigation() {
     val uiLayoutMode by settingsViewModel.uiLayoutMode.collectAsStateWithLifecycle("AUTO")
 
     LocaleWrapper(language = currentLang) {
+        val uiContext = LocalContext.current
         val configuration = androidx.compose.ui.platform.LocalConfiguration.current
         val screenWidthDp = configuration.screenWidthDp
         val isTablet = when (uiLayoutMode) {
@@ -1250,7 +1251,7 @@ fun MainNavigation() {
                                 val canEditPermissions = isOwner || activePermissions.contains(AppPermissions.SYSTEM_PERMISSIONS)
                                 LaunchedEffect(canManageStaff) {
                                     if (!canManageStaff) {
-                                        android.widget.Toast.makeText(context, context.getString(R.string.user_management_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(uiContext, uiContext.getString(R.string.user_management_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                         if (backStack.lastOrNull() == ManageUsers) {
                                             backStack.removeLastOrNull()
                                         }
@@ -1288,7 +1289,7 @@ fun MainNavigation() {
                                             prefilledBarcodeForProductScreen = barcode
                                             backStack.add(Products)
                                         } else {
-                                            android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(uiContext, uiContext.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     modifier = Modifier.padding(contentPadding)
@@ -1310,7 +1311,7 @@ fun MainNavigation() {
                                             prefilledBarcodeForProductScreen = barcode
                                             backStack.add(Products)
                                         } else {
-                                            android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(uiContext, uiContext.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     isTablet = isTablet,
@@ -1321,7 +1322,7 @@ fun MainNavigation() {
                                 val canViewInventory = isOwner || activePermissions.contains(AppPermissions.INVENTORY_VIEW)
                                 LaunchedEffect(canViewInventory) {
                                     if (!canViewInventory) {
-                                        android.widget.Toast.makeText(context, context.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(uiContext, uiContext.getString(R.string.inventory_permission_required), android.widget.Toast.LENGTH_SHORT).show()
                                         if (backStack.lastOrNull() == Products) {
                                             backStack.removeLastOrNull()
                                         }
@@ -1365,7 +1366,7 @@ fun MainNavigation() {
                                                 backStack.add(SalesReport)
                                             }
                                         } else {
-                                            android.widget.Toast.makeText(context, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(uiContext, ownerOnlyReportsText, android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     onNavigateToCart = { backStack.add(Cart) },

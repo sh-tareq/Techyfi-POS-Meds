@@ -408,7 +408,30 @@ object DueReminderScheduler {
                     if (notificationShown) {
                         dao.deleteByPhone(normalizedPhone)
                     } else {
-                        Log.w(TAG, "Notification blocked/failed for $normalizedPhone; keeping scheduled reminder row")
+                        Log.w(TAG, "Notification blocked/failed for $normalizedPhone; rescheduling retry")
+                        val retryFireAt = System.currentTimeMillis() + (15 * 60 * 1000L)
+                        dao.upsert(
+                            ScheduledDueReminder(
+                                customerPhone = normalizedPhone,
+                                customerName = customerName,
+                                dueAmount = dueAmount,
+                                channel = channel,
+                                scheduledAt = System.currentTimeMillis(),
+                                fireAt = retryFireAt,
+                                messageText = messageText,
+                                isRecurring = false
+                            )
+                        )
+                        scheduleAlarmManagerReminder(
+                            context = context,
+                            customerName = customerName,
+                            customerPhone = normalizedPhone,
+                            dueAmount = dueAmount,
+                            messageText = messageText,
+                            channel = channel,
+                            triggerAtMillis = retryFireAt,
+                            isRecurring = false
+                        )
                     }
                 }
             } catch (e: Exception) {

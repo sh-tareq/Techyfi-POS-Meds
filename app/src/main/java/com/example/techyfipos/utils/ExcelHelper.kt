@@ -73,24 +73,29 @@ object ExcelHelper {
     private fun getCellStringValue(cell: Cell?, isBarcode: Boolean = false): String {
         if (cell == null) return ""
         return when (cell.cellType) {
-            Cell.CELL_TYPE_STRING -> cell.stringCellValue.trim()
+            Cell.CELL_TYPE_STRING -> {
+                val str = cell.stringCellValue.trim()
+                if (isBarcode) preserveLeadingZeros(str) else str
+            }
             Cell.CELL_TYPE_NUMERIC -> {
                 if (DateUtil.isCellDateFormatted(cell)) {
                     val date = cell.dateCellValue
                     SimpleDateFormat("dd/MM/yyyy", Locale.US).format(date)
                 } else {
                     val numValue = cell.numericCellValue
-                    if (numValue == numValue.toLong().toDouble()) {
+                    val raw = if (numValue == numValue.toLong().toDouble()) {
                         numValue.toLong().toString()
                     } else {
                         numValue.toString()
                     }
+                    if (isBarcode) preserveLeadingZeros(raw) else raw
                 }
             }
             Cell.CELL_TYPE_BOOLEAN -> cell.booleanCellValue.toString()
             Cell.CELL_TYPE_FORMULA -> {
                 try {
-                    cell.stringCellValue.trim()
+                    val str = cell.stringCellValue.trim()
+                    if (isBarcode) preserveLeadingZeros(str) else str
                 } catch (e: Exception) {
                     try {
                         if (DateUtil.isCellDateFormatted(cell)) {
@@ -98,11 +103,12 @@ object ExcelHelper {
                             SimpleDateFormat("dd/MM/yyyy", Locale.US).format(date)
                         } else {
                             val numValue = cell.numericCellValue
-                            if (numValue == numValue.toLong().toDouble()) {
+                            val raw = if (numValue == numValue.toLong().toDouble()) {
                                 numValue.toLong().toString()
                             } else {
                                 numValue.toString()
                             }
+                            if (isBarcode) preserveLeadingZeros(raw) else raw
                         }
                     } catch (ex: Exception) {
                         ""
@@ -406,13 +412,16 @@ object ExcelHelper {
                         continue
                     }
 
+                    val mrpVal = optionalDouble("mrpPrice")
+                    val effectiveSellingPrice = if (mrpVal > 0.0) sellingPrice.coerceAtMost(mrpVal) else sellingPrice
+
                     importedList.add(
                         Product(
                             barcode = barcode,
                             name = name,
                             category = category,
                             purchasePrice = purchasePrice,
-                            sellingPrice = sellingPrice,
+                            sellingPrice = effectiveSellingPrice,
                             stockQty = stockQty,
                             reorderLevel = reorderLevel,
                             imageUri = optionalText("imageUri"),
@@ -421,7 +430,7 @@ object ExcelHelper {
                             expiryDate = expiryVal,
                             unit = optionalText("unit") ?: "Pcs",
                             wholesalePrice = optionalDouble("wholesalePrice"),
-                            mrpPrice = optionalDouble("mrpPrice"),
+                            mrpPrice = mrpVal,
                             discountedPrice = optionalDouble("discountedPrice")
                         )
                     )
@@ -751,13 +760,13 @@ object ExcelHelper {
             cRepaid.setCellValue(totalRepaid)
             cRepaid.cellStyle = currencyStyle
 
-            row.createCell(8).setCellValue(if (lastPayment != null) dateFormat.format(Date(lastPayment.timestamp)) else "—")
+            row.createCell(8).setCellValue(if (lastPayment != null) dateFormat.format(Date(lastPayment.timestamp)) else "-")
 
             val cLastPayAmt = row.createCell(9)
             cLastPayAmt.setCellValue(lastPayment?.amountPaid ?: 0.0)
             cLastPayAmt.cellStyle = currencyStyle
 
-            row.createCell(10).setCellValue(if (due.updatedAt > 0) dateFormat.format(Date(due.updatedAt)) else "—")
+            row.createCell(10).setCellValue(if (due.updatedAt > 0) dateFormat.format(Date(due.updatedAt)) else "-")
 
             totalOutstandingSum += due.outstandingAmount
             totalCreditLimitSum += due.creditLimit

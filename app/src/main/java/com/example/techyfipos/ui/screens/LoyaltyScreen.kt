@@ -280,18 +280,36 @@ fun LoyaltyScreen(
                 }
             },
             onAddPoints = { pts, reason ->
-                loyaltyViewModel.addPoints(member.phone, pts, 0.0, reason)
+                loyaltyViewModel.addPoints(member.phone, pts, 0.0, reason) { result ->
+                    if (result.isSuccess) {
+                        Toast.makeText(context, context.getString(R.string.loyalty_points_added_toast), Toast.LENGTH_SHORT).show()
+                    }
+                }
                 memberToAdjust = null
             },
             onRedeemPoints = { pts, reason ->
-                loyaltyViewModel.redeemPoints(member.phone, pts, reason)
+                loyaltyViewModel.redeemPoints(member.phone, pts, reason) { result ->
+                    if (result.isSuccess && result.getOrDefault(false)) {
+                        Toast.makeText(context, context.getString(R.string.loyalty_points_redeemed_toast), Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, context.getString(R.string.loyalty_points_redeem_failed_toast), Toast.LENGTH_SHORT).show()
+                    }
+                }
                 memberToAdjust = null
             },
             onToggleActive = {
                 if (member.isActive) {
-                    loyaltyViewModel.deactivateMember(member.phone)
+                    loyaltyViewModel.deactivateMember(member.phone) { result ->
+                        if (result.isSuccess) {
+                            Toast.makeText(context, context.getString(R.string.loyalty_member_deactivated_toast), Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 } else {
-                    loyaltyViewModel.reactivateMember(member.phone)
+                    loyaltyViewModel.reactivateMember(member.phone) { result ->
+                        if (result.isSuccess) {
+                            Toast.makeText(context, context.getString(R.string.loyalty_member_reactivated_toast), Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
                 memberToAdjust = null
             }
@@ -355,9 +373,12 @@ fun LoyaltyScreen(
             currentSettings = programSettings,
             onDismiss = { showSettingsDialog = false },
             onSave = { updated ->
-                loyaltyViewModel.updateProgramSettings(updated)
+                loyaltyViewModel.updateProgramSettings(updated) { result ->
+                    if (result.isSuccess) {
+                        Toast.makeText(context, context.getString(R.string.loyalty_settings_saved_toast), Toast.LENGTH_SHORT).show()
+                    }
+                }
                 showSettingsDialog = false
-                Toast.makeText(context, context.getString(R.string.loyalty_settings_saved_toast), Toast.LENGTH_SHORT).show()
             }
         )
     }

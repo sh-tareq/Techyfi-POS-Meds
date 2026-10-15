@@ -26,6 +26,16 @@ import com.example.techyfipos.utils.BillData
 import com.example.techyfipos.utils.LoyaltySettingsHelper
 import com.example.techyfipos.utils.LoyaltyProgramSettings
 
+inline fun <T> runCatchingNonCancellation(block: () -> T): Result<T> {
+    return try {
+        Result.success(block())
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        Result.failure(e)
+    }
+}
+
 // Cart Item Wrapper
 data class CartItem(
     val product: Product,
@@ -490,7 +500,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         lookupLoyalty(clean)
 
         // Cancelling any lookup already in flight (above) keeps an old, slower-to-resolve keystroke
-        // from overwriting resolvedCustomer after a newer one has already landed — otherwise the
+        // from overwriting resolvedCustomer after a newer one has already landed - otherwise the
         // "Master Customer Profile" card can freeze on a stale due/balance that no longer matches
         // what a fresh read (e.g. the credit-limit check at Complete Sale) would return.
         customerLookupJob = viewModelScope.launch(Dispatchers.IO) {
@@ -1148,7 +1158,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun deleteHeldCart(id: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.deleteHeldCart(id)
         }
     }
@@ -1284,7 +1294,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             }
         }
         viewModelScope.launch {
-            combine(subtotal, discountValue, taxSettings) { _, _, _ -> Unit }.collect {
+            combine(subtotal, discountValue, taxValue, taxSettings) { _, _, _, _ -> Unit }.collect {
                 if (_loyaltyDiscount.value > 0.0) {
                     setLoyaltyDiscount(_loyaltyDiscount.value)
                 }
@@ -1535,10 +1545,13 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val currentList = _cartItems.value.toMutableList()
         val existingIndex = currentList.indexOfFirst { it.product.barcode == item.product.barcode }
         if (existingIndex != -1) {
-            currentList.removeAt(existingIndex)
+            val existing = currentList[existingIndex]
+            val mergedQty = existing.quantity + item.quantity
+            currentList[existingIndex] = existing.copy(quantity = mergedQty)
+        } else {
+            val targetIndex = if (index in 0..currentList.size) index else currentList.size
+            currentList.add(targetIndex, item)
         }
-        val targetIndex = if (index in 0..currentList.size) index else currentList.size
-        currentList.add(targetIndex, item)
         _cartItems.value = currentList
         persistCartSnapshot(currentList)
         return true
@@ -1711,7 +1724,7 @@ class ScannerViewModel(private val repository: DataRepository) : ViewModel() {
     // (the code left the frame) for MISS_FRAMES_TO_UNLOCK consecutive frames AND
     // at least MIN_MISS_DURATION_MS has passed. The time gate matters because a
     // shaky hand or motion blur can cause several consecutive "no barcode" frames
-    // in well under a second while the code is still physically in view — a pure
+    // in well under a second while the code is still physically in view - a pure
     // frame-count debounce unlocks during that blur and double-adds on the next
     // successful read.
     private var lockedBarcode: String? = null
@@ -1852,7 +1865,7 @@ class ScannerViewModel(private val repository: DataRepository) : ViewModel() {
         // considered "out of sight" and eligible to scan again.
         private const val MISS_FRAMES_TO_UNLOCK = 6
         // Minimum time with no detection before unlocking, regardless of frame
-        // count — guards against motion blur/hand shake producing several
+        // count - guards against motion blur/hand shake producing several
         // "no barcode" frames in quick succession while still pointed at the code.
         private const val MIN_MISS_DURATION_MS = 700L
         private const val CROSS_SOURCE_DUPLICATE_WINDOW_MS = 450L
@@ -2289,7 +2302,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         )
     }
 
-    /** Current outstanding due for a customer — used to show the live "Total Due" on a reopened historical receipt, since that figure isn't stored on the Sale row itself. */
+    /** Current outstanding due for a customer - used to show the live "Total Due" on a reopened historical receipt, since that figure isn't stored on the Sale row itself. */
     suspend fun getCustomerDue(phone: String) = repository.getCustomerDueByPhone(phone)
 
     val registerShiftState: StateFlow<RegisterShiftState?> = repository.registerShiftState
@@ -2864,6 +2877,9 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
     val allDueReminderLogs: StateFlow<List<com.example.techyfipos.data.db.DueReminderLog>> = repository.allDueReminderLogs
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val allReturns: StateFlow<List<com.example.techyfipos.data.db.Return>> = repository.allReturns
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     fun logReminder(
         customerPhone: String,
         customerName: String,
@@ -2872,7 +2888,7 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
         messageText: String = "",
         status: String = "SENT"
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.logDueReminder(
                 com.example.techyfipos.data.db.DueReminderLog(
                     customerPhone = customerPhone,
@@ -2888,13 +2904,13 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun deleteReminderLog(id: Long) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.deleteDueReminderLog(id)
         }
     }
 
     fun clearAllReminderLogs() {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.clearDueReminderLogs()
         }
     }
@@ -3065,7 +3081,7 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     fun cancelScheduledReminder(context: Context, phone: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             repository.cancelScheduledDueReminder(context, phone)
         }
     }
@@ -3098,7 +3114,7 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
         referenceNote: String? = null,
         onComplete: (Boolean) -> Unit = {}
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             try {
                 repository.recordDuePayment(phone, amount, paymentMethod, referenceNote)
                 val fresh = repository.getCustomerDueByPhone(phone)
@@ -3113,6 +3129,8 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
                 }
                 onComplete(true)
             } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                com.example.techyfipos.utils.RepositoryErrorBus.report(error)
                 android.util.Log.e("DuesViewModel", "Unable to record due payment", error)
                 onComplete(false)
             }
@@ -3120,7 +3138,7 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun updateCustomerCreditLimit(phone: String, creditLimit: Double, onComplete: (Boolean) -> Unit = {}) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             try {
                 repository.updateCustomerCreditLimit(phone, creditLimit)
                 val fresh = repository.getCustomerDueByPhone(phone)
@@ -3129,6 +3147,8 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
                 }
                 onComplete(true)
             } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                com.example.techyfipos.utils.RepositoryErrorBus.report(error)
                 android.util.Log.e("DuesViewModel", "Unable to update credit limit", error)
                 onComplete(false)
             }
@@ -3143,7 +3163,7 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
         note: String? = null,
         onComplete: (Boolean) -> Unit = {}
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             try {
                 val cleanPhone = phone.trim()
                 val cleanName = name.trim()
@@ -3172,6 +3192,8 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
                 }
                 onComplete(true)
             } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                com.example.techyfipos.utils.RepositoryErrorBus.report(error)
                 android.util.Log.e("DuesViewModel", "Unable to add/update customer due", error)
                 onComplete(false)
             }
@@ -3188,7 +3210,7 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
         onCollision: (existingCustomer: com.example.techyfipos.data.db.Customer) -> Unit,
         onError: (String) -> Unit
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             try {
                 when (val res = repository.migrateCustomerPhone(oldPhone, newPhone, newName, creditLimit, note)) {
                     is com.example.techyfipos.data.CustomerPhoneUpdateResult.Success -> {
@@ -3207,6 +3229,8 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
                     }
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                com.example.techyfipos.utils.RepositoryErrorBus.report(e)
                 val msg = if (com.example.techyfipos.utils.isAppBangla()) "মোবাইল নম্বর আপডেট করতে ব্যর্থ হয়েছে" else "Failed to update phone number"
                 onError(e.message ?: msg)
             }
@@ -3214,7 +3238,7 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun mergeCustomers(masterPhone: String, secondaryPhone: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             try {
                 val ok = repository.mergeCustomers(masterPhone, secondaryPhone)
                 if (ok) {
@@ -3227,15 +3251,17 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
                     onError("Could not merge customer accounts")
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                com.example.techyfipos.utils.RepositoryErrorBus.report(e)
                 onError(e.message ?: "Merge failed")
             }
         }
     }
 
-    /** Reverses a mistakenly recorded collection — restores the amount to the outstanding balance
+    /** Reverses a mistakenly recorded collection - restores the amount to the outstanding balance
      * and removes it from Transaction History. */
     fun deletePayment(phone: String, paymentId: Long, onComplete: (Boolean) -> Unit = {}) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             try {
                 repository.deleteDuePayment(paymentId, phone)
                 val fresh = repository.getCustomerDueByPhone(phone)
@@ -3244,6 +3270,8 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
                 }
                 onComplete(true)
             } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                com.example.techyfipos.utils.RepositoryErrorBus.report(error)
                 android.util.Log.e("DuesViewModel", "Unable to delete due payment", error)
                 onComplete(false)
             }
@@ -3251,7 +3279,7 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun deleteCharge(phone: String, chargeId: Long, onComplete: (Boolean) -> Unit = {}) {
-        viewModelScope.launch {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
             try {
                 repository.deleteDueCharge(chargeId, phone)
                 val fresh = repository.getCustomerDueByPhone(phone)
@@ -3260,6 +3288,8 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
                 }
                 onComplete(true)
             } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                com.example.techyfipos.utils.RepositoryErrorBus.report(error)
                 android.util.Log.e("DuesViewModel", "Unable to delete due charge", error)
                 onComplete(false)
             }
@@ -3438,6 +3468,7 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
                 repository.saveShopInfo(name, address, phone)
                 true
             } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 com.example.techyfipos.utils.RepositoryErrorBus.report(e)
                 false
             }
@@ -3451,6 +3482,7 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
                 repository.saveInvoiceSettings(logoUri, facebookUrl, qrCodeInfo, cashierName)
                 true
             } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 com.example.techyfipos.utils.RepositoryErrorBus.report(e)
                 false
             }
@@ -3464,6 +3496,7 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
                 repository.saveInvoiceSettingsData(settings)
                 true
             } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 com.example.techyfipos.utils.RepositoryErrorBus.report(e)
                 false
             }
@@ -3520,6 +3553,8 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
             try {
                 onResult(repository.previewDuplicatePhoneDueLedgers())
             } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                com.example.techyfipos.utils.RepositoryErrorBus.report(e)
                 onResult(emptyList())
             }
         }
@@ -4494,7 +4529,7 @@ class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
 
     // "Cash" refunds always take physical cash out of the drawer. "Original method" refunds are
-    // apportioned by the original sale's cash fraction — for a plain Cash sale that's 100%, for a
+    // apportioned by the original sale's cash fraction - for a plain Cash sale that's 100%, for a
     // plain digital sale it's 0%, and for a Split sale it's whatever fraction of that sale was
     // actually paid in cash (parsed from splitPaymentJson via splitCashAndDigitalAmounts).
     // "Store credit" never affects the drawer.
@@ -4554,7 +4589,7 @@ class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
         onResult: (Result<Unit>) -> Unit = {}
     ) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            val res = runCatching {
+            val res = runCatchingNonCancellation {
                 repository.insertExpense(
                     Expense(
                         title = title.trim(),
@@ -4575,20 +4610,22 @@ class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun deleteExpense(id: Long, onResult: (Result<Unit>) -> Unit = {}) {
-        viewModelScope.launch {
-            val result = runCatching {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val result = runCatchingNonCancellation {
                 kotlinx.coroutines.withContext(Dispatchers.IO) { repository.deleteExpense(id) }
             }
+            result.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
             onResult(result)
         }
     }
 
     fun updateExpense(expense: Expense, onResult: (Result<Unit>) -> Unit = {}) {
-        viewModelScope.launch {
-            val result = runCatching {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            val result = runCatchingNonCancellation {
                 kotlinx.coroutines.withContext(Dispatchers.IO) { repository.updateExpense(expense) }
                 Unit
             }
+            result.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
             onResult(result)
         }
     }
@@ -4912,7 +4949,7 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun updateProgramSettings(settings: LoyaltyProgramSettings, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            val res = runCatching {
+            val res = runCatchingNonCancellation {
                 LoyaltySettingsHelper.saveSettings(repository.appContext, settings)
                 _programSettings.value = settings
                 repository.updateLoyaltySettings(settings)
@@ -5015,7 +5052,7 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
         onResult: (Result<Unit>) -> Unit = {}
     ) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            val res = runCatching {
+            val res = runCatchingNonCancellation {
                 val existing = repository.getLoyaltyByPhone(phone)
                 val effectiveTier = tier?.takeIf { it.isNotBlank() } ?: existing?.tier ?: "Regular"
                 repository.upsertLoyalty(
@@ -5040,7 +5077,7 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
         onResult: (Result<Unit>) -> Unit = {}
     ) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            val res = runCatching {
+            val res = runCatchingNonCancellation {
                 repository.addLoyaltyPoints(phone.trim(), pts, spend, reason)
             }
             res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
@@ -5055,7 +5092,7 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
         onResult: (Result<Boolean>) -> Unit = {}
     ) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            val res = runCatching {
+            val res = runCatchingNonCancellation {
                 repository.redeemLoyaltyPoints(phone.trim(), pts, reason)
             }
             res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
@@ -5065,7 +5102,7 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun deactivateMember(phone: String, onResult: (Result<Boolean>) -> Unit = {}) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            val res = runCatching {
+            val res = runCatchingNonCancellation {
                 repository.setLoyaltyMemberActive(phone, false)
             }
             res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
@@ -5075,7 +5112,7 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun reactivateMember(phone: String, onResult: (Result<Boolean>) -> Unit = {}) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            val res = runCatching {
+            val res = runCatchingNonCancellation {
                 repository.setLoyaltyMemberActive(phone, true)
             }
             res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
@@ -5085,7 +5122,7 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun deleteMember(phone: String, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            val res = runCatching {
+            val res = runCatchingNonCancellation {
                 repository.deleteLoyaltyMember(phone)
             }
             res.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
@@ -5476,13 +5513,14 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
 
                     val events = mutableListOf<CustomerTimelineEvent>()
 
+                    val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
                     // Account created
                     events.add(
                         CustomerTimelineEvent(
                             id = "created_${customer.phone}",
                             type = CustomerTimelineEventType.ACCOUNT_CREATED,
-                            title = repository.context.getString(R.string.timeline_customer_registered),
-                            description = repository.context.getString(R.string.timeline_registered_as_tag_fmt, customer.tag),
+                            title = locCtx.getString(R.string.timeline_customer_registered),
+                            description = locCtx.getString(R.string.timeline_registered_as_tag_fmt, customer.tag),
                             timestamp = customer.createdAt
                         )
                     )
@@ -5494,7 +5532,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                             CustomerTimelineEvent(
                                 id = "sale_${s.id}",
                                 type = CustomerTimelineEventType.SALE,
-                                title = repository.context.getString(R.string.timeline_invoice_num_fmt, s.id),
+                                title = locCtx.getString(R.string.timeline_invoice_num_fmt, s.id),
                                 description = "${s.paymentMethod} • ${saleWithItems.items.size} items",
                                 amount = s.grandTotal,
                                 timestamp = s.timestamp,
@@ -5506,8 +5544,8 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                                 CustomerTimelineEvent(
                                     id = "due_${s.id}",
                                     type = CustomerTimelineEventType.DUE_CREATED,
-                                    title = repository.context.getString(R.string.timeline_due_created_fmt, s.id),
-                                    description = repository.context.getString(R.string.timeline_unpaid_credit_balance),
+                                    title = locCtx.getString(R.string.timeline_due_created_fmt, s.id),
+                                    description = locCtx.getString(R.string.timeline_unpaid_credit_balance),
                                     amount = s.grandTotal - s.amountPaid,
                                     timestamp = s.timestamp + 1,
                                     referenceId = s.id.toString()
@@ -5522,7 +5560,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                             CustomerTimelineEvent(
                                 id = "payment_${p.id}",
                                 type = CustomerTimelineEventType.PAYMENT_RECEIVED,
-                                title = repository.context.getString(R.string.timeline_repayment_fmt, p.paymentMethod),
+                                title = locCtx.getString(R.string.timeline_repayment_fmt, p.paymentMethod),
                                 description = p.referenceNote?.takeIf { it.isNotBlank() } ?: "Due payment received",
                                 amount = p.amountPaid,
                                 timestamp = p.timestamp,
@@ -5646,7 +5684,8 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                 val existing = repository.getCustomerByPhone(cleanPhone)
                 val duplicateName = com.example.techyfipos.utils.PaymentMath.validateCustomerPhoneUniqueness(isEdit, existing)
                 if (duplicateName != null) {
-                    onError(repository.context.getString(R.string.customer_phone_already_exists_error, duplicateName))
+                    val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                    onError(locCtx.getString(R.string.customer_phone_already_exists_error, duplicateName))
                     return@launch
                 }
                 val customer = (existing ?: Customer(phone = cleanPhone, name = cleanName)).copy(

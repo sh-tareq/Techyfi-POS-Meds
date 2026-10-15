@@ -1241,6 +1241,11 @@ fun DuesScreen(
             onCancelReminder = { phone -> duesViewModel.cancelScheduledReminder(context, phone) },
             onSendReminderNow = { reminder ->
                 val currentDue = duesViewModel.duesList.value.firstOrNull { it.customerPhone == reminder.customerPhone }?.outstandingAmount ?: reminder.dueAmount
+                if (currentDue <= 0.001) {
+                    android.widget.Toast.makeText(context, context.getString(R.string.dues_settled_no_reminder_toast), android.widget.Toast.LENGTH_SHORT).show()
+                    duesViewModel.cancelScheduledReminder(context, reminder.customerPhone)
+                    return@DuesReminderHubSheet
+                }
                 val message = if (currentDue != reminder.dueAmount) {
                     reminder.messageText
                         .replace(formatTaka(reminder.dueAmount, isBangla = false), formatTaka(currentDue, isBangla = false))
@@ -1258,6 +1263,7 @@ fun DuesScreen(
                     }
                     else -> {
                         openWhatsAppReminder(context, reminder.customerPhone, message)
+                        openPaymentReminder(context, reminder.customerPhone, message)
                         "BOTH"
                     }
                 }
@@ -4974,8 +4980,8 @@ private fun PaymentHistoryRow(
     }
 }
 
-/** A single row in the merged Transaction History — either a collection (credit) or a charge
- * (debit, from a Due sale or a manual Add Due entry) — sortable together by timestamp. */
+/** A single row in the merged Transaction History - either a collection (credit) or a charge
+ * (debit, from a Due sale or a manual Add Due entry) - sortable together by timestamp. */
 private sealed class DueLedgerRow(val timestamp: Long) {
     class Payment(val payment: DuePayment) : DueLedgerRow(payment.timestamp)
     class Charge(val charge: com.example.techyfipos.data.db.DueCharge) : DueLedgerRow(charge.timestamp)
@@ -6302,7 +6308,7 @@ fun DueRepaymentReceiptDialog(
                     appendLine("আজকের জমা: ${formatTakaBn(data.amountPaid)} (${if (data.paymentMethod.equals("Cash", ignoreCase = true)) "নগদ" else data.paymentMethod})")
                     appendLine("অবশিষ্ট বাকি: ${if (isSettled) "${formatTakaBn(0.0)} (সম্পূর্ণ পরিশোধ ✓)" else formatTakaBn(data.remainingDue)}")
                 }
-                appendLine(if (isSettled) "✔ বাকি সম্পূর্ণ পরিশোধ হয়েছে" else "⏳ আংশিক জমা নেওয়া হলো")
+                appendLine(if (data.isReprint) "পরিশোধের রসিদ (পুনঃমুদ্রণ)" else if (isSettled) "✔ বাকি সম্পূর্ণ পরিশোধ হয়েছে" else "⏳ আংশিক জমা নেওয়া হলো")
                 if (settings.showDueReceiptCustomNotes && settings.dueReceiptCustomNotes.isNotBlank()) {
                     appendLine("নোট: ${settings.dueReceiptCustomNotes}")
                 }
@@ -6323,7 +6329,7 @@ fun DueRepaymentReceiptDialog(
                     appendLine("Amount Paid: ${formatTaka(data.amountPaid)} (${data.paymentMethod})")
                     appendLine("Remaining Due: ${if (isSettled) "${formatTaka(0.0)} (Fully Settled ✓)" else formatTaka(data.remainingDue)}")
                 }
-                appendLine(if (isSettled) "✔ PAID IN FULL & SETTLED" else "⏳ PARTIAL PAYMENT RECEIVED")
+                appendLine(if (data.isReprint) "RECORDED PAYMENT (REPRINT)" else if (isSettled) "✔ PAID IN FULL & SETTLED" else "⏳ PARTIAL PAYMENT RECEIVED")
                 if (settings.showDueReceiptCustomNotes && settings.dueReceiptCustomNotes.isNotBlank()) {
                     appendLine("Note: ${settings.dueReceiptCustomNotes}")
                 }
@@ -6488,7 +6494,9 @@ fun DueRepaymentReceiptDialog(
                                 color = Color(0xFF10B981)
                             ) {
                                 Text(
-                                    text = if (isSettled) {
+                                    text = if (data.isReprint) {
+                                        stringResource(R.string.dues_receipt_reprint_badge)
+                                    } else if (isSettled) {
                                         stringResource(R.string.dues_paid_in_full)
                                     } else {
                                         stringResource(R.string.dues_partial_payment)

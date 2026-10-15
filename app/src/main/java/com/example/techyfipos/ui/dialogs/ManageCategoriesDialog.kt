@@ -71,9 +71,17 @@ fun ManageCategoriesDialog(
         } else {
             val currentEditing = editingCategory
             val isDuplicate = if (currentEditing != null) {
-                localCategories.any { it.id != currentEditing.id && it.nameEn.equals(trimEn, ignoreCase = true) }
+                localCategories.any {
+                    it.id != currentEditing.id && (
+                        it.nameEn.equals(trimEn, ignoreCase = true) ||
+                        (trimBn.isNotBlank() && it.nameBn.equals(trimBn, ignoreCase = true))
+                    )
+                }
             } else {
-                localCategories.any { it.nameEn.equals(trimEn, ignoreCase = true) }
+                localCategories.any {
+                    it.nameEn.equals(trimEn, ignoreCase = true) ||
+                    (trimBn.isNotBlank() && it.nameBn.equals(trimBn, ignoreCase = true))
+                }
             }
 
             if (isDuplicate) {

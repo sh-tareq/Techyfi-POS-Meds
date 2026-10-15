@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import android.net.Uri
@@ -107,6 +108,15 @@ class DataRepository(
     private val expenseAuditLogDao = database.expenseAuditLogDao()
     private val storeCreditVoucherDao = database.storeCreditVoucherDao()
     private val storeCreditLedgerDao = database.storeCreditLedgerDao()
+
+    init {
+        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            try {
+                normalizeLegacyStockAdjustmentReasons()
+            } catch (ignored: Exception) {
+            }
+        }
+    }
 
     val allSaleAuditLogs: Flow<List<com.example.techyfipos.data.db.SaleAuditLog>> = saleAuditLogDao.getAllAuditLogs()
     val allExpenseAuditLogs: Flow<List<com.example.techyfipos.data.db.ExpenseAuditLog>> = expenseAuditLogDao.getAllAuditLogs()
@@ -475,19 +485,45 @@ class DataRepository(
 
     suspend fun updateProduct(product: Product) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
+        val hasAdjust = hasPermission(AppPermissions.INVENTORY_ADJUST_STOCK)
         val normalized = product.copy(barcode = toEnglishDigits(product.barcode.trim()).lowercase())
-        productDao.updateProduct(normalized)
+        database.withDriverTransaction {
+            val existing = productDao.getProductByBarcode(normalized.barcode)
+                ?: productDao.getProductByBarcodeCaseInsensitive(normalized.barcode)
+                ?: throw IllegalArgumentException("Product no longer exists")
+            val toSave = if (!hasAdjust) {
+                normalized.copy(stockQty = existing.stockQty)
+            } else {
+                normalized
+            }
+            productDao.updateProduct(toSave)
+        }
     }
 
     /** Updates a product and records its inventory audit entry as a single transaction, so a manual stock edit can never leave stock changed without an audit row (or vice versa). */
     suspend fun updateProductWithInventoryAdjustment(product: Product, adjustment: InventoryAdjustment?) = withContext(Dispatchers.IO) {
-        requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
+        val hasAddEdit = hasPermission(AppPermissions.INVENTORY_ADD_EDIT)
+        val hasAdjust = hasPermission(AppPermissions.INVENTORY_ADJUST_STOCK)
+        if (!hasAddEdit && !hasAdjust) {
+            requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
+        }
         if (adjustment != null) {
             requirePermission(AppPermissions.INVENTORY_ADJUST_STOCK)
         }
         val normalized = product.copy(barcode = toEnglishDigits(product.barcode.trim()).lowercase())
         database.withDriverTransaction {
-            productDao.updateProduct(normalized)
+            val existing = productDao.getProductByBarcode(normalized.barcode)
+                ?: productDao.getProductByBarcodeCaseInsensitive(normalized.barcode)
+                ?: throw IllegalArgumentException("Product no longer exists")
+            val toSave = if (!hasAddEdit && hasAdjust) {
+                // Stock-only user: update only stockQty, preserve existing DB metadata
+                existing.copy(stockQty = product.stockQty)
+            } else if (!hasAdjust && adjustment == null) {
+                normalized.copy(stockQty = existing.stockQty)
+            } else {
+                normalized
+            }
+            productDao.updateProduct(toSave)
             if (adjustment != null) {
                 val cashier = adjustment.cashierName.ifBlank { sessionUser?.name ?: "Admin" }
                 inventoryAdjustmentDao.insertAdjustment(adjustment.copy(cashierName = cashier))
@@ -502,6 +538,7 @@ class DataRepository(
         adjustment: InventoryAdjustment? = null
     ) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
+        val hasAdjust = hasPermission(AppPermissions.INVENTORY_ADJUST_STOCK)
         if (adjustment != null) {
             requirePermission(AppPermissions.INVENTORY_ADJUST_STOCK)
         }
@@ -509,19 +546,24 @@ class DataRepository(
         val normalizedProduct = updatedProduct.copy(barcode = toEnglishDigits(updatedProduct.barcode.trim()).lowercase())
         if (cleanOldBarcode != normalizedProduct.barcode) requireProductNotInSavedCarts(cleanOldBarcode)
         database.withDriverTransaction {
-            if (cleanOldBarcode == normalizedProduct.barcode) {
-                productDao.updateProduct(normalizedProduct)
+            val oldProduct = productDao.getProductByBarcode(cleanOldBarcode)
+                ?: productDao.getProductByBarcodeCaseInsensitive(cleanOldBarcode)
+                ?: throw IllegalArgumentException("Product no longer exists")
+            val effectiveProduct = if (adjustment == null && !hasAdjust) {
+                normalizedProduct.copy(stockQty = oldProduct.stockQty)
             } else {
-                val oldProduct = productDao.getProductByBarcode(cleanOldBarcode)
-                    ?: productDao.getProductByBarcodeCaseInsensitive(cleanOldBarcode)
-                    ?: throw IllegalArgumentException("Product no longer exists")
+                normalizedProduct
+            }
+            if (cleanOldBarcode == normalizedProduct.barcode) {
+                productDao.updateProduct(effectiveProduct)
+            } else {
                 val existingTarget = productDao.getProductByBarcode(normalizedProduct.barcode)
                     ?: productDao.getProductByBarcodeCaseInsensitive(normalizedProduct.barcode)
                 require(existingTarget == null) {
                     "Product barcode already exists"
                 }
                 productDao.deleteProduct(oldProduct)
-                productDao.insertProduct(normalizedProduct)
+                productDao.insertProduct(effectiveProduct)
             }
             if (adjustment != null) {
                 val cashier = adjustment.cashierName.ifBlank { sessionUser?.name ?: "Admin" }
@@ -535,6 +577,26 @@ class DataRepository(
         requirePermission(AppPermissions.INVENTORY_ADD_EDIT)
         if (oldCategory.isNotBlank() && oldCategory != newCategory) {
             productDao.renameCategory(oldCategory, newCategory)
+        }
+    }
+
+    suspend fun normalizeLegacyStockAdjustmentReasons() = withContext(Dispatchers.IO) {
+        val mappings = mapOf(
+            "রিস্টক" to "Restock",
+            "পুনরায় মজুত" to "Restock",
+            "ক্ষতিগ্রস্ত" to "Damage",
+            "নষ্ট" to "Damage",
+            "মেয়াদোত্তীর্ণ" to "Expired",
+            "অসঙ্গতি" to "Discrepancy",
+            "পার্থক্য" to "Discrepancy",
+            "নমুনা" to "Sample",
+            "দোকানে ব্যবহার" to "Store Use",
+            "অভ্যন্তরীণ ব্যবহার" to "Internal Use",
+            "আমদানি" to "Import",
+            "অন্যান্য" to "Other"
+        )
+        for ((old, new) in mappings) {
+            inventoryAdjustmentDao.updateReason(old, new)
         }
     }
 
@@ -891,7 +953,7 @@ class DataRepository(
                     )
                 )
             }
-            // The due amount itself was already reversed above via reduceCustomerDue — this only
+            // The due amount itself was already reversed above via reduceCustomerDue - this only
             // removes the now-stale ledger entry so Transaction History doesn't keep showing a
             // "Due Sale" charge for a sale that no longer exists.
             customerDueDao.deleteDueChargesBySaleId(saleId)
@@ -2114,7 +2176,7 @@ class DataRepository(
     }
 
     /** Adds a standalone charge to a customer's due balance (the Add Due dialog) and records it on
-     * the debit side of the ledger so it shows up in Transaction History alongside collections —
+     * the debit side of the ledger so it shows up in Transaction History alongside collections  - 
      * previously only a payment left a trace; an added due only ever bumped the aggregate balance. */
     suspend fun addManualDueCharge(
         phoneRaw: String,
@@ -2216,7 +2278,7 @@ class DataRepository(
         syncCustomerProfileFromLedgers(cleanPhone)
     }
 
-    /** Reverses a charge (a Due sale or a manual Add Due entry) — reduces the outstanding balance
+    /** Reverses a charge (a Due sale or a manual Add Due entry) - reduces the outstanding balance
      * back and removes it from history. For a sale-linked charge this only undoes the ledger entry
      * and its share of the balance; the sale itself is untouched (use Delete Sale in History for a
      * full undo, which cleans up this same row automatically). Owner-only. */
@@ -2334,7 +2396,7 @@ class DataRepository(
             groups.forEach { group ->
                 val canonicalPhone = group.canonicalPhone
                 val latest = group.rows.maxByOrNull { it.updatedAt }!!
-                // The canonical row must exist before any due_payments row is re-keyed onto it —
+                // The canonical row must exist before any due_payments row is re-keyed onto it  - 
                 // due_payments.customerPhone has an ON DELETE CASCADE foreign key into
                 // customer_dues.customerPhone, so re-pointing a payment at a phone with no parent
                 // row yet trips a foreign-key-constraint failure.
@@ -2692,7 +2754,7 @@ class DataRepository(
             }
             backupJson.put("duePayments", duePaymentsArray)
 
-            // Due Charges JSON (debit side of the ledger — see DueCharge)
+            // Due Charges JSON (debit side of the ledger - see DueCharge)
             val dueChargesList = customerDueDao.getAllDueCharges().first()
             val dueChargesArray = JSONArray()
             for (c in dueChargesList) {
@@ -3925,7 +3987,7 @@ class DataRepository(
             }
 
             // Preferences-backed business configuration import (quick-sale presets, note presets,
-            // due-reminder templates, custom categories) — these live in DataStore, not Room, so
+            // due-reminder templates, custom categories) - these live in DataStore, not Room, so
             // they're restored outside the database transaction above.
             if (backupJson.has("quickSalePresets")) {
                 try {
@@ -4128,7 +4190,8 @@ class DataRepository(
                     currentSellingPrice = p.sellingPrice,
                     currentDiscountedPrice = p.discountedPrice,
                     percentDelta = percentDelta,
-                    fixedDelta = fixedDelta
+                    fixedDelta = fixedDelta,
+                    mrp = p.mrpPrice
                 )
                 productDao.updateProduct(p.copy(sellingPrice = rounded, discountedPrice = newDiscounted))
             }
@@ -5172,7 +5235,10 @@ class DataRepository(
     suspend fun updateExpense(expense: Expense) = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.EXPENSES_MANAGE)
         val existing = expenseDao.getExpenseById(expense.id)
-        if (existing != null && existing.category.equals("Supplier Payment", ignoreCase = true)) {
+        val isAutoSupplierPayment = existing != null &&
+            existing.category.equals("Supplier Payment", ignoreCase = true) &&
+            (existing.title.startsWith("Supplier Invoice #") || existing.title.startsWith("Supplier Payment: "))
+        if (isAutoSupplierPayment) {
             throw IllegalStateException("Supplier payment expenses are auto-generated and cannot be edited directly.")
         }
         expenseDao.updateExpense(expense)
@@ -5195,7 +5261,10 @@ class DataRepository(
     suspend fun deleteExpense(id: Long, reason: String = "Expense Deleted") = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.EXPENSES_MANAGE)
         val expense = expenseDao.getExpenseById(id)
-        if (expense != null && expense.category.equals("Supplier Payment", ignoreCase = true)) {
+        val isAutoSupplierPayment = expense != null &&
+            expense.category.equals("Supplier Payment", ignoreCase = true) &&
+            (expense.title.startsWith("Supplier Invoice #") || expense.title.startsWith("Supplier Payment: "))
+        if (isAutoSupplierPayment) {
             throw IllegalStateException("Supplier payment expenses are auto-generated and cannot be deleted directly. Manage them from Suppliers.")
         }
         if (expense != null) {

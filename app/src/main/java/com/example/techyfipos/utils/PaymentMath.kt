@@ -699,13 +699,17 @@ object PaymentMath {
         currentSellingPrice: Double,
         currentDiscountedPrice: Double,
         percentDelta: Double? = null,
-        fixedDelta: Double? = null
+        fixedDelta: Double? = null,
+        mrp: Double? = null
     ): Pair<Double, Double> {
         var newPrice = currentSellingPrice
         if (percentDelta != null) {
             newPrice = (newPrice * (1.0 + percentDelta / 100.0)).coerceAtLeast(0.0)
         } else if (fixedDelta != null) {
             newPrice = (newPrice + fixedDelta).coerceAtLeast(0.0)
+        }
+        if (mrp != null && mrp > 0.0) {
+            newPrice = newPrice.coerceAtMost(mrp)
         }
         val rounded = kotlin.math.round(newPrice * 100.0) / 100.0
         val newDiscounted = if (currentDiscountedPrice > 0.0) rounded else 0.0

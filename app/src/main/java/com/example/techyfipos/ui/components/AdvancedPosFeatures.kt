@@ -1361,7 +1361,9 @@ fun ExpenseItemRow(
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
     val isCashIn = expense.type == "CASH_IN"
-    val isSupplierPayment = expense.category.equals("Supplier Payment", ignoreCase = true)
+    val isSupplierPayment = expense.category.equals("Supplier Payment", ignoreCase = true) &&
+        (expense.title.startsWith("Supplier Invoice #") || expense.title.startsWith("Supplier Payment: "))
+    val context = androidx.compose.ui.platform.LocalContext.current
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1434,24 +1436,14 @@ fun ExpenseItemRow(
                     }
                     val isBangla = com.example.techyfipos.utils.isAppBangla()
                     val expenseDateLabel = remember(expense.timestamp, isBangla) {
-                        val nowCal = java.util.Calendar.getInstance().apply {
-                            set(java.util.Calendar.HOUR_OF_DAY, 0)
-                            set(java.util.Calendar.MINUTE, 0)
-                            set(java.util.Calendar.SECOND, 0)
-                            set(java.util.Calendar.MILLISECOND, 0)
-                        }
-                        val expCal = java.util.Calendar.getInstance().apply {
-                            timeInMillis = expense.timestamp
-                            set(java.util.Calendar.HOUR_OF_DAY, 0)
-                            set(java.util.Calendar.MINUTE, 0)
-                            set(java.util.Calendar.SECOND, 0)
-                            set(java.util.Calendar.MILLISECOND, 0)
-                        }
-                        val diffDays = ((nowCal.timeInMillis - expCal.timeInMillis) / (24L * 60 * 60 * 1000)).toInt()
+                        val expenseInstant = java.time.Instant.ofEpochMilli(expense.timestamp)
+                        val expenseDate = expenseInstant.atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                        val today = java.time.LocalDate.now()
+                        val diffDays = java.time.temporal.ChronoUnit.DAYS.between(expenseDate, today)
                         val timeStr = SimpleDateFormat("hh:mm a", if (isBangla) Locale.forLanguageTag("bn") else Locale.getDefault()).format(Date(expense.timestamp))
                         when (diffDays) {
-                            0 -> timeStr
-                            1 -> if (isBangla) "গতকাল, $timeStr" else "Yesterday, $timeStr"
+                            0L -> timeStr
+                            1L -> context.getString(R.string.date_yesterday_fmt, timeStr)
                             else -> "${SimpleDateFormat("dd MMM", if (isBangla) Locale.forLanguageTag("bn") else Locale.getDefault()).format(Date(expense.timestamp))}, $timeStr"
                         }
                     }
@@ -1997,7 +1989,7 @@ fun PriceModeSelector(
     }
 }
 
-/** Legacy shim — kept for any call-sites that haven't migrated yet. Use [PriceModeSelector] instead. */
+/** Legacy shim - kept for any call-sites that haven't migrated yet. Use [PriceModeSelector] instead. */
 @Deprecated("Use PriceModeSelector", ReplaceWith("PriceModeSelector"))
 @Composable
 fun WholesalePricingCartSwitch(

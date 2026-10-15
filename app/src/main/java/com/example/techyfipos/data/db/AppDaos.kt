@@ -202,7 +202,7 @@ interface CustomerDueDao {
     @Query("DELETE FROM due_payments WHERE id = :id")
     suspend fun deleteDuePaymentById(id: Long)
 
-    // The debit side of the ledger (see DueCharge) — charges that increased a customer's balance,
+    // The debit side of the ledger (see DueCharge) - charges that increased a customer's balance,
     // from a Due sale (reason "Sale") or a standalone entry via the Add Due dialog ("Manual").
     @Query("SELECT * FROM due_charges WHERE customerPhone = :phone ORDER BY timestamp DESC")
     fun getChargesForCustomer(phone: String): Flow<List<DueCharge>>
@@ -627,6 +627,9 @@ interface InventoryAdjustmentDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAdjustment(adjustment: InventoryAdjustment): Long
+
+    @Query("UPDATE inventory_adjustments SET reason = :newReason WHERE reason = :oldReason")
+    suspend fun updateReason(oldReason: String, newReason: String): Int
 }
 
 @Dao

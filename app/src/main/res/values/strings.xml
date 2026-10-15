@@ -813,7 +813,7 @@
     <string name="dues_delete_charge_button">Delete Charge</string>
     <string name="dues_delete_charge_title">Delete this charge?</string>
     <string name="dues_delete_charge_confirm_manual">This removes the %1$s \"Due Added\" entry from history and subtracts it from the customer\'s outstanding balance. Owner only.</string>
-    <string name="dues_delete_charge_confirm_sale">This removes the %1$s \"Due Sale\" entry from history and subtracts it from the customer\'s outstanding balance — the sale itself is not deleted or changed. To fully undo the sale (restock items, reverse loyalty, etc.), use Delete Sale from History instead. Owner only.</string>
+    <string name="dues_delete_charge_confirm_sale">This removes the %1$s \"Due Sale\" entry from history and subtracts it from the customer\'s outstanding balance - the sale itself is not deleted or changed. To fully undo the sale (restock items, reverse loyalty, etc.), use Delete Sale from History instead. Owner only.</string>
     <string name="dues_cancel">Cancel</string>
     <string name="dues_next_end_date_button">Next (End Date)</string>
     <string name="dues_select_dues_start_date">Select start date for dues</string>
@@ -1088,7 +1088,7 @@
     <string name="settings_repair_dues_none_found_title">No Duplicate Ledgers Found</string>
     <string name="settings_repair_dues_none_found_body">Every customer\'s due ledger is keyed by a single phone number. Nothing to merge.</string>
     <string name="settings_repair_dues_found_title">Duplicate Ledgers Found</string>
-    <string name="settings_repair_dues_found_intro">The following customers have their due history split across more than one phone-number key. Merging will combine each customer\'s balances into one ledger under their normalized phone number and re-key their payment history — this cannot be undone.</string>
+    <string name="settings_repair_dues_found_intro">The following customers have their due history split across more than one phone-number key. Merging will combine each customer\'s balances into one ledger under their normalized phone number and re-key their payment history - this cannot be undone.</string>
     <string name="settings_repair_dues_merge_summary">%1$s (%2$s): %3$d rows → merged balance ৳%4$s</string>
     <string name="settings_repair_dues_button_merge">Merge %1$d Customer(s)</string>
     <string name="settings_repair_dues_toast_done">Merged %1$d duplicate customer ledger(s)</string>
@@ -1721,7 +1721,7 @@
     <string name="customer_filter_recent">🕒 Recent</string>
     <string name="customers_empty">No customers matching this filter</string>
     <string name="customers_empty_no_customers">No customers yet</string>
-    <string name="customers_no_match_filter">No customers match this filter — try clearing filters</string>
+    <string name="customers_no_match_filter">No customers match this filter - try clearing filters</string>
     <string name="customers_clear_filters">Clear Filters</string>
     <string name="customer_deleted_toast">Customer deleted</string>
     <string name="customer_cannot_delete_title">Cannot Delete Customer</string>
@@ -2399,7 +2399,7 @@
     <string name="select">Select</string>
     <string name="custom_item_in_cart_badge">✓ %1$d in Cart</string>
     <string name="custom_item_added_another_hint">Added to cart! Add another or tap Done when finished</string>
-    <string name="custom_item_no_presets_hint">No presets yet — tap + to add one.</string>
+    <string name="custom_item_no_presets_hint">No presets yet - tap + to add one.</string>
     <string name="next">Next</string>
     <string name="history_sales_count">%1$d sales</string>
     <string name="history_clear_search_filters">Clear search and filters</string>
@@ -2850,6 +2850,7 @@
     <string name="error_invoice_not_found">Invoice not found</string>
     <string name="error_supplier_payment_not_found">Supplier payment not found</string>
     <string name="error_duplicate_record">Failed to save: duplicate record conflict</string>
+    <string name="error_supervisor_auth_required_discount">Supervisor authorization is required to apply discount</string>
     <string name="error_generic">An error occurred</string>
 
     <!-- Printers Configuration -->
@@ -3151,6 +3152,17 @@
     <string name="settings_decimal_quantities_title">Decimal Quantities</string>
     <string name="settings_decimal_quantities_desc">Allow fractional and decimal item quantities in cart</string>
     <string name="settings_label_backup_time">Scheduled Backup Time</string>
+    <string name="loyalty_points_added_toast">Points added successfully</string>
+    <string name="loyalty_points_redeemed_toast">Points redeemed successfully</string>
+    <string name="loyalty_points_redeem_failed_toast">Failed to redeem points. Check points balance.</string>
+    <string name="loyalty_member_deactivated_toast">Member deactivated</string>
+    <string name="loyalty_member_reactivated_toast">Member reactivated</string>
+    <string name="expense_add_success">Expense recorded successfully</string>
+    <string name="expense_cash_in_success">Cash-in recorded successfully</string>
+    <string name="dues_settled_no_reminder_toast">Customer due is already settled. Reminder cancelled.</string>
+    <string name="dues_receipt_reprint_badge">RECORDED PAYMENT (REPRINT)</string>
+    <string name="date_yesterday_fmt">Yesterday, %1$s</string>
+    <string name="dossier_credit_charge_reversal_overpayment">Overpayment Reversal</string>
 </resources>
 
 

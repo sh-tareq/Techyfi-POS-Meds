@@ -1,6 +1,7 @@
 package com.example.techyfipos.utils
 
 import android.content.Context
+import com.example.techyfipos.R
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
@@ -140,6 +141,13 @@ fun setAppLanguage(lang: String) {
 
 fun isAppBangla(locale: Locale = Locale.getDefault()): Boolean =
     currentAppLanguage.equals("bn", ignoreCase = true) || locale.language.equals("bn", ignoreCase = true)
+
+fun getLocalizedContext(context: Context, locale: Locale = DateFormatters.getAppLocale()): Context {
+    val config = android.content.res.Configuration(context.resources.configuration).apply {
+        setLocale(locale)
+    }
+    return context.createConfigurationContext(config)
+}
 
 fun toBanglaDigits(str: String): String {
     val digits = mapOf(
@@ -430,71 +438,90 @@ fun sanitizeNumericInput(rawValue: String): String {
 }
 
 /**
+ * Maps database and repository exception messages to localized string resource IDs if recognized.
+ */
+fun mapErrorToLocalizedMessageResId(msg: String?): Int? {
+    if (msg.isNullOrBlank()) return null
+    return when {
+        msg.contains("Supervisor authorization is required to apply discount", ignoreCase = true) ->
+            R.string.error_supervisor_auth_required_discount
+        msg.contains("Owner privileges required", ignoreCase = true) ->
+            R.string.error_unauthorized_owner
+        msg.contains("Supervisor", ignoreCase = true) ->
+            R.string.error_unauthorized_supervisor
+        msg.contains("Permission", ignoreCase = true) ->
+            R.string.error_unauthorized_permission
+        msg.contains("Insufficient stock", ignoreCase = true) ->
+            R.string.error_insufficient_stock
+        msg.contains("not found", ignoreCase = true) && msg.contains("Voucher", ignoreCase = true) ->
+            R.string.error_voucher_not_found
+        msg.contains("expired", ignoreCase = true) && msg.contains("Voucher", ignoreCase = true) ->
+            R.string.error_voucher_expired
+        msg.contains("Cannot delete sale", ignoreCase = true) && msg.contains("return", ignoreCase = true) ->
+            R.string.error_cannot_delete_sale_has_returns
+        msg.contains("Cannot delete or archive customer with outstanding dues", ignoreCase = true) ||
+            msg.contains("Cannot permanently delete customer with outstanding dues", ignoreCase = true) ||
+            msg.contains("Cannot delete due ledger with outstanding dues", ignoreCase = true) ->
+            R.string.error_customer_has_dues
+        msg.contains("Cannot delete supplier with active due balance", ignoreCase = true) ->
+            R.string.error_supplier_has_dues
+        msg.contains("An owner account already exists", ignoreCase = true) ->
+            R.string.error_owner_exists
+        msg.contains("PIN already in use", ignoreCase = true) || msg.contains("Invalid or unavailable PIN", ignoreCase = true) ->
+            R.string.error_pin_in_use
+        msg.contains("Cannot promote staff to owner", ignoreCase = true) ->
+            R.string.users_cannot_promote_to_owner
+        msg.contains("The only owner account cannot be changed", ignoreCase = true) ||
+            msg.contains("cannot be changed to another role", ignoreCase = true) ->
+            R.string.error_cannot_change_role_last_owner
+        msg.contains("The last owner account cannot be deleted", ignoreCase = true) ->
+            R.string.error_cannot_delete_last_owner
+        msg.contains("cannot be deactivated", ignoreCase = true) ->
+            R.string.error_cannot_deactivate_last_owner
+        msg.contains("Product no longer exists", ignoreCase = true) || msg.contains("no longer exists", ignoreCase = true) ->
+            R.string.error_product_not_found
+        msg.contains("Sale not found", ignoreCase = true) ->
+            R.string.error_sale_not_found
+        msg.contains("Supplier not found", ignoreCase = true) ->
+            R.string.error_supplier_not_found
+        msg.contains("Invoice not found", ignoreCase = true) ->
+            R.string.error_invoice_not_found
+        msg.contains("Supplier payment not found", ignoreCase = true) ->
+            R.string.error_supplier_payment_not_found
+        msg.contains("Cannot void invoice payments directly", ignoreCase = true) ||
+            msg.contains("Cannot void payment created automatically with purchase invoice", ignoreCase = true) ->
+            R.string.supplier_cannot_void_invoice_payment
+        msg.contains("constraint conflict", ignoreCase = true) ||
+            msg.contains("duplicate record", ignoreCase = true) ||
+            msg.contains("UNIQUE constraint failed", ignoreCase = true) ->
+            R.string.error_duplicate_record
+        msg.contains("Void failed", ignoreCase = true) ->
+            R.string.supplier_void_failed
+        else -> null
+    }
+}
+
+fun mapErrorToLocalizedMessage(rawMessage: String?): Int? = mapErrorToLocalizedMessageResId(rawMessage)
+
+fun mapErrorToLocalizedMessage(error: Throwable?): Int? =
+    mapErrorToLocalizedMessageResId(error?.message ?: error?.localizedMessage)
+
+/**
  * Maps database and repository exception messages to localized, human-friendly string resources.
  */
 fun getLocalizedRepositoryErrorMessage(context: Context, error: Throwable?): String {
-    if (error == null) return context.getString(com.example.techyfipos.R.string.error_generic)
+    if (error == null) return context.getString(R.string.error_generic)
     val msg = error.message ?: error.localizedMessage ?: ""
+    val resId = mapErrorToLocalizedMessageResId(msg)
     return when {
-        msg.contains("Owner privileges required", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_unauthorized_owner)
-        msg.contains("Supervisor", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_unauthorized_supervisor)
-        msg.contains("Permission", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_unauthorized_permission)
-        msg.contains("Insufficient stock", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_insufficient_stock)
-        msg.contains("not found", ignoreCase = true) && msg.contains("Voucher", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_voucher_not_found)
-        msg.contains("expired", ignoreCase = true) && msg.contains("Voucher", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_voucher_expired)
-        msg.contains("Cannot delete sale", ignoreCase = true) && msg.contains("return", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_cannot_delete_sale_has_returns)
-        msg.contains("Cannot delete or archive customer with outstanding dues", ignoreCase = true) ||
-        msg.contains("Cannot permanently delete customer with outstanding dues", ignoreCase = true) ||
-        msg.contains("Cannot delete due ledger with outstanding dues", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_customer_has_dues)
-        msg.contains("Cannot delete supplier with active due balance", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_supplier_has_dues)
-        msg.contains("An owner account already exists", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_owner_exists)
-        msg.contains("PIN already in use", ignoreCase = true) || msg.contains("Invalid or unavailable PIN", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_pin_in_use)
-        msg.contains("Cannot promote staff to owner", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.users_cannot_promote_to_owner)
-        msg.contains("The only owner account cannot be changed", ignoreCase = true) ||
-            msg.contains("cannot be changed to another role", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_cannot_change_role_last_owner)
-        msg.contains("The last owner account cannot be deleted", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_cannot_delete_last_owner)
-        msg.contains("cannot be deactivated", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_cannot_deactivate_last_owner)
-        msg.contains("Product no longer exists", ignoreCase = true) || msg.contains("no longer exists", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_product_not_found)
-        msg.contains("Sale not found", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_sale_not_found)
-        msg.contains("Supplier not found", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_supplier_not_found)
-        msg.contains("Invoice not found", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_invoice_not_found)
-        msg.contains("Supplier payment not found", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_supplier_payment_not_found)
-        msg.contains("Supervisor authorization is required to apply discount", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.permission_required_discount_limit, 0)
-        msg.contains("Cannot void invoice payments directly", ignoreCase = true) ||
-            msg.contains("Cannot void payment created automatically with purchase invoice", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.supplier_cannot_void_invoice_payment)
-        msg.contains("constraint conflict", ignoreCase = true) || msg.contains("duplicate record", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.error_duplicate_record)
-        msg.contains("Void failed", ignoreCase = true) ->
-            context.getString(com.example.techyfipos.R.string.supplier_void_failed)
+        resId != null -> context.getString(resId)
         msg.isNotBlank() -> msg
-        else -> context.getString(com.example.techyfipos.R.string.error_generic)
+        else -> context.getString(R.string.error_generic)
     }
 }
 
 fun getLocalizedRepositoryErrorMessage(context: Context, rawMessage: String?): String {
-    if (rawMessage.isNullOrBlank()) return context.getString(com.example.techyfipos.R.string.error_generic)
+    if (rawMessage.isNullOrBlank()) return context.getString(R.string.error_generic)
     return getLocalizedRepositoryErrorMessage(context, Exception(rawMessage))
 }
 

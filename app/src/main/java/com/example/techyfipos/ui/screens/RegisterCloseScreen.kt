@@ -1077,12 +1077,20 @@ fun RegisterCloseScreen(
                     title = reason.ifBlank { "Cash Float Top-up" },
                     amount = amount,
                     paymentSource = "Cash",
-                    note = "Added from Cash Register"
+                    note = "Added from Cash Register",
+                    onResult = { res ->
+                        if (res.isSuccess) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(context.getString(R.string.snackbar_cash_float_added_fmt, formatTaka(amount)))
+                            }
+                        } else {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(res.exceptionOrNull()?.message ?: context.getString(R.string.error_generic))
+                            }
+                        }
+                    }
                 )
                 showCashInDialog = false
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.snackbar_cash_float_added_fmt, formatTaka(amount)))
-                }
             }
         )
     }
@@ -1099,12 +1107,20 @@ fun RegisterCloseScreen(
                     type = "EXPENSE",
                     amount = amount,
                     paymentSource = "Cash",
-                    note = "Safe drop transfer from drawer"
+                    note = "Safe drop transfer from drawer",
+                    onResult = { res ->
+                        if (res.isSuccess) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(context.getString(R.string.snackbar_safe_drop_recorded_fmt, formatTaka(amount)))
+                            }
+                        } else {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(res.exceptionOrNull()?.message ?: context.getString(R.string.error_generic))
+                            }
+                        }
+                    }
                 )
                 showSafeDropDialog = false
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.snackbar_safe_drop_recorded_fmt, formatTaka(amount)))
-                }
             }
         )
     }
@@ -1291,7 +1307,7 @@ fun RegisterCloseScreen(
     }
 
     // 7. Z-Report Dialog (Closing)
-    val zTarget = closedShiftZReport ?: report?.let { it to rangeLabel }
+    val zTarget = closedShiftZReport
     if (showPnlZReportDialog && zTarget != null) {
         val (r, label) = zTarget
         ZReportDialog(
@@ -2436,7 +2452,7 @@ fun CloseRegisterReconciliationDialog(
 ) {
     var actualCashText by remember {
         mutableStateOf(
-            if (initialCountedCash % 1.0 == 0.0) initialCountedCash.toLong().toString() else initialCountedCash.toString()
+            java.math.BigDecimal.valueOf(initialCountedCash).stripTrailingZeros().toPlainString()
         )
     }
     var notesText by remember { mutableStateOf(initialNotes) }
@@ -2931,6 +2947,8 @@ fun ZReportDialog(
                         val cashRefundLabel = stringResource(R.string.z_report_cash_refunds)
                         val cashOutLabel = stringResource(R.string.z_report_cash_out_expenses)
                         val suppCashLabel = stringResource(R.string.z_report_supplier_cash_paid)
+                        val countedCashLabel = stringResource(R.string.register_close_counted_cash_label)
+                        val varianceLabel = stringResource(R.string.register_close_variance_label)
 
                         val cashReconSection = if (data.hasCashReconciliation) {
                             "\n--------------------------------\n" +
@@ -2943,7 +2961,10 @@ fun ZReportDialog(
                             (if (data.cashOut > 0.0) "- $cashOutLabel: -${formatTaka(data.cashOut)}\n" else "") +
                             (if (data.supplierCashPaid > 0.0) "- $suppCashLabel:  -${formatTaka(data.supplierCashPaid)}\n" else "") +
                             "--------------------------------\n" +
-                            "$expectedCashLabel: ${formatTaka(data.expectedCash)}"
+                            "$expectedCashLabel: ${formatTaka(data.expectedCash)}" +
+                            (if (data.countedCash != null) "\n$countedCashLabel ${formatTaka(data.countedCash)}" else "") +
+                            (if (data.cashVariance != null) "\n$varianceLabel ${if (data.cashVariance >= 0) "+" else ""}${formatTaka(data.cashVariance)}" else "") +
+                            (if (!data.varianceReason.isNullOrBlank()) "\nReason: ${data.varianceReason}" else "")
                         } else ""
 
                         val formattedUnits = com.example.techyfipos.utils.formatUnitsSold(data.itemsSold)
@@ -3270,6 +3291,21 @@ private fun buildReportCsv(data: SalesReportData, rangeLabel: String, canViewPnl
         appendLine("Method,Transactions,Amount")
         data.paymentBreakdown.forEach { payment ->
             appendLine("${csv(payment.method)},${payment.transactionCount},${payment.amount}")
+        }
+        if (data.hasCashReconciliation) {
+            appendLine()
+            appendLine("Cash Reconciliation")
+            appendLine("Starting Float,${data.startingFloat}")
+            appendLine("Cash Sales,${data.cashSales}")
+            if (data.cashIn > 0.0) appendLine("Cash-In,${data.cashIn}")
+            if (data.dueCashCollected > 0.0) appendLine("Due Collections,${data.dueCashCollected}")
+            if (data.cashRefunds > 0.0) appendLine("Cash Refunds,${data.cashRefunds}")
+            if (data.cashOut > 0.0) appendLine("Cash-Out (Expenses),${data.cashOut}")
+            if (data.supplierCashPaid > 0.0) appendLine("Supplier Cash Paid,${data.supplierCashPaid}")
+            appendLine("Expected Cash,${data.expectedCash}")
+            data.countedCash?.let { appendLine("Counted Cash,$it") }
+            data.cashVariance?.let { appendLine("Variance,$it") }
+            data.varianceReason?.takeIf { it.isNotBlank() }?.let { appendLine("Variance Reason,${csv(it)}") }
         }
     }
 }

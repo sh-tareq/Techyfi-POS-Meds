@@ -170,7 +170,7 @@ private enum class ProductSortOption { NAME_ASC, NAME_DESC, STOCK_LOW, STOCK_HIG
 private enum class ProductViewMode { LIST, GRID }
 
 // Maps the stored (English) inventory-adjustment reason value to a localized display label.
-// The underlying stored/compared value is left untouched — only the Text() shown to the user is localized.
+// The underlying stored/compared value is left untouched - only the Text() shown to the user is localized.
 @Composable
 internal fun localizedAdjustmentReasonLabel(reason: String): String = when (reason) {
     "All" -> stringResource(R.string.products_reason_all)
@@ -2972,7 +2972,7 @@ fun ProductsScreen(
                                     )
                                 }
                             } else {
-                                val msg = result.exceptionOrNull()?.message ?: context.getString(R.string.error_generic)
+                                val msg = com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(context, result.exceptionOrNull())
                                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                             }
                         }

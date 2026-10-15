@@ -49,7 +49,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.techyfipos.R
-import com.example.techyfipos.theme.extendedColors
 import com.example.techyfipos.data.db.ReturnLine
 import com.example.techyfipos.data.db.SaleItem
 import com.example.techyfipos.data.db.SaleWithItems

@@ -103,6 +103,7 @@ import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.isFractionalUnit
 import com.example.techyfipos.utils.HardwareBarcodeScanner
 import com.example.techyfipos.utils.toEnglishDigits
+import com.example.techyfipos.utils.findActivity
 import android.content.res.Configuration
 import androidx.compose.ui.platform.LocalConfiguration
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -428,8 +429,23 @@ fun ScannerScreen(
                                         fontWeight = FontWeight.Medium
                                     )
                                     Spacer(modifier = Modifier.height(12.dp))
-                                    Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
-                                        Text(stringResource(R.string.grant_permission))
+                                    val activity = context.findActivity()
+                                    val permanentlyDenied = activity != null &&
+                                        !androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)
+                                    Button(onClick = {
+                                        if (permanentlyDenied) {
+                                            val intent = android.content.Intent(
+                                                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                                android.net.Uri.fromParts("package", context.packageName, null)
+                                            ).apply {
+                                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            context.startActivity(intent)
+                                        } else {
+                                            permissionLauncher.launch(Manifest.permission.CAMERA)
+                                        }
+                                    }) {
+                                        Text(stringResource(if (permanentlyDenied) R.string.settings else R.string.grant_permission))
                                     }
                                 }
                             }

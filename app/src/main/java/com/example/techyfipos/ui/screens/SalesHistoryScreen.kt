@@ -249,11 +249,17 @@ fun SalesHistoryScreen(
             when (sortOrder) {
                 HistorySortOption.HIGHEST_TOTAL -> matches.sortedByDescending { it.sale.grandTotal }
                 HistorySortOption.LOWEST_TOTAL -> matches.sortedBy { it.sale.grandTotal }
-                HistorySortOption.HIGHEST_PROFIT -> matches.sortedByDescending {
-                    salesViewModel.calculateInvoiceProfit(it, returnsBySaleId[it.sale.id]).netProfit
+                HistorySortOption.HIGHEST_PROFIT -> {
+                    val profitMap = matches.associateWith {
+                        salesViewModel.calculateInvoiceProfit(it, returnsBySaleId[it.sale.id]).netProfit
+                    }
+                    matches.sortedByDescending { profitMap[it] ?: 0.0 }
                 }
-                HistorySortOption.LOWEST_PROFIT -> matches.sortedBy {
-                    salesViewModel.calculateInvoiceProfit(it, returnsBySaleId[it.sale.id]).netProfit
+                HistorySortOption.LOWEST_PROFIT -> {
+                    val profitMap = matches.associateWith {
+                        salesViewModel.calculateInvoiceProfit(it, returnsBySaleId[it.sale.id]).netProfit
+                    }
+                    matches.sortedBy { profitMap[it] ?: 0.0 }
                 }
                 HistorySortOption.NEWEST_FIRST -> matches.sortedByDescending { it.sale.timestamp }
             }
@@ -1822,8 +1828,8 @@ private fun SaleDetailDialog(
     val canDelete = isOwner || activePermissions.contains(AppPermissions.RETURNS_DELETE_SALE)
     val canEdit = isOwner || activePermissions.contains(AppPermissions.SALES_EDIT_INVOICE)
 
-    // BillData.totalOutstandingDue isn't stored on the Sale row — it's only meaningful at the
-    // moment of checkout — so reopening an old Due invoice from History must re-fetch the
+    // BillData.totalOutstandingDue isn't stored on the Sale row - it's only meaningful at the
+    // moment of checkout - so reopening an old Due invoice from History must re-fetch the
     // customer's current balance live, rather than showing a stale/zero value.
     val hasDuePortion = remember(saleWithItems) {
         val method = saleWithItems.sale.paymentMethod.trim()

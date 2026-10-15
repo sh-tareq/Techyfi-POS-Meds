@@ -4551,7 +4551,7 @@ private fun OptimizedAboutSettings() {
         SettingsNavigationRow3D(
             icon = { Icon(Icons.Default.BugReport, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = stringResource(R.string.settings_crash_logs_title),
-            subtitle = if (crashLogFiles.isEmpty()) "No crashes recorded" else "${crashLogFiles.size} recorded — tap to view & share",
+            subtitle = if (crashLogFiles.isEmpty()) "No crashes recorded" else "${crashLogFiles.size} recorded - tap to view & share",
             onClick = {
                 crashLogFiles = com.example.techyfipos.utils.CrashLogger.listLogs(context)
                 showCrashLogs = true
@@ -5039,8 +5039,11 @@ fun SettingsScreen(
                     withContext(Dispatchers.Main) {
                         logoVersion++
                         currentSettings = currentSettings.copy(logoUri = savedUri)
-                        settingsViewModel.saveInvoiceSettingsData(currentSettings)
-                        Toast.makeText(context, context.getString(R.string.settings_toast_logo_updated), Toast.LENGTH_SHORT).show()
+                        settingsViewModel.saveInvoiceSettingsData(currentSettings) { ok ->
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.settings_toast_logo_updated), Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -5541,7 +5544,7 @@ fun SettingsScreen(
                         if (canBackup) {
                             settingsPage = SettingsPage.BACKUP
                         } else {
-                            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.error_unauthorized_permission), Toast.LENGTH_SHORT).show()
                         }
                     },
                     onTransferClick = { settingsPage = SettingsPage.TRANSFER },
@@ -5580,8 +5583,11 @@ fun SettingsScreen(
                     currentSettings = currentSettings,
                     onSettingsChanged = { currentSettings = it },
                     onSave = {
-                        settingsViewModel.saveInvoiceSettingsData(currentSettings)
-                        Toast.makeText(context, context.getString(R.string.settings_toast_due_receipt_saved), Toast.LENGTH_SHORT).show()
+                        settingsViewModel.saveInvoiceSettingsData(currentSettings) { ok ->
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.settings_toast_due_receipt_saved), Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     },
                     onTestPrint = {
                         val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_পরিশোধ_#১" else "Test_Repayment_#1"
@@ -5607,10 +5613,15 @@ fun SettingsScreen(
                     currentSettings = currentSettings,
                     onSettingsChanged = { currentSettings = it },
                     onSave = {
-                        settingsViewModel.saveInvoiceSettingsData(currentSettings)
-                        settingsViewModel.saveShopInfo(currentSettings.storeName, currentSettings.address, currentSettings.phonePrimary)
-                        settingsViewModel.saveInvoiceSettings(currentSettings.logoUri, currentSettings.facebookUrl, currentSettings.qrCustomUrl, currentSettings.cashierName)
-                        Toast.makeText(context, context.getString(R.string.settings_toast_shop_identity_saved), Toast.LENGTH_SHORT).show()
+                        settingsViewModel.saveInvoiceSettingsData(currentSettings) { ok1 ->
+                            settingsViewModel.saveShopInfo(currentSettings.storeName, currentSettings.address, currentSettings.phonePrimary) { ok2 ->
+                                settingsViewModel.saveInvoiceSettings(currentSettings.logoUri, currentSettings.facebookUrl, currentSettings.qrCustomUrl, currentSettings.cashierName) { ok3 ->
+                                    if (ok1 && ok2 && ok3) {
+                                        Toast.makeText(context, context.getString(R.string.settings_toast_shop_identity_saved), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
                     },
                     onTestPrint = {
                         val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12"
@@ -5642,8 +5653,11 @@ fun SettingsScreen(
                     currentSettings = currentSettings,
                     onSettingsChanged = { currentSettings = it },
                     onSave = {
-                        settingsViewModel.saveInvoiceSettingsData(currentSettings)
-                        Toast.makeText(context, context.getString(R.string.settings_toast_qr_links_saved), Toast.LENGTH_SHORT).show()
+                        settingsViewModel.saveInvoiceSettingsData(currentSettings) { ok ->
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.settings_toast_qr_links_saved), Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     },
                     onTestPrint = {
                         val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12"
@@ -5672,8 +5686,11 @@ fun SettingsScreen(
                         currentSettings = currentSettings.copy(customInfoBlocks = updated)
                     },
                     onSave = {
-                        settingsViewModel.saveInvoiceSettingsData(currentSettings)
-                        Toast.makeText(context, context.getString(R.string.settings_toast_receipt_layout_saved), Toast.LENGTH_SHORT).show()
+                        settingsViewModel.saveInvoiceSettingsData(currentSettings) { ok ->
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.settings_toast_receipt_layout_saved), Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     },
                     onTestPrint = {
                         val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12"
@@ -5682,17 +5699,24 @@ fun SettingsScreen(
                         }
                     },
                     onResetForm = {
-                        currentSettings = InvoiceSettingsData()
-                        settingsViewModel.saveInvoiceSettingsData(currentSettings)
-                        Toast.makeText(context, context.getString(R.string.settings_toast_reset_form_default), Toast.LENGTH_SHORT).show()
+                        val resetData = InvoiceSettingsData()
+                        settingsViewModel.saveInvoiceSettingsData(resetData) { ok ->
+                            if (ok) {
+                                currentSettings = resetData
+                                Toast.makeText(context, context.getString(R.string.settings_toast_reset_form_default), Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 )
                 SettingsPage.TAX -> TaxSettings(
                     currentSettings = currentSettings,
                     onSettingsChanged = { currentSettings = it },
                     onSave = {
-                        settingsViewModel.saveInvoiceSettingsData(currentSettings)
-                        Toast.makeText(context, context.getString(R.string.settings_toast_tax_settings_saved), Toast.LENGTH_SHORT).show()
+                        settingsViewModel.saveInvoiceSettingsData(currentSettings) { ok ->
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.settings_toast_tax_settings_saved), Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 )
                 SettingsPage.BACKUP -> OptimizedBackupSettings(

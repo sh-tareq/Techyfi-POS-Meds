@@ -813,7 +813,7 @@
     <string name="dues_delete_charge_button">চার্জ মুছুন</string>
     <string name="dues_delete_charge_title">এই চার্জটি মুছবেন?</string>
     <string name="dues_delete_charge_confirm_manual">এটি %1$s \"বকেয়া যুক্ত হয়েছে\" এন্ট্রিটি ইতিহাস থেকে সরিয়ে দেবে এবং গ্রাহকের বকেয়া ব্যালেন্স থেকে বিয়োগ করবে। শুধুমাত্র মালিক।</string>
-    <string name="dues_delete_charge_confirm_sale">এটি %1$s \"বাকিতে বিক্রি\" এন্ট্রিটি ইতিহাস থেকে সরিয়ে দেবে এবং গ্রাহকের বকেয়া ব্যালেন্স থেকে বিয়োগ করবে — বিক্রয়টি নিজে মুছে বা পরিবর্তন হবে না। বিক্রয়টি সম্পূর্ণরূপে বাতিল করতে (স্টক ফেরত, লয়্যালটি বিপরীত ইত্যাদি), ইতিহাস থেকে বিক্রয় মুছুন ব্যবহার করুন। শুধুমাত্র মালিক।</string>
+    <string name="dues_delete_charge_confirm_sale">এটি %1$s \"বাকিতে বিক্রি\" এন্ট্রিটি ইতিহাস থেকে সরিয়ে দেবে এবং গ্রাহকের বকেয়া ব্যালেন্স থেকে বিয়োগ করবে - বিক্রয়টি নিজে মুছে বা পরিবর্তন হবে না। বিক্রয়টি সম্পূর্ণরূপে বাতিল করতে (স্টক ফেরত, লয়্যালটি বিপরীত ইত্যাদি), ইতিহাস থেকে বিক্রয় মুছুন ব্যবহার করুন। শুধুমাত্র মালিক।</string>
     <string name="dues_cancel">বাতিল</string>
     <string name="dues_next_end_date_button">পরবর্তী (শেষ তারিখ)</string>
     <string name="dues_select_dues_start_date">বকেয়ার জন্য শুরুর তারিখ নির্বাচন করুন</string>
@@ -1086,7 +1086,7 @@
     <string name="settings_repair_dues_none_found_title">কোনো ডুপ্লিকেট লেজার পাওয়া যায়নি</string>
     <string name="settings_repair_dues_none_found_body">প্রতিটি কাস্টমারের বাকি হিসাব একটি মাত্র ফোন নম্বরের অধীনে সংরক্ষিত। একত্র করার কিছু নেই।</string>
     <string name="settings_repair_dues_found_title">ডুপ্লিকেট লেজার পাওয়া গেছে</string>
-    <string name="settings_repair_dues_found_intro">নিচের কাস্টমারদের বাকি হিসাব একাধিক ফোন-নম্বর কী-তে বিভক্ত। একত্র করলে প্রতিটি কাস্টমারের ব্যালেন্স একটি নরমালাইজড ফোন নম্বরের অধীনে একত্রিত হবে এবং তাদের পেমেন্ট হিস্টরি পুনরায় কী করা হবে — এটি ফিরিয়ে নেওয়া যাবে না।</string>
+    <string name="settings_repair_dues_found_intro">নিচের কাস্টমারদের বাকি হিসাব একাধিক ফোন-নম্বর কী-তে বিভক্ত। একত্র করলে প্রতিটি কাস্টমারের ব্যালেন্স একটি নরমালাইজড ফোন নম্বরের অধীনে একত্রিত হবে এবং তাদের পেমেন্ট হিস্টরি পুনরায় কী করা হবে - এটি ফিরিয়ে নেওয়া যাবে না।</string>
     <string name="settings_repair_dues_merge_summary">%1$s (%2$s): %3$d সারি → একত্রিত ব্যালেন্স ৳%4$s</string>
     <string name="settings_repair_dues_button_merge">%1$d জন কাস্টমার একত্র করুন</string>
     <string name="settings_repair_dues_toast_done">%1$d টি ডুপ্লিকেট কাস্টমার লেজার একত্র করা হয়েছে</string>
@@ -1717,7 +1717,7 @@
     <string name="customer_filter_recent">🕒 সাম্প্রতিক</string>
     <string name="customers_empty">এই ফিল্টারে কোনো গ্রাহক নেই</string>
     <string name="customers_empty_no_customers">এখনও কোনো গ্রাহক যোগ করা হয়নি</string>
-    <string name="customers_no_match_filter">এই ফিল্টারে কোনো গ্রাহক মেলেনি — ফিল্টার মুছে চেষ্টা করুন</string>
+    <string name="customers_no_match_filter">এই ফিল্টারে কোনো গ্রাহক মেলেনি - ফিল্টার মুছে চেষ্টা করুন</string>
     <string name="customers_clear_filters">ফিল্টার মুছুন</string>
     <string name="customer_deleted_toast">গ্রাহক মুছে ফেলা হয়েছে</string>
     <string name="customer_cannot_delete_title">গ্রাহক মুছে ফেলা সম্ভব নয়</string>
@@ -2395,7 +2395,7 @@
     <string name="select">নির্বাচন করুন</string>
     <string name="custom_item_in_cart_badge">✓ কার্টে %1$dটি</string>
     <string name="custom_item_added_another_hint">কার্টে যোগ হয়েছে! অন্য আইটেম যোগ করুন অথবা সম্পন্ন হলে সম্পন্ন চাপুন</string>
-    <string name="custom_item_no_presets_hint">এখনো কোনো প্রিসেট নেই — যোগ করতে + চাপুন।</string>
+    <string name="custom_item_no_presets_hint">এখনো কোনো প্রিসেট নেই - যোগ করতে + চাপুন।</string>
     <string name="next">পরবর্তী</string>
     <string name="history_sales_count">%1$dটি বিক্রয়</string>
     <string name="history_clear_search_filters">অনুসন্ধান ও ফিল্টার মুছুন</string>
@@ -2852,6 +2852,7 @@
     <string name="error_invoice_not_found">চালান পাওয়া যায়নি</string>
     <string name="error_supplier_payment_not_found">সরবরাহকারী পরিশোধ পাওয়া যায়নি</string>
     <string name="error_duplicate_record">সংরক্ষণ করা যায়নি: ডুপ্লিকেট তথ্যের দ্বন্দ্ব</string>
+    <string name="error_supervisor_auth_required_discount">ডিসকাউন্ট প্রয়োগ করার জন্য সুপারিভাইজারের অনুমোদন প্রয়োজন</string>
     <string name="error_generic">একটি সমস্যা দেখা দিয়েছে</string>
 
     <!-- Printers Configuration -->
@@ -3153,4 +3154,15 @@
     <string name="settings_decimal_quantities_title">দশমিক পরিমাণ</string>
     <string name="settings_decimal_quantities_desc">কার্টে ভগ্নাংশ ও দশমিক পরিমাণ আইটেম বিক্রির অনুমতি দিন</string>
     <string name="settings_label_backup_time">নির্ধারিত ব্যাকআপের সময়</string>
+    <string name="loyalty_points_added_toast">পয়েন্ট সফলভাবে যোগ করা হয়েছে</string>
+    <string name="loyalty_points_redeemed_toast">পয়েন্ট সফলভাবে রিডিম করা হয়েছে</string>
+    <string name="loyalty_points_redeem_failed_toast">পয়েন্ট রিডিম করতে ব্যর্থ হয়েছে। ব্যালেন্স চেক করুন।</string>
+    <string name="loyalty_member_deactivated_toast">সদস্য নিষ্ক্রিয় করা হয়েছে</string>
+    <string name="loyalty_member_reactivated_toast">সদস্য পুনরায় সক্রিয় করা হয়েছে</string>
+    <string name="expense_add_success">খরচ সফলভাবে যুক্ত করা হয়েছে</string>
+    <string name="expense_cash_in_success">ক্যাশ-ইন সফলভাবে যুক্ত করা হয়েছে</string>
+    <string name="dues_settled_no_reminder_toast">গ্রাহকের সম্পূর্ণ বকেয়া ইতোমধ্যে পরিশোধিত হয়েছে। তাগিদ বাতিল করা হলো।</string>
+    <string name="dues_receipt_reprint_badge">পরিশোধের রসিদ (পুনঃমুদ্রণ)</string>
+    <string name="date_yesterday_fmt">গতকাল, %1$s</string>
+    <string name="dossier_credit_charge_reversal_overpayment">অতিরিক্ত পেমেন্ট রিভার্সাল</string>
 </resources>
