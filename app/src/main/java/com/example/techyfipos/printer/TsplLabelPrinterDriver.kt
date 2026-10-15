@@ -210,8 +210,19 @@ fun buildTsplPayload(
     )
 }
 
+fun calculateMultiUpRowWidthMm(
+    labelsAcross: Int,
+    columnGapMm: Float,
+    labelWidthMm: Float
+): Float {
+    val safeAcross = labelsAcross.coerceIn(1, 3)
+    if (safeAcross == 1) return labelWidthMm
+    val safeGapMm = columnGapMm.coerceIn(0f, 20f)
+    return safeAcross * labelWidthMm + (safeAcross - 1) * safeGapMm
+}
+
 /**
- * Composes multiple label bitmaps horizontally into a single multi-up row bitmap
+ * Composes individual label bitmaps into a single wide composite row bitmap
  * for printing on 2-across or 3-across label rolls.
  */
 fun composeMultiUpRowBitmap(
@@ -223,12 +234,12 @@ fun composeMultiUpRowBitmap(
     dpi: Int = 203
 ): Pair<Bitmap, Float> {
     val safeAcross = labelsAcross.coerceIn(1, 3)
+    val totalRowWidthMm = calculateMultiUpRowWidthMm(labelsAcross, columnGapMm, labelWidthMm)
     if (safeAcross == 1 || rowBitmaps.isEmpty()) {
         val bmp = rowBitmaps.firstOrNull() ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-        return bmp to labelWidthMm
+        return bmp to totalRowWidthMm
     }
     val safeGapMm = columnGapMm.coerceIn(0f, 20f)
-    val totalRowWidthMm = safeAcross * labelWidthMm + (safeAcross - 1) * safeGapMm
     val dotsPerMm = dpi / 25.4f
     val labelWidthDots = maxOf(1, (labelWidthMm * dotsPerMm).roundToInt())
     val labelHeightDots = maxOf(1, (labelHeightMm * dotsPerMm).roundToInt())

@@ -2,8 +2,9 @@ package com.example.techyfipos.utils
 
 import com.example.techyfipos.R
 import com.example.techyfipos.data.InvoiceSettingsData
-import com.example.techyfipos.printer.PrintTiming
+import com.example.techyfipos.printer.BatchLabelPrintResult
 import com.example.techyfipos.printer.DirectPrintResult
+import com.example.techyfipos.printer.PrintTiming
 import com.example.techyfipos.printer.EscPosPrinterDriver
 import com.example.techyfipos.printer.LabelJob
 import com.example.techyfipos.printer.PrinterTarget
@@ -793,23 +794,27 @@ fun decidePrintRouting(
  * Displays a localized Toast message explaining why direct printing failed.
  */
 suspend fun showDirectPrintToast(context: Context, result: DirectPrintResult) = withContext(Dispatchers.Main) {
-    val message = when (result) {
-        is DirectPrintResult.Success -> return@withContext
-        is DirectPrintResult.NoAddress -> context.getString(R.string.direct_print_error_no_address)
-        is DirectPrintResult.NoPermission -> context.getString(R.string.direct_print_error_no_permission)
-        is DirectPrintResult.BluetoothOff -> context.getString(R.string.direct_print_error_bluetooth_off)
-        is DirectPrintResult.DeviceNotPaired -> context.getString(R.string.direct_print_error_not_paired)
-        is DirectPrintResult.UsbDeviceNotFound -> context.getString(R.string.direct_print_error_usb_device_not_found)
-        is DirectPrintResult.UsbNoPermission -> context.getString(R.string.direct_print_error_usb_no_permission)
-        is DirectPrintResult.UsbNoPrinterInterface -> context.getString(R.string.direct_print_error_usb_no_printer_interface)
-        is DirectPrintResult.UsbNotSupported -> context.getString(R.string.direct_print_error_usb_not_supported)
-        is DirectPrintResult.UsbOpenFailed -> context.getString(R.string.direct_print_error_usb_open_failed)
-        is DirectPrintResult.UsbClaimInterfaceFailed -> context.getString(R.string.direct_print_error_usb_claim_failed)
-        is DirectPrintResult.UsbTransferFailed -> context.getString(R.string.direct_print_error_usb_transfer_failed, result.code)
-        is DirectPrintResult.UsbCommunicationError -> context.getString(R.string.direct_print_error_usb_comm, result.reason)
-        is DirectPrintResult.Failed -> context.getString(R.string.direct_print_error_connection_failed, result.message)
-    }
-    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+    try {
+        val message = when (result) {
+            is DirectPrintResult.Success -> return@withContext
+            is DirectPrintResult.NoAddress -> context.getString(R.string.direct_print_error_no_address)
+            is DirectPrintResult.NoPermission -> context.getString(R.string.direct_print_error_no_permission)
+            is DirectPrintResult.BluetoothOff -> context.getString(R.string.direct_print_error_bluetooth_off)
+            is DirectPrintResult.DeviceNotPaired -> context.getString(R.string.direct_print_error_not_paired)
+            is DirectPrintResult.UsbDeviceNotFound -> context.getString(R.string.direct_print_error_usb_device_not_found)
+            is DirectPrintResult.UsbNoPermission -> context.getString(R.string.direct_print_error_usb_no_permission)
+            is DirectPrintResult.UsbNoPrinterInterface -> context.getString(R.string.direct_print_error_usb_no_printer_interface)
+            is DirectPrintResult.UsbNotSupported -> context.getString(R.string.direct_print_error_usb_not_supported)
+            is DirectPrintResult.UsbOpenFailed -> context.getString(R.string.direct_print_error_usb_open_failed)
+            is DirectPrintResult.UsbClaimInterfaceFailed -> context.getString(R.string.direct_print_error_usb_claim_failed)
+            is DirectPrintResult.UsbTransferFailed -> context.getString(R.string.direct_print_error_usb_transfer_failed, result.code)
+            is DirectPrintResult.UsbCommunicationError -> context.getString(R.string.direct_print_error_usb_comm, result.reason)
+            is DirectPrintResult.Failed -> context.getString(R.string.direct_print_error_connection_failed, result.message)
+        }
+        if (!message.isNullOrBlank()) {
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
+    } catch (_: Throwable) {}
 }
 
 /**
@@ -1148,7 +1153,9 @@ suspend fun printLabelImages(
     copies: Int,
     jobName: String,
     settings: InvoiceSettingsData,
-    pdfFallbackBuilder: (suspend () -> File?)? = null
+    pdfFallbackBuilder: (suspend () -> File?)? = null,
+    batchPrinter: (suspend (target: PrinterTarget, jobs: List<LabelJob>) -> BatchLabelPrintResult)? = null,
+    pdfPrinter: ((context: Context, file: File, jobName: String, widthMm: Float?, heightMm: Float?) -> Boolean)? = null
 ): LabelPrintOutcome {
     val mode = settings.labelPrintMode.trim().uppercase()
     val labelTarget = settings.resolvedLabelPrinterTarget()
@@ -1158,12 +1165,17 @@ suspend fun printLabelImages(
         pdfFallback ?: pdfFallbackBuilder?.invoke()
     }
 
+    val printPdf: suspend (File) -> Boolean = { file ->
+        withContext(Dispatchers.Main) {
+            pdfPrinter?.invoke(activity ?: context, file, jobName, widthMm, heightMm)
+                ?: printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
+        }
+    }
+
     if (mode == "SYSTEM") {
         val file = resolvePdf()
         return if (file != null) {
-            val opened = withContext(Dispatchers.Main) {
-                printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
-            }
+            val opened = printPdf(file)
             if (opened) LabelPrintOutcome.OPENED_SYSTEM_DIALOG else LabelPrintOutcome.FAILED
         } else {
             LabelPrintOutcome.FAILED
@@ -1171,13 +1183,15 @@ suspend fun printLabelImages(
     }
 
     if (isSamePrinterTarget(labelTarget, receiptTarget)) {
-        withContext(Dispatchers.Main) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.direct_print_error_label_same_as_receipt),
-                Toast.LENGTH_LONG
-            ).show()
-        }
+        try {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.direct_print_error_label_same_as_receipt),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        } catch (_: Exception) {}
         return LabelPrintOutcome.FAILED
     }
 
@@ -1192,9 +1206,7 @@ suspend fun printLabelImages(
             RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
                 val file = resolvePdf()
                 if (file != null) {
-                    val opened = withContext(Dispatchers.Main) {
-                        printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
-                    }
+                    val opened = printPdf(file)
                     if (opened) LabelPrintOutcome.OPENED_SYSTEM_DIALOG else LabelPrintOutcome.FAILED
                 } else {
                     LabelPrintOutcome.FAILED
@@ -1205,7 +1217,7 @@ suspend fun printLabelImages(
     }
 
     val jobs = labels.map { LabelJob(it, copies) }
-    val batchResult = TsplLabelPrinterDriver.printLabelsBatch(
+    val batchResult = batchPrinter?.invoke(labelTarget, jobs) ?: TsplLabelPrinterDriver.printLabelsBatch(
         context = context,
         target = labelTarget,
         jobs = jobs,
@@ -1225,13 +1237,15 @@ suspend fun printLabelImages(
     val directResult = batchResult.result
 
     if (batchResult.successfulCount > 0 && directResult !is DirectPrintResult.Success) {
-        withContext(Dispatchers.Main) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.batch_print_partial_failure, batchResult.successfulCount),
-                Toast.LENGTH_LONG
-            ).show()
-        }
+        try {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.batch_print_partial_failure, batchResult.successfulCount),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        } catch (_: Exception) {}
     }
 
     val decision = decidePrintRouting(mode, labelTarget.identifier, directResult, batchResult.successfulCount)
@@ -1245,9 +1259,7 @@ suspend fun printLabelImages(
             showDirectPrintToast(context, directResult)
             val file = resolvePdf()
             if (file != null) {
-                val opened = withContext(Dispatchers.Main) {
-                    printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
-                }
+                val opened = printPdf(file)
                 if (opened) LabelPrintOutcome.OPENED_SYSTEM_DIALOG else LabelPrintOutcome.FAILED
             } else {
                 LabelPrintOutcome.FAILED
@@ -1256,9 +1268,7 @@ suspend fun printLabelImages(
         RoutingDecision.SYSTEM_DIALOG -> {
             val file = resolvePdf()
             if (file != null) {
-                val opened = withContext(Dispatchers.Main) {
-                    printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
-                }
+                val opened = printPdf(file)
                 if (opened) LabelPrintOutcome.OPENED_SYSTEM_DIALOG else LabelPrintOutcome.FAILED
             } else {
                 LabelPrintOutcome.FAILED

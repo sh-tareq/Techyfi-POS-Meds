@@ -128,7 +128,7 @@ Line numbers are approximate. Search for the quoted code if they have moved.
 
 ## P5: Tests
 
-- [ ] **LBL-20 MED. Tests for the print flow and routing.** Existing tests cover sizing, Bengali rendering and TSPL clamping only (`ProductCodeLabelSizeTest`, `ProductCodeLabelRenderingIntegrationTest`, `PrinterRoutingAndDriverTest`). Add unit tests calling production code for:
+- [x] **LBL-20 MED. Tests for the print flow and routing.** Existing tests cover sizing, Bengali rendering and TSPL clamping only (`ProductCodeLabelSizeTest`, `ProductCodeLabelRenderingIntegrationTest`, `PrinterRoutingAndDriverTest`). Add unit tests calling production code for:
   - `printLabelImages` return values and routing (SYSTEM, same-as-receipt, no address, direct OK, direct fail with fallback), using a fake transport (LBL-03).
   - `formatProductCodeLabelPriceString` with unset MRP and wholesale (LBL-05).
   - `buildTsplPayload` at 203 and 300 dpi (LBL-12).
