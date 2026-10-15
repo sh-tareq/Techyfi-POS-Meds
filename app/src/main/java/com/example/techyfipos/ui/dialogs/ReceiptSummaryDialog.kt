@@ -197,18 +197,16 @@ fun ReceiptSummaryDialog(
         end = Offset(shimmerOffset, shimmerOffset)
     )
 
-    LaunchedEffect(activeBill.saleId, receiptLanguage, activeBill.settingsData.paperRollWidthMm) {
+    LaunchedEffect(activeBill, receiptLanguage) {
         val paperWidth = activeBill.settingsData.paperRollWidthMm
-        if (ReceiptBitmapCache.get(activeBill.saleId, receiptLanguage, paperWidth) == null) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val bmp = generateBillBitmap(context, activeBill, receiptLanguage)
-                    ReceiptBitmapCache.put(activeBill.saleId, receiptLanguage, paperWidth, bmp)
-                    android.util.Log.d("ReceiptSummaryDialog", "Receipt bitmap pre-rendered in background for saleId=${activeBill.saleId}")
-                } catch (e: Exception) {
-                    if (e is kotlinx.coroutines.CancellationException) throw e
-                    android.util.Log.w("ReceiptSummaryDialog", "Background receipt pre-render failed: ${e.message}")
-                }
+        withContext(Dispatchers.IO) {
+            try {
+                val bmp = generateBillBitmap(context, activeBill, receiptLanguage)
+                ReceiptBitmapCache.put(activeBill.saleId, receiptLanguage, paperWidth, bmp)
+                android.util.Log.d("ReceiptSummaryDialog", "Receipt bitmap pre-rendered in background for saleId=${activeBill.saleId}")
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                android.util.Log.w("ReceiptSummaryDialog", "Background receipt pre-render failed: ${e.message}")
             }
         }
     }

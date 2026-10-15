@@ -265,10 +265,19 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
     val date = SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.US).format(Date(bill.timestampMillis))
     val settings = bill.settingsData
     val sb = StringBuilder()
-    sb.appendLine(bill.shopName.ifBlank { settings.storeName })
-    if (settings.showAddress && bill.shopAddress.isNotBlank()) sb.appendLine(bill.shopAddress)
-    if (settings.showPhone && bill.shopPhone.isNotBlank()) sb.appendLine(bill.shopPhone)
-    if (settings.showFacebookInHeader && settings.facebookUrl.isNotBlank()) sb.appendLine(settings.facebookUrl)
+    val defaultShopName = "Techyfi POS"
+    val storeName = bill.shopName.takeIf { it.isNotBlank() && it != defaultShopName }
+        ?: settings.storeName.takeIf { it.isNotBlank() && it != "My Shop" }
+        ?: bill.shopName.ifBlank { settings.storeName.ifBlank { defaultShopName } }
+    sb.appendLine(storeName)
+    val effectiveAddress = bill.shopAddress.ifBlank { settings.address }
+    if (settings.showAddress && effectiveAddress.isNotBlank()) sb.appendLine(effectiveAddress)
+    val effectivePhone = bill.shopPhone.ifBlank {
+        if (settings.phoneSecondary.isNotBlank()) "${settings.phonePrimary} | ${settings.phoneSecondary}" else settings.phonePrimary
+    }
+    if (settings.showPhone && effectivePhone.isNotBlank()) sb.appendLine(effectivePhone)
+    val effectiveFb = bill.facebookUrl.ifBlank { settings.facebookUrl }
+    if (settings.showFacebookInHeader && effectiveFb.isNotBlank()) sb.appendLine(effectiveFb)
     if (settings.websiteUrl.isNotBlank()) sb.appendLine(settings.websiteUrl)
     sb.appendLine("==========================================")
     sb.appendLine(if (isBn) "চালান নং : #${bill.saleId}" else "Invoice  : #${bill.saleId}")
@@ -442,8 +451,16 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
     if (settings.showLogo && effectiveLogoUri.isNotBlank()) {
         try {
             val uri = Uri.parse(effectiveLogoUri)
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                val decoded = BitmapFactory.decodeStream(stream)
+            val stream = try {
+                context.contentResolver.openInputStream(uri)
+            } catch (_: Exception) {
+                null
+            } ?: run {
+                val f = File(effectiveLogoUri)
+                if (f.exists()) f.inputStream() else null
+            }
+            stream?.use { s ->
+                val decoded = BitmapFactory.decodeStream(s)
                 if (decoded != null) {
                     val targetLogoWidth = if (is58) 260 else 380
                     logoBitmap = convertToMonochromeThresholdBitmap(decoded, targetLogoWidth)
@@ -463,10 +480,14 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
         textSize = textSizeTitle
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
-    val headerStoreName = bill.shopName.ifBlank { settings.storeName }
+    val defaultShopName = "Techyfi POS"
+    val headerStoreName = bill.shopName.takeIf { it.isNotBlank() && it != defaultShopName }
+        ?: settings.storeName.takeIf { it.isNotBlank() && it != "My Shop" }
+        ?: bill.shopName.ifBlank { settings.storeName.ifBlank { defaultShopName } }
     val headerNameLines = wrapItemNameByPixelWidth(headerStoreName, width - 40f, measurePaintTitle)
     totalHeight += headerNameLines.size * 34f + 11f
-    if (settings.showAddress && bill.shopAddress.ifBlank { settings.address }.isNotBlank()) totalHeight += (if (is58) 28f else 34f)
+    val effectiveAddress = bill.shopAddress.ifBlank { settings.address }
+    if (settings.showAddress && effectiveAddress.isNotBlank()) totalHeight += (if (is58) 28f else 34f)
     val effectivePhone = bill.shopPhone.ifBlank {
         if (settings.phoneSecondary.isNotBlank()) "${settings.phonePrimary} | ${settings.phoneSecondary}" else settings.phonePrimary
     }
@@ -633,7 +654,9 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
     }
 
     // 2. Draw Header
-    val nameText = bill.shopName.ifBlank { settings.storeName }
+    val nameText = bill.shopName.takeIf { it.isNotBlank() && it != defaultShopName }
+        ?: settings.storeName.takeIf { it.isNotBlank() && it != "My Shop" }
+        ?: bill.shopName.ifBlank { settings.storeName.ifBlank { defaultShopName } }
     val nameLines = wrapItemNameByPixelWidth(nameText, width - 40f, paintTitle)
     for (line in nameLines) {
         val nameW = paintTitle.measureText(line)

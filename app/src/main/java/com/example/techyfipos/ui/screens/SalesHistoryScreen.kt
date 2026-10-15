@@ -54,6 +54,7 @@ import com.example.techyfipos.ui.viewmodel.SalesViewModel
 import androidx.annotation.StringRes
 import com.example.techyfipos.ui.viewmodel.SettingsViewModel
 import com.example.techyfipos.utils.*
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.util.*
 
@@ -137,10 +138,65 @@ fun SalesHistoryScreen(
     var issuedVoucherEntity by remember { mutableStateOf<com.example.techyfipos.data.db.StoreCreditVoucher?>(null) }
     val defaultShopName = stringResource(R.string.app_name)
     val defaultAdminName = stringResource(R.string.more_admin_badge)
-    val historyShopName = settingsViewModel?.shopName?.collectAsStateWithLifecycle(initialValue = defaultShopName)?.value ?: defaultShopName
-    val historyShopPhone = settingsViewModel?.shopPhone?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val historyShopAddress = settingsViewModel?.shopAddress?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val historyInvoiceSettingsData = settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle(initialValue = com.example.techyfipos.data.InvoiceSettingsData())?.value ?: com.example.techyfipos.data.InvoiceSettingsData()
+
+    val appSettingsDataStore = remember(context) { com.example.techyfipos.data.SettingsDataStore(context.applicationContext) }
+    val dataStoreInvoiceSettings by appSettingsDataStore.invoiceSettingsDataFlow.collectAsStateWithLifecycle(
+        initialValue = settingsViewModel?.invoiceSettingsData?.value ?: com.example.techyfipos.data.InvoiceSettingsData()
+    )
+
+    val historyInvoiceSettingsData by (settingsViewModel?.invoiceSettingsData ?: appSettingsDataStore.invoiceSettingsDataFlow).collectAsStateWithLifecycle(
+        initialValue = settingsViewModel?.invoiceSettingsData?.value ?: dataStoreInvoiceSettings
+    )
+
+    val historyShopName by (settingsViewModel?.shopName ?: appSettingsDataStore.shopNameFlow).collectAsStateWithLifecycle(
+        initialValue = settingsViewModel?.shopName?.value?.takeIf { it.isNotBlank() }
+            ?: historyInvoiceSettingsData.storeName.takeIf { it.isNotBlank() }
+            ?: defaultShopName
+    )
+    val historyShopAddress by (settingsViewModel?.shopAddress ?: appSettingsDataStore.shopAddressFlow).collectAsStateWithLifecycle(
+        initialValue = settingsViewModel?.shopAddress?.value?.takeIf { it.isNotBlank() }
+            ?: historyInvoiceSettingsData.address
+    )
+    val historyShopPhone by (settingsViewModel?.shopPhone ?: appSettingsDataStore.shopPhoneFlow).collectAsStateWithLifecycle(
+        initialValue = settingsViewModel?.shopPhone?.value?.takeIf { it.isNotBlank() }
+            ?: if (historyInvoiceSettingsData.phoneSecondary.isNotBlank()) "${historyInvoiceSettingsData.phonePrimary} | ${historyInvoiceSettingsData.phoneSecondary}" else historyInvoiceSettingsData.phonePrimary
+    )
+    val historyShopLogoUri by (settingsViewModel?.shopLogoUri ?: appSettingsDataStore.shopLogoUriFlow).collectAsStateWithLifecycle(
+        initialValue = settingsViewModel?.shopLogoUri?.value?.takeIf { it.isNotBlank() }
+            ?: historyInvoiceSettingsData.logoUri
+    )
+    val historyFacebookUrl by (settingsViewModel?.facebookUrl ?: appSettingsDataStore.facebookUrlFlow).collectAsStateWithLifecycle(
+        initialValue = settingsViewModel?.facebookUrl?.value?.takeIf { it.isNotBlank() }
+            ?: historyInvoiceSettingsData.facebookUrl
+    )
+    val historyQrCodeInfo by (settingsViewModel?.qrCodeInfo ?: appSettingsDataStore.qrCodeInfoFlow).collectAsStateWithLifecycle(
+        initialValue = settingsViewModel?.qrCodeInfo?.value?.takeIf { it.isNotBlank() }
+            ?: historyInvoiceSettingsData.qrCustomUrl
+    )
+    val historyCashierName by (settingsViewModel?.cashierName ?: appSettingsDataStore.cashierNameFlow).collectAsStateWithLifecycle(
+        initialValue = settingsViewModel?.cashierName?.value?.takeIf { it.isNotBlank() }
+            ?: historyInvoiceSettingsData.cashierName.ifBlank { defaultAdminName }
+    )
+
+    // Resolved authoritative store information ensuring fallbacks never mask configured store details
+    val effectiveInvoiceSettings = settingsViewModel?.invoiceSettingsData?.value
+        ?: historyInvoiceSettingsData.takeIf { it.storeName.isNotBlank() || it.address.isNotBlank() || it.directBluetoothPrinterAddress.isNotBlank() }
+        ?: dataStoreInvoiceSettings
+    val effectiveShopName = historyShopName.takeIf { it.isNotBlank() && it != defaultShopName }
+        ?: effectiveInvoiceSettings.storeName.takeIf { it.isNotBlank() }
+        ?: defaultShopName
+    val effectiveShopAddress = historyShopAddress.takeIf { it.isNotBlank() }
+        ?: effectiveInvoiceSettings.address
+    val effectiveShopPhone = historyShopPhone.takeIf { it.isNotBlank() }
+        ?: if (effectiveInvoiceSettings.phoneSecondary.isNotBlank()) "${effectiveInvoiceSettings.phonePrimary} | ${effectiveInvoiceSettings.phoneSecondary}" else effectiveInvoiceSettings.phonePrimary
+    val effectiveShopLogoUri = historyShopLogoUri.takeIf { it.isNotBlank() }
+        ?: effectiveInvoiceSettings.logoUri
+    val effectiveFacebookUrl = historyFacebookUrl.takeIf { it.isNotBlank() }
+        ?: effectiveInvoiceSettings.facebookUrl
+    val effectiveQrCodeInfo = historyQrCodeInfo.takeIf { it.isNotBlank() }
+        ?: effectiveInvoiceSettings.qrCustomUrl
+    val effectiveCashierName = historyCashierName.takeIf { it.isNotBlank() }
+        ?: effectiveInvoiceSettings.cashierName.ifBlank { defaultAdminName }
 
     var showSupervisorAuthDialog by remember { mutableStateOf(false) }
     var pendingSupervisorAction by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -787,6 +843,14 @@ fun SalesHistoryScreen(
             isOwner = isOwner,
             isSupervisor = isSupervisor,
             activePermissions = activePermissions,
+            shopName = effectiveShopName,
+            shopAddress = effectiveShopAddress,
+            shopPhone = effectiveShopPhone,
+            shopLogoUri = effectiveShopLogoUri,
+            facebookUrl = effectiveFacebookUrl,
+            qrCodeInfo = effectiveQrCodeInfo,
+            cashierName = effectiveCashierName,
+            invoiceSettingsData = effectiveInvoiceSettings,
             onDismiss = { selectedSaleDetail = null },
             onReturn = {
                 selectedSaleDetail = null
@@ -943,10 +1007,10 @@ fun SalesHistoryScreen(
     issuedVoucherEntity?.let { voucher ->
         StoreCreditVoucherSlipDialog(
             voucher = voucher,
-            shopName = historyShopName,
-            shopPhone = historyShopPhone,
-            shopAddress = historyShopAddress,
-            invoiceSettingsData = historyInvoiceSettingsData,
+            shopName = effectiveShopName,
+            shopPhone = effectiveShopPhone,
+            shopAddress = effectiveShopAddress,
+            invoiceSettingsData = effectiveInvoiceSettings,
             onDismiss = { issuedVoucherEntity = null }
         )
     }
@@ -1813,6 +1877,14 @@ private fun SaleDetailDialog(
     isOwner: Boolean = true,
     isSupervisor: Boolean = false,
     activePermissions: Set<String> = emptySet(),
+    shopName: String = "",
+    shopAddress: String = "",
+    shopPhone: String = "",
+    shopLogoUri: String = "",
+    facebookUrl: String = "",
+    qrCodeInfo: String = "",
+    cashierName: String = "",
+    invoiceSettingsData: com.example.techyfipos.data.InvoiceSettingsData = com.example.techyfipos.data.InvoiceSettingsData(),
     onDismiss: () -> Unit,
     onReturn: (() -> Unit)? = null,
     onDelete: () -> Unit,
@@ -1852,14 +1924,40 @@ private fun SaleDetailDialog(
     }
     val defaultShopName = stringResource(R.string.app_name)
     val defaultAdminName = stringResource(R.string.more_admin_badge)
-    val shopName = settingsViewModel?.shopName?.collectAsStateWithLifecycle(initialValue = defaultShopName)?.value ?: defaultShopName
-    val shopAddress = settingsViewModel?.shopAddress?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val shopPhone = settingsViewModel?.shopPhone?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val shopLogoUri = settingsViewModel?.shopLogoUri?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val facebookUrl = settingsViewModel?.facebookUrl?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val qrCodeInfo = settingsViewModel?.qrCodeInfo?.collectAsStateWithLifecycle(initialValue = "")?.value ?: ""
-    val cashierName = settingsViewModel?.cashierName?.collectAsStateWithLifecycle(initialValue = defaultAdminName)?.value ?: defaultAdminName
-    val invoiceSettingsData = settingsViewModel?.invoiceSettingsData?.collectAsStateWithLifecycle(initialValue = com.example.techyfipos.data.InvoiceSettingsData())?.value ?: com.example.techyfipos.data.InvoiceSettingsData()
+    val activeShopName = shopName.ifBlank {
+        settingsViewModel?.shopName?.value?.takeIf { it.isNotBlank() }
+            ?: invoiceSettingsData.storeName.takeIf { it.isNotBlank() }
+            ?: defaultShopName
+    }
+    val activeShopAddress = shopAddress.ifBlank {
+        settingsViewModel?.shopAddress?.value?.takeIf { it.isNotBlank() }
+            ?: invoiceSettingsData.address
+    }
+    val activeShopPhone = shopPhone.ifBlank {
+        settingsViewModel?.shopPhone?.value?.takeIf { it.isNotBlank() }
+            ?: if (invoiceSettingsData.phoneSecondary.isNotBlank()) "${invoiceSettingsData.phonePrimary} | ${invoiceSettingsData.phoneSecondary}" else invoiceSettingsData.phonePrimary
+    }
+    val activeShopLogoUri = shopLogoUri.ifBlank {
+        settingsViewModel?.shopLogoUri?.value?.takeIf { it.isNotBlank() }
+            ?: invoiceSettingsData.logoUri
+    }
+    val activeFacebookUrl = facebookUrl.ifBlank {
+        settingsViewModel?.facebookUrl?.value?.takeIf { it.isNotBlank() }
+            ?: invoiceSettingsData.facebookUrl
+    }
+    val activeQrCodeInfo = qrCodeInfo.ifBlank {
+        settingsViewModel?.qrCodeInfo?.value?.takeIf { it.isNotBlank() }
+            ?: invoiceSettingsData.qrCustomUrl
+    }
+    val activeCashierName = cashierName.ifBlank {
+        settingsViewModel?.cashierName?.value?.takeIf { it.isNotBlank() }
+            ?: invoiceSettingsData.cashierName.ifBlank { defaultAdminName }
+    }
+    val activeInvoiceSettings = if (invoiceSettingsData.storeName.isNotBlank() || invoiceSettingsData.directBluetoothPrinterAddress.isNotBlank()) {
+        invoiceSettingsData
+    } else {
+        settingsViewModel?.invoiceSettingsData?.value ?: invoiceSettingsData
+    }
 
     var voucherForSale by remember { mutableStateOf<com.example.techyfipos.data.db.StoreCreditVoucher?>(null) }
     var showVoucherSlipDialog by remember { mutableStateOf(false) }
@@ -1888,7 +1986,7 @@ private fun SaleDetailDialog(
         }
     }
 
-    val billData = remember(saleWithItems, shopName, shopAddress, shopPhone, shopLogoUri, facebookUrl, qrCodeInfo, cashierName, invoiceSettingsData, liveOutstandingDue, voucherForSale, currentReturnSummary) {
+    val billData = remember(saleWithItems, activeShopName, activeShopAddress, activeShopPhone, activeShopLogoUri, activeFacebookUrl, activeQrCodeInfo, activeCashierName, activeInvoiceSettings, liveOutstandingDue, voucherForSale, currentReturnSummary) {
         var appliedSc: Double? = null
         var vCode: String? = voucherForSale?.code
         var vAmt: Double? = null
@@ -1922,9 +2020,9 @@ private fun SaleDetailDialog(
         BillData(
             saleId = saleWithItems.sale.id,
             timestampMillis = saleWithItems.sale.timestamp,
-            shopName = shopName,
-            shopAddress = shopAddress,
-            shopPhone = shopPhone,
+            shopName = activeShopName,
+            shopAddress = activeShopAddress,
+            shopPhone = activeShopPhone,
             items = saleWithItems.items.map { item ->
                 BillLineItem(
                     name = item.productName,
@@ -1959,12 +2057,12 @@ private fun SaleDetailDialog(
             cardType = saleWithItems.sale.cardType ?: "",
             cardLastFour = saleWithItems.sale.cardLastFour ?: "",
             splitPaymentJson = saleWithItems.sale.splitPaymentJson,
-            logoUri = shopLogoUri,
-            facebookUrl = facebookUrl,
-            qrCodeInfo = qrCodeInfo,
-            cashierName = saleWithItems.sale.performedByName?.takeIf { it.isNotBlank() } ?: cashierName,
-            settingsData = invoiceSettingsData,
-            taxLabel = invoiceSettingsData.taxLabel,
+            logoUri = activeShopLogoUri,
+            facebookUrl = activeFacebookUrl,
+            qrCodeInfo = activeQrCodeInfo,
+            cashierName = saleWithItems.sale.performedByName?.takeIf { it.isNotBlank() } ?: activeCashierName,
+            settingsData = activeInvoiceSettings,
+            taxLabel = activeInvoiceSettings.taxLabel,
             taxValue = saleWithItems.sale.taxAmount,
             totalOutstandingDue = liveOutstandingDue,
             storeCreditApplied = appliedSc,
@@ -2043,10 +2141,10 @@ private fun SaleDetailDialog(
     if (showVoucherSlipDialog && voucherForSale != null) {
         StoreCreditVoucherSlipDialog(
             voucher = voucherForSale!!,
-            shopName = shopName,
-            shopPhone = shopPhone,
-            shopAddress = shopAddress,
-            invoiceSettingsData = invoiceSettingsData,
+            shopName = activeShopName,
+            shopPhone = activeShopPhone,
+            shopAddress = activeShopAddress,
+            invoiceSettingsData = activeInvoiceSettings,
             onDismiss = { showVoucherSlipDialog = false }
         )
     }
