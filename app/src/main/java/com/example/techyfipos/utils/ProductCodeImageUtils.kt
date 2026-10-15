@@ -3,6 +3,8 @@ package com.example.techyfipos.utils
 import com.example.techyfipos.R
 import android.content.ContentValues
 import android.content.Context
+import android.content.SharedPreferences
+import com.example.techyfipos.data.db.Product
 import android.content.Intent
 import android.content.ClipData
 import android.graphics.Bitmap
@@ -132,14 +134,20 @@ fun generateProductCodeLabelBitmap(
         val rightX = (width - horizontalPadding).toFloat()
 
         val effectiveStoreName = storeName.trim().uppercase()
-        val mfgLabel = if (mfgOrPkgType == "Pkg") "PKG:" else "MFG:"
+        val isBengali = isAppBangla() || storeName.hasBengali() || productName.hasBengali()
+        val mfgLabel = if (isBengali) {
+            if (mfgOrPkgType == "Pkg") "প্যাকেজিং:" else "উৎপাদন:"
+        } else {
+            if (mfgOrPkgType == "Pkg") "PKG:" else "MFG:"
+        }
+        val expLabel = if (isBengali) "মেয়াদ:" else "EXP:"
         val dateString = buildString {
             if (mfgOrPkgDate.isNotBlank()) {
                 append("$mfgLabel $mfgOrPkgDate")
             }
             if (expDate.isNotBlank()) {
                 if (isNotEmpty()) append("    |    ")
-                append("EXP: $expDate")
+                append("$expLabel $expDate")
             }
         }.trim()
         val showDate = showDateTracking && dateString.isNotBlank()
@@ -174,7 +182,8 @@ fun generateProductCodeLabelBitmap(
         }
 
         // 1. PRODUCT NAME (UPPERCASE)
-        val uppercaseName = productName.ifBlank { "Product Name" }.uppercase()
+        val defaultFallback = if (isBengali) "পণ্যের নাম" else "Product Name"
+        val uppercaseName = productName.ifBlank { defaultFallback }.uppercase()
         val namePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
             textSize = rawNameTextSize * verticalTextScale
@@ -628,6 +637,145 @@ fun resolveConfiguredLabelDimensionsMm(context: Context): Pair<Float, Float> {
 
 private fun String.hasBengali(): Boolean = any { it in '\u0980'..'\u09FF' }
 
+data class LabelStyleSettings(
+    val labelSize: ProductCodeLabelSize = ProductCodeLabelSize.SIZE_50_X_30,
+    val customWidthMm: Float = 50f,
+    val customHeightMm: Float = 30f,
+    val showPrice: Boolean = true,
+    val priceTier: ProductCodePriceTier = ProductCodePriceTier.SELLING,
+    val showCodeNumber: Boolean = true,
+    val showStoreName: Boolean = false,
+    val storeName: String = "",
+    val showDateTracking: Boolean = false,
+    val mfgOrPkgType: String = "Mfg",
+    val mfgOrPkgDate: String = "",
+    val expDate: String = "",
+    val showUnit: Boolean = false,
+    val showBanglaDigits: Boolean = false,
+    val productNameTextScale: Float = 1f,
+    val priceTextScale: Float = 1f,
+    val codeNumberTextScale: Float = 1f,
+    val storeNameTextScale: Float = 1f,
+    val dateTrackingTextScale: Float = 1f,
+    val barcodeGraphicScale: Float = 1f
+)
+
+fun loadLabelStyleSettings(
+    preferences: SharedPreferences,
+    defaultStoreName: String = ""
+): LabelStyleSettings {
+    val sizeName = preferences.getString("label_size", ProductCodeLabelSize.SIZE_50_X_30.name)
+    val labelSize = ProductCodeLabelSize.entries.firstOrNull { it.name == sizeName } ?: ProductCodeLabelSize.SIZE_50_X_30
+    val tierName = preferences.getString("price_tier", ProductCodePriceTier.SELLING.name)
+    val priceTier = ProductCodePriceTier.entries.firstOrNull { it.name == tierName } ?: ProductCodePriceTier.SELLING
+    val storeName = if (preferences.contains("store_name")) {
+        preferences.getString("store_name", "") ?: ""
+    } else {
+        defaultStoreName
+    }
+    return LabelStyleSettings(
+        labelSize = labelSize,
+        customWidthMm = preferences.getFloat("custom_width_mm", 50f).coerceIn(15f, 150f),
+        customHeightMm = preferences.getFloat("custom_height_mm", 30f).coerceIn(10f, 150f),
+        showPrice = preferences.getBoolean("show_price", true),
+        priceTier = priceTier,
+        showCodeNumber = preferences.getBoolean("show_code_number", true),
+        showStoreName = preferences.getBoolean("show_store_name", false),
+        storeName = storeName,
+        showDateTracking = preferences.getBoolean("show_date_tracking", false),
+        mfgOrPkgType = preferences.getString("mfg_or_pkg_type", "Mfg") ?: "Mfg",
+        mfgOrPkgDate = preferences.getString("mfg_or_pkg_date", "") ?: "",
+        expDate = preferences.getString("exp_date", "") ?: "",
+        showUnit = preferences.getBoolean("show_unit", false),
+        showBanglaDigits = preferences.getBoolean("show_bangla_digits", false),
+        productNameTextScale = preferences.getFloat("product_name_text_scale", 1f).coerceIn(0.6f, 1.8f),
+        priceTextScale = preferences.getFloat("price_text_scale", 1f).coerceIn(0.6f, 1.8f),
+        codeNumberTextScale = preferences.getFloat("code_number_text_scale", 1f).coerceIn(0.6f, 1.8f),
+        storeNameTextScale = preferences.getFloat("store_name_text_scale", 1f).coerceIn(0.6f, 1.8f),
+        dateTrackingTextScale = preferences.getFloat("date_tracking_text_scale", 1f).coerceIn(0.6f, 1.8f),
+        barcodeGraphicScale = preferences.getFloat("barcode_graphic_scale", 1f).coerceIn(0.5f, 2.0f)
+    )
+}
+
+fun saveLabelStyleSettings(
+    editor: SharedPreferences.Editor,
+    settings: LabelStyleSettings
+) {
+    editor
+        .putString("label_size", settings.labelSize.name)
+        .putBoolean("show_store_name", settings.showStoreName)
+        .putString("store_name", settings.storeName)
+        .putBoolean("show_price", settings.showPrice)
+        .putString("price_tier", settings.priceTier.name)
+        .putBoolean("show_code_number", settings.showCodeNumber)
+        .putBoolean("show_date_tracking", settings.showDateTracking)
+        .putString("mfg_or_pkg_type", settings.mfgOrPkgType)
+        .putString("mfg_or_pkg_date", settings.mfgOrPkgDate)
+        .putString("exp_date", settings.expDate)
+        .putBoolean("show_unit", settings.showUnit)
+        .putBoolean("show_bangla_digits", settings.showBanglaDigits)
+        .putFloat("product_name_text_scale", settings.productNameTextScale)
+        .putFloat("price_text_scale", settings.priceTextScale)
+        .putFloat("code_number_text_scale", settings.codeNumberTextScale)
+        .putFloat("store_name_text_scale", settings.storeNameTextScale)
+        .putFloat("date_tracking_text_scale", settings.dateTrackingTextScale)
+        .putFloat("barcode_graphic_scale", settings.barcodeGraphicScale)
+    if (settings.customWidthMm in 15f..150f) {
+        editor.putFloat("custom_width_mm", settings.customWidthMm)
+    }
+    if (settings.customHeightMm in 10f..150f) {
+        editor.putFloat("custom_height_mm", settings.customHeightMm)
+    }
+}
+
+fun buildBatchLabelItems(
+    candidateProducts: List<Product>,
+    copiesModeByStock: Boolean,
+    batchCopies: Int,
+    priceTier: ProductCodePriceTier,
+    showUnit: Boolean,
+    showBanglaDigits: Boolean,
+    useProductDates: Boolean,
+    mfgOrPkgType: String,
+    mfgOrPkgDate: String,
+    expDate: String,
+    maxTotalLabels: Int = 500
+): List<ProductLabelItem> {
+    var remainingAllowed = maxTotalLabels
+    val items = mutableListOf<ProductLabelItem>()
+    val effectiveCopies = clampCopies(batchCopies)
+    for (prod in candidateProducts) {
+        if (remainingAllowed <= 0) break
+        val requestedQty = if (copiesModeByStock) stockToPrintCopies(prod.stockQty) else effectiveCopies
+        val qty = requestedQty.coerceAtMost(remainingAllowed)
+        if (qty <= 0) continue
+        remainingAllowed -= qty
+        val priceString = formatProductCodeLabelPriceString(
+            tier = priceTier,
+            sellingPrice = prod.sellingPrice,
+            mrpPrice = prod.mrpPrice,
+            wholesalePrice = prod.wholesalePrice,
+            showUnit = showUnit,
+            showBanglaDigits = showBanglaDigits
+        )
+        val itemMfgType = if (useProductDates) (prod.mfgOrPkgType ?: "Mfg") else mfgOrPkgType
+        val itemMfgDate = if (useProductDates) prod.mfgOrPkgDate.orEmpty() else mfgOrPkgDate
+        val itemExpDate = if (useProductDates) prod.expiryDate.orEmpty() else expDate
+        items.add(
+            ProductLabelItem(
+                productName = prod.name,
+                barcode = prod.barcode,
+                formattedPrice = priceString,
+                quantity = qty,
+                mfgOrPkgType = itemMfgType,
+                mfgOrPkgDate = itemMfgDate,
+                expDate = itemExpDate
+            )
+        )
+    }
+    return items
+}
+
 data class ProductLabelItem(
     val productName: String,
     val barcode: String,
@@ -636,6 +784,34 @@ data class ProductLabelItem(
     val mfgOrPkgType: String = "",
     val mfgOrPkgDate: String = "",
     val expDate: String = ""
+)
+
+fun cacheBatchProductCodeLabelsPdf(
+    context: Context,
+    items: List<ProductLabelItem>,
+    codeType: ProductCodeType,
+    style: LabelStyleSettings
+): Pair<File, Uri>? = cacheBatchProductCodeLabelsPdf(
+    context = context,
+    items = items,
+    codeType = codeType,
+    labelSize = style.labelSize,
+    customWidthMm = style.customWidthMm,
+    customHeightMm = style.customHeightMm,
+    showPrice = style.showPrice,
+    showCodeNumber = style.showCodeNumber,
+    showStoreName = style.showStoreName,
+    storeName = style.storeName,
+    productNameTextScale = style.productNameTextScale,
+    priceTextScale = style.priceTextScale,
+    codeNumberTextScale = style.codeNumberTextScale,
+    storeNameTextScale = style.storeNameTextScale,
+    showDateTracking = style.showDateTracking,
+    mfgOrPkgType = style.mfgOrPkgType,
+    mfgOrPkgDate = style.mfgOrPkgDate,
+    expDate = style.expDate,
+    dateTrackingTextScale = style.dateTrackingTextScale,
+    barcodeGraphicScale = style.barcodeGraphicScale
 )
 
 fun cacheBatchProductCodeLabelsPdf(

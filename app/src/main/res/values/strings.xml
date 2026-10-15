@@ -3205,6 +3205,16 @@
     <string name="barcode_too_dense_warning">Barcode too dense for this label size</string>
     <string name="barcode_too_dense_hint">Scanners may struggle to read this. Use a larger label or switch to QR Code.</string>
     <string name="switch_to_qr">Use QR</string>
+    <string name="batch_print_subtitle">Bulk Barcode &amp; QR Label Printing</string>
+    <string name="custom_width_range_error">Width must be 15 - 150 mm</string>
+    <string name="custom_height_range_error">Height must be 10 - 150 mm</string>
+    <string name="batch_picker_ratio_fmt">%1$d / %2$d selected</string>
+    <string name="batch_picker_selected_fmt">%1$d selected</string>
+    <string name="batch_labels_share_subject">Batch_Labels</string>
+    <string name="reset_all_sizes">Reset all</string>
+    <string name="reset_size_hint">Scales above 100% may auto-fit if label height is constrained</string>
+    <string name="batch_preview_prev_sample">Previous sample</string>
+    <string name="batch_preview_next_sample">Next sample</string>
 </resources>
 
 
