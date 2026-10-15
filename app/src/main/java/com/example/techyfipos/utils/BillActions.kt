@@ -1126,6 +1126,14 @@ fun cleanOldPrintCacheFiles(cacheDir: File, maxAgeMillis: Long = 7 * 24 * 60 * 6
 fun cleanOldPrintCacheFiles(context: Context, maxAgeMillis: Long = 7 * 24 * 60 * 60 * 1000L): Int =
     cleanOldPrintCacheFiles(context.cacheDir, maxAgeMillis)
 
+enum class LabelPrintOutcome {
+    SENT_DIRECT,
+    OPENED_SYSTEM_DIALOG,
+    FAILED;
+
+    val isSuccess: Boolean get() = this != FAILED
+}
+
 /**
  * Unified entry point for printing label images.
  * Respects labelPrintMode (BLUETOOTH, SYSTEM, AUTO) and provides graceful fallback.
@@ -1141,7 +1149,7 @@ suspend fun printLabelImages(
     jobName: String,
     settings: InvoiceSettingsData,
     pdfFallbackBuilder: (suspend () -> File?)? = null
-): Boolean {
+): LabelPrintOutcome {
     val mode = settings.labelPrintMode.trim().uppercase()
     val labelTarget = settings.resolvedLabelPrinterTarget()
     val receiptTarget = settings.resolvedReceiptPrinterTarget()
@@ -1152,12 +1160,14 @@ suspend fun printLabelImages(
 
     if (mode == "SYSTEM") {
         val file = resolvePdf()
-        if (file != null) {
-            withContext(Dispatchers.Main) {
+        return if (file != null) {
+            val opened = withContext(Dispatchers.Main) {
                 printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
             }
+            if (opened) LabelPrintOutcome.OPENED_SYSTEM_DIALOG else LabelPrintOutcome.FAILED
+        } else {
+            LabelPrintOutcome.FAILED
         }
-        return false
     }
 
     if (isSamePrinterTarget(labelTarget, receiptTarget)) {
@@ -1168,7 +1178,7 @@ suspend fun printLabelImages(
                 Toast.LENGTH_LONG
             ).show()
         }
-        return false
+        return LabelPrintOutcome.FAILED
     }
 
     if (labelTarget is PrinterTarget.None || labelTarget.identifier.isBlank()) {
@@ -1176,19 +1186,21 @@ suspend fun printLabelImages(
         return when (decision) {
             RoutingDecision.SHOW_ERROR -> {
                 showDirectPrintToast(context, DirectPrintResult.NoAddress)
-                false
+                LabelPrintOutcome.FAILED
             }
             RoutingDecision.SYSTEM_DIALOG,
             RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
                 val file = resolvePdf()
                 if (file != null) {
-                    withContext(Dispatchers.Main) {
+                    val opened = withContext(Dispatchers.Main) {
                         printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
                     }
+                    if (opened) LabelPrintOutcome.OPENED_SYSTEM_DIALOG else LabelPrintOutcome.FAILED
+                } else {
+                    LabelPrintOutcome.FAILED
                 }
-                false
             }
-            RoutingDecision.DIRECT_OK -> true
+            RoutingDecision.DIRECT_OK -> LabelPrintOutcome.SENT_DIRECT
         }
     }
 
@@ -1216,29 +1228,33 @@ suspend fun printLabelImages(
 
     val decision = decidePrintRouting(mode, labelTarget.identifier, directResult, batchResult.successfulCount)
     return when (decision) {
-        RoutingDecision.DIRECT_OK -> true
+        RoutingDecision.DIRECT_OK -> LabelPrintOutcome.SENT_DIRECT
         RoutingDecision.SHOW_ERROR -> {
             showDirectPrintToast(context, directResult)
-            false
+            LabelPrintOutcome.FAILED
         }
         RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
             showDirectPrintToast(context, directResult)
             val file = resolvePdf()
             if (file != null) {
-                withContext(Dispatchers.Main) {
+                val opened = withContext(Dispatchers.Main) {
                     printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
                 }
+                if (opened) LabelPrintOutcome.OPENED_SYSTEM_DIALOG else LabelPrintOutcome.FAILED
+            } else {
+                LabelPrintOutcome.FAILED
             }
-            false
         }
         RoutingDecision.SYSTEM_DIALOG -> {
             val file = resolvePdf()
             if (file != null) {
-                withContext(Dispatchers.Main) {
+                val opened = withContext(Dispatchers.Main) {
                     printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
                 }
+                if (opened) LabelPrintOutcome.OPENED_SYSTEM_DIALOG else LabelPrintOutcome.FAILED
+            } else {
+                LabelPrintOutcome.FAILED
             }
-            false
         }
     }
 }

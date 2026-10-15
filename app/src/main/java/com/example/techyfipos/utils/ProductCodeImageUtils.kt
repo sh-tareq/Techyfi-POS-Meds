@@ -174,14 +174,14 @@ fun generateProductCodeLabelBitmap(
         }
 
         // 1. PRODUCT NAME (UPPERCASE)
+        val uppercaseName = productName.ifBlank { "Product Name" }.uppercase()
         val namePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
             textSize = rawNameTextSize * verticalTextScale
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             textAlign = Paint.Align.LEFT
-            letterSpacing = 0.02f
+            letterSpacing = if (uppercaseName.hasBengali()) 0f else 0.02f
         }
-        val uppercaseName = productName.ifBlank { "Product Name" }.uppercase()
         val nameLayout = StaticLayout.Builder
             .obtain(uppercaseName, 0, uppercaseName.length, namePaint, contentWidth)
             .setAlignment(Layout.Alignment.ALIGN_CENTER)
@@ -309,10 +309,14 @@ fun generateProductCodeLabelBitmap(
                 textSize = storeTextSize
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 textAlign = Paint.Align.CENTER
-                letterSpacing = 0.04f
+                letterSpacing = if (effectiveStoreName.hasBengali()) 0f else 0.04f
             }
-            val storeY = (nextBaseline + storePaint.textSize)
-                .coerceAtMost(height - bottomPadding.toFloat())
+            val maxStoreY = if (showDate) {
+                height - (dateTextSize + height * 0.045f + framePadding + 6f)
+            } else {
+                height - bottomPadding.toFloat()
+            }
+            val storeY = (nextBaseline + storePaint.textSize).coerceAtMost(maxStoreY)
             drawFittedCenteredText(
                 canvas = canvas,
                 text = effectiveStoreName,
@@ -338,7 +342,7 @@ fun generateProductCodeLabelBitmap(
                 textSize = dateTextSize
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 textAlign = Paint.Align.CENTER
-                letterSpacing = 0.03f
+                letterSpacing = if (dateString.hasBengali()) 0f else 0.03f
             }
             val dateY = (lineY + (height * 0.022f) + datePaint.textSize)
                 .coerceAtMost(height - framePadding - 4f)
@@ -399,23 +403,35 @@ fun formatProductCodeLabelPriceString(
             if (showBanglaDigits) "মূল্য: $priceStr$unitStr" else "Price: $priceStr$unitStr"
         }
         ProductCodePriceTier.MRP -> {
-            val effective = if (mrpPrice > 0) mrpPrice else sellingPrice
-            val priceStr = formatVal(effective)
-            if (showBanglaDigits) "এমআরপি মূল্য: $priceStr$unitStr" else "MRP Price: $priceStr$unitStr"
+            if (mrpPrice > 0) {
+                val priceStr = formatVal(mrpPrice)
+                if (showBanglaDigits) "এমআরপি মূল্য: $priceStr$unitStr" else "MRP Price: $priceStr$unitStr"
+            } else {
+                val priceStr = formatVal(sellingPrice)
+                if (showBanglaDigits) "মূল্য: $priceStr$unitStr" else "Price: $priceStr$unitStr"
+            }
         }
         ProductCodePriceTier.WHOLESALE -> {
-            val effective = if (wholesalePrice > 0) wholesalePrice else sellingPrice
-            val priceStr = formatVal(effective)
-            if (showBanglaDigits) "পাইকারি মূল্য: $priceStr$unitStr" else "Wholesale Price: $priceStr$unitStr"
+            if (wholesalePrice > 0) {
+                val priceStr = formatVal(wholesalePrice)
+                if (showBanglaDigits) "পাইকারি মূল্য: $priceStr$unitStr" else "Wholesale Price: $priceStr$unitStr"
+            } else {
+                val priceStr = formatVal(sellingPrice)
+                if (showBanglaDigits) "মূল্য: $priceStr$unitStr" else "Price: $priceStr$unitStr"
+            }
         }
         ProductCodePriceTier.DUAL -> {
-            val effectiveMrp = if (mrpPrice > 0) mrpPrice else (sellingPrice * 1.15)
-            val mrpVal = formatVal(effectiveMrp)
-            val sellVal = formatVal(sellingPrice)
-            if (showBanglaDigits) {
-                "এমআরপি: $mrpVal | অফার: $sellVal$unitStr"
+            if (mrpPrice > 0) {
+                val mrpVal = formatVal(mrpPrice)
+                val sellVal = formatVal(sellingPrice)
+                if (showBanglaDigits) {
+                    "এমআরপি: $mrpVal | অফার: $sellVal$unitStr"
+                } else {
+                    "MRP: $mrpVal | Offer: $sellVal$unitStr"
+                }
             } else {
-                "MRP: $mrpVal | Offer: $sellVal$unitStr"
+                val priceStr = formatVal(sellingPrice)
+                if (showBanglaDigits) "মূল্য: $priceStr$unitStr" else "Price: $priceStr$unitStr"
             }
         }
     }
@@ -566,11 +582,16 @@ fun shareProductCodeLabelPdf(context: Context, pdfUri: Uri, productName: String)
     }
 }
 
+private fun String.hasBengali(): Boolean = any { it in '\u0980'..'\u09FF' }
+
 data class ProductLabelItem(
     val productName: String,
     val barcode: String,
     val formattedPrice: String,
-    val quantity: Int = 1
+    val quantity: Int = 1,
+    val mfgOrPkgType: String = "",
+    val mfgOrPkgDate: String = "",
+    val expDate: String = ""
 )
 
 fun cacheBatchProductCodeLabelsPdf(
@@ -609,6 +630,9 @@ fun cacheBatchProductCodeLabelsPdf(
         var pageNumber = 0
         try {
             for (item in validItems) {
+                val itemMfgType = if (mfgOrPkgDate.isNotBlank()) mfgOrPkgType else (item.mfgOrPkgType.ifBlank { mfgOrPkgType })
+                val itemMfgDate = mfgOrPkgDate.ifBlank { item.mfgOrPkgDate }
+                val itemExpDate = expDate.ifBlank { item.expDate }
                 val bitmap = generateProductCodeLabelBitmap(
                     productName = item.productName,
                     barcode = item.barcode,
@@ -626,9 +650,9 @@ fun cacheBatchProductCodeLabelsPdf(
                     storeName = storeName,
                     storeNameTextScale = storeNameTextScale,
                     showDateTracking = showDateTracking,
-                    mfgOrPkgType = mfgOrPkgType,
-                    mfgOrPkgDate = mfgOrPkgDate,
-                    expDate = expDate,
+                    mfgOrPkgType = itemMfgType,
+                    mfgOrPkgDate = itemMfgDate,
+                    expDate = itemExpDate,
                     dateTrackingTextScale = dateTrackingTextScale,
                     barcodeGraphicScale = barcodeGraphicScale
                 ) ?: continue

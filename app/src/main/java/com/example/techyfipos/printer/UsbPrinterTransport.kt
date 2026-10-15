@@ -16,6 +16,7 @@ import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -319,6 +320,7 @@ suspend fun sendToUsbPrinter(
 
             try {
                 for ((index, segment) in segments.withIndex()) {
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
                     var offset = 0
                     while (offset < segment.size) {
                         if (index == 0 && offset == 0) {

@@ -1485,9 +1485,11 @@ private fun OptimizedSettingsHome(
                 onClick = {
                     scope.launch(Dispatchers.IO) {
                         isTestingLabel = true
-                        val ok = try {
+                        val outcome = try {
                             val (labelW, labelH) = getConfiguredLabelDimensions(context)
-                            val testBitmap = buildTestLabelBitmap(currentSettings.storeName, labelW, labelH)
+                            val testStoreName = currentSettings.storeName.takeIf { it.isNotBlank() && it != "My Shop" }
+                                ?: context.getString(R.string.settings_default_store_name)
+                            val testBitmap = buildTestLabelBitmap(testStoreName, labelW, labelH)
                             val dummyPdf = buildTestLabelPdf(testBitmap, context.cacheDir)
                             printLabelImages(
                                 context = context,
@@ -1503,12 +1505,17 @@ private fun OptimizedSettingsHome(
                         } catch (e: Exception) {
                             if (e is kotlinx.coroutines.CancellationException) throw e
                             android.util.Log.e("SettingsScreen", "Test label failed", e)
-                            false
+                            com.example.techyfipos.utils.LabelPrintOutcome.FAILED
                         }
                         withContext(Dispatchers.Main) {
                             isTestingLabel = false
-                            if (ok) {
-                                Toast.makeText(context, context.getString(R.string.settings_test_label_success), Toast.LENGTH_SHORT).show()
+                            if (outcome.isSuccess) {
+                                val msg = if (outcome == com.example.techyfipos.utils.LabelPrintOutcome.OPENED_SYSTEM_DIALOG) {
+                                    context.getString(R.string.print_system_dialog_opened)
+                                } else {
+                                    context.getString(R.string.settings_test_label_success)
+                                }
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(context, context.getString(R.string.settings_test_label_failed), Toast.LENGTH_SHORT).show()
                             }

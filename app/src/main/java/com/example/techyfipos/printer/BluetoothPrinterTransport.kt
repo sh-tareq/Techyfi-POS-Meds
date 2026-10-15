@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -398,6 +399,7 @@ suspend fun sendToBluetoothPrinter(
                 val writeStartTime = System.currentTimeMillis()
                 var bytesWrittenSoFar = 0
                 for ((index, segment) in segments.withIndex()) {
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
                     var offset = 0
                     while (offset < segment.size) {
                         val length = minOf(CHUNK_SIZE, segment.size - offset)

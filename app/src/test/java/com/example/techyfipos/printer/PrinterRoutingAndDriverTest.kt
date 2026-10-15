@@ -1188,4 +1188,12 @@ class PrinterRoutingAndDriverTest {
         assertEquals(79f, totalLineHeight, 0.01f)
         assertTrue("Two lines must take more height than single line", totalLineHeight > 45f)
     }
+
+    // 22. Tests for LBL-03 LabelPrintOutcome properties
+    @Test
+    fun `testLBL_03_labelPrintOutcomeSuccess`() {
+        assertTrue(com.example.techyfipos.utils.LabelPrintOutcome.SENT_DIRECT.isSuccess)
+        assertTrue(com.example.techyfipos.utils.LabelPrintOutcome.OPENED_SYSTEM_DIALOG.isSuccess)
+        assertFalse(com.example.techyfipos.utils.LabelPrintOutcome.FAILED.isSuccess)
+    }
 }

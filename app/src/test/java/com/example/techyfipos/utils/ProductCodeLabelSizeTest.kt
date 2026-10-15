@@ -86,4 +86,48 @@ class ProductCodeLabelSizeTest {
         assertEquals("Price: ৳120", formatProductCodeLabelPrice("৳120"))
         assertEquals("Price: ৳120", formatProductCodeLabelPrice("Price: ৳120"))
     }
+
+    @Test
+    fun `dual tier with unset mrp falls back to selling price and never invents mrp`() {
+        val result = formatProductCodeLabelPriceString(
+            tier = ProductCodePriceTier.DUAL,
+            sellingPrice = 100.0,
+            mrpPrice = 0.0,
+            wholesalePrice = 80.0
+        )
+        assertEquals("Price: ৳100", result)
+    }
+
+    @Test
+    fun `dual tier with valid mrp displays mrp and offer price`() {
+        val result = formatProductCodeLabelPriceString(
+            tier = ProductCodePriceTier.DUAL,
+            sellingPrice = 100.0,
+            mrpPrice = 120.0,
+            wholesalePrice = 80.0
+        )
+        assertEquals("MRP: ৳120 | Offer: ৳100", result)
+    }
+
+    @Test
+    fun `mrp tier with unset mrp falls back to selling price`() {
+        val result = formatProductCodeLabelPriceString(
+            tier = ProductCodePriceTier.MRP,
+            sellingPrice = 100.0,
+            mrpPrice = 0.0,
+            wholesalePrice = 80.0
+        )
+        assertEquals("Price: ৳100", result)
+    }
+
+    @Test
+    fun `wholesale tier with unset wholesale price falls back to selling price`() {
+        val result = formatProductCodeLabelPriceString(
+            tier = ProductCodePriceTier.WHOLESALE,
+            sellingPrice = 100.0,
+            mrpPrice = 120.0,
+            wholesalePrice = 0.0
+        )
+        assertEquals("Price: ৳100", result)
+    }
 }

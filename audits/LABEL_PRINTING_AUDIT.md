@@ -25,28 +25,28 @@ Line numbers are approximate. Search for the quoted code if they have moved.
 
 ## P0: Broken or unsafe behaviour
 
-- [ ] **LBL-01 HIGH Verified. Batch dialog: Share and Cancel buttons moved out of their Row.**
+- [x] **LBL-01 HIGH Verified. Batch dialog: Share and Cancel buttons moved out of their Row.**
   - Regression from commit `7dc768e`. In `BatchProductCodePrintDialog`, the action `Row` (Dialogs ~1849) closes at ~2153 right after the Direct Print button. The Cancel button (~2155) and the Share PDF `OutlinedButton` (~2180) are now direct children of the scrolling `Column` yet still use `Modifier.weight(...)`. Weight inside a `verticalScroll` Column gets zero space, so these buttons likely render with zero height or in the wrong place.
   - Fix: put Direct Print and (Cancel or Share) back inside the same `Row`, with Cancel replacing Share while `isPrinting`. Remove the stray `weight` from anything that is not inside a `RowScope`/`ColumnScope` with bounded size.
   - Check on a device or with a Compose UI test that all three states render: idle (Print + Share), printing (Print disabled + Cancel), generating (Share spinner).
 
-- [ ] **LBL-02 HIGH Verified. Batch Cancel does nothing.**
+- [x] **LBL-02 HIGH Verified. Batch Cancel does nothing.**
   - `printJob` (Dialogs ~944) is never assigned. `printJob?.cancel()` (~2158) is a no-op, but the UI resets `isPrinting = false` so it looks cancelled while the TSPL job keeps sending.
   - Fix: store the `scope.launch(Dispatchers.IO) { ... }` result in `printJob` for both Direct Print and Share PDF. On cancel, cancel the job, then reset UI state. Make sure the existing `finally` block that resets state uses `NonCancellable` (it already does for direct print). Show a toast with how many labels were already sent.
   - Also make `printLabelPayloadsBatch` / `sendToPrinter` cooperative: check `isActive` between segments so cancel stops before the next label.
 
-- [ ] **LBL-03 HIGH Verified. System print dialog is reported as a failure.**
+- [x] **LBL-03 HIGH Verified. System print dialog is reported as a failure.**
   - `printLabelImages` (Bill ~1133) returns `false` in SYSTEM mode (~1153-1160) and in every fallback path (~1181-1233) even when `printPdfDocument` opened the system dialog. Effects:
     - Single dialog shows red "print failed" (Dialogs ~2736-2738, and again ~3112).
     - Settings "Test label" shows the failed toast (Settings ~1505).
   - Fix: return `printPdfDocument(...)`'s result (true if the dialog opened) from those branches. Prefer a small result type (for example `LabelPrintOutcome { SentDirect, OpenedSystemDialog, Failed }`) so callers can show the right message ("sent to printer" vs "print dialog opened" vs error). Update both dialogs and Settings.
   - Add a unit test for the routing return values (see LBL-20).
 
-- [ ] **LBL-04 HIGH Verified. Batch label printing bypasses the print-labels permission.**
+- [x] **LBL-04 HIGH Verified. Batch label printing bypasses the print-labels permission.**
   - The "Print Labels" chip (Products ~1006) sets `showBatchPrintDialog = true` with no check. The single-product path checks `canPrintLabels` (Products ~2049, ~2108).
   - Fix: gate the chip (hide it or toast `R.string.perm_inventory_print_labels_desc`) and also guard the dialog host (Products ~3017) so a restored `rememberSaveable` state cannot open it without permission.
 
-- [ ] **LBL-05 HIGH Verified. Dual price (MRP + Offer) prints an invented MRP, and the preview disagrees.**
+- [x] **LBL-05 HIGH Verified. Dual price (MRP + Offer) prints an invented MRP, and the preview disagrees.**
   - `Img` `formatProductCodeLabelPriceString`, DUAL branch (~412): if `mrpPrice <= 0` it prints `sellingPrice * 1.15` as the MRP. The `PriceTierSwitcherCard` preview (Dialogs ~386-403) shows the selling price struck through instead. Printing a made-up MRP on a customer-facing label is a compliance risk.
   - Fix: never invent an MRP. If MRP is not set, either disable the Dual tile with a hint ("Set MRP on the product"), or fall back to the plain SELLING format. Make the preview and the printed output use the same function. In batch mode, list how many selected products lack an MRP when Dual or MRP tier is chosen and let the user continue or cancel.
   - Same check for MRP and WHOLESALE tiers, which silently fall back to the selling price when unset (~402-410). Show the fallback in the preview text and in a warning.

@@ -3175,6 +3175,13 @@
     <string name="scanner_banner_out_of_stock">⚠ OUT OF STOCK</string>
     <string name="share_sales_report_subject">Techyfi POS Sales Report (%1$s)</string>
     <string name="share_sales_report_chooser">Share Sales Report</string>
+    <string name="batch_print_cancelled_with_count">Print cancelled. %1$d labels sent.</string>
+    <string name="batch_print_cancelled">Print cancelled.</string>
+    <string name="print_system_dialog_opened">Print dialog opened</string>
+    <string name="batch_print_mrp_missing_warning">%1$d selected products have no MRP set and will print standard selling price.</string>
+    <string name="batch_print_wholesale_missing_warning">%1$d selected products have no wholesale price set and will print standard selling price.</string>
+    <string name="products_price_tier_mrp_not_set_hint">MRP not set (uses selling price)</string>
+    <string name="products_price_tier_wholesale_not_set_hint">Wholesale not set (uses selling price)</string>
 </resources>
 
 

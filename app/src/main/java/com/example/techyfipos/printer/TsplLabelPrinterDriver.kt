@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.util.Locale
@@ -241,6 +242,7 @@ suspend fun printLabelsBatch(
     }
 
     val payloads = jobs.map { job ->
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
         buildTsplPayload(
             labelBitmap = job.bitmap,
             widthMm = widthMm,

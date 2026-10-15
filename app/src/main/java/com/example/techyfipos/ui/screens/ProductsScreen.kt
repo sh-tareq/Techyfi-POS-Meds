@@ -1002,30 +1002,38 @@ fun ProductsScreen(
                         }
 
                         // 4. Batch Print Labels Chip
-                        Surface(
-                            onClick = { showBatchPrintDialog = true },
-                            shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                            modifier = Modifier.height(48.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 12.dp)
+                        if (canPrintLabels) {
+                            Surface(
+                                onClick = {
+                                    if (canPrintLabels) {
+                                        showBatchPrintDialog = true
+                                    } else {
+                                        android.widget.Toast.makeText(context, context.getString(R.string.perm_inventory_print_labels_desc), android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                                modifier = Modifier.height(48.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Print,
-                                    contentDescription = stringResource(R.string.products_print_labels),
-                                    tint = Color(0xFF4F46E5),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = stringResource(R.string.products_print_labels),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Print,
+                                        contentDescription = stringResource(R.string.products_print_labels),
+                                        tint = Color(0xFF4F46E5),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = stringResource(R.string.products_print_labels),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
                             }
                         }
                     }
@@ -3015,11 +3023,15 @@ fun ProductsScreen(
 
     // Batch Barcode Print Dialog
     if (showBatchPrintDialog) {
-        BatchProductCodePrintDialog(
-            products = allProductsList,
-            initiallySelectedBarcodes = selectedBarcodes.toSet(),
-            onDismiss = { showBatchPrintDialog = false }
-        )
+        if (canPrintLabels) {
+            BatchProductCodePrintDialog(
+                products = allProductsList,
+                initiallySelectedBarcodes = selectedBarcodes.toSet(),
+                onDismiss = { showBatchPrintDialog = false }
+            )
+        } else {
+            showBatchPrintDialog = false
+        }
     }
 
     // Enlarged Image Dialog
