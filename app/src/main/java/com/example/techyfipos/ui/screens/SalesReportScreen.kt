@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.example.techyfipos.theme.extendedColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -260,10 +261,10 @@ fun SalesReportScreen(
                                     val textReport = generateStructuredReportText(report!!, rangeLabel, periodExpenseTotal, canViewPnl)
                                     val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                         type = "text/plain"
-                                        putExtra(android.content.Intent.EXTRA_SUBJECT, "Techyfi POS Sales Report ($rangeLabel)")
+                                        putExtra(android.content.Intent.EXTRA_SUBJECT, context.getString(R.string.share_sales_report_subject, rangeLabel))
                                         putExtra(android.content.Intent.EXTRA_TEXT, textReport)
                                     }
-                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Sales Report"))
+                                    context.startActivity(android.content.Intent.createChooser(shareIntent, context.getString(R.string.share_sales_report_chooser)))
                                 }
                             },
                             enabled = hasTransactions
@@ -571,40 +572,48 @@ private fun generateStructuredReportText(
     periodExpenseTotal: Double,
     canViewPnl: Boolean = true
 ): String {
+    val isBangla = com.example.techyfipos.utils.isAppBangla()
     val sb = StringBuilder()
-    sb.appendLine("=== Techyfi POS Sales Report ===")
-    sb.appendLine("Period: $rangeLabel")
+    sb.appendLine(if (isBangla) "=== টেকিফাই পিওএস বিক্রয় রিপোর্ট ===" else "=== Techyfi POS Sales Report ===")
+    sb.appendLine("${if (isBangla) "সময়কাল" else "Period"}: $rangeLabel")
     sb.appendLine("--------------------------------")
-    sb.appendLine("Total Revenue: ${formatTaka(report.totalRevenue)}")
-    sb.appendLine("Net Sales: ${formatTaka((report.totalRevenue - report.totalTax).coerceAtLeast(0.0))}")
+    sb.appendLine("${if (isBangla) "মোট বিক্রয়" else "Total Revenue"}: ${formatTaka(report.totalRevenue, isBangla = isBangla)}")
+    sb.appendLine("${if (isBangla) "নিট বিক্রয়" else "Net Sales"}: ${formatTaka((report.totalRevenue - report.totalTax).coerceAtLeast(0.0), isBangla = isBangla)}")
     if (canViewPnl) {
-        sb.appendLine("Gross Profit: ${formatTaka(report.grossProfit)}")
+        sb.appendLine("${if (isBangla) "মোট লাভ" else "Gross Profit"}: ${formatTaka(report.grossProfit, isBangla = isBangla)}")
     }
-    sb.appendLine("Invoices / Bills: ${report.transactionCount}")
-    val itemsSoldStr = if (report.itemsSold % 1.0 == 0.0) report.itemsSold.toLong().toString() else String.format(Locale.US, "%.2f", report.itemsSold).trimEnd('0').trimEnd('.')
-    sb.appendLine("Items Sold: $itemsSoldStr")
-    sb.appendLine("Total Tax: ${formatTaka(report.totalTax)}")
-    sb.appendLine("Total Discount: ${formatTaka(report.totalDiscount)}")
-    sb.appendLine("Total Refunds: ${formatTaka(report.totalRefunds)}")
+    val invCountStr = if (isBangla) com.example.techyfipos.utils.toBanglaDigits(report.transactionCount.toString()) else report.transactionCount.toString()
+    sb.appendLine("${if (isBangla) "ইনভয়েস / বিল সংখ্যা" else "Invoices / Bills"}: $invCountStr")
+    val rawItemsSoldStr = if (report.itemsSold % 1.0 == 0.0) report.itemsSold.toLong().toString() else String.format(Locale.US, "%.2f", report.itemsSold).trimEnd('0').trimEnd('.')
+    val itemsSoldStr = if (isBangla) com.example.techyfipos.utils.toBanglaDigits(rawItemsSoldStr) else rawItemsSoldStr
+    sb.appendLine("${if (isBangla) "বিক্রিত পণ্য" else "Items Sold"}: $itemsSoldStr")
+    sb.appendLine("${if (isBangla) "মোট ভ্যাট/ট্যাক্স" else "Total Tax"}: ${formatTaka(report.totalTax, isBangla = isBangla)}")
+    sb.appendLine("${if (isBangla) "মোট ডিসকাউন্ট" else "Total Discount"}: ${formatTaka(report.totalDiscount, isBangla = isBangla)}")
+    sb.appendLine("${if (isBangla) "মোট রিফান্ড" else "Total Refunds"}: ${formatTaka(report.totalRefunds, isBangla = isBangla)}")
     val effectiveExpense = if (periodExpenseTotal > 0.0) periodExpenseTotal else report.totalExpenses
-    sb.appendLine("Expenses: ${formatTaka(effectiveExpense)}")
+    sb.appendLine("${if (isBangla) "খরচ" else "Expenses"}: ${formatTaka(effectiveExpense, isBangla = isBangla)}")
     if (canViewPnl) {
         val netOperatingProfit = report.grossProfit - effectiveExpense
-        sb.appendLine("Net Operating Profit: ${formatTaka(netOperatingProfit)}")
+        sb.appendLine("${if (isBangla) "নিট অপারেটিং লাভ" else "Net Operating Profit"}: ${formatTaka(netOperatingProfit, isBangla = isBangla)}")
     }
     if (report.paymentBreakdown.isNotEmpty()) {
         sb.appendLine("--------------------------------")
-        sb.appendLine("Payment Breakdown:")
+        sb.appendLine(if (isBangla) "মূল্য পরিশোধ বিবরণী:" else "Payment Breakdown:")
         report.paymentBreakdown.forEach { p ->
-            sb.appendLine("  ${p.method}: ${formatTaka(p.amount)} (${p.transactionCount} bills)")
+            val bCount = if (isBangla) com.example.techyfipos.utils.toBanglaDigits(p.transactionCount.toString()) else p.transactionCount.toString()
+            val billsSuffix = if (isBangla) "$bCount টি বিল" else "$bCount bills"
+            sb.appendLine("  ${p.method}: ${formatTaka(p.amount, isBangla = isBangla)} ($billsSuffix)")
         }
     }
     if (report.topProducts.isNotEmpty()) {
         sb.appendLine("--------------------------------")
-        sb.appendLine("Top Products:")
+        sb.appendLine(if (isBangla) "সেরা বিক্রিত পণ্য:" else "Top Products:")
         report.topProducts.take(10).forEachIndexed { i, p ->
-            val qStr = if (p.quantity % 1.0 == 0.0) p.quantity.toLong().toString() else String.format(Locale.US, "%.2f", p.quantity).trimEnd('0').trimEnd('.')
-            sb.appendLine("  ${i + 1}. ${p.name}: $qStr sold (${formatTaka(p.revenue)})")
+            val rawQ = if (p.quantity % 1.0 == 0.0) p.quantity.toLong().toString() else String.format(Locale.US, "%.2f", p.quantity).trimEnd('0').trimEnd('.')
+            val qStr = if (isBangla) com.example.techyfipos.utils.toBanglaDigits(rawQ) else rawQ
+            val rank = if (isBangla) com.example.techyfipos.utils.toBanglaDigits((i + 1).toString()) else (i + 1).toString()
+            val soldSuffix = if (isBangla) "$qStr টি বিক্রয়" else "$qStr sold"
+            sb.appendLine("  $rank. ${p.name}: $soldSuffix (${formatTaka(p.revenue, isBangla = isBangla)})")
         }
     }
     sb.appendLine("================================")
@@ -1688,7 +1697,7 @@ private fun HourlyPanel(data: SalesReportData, canViewPnl: Boolean = true) {
                                             text = stringResource(R.string.sales_report_profit_prefix, formatTaka(hourData.profit)),
                                             fontSize = 10.5.sp,
                                             fontWeight = FontWeight.Medium,
-                                            color = Color(0xFF059669)
+                                            color = MaterialTheme.extendedColors.success
                                         )
                                     }
                                 }
@@ -1702,7 +1711,7 @@ private fun HourlyPanel(data: SalesReportData, canViewPnl: Boolean = true) {
                                         .fillMaxWidth()
                                         .height(5.dp)
                                         .clip(RoundedCornerShape(5.dp)),
-                                    color = if (isPeak) Color(0xFFF59E0B) else MaterialTheme.colorScheme.primary,
+                                    color = if (isPeak) MaterialTheme.extendedColors.warning else MaterialTheme.colorScheme.primary,
                                     trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                                     strokeCap = StrokeCap.Round
                                 )

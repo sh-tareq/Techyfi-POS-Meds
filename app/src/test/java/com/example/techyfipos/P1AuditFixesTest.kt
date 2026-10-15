@@ -48,13 +48,34 @@ class P1AuditFixesTest {
         val voucherRemaining = 100.0
 
         // On switching to Customer B with a voucher attached, store credit is clamped to voucher balance
-        val clamped = minOf(appliedStoreCredit, voucherRemaining)
+        val clamped = com.example.techyfipos.utils.PaymentMath.resolveStoreCreditOnPhoneChange(
+            oldPhone = "01711111111",
+            newPhone = "01722222222",
+            currentCredit = appliedStoreCredit,
+            hasRedeemedVoucher = true,
+            voucherRemainingBalance = voucherRemaining
+        )
         assertEquals(100.0, clamped, 0.001)
 
         // If no voucher remaining, clamped to 0.0
         val zeroVoucherRemaining = 0.0
-        val clampedZero = minOf(appliedStoreCredit, zeroVoucherRemaining)
+        val clampedZero = com.example.techyfipos.utils.PaymentMath.resolveStoreCreditOnPhoneChange(
+            oldPhone = "01711111111",
+            newPhone = "01722222222",
+            currentCredit = appliedStoreCredit,
+            hasRedeemedVoucher = false,
+            voucherRemainingBalance = zeroVoucherRemaining
+        )
         assertEquals(0.0, clampedZero, 0.001)
+
+        val clampedNull = com.example.techyfipos.utils.PaymentMath.resolveStoreCreditOnPhoneChange(
+            oldPhone = "01711111111",
+            newPhone = "01722222222",
+            currentCredit = appliedStoreCredit,
+            hasRedeemedVoucher = false,
+            voucherRemainingBalance = null
+        )
+        assertEquals(0.0, clampedNull, 0.001)
     }
 
     @Test

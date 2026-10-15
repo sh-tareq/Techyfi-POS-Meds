@@ -223,7 +223,7 @@ fun StockAuditHistorySheet(
                                     val dateStr = remember(adj.timestamp) {
                                         DateFormatters.formatDateTime(adj.timestamp)
                                     }
-                                    val cashierText = if (adj.cashierName.isNotBlank()) " - By: ${adj.cashierName}" else ""
+                                    val cashierText = if (adj.cashierName.isNotBlank()) stringResource(R.string.audit_by_cashier_fmt, adj.cashierName) else ""
                                     Text("$dateStr$cashierText", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.outline)
                                 }
 

@@ -490,7 +490,7 @@ fun CartScreen(
     // completed barcode here. Keep checkout forms isolated so a scan cannot type
     // into payment, phone, or reference fields.
     // The customer's due/balance card can have been resolved earlier in this cart session (or even
-    // reused from before the cart was last cleared) — re-check it against the DB every time the
+    // reused from before the cart was last cleared) - re-check it against the DB every time the
     // cashier reaches Complete Sale so a payment collected elsewhere isn't shown as stale here.
     LaunchedEffect(showCheckout) {
         if (showCheckout) {
@@ -1231,7 +1231,7 @@ fun CartScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Price mode selector — visible in checkout too
+                        // Price mode selector - visible in checkout too
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -2556,15 +2556,15 @@ fun CartScreen(
                                         }
                                     }
 
-                                    HorizontalDivider(color = Color(0xFFDCFCE7), thickness = 1.dp)
+                                    HorizontalDivider(color = MaterialTheme.extendedColors.onSuccessContainer.copy(alpha = 0.2f), thickness = 1.dp)
 
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(stringResource(R.string.cart_total_customer_savings), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF14532D))
-                                        Text(stringResource(R.string.cart_savings_with_pct, formatTaka(totalSavings), pctStr), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = Color(0xFF15803D))
+                                        Text(stringResource(R.string.cart_total_customer_savings), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.extendedColors.onSuccessContainer)
+                                        Text(stringResource(R.string.cart_savings_with_pct, formatTaka(totalSavings), pctStr), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = MaterialTheme.extendedColors.onSuccessContainer)
                                     }
 
                                     if (canEditShopSettings) {

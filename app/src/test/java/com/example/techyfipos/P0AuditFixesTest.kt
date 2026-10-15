@@ -128,8 +128,11 @@ class P0AuditFixesTest {
         AuthViewModel.setLastUserActivityElapsedForTesting(initialTime)
         assertEquals(initialTime, AuthViewModel.getLastUserActivityElapsed())
 
+        val before = android.os.SystemClock.elapsedRealtime()
         AuthViewModel.recordUserActivity()
-        assertEquals(android.os.SystemClock.elapsedRealtime(), AuthViewModel.getLastUserActivityElapsed())
+        val after = android.os.SystemClock.elapsedRealtime()
+        val recorded = AuthViewModel.getLastUserActivityElapsed()
+        assertTrue("Recorded time $recorded should be within $before..$after", recorded in before..after)
     }
 
     @Test
@@ -171,18 +174,14 @@ class P0AuditFixesTest {
 
         // Regular (Discounted) mode
         val hashRegular = CartViewModel.computeCartHash(cartItems, PriceMode.DISCOUNTED)
-        val repoTriplesRegular = listOf(
-            Triple(product.copy(sellingPrice = CartViewModel.effectivePrice(product, PriceMode.DISCOUNTED)), 2.0, null)
-        )
+        val repoTriplesRegular = CartViewModel.buildSaleTriples(cartItems, PriceMode.DISCOUNTED)
         val repoHashRegular = CartViewModel.computeCartHashFromTriples(repoTriplesRegular)
         assertEquals(hashRegular, repoHashRegular)
         assertEquals("ITEM-001:2.0:100.0", hashRegular)
 
         // MRP mode
         val hashMrp = CartViewModel.computeCartHash(cartItems, PriceMode.MRP)
-        val repoTriplesMrp = listOf(
-            Triple(product.copy(sellingPrice = CartViewModel.effectivePrice(product, PriceMode.MRP)), 2.0, null)
-        )
+        val repoTriplesMrp = CartViewModel.buildSaleTriples(cartItems, PriceMode.MRP)
         val repoHashMrp = CartViewModel.computeCartHashFromTriples(repoTriplesMrp)
         assertEquals(hashMrp, repoHashMrp)
         assertEquals("ITEM-001:2.0:120.0", hashMrp)
@@ -190,13 +189,54 @@ class P0AuditFixesTest {
 
         // Wholesale mode
         val hashWholesale = CartViewModel.computeCartHash(cartItems, PriceMode.WHOLESALE)
-        val repoTriplesWholesale = listOf(
-            Triple(product.copy(sellingPrice = CartViewModel.effectivePrice(product, PriceMode.WHOLESALE)), 2.0, null)
-        )
+        val repoTriplesWholesale = CartViewModel.buildSaleTriples(cartItems, PriceMode.WHOLESALE)
         val repoHashWholesale = CartViewModel.computeCartHashFromTriples(repoTriplesWholesale)
         assertEquals(hashWholesale, repoHashWholesale)
         assertEquals("ITEM-001:2.0:90.0", hashWholesale)
         assertNotEquals(hashRegular, hashWholesale)
+    }
+
+    @Test
+    fun testR22_04_supervisorApprovalInvalidAfterCartChange() {
+        val product1 = Product(
+            barcode = "ITEM-001",
+            name = "Item 1",
+            category = "Cat",
+            purchasePrice = 50.0,
+            sellingPrice = 100.0,
+            stockQty = 10.0,
+            reorderLevel = 1,
+            unit = "pcs"
+        )
+        val product2 = Product(
+            barcode = "ITEM-002",
+            name = "Item 2",
+            category = "Cat",
+            purchasePrice = 60.0,
+            sellingPrice = 120.0,
+            stockQty = 10.0,
+            reorderLevel = 1,
+            unit = "pcs"
+        )
+        val initialCart = listOf(CartItem(product = product1, quantity = 1.0))
+        val initialHash = CartViewModel.computeCartHash(initialCart, PriceMode.DISCOUNTED)
+
+        // Adding an item modifies hash
+        val modifiedCart = listOf(
+            CartItem(product = product1, quantity = 1.0),
+            CartItem(product = product2, quantity = 1.0)
+        )
+        val modifiedHash = CartViewModel.computeCartHash(modifiedCart, PriceMode.DISCOUNTED)
+        assertNotEquals(initialHash, modifiedHash)
+
+        // Changing quantity modifies hash
+        val modifiedQtyCart = listOf(CartItem(product = product1, quantity = 2.0))
+        val modifiedQtyHash = CartViewModel.computeCartHash(modifiedQtyCart, PriceMode.DISCOUNTED)
+        assertNotEquals(initialHash, modifiedQtyHash)
+
+        // Changing price mode modifies hash
+        val modifiedModeHash = CartViewModel.computeCartHash(initialCart, PriceMode.MRP)
+        assertNotEquals(initialHash, modifiedModeHash)
     }
 
     @Test

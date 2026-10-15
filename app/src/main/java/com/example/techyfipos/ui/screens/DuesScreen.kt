@@ -2042,7 +2042,7 @@ fun SendDueReminderDialog(
                             )
                         }
                         Text(
-                            text = formatTaka(customer.outstandingAmount),
+                            text = formatTaka(customer.outstandingAmount, isBangla = isAppBangla),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color(0xFFBE123C)

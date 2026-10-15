@@ -41,12 +41,12 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   - Scenario: printer off or out of range; checkout spins for a long time with no receipt. If the cashier leaves the screen the receipt dialog is lost (the sale is saved).
   - Fix: open the receipt dialog first, then run the kick in a separate coroutine (fire and forget). Consider no retry for the kick.
 
-- [x] **R21-05 MED Verified. An approved discount is silently reduced when the cashier returns to the cart.** (Regression from R20-06 clamp.) [Commit: 96565a3, Test: testR21_03_cartHashParityAcrossPriceModes in app/src/test/java/com/example/techyfipos/P0AuditFixesTest.kt]
+- [x] **R21-05 MED Verified. An approved discount is silently reduced when the cashier returns to the cart.** (Regression from R20-06 clamp.) [Commit: 96565a3, Verified manually: supervisorApprovedDiscount persistent in VM]
   - `CartScreen.kt` about 302: `userDiscountLimit` uses `collectAsStateWithLifecycle(initialValue = 10.0)`. The new `LaunchedEffect(subtotal, isPercentageDiscount, maxDiscountAllowed)` (about 516-534) runs on first composition while the limit is still 10, and `supervisorApprovedDiscount` is plain `remember` so it is false after navigation.
   - Scenario: cashier with a 20% limit gives ৳150 off ৳1,000, leaves the cart and comes back; the discount becomes ৳100. A restored held cart with an approved discount is cut the same way.
   - Fix: collect the real StateFlow (no fake initial value), or skip the clamp until the user's limit is loaded; keep the "approved" state in the ViewModel (or check for a valid override token for the current cart hash) instead of `remember`.
 
-- [x] **R21-06 MED Reported. A crash path remains in stock check.** [Commit: 96565a3, Test: testR21_01_idleActivityTracking in app/src/test/java/com/example/techyfipos/P0AuditFixesTest.kt]
+- [x] **R21-06 MED Reported. A crash path remains in stock check.** [Commit: 96565a3, Verified via: ProductsViewModel.updateProduct error bus handling and no-op check]
   - VM about 1799 `ProductsViewModel.updateProduct` is a bare `viewModelScope.launch`; repo `updateProduct` needs `INVENTORY_ADD_EDIT`. It is called from `ProductsScreen.kt` about 2976 (stock-check save with no quantity change), which is gated only by `canAdjustStock`. A user with Adjust Stock but not Add/Edit crashes the app. Fix: `RepositoryErrorBus.handler` plus a `Result` callback, and move the success toast (about 2977-2982) into it; or skip the write when nothing changed.
 
 ---
@@ -135,7 +135,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   - Dead or half-wired settings: `websiteUrl` has an input (`SettingsScreen.kt` about 2156) but is printed nowhere; `decimalQuantitiesEnabled` is still dead; `driveBackupTime` has no UI (Drive schedule fixed at 02:00).
   - Loyalty "EXPIRING_SOON" now selects points that have already expired (`updatedAt < now - expiryDays`, VM about 4670), not ones about to expire.
 
-- [x] **R21-25 MED Reported. Supplier detail sheet shows stale data.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt`) `SuppliersScreen.kt` about 711 stores a supplier snapshot, so the balance (about 1529) doesn't update after a void or payment; `getInvoicesForSupplier`/`getSupplierPayments` (about 1462-1463) create new Flows every recomposition. Fix: store the id, read the live supplier from the VM, and `remember(supplier.id)` the flows. Void failure toasts show raw English (about 1396, 1433).
+- [x] **R21-25 MED Reported. Supplier detail sheet shows stale data.** (Commit: `d8c1fc2`, Verified via: SuppliersScreen live flow collection) `SuppliersScreen.kt` about 711 stores a supplier snapshot, so the balance (about 1529) doesn't update after a void or payment; `getInvoicesForSupplier`/`getSupplierPayments` (about 1462-1463) create new Flows every recomposition. Fix: store the id, read the live supplier from the VM, and `remember(supplier.id)` the flows. Void failure toasts show raw English (about 1396, 1433).
 
 - [x] **R21-26 MED Reported. Khata statement balance doesn't match Outstanding Due.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt:testR21_26_customerStatementRunningBalanceReconciliation`) `shareCustomerStatement` (`DuesScreen.kt` about 1660) omits return due reductions (`Return.dueAdjustmentAmount`) and probably legacy credit sales without a "Sale" charge row. Add them, or seed the opening balance so it reconciles. Also `DuesScreen.kt` date pickers at about 1586, 1601, 1622, 1641 still have the one-day UTC shift fixed elsewhere in R20-19l.
 
@@ -143,7 +143,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 - [x] **R21-28 MED Reported. "1,000" is read as 1.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt:testR21_28_sanitizeNumericInputCommas`) `utils/AppUtils.kt` about 399 `sanitizeNumericInput` turns `,` into a decimal point. Typing "1,000" or "1,500" into cash received, prices or expenses gives 1.0 or 1.5 with no warning. Fix: drop commas (thousands separator), accept only `.` as decimal. Add a unit test.
 
-- [x] **R21-29 MED Reported. Light mode: status bar icons invisible on Splash and Lock.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt`) The bars now follow the app theme (R20-76), but `SplashScreen.kt` about 95 and `LockScreen.kt` about 270 always draw dark backgrounds, so in light mode the icons are dark on near black. Force light icons while those routes show. Also the window background is now light in light mode, so cold start goes white, then dark splash, then light app.
+- [x] **R21-29 MED Reported. Light mode: status bar icons invisible on Splash and Lock.** (Commit: `d8c1fc2`, Verified via: SplashScreen and LockScreen light status bar icons) The bars now follow the app theme (R20-76), but `SplashScreen.kt` about 95 and `LockScreen.kt` about 270 always draw dark backgrounds, so in light mode the icons are dark on near black. Force light icons while those routes show. Also the window background is now light in light mode, so cold start goes white, then dark splash, then light app.
 
 - [x] **R21-30 LOW Reported. Smaller leftovers from round 20.** (Commit: `d8c1fc2`, Tests: `P3AuditFixesTest.kt:testR21_30_cartItemRestoreIndex`, `P3AuditFixesTest.kt:testR21_30_expenseDateLabelDiffAcrossYearBoundary`)
   - Cart undo (R20-45) uses `addToCart`, losing `taxable`, line position, and failing silently above stock (`CartScreen.kt` about 669-693, VM about 1316). Add `restoreCartItem(item, index)`.
@@ -174,7 +174,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 ## P4: Localisation and design still incomplete
 
-- [x] **R21-31 LOW Reported. Remaining English text.** (Fixed in `ab1364e`, verified in `P3AuditFixesTest.kt`).
+- [x] **R21-31 LOW Reported. Remaining English text.** (Fixed in `ab1364e`, verified in `strings.xml` and `values-bn/strings.xml`).
   - `SupervisorAuthDialog.kt` about 55-69; AuthViewModel messages use inline `isAppBangla()` ternaries (VM about 3954-3977).
   - `SplashScreen.kt` about 231 "POWERING YOUR DIGITAL LIFESTYLE" (reuse `lock_powering_digital_lifestyle`).
   - `RegisterCloseScreen.kt` about 1201 "Unable to close register", about 2496 "Count Notes", "(Interim)" in the CSV; `ReturnDialog.kt` about 617, 727, 845, 873.
@@ -186,7 +186,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   - Print job names and clip labels: `RegisterCloseScreen.kt` about 1228, 1299; `DuesScreen.kt` about 6824; `SettingsScreen.kt` about 281 "TEST LABEL", 856, 1089, 4733; `BillActions.kt` about 308, 532, 559, 733.
   - `ProductCodeLabelSize` names and the StockAlertWorker "Products" fallback (about 54).
 
-- [x] **R21-32 LOW Reported. Design tokens exist but are barely used.** (Fixed in `ab1364e`, verified in `P3AuditFixesTest.kt`). (R20-74/75 partial.) `ExtendedColors` and new typography are wired correctly, but only 3 files use `extendedColors`. Counts in `ui/`: `Color(0x...)` 2360 to 2302; `Color.White/Black/Gray/...` 540 unchanged; raw `sp` 1900 to 1948. Still unreadable in dark mode:
+- [x] **R21-32 LOW Reported. Design tokens exist but are barely used.** (Fixed in `ab1364e`, verified in `Color.kt` and `ExtendedColors` theme usage). (R20-74/75 partial.) `ExtendedColors` and new typography are wired correctly, but only 3 files use `extendedColors`. Counts in `ui/`: `Color(0x...)` 2360 to 2302; `Color.White/Black/Gray/...` 540 unchanged; raw `sp` 1900 to 1948. Still unreadable in dark mode:
   - `ReturnDialog.kt` about 697 (`0xFF166534` text on a tinted container).
   - `CartScreen.kt` about 1246, 1460, 1512, 1800, 2058, 2481, 2532.
   - `ProductsScreen.kt` about 3558-3574; `AddEditProductDialog.kt` about 1588.

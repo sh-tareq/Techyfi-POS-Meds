@@ -645,7 +645,7 @@ fun StoreCreditVoucherSlipDialog(
                         ) {
                             Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFDC2626), modifier = Modifier.size(16.dp))
                             Text(
-                                text = "This voucher is $statusLabel and cannot be printed, shared, or redeemed.",
+                                text = stringResource(R.string.store_credit_voucher_disabled_msg, statusLabel),
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color(0xFFB91C1C)

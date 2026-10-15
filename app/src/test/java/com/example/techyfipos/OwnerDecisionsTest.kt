@@ -1,42 +1,64 @@
 package com.example.techyfipos
 
+import com.example.techyfipos.data.AppRoles
 import com.example.techyfipos.data.InvoiceSettingsData
+import com.example.techyfipos.utils.PaymentMath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.Mockito
 
 class OwnerDecisionsTest {
 
     @Test
     fun testR20_29_singleOwnerPromotionPolicy() {
-        val existingRoleCashier = "CASHIER"
-        val targetRoleOwner = "OWNER"
+        val existingRoleCashier = AppRoles.CASHIER
+        val targetRoleOwner = AppRoles.OWNER
 
         // Policy rule: cannot promote non-owner to owner
-        val isPromotionAllowed = !(targetRoleOwner == "OWNER" && existingRoleCashier != "OWNER")
+        val isPromotionAllowed = AppRoles.canPromoteToOwner(existingRoleCashier, targetRoleOwner)
         assertFalse(isPromotionAllowed)
 
         // Existing owner keeping owner role is allowed
-        val existingRoleOwner = "OWNER"
-        val isOwnerPreserved = !(targetRoleOwner == "OWNER" && existingRoleOwner != "OWNER")
+        val existingRoleOwner = AppRoles.OWNER
+        val isOwnerPreserved = AppRoles.canPromoteToOwner(existingRoleOwner, targetRoleOwner)
         assertTrue(isOwnerPreserved)
+
+        // Manager cannot be promoted to owner
+        val existingRoleManager = AppRoles.MANAGER
+        assertFalse(AppRoles.canPromoteToOwner(existingRoleManager, targetRoleOwner))
     }
 
     @Test
     fun testR20_30_ownerPinResetAcknowledgment() {
-        var acknowledged = false
-        var resetTimestamp = 1730000000000L
+        val mockContext = Mockito.mock(android.content.Context::class.java)
+        val mockPrefs = Mockito.mock(android.content.SharedPreferences::class.java)
+        val mockEditor = Mockito.mock(android.content.SharedPreferences.Editor::class.java)
+        val mockDb = Mockito.mock(com.example.techyfipos.data.db.AppDatabase::class.java, Mockito.RETURNS_DEEP_STUBS)
+        val mockDataStore = Mockito.mock(com.example.techyfipos.data.SettingsDataStore::class.java, Mockito.RETURNS_DEEP_STUBS)
 
-        fun getUnacknowledged(): Long = if (!acknowledged) resetTimestamp else 0L
-        fun acknowledge() { acknowledged = true }
+        var acknowledged = false
+        val resetTimestamp = 1730000000000L
+
+        Mockito.`when`(mockContext.getSharedPreferences(Mockito.anyString(), Mockito.anyInt())).thenReturn(mockPrefs)
+        Mockito.`when`(mockPrefs.getLong("owner_device_pin_reset_timestamp", 0L)).thenAnswer { resetTimestamp }
+        Mockito.`when`(mockPrefs.getBoolean("owner_device_pin_reset_acknowledged", false)).thenAnswer { acknowledged }
+        Mockito.`when`(mockPrefs.getBoolean("owner_pin_changed_after_reset", false)).thenAnswer { true }
+        Mockito.`when`(mockPrefs.edit()).thenReturn(mockEditor)
+        Mockito.`when`(mockEditor.putBoolean(Mockito.eq("owner_device_pin_reset_acknowledged"), Mockito.anyBoolean())).thenAnswer {
+            acknowledged = it.getArgument(1)
+            mockEditor
+        }
+
+        val repo = com.example.techyfipos.data.DataRepository(mockContext, mockDb, mockDataStore)
 
         // Initially unacknowledged, returns timestamp
-        assertEquals(1730000000000L, getUnacknowledged())
+        assertEquals(resetTimestamp, repo.getUnacknowledgedOwnerPinResetTimestamp())
 
         // After acknowledgement, returns 0L
-        acknowledge()
-        assertEquals(0L, getUnacknowledged())
+        repo.acknowledgeOwnerPinReset()
+        assertEquals(0L, repo.getUnacknowledgedOwnerPinResetTimestamp())
     }
 
     @Test
@@ -59,9 +81,7 @@ class OwnerDecisionsTest {
         val timeoutMinutes = 0L // 0 means Never / Off
         val idleMillis = 1000L * 60 * 120 // 2 hours idle
 
-        // If timeoutMinutes <= 0, auto-lock is disabled
-        val shouldLock = if (timeoutMinutes <= 0L) false else idleMillis >= timeoutMinutes * 60_000L
-        assertFalse(shouldLock)
+        assertFalse(PaymentMath.isIdleAutoLockTriggered(idleMillis, timeoutMinutes))
     }
 
     @Test
@@ -71,11 +91,8 @@ class OwnerDecisionsTest {
         val idleMillis5Min = 5L * 60_000L
         val idleMillis6Min = 6L * 60_000L
 
-        fun checkLock(idleMs: Long): Boolean =
-            if (timeoutMinutes <= 0L) false else idleMs >= timeoutMinutes * 60_000L
-
-        assertFalse(checkLock(idleMillis4Min))
-        assertTrue(checkLock(idleMillis5Min))
-        assertTrue(checkLock(idleMillis6Min))
+        assertFalse(PaymentMath.isIdleAutoLockTriggered(idleMillis4Min, timeoutMinutes))
+        assertTrue(PaymentMath.isIdleAutoLockTriggered(idleMillis5Min, timeoutMinutes))
+        assertTrue(PaymentMath.isIdleAutoLockTriggered(idleMillis6Min, timeoutMinutes))
     }
 }

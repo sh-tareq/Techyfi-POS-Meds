@@ -1085,7 +1085,7 @@ fun RegisterCloseScreen(
                             }
                         } else {
                             coroutineScope.launch {
-                                snackbarHostState.showSnackbar(res.exceptionOrNull()?.message ?: context.getString(R.string.error_generic))
+                                snackbarHostState.showSnackbar(getLocalizedRepositoryErrorMessage(context, res.exceptionOrNull()))
                             }
                         }
                     }
@@ -1115,7 +1115,7 @@ fun RegisterCloseScreen(
                             }
                         } else {
                             coroutineScope.launch {
-                                snackbarHostState.showSnackbar(res.exceptionOrNull()?.message ?: context.getString(R.string.error_generic))
+                                snackbarHostState.showSnackbar(getLocalizedRepositoryErrorMessage(context, res.exceptionOrNull()))
                             }
                         }
                     }

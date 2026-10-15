@@ -70,7 +70,7 @@ object ExcelHelper {
     }
 
     @Suppress("DEPRECATION")
-    private fun getCellStringValue(cell: Cell?, isBarcode: Boolean = false): String {
+    internal fun getCellStringValue(cell: Cell?, isBarcode: Boolean = false): String {
         if (cell == null) return ""
         return when (cell.cellType) {
             Cell.CELL_TYPE_STRING -> {

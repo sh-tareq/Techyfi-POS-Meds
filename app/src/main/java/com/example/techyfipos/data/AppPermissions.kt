@@ -8,6 +8,9 @@ object AppRoles {
     const val OWNER = "OWNER"
     const val MANAGER = "MANAGER"
     const val CASHIER = "CASHIER"
+
+    fun canPromoteToOwner(existingRole: String, targetRole: String): Boolean =
+        !(targetRole == OWNER && existingRole != OWNER)
 }
 
 data class PermissionItem(

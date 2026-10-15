@@ -305,7 +305,7 @@ fun printPdfDocument(
                             callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
                         }
                     } catch (error: Exception) {
-                        callback?.onWriteFailed(error.localizedMessage ?: "Unable to write print document")
+                        callback?.onWriteFailed(context.getString(R.string.print_error_message, error.localizedMessage ?: ""))
                     }
                 }.start()
             }
@@ -529,7 +529,7 @@ fun shareBillPdfAndJpeg(context: Context, pdfUri: Uri, jpegUri: Uri): Boolean {
     val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
         type = "*/*"
         putParcelableArrayListExtra(Intent.EXTRA_STREAM, streams)
-        clipData = ClipData.newUri(context.contentResolver, if (isAppBangla()) "ইনভয়েস পিডিএফ" else "Invoice PDF", pdfUri).apply {
+        clipData = ClipData.newUri(context.contentResolver, context.getString(R.string.clip_invoice_pdf), pdfUri).apply {
             addItem(ClipData.Item(jpegUri))
         }
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -556,7 +556,7 @@ fun shareBillPdf(context: Context, pdfUri: Uri, targetPackage: String? = null): 
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "application/pdf"
         putExtra(Intent.EXTRA_STREAM, pdfUri)
-        clipData = ClipData.newUri(context.contentResolver, if (isAppBangla()) "ইনভয়েস পিডিএফ" else "Invoice PDF", pdfUri)
+        clipData = ClipData.newUri(context.contentResolver, context.getString(R.string.clip_invoice_pdf), pdfUri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (targetPackage != null) setPackage(targetPackage)
@@ -730,7 +730,7 @@ fun openWhatsAppChat(context: Context, phone: String): Boolean {
         } catch (_: Exception) {
             // 3. Fallback to clipboard
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            clipboard?.setPrimaryClip(ClipData.newPlainText(if (isAppBangla()) "গ্রাহকের মোবাইল নম্বর" else "Customer Phone", phone.trim()))
+            clipboard?.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_customer_phone), phone.trim()))
             Toast.makeText(context, context.getString(R.string.toast_phone_copied_whatsapp_unavailable), Toast.LENGTH_SHORT).show()
             false
         }

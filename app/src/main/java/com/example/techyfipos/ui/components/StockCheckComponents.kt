@@ -529,7 +529,7 @@ fun FinancialMarginCard(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        if (mrpPrice > 0.0) formatTaka(mrpPrice) else "—",
+                        if (mrpPrice > 0.0) formatTaka(mrpPrice) else "-",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         color = if (mrpPrice > 0.0) Color(0xFF7C3AED) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
@@ -559,7 +559,7 @@ fun FinancialMarginCard(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        if (wholesalePrice > 0.0) formatTaka(wholesalePrice) else "—",
+                        if (wholesalePrice > 0.0) formatTaka(wholesalePrice) else "-",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         color = if (wholesalePrice > 0.0) Color(0xFFD97706) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),

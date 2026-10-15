@@ -651,8 +651,16 @@ object PaymentMath {
 
     fun resetDiscountOnUnitToggle(): Double = 0.0
 
-    fun resolveStoreCreditOnPhoneChange(oldPhone: String, newPhone: String, currentCredit: Double, hasRedeemedVoucher: Boolean): Double {
-        return if (newPhone != oldPhone && !hasRedeemedVoucher) 0.0 else currentCredit
+    fun resolveStoreCreditOnPhoneChange(
+        oldPhone: String,
+        newPhone: String,
+        currentCredit: Double,
+        hasRedeemedVoucher: Boolean,
+        voucherRemainingBalance: Double? = null
+    ): Double {
+        if (newPhone == oldPhone) return currentCredit
+        if (!hasRedeemedVoucher) return 0.0
+        return if (voucherRemainingBalance != null) currentCredit.coerceAtMost(voucherRemainingBalance) else currentCredit
     }
 
     fun computeEffectiveStoreCredit(requestedCredit: Double, grandTotal: Double): Double {
@@ -668,6 +676,9 @@ object PaymentMath {
     }
 
     fun canSubmitSupplierPayment(isSaving: Boolean): Boolean = !isSaving
+
+    fun isIdleAutoLockTriggered(idleMillis: Long, timeoutMinutes: Long): Boolean =
+        if (timeoutMinutes <= 0L) false else idleMillis >= timeoutMinutes * 60_000L
 
     data class DueChargeReversalResult(
         val newOutstanding: Double,

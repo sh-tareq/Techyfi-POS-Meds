@@ -479,11 +479,13 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val clean = phone.trim()
         if (clean != oldClean) {
             val voucher = _redeemedVoucher.value
-            if (voucher == null) {
-                _storeCreditApplied.value = 0.0
-            } else {
-                _storeCreditApplied.value = minOf(_storeCreditApplied.value, voucher.remainingBalance)
-            }
+            _storeCreditApplied.value = com.example.techyfipos.utils.PaymentMath.resolveStoreCreditOnPhoneChange(
+                oldPhone = oldClean,
+                newPhone = clean,
+                currentCredit = _storeCreditApplied.value,
+                hasRedeemedVoucher = voucher != null,
+                voucherRemainingBalance = voucher?.remainingBalance
+            )
         }
         customerLookupJob?.cancel()
         if (clean.isBlank()) {
@@ -554,11 +556,13 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _customerSuggestions.value = emptyList()
         if (newClean != oldClean) {
             val voucher = _redeemedVoucher.value
-            if (voucher == null) {
-                _storeCreditApplied.value = 0.0
-            } else {
-                _storeCreditApplied.value = minOf(_storeCreditApplied.value, voucher.remainingBalance)
-            }
+            _storeCreditApplied.value = com.example.techyfipos.utils.PaymentMath.resolveStoreCreditOnPhoneChange(
+                oldPhone = oldClean,
+                newPhone = newClean,
+                currentCredit = _storeCreditApplied.value,
+                hasRedeemedVoucher = voucher != null,
+                voucherRemainingBalance = voucher?.remainingBalance
+            )
         }
         lookupLoyalty(suggestion.phone)
     }
@@ -639,6 +643,12 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                     "${it.product.barcode}:${it.quantity}:$chargedPrice"
                 }
         }
+
+        fun buildSaleTriples(items: List<CartItem>, mode: PriceMode): List<Triple<Product, Double, String?>> =
+            items.map {
+                val chargedPrice = effectivePrice(it.product, mode)
+                Triple(it.product.copy(sellingPrice = chargedPrice), it.quantity, it.note)
+            }
 
         fun computeCartHashFromTriples(items: List<Triple<Product, Double, String?>>): String {
             return items.sortedBy { it.first.barcode }
@@ -1289,7 +1299,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         viewModelScope.launch {
             grandTotal.collect { currentGrandTotal ->
                 if (_storeCreditApplied.value > currentGrandTotal) {
-                    _storeCreditApplied.value = currentGrandTotal.coerceAtLeast(0.0)
+                    _storeCreditApplied.value = com.example.techyfipos.utils.PaymentMath.computeEffectiveStoreCredit(_storeCreditApplied.value, currentGrandTotal)
                 }
             }
         }
@@ -1560,7 +1570,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
 
 
     fun toggleDiscountUnit() {
-        _discountAmount.value = 0.0
+        _discountAmount.value = com.example.techyfipos.utils.PaymentMath.resetDiscountOnUnitToggle()
         _isPercentageDiscount.value = !_isPercentageDiscount.value
     }
 
@@ -1612,10 +1622,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 throw IllegalStateException("Cannot complete sale with ৳0 total")
             }
             val mode = priceMode.value
-            val itemsToSave = _cartItems.value.map {
-                val chargedPrice = effectivePrice(it.product, mode)
-                Triple(it.product.copy(sellingPrice = chargedPrice), it.quantity, it.note)
-            }
+            val itemsToSave = buildSaleTriples(_cartItems.value, mode)
             val settings = taxSettings.value
             
             val breakdown = calculatePaymentBreakdown()
@@ -1637,7 +1644,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 0
             }
 
-            val remainingCash = (grandTotal.value - _storeCreditApplied.value).coerceAtLeast(0.0)
+            val remainingCash = com.example.techyfipos.utils.PaymentMath.computeRemainingAfterStoreCredit(grandTotal.value, _storeCreditApplied.value)
             if (!isSplitPayment.value && (methodToSave == "Cash" || paymentMethod.value == "Cash") && remainingCash > 0.0 && amountPaid.value < remainingCash) {
                 throw IllegalStateException("Amount paid (${amountPaid.value}) cannot be less than remaining cash ($remainingCash) for Cash payment")
             }
@@ -4000,9 +4007,8 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
     fun checkIdleAutoLock(timeoutMinutes: Long? = null): Boolean {
         if (_currentUser.value == null) return false
         val timeout = timeoutMinutes ?: currentIdleLockMinutes.toLong()
-        if (timeout <= 0L) return false
         val idleMillis = android.os.SystemClock.elapsedRealtime() - lastUserActivityElapsed
-        if (idleMillis >= timeout * 60_000L) {
+        if (com.example.techyfipos.utils.PaymentMath.isIdleAutoLockTriggered(idleMillis, timeout)) {
             logout()
             return true
         }
@@ -4289,34 +4295,25 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
                 is com.example.techyfipos.data.PinVerifyResult.Locked -> {
                     val s = (res.remainingMillis + 999L) / 1000L
                     _lockoutSeconds.value = s
+                    val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
                     val isBn = com.example.techyfipos.utils.isAppBangla()
                     val sStr = if (isBn) com.example.techyfipos.utils.toBanglaDigits(s.toString()) else s.toString()
-                    val msg = if (isBn) {
-                        "অতিরিক্ত ব্যর্থ প্রচেষ্টা। $sStr সেকেন্ড পরে আবার চেষ্টা করুন।"
-                    } else {
-                        "Too many failed attempts. Try again in $s seconds."
-                    }
+                    val msg = locCtx.getString(R.string.auth_locked_out_seconds, sStr)
                     onResult(false, msg)
                 }
                 is com.example.techyfipos.data.PinVerifyResult.Deactivated -> {
-                    val msg = if (com.example.techyfipos.utils.isAppBangla()) {
-                        "এই অ্যাকাউন্টটি নিষ্ক্রিয় করা হয়েছে। স্টোর মালিকের সাথে যোগাযোগ করুন।"
-                    } else {
-                        "This account is deactivated. Contact store owner."
-                    }
+                    val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                    val msg = locCtx.getString(R.string.users_account_inactive_error)
                     onResult(false, msg)
                 }
                 is com.example.techyfipos.data.PinVerifyResult.Invalid -> {
                     val lockSec = (res.remainingMillis + 999L) / 1000L
                     _lockoutSeconds.value = lockSec
-                    val isBn = com.example.techyfipos.utils.isAppBangla()
-                    val lockSecStr = if (isBn) com.example.techyfipos.utils.toBanglaDigits(lockSec.toString()) else lockSec.toString()
+                    val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
                     val message = if (lockSec > 0L) {
-                        if (isBn) {
-                            "অতিরিক্ত ব্যর্থ প্রচেষ্টা। $lockSecStr সেকেন্ড পরে আবার চেষ্টা করুন।"
-                        } else {
-                            "Too many failed attempts. Try again in $lockSec seconds."
-                        }
+                        val isBn = com.example.techyfipos.utils.isAppBangla()
+                        val lockSecStr = if (isBn) com.example.techyfipos.utils.toBanglaDigits(lockSec.toString()) else lockSec.toString()
+                        locCtx.getString(R.string.auth_locked_out_seconds, lockSecStr)
                     } else null
                     onResult(false, message)
                 }

@@ -337,8 +337,10 @@ fun ExpensesScreen(
                                         shape = RoundedCornerShape(6.dp),
                                         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
                                     ) {
+                                        val isBangla = com.example.techyfipos.utils.isAppBangla()
+                                        val countStr = if (isBangla) com.example.techyfipos.utils.toBanglaDigits(count.toString()) else count.toString()
                                         Text(
-                                            text = "$count",
+                                            text = countStr,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -514,7 +516,7 @@ fun ExpensesScreen(
                         showAddExpenseDialog = false
                         Toast.makeText(context, context.getString(R.string.expense_add_success), Toast.LENGTH_SHORT).show()
                     }.onFailure { err ->
-                        Toast.makeText(context, err.localizedMessage ?: "Failed to add expense", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, getLocalizedRepositoryErrorMessage(context, err), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -531,7 +533,7 @@ fun ExpensesScreen(
                         showAddCashInDialog = false
                         Toast.makeText(context, context.getString(R.string.expense_cash_in_success), Toast.LENGTH_SHORT).show()
                     }.onFailure { err ->
-                        Toast.makeText(context, err.localizedMessage ?: "Failed to add cash-in", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, getLocalizedRepositoryErrorMessage(context, err), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -557,7 +559,7 @@ fun ExpensesScreen(
                         Toast.makeText(context, expenseUpdatedMessage, Toast.LENGTH_SHORT).show()
                         expenseToEdit = null
                     }.onFailure { err ->
-                        Toast.makeText(context, err.localizedMessage ?: "Failed to update expense", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, getLocalizedRepositoryErrorMessage(context, err), Toast.LENGTH_LONG).show()
                     }
                 }
             }

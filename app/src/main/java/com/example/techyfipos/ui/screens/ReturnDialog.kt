@@ -1141,7 +1141,7 @@ fun ReturnItemsDialog(
                                                 horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text("⚠️ " + stringResource(R.string.store_credit_walkin_resolution_title), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.extendedColors.warning)
+                                                Text("⚠️ " + stringResource(R.string.store_credit_walkin_resolution_title), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.extendedColors.onWarningContainer)
                                                 Surface(
                                                     shape = RoundedCornerShape(6.dp),
                                                     color = MaterialTheme.colorScheme.tertiaryContainer,

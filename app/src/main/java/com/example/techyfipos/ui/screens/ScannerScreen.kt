@@ -68,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -2318,7 +2319,8 @@ private fun TabletProductGridCard(
                             color = TabletTerminalColors.Emerald,
                             shadowElevation = 2.dp
                         ) {
-                            val inCartDisp = if (inCartQuantity % 1.0 == 0.0) inCartQuantity.toLong().toString() else String.format(Locale.US, "%.2f", inCartQuantity).trimEnd('0').trimEnd('.')
+                            val rawInCartDisp = if (inCartQuantity % 1.0 == 0.0) inCartQuantity.toLong().toString() else String.format(Locale.US, "%.2f", inCartQuantity).trimEnd('0').trimEnd('.')
+                            val inCartDisp = if (com.example.techyfipos.utils.isAppBangla()) com.example.techyfipos.utils.toBanglaDigits(rawInCartDisp) else rawInCartDisp
                             Text(
                                 text = inCartDisp,
                                 color = Color.White,
@@ -2884,8 +2886,15 @@ private fun SellCheckoutBar(
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                val itemCountStr = if (itemCount % 1.0 == 0.0) itemCount.toLong().toString() else String.format(Locale.US, "%.2f", itemCount).trimEnd('0').trimEnd('.')
-                Text("$itemCountStr ${if (itemCount == 1.0) "item" else "items"}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                val countInt = kotlin.math.round(itemCount).toInt().coerceAtLeast(1)
+                val itemCountDisp = if (itemCount % 1.0 == 0.0) {
+                    pluralStringResource(R.plurals.items_count, countInt, countInt)
+                } else {
+                    val rawFrac = String.format(Locale.US, "%.2f", itemCount).trimEnd('0').trimEnd('.')
+                    val fracDisp = if (com.example.techyfipos.utils.isAppBangla()) com.example.techyfipos.utils.toBanglaDigits(rawFrac) else rawFrac
+                    if (com.example.techyfipos.utils.isAppBangla()) "${fracDisp}টি আইটেম" else "$fracDisp items"
+                }
+                Text(itemCountDisp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                 Text(formatTaka(total), fontWeight = FontWeight.Bold, fontSize = 20.sp)
             }
             Button(
@@ -2901,11 +2910,12 @@ private fun SellCheckoutBar(
                     Text(stringResource(R.string.cart_review_button), fontWeight = FontWeight.Bold)
                     if (itemCount > 0) {
                         Spacer(Modifier.width(6.dp))
-                        val badgeText = if (itemCount % 1.0 == 0.0) {
+                        val rawBadge = if (itemCount % 1.0 == 0.0) {
                             itemCount.toLong().toString()
                         } else {
                             String.format(Locale.US, "%.2f", itemCount).trimEnd('0').trimEnd('.')
                         }
+                        val badgeText = if (com.example.techyfipos.utils.isAppBangla()) com.example.techyfipos.utils.toBanglaDigits(rawBadge) else rawBadge
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
@@ -4117,7 +4127,7 @@ fun ProductAddedConfirmationBanner(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (confirmation.isSuccess) "✓ PRODUCT ADDED TO CART" else "⚠ OUT OF STOCK",
+                        text = if (confirmation.isSuccess) stringResource(R.string.scanner_banner_added_to_cart) else stringResource(R.string.scanner_banner_out_of_stock),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = if (confirmation.isSuccess) Color(0xFF10B981) else Color(0xFFEF4444),
@@ -4157,7 +4167,7 @@ fun ProductAddedConfirmationBanner(
                         }
 
                         Text(
-                            text = "• Cart Total: ${formatTaka(confirmation.grandTotal)}",
+                            text = stringResource(R.string.scanner_banner_cart_total, formatTaka(confirmation.grandTotal)),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFF94A3B8)

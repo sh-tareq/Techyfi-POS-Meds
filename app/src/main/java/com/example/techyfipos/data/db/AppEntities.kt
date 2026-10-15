@@ -341,7 +341,7 @@ data class DuePayment(
     val referenceNote: String? = null
 )
 
-// The debit side of a customer's due ledger — a charge that increased their outstanding balance.
+// The debit side of a customer's due ledger - a charge that increased their outstanding balance.
 // Pairs with DuePayment (the credit side) to give the Transaction History a full statement instead
 // of only ever showing collections. reason "Sale" links back to the sale that created the due
 // (saleId set); "Manual" is a standalone charge entered via the Add Due dialog.

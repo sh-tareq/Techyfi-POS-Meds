@@ -4594,7 +4594,7 @@ private fun CrashLogsDialog(
         title = { Text(stringResource(R.string.settings_crash_logs_title_fmt, files.size)) },
         text = {
             if (files.isEmpty()) {
-                Text(stringResource(R.string.settings_no_crashes), color = Color.Gray, fontSize = 13.sp)
+                Text(stringResource(R.string.settings_no_crashes), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
             } else {
                 Column(
                     modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
@@ -6484,7 +6484,7 @@ fun SettingsScreen(
                         Text(signingSha1, fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(stringResource(R.string.settings_local_backup_note), fontSize = 12.sp, color = Color.Gray)
+                    Text(stringResource(R.string.settings_local_backup_note), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             dismissButton = {

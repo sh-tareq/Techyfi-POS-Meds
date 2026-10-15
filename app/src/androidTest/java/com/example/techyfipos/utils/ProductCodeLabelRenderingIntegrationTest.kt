@@ -40,7 +40,7 @@ class ProductCodeLabelRenderingIntegrationTest {
     @Test
     fun minimumCustomSizeRendersBengaliWithoutFailure() {
         val bitmap = generateProductCodeLabelBitmap(
-            productName = "ইসবগুল ভুসি ৫০ গ্রাম — বিশেষ প্যাক",
+            productName = "ইসবগুল ভুসি ৫০ গ্রাম - বিশেষ প্যাক",
             barcode = "1786833564332",
             formattedPrice = "৳140",
             codeType = ProductCodeType.QR_CODE,

@@ -485,7 +485,7 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
     // 4. Item Table Header
     totalHeight += 32f + 40f // Header + single divider
 
-    // 5. Items — use a temporary Paint to measure pixel widths for Bengali text wrapping
+    // 5. Items - use a temporary Paint to measure pixel widths for Bengali text wrapping
     val tempPaint = Paint().apply {
         textSize = textSizeBody
         typeface = if (isBn) Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL) else Typeface.MONOSPACE
@@ -691,7 +691,7 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
     canvas.drawText(singleDivider, divX, currentY + 20f, paintText)
     currentY += 35f
 
-    // 5. Product Table Header — Fixed pixel X positions for each column
+    // 5. Product Table Header - Fixed pixel X positions for each column
     val colItemX = sidePad            // Item name starts here
     val colItemMaxW = if (is58) 150f else 230f // Max pixel width for item name column
     val colQtyX = if (is58) 185f else 280f     // Qty column (right-aligned)
@@ -714,7 +714,7 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
     canvas.drawText(singleDivider, divX, currentY + 20f, paintText)
     currentY += 35f
 
-    // 6. Product Table Items — pixel-based column positioning
+    // 6. Product Table Items - pixel-based column positioning
     val isMrpDisplay = bill.isSaleMode && bill.mrpSavings > 0.0 && settings.showMrpDiscountInSaleMode
 
     bill.items.forEach { item ->
@@ -730,13 +730,13 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
             // Draw item name left-aligned
             canvas.drawText(line, colItemX, currentY + 20f, paintText)
             if (index == 0) {
-                // Qty — center-aligned on colQtyX
+                // Qty - center-aligned on colQtyX
                 val qtyW = paintText.measureText(qtyStr)
                 canvas.drawText(qtyStr, colQtyX - qtyW / 2f, currentY + 20f, paintText)
-                // Price — center-aligned on colPriceX
+                // Price - center-aligned on colPriceX
                 val priceW = paintText.measureText(priceStr)
                 canvas.drawText(priceStr, colPriceX - priceW / 2f, currentY + 20f, paintText)
-                // Total — right-aligned to colTotalX
+                // Total - right-aligned to colTotalX
                 val totalW = paintText.measureText(totalStr)
                 canvas.drawText(totalStr, colTotalX - totalW, currentY + 20f, paintText)
             }

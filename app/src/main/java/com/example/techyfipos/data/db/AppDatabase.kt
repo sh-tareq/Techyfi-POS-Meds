@@ -205,8 +205,8 @@ val MIGRATION_22_23 = sqlMigration(
     "CREATE TABLE IF NOT EXISTS `due_charges` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `customerPhone` TEXT NOT NULL, `amount` REAL NOT NULL, `timestamp` INTEGER NOT NULL, `reason` TEXT NOT NULL DEFAULT 'Manual', `saleId` INTEGER, `note` TEXT, FOREIGN KEY(`customerPhone`) REFERENCES `customer_dues`(`customerPhone`) ON UPDATE NO ACTION ON DELETE CASCADE)",
     "CREATE INDEX IF NOT EXISTS `index_due_charges_customerPhone` ON `due_charges` (`customerPhone`)",
     // Backfill charge history for existing straight-Due sales so upgrading installs get a starting
-    // statement instead of an empty debit side. Split-payment Due portions aren't backfilled here —
-    // they're stored as JSON on the sale, not reliably extractable in plain SQL — but are logged for
+    // statement instead of an empty debit side. Split-payment Due portions aren't backfilled here -
+    // they're stored as JSON on the sale, not reliably extractable in plain SQL - but are logged for
     // every Due/Split sale going forward from the app code that runs this migration.
     "INSERT INTO `due_charges` (`customerPhone`, `amount`, `timestamp`, `reason`, `saleId`) " +
         "SELECT s.`customerPhone`, (s.`grandTotal` - s.`amountPaid`), s.`timestamp`, 'Sale', s.`id` " +

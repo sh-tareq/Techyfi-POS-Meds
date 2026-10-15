@@ -177,9 +177,9 @@ class DataRepository(
             storeCreditVoucherDao.updateVoucherBalance(clean, voucher.remainingBalance, "EXPIRED")
             throw IllegalArgumentException("Voucher $clean has expired")
         }
-        val actualDeduction = kotlin.math.min(amountToRedeem, voucher.remainingBalance)
+        val actualDeduction = com.example.techyfipos.utils.PaymentMath.computeVoucherDeduction(amountToRedeem, voucher.remainingBalance)
         require(actualDeduction > 0.0) { "Voucher has no remaining balance" }
-        val newBal = (voucher.remainingBalance - actualDeduction).coerceAtLeast(0.0)
+        val newBal = com.example.techyfipos.utils.PaymentMath.computePostSaleVoucherBalance(voucher.remainingBalance, actualDeduction)
         val newStatus = if (newBal <= 0.01) "EXHAUSTED" else "ACTIVE"
         storeCreditVoucherDao.updateVoucherBalance(clean, newBal, newStatus)
         actualDeduction
@@ -1224,13 +1224,13 @@ class DataRepository(
                         else it.optDouble("amount", 0.0)
                     }?.takeIf { it > 0.0 } ?: storeCreditToUse
 
-                    val voucherDeduct = voucherDeductLimit.coerceAtMost(voucher.remainingBalance)
+                    val voucherDeduct = com.example.techyfipos.utils.PaymentMath.computeVoucherDeduction(voucherDeductLimit, voucher.remainingBalance)
                     customerCreditToDeduct = (storeCreditToUse - voucherDeduct).coerceAtLeast(0.0)
 
                     if (voucherDeduct > 0.0) {
                         finalVoucherCode = cleanCode
                         finalVoucherAmount = voucherDeduct
-                        val newBalance = (voucher.remainingBalance - voucherDeduct).coerceAtLeast(0.0)
+                        val newBalance = com.example.techyfipos.utils.PaymentMath.computePostSaleVoucherBalance(voucher.remainingBalance, voucherDeduct)
                         val newStatus = if (newBalance < 0.01) "EXHAUSTED" else "ACTIVE"
                         storeCreditVoucherDao.updateVoucherBalance(voucher.code, newBalance, newStatus)
                         activeVoucherForPlainSC = voucher
@@ -4622,7 +4622,7 @@ class DataRepository(
             }
         }
 
-        if (targetRole == AppRoles.OWNER && existing.role != AppRoles.OWNER) {
+        if (!AppRoles.canPromoteToOwner(existing.role, targetRole)) {
             throw IllegalStateException("Cannot promote staff to owner; only one owner account is supported")
         }
 

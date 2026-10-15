@@ -651,6 +651,7 @@
     <string name="cart_saved_jpeg_toast">Saved JPEG &amp; Copied to clipboard</string>
     <string name="file_saved_private_fallback">Saved to app storage (not in public gallery): %1$s</string>
     <string name="clip_invoice_jpeg">Invoice JPEG</string>
+    <string name="clip_invoice_pdf">Invoice PDF</string>
     <string name="clip_voucher_slip">Voucher Slip</string>
     <string name="clip_due_reminder">Due Reminder</string>
     <string name="clip_customer_phone">Customer phone</string>
@@ -2939,7 +2940,7 @@
     <string name="supplier_no_payments">No supplier payments recorded</string>
     <string name="cart_item_removed_message">Removed %1$s from cart</string>
     <string name="cart_undo">Undo</string>
-    <string name="auth_locked_out_seconds">Terminal locked for %1$d seconds</string>
+    <string name="auth_locked_out_seconds">Terminal locked for %1$s seconds</string>
     <string name="lock_new_pin_label">New 4-digit PIN</string>
     <string name="lock_confirm_pin_label">Confirm New PIN</string>
     <string name="lock_pins_do_not_match">PINs do not match</string>
@@ -3170,6 +3171,10 @@
     <string name="audit_by_cashier_fmt"> - By: %1$s</string>
     <string name="print_unable_to_write_document">Unable to write print document</string>
     <string name="scanner_banner_cart_total">• Cart Total: %1$s</string>
+    <string name="scanner_banner_added_to_cart">✓ PRODUCT ADDED TO CART</string>
+    <string name="scanner_banner_out_of_stock">⚠ OUT OF STOCK</string>
+    <string name="share_sales_report_subject">Techyfi POS Sales Report (%1$s)</string>
+    <string name="share_sales_report_chooser">Share Sales Report</string>
 </resources>
 
 

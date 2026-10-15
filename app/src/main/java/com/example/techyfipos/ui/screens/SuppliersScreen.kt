@@ -1298,7 +1298,7 @@ fun SuppliersScreen(
             },
             confirmButton = {
                 Button(
-                    enabled = !isSaving && payMethod.isNotBlank() && isAmountValid,
+                    enabled = com.example.techyfipos.utils.PaymentMath.canSubmitSupplierPayment(isSaving) && payMethod.isNotBlank() && isAmountValid,
                     onClick = {
                         val amount = payAmountText.toDoubleOrNull() ?: 0.0
                         if (!isSaving && amount > 0 && amount <= sup.totalDue) {

@@ -651,6 +651,7 @@
     <string name="cart_saved_jpeg_toast">জেপিইজি সংরক্ষিত হয়েছে এবং ক্লিপবোর্ডে কপি হয়েছে</string>
     <string name="file_saved_private_fallback">অ্যাপ স্টোরেজে সংরক্ষিত (গ্যালারিতে নয়): %1$s</string>
     <string name="clip_invoice_jpeg">ইনভয়েস জেপিইজি</string>
+    <string name="clip_invoice_pdf">ইনভয়েস পিডিএফ</string>
     <string name="clip_voucher_slip">ভাউচার স্লিপ</string>
     <string name="clip_due_reminder">বকেয়া তাগাদা</string>
     <string name="clip_customer_phone">গ্রাহকের ফোন নম্বর</string>
@@ -2941,7 +2942,7 @@
     <string name="supplier_no_payments">কোনো পরিশোধ রেকর্ড নেই</string>
     <string name="cart_item_removed_message">কার্ট থেকে %1$s সরানো হয়েছে</string>
     <string name="cart_undo">পূর্বাবস্থায় আনুন</string>
-    <string name="auth_locked_out_seconds">টার্মিনাল %1$d সেকেন্ডের জন্য লক করা হয়েছে</string>
+    <string name="auth_locked_out_seconds">টার্মিনাল %1$s সেকেন্ডের জন্য লক করা হয়েছে</string>
     <string name="lock_new_pin_label">নতুন ৪-সংখ্যার পিন</string>
     <string name="lock_confirm_pin_label">নতুন পিন নিশ্চিত করুন</string>
     <string name="lock_pins_do_not_match">পিন দুটি মিলছে না</string>
@@ -3172,4 +3173,8 @@
     <string name="audit_by_cashier_fmt"> - দ্বারা: %1$s</string>
     <string name="print_unable_to_write_document">প্রিন্ট ডকুমেন্ট লেখা সম্ভব হয়নি</string>
     <string name="scanner_banner_cart_total">• মোট কার্ট: %1$s</string>
+    <string name="scanner_banner_added_to_cart">✓ পণ্য কার্টে যোগ করা হয়েছে</string>
+    <string name="scanner_banner_out_of_stock">⚠ স্টক শেষ</string>
+    <string name="share_sales_report_subject">টেকিফাই পিওএস বিক্রয় রিপোর্ট (%1$s)</string>
+    <string name="share_sales_report_chooser">বিক্রয় রিপোর্ট শেয়ার করুন</string>
 </resources>

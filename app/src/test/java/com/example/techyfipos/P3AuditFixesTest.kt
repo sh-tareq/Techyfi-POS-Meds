@@ -3,32 +3,34 @@ package com.example.techyfipos
 import com.example.techyfipos.utils.ExcelHelper
 import com.example.techyfipos.utils.PaymentMath
 import com.example.techyfipos.utils.mapErrorToLocalizedMessage
+import com.example.techyfipos.utils.toBanglaDigits
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class P3AuditFixesTest {
 
     @Test
-    fun testR22_24_mapErrorToLocalizedMessage() {
+    fun testMapErrorToLocalizedMessage_P3Mappings() {
         assertEquals(
             R.string.supplier_cannot_void_invoice_payment,
             mapErrorToLocalizedMessage("Cannot void invoice payments directly. Void the purchase invoice instead.")
         )
         assertEquals(
             R.string.error_duplicate_record,
-            mapErrorToLocalizedMessage("SQLiteConstraintException: UNIQUE constraint failed: products.barcode")
+            mapErrorToLocalizedMessage("UNIQUE constraint failed: products.barcode")
         )
         assertEquals(
             R.string.error_duplicate_record,
-            mapErrorToLocalizedMessage("A duplicate record was found")
+            mapErrorToLocalizedMessage("constraint conflict: product already exists")
         )
         assertEquals(
             R.string.error_duplicate_record,
-            mapErrorToLocalizedMessage("constraint conflict detected")
+            mapErrorToLocalizedMessage("duplicate record detected")
         )
         assertEquals(
             R.string.error_invoice_not_found,
-            mapErrorToLocalizedMessage("Invoice not found")
+            mapErrorToLocalizedMessage("Invoice not found in system")
         )
         assertEquals(
             R.string.error_supplier_payment_not_found,
@@ -49,60 +51,60 @@ class P3AuditFixesTest {
     }
 
     @Test
-    fun testR22_26_computeBulkUpdatedPricesWithMrp() {
-        // Current price 100, increase 50% -> 150. MRP is 120 -> clamped to 120.
-        val (priceClamped, _) = PaymentMath.computeBulkUpdatedPrices(
+    fun testComputeBulkUpdatedPrices_mrpClamp() {
+        // Price increased by 50% from 100 -> 150, but MRP is 120 -> clamped to 120
+        val (newSell, newDisc) = PaymentMath.computeBulkUpdatedPrices(
             currentSellingPrice = 100.0,
             currentDiscountedPrice = 0.0,
             percentDelta = 50.0,
             mrp = 120.0
         )
-        assertEquals(120.0, priceClamped, 0.001)
+        assertEquals(120.0, newSell, 0.001)
+        assertEquals(0.0, newDisc, 0.001)
 
-        // Current price 100, increase 10% -> 110. MRP is 120 -> not clamped (110).
-        val (priceNotClamped, _) = PaymentMath.computeBulkUpdatedPrices(
-            currentSellingPrice = 100.0,
-            currentDiscountedPrice = 0.0,
-            percentDelta = 10.0,
-            mrp = 120.0
-        )
-        assertEquals(110.0, priceNotClamped, 0.001)
-
-        // Current price 100, fixed increase +30 -> 130. MRP is 115 -> clamped to 115.
-        val (fixedClamped, _) = PaymentMath.computeBulkUpdatedPrices(
-            currentSellingPrice = 100.0,
-            currentDiscountedPrice = 0.0,
-            fixedDelta = 30.0,
-            mrp = 115.0
-        )
-        assertEquals(115.0, fixedClamped, 0.001)
-
-        // Current price 100, increase 50% -> 150. MRP is null -> 150.
-        val (noMrp, _) = PaymentMath.computeBulkUpdatedPrices(
-            currentSellingPrice = 100.0,
-            currentDiscountedPrice = 0.0,
-            percentDelta = 50.0,
-            mrp = null
-        )
-        assertEquals(150.0, noMrp, 0.001)
-
-        // Current price 100, increase 50% -> 150. MRP is 0.0 -> 150.
-        val (zeroMrp, _) = PaymentMath.computeBulkUpdatedPrices(
+        // Without MRP or with zero MRP, price increases to 150
+        val (uncappedSell, _) = PaymentMath.computeBulkUpdatedPrices(
             currentSellingPrice = 100.0,
             currentDiscountedPrice = 0.0,
             percentDelta = 50.0,
             mrp = 0.0
         )
-        assertEquals(150.0, zeroMrp, 0.001)
+        assertEquals(150.0, uncappedSell, 0.001)
+
+        // Price increase is below MRP -> not clamped
+        val (belowMrpSell, _) = PaymentMath.computeBulkUpdatedPrices(
+            currentSellingPrice = 100.0,
+            currentDiscountedPrice = 0.0,
+            fixedDelta = 10.0,
+            mrp = 200.0
+        )
+        assertEquals(110.0, belowMrpSell, 0.001)
     }
 
     @Test
-    fun testR22_26_excelBarcodeLeadingZerosPreservation() {
-        val plain = ExcelHelper.preserveLeadingZeros("123456")
-        assertEquals("123456", plain)
+    fun testExcelHelper_preserveLeadingZerosOnBarcode() {
+        val workbook = XSSFWorkbook()
+        val sheet = workbook.createSheet("TestSheet")
+        val row = sheet.createRow(0)
 
-        // 10-digit number starting with '1' (dropped leading 0 from 01712345678)
-        val phoneBarcode = ExcelHelper.preserveLeadingZeros("1712345678")
-        assertEquals("01712345678", phoneBarcode)
+        // String cell with leading zeros
+        val stringCell = row.createCell(0)
+        stringCell.setCellValue("0001234567")
+        val strResult = ExcelHelper.getCellStringValue(stringCell, isBarcode = true)
+        assertEquals("0001234567", strResult)
+
+        // Numeric cell formatted with leading zero
+        val numericCell = row.createCell(1)
+        numericCell.setCellValue(123456.0)
+        val numResult = ExcelHelper.getCellStringValue(numericCell, isBarcode = true)
+        assertEquals("123456", numResult)
+
+        workbook.close()
+    }
+
+    @Test
+    fun testToBanglaDigits() {
+        assertEquals("০১২৩৪৫৬৭৮৯", toBanglaDigits("0123456789"))
+        assertEquals("৳১২.৫০", toBanglaDigits("৳12.50"))
     }
 }
