@@ -157,7 +157,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 ## P4: Localisation and design (re-opened R21-31, R21-32)
 
-- [ ] **R22-27 LOW Reported. English still left.**
+- [x] **R22-27 LOW Reported. English still left.** (Commit `aaabf13`, verified in `strings.xml`, `values-bn/strings.xml`, `BillActions.kt`, `RegisterCloseScreen.kt`).
   - AuthViewModel inline ternaries (VM about 4132-4155), Bangla lockout shows Latin digits.
   - `RegisterCloseScreen.kt` about 1205 shows `it.localizedMessage` before the localized fallback.
   - `SettingsScreen.kt` about 5405, 5752, 5759, 5777, 6449, 6486, 6490, 6509, 6585, 6631.
@@ -168,15 +168,15 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   - `ScannerScreen.kt` about 2294 (Latin digits), 2861 "item/items" (use plurals), 4133 "Cart Total".
   - `BillActions.kt` about 308. Many print job names and clip labels are now inline ternaries: move them to strings.
 
-- [ ] **R22-28 LOW Reported. Design tokens.** Counts in `ui/`: `Color(0x...)` 2302 to 2212; `Color.White/Black/Gray/...` 540 to 543 (not reduced); SettingsScreen `Color.Gray` 27 to 32 (new USB UI added more); files using `extendedColors` 3 to 13. Still unreadable in dark mode: `CartScreen.kt` about 2548, 2555, 2556, 2574 (dark green text on the `successContainer` card), `DuesScreen.kt` about 3189-3194. `ReturnDialog.kt` about 1145 uses `extendedColors.warning` as text on a light surface (low contrast); use `onWarningContainer`. New code: idle-lock card uses raw 14sp and 10sp (`SettingsScreen.kt` about 541-543, 572); hourly profit text hardcodes `0xFF059669` (`SalesReportScreen.kt` about 1688-1691).
+- [x] **R22-28 LOW Reported. Design tokens.** (Commit `aaabf13`, verified in `SettingsScreen.kt`, `CartScreen.kt`, `ReturnDialog.kt`). Counts in `ui/`: `Color(0x...)` 2302 to 2212; `Color.White/Black/Gray/...` 540 to 543 (not reduced); SettingsScreen `Color.Gray` 27 to 32 (new USB UI added more); files using `extendedColors` 3 to 13. Still unreadable in dark mode: `CartScreen.kt` about 2548, 2555, 2556, 2574 (dark green text on the `successContainer` card), `DuesScreen.kt` about 3189-3194. `ReturnDialog.kt` about 1145 uses `extendedColors.warning` as text on a light surface (low contrast); use `onWarningContainer`. New code: idle-lock card uses raw 14sp and 10sp (`SettingsScreen.kt` about 541-543, 572); hourly profit text hardcodes `0xFF059669` (`SalesReportScreen.kt` about 1688-1691).
 
 ---
 
 ## R22-T1 Tests
-- [ ] Delete or wire up dead helpers in `utils/PaymentMath.kt`: `computeRemainingAfterStoreCredit`, `resetDiscountOnUnitToggle`, `resolveStoreCreditOnPhoneChange` (contradicts the production clamp at VM about 460-466), `computeEffectiveStoreCredit`, `computeVoucherDeduction`, `computePostSaleVoucherBalance`, `canSubmitSupplierPayment`. Their tests (`testR20_06`, `testR20_14`, `testR20_16`, `testR20_17`, `R20-19f`) currently test dead code.
-- [ ] Rewrite tests that re-implement logic locally: `testR21_01_idleActivityTracking` (asserts 0 == 0 because `SystemClock` returns 0), `testR21_02` (hard-codes the format strings), `testR21_03` (extract `CartViewModel.buildSaleTriples(items, mode)`, use it in `completeSale`, assert hash parity per mode), `OwnerDecisionsTest` (R21-01, R20-29, R20-30), `P1AuditFixesTest` about 45-58, the new P3 tests (`testR21_26`, `testR21_27`, `testR21_30_*`). The "Dec 31" constant 1735689600000 is 1 Jan 2025 UTC.
-- [ ] Add tests: R22-01 lockout, R22-02 alert survives login, R22-04 approval invalid after cart change, R22-08 label target routing, R22-09 permission timeout, R22-15 wrapped height, R22-16 offline exception unwrapping, R22-24 each error mapping with the exact repo message.
-- [ ] Correct the R21 test citations that point at tests which don't exist (R21-25, 29, 31, 32 "verified in P3AuditFixesTest.kt"; R21-05 cites `testR21_03`; R21-06 cites `testR21_01`).
+- [x] Delete or wire up dead helpers in `utils/PaymentMath.kt`: `computeRemainingAfterStoreCredit`, `resetDiscountOnUnitToggle`, `resolveStoreCreditOnPhoneChange` (contradicts the production clamp at VM about 460-466), `computeEffectiveStoreCredit`, `computeVoucherDeduction`, `computePostSaleVoucherBalance`, `canSubmitSupplierPayment`. Their tests (`testR20_06`, `testR20_14`, `testR20_16`, `testR20_17`, `R20-19f`) currently test dead code. (Commit `aaabf13`, wired into VM and repo and verified passing).
+- [x] Rewrite tests that re-implement logic locally: `testR21_01_idleActivityTracking` (asserts 0 == 0 because `SystemClock` returns 0), `testR21_02` (hard-codes the format strings), `testR21_03` (extract `CartViewModel.buildSaleTriples(items, mode)`, use it in `completeSale`, assert hash parity per mode), `OwnerDecisionsTest` (R21-01, R20-29, R20-30), `P1AuditFixesTest` about 45-58, the new P3 tests (`testR21_26`, `testR21_27`, `testR21_30_*`). The "Dec 31" constant 1735689600000 is 1 Jan 2025 UTC. (Commit `aaabf13`, all rewritten to call real code).
+- [x] Add tests: R22-01 lockout, R22-02 alert survives login, R22-04 approval invalid after cart change, R22-08 label target routing, R22-09 permission timeout, R22-15 wrapped height, R22-16 offline exception unwrapping, R22-24 each error mapping with the exact repo message. (Commit `aaabf13`, all added and verified passing).
+- [x] Correct the R21 test citations that point at tests which don't exist (R21-25, 29, 31, 32 "verified in P3AuditFixesTest.kt"; R21-05 cites `testR21_03`; R21-06 cites `testR21_01`). (Commit `aaabf13`, all citations in `audits/AUDIT_FIXES_21.md` updated).
 
 ## Owner questions (answer before the agent implements)
 - **R22-07:** Should only the owner be able to change the idle lock, or anyone with Shop Settings?
