@@ -599,6 +599,20 @@ object PaymentMath {
         val netProfit: Double
     )
 
+    fun calculateExTaxDiscount(
+        discount: Double,
+        isTaxInclusive: Boolean,
+        taxRate: Double,
+        taxableSubtotal: Double,
+        actualTaxAmount: Double
+    ): Double {
+        if (!isTaxInclusive || taxRate <= 0.0) return discount
+        val r = taxRate / 100.0
+        val taxWithoutDiscount = taxableSubtotal * r / (1.0 + r)
+        val taxShare = (taxWithoutDiscount - actualTaxAmount).coerceAtLeast(0.0)
+        return (discount - taxShare).coerceAtLeast(0.0)
+    }
+
     fun calculateInvoiceProfitSummary(
         subtotal: Double,
         grossCogs: Double,
@@ -607,14 +621,19 @@ object PaymentMath {
         loyaltyDiscount: Double,
         grandTotal: Double,
         refundAmount: Double = 0.0,
-        returnedCost: Double = 0.0
+        returnedCost: Double = 0.0,
+        isTaxInclusive: Boolean = false
     ): PureInvoiceProfitResult {
         val totalDiscounts = discount + loyaltyDiscount
         val retTaxPortion = if (grandTotal > 0.0 && taxAmount > 0.0) {
             (refundAmount / grandTotal) * taxAmount
         } else 0.0
         val effectiveRefundRevenue = (refundAmount - retTaxPortion).coerceAtLeast(0.0)
-        val netRevBeforeRefund = (subtotal - totalDiscounts).coerceAtLeast(0.0)
+        val netRevBeforeRefund = if (isTaxInclusive) {
+            (grandTotal + loyaltyDiscount - taxAmount).coerceAtLeast(0.0)
+        } else {
+            (subtotal - totalDiscounts).coerceAtLeast(0.0)
+        }
         val netRev = (netRevBeforeRefund - effectiveRefundRevenue).coerceAtLeast(0.0)
         val netCogs = (grossCogs - returnedCost).coerceAtLeast(0.0)
         val netProfit = netRev - netCogs

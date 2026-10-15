@@ -3141,4 +3141,12 @@
     <string name="direct_print_error_usb_comm">ইউএসবি যোগাযোগে ত্রুটি: %1$s</string>
     <string name="settings_usb_not_connected">কোন ইউএসবি প্রিন্টার সংযুক্ত নেই</string>
     <string name="batch_print_cancel">বাতিল</string>
+    <string name="products_import_partial_failed">%1$dটি পণ্য ইমপোর্ট হয়েছে (%2$dটি ব্যর্থ)</string>
+    <string name="customer_cannot_delete_voucher_desc">গ্রাহক \"%1$s\"-এর সক্রিয় স্টোর ক্রেডিট ভাউচার রয়েছে, তাই মোছা যাবে না। আগে ভাউচার রিডিম বা বাতিল করতে হবে।</string>
+    <string name="excel_import_err_row_blank">সারি %1$d: বারকোড এবং নাম খালি রাখা যাবে না।</string>
+    <string name="excel_import_err_purchase_price">সারি %1$d: ক্রয়মূল্য \'%2$s\' সঠিক নয়।</string>
+    <string name="excel_import_err_selling_price">সারি %1$d: বিক্রয়মূল্য \'%2$s\' সঠিক নয়। শূন্য বা তার বেশি হতে হবে।</string>
+    <string name="excel_import_err_stock_qty">সারি %1$d: স্টক পরিমাণ \'%2$s\' সঠিক নয়।</string>
+    <string name="excel_import_err_expiry_date">সারি %1$d: মেয়াদের তারিখ \'%2$s\' সঠিক নয়। দিন/মাস/বছর (dd/MM/yyyy) ফরম্যাট প্রত্যাশিত।</string>
+    <string name="excel_import_err_missing_columns">প্রয়োজনীয় কলাম পাওয়া যায়নি: %1$s</string>
 </resources>

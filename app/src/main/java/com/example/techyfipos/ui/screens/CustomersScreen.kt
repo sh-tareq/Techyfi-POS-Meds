@@ -777,8 +777,18 @@ fun CustomersScreen(
     // Add / Edit Customer Dialog
     if (showAddCustomerDialog || customerToEdit != null) {
         val editingCustomer = customerToEdit
+        var hasActiveVouchers by remember(customerToEdit?.phone) { mutableStateOf(false) }
+        LaunchedEffect(customerToEdit?.phone) {
+            val phone = customerToEdit?.phone
+            hasActiveVouchers = if (phone != null) {
+                customerViewModel.hasActiveVouchers(phone)
+            } else {
+                false
+            }
+        }
         CustomerAddEditDialog(
             customer = customerToEdit,
+            hasActiveVouchers = hasActiveVouchers,
             onDismiss = {
                 showAddCustomerDialog = false
                 customerToEdit = null
@@ -847,7 +857,16 @@ fun CustomersScreen(
                             customerToEdit = null
                         },
                         onError = { err ->
-                            Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                            val msg = when {
+                                err.contains("outstanding dues", ignoreCase = true) ->
+                                    context.getString(R.string.customer_cannot_delete_due_desc, editingCustomer.name, formatTaka(editingCustomer.totalDue))
+                                err.contains("store credit balance", ignoreCase = true) ->
+                                    context.getString(R.string.customer_cannot_delete_credit_desc, editingCustomer.name, formatTaka(editingCustomer.storeCredit))
+                                err.contains("active voucher balance", ignoreCase = true) ->
+                                    context.getString(R.string.customer_cannot_delete_voucher_desc, editingCustomer.name)
+                                else -> err
+                            }
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                         }
                     )
                 }
@@ -1458,7 +1477,8 @@ fun CustomerAddEditDialog(
     customer: Customer?,
     onDismiss: () -> Unit,
     onSave: (phone: String, name: String, email: String?, address: String?, notes: String?, tag: String, creditLimit: Double) -> Unit,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    hasActiveVouchers: Boolean = false
 ) {
     var phone by remember { mutableStateOf(customer?.phone ?: "") }
     var name by remember { mutableStateOf(customer?.name ?: "") }
@@ -1470,6 +1490,7 @@ fun CustomerAddEditDialog(
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showDueBlockedDialog by remember { mutableStateOf(false) }
     var showCreditBlockedDialog by remember { mutableStateOf(false) }
+    var showVoucherBlockedDialog by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1568,6 +1589,8 @@ fun CustomerAddEditDialog(
                                 showDueBlockedDialog = true
                             } else if (customer.storeCredit > 0.001) {
                                 showCreditBlockedDialog = true
+                            } else if (hasActiveVouchers) {
+                                showVoucherBlockedDialog = true
                             } else {
                                 showDeleteConfirmDialog = true
                             }
@@ -1606,6 +1629,20 @@ fun CustomerAddEditDialog(
             text = { Text(stringResource(R.string.customer_cannot_delete_credit_desc, customer.name, formatTaka(customer.storeCredit))) },
             confirmButton = {
                 Button(onClick = { showCreditBlockedDialog = false }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        )
+    }
+
+    if (showVoucherBlockedDialog && customer != null) {
+        AlertDialog(
+            onDismissRequest = { showVoucherBlockedDialog = false },
+            properties = DialogProperties(dismissOnClickOutside = false),
+            title = { Text(stringResource(R.string.customer_cannot_delete_title), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.customer_cannot_delete_voucher_desc, customer.name)) },
+            confirmButton = {
+                Button(onClick = { showVoucherBlockedDialog = false }) {
                     Text(stringResource(R.string.ok))
                 }
             }

@@ -1709,6 +1709,12 @@ class DataRepository(
         }
     }
 
+    suspend fun hasActiveVouchers(phone: String): Boolean = withContext(Dispatchers.IO) {
+        val normalized = normalizePhone(phone)
+        val customerVouchers = storeCreditVoucherDao.getVouchersByPhone(normalized)
+        customerVouchers.any { it.status == "ACTIVE" && it.remainingBalance > 0.001 }
+    }
+
     suspend fun mergeCustomers(masterPhone: String, secondaryPhone: String): Boolean = withContext(Dispatchers.IO) {
         requirePermission(AppPermissions.CUSTOMERS_EDIT)
         val masterNorm = normalizePhone(masterPhone)
@@ -4031,8 +4037,14 @@ class DataRepository(
             for (p in products) {
                 val normBarcode = com.example.techyfipos.utils.toEnglishDigits(p.barcode.trim()).lowercase()
                 var existing = productDao.getProductByBarcode(normBarcode)
-                if (existing == null && normBarcode.length == 12 && normBarcode.all { it.isDigit() }) {
-                    existing = productDao.getProductByBarcode("0$normBarcode")
+                if (existing == null && normBarcode.all { it.isDigit() }) {
+                    val p1 = productDao.getProductByBarcode("0$normBarcode")
+                    val p2 = productDao.getProductByBarcode("00$normBarcode")
+                    if (p1 != null && p2 == null) {
+                        existing = p1
+                    } else if (p1 == null && p2 != null) {
+                        existing = p2
+                    }
                 }
                 if (existing != null) {
                     val updatedStock = if ("stockQty" in presentFields && p.stockQty >= 0.0) p.stockQty else existing.stockQty
@@ -4055,19 +4067,19 @@ class DataRepository(
                         p.copy(
                             barcode = existing.barcode,
                             createdAt = existing.createdAt,
-                            category = if ("category" in presentFields) p.category else existing.category,
+                            category = if ("category" in presentFields && p.category.isNotBlank()) p.category else existing.category,
                             purchasePrice = updatedPurchasePrice,
-                            sellingPrice = if ("sellingPrice" in presentFields) p.sellingPrice else existing.sellingPrice,
+                            sellingPrice = if ("sellingPrice" in presentFields && p.sellingPrice >= 0.0) p.sellingPrice else existing.sellingPrice,
                             stockQty = updatedStock,
-                            reorderLevel = if ("reorderLevel" in presentFields) p.reorderLevel else existing.reorderLevel,
-                            imageUri = if ("imageUri" in presentFields) p.imageUri else existing.imageUri,
+                            reorderLevel = if ("reorderLevel" in presentFields && p.reorderLevel >= 0) p.reorderLevel else existing.reorderLevel,
+                            imageUri = if ("imageUri" in presentFields && !p.imageUri.isNullOrBlank()) p.imageUri else existing.imageUri,
                             mfgOrPkgType = if ("mfgOrPkgType" in presentFields) p.mfgOrPkgType else existing.mfgOrPkgType,
-                            mfgOrPkgDate = if ("mfgOrPkgDate" in presentFields) p.mfgOrPkgDate else existing.mfgOrPkgDate,
-                            expiryDate = if ("expiryDate" in presentFields) p.expiryDate else existing.expiryDate,
-                            unit = if ("unit" in presentFields) p.unit else existing.unit,
-                            wholesalePrice = if ("wholesalePrice" in presentFields) p.wholesalePrice else existing.wholesalePrice,
-                            mrpPrice = if ("mrpPrice" in presentFields) p.mrpPrice else existing.mrpPrice,
-                            discountedPrice = if ("discountedPrice" in presentFields) p.discountedPrice else existing.discountedPrice
+                            mfgOrPkgDate = if ("mfgOrPkgDate" in presentFields && !p.mfgOrPkgDate.isNullOrBlank()) p.mfgOrPkgDate else existing.mfgOrPkgDate,
+                            expiryDate = if ("expiryDate" in presentFields && !p.expiryDate.isNullOrBlank()) p.expiryDate else existing.expiryDate,
+                            unit = if ("unit" in presentFields && p.unit.isNotBlank()) p.unit else existing.unit,
+                            wholesalePrice = if ("wholesalePrice" in presentFields && p.wholesalePrice >= 0.0) p.wholesalePrice else existing.wholesalePrice,
+                            mrpPrice = if ("mrpPrice" in presentFields && p.mrpPrice >= 0.0) p.mrpPrice else existing.mrpPrice,
+                            discountedPrice = if ("discountedPrice" in presentFields && p.discountedPrice >= 0.0) p.discountedPrice else existing.discountedPrice
                         )
                     )
                 } else {
@@ -4075,8 +4087,13 @@ class DataRepository(
                     val finalPurchase = p.purchasePrice.coerceAtLeast(0.0)
                     val newProduct = p.copy(
                         barcode = normBarcode,
+                        category = p.category.ifBlank { "General" },
                         stockQty = finalStock,
-                        purchasePrice = finalPurchase
+                        purchasePrice = finalPurchase,
+                        reorderLevel = p.reorderLevel.coerceAtLeast(0),
+                        wholesalePrice = p.wholesalePrice.coerceAtLeast(0.0),
+                        mrpPrice = p.mrpPrice.coerceAtLeast(0.0),
+                        discountedPrice = p.discountedPrice.coerceAtLeast(0.0)
                     )
                     productDao.insertProduct(newProduct)
                     if (finalStock > 0.0001) {
@@ -5411,6 +5428,21 @@ class DataRepository(
     fun getSupplierPayments(supplierId: Long): Flow<List<SupplierPayment>> =
         supplierDao.getPaymentsForSupplier(supplierId)
 
+    internal suspend fun recalculateSupplierBalancesFromLedger(supplierId: Long, timestamp: Long = System.currentTimeMillis()) {
+        val invoices = purchaseInvoiceDao.getInvoicesForSupplierOnce(supplierId)
+        val payments = supplierDao.getPaymentsForSupplierOnce(supplierId)
+        val totalPurchases = invoices.sumOf { it.totalAmount }
+        val totalInvoiceDue = invoices.sumOf { (it.totalAmount - it.paidAmount).coerceAtLeast(0.0) }
+        val standalonePayments = payments.filter { it.referenceNote?.startsWith("Paid on Invoice #") != true }.sumOf { it.amountPaid }
+        val totalDue = (totalInvoiceDue - standalonePayments).coerceAtLeast(0.0)
+        supplierDao.setSupplierBalances(
+            supplierId = supplierId,
+            totalPurchased = totalPurchases,
+            totalDue = totalDue,
+            timestamp = timestamp
+        )
+    }
+
     suspend fun voidSupplierPayment(paymentId: Long, reason: String = "Voided by Owner") = withContext(Dispatchers.IO) {
         requireOwnerSession()
         database.withDriverTransaction {
@@ -5418,15 +5450,6 @@ class DataRepository(
                 ?: throw IllegalArgumentException("Supplier payment not found")
             if (payment.referenceNote?.startsWith("Paid on Invoice #") == true) {
                 throw IllegalStateException("Cannot void invoice payments directly. Void the purchase invoice instead.")
-            }
-            val supplier = supplierDao.getSupplierById(payment.supplierId)
-            if (supplier != null) {
-                supplierDao.updateSupplierBalances(
-                    supplierId = payment.supplierId,
-                    purchaseAmount = 0.0,
-                    dueChange = payment.amountPaid,
-                    timestamp = System.currentTimeMillis()
-                )
             }
             supplierDao.deleteSupplierPaymentById(paymentId)
             val linkedExpense = expenseDao.getSupplierExpenseByTimestamp(payment.timestamp)
@@ -5447,6 +5470,7 @@ class DataRepository(
                 )
                 expenseDao.deleteExpenseById(linkedExpense.id)
             }
+            recalculateSupplierBalancesFromLedger(payment.supplierId)
         }
     }
 
@@ -5476,15 +5500,6 @@ class DataRepository(
                     )
                 }
             }
-            val supplier = supplierDao.getSupplierById(invoice.supplierId)
-            val currentSupplierDue = supplier?.totalDue ?: 0.0
-            val dueReduction = com.example.techyfipos.utils.PaymentMath.computeSupplierInvoiceVoidDueReduction(invoice.dueAmount, currentSupplierDue)
-            supplierDao.updateSupplierBalances(
-                supplierId = invoice.supplierId,
-                purchaseAmount = -invoice.totalAmount,
-                dueChange = -dueReduction,
-                timestamp = System.currentTimeMillis()
-            )
             purchaseInvoiceDao.deleteItemsForInvoice(invoiceId)
             purchaseInvoiceDao.deletePurchaseInvoice(invoice)
 
@@ -5518,6 +5533,7 @@ class DataRepository(
                     }
                 }
             }
+            recalculateSupplierBalancesFromLedger(invoice.supplierId)
         }
     }
 

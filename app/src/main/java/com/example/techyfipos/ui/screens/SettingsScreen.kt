@@ -4942,6 +4942,7 @@ fun SettingsScreen(
     val signingSha1 = remember(context) { SigningCertificateHelper.sha1Fingerprint(context) }
     val canBackup = isOwner || activePermissions.contains(com.example.techyfipos.data.AppPermissions.SYSTEM_BACKUP_RESTORE)
     val canEditSettings = isOwner || activePermissions.contains(com.example.techyfipos.data.AppPermissions.SYSTEM_SHOP_SETTINGS)
+    val canExportSalesExcel = isOwner || activePermissions.contains(com.example.techyfipos.data.AppPermissions.REPORTS_EXPORT_EXCEL)
 
     val currentLang by settingsViewModel.language.collectAsStateWithLifecycle()
     val currentThemeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
@@ -5756,8 +5757,12 @@ fun SettingsScreen(
                         importProductsLauncher.launch(arrayOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     },
                     onExportSales = {
-                        val dateStr = DateFormatters.formatISO()
-                        exportSalesLauncher.launch("sales-report-$dateStr.xlsx")
+                        if (canExportSalesExcel) {
+                            val dateStr = DateFormatters.formatISO()
+                            exportSalesLauncher.launch("sales-report-$dateStr.xlsx")
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
+                        }
                     },
                     onExportDues = {
                         val dateStr = DateFormatters.formatISO()

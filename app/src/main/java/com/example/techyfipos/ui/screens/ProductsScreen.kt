@@ -3,6 +3,7 @@
 package com.example.techyfipos.ui.screens
 
 import com.example.techyfipos.ui.dialogs.*
+import android.content.Context
 import android.graphics.Bitmap
 import android.widget.Toast
 import android.net.Uri
@@ -351,7 +352,7 @@ fun ProductsScreen(
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
                         val result = productsViewModel.importProductsFromExcel(inputStream)
                         val msg = if (result.failCount > 0) {
-                            "${context.getString(R.string.products_import_success, result.importedProducts.size)} (${result.failCount} failed)"
+                            context.getString(R.string.products_import_partial_failed, result.importedProducts.size, result.failCount)
                         } else {
                             context.getString(R.string.products_import_success, result.importedProducts.size)
                         }
@@ -2883,7 +2884,7 @@ fun ProductsScreen(
                     )
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     result.failures.take(50).forEach { failure ->
-                        Text(failure, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                        Text(localizeImportError(context, failure), fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                     }
                 }
             },
@@ -5244,6 +5245,39 @@ private fun ProductGridCard(
             }
         }
     }
+}
+
+private fun localizeImportError(context: Context, failure: String): String {
+    val missingMatch = Regex("""Missing required columns: (.*)""").matchEntire(failure)
+    if (missingMatch != null) {
+        return context.getString(R.string.excel_import_err_missing_columns, missingMatch.groupValues[1])
+    }
+    val blankMatch = Regex("""Row (\d+): Barcode and Name cannot be blank\.""").matchEntire(failure)
+    if (blankMatch != null) {
+        val row = blankMatch.groupValues[1].toIntOrNull() ?: 1
+        return context.getString(R.string.excel_import_err_row_blank, row)
+    }
+    val pPriceMatch = Regex("""Row (\d+): Invalid purchase price '(.*)'\.""").matchEntire(failure)
+    if (pPriceMatch != null) {
+        val row = pPriceMatch.groupValues[1].toIntOrNull() ?: 1
+        return context.getString(R.string.excel_import_err_purchase_price, row, pPriceMatch.groupValues[2])
+    }
+    val sPriceMatch = Regex("""Row (\d+): Invalid selling price '(.*)'\. Must be zero or greater\.""").matchEntire(failure)
+    if (sPriceMatch != null) {
+        val row = sPriceMatch.groupValues[1].toIntOrNull() ?: 1
+        return context.getString(R.string.excel_import_err_selling_price, row, sPriceMatch.groupValues[2])
+    }
+    val stockMatch = Regex("""Row (\d+): Invalid stock quantity '(.*)'\.""").matchEntire(failure)
+    if (stockMatch != null) {
+        val row = stockMatch.groupValues[1].toIntOrNull() ?: 1
+        return context.getString(R.string.excel_import_err_stock_qty, row, stockMatch.groupValues[2])
+    }
+    val expiryMatch = Regex("""Row (\d+): Invalid expiry date '(.*)'\. Expected dd/MM/yyyy\.""").matchEntire(failure)
+    if (expiryMatch != null) {
+        val row = expiryMatch.groupValues[1].toIntOrNull() ?: 1
+        return context.getString(R.string.excel_import_err_expiry_date, row, expiryMatch.groupValues[2])
+    }
+    return failure
 }
 
 

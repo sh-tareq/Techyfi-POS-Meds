@@ -3139,6 +3139,14 @@
     <string name="direct_print_error_usb_comm">USB communication error: %1$s</string>
     <string name="settings_usb_not_connected">No USB printer connected</string>
     <string name="batch_print_cancel">Cancel</string>
+    <string name="products_import_partial_failed">%1$d products imported (%2$d failed)</string>
+    <string name="customer_cannot_delete_voucher_desc">Cannot delete customer \"%1$s\" because they have an active store credit voucher. Vouchers must be redeemed or cancelled first.</string>
+    <string name="excel_import_err_row_blank">Row %1$d: Barcode and Name cannot be blank.</string>
+    <string name="excel_import_err_purchase_price">Row %1$d: Invalid purchase price \'%2$s\'.</string>
+    <string name="excel_import_err_selling_price">Row %1$d: Invalid selling price \'%2$s\'. Must be zero or greater.</string>
+    <string name="excel_import_err_stock_qty">Row %1$d: Invalid stock quantity \'%2$s\'.</string>
+    <string name="excel_import_err_expiry_date">Row %1$d: Invalid expiry date \'%2$s\'. Expected dd/MM/yyyy.</string>
+    <string name="excel_import_err_missing_columns">Missing required columns: %1$s</string>
 </resources>
 
 

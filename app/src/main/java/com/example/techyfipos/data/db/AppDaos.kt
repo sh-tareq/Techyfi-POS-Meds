@@ -453,6 +453,9 @@ interface ExpenseDao {
  
      @Query("UPDATE suppliers SET totalPurchased = totalPurchased + :purchaseAmount, totalDue = totalDue + :dueChange, updatedAt = :timestamp WHERE id = :supplierId")
      suspend fun updateSupplierBalances(supplierId: Long, purchaseAmount: Double, dueChange: Double, timestamp: Long): Int
+
+     @Query("UPDATE suppliers SET totalPurchased = :totalPurchased, totalDue = :totalDue, updatedAt = :timestamp WHERE id = :supplierId")
+     suspend fun setSupplierBalances(supplierId: Long, totalPurchased: Double, totalDue: Double, timestamp: Long): Int
  
      @Query("UPDATE suppliers SET totalDue = MAX(0.0, totalDue - :amountPaid), updatedAt = :timestamp WHERE id = :supplierId AND :amountPaid > 0.0")
      suspend fun recordSupplierPayment(supplierId: Long, amountPaid: Double, timestamp: Long): Int
@@ -495,6 +498,9 @@ interface ExpenseDao {
 
     @Query("SELECT * FROM purchase_invoices WHERE supplierId = :supplierId ORDER BY timestamp DESC")
     fun getInvoicesForSupplier(supplierId: Long): Flow<List<PurchaseInvoice>>
+
+    @Query("SELECT * FROM purchase_invoices WHERE supplierId = :supplierId ORDER BY timestamp DESC")
+    suspend fun getInvoicesForSupplierOnce(supplierId: Long): List<PurchaseInvoice>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPurchaseInvoice(invoice: PurchaseInvoice): Long

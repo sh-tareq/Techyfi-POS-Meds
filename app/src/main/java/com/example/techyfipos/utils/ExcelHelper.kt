@@ -359,7 +359,8 @@ object ExcelHelper {
                         continue
                     }
 
-                    val category = colMap["category"]?.let { getCellStringValue(row.getCell(it)) } ?: "General"
+                    val categoryStr = colMap["category"]?.let { getCellStringValue(row.getCell(it)).trim() }.orEmpty()
+                    val category = categoryStr
                     
                     val pPriceStr = colMap["purchasePrice"]?.let { getCellStringValue(row.getCell(it)) }.orEmpty()
                     val parsedPPrice = if (pPriceStr.isBlank()) null else parseDouble(pPriceStr)
@@ -387,13 +388,16 @@ object ExcelHelper {
                     }
                     val stockQty = if (stockStr.isBlank()) -1.0 else (parsedStock ?: 0.0).coerceAtLeast(0.0)
 
-                    val reorderStr = colMap["reorderLevel"]?.let { getCellStringValue(row.getCell(it)) } ?: "0"
-                    val reorderLevel = (parseInt(reorderStr) ?: 0).coerceAtLeast(0)
+                    val reorderStr = colMap["reorderLevel"]?.let { getCellStringValue(row.getCell(it)).trim() }.orEmpty()
+                    val reorderLevel = if (reorderStr.isBlank()) -1 else (parseInt(reorderStr) ?: 0).coerceAtLeast(0)
 
                     fun optionalText(field: String): String? = colMap[field]
-                        ?.let { getCellStringValue(row.getCell(it)).takeIf(String::isNotBlank) }
-                    fun optionalDouble(field: String): Double = colMap[field]
-                        ?.let { parseDouble(getCellStringValue(row.getCell(it))) }?.coerceAtLeast(0.0) ?: 0.0
+                        ?.let { getCellStringValue(row.getCell(it)).trim().takeIf(String::isNotBlank) }
+                    fun optionalDouble(field: String): Double {
+                        val s = colMap[field]?.let { getCellStringValue(row.getCell(it)).trim() }.orEmpty()
+                        if (s.isBlank()) return -1.0
+                        return parseDouble(s)?.coerceAtLeast(0.0) ?: 0.0
+                    }
 
                     val expiryVal = optionalText("expiryDate")
                     if (expiryVal != null && parseExpiryDateToMillis(toEnglishDigits(expiryVal)) == null) {
@@ -441,7 +445,8 @@ object ExcelHelper {
         purchasePrices: Map<String, Double>,
         returns: List<Return>,
         returnItems: List<ReturnItem>,
-        outputStream: OutputStream
+        outputStream: OutputStream,
+        canViewPnl: Boolean = true
     ) {
         val workbook = SXSSFWorkbook(100)
         try {
@@ -467,11 +472,19 @@ object ExcelHelper {
                 setFillPattern(FillPatternType.SOLID_FOREGROUND)
             }
 
-            val headers = arrayOf(
-                "Date", "Invoice ID", "Items Detail", "Payment Method",
-                "Subtotal", "Discount", "Grand Total", "Returns", "Net Total", "Amount Paid",
-                "Due Amount", "Profit", "Customer"
-            )
+            val headers = if (canViewPnl) {
+                arrayOf(
+                    "Date", "Invoice ID", "Items Detail", "Payment Method",
+                    "Subtotal", "Discount", "Grand Total", "Returns", "Net Total", "Amount Paid",
+                    "Due Amount", "Profit", "Customer"
+                )
+            } else {
+                arrayOf(
+                    "Date", "Invoice ID", "Items Detail", "Payment Method",
+                    "Subtotal", "Discount", "Grand Total", "Returns", "Net Total", "Amount Paid",
+                    "Due Amount", "Customer"
+                )
+            }
             val headerRow = sheet.createRow(0)
             for (i in headers.indices) {
                 val cell = headerRow.createCell(i)
@@ -560,13 +573,21 @@ object ExcelHelper {
                     }
                     val due = (originalDue - saleReturns.sumOf { it.dueAdjustmentAmount }).coerceAtLeast(0.0)
                     row.createCell(10).setCellValue(due)
-                    row.createCell(11).setCellValue(profit)
-                    
+                    val custColIdx: Int
+                    if (canViewPnl) {
+                        row.createCell(11).setCellValue(profit)
+                        custColIdx = 12
+                    } else {
+                        custColIdx = 11
+                    }
+
                     val custInfo = if (swi.sale.customerName != null) "${swi.sale.customerName} (${swi.sale.customerPhone ?: ""})" else ""
-                    row.createCell(12).setCellValue(custInfo)
+                    row.createCell(custColIdx).setCellValue(custInfo)
 
                     totalSalesSum += netTotal
-                    totalProfitSum += profit
+                    if (canViewPnl) {
+                        totalProfitSum += profit
+                    }
                 }
             }
 
@@ -580,7 +601,9 @@ object ExcelHelper {
             }
             summaryRow.getCell(0).setCellValue("TOTAL SUMMARY")
             summaryRow.getCell(8).setCellValue(totalSalesSum)
-            summaryRow.getCell(11).setCellValue(totalProfitSum)
+            if (canViewPnl) {
+                summaryRow.getCell(11).setCellValue(totalProfitSum)
+            }
 
             workbook.write(outputStream)
         } finally {
@@ -1380,7 +1403,8 @@ object ExcelHelper {
     fun exportSalesReport(
         report: com.example.techyfipos.ui.viewmodel.SalesReportData,
         dateRangeLabel: String,
-        outputStream: OutputStream
+        outputStream: OutputStream,
+        canViewPnl: Boolean = true
     ) {
         val workbook = SXSSFWorkbook(100)
         try {
@@ -1414,17 +1438,20 @@ object ExcelHelper {
         dateRow.createCell(0).setCellValue("Report Period: $dateRangeLabel")
         dateRow.getCell(0).cellStyle = boldStyle
 
-        val kpiItems = listOf(
-            "Gross Revenue (৳)" to report.totalRevenue,
-            "Gross Profit (৳)" to report.totalProfit,
-            "Total Expenses (৳)" to report.totalExpenses,
-            "Net Profit (৳)" to report.netProfit,
-            "Completed Transactions" to report.transactionCount.toDouble(),
-            "Total Units Sold" to report.itemsSold,
-            "Total Discounts Given (৳)" to report.totalDiscount,
-            "Total Tax / VAT Collected (৳)" to report.totalTax,
-            "Total Refunds Issued (৳)" to report.totalRefunds
-        )
+        val kpiItems = mutableListOf<Pair<String, Double>>()
+        kpiItems.add("Gross Revenue (৳)" to report.totalRevenue)
+        if (canViewPnl) {
+            kpiItems.add("Gross Profit (৳)" to report.totalProfit)
+        }
+        kpiItems.add("Total Expenses (৳)" to report.totalExpenses)
+        if (canViewPnl) {
+            kpiItems.add("Net Profit (৳)" to report.netProfit)
+        }
+        kpiItems.add("Completed Transactions" to report.transactionCount.toDouble())
+        kpiItems.add("Total Units Sold" to report.itemsSold)
+        kpiItems.add("Total Discounts Given (৳)" to report.totalDiscount)
+        kpiItems.add("Total Tax / VAT Collected (৳)" to report.totalTax)
+        kpiItems.add("Total Refunds Issued (৳)" to report.totalRefunds)
 
         val kpiHeaderRow = summarySheet.createRow(3)
         kpiHeaderRow.createCell(0).apply { setCellValue("Financial Metric"); cellStyle = headerStyle }
@@ -1483,7 +1510,11 @@ object ExcelHelper {
         // Sheet 4: Daily Breakdown
         if (report.dailyBreakdown.isNotEmpty()) {
             val dailySheet = workbook.createSheet("Daily Breakdown")
-            val dailyHeaders = arrayOf("Date", "Revenue (৳)", "Profit (৳)", "Transactions")
+            val dailyHeaders = if (canViewPnl) {
+                arrayOf("Date", "Revenue (৳)", "Profit (৳)", "Transactions")
+            } else {
+                arrayOf("Date", "Revenue (৳)", "Transactions")
+            }
             val dailyHeaderRow = dailySheet.createRow(0)
             for (i in dailyHeaders.indices) {
                 val cell = dailyHeaderRow.createCell(i)
@@ -1497,8 +1528,12 @@ object ExcelHelper {
                 val r = dailySheet.createRow(dRowIdx++)
                 r.createCell(0).setCellValue(dFormat.format(Date(d.timestamp)))
                 r.createCell(1).setCellValue(d.revenue)
-                r.createCell(2).setCellValue(d.profit)
-                r.createCell(3).setCellValue(d.transactionCount.toDouble())
+                if (canViewPnl) {
+                    r.createCell(2).setCellValue(d.profit)
+                    r.createCell(3).setCellValue(d.transactionCount.toDouble())
+                } else {
+                    r.createCell(2).setCellValue(d.transactionCount.toDouble())
+                }
             }
         }
 

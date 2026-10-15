@@ -542,8 +542,13 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _isAutoFilledName.value = true
         _resolvedCustomer.value = suggestion
         _customerSuggestions.value = emptyList()
-        if (newClean != oldClean && _redeemedVoucher.value == null) {
-            _storeCreditApplied.value = 0.0
+        if (newClean != oldClean) {
+            val voucher = _redeemedVoucher.value
+            if (voucher == null) {
+                _storeCreditApplied.value = 0.0
+            } else {
+                _storeCreditApplied.value = minOf(_storeCreditApplied.value, voucher.remainingBalance)
+            }
         }
         lookupLoyalty(suggestion.phone)
     }
@@ -554,8 +559,11 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         _isAutoFilledName.value = false
         _resolvedCustomer.value = null
         _customerSuggestions.value = emptyList()
-        if (_redeemedVoucher.value == null) {
+        val voucher = _redeemedVoucher.value
+        if (voucher == null) {
             _storeCreditApplied.value = 0.0
+        } else {
+            _storeCreditApplied.value = minOf(_storeCreditApplied.value, voucher.remainingBalance)
         }
         lookupLoyalty("")
     }
@@ -2216,7 +2224,11 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         } else {
             sale.subtotal
         }
-        val netRevBeforeRefund = (grossRevenue - totalDiscounts).coerceAtLeast(0.0)
+        val netRevBeforeRefund = if (sale.isTaxInclusive) {
+            (sale.grandTotal + loyaltyDiscount - sale.taxAmount).coerceAtLeast(0.0)
+        } else {
+            (grossRevenue - totalDiscounts).coerceAtLeast(0.0)
+        }
 
         val maxProfit = itemsProfitList.maxOfOrNull { it.lineProfit } ?: 0.0
         val taggedItems = itemsProfitList.map {
@@ -2241,7 +2253,8 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             loyaltyDiscount = loyaltyDiscount,
             grandTotal = sale.grandTotal,
             refundAmount = refundAmount,
-            returnedCost = returnCogsReversal
+            returnedCost = returnCogsReversal,
+            isTaxInclusive = sale.isTaxInclusive
         )
         val netRev = pureProfit.netRevenue
         val netCogs = pureProfit.netCogs
@@ -2620,6 +2633,19 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         val grossMargin = profitSum - refundedProfit
         val grossSalesVal = totalRevenue
         val netSalesVal = (totalRevenue - totalRefunds).coerceAtLeast(0.0)
+        val totalExTaxDiscount = list.sumOf { swi ->
+            val sale = swi.sale
+            val d = calculateDiscountValue(sale.subtotal, sale.discountAmount, sale.isPercentageDiscount)
+            if (sale.isTaxInclusive && sale.taxRate > 0.0) {
+                val r = sale.taxRate / 100.0
+                val taxableSum = swi.items.filter { it.taxable }.sumOf { it.price * it.quantity }
+                val taxWithoutDiscount = taxableSum * r / (1.0 + r)
+                val taxShare = (taxWithoutDiscount - sale.taxAmount).coerceAtLeast(0.0)
+                (d - taxShare).coerceAtLeast(0.0)
+            } else {
+                d
+            }
+        }
         SalesReportData(
             transactionCount = list.size,
             totalRevenue = netSalesVal,
@@ -2628,7 +2654,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             grossProfit = grossMargin,
             totalExpenses = totalExpenses,
             totalLoyaltyDiscount = totalLoyaltyDiscount,
-            netProfit = grossMargin - totalDiscount - totalLoyaltyDiscount - totalExpenses,
+            netProfit = grossMargin - totalExTaxDiscount - totalLoyaltyDiscount - totalExpenses,
             totalRefunds = totalRefunds,
             itemsSold = (itemsSold - totalReturnedQty).coerceAtLeast(0.0),
             topProducts = productTotals.values.filter { it.quantity > 0.0 || it.revenue > 0.0 }.sortedByDescending { it.revenue },
@@ -2703,8 +2729,9 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
     ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         try {
             repository.requirePermission(com.example.techyfipos.data.AppPermissions.REPORTS_EXPORT_EXCEL)
+            val canViewPnl = repository.hasPermission(com.example.techyfipos.data.AppPermissions.REPORTS_VIEW_PNL)
             val buffer = java.io.ByteArrayOutputStream()
-            com.example.techyfipos.utils.ExcelHelper.exportSalesReport(report, dateRangeLabel, buffer)
+            com.example.techyfipos.utils.ExcelHelper.exportSalesReport(report, dateRangeLabel, buffer, canViewPnl = canViewPnl)
             outputStream.write(buffer.toByteArray())
             outputStream.flush()
             true
@@ -3624,8 +3651,10 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
         val returnItems = repository.allReturnItems.first()
         val purchasePrices = products.associate { it.barcode to it.purchasePrice }
         return@withContext try {
+            repository.requirePermission(com.example.techyfipos.data.AppPermissions.REPORTS_EXPORT_EXCEL)
+            val canViewPnl = repository.hasPermission(com.example.techyfipos.data.AppPermissions.REPORTS_VIEW_PNL)
             val buffer = java.io.ByteArrayOutputStream()
-            com.example.techyfipos.utils.ExcelHelper.exportSales(sales, purchasePrices, returns, returnItems, buffer)
+            com.example.techyfipos.utils.ExcelHelper.exportSales(sales, purchasePrices, returns, returnItems, buffer, canViewPnl = canViewPnl)
             outputStream.write(buffer.toByteArray())
             outputStream.flush()
             true
@@ -5614,6 +5643,10 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                 onError(e.message ?: "Failed to permanently delete customer")
             }
         }
+    }
+
+    suspend fun hasActiveVouchers(phone: String): Boolean {
+        return repository.hasActiveVouchers(phone)
     }
 
     suspend fun exportCustomersExcel(outputStream: java.io.OutputStream): Boolean {
