@@ -3119,6 +3119,17 @@ private fun ReceiptLayoutSettings(
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text(stringResource(R.string.settings_decimal_quantities_title), fontSize = 13.sp)
+                    Text(stringResource(R.string.settings_decimal_quantities_desc), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(
+                    checked = currentSettings.decimalQuantitiesEnabled,
+                    onCheckedChange = { onSettingsChanged(currentSettings.copy(decimalQuantitiesEnabled = it)) }
+                )
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.settings_show_discount_line), fontSize = 13.sp)
                 Switch(checked = currentSettings.showDiscount, onCheckedChange = { onSettingsChanged(currentSettings.copy(showDiscount = it)) })
             }
@@ -3704,6 +3715,7 @@ private fun OptimizedBackupSettings(
     driveAutoBackupFrequency: String,
     driveRetentionCount: Int,
     driveNetworkPolicy: String,
+    driveBackupTime: String = "02:00",
     isBackingUpToDrive: Boolean,
     onLocalBackup: () -> Unit,
     onLocalRestore: () -> Unit,
@@ -3716,6 +3728,7 @@ private fun OptimizedBackupSettings(
     onOpenDriveHistory: () -> Unit,
     onTestDriveConnection: () -> Unit = {},
     onDriveSettingsChanged: (Boolean, String, String, Int) -> Unit,
+    onDriveBackupTimeChanged: (String) -> Unit = {},
     onLocalAutoBackupChanged: (Boolean, String) -> Unit
 ) {
     val isDriveConfigured = driveConnection != null || savedDriveAccountEmail.isNotBlank()
@@ -4155,6 +4168,42 @@ private fun OptimizedBackupSettings(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clickable { onDriveSettingsChanged(true, driveAutoBackupFrequency, driveNetworkPolicy, count) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier
+                                            .padding(vertical = 6.dp)
+                                            .wrapContentWidth(Alignment.CenterHorizontally)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Backup Time Pills
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = stringResource(R.string.settings_label_backup_time),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf("00:00" to "12:00 AM", "02:00" to "02:00 AM", "04:00" to "04:00 AM", "23:00" to "11:00 PM").forEach { (timeVal, label) ->
+                                val isSelected = driveBackupTime == timeVal
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { onDriveBackupTimeChanged(timeVal) },
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                                     border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -5090,6 +5139,7 @@ fun SettingsScreen(
     val lastDriveBackupTimestamp by settingsViewModel.lastDriveBackupTimestamp.collectAsStateWithLifecycle()
     val driveRetentionCount by settingsViewModel.driveRetentionCount.collectAsStateWithLifecycle()
     val driveNetworkPolicy by settingsViewModel.driveNetworkPolicy.collectAsStateWithLifecycle()
+    val driveBackupTime by settingsViewModel.driveBackupTime.collectAsStateWithLifecycle()
 
     var isBackingUpToDrive by remember { mutableStateOf(false) }
     var inspectedBackupMetadata by remember { mutableStateOf<com.example.techyfipos.utils.BackupPackageManager.BackupMetadata?>(null) }
@@ -5656,6 +5706,7 @@ fun SettingsScreen(
                     driveAutoBackupFrequency = driveAutoBackupFrequency,
                     driveRetentionCount = driveRetentionCount,
                     driveNetworkPolicy = driveNetworkPolicy,
+                    driveBackupTime = driveBackupTime,
                     isBackingUpToDrive = isBackingUpToDrive,
                     onLocalBackup = {
                         val dateStr = DateFormatters.formatISO()
@@ -5743,6 +5794,9 @@ fun SettingsScreen(
                     },
                     onDriveSettingsChanged = { enabled, freq, netPolicy, retention ->
                         settingsViewModel.saveDriveSettings(enabled, freq, netPolicy, retention, context)
+                    },
+                    onDriveBackupTimeChanged = { time ->
+                        settingsViewModel.saveDriveBackupTime(time, context)
                     },
                     onLocalAutoBackupChanged = { enabled, freq ->
                         settingsViewModel.saveLocalAutoBackup(enabled, freq, context)
@@ -5959,10 +6013,12 @@ fun SettingsScreen(
     // Local Automatic Backups History Dialog
     if (showLocalAutoBackupsDialog) {
         val autoBackupsDir = remember { File(context.filesDir, "AutoBackups") }
-        val backupFiles = remember(showLocalAutoBackupsDialog) {
-            autoBackupsDir.listFiles { _, name -> name.endsWith(".json") }
-                ?.sortedByDescending { it.lastModified() }
-                ?: emptyList()
+        val backupFiles by androidx.compose.runtime.produceState<List<File>>(initialValue = emptyList(), showLocalAutoBackupsDialog) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                autoBackupsDir.listFiles { _, name ->
+                    name.endsWith(".json") && !name.endsWith("_latest.json")
+                }?.sortedByDescending { it.lastModified() } ?: emptyList()
+            }
         }
 
         AlertDialog(
@@ -6550,11 +6606,15 @@ fun SettingsScreen(
                             Toast.makeText(context, context.getString(R.string.toast_only_owner_factory_reset), Toast.LENGTH_LONG).show()
                             return@Button
                         }
-                        settingsViewModel.resetFactoryDefaults {
-                            currentSettings = InvoiceSettingsData()
-                            showResetConfirmDialog = false
-                            Toast.makeText(context, context.getString(R.string.settings_toast_factory_reset_done), Toast.LENGTH_LONG).show()
-                            onLogout()
+                        settingsViewModel.resetFactoryDefaults { success ->
+                            if (success) {
+                                currentSettings = InvoiceSettingsData()
+                                showResetConfirmDialog = false
+                                Toast.makeText(context, context.getString(R.string.settings_toast_factory_reset_done), Toast.LENGTH_LONG).show()
+                                onLogout()
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.settings_toast_factory_reset_failed), Toast.LENGTH_LONG).show()
+                            }
                         }
                     },
                     enabled = resetAcknowledged,

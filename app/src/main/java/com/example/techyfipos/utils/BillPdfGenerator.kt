@@ -269,6 +269,7 @@ fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String
     if (settings.showAddress && bill.shopAddress.isNotBlank()) sb.appendLine(bill.shopAddress)
     if (settings.showPhone && bill.shopPhone.isNotBlank()) sb.appendLine(bill.shopPhone)
     if (settings.showFacebookInHeader && settings.facebookUrl.isNotBlank()) sb.appendLine(settings.facebookUrl)
+    if (settings.websiteUrl.isNotBlank()) sb.appendLine(settings.websiteUrl)
     sb.appendLine("==========================================")
     sb.appendLine(if (isBn) "চালান নং : #${bill.saleId}" else "Invoice  : #${bill.saleId}")
     sb.appendLine(if (isBn) "তারিখ    : $date" else "Date     : $date")
@@ -473,6 +474,7 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
 
     val effectiveFb = bill.facebookUrl.ifBlank { settings.facebookUrl }
     if (settings.showFacebookInHeader && effectiveFb.isNotBlank()) totalHeight += (if (is58) 30f else 38f)
+    if (settings.websiteUrl.isNotBlank()) totalHeight += (if (is58) 30f else 38f)
     totalHeight += 40f // Double divider
 
     // 3. Invoice Meta
@@ -656,6 +658,12 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
     if (settings.showFacebookInHeader && effectiveFb.isNotBlank()) {
         val fbW = paintText.measureText(effectiveFb)
         canvas.drawText(effectiveFb, (width - fbW) / 2f, currentY + 20f, paintText)
+        currentY += 38f
+    }
+
+    if (settings.websiteUrl.isNotBlank()) {
+        val webW = paintText.measureText(settings.websiteUrl)
+        canvas.drawText(settings.websiteUrl, (width - webW) / 2f, currentY + 20f, paintText)
         currentY += 38f
     }
 

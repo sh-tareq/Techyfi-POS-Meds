@@ -288,8 +288,8 @@ fun LocaleWrapper(language: String, content: @Composable () -> Unit) {
         if (registryOwner != null) {
             add(androidx.activity.compose.LocalActivityResultRegistryOwner provides registryOwner)
         }
-        if (activity != null) {
-            add(androidx.activity.compose.LocalActivity provides activity)
+        (activity as? androidx.activity.ComponentActivity)?.let {
+            add(androidx.activity.compose.LocalActivity provides it)
         }
     }.toTypedArray()
 

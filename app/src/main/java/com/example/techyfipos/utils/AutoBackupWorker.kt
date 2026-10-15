@@ -40,12 +40,16 @@ class AutoBackupWorker(
 
             val localRequested = scope != AutoBackupScheduler.SCOPE_DRIVE && localEnabled
             val driveRequested = scope != AutoBackupScheduler.SCOPE_LOCAL && driveEnabled
-            val localDue = localRequested && runAttemptCount == 0 && (
-                !respectDueTime || isDue(
-                    now = now,
-                    lastBackup = settings.lastLocalBackupTimestampFlow.first(),
-                    frequency = localFrequency
-                )
+            val chainStartTime = chainStartTimes.getOrPut(id) { now }
+            val lastLocalBackup = settings.lastLocalBackupTimestampFlow.first()
+            val localDue = shouldRunLocalBackup(
+                localRequested = localRequested,
+                runAttemptCount = runAttemptCount,
+                lastLocalBackupTimestamp = lastLocalBackup,
+                chainStartTime = chainStartTime,
+                respectDueTime = respectDueTime,
+                now = now,
+                frequency = localFrequency
             )
             val driveDue = driveRequested && (
                 !respectDueTime || isDue(
@@ -57,6 +61,7 @@ class AutoBackupWorker(
 
             if (!localDue && !driveDue) {
                 Log.i(TAG, "Backup skipped: disabled or not due")
+                chainStartTimes.remove(id)
                 return Result.success()
             }
 
@@ -102,10 +107,7 @@ class AutoBackupWorker(
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Drive authorization refresh failed", e)
-                        val isApiExceptionNetwork = (e is com.google.android.gms.common.api.ApiException &&
-                            (e.statusCode == com.google.android.gms.common.api.CommonStatusCodes.NETWORK_ERROR ||
-                             e.statusCode == com.google.android.gms.common.api.CommonStatusCodes.TIMEOUT))
-                        if (e is java.io.IOException || e.cause is java.io.IOException || isApiExceptionNetwork) {
+                        if (isNetworkOrTimeoutException(e)) {
                             authNetworkError = true
                         } else {
                             driveNeedsUserAuthorization = true
@@ -165,6 +167,7 @@ class AutoBackupWorker(
 
                 when {
                     driveNeedsUserAuthorization -> {
+                        chainStartTimes.remove(id)
                         notifyBackupFailure(
                             context = localizedContext,
                             title = localizedContext.getString(R.string.notif_drive_reconnect_title),
@@ -180,7 +183,10 @@ class AutoBackupWorker(
                         )
                         Result.retry()
                     }
-                    else -> Result.success()
+                    else -> {
+                        chainStartTimes.remove(id)
+                        Result.success()
+                    }
                 }
             } finally {
                 tempFile.delete()
@@ -224,16 +230,6 @@ class AutoBackupWorker(
             .sortedBy { it.lastModified() }
             .take((files.orEmpty().size - MAX_BACKUPS).coerceAtLeast(0))
             .forEach { it.delete() }
-    }
-
-    private fun isDue(now: Long, lastBackup: Long, frequency: String): Boolean {
-        if (lastBackup <= 0L) return true
-        val intervalDays = when (frequency.uppercase(Locale.US)) {
-            "WEEKLY" -> 7L
-            "MONTHLY" -> 30L
-            else -> 1L
-        }
-        return now - lastBackup >= TimeUnit.DAYS.toMillis(intervalDays)
     }
 
     private fun notifyBackupFailure(context: Context, title: String, message: String) {
@@ -280,5 +276,41 @@ class AutoBackupWorker(
         const val BACKUP_FOLDER = "AutoBackups"
         const val LATEST_FILE = "TechyfiPOS_AutoBackup_latest.json"
         const val MAX_BACKUPS = 15
+
+        val chainStartTimes = java.util.concurrent.ConcurrentHashMap<java.util.UUID, Long>()
+
+        fun isNetworkOrTimeoutException(e: Throwable): Boolean {
+            val root = (e as? java.util.concurrent.ExecutionException)?.cause ?: e
+            val isApiExceptionNetwork = (root as? com.google.android.gms.common.api.ApiException)?.statusCode in setOf(
+                com.google.android.gms.common.api.CommonStatusCodes.NETWORK_ERROR,
+                com.google.android.gms.common.api.CommonStatusCodes.TIMEOUT
+            )
+            return root is java.io.IOException || root.cause is java.io.IOException || isApiExceptionNetwork
+        }
+
+        fun shouldRunLocalBackup(
+            localRequested: Boolean,
+            runAttemptCount: Int,
+            lastLocalBackupTimestamp: Long,
+            chainStartTime: Long,
+            respectDueTime: Boolean,
+            now: Long,
+            frequency: String
+        ): Boolean {
+            if (!localRequested) return false
+            val localAlreadyDone = runAttemptCount > 0 && lastLocalBackupTimestamp >= chainStartTime
+            if (localAlreadyDone) return false
+            return !respectDueTime || isDue(now, lastLocalBackupTimestamp, frequency)
+        }
+
+        fun isDue(now: Long, lastBackup: Long, frequency: String): Boolean {
+            if (lastBackup <= 0L) return true
+            val intervalDays = when (frequency.uppercase(Locale.US)) {
+                "WEEKLY" -> 7L
+                "MONTHLY" -> 30L
+                else -> 1L
+            }
+            return now - lastBackup >= TimeUnit.DAYS.toMillis(intervalDays)
+        }
     }
 }

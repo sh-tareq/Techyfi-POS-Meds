@@ -5647,6 +5647,17 @@ class DataRepository(
         requireOwnerSession()
         requirePermission(AppPermissions.SYSTEM_FACTORY_RESET)
         val connectedDriveEmail = settingsDataStore.driveAccountEmailFlow.first().takeIf { it.isNotBlank() }
+
+        // Cancel scheduled due reminders before clearing tables so phone numbers and alarms can be resolved
+        try {
+            val reminders = scheduledDueReminderDao.getAllOnce()
+            for (reminder in reminders) {
+                com.example.techyfipos.utils.DueReminderScheduler.cancelDueReminder(context, reminder.customerPhone)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         database.clearAllTables()
         settingsDataStore.clearAll()
         if (connectedDriveEmail != null) {
@@ -5660,20 +5671,23 @@ class DataRepository(
             }
         }
 
-        // Cleanup all persistent files and leftover caches (R20-37)
+        // Cleanup all persistent files and leftover caches (R20-37, R22-18)
         try {
             val filesToDelete = listOf(
                 "store_logo.png",
                 "custom_logo.png",
                 "restored_logo.png",
-                "restored_shop_logo.png"
+                "restored_shop_logo.png",
+                "cart_snapshot.json"
             )
             filesToDelete.forEach { name ->
                 val f = File(context.filesDir, name)
                 if (f.exists()) f.delete()
             }
-            context.filesDir.listFiles { _, name -> name.startsWith("restored_") && name.endsWith(".png") }
-                ?.forEach { it.delete() }
+            context.filesDir.listFiles { _, name ->
+                (name.startsWith("restored_") && name.endsWith(".png")) ||
+                (name.startsWith("product_") && name.endsWith(".jpg"))
+            }?.forEach { it.delete() }
             File(context.filesDir, "AutoBackups").deleteRecursively()
             File(context.filesDir, "safety_rollback").deleteRecursively()
             File(context.filesDir, "restored_product_images").deleteRecursively()
@@ -5701,7 +5715,6 @@ class DataRepository(
             workManager.cancelUniqueWork(com.example.techyfipos.utils.AutoBackupScheduler.WORK_DRIVE_BACKUP)
             workManager.cancelUniqueWork(com.example.techyfipos.utils.AutoBackupScheduler.WORK_ONETIME_BACKUP)
             com.example.techyfipos.utils.AutoBackupScheduler.scheduleAlarmManagerBackup(context, enabled = false)
-            com.example.techyfipos.utils.DueReminderScheduler.cancelAllScheduledReminders(context)
         } catch (e: Exception) {
             e.printStackTrace()
         }

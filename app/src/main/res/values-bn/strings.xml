@@ -3149,4 +3149,8 @@
     <string name="excel_import_err_stock_qty">সারি %1$d: স্টক পরিমাণ \'%2$s\' সঠিক নয়।</string>
     <string name="excel_import_err_expiry_date">সারি %1$d: মেয়াদের তারিখ \'%2$s\' সঠিক নয়। দিন/মাস/বছর (dd/MM/yyyy) ফরম্যাট প্রত্যাশিত।</string>
     <string name="excel_import_err_missing_columns">প্রয়োজনীয় কলাম পাওয়া যায়নি: %1$s</string>
+    <string name="settings_toast_factory_reset_failed">ফ্যাক্টরি রিসেট ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।</string>
+    <string name="settings_decimal_quantities_title">দশমিক পরিমাণ</string>
+    <string name="settings_decimal_quantities_desc">কার্টে ভগ্নাংশ ও দশমিক পরিমাণ আইটেম বিক্রির অনুমতি দিন</string>
+    <string name="settings_label_backup_time">নির্ধারিত ব্যাকআপের সময়</string>
 </resources>

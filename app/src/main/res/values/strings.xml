@@ -3147,6 +3147,10 @@
     <string name="excel_import_err_stock_qty">Row %1$d: Invalid stock quantity \'%2$s\'.</string>
     <string name="excel_import_err_expiry_date">Row %1$d: Invalid expiry date \'%2$s\'. Expected dd/MM/yyyy.</string>
     <string name="excel_import_err_missing_columns">Missing required columns: %1$s</string>
+    <string name="settings_toast_factory_reset_failed">Factory reset failed. Please try again.</string>
+    <string name="settings_decimal_quantities_title">Decimal Quantities</string>
+    <string name="settings_decimal_quantities_desc">Allow fractional and decimal item quantities in cart</string>
+    <string name="settings_label_backup_time">Scheduled Backup Time</string>
 </resources>
 
 

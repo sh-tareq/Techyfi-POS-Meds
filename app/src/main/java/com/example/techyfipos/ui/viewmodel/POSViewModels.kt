@@ -1448,18 +1448,23 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun addToCart(product: Product, quantity: Double = 1.0): Boolean {
-        if (!quantity.isFinite() || quantity <= 0.0) return false
+        val effectiveQty = if (!taxSettings.value.decimalQuantitiesEnabled) {
+            kotlin.math.floor(quantity).coerceAtLeast(1.0)
+        } else {
+            quantity
+        }
+        if (!effectiveQty.isFinite() || effectiveQty <= 0.0) return false
         val currentList = _cartItems.value.toMutableList()
         val index = currentList.indexOfFirst { it.product.barcode == product.barcode }
         val isSynthetic = isSyntheticSaleBarcode(product.barcode)
         val currentQuantity = currentList.getOrNull(index)?.quantity ?: 0.0
-        if (!isSynthetic && currentQuantity + quantity > product.stockQty + 0.000001) return false
+        if (!isSynthetic && currentQuantity + effectiveQty > product.stockQty + 0.000001) return false
         val added = if (index != -1) {
-            currentList[index] = currentList[index].copy(quantity = currentList[index].quantity + quantity)
+            currentList[index] = currentList[index].copy(quantity = currentList[index].quantity + effectiveQty)
             _cartItems.value = currentList
             true
         } else {
-            currentList.add(CartItem(product, quantity))
+            currentList.add(CartItem(product, effectiveQty))
             _cartItems.value = currentList
             true
         }
@@ -1492,7 +1497,12 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun setQuantity(product: Product, newQty: Double, allowNegative: Boolean = false) {
-        if (newQty <= 0.0) {
+        val effectiveQty = if (!taxSettings.value.decimalQuantitiesEnabled) {
+            kotlin.math.floor(newQty).coerceAtLeast(0.0)
+        } else {
+            newQty
+        }
+        if (effectiveQty <= 0.0) {
             removeFromCart(product)
             return
         }
@@ -1500,9 +1510,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         val index = currentList.indexOfFirst { it.product.barcode == product.barcode }
         if (index != -1) {
             val safeQuantity = if (isSyntheticSaleBarcode(product.barcode) || allowNegative) {
-                newQty
+                effectiveQty
             } else {
-                newQty.coerceAtMost(product.stockQty)
+                effectiveQty.coerceAtMost(product.stockQty)
             }
             if (safeQuantity <= 0.0) {
                 removeFromCart(product)
@@ -3473,13 +3483,35 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun resetFactoryDefaults(onComplete: () -> Unit) {
+    fun resetFactoryDefaults(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            var success = false
             try {
                 repository.resetFactoryDefaults()
+                success = true
+            } catch (e: Exception) {
+                success = false
+                throw e
             } finally {
-                onComplete()
+                onComplete(success)
             }
+        }
+    }
+
+    fun saveDriveBackupTime(time: String, context: Context) {
+        viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
+            repository.saveDriveBackupTime(time)
+            val enabled = repository.autoBackupFlow.first()
+            val frequency = repository.driveAutoBackupFrequencyFlow.first()
+            val networkPolicy = repository.driveNetworkPolicyFlow.first()
+            com.example.techyfipos.utils.AutoBackupScheduler.scheduleDriveBackup(
+                context = context,
+                enabled = enabled,
+                frequency = frequency,
+                networkPolicy = networkPolicy,
+                targetTime = time,
+                forceUpdate = true
+            )
         }
     }
 
@@ -4846,6 +4878,21 @@ enum class LoyaltySortOption {
     RECENTLY_ADDED
 }
 
+fun isLoyaltyPointsExpiringSoon(
+    pointsBalance: Int,
+    updatedAt: Long,
+    now: Long,
+    expiryDays: Int,
+    soonWindowDays: Int = 30
+): Boolean {
+    if (pointsBalance <= 0) return false
+    val safeExpiryDays = expiryDays.coerceAtLeast(1)
+    val safeWindow = soonWindowDays.coerceAtMost(safeExpiryDays)
+    val expiryThreshold = now - safeExpiryDays.toLong() * 24 * 60 * 60 * 1000L
+    val soonThreshold = expiryThreshold + safeWindow.toLong() * 24 * 60 * 60 * 1000L
+    return updatedAt in expiryThreshold until soonThreshold
+}
+
 data class LoyaltyKpiData(
     val totalMembers: Int = 0,
     val outstandingPoints: Int = 0,
@@ -4937,7 +4984,9 @@ class LoyaltyViewModel(private val repository: DataRepository) : ViewModel() {
             LoyaltyFilterOption.VIP -> list.filter { it.tier.equals("Gold", ignoreCase = true) || it.tier.equals("Platinum", ignoreCase = true) }
             LoyaltyFilterOption.WITH_POINTS -> list.filter { it.pointsBalance > 0 }
             LoyaltyFilterOption.ACTIVE -> list.filter { it.isActive && it.updatedAt >= activeThreshold }
-            LoyaltyFilterOption.EXPIRING_SOON -> list.filter { it.pointsBalance > 0 && it.updatedAt < expiryThreshold }
+            LoyaltyFilterOption.EXPIRING_SOON -> list.filter {
+                isLoyaltyPointsExpiringSoon(it.pointsBalance, it.updatedAt, now, expiryDays)
+            }
             LoyaltyFilterOption.ZERO_POINTS -> list.filter { it.pointsBalance == 0 }
         }
         when (sort) {

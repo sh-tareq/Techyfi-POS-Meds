@@ -85,20 +85,21 @@ internal val LightColorScheme = lightColorScheme(
 
 val LocalDarkTheme = androidx.compose.runtime.compositionLocalOf { false }
 
-@Composable
-fun ForceDarkSystemBars() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val isAppDark = LocalDarkTheme.current
-    androidx.compose.runtime.DisposableEffect(isAppDark) {
-        val activity = generateSequence(context) { (it as? android.content.ContextWrapper)?.baseContext }
-            .filterIsInstance<androidx.activity.ComponentActivity>()
-            .firstOrNull()
-        activity?.enableEdgeToEdge(
+object SystemBarManager {
+    private var forceDarkCount = 0
+
+    fun enterForceDark(activity: androidx.activity.ComponentActivity) {
+        forceDarkCount++
+        activity.enableEdgeToEdge(
             statusBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
-        onDispose {
-            activity?.enableEdgeToEdge(
+    }
+
+    fun exitForceDark(activity: androidx.activity.ComponentActivity, isAppDark: Boolean) {
+        forceDarkCount = (forceDarkCount - 1).coerceAtLeast(0)
+        if (forceDarkCount == 0) {
+            activity.enableEdgeToEdge(
                 statusBarStyle = if (isAppDark) {
                     androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
                 } else {
@@ -110,6 +111,29 @@ fun ForceDarkSystemBars() {
                     androidx.activity.SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun ForceDarkSystemBars() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isAppDark = LocalDarkTheme.current
+    val localActivity = androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity
+    androidx.compose.runtime.DisposableEffect(isAppDark, localActivity) {
+        val activity = localActivity
+            ?: generateSequence(context) { (it as? android.content.ContextWrapper)?.baseContext }
+                .filterIsInstance<androidx.activity.ComponentActivity>()
+                .firstOrNull()
+            ?: (com.example.techyfipos.MainActivity.currentActivity?.get() as? androidx.activity.ComponentActivity)
+
+        if (activity != null) {
+            SystemBarManager.enterForceDark(activity)
+        }
+        onDispose {
+            if (activity != null) {
+                SystemBarManager.exitForceDark(activity, isAppDark)
+            }
         }
     }
 }
