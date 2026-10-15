@@ -553,9 +553,14 @@ private fun OptimizedSettingsHome(
             }
             Spacer(modifier = Modifier.height(10.dp))
             val timeoutOptions = listOf(0, 5, 15, 30, 60)
+            val selectedOption = if (currentSettings.idleLockDurationMinutes in timeoutOptions) {
+                currentSettings.idleLockDurationMinutes
+            } else {
+                timeoutOptions.minByOrNull { kotlin.math.abs(it - currentSettings.idleLockDurationMinutes) } ?: 15
+            }
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 timeoutOptions.forEachIndexed { index, minutes ->
-                    val isSelected = currentSettings.idleLockDurationMinutes == minutes
+                    val isSelected = selectedOption == minutes
                     SegmentedButton(
                         selected = isSelected,
                         onClick = {

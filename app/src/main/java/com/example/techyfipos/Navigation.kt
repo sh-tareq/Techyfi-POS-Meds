@@ -356,6 +356,7 @@ fun MainNavigation() {
         val isSupervisor by authViewModel.isSupervisor.collectAsStateWithLifecycle()
         val activePermissions by authViewModel.activePermissions.collectAsStateWithLifecycle()
         val currentUser by authViewModel.currentUser.collectAsStateWithLifecycle()
+        val invoiceSettingsData by settingsViewModel.invoiceSettingsData.collectAsStateWithLifecycle()
 
         var prefilledBarcodeForProductScreen by remember { mutableStateOf<String?>(null) }
 
@@ -377,8 +378,11 @@ fun MainNavigation() {
                 when (event) {
                     Lifecycle.Event.ON_STOP -> backgroundedAt = android.os.SystemClock.elapsedRealtime()
                     Lifecycle.Event.ON_START -> {
+                        val idleMinutes = invoiceSettingsData.idleLockDurationMinutes
+                        val backgroundTimeoutMillis = if (idleMinutes > 0) idleMinutes * 60_000L else Long.MAX_VALUE
                         val shouldLock = backgroundedAt > 0L &&
-                            android.os.SystemClock.elapsedRealtime() - backgroundedAt >= 5 * 60_000L &&
+                            idleMinutes > 0 &&
+                            android.os.SystemClock.elapsedRealtime() - backgroundedAt >= backgroundTimeoutMillis &&
                             latestCurrentKey != Splash && latestCurrentKey != Lock
                         if (shouldLock) {
                             authViewModel.logout()
