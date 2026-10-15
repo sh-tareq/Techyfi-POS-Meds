@@ -100,11 +100,11 @@ Line numbers are approximate. Search for the quoted code if they have moved.
 
 ## P3: Missing features
 
-- [ ] **LBL-15 MED. Per-product quantity in batch.** Currently one fixed count or "stock qty" for every product. Add a quantity column (stepper) per selected product in `BatchProductPickerSheet`, or a "review" step before printing. Store as `Map<String, Int>` keyed by barcode. Keep the 500 label cap, and tell the user which products were cut.
-- [ ] **LBL-16 MED. EAN-13 / EAN-8 support.** Only Code128 and QR exist (`ProductCodeType`, Img ~32). Add `EAN_13` (and optionally `EAN_8`, `CODE_39`) with validation. When the barcode is 13 or 8 digits with a valid check digit, offer EAN as the default. EAN-13 has fewer modules than Code128, which also helps LBL-13.
-- [ ] **LBL-17 LOW. Multi-up (2 or 3 across) rolls.** Add a "labels across" setting with column gap, and compose several label bitmaps into one TSPL print row. Needed for common 3-across small-label rolls.
-- [ ] **LBL-18 LOW. Optional label fields and saved presets.** Allow extra text (weight, variant, lot or batch number, category), optional logo, and named label templates that bundle size, fields and text scales.
-- [ ] **LBL-19 LOW. Resume after partial failure.** The batch dialog only says "N sent". Keep the unsent items and offer "Retry remaining". Optionally keep a small print history for reprint.
+- [x] **LBL-15 MED. Per-product quantity in batch.** Currently one fixed count or "stock qty" for every product. Add a quantity column (stepper) per selected product in `BatchProductPickerSheet`, or a "review" step before printing. Store as `Map<String, Int>` keyed by barcode. Keep the 500 label cap, and tell the user which products were cut.
+- [x] **LBL-16 MED. EAN-13 / EAN-8 support.** Only Code128 and QR exist (`ProductCodeType`, Img ~32). Add `EAN_13` (and optionally `EAN_8`, `CODE_39`) with validation. When the barcode is 13 or 8 digits with a valid check digit, offer EAN as the default. EAN-13 has fewer modules than Code128, which also helps LBL-13.
+- [x] **LBL-17 LOW. Multi-up (2 or 3 across) rolls.** Add a "labels across" setting with column gap, and compose several label bitmaps into one TSPL print row. Needed for common 3-across small-label rolls.
+- [x] **LBL-18 LOW. Optional label fields and saved presets.** Allow extra text (weight, variant, lot or batch number, category), optional logo, and named label templates that bundle size, fields and text scales.
+- [x] **LBL-19 LOW. Resume after partial failure.** The batch dialog only says "N sent". Keep the unsent items and offer "Retry remaining". Optionally keep a small print history for reprint.
 
 ## P4: UX and design consistency
 

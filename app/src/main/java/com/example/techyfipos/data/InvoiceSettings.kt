@@ -94,6 +94,8 @@ data class InvoiceSettingsData(
     val labelYOffsetDots: Int = 0,
     val labelDirection: Int = 1,
     val labelPaperType: String = "GAP",
+    val labelLabelsAcross: Int = 1,
+    val labelColumnGapMm: Float = 2.0f,
     val allowNegativeInventory: Boolean = false,
     val decimalQuantitiesEnabled: Boolean = true,
     val paperRollWidthMm: Int = 80,
@@ -244,6 +246,8 @@ data class InvoiceSettingsData(
             put("labelYOffsetDots", labelYOffsetDots)
             put("labelDirection", labelDirection)
             put("labelPaperType", labelPaperType)
+            put("labelLabelsAcross", labelLabelsAcross)
+            put("labelColumnGapMm", labelColumnGapMm.toDouble())
             put("allowNegativeInventory", allowNegativeInventory)
             put("decimalQuantitiesEnabled", decimalQuantitiesEnabled)
             put("paperRollWidthMm", paperRollWidthMm)
@@ -372,6 +376,8 @@ data class InvoiceSettingsData(
                     labelPaperType = json.optString("labelPaperType", "GAP").trim().uppercase().let {
                         if (it in listOf("GAP", "CONTINUOUS", "BLACK_MARK")) it else "GAP"
                     },
+                    labelLabelsAcross = json.optInt("labelLabelsAcross", 1).coerceIn(1, 3),
+                    labelColumnGapMm = json.optDouble("labelColumnGapMm", 2.0).toFloat().coerceIn(0f, 10f),
                     allowNegativeInventory = json.optBoolean("allowNegativeInventory", false),
                     decimalQuantitiesEnabled = json.optBoolean("decimalQuantitiesEnabled", true),
                     paperRollWidthMm = json.optInt("paperRollWidthMm", 80),

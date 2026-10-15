@@ -3215,6 +3215,34 @@
     <string name="reset_size_hint">Scales above 100% may auto-fit if label height is constrained</string>
     <string name="batch_preview_prev_sample">Previous sample</string>
     <string name="batch_preview_next_sample">Next sample</string>
+    <string name="batch_print_custom_per_product">Per Product</string>
+    <string name="batch_print_cut_products_toast">500 label limit reached. Excluded %1$d products (%2$s)</string>
+    <string name="batch_picker_qty_title">Qty</string>
+    <string name="code_type_ean13">EAN-13</string>
+    <string name="code_type_ean8">EAN-8</string>
+    <string name="code_type_code39">Code 39</string>
+    <string name="code_type_recommended_badge">Recommended</string>
+    <string name="settings_label_labels_across">Labels Across Roll</string>
+    <string name="settings_label_labels_across_1">1 (Single)</string>
+    <string name="settings_label_labels_across_2">2 Across</string>
+    <string name="settings_label_labels_across_3">3 Across</string>
+    <string name="settings_label_column_gap">Column Gap (mm)</string>
+    <string name="settings_label_column_gap_error">Column gap must be between 0 and 10 mm</string>
+    <string name="label_preset_standard">Standard Retail</string>
+    <string name="label_preset_grocery">Grocery &amp; Expiry</string>
+    <string name="label_preset_jewelry">Jewelry Mini Tag</string>
+    <string name="label_preset_apparel">Apparel &amp; Dual Price</string>
+    <string name="label_preset_shipping">Warehouse &amp; Shipping</string>
+    <string name="label_presets_title">Templates</string>
+    <string name="label_save_preset">Save Preset</string>
+    <string name="label_preset_saved_toast">Label template saved</string>
+    <string name="label_extra_field_title">Additional Field (Weight, Batch, Category)</string>
+    <string name="label_extra_field_name">Field Label (e.g. Weight, Batch)</string>
+    <string name="label_extra_field_value">Field Value</string>
+    <string name="batch_print_retry_remaining">Retry Remaining (%1$d)</string>
+    <string name="batch_print_failed_banner">Printing stopped after %1$d labels. %2$d labels remaining.</string>
+    <string name="batch_print_reprint_last">Reprint Last Batch</string>
+    <string name="edit">Edit</string>
 </resources>
 
 

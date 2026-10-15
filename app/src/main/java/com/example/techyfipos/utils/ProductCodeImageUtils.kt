@@ -31,7 +31,44 @@ import java.io.FileOutputStream
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-enum class ProductCodeType { BARCODE, QR_CODE }
+enum class ProductCodeType {
+    BARCODE, // Code 128
+    QR_CODE,
+    EAN_13,
+    EAN_8,
+    CODE_39
+}
+
+fun isValidEan13(barcode: String): Boolean {
+    val clean = barcode.trim()
+    if (clean.length != 13 || !clean.all { it.isDigit() }) return false
+    val sum = clean.substring(0, 12).mapIndexed { idx, c ->
+        val digit = c.digitToInt()
+        if (idx % 2 == 0) digit else digit * 3
+    }.sum()
+    val checkDigit = (10 - (sum % 10)) % 10
+    return clean[12].digitToInt() == checkDigit
+}
+
+fun isValidEan8(barcode: String): Boolean {
+    val clean = barcode.trim()
+    if (clean.length != 8 || !clean.all { it.isDigit() }) return false
+    val sum = clean.substring(0, 7).mapIndexed { idx, c ->
+        val digit = c.digitToInt()
+        if (idx % 2 == 0) digit * 3 else digit
+    }.sum()
+    val checkDigit = (10 - (sum % 10)) % 10
+    return clean[7].digitToInt() == checkDigit
+}
+
+fun getRecommendedCodeType(barcode: String): ProductCodeType {
+    val clean = barcode.trim()
+    return when {
+        isValidEan13(clean) -> ProductCodeType.EAN_13
+        isValidEan8(clean) -> ProductCodeType.EAN_8
+        else -> ProductCodeType.BARCODE
+    }
+}
 
 enum class ProductCodePriceTier {
     SELLING,
@@ -100,7 +137,12 @@ fun generateProductCodeLabelBitmap(
     mfgOrPkgDate: String = "",
     expDate: String = "",
     dateTrackingTextScale: Float = 1f,
-    barcodeGraphicScale: Float = 1f
+    barcodeGraphicScale: Float = 1f,
+    showExtraField: Boolean = false,
+    extraFieldLabel: String = "",
+    extraFieldValue: String = "",
+    extraFieldTextScale: Float = 1f,
+    showLogo: Boolean = false
 ): Bitmap? {
     val cleanBarcode = toEnglishDigits(barcode.trim())
     if (cleanBarcode.isBlank()) return null
@@ -151,6 +193,7 @@ fun generateProductCodeLabelBitmap(
             }
         }.trim()
         val showDate = showDateTracking && dateString.isNotBlank()
+        val showExtra = showExtraField && extraFieldValue.isNotBlank()
 
         val rawNameTextSize = (width * 0.054f).coerceIn(20f, 74f) *
             productNameTextScale.coerceIn(0.6f, 1.8f)
@@ -162,18 +205,22 @@ fun generateProductCodeLabelBitmap(
             storeNameTextScale.coerceIn(0.6f, 1.8f)
         val rawDateTextSize = (width * 0.028f).coerceIn(14f, 42f) *
             dateTrackingTextScale.coerceIn(0.6f, 1.8f)
+        val rawExtraTextSize = (width * 0.028f).coerceIn(14f, 42f) *
+            extraFieldTextScale.coerceIn(0.6f, 1.8f)
 
         val fixedVerticalSpace = height * (
             0.07f + 0.04f + 0.05f +
                 (if (showPrice) 0.035f else 0f) +
                 (if (showCodeNumber) 0.035f else 0f) +
                 (if (showStoreName && effectiveStoreName.isNotBlank()) 0.035f else 0f) +
+                (if (showExtra) 0.035f else 0f) +
                 (if (showDate) 0.045f else 0f)
             ) + 32f
         val requestedTextSpace = rawNameTextSize * 2.2f +
             (if (showPrice) rawPriceTextSize else 0f) +
             (if (showCodeNumber) rawNumberTextSize else 0f) +
             (if (showStoreName && effectiveStoreName.isNotBlank()) rawStoreTextSize else 0f) +
+            (if (showExtra) rawExtraTextSize else 0f) +
             (if (showDate) rawDateTextSize else 0f)
         val verticalTextScale = if (requestedTextSpace > 0f) {
             ((height - fixedVerticalSpace) / requestedTextSpace).coerceIn(0.55f, 1f)
@@ -274,9 +321,19 @@ fun generateProductCodeLabelBitmap(
         }
 
         // 4. BARCODE / QR CODE GRAPHIC
-        val format = if (codeType == ProductCodeType.QR_CODE) BarcodeFormat.QR_CODE else BarcodeFormat.CODE_128
+        val format = when (codeType) {
+            ProductCodeType.QR_CODE -> BarcodeFormat.QR_CODE
+            ProductCodeType.EAN_13 -> if (isValidEan13(cleanBarcode)) BarcodeFormat.EAN_13 else BarcodeFormat.CODE_128
+            ProductCodeType.EAN_8 -> if (isValidEan8(cleanBarcode)) BarcodeFormat.EAN_8 else BarcodeFormat.CODE_128
+            ProductCodeType.CODE_39 -> BarcodeFormat.CODE_39
+            ProductCodeType.BARCODE -> BarcodeFormat.CODE_128
+        }
         val hints = mapOf(EncodeHintType.MARGIN to if (codeType == ProductCodeType.QR_CODE) 1 else 6)
-        val matrix = MultiFormatWriter().encode(cleanBarcode, format, codeWidth, codeHeight, hints)
+        val matrix = try {
+            MultiFormatWriter().encode(cleanBarcode, format, codeWidth, codeHeight, hints)
+        } catch (e: Exception) {
+            MultiFormatWriter().encode(cleanBarcode, BarcodeFormat.CODE_128, codeWidth, codeHeight, hints)
+        }
         val codeBitmap = Bitmap.createBitmap(codeWidth, codeHeight, Bitmap.Config.ARGB_8888)
         val pixels = IntArray(codeWidth * codeHeight)
         for (y in 0 until codeHeight) {
@@ -338,6 +395,32 @@ fun generateProductCodeLabelBitmap(
                 paint = storePaint
             )
             nextBaseline = storeY + height * 0.018f
+        }
+
+        // 6b. OPTIONAL EXTRA FIELD (WEIGHT, VARIANT, BATCH, CATEGORY)
+        if (showExtra) {
+            val extraPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                textSize = rawExtraTextSize * verticalTextScale
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                textAlign = Paint.Align.CENTER
+            }
+            val extraText = if (extraFieldLabel.isNotBlank()) "$extraFieldLabel: $extraFieldValue" else extraFieldValue
+            val maxExtraY = if (showDate) {
+                height - (dateTextSize + height * 0.045f + framePadding + 6f)
+            } else {
+                height - bottomPadding.toFloat()
+            }
+            val extraY = (nextBaseline + extraPaint.textSize).coerceAtMost(maxExtraY)
+            drawFittedCenteredText(
+                canvas = canvas,
+                text = extraText,
+                centerX = centerX,
+                baselineY = extraY,
+                maxWidth = contentWidth.toFloat(),
+                paint = extraPaint
+            )
+            nextBaseline = extraY + height * 0.018f
         }
 
         // 7. FOOTER SECTION (DIVIDER LINE & DATE TRACKING: MFG: 23-05-2025  |  EXP: 23-05-2027)
@@ -657,7 +740,79 @@ data class LabelStyleSettings(
     val codeNumberTextScale: Float = 1f,
     val storeNameTextScale: Float = 1f,
     val dateTrackingTextScale: Float = 1f,
-    val barcodeGraphicScale: Float = 1f
+    val barcodeGraphicScale: Float = 1f,
+    val showExtraField: Boolean = false,
+    val extraFieldLabel: String = "",
+    val extraFieldValue: String = "",
+    val extraFieldTextScale: Float = 1f,
+    val showLogo: Boolean = false
+)
+
+data class LabelPresetTemplate(
+    val id: String,
+    val name: String,
+    val nameRes: Int? = null,
+    val style: LabelStyleSettings
+)
+
+fun getDefaultLabelPresets(): List<LabelPresetTemplate> = listOf(
+    LabelPresetTemplate(
+        id = "standard_retail",
+        name = "Standard Retail",
+        nameRes = R.string.label_preset_standard,
+        style = LabelStyleSettings(
+            labelSize = ProductCodeLabelSize.SIZE_50_X_30,
+            showPrice = true,
+            showCodeNumber = true,
+            showStoreName = true
+        )
+    ),
+    LabelPresetTemplate(
+        id = "grocery_expiry",
+        name = "Grocery & Expiry",
+        nameRes = R.string.label_preset_grocery,
+        style = LabelStyleSettings(
+            labelSize = ProductCodeLabelSize.SIZE_40_X_25,
+            showPrice = true,
+            showCodeNumber = true,
+            showDateTracking = true
+        )
+    ),
+    LabelPresetTemplate(
+        id = "jewelry_mini",
+        name = "Jewelry Mini Tag",
+        nameRes = R.string.label_preset_jewelry,
+        style = LabelStyleSettings(
+            labelSize = ProductCodeLabelSize.SIZE_25_X_15,
+            showPrice = true,
+            showCodeNumber = false,
+            barcodeGraphicScale = 0.8f
+        )
+    ),
+    LabelPresetTemplate(
+        id = "apparel_tag",
+        name = "Apparel & Dual Price",
+        nameRes = R.string.label_preset_apparel,
+        style = LabelStyleSettings(
+            labelSize = ProductCodeLabelSize.SIZE_60_X_40,
+            showPrice = true,
+            priceTier = ProductCodePriceTier.DUAL,
+            showStoreName = true,
+            showUnit = true
+        )
+    ),
+    LabelPresetTemplate(
+        id = "warehouse_shipping",
+        name = "Warehouse & Shipping",
+        nameRes = R.string.label_preset_shipping,
+        style = LabelStyleSettings(
+            labelSize = ProductCodeLabelSize.SIZE_100_X_150,
+            showPrice = false,
+            showCodeNumber = true,
+            showStoreName = true,
+            showDateTracking = true
+        )
+    )
 )
 
 fun loadLabelStyleSettings(
@@ -693,7 +848,12 @@ fun loadLabelStyleSettings(
         codeNumberTextScale = preferences.getFloat("code_number_text_scale", 1f).coerceIn(0.6f, 1.8f),
         storeNameTextScale = preferences.getFloat("store_name_text_scale", 1f).coerceIn(0.6f, 1.8f),
         dateTrackingTextScale = preferences.getFloat("date_tracking_text_scale", 1f).coerceIn(0.6f, 1.8f),
-        barcodeGraphicScale = preferences.getFloat("barcode_graphic_scale", 1f).coerceIn(0.5f, 2.0f)
+        barcodeGraphicScale = preferences.getFloat("barcode_graphic_scale", 1f).coerceIn(0.5f, 2.0f),
+        showExtraField = preferences.getBoolean("show_extra_field", false),
+        extraFieldLabel = preferences.getString("extra_field_label", "") ?: "",
+        extraFieldValue = preferences.getString("extra_field_value", "") ?: "",
+        extraFieldTextScale = preferences.getFloat("extra_field_text_scale", 1f).coerceIn(0.6f, 1.8f),
+        showLogo = preferences.getBoolean("show_logo", false)
     )
 }
 
@@ -720,6 +880,11 @@ fun saveLabelStyleSettings(
         .putFloat("store_name_text_scale", settings.storeNameTextScale)
         .putFloat("date_tracking_text_scale", settings.dateTrackingTextScale)
         .putFloat("barcode_graphic_scale", settings.barcodeGraphicScale)
+        .putBoolean("show_extra_field", settings.showExtraField)
+        .putString("extra_field_label", settings.extraFieldLabel)
+        .putString("extra_field_value", settings.extraFieldValue)
+        .putFloat("extra_field_text_scale", settings.extraFieldTextScale)
+        .putBoolean("show_logo", settings.showLogo)
     if (settings.customWidthMm in 15f..150f) {
         editor.putFloat("custom_width_mm", settings.customWidthMm)
     }
@@ -728,7 +893,14 @@ fun saveLabelStyleSettings(
     }
 }
 
-fun buildBatchLabelItems(
+data class BatchBuildResult(
+    val items: List<ProductLabelItem>,
+    val totalRequestedLabels: Int,
+    val totalIncludedLabels: Int,
+    val cutProducts: List<String>
+)
+
+fun buildBatchLabelItemsResult(
     candidateProducts: List<Product>,
     copiesModeByStock: Boolean,
     batchCopies: Int,
@@ -739,17 +911,35 @@ fun buildBatchLabelItems(
     mfgOrPkgType: String,
     mfgOrPkgDate: String,
     expDate: String,
+    customQuantities: Map<String, Int> = emptyMap(),
     maxTotalLabels: Int = 500
-): List<ProductLabelItem> {
+): BatchBuildResult {
     var remainingAllowed = maxTotalLabels
     val items = mutableListOf<ProductLabelItem>()
+    val cutProducts = mutableListOf<String>()
+    var totalRequested = 0
+    var totalIncluded = 0
     val effectiveCopies = clampCopies(batchCopies)
+
     for (prod in candidateProducts) {
-        if (remainingAllowed <= 0) break
-        val requestedQty = if (copiesModeByStock) stockToPrintCopies(prod.stockQty) else effectiveCopies
+        val requestedQty = when {
+            customQuantities.containsKey(prod.barcode) -> customQuantities[prod.barcode]!!.coerceIn(1, 500)
+            copiesModeByStock -> stockToPrintCopies(prod.stockQty)
+            else -> effectiveCopies
+        }
+        totalRequested += requestedQty
+        if (remainingAllowed <= 0) {
+            cutProducts.add(prod.name)
+            continue
+        }
         val qty = requestedQty.coerceAtMost(remainingAllowed)
+        if (qty < requestedQty) {
+            cutProducts.add("${prod.name} (${requestedQty - qty} cut)")
+        }
         if (qty <= 0) continue
         remainingAllowed -= qty
+        totalIncluded += qty
+
         val priceString = formatProductCodeLabelPriceString(
             tier = priceTier,
             sellingPrice = prod.sellingPrice,
@@ -773,7 +963,42 @@ fun buildBatchLabelItems(
             )
         )
     }
-    return items
+    return BatchBuildResult(
+        items = items,
+        totalRequestedLabels = totalRequested,
+        totalIncludedLabels = totalIncluded,
+        cutProducts = cutProducts
+    )
+}
+
+fun buildBatchLabelItems(
+    candidateProducts: List<Product>,
+    copiesModeByStock: Boolean,
+    batchCopies: Int,
+    priceTier: ProductCodePriceTier,
+    showUnit: Boolean,
+    showBanglaDigits: Boolean,
+    useProductDates: Boolean,
+    mfgOrPkgType: String,
+    mfgOrPkgDate: String,
+    expDate: String,
+    customQuantities: Map<String, Int> = emptyMap(),
+    maxTotalLabels: Int = 500
+): List<ProductLabelItem> {
+    return buildBatchLabelItemsResult(
+        candidateProducts = candidateProducts,
+        copiesModeByStock = copiesModeByStock,
+        batchCopies = batchCopies,
+        priceTier = priceTier,
+        showUnit = showUnit,
+        showBanglaDigits = showBanglaDigits,
+        useProductDates = useProductDates,
+        mfgOrPkgType = mfgOrPkgType,
+        mfgOrPkgDate = mfgOrPkgDate,
+        expDate = expDate,
+        customQuantities = customQuantities,
+        maxTotalLabels = maxTotalLabels
+    ).items
 }
 
 data class ProductLabelItem(
@@ -783,7 +1008,9 @@ data class ProductLabelItem(
     val quantity: Int = 1,
     val mfgOrPkgType: String = "",
     val mfgOrPkgDate: String = "",
-    val expDate: String = ""
+    val expDate: String = "",
+    val extraFieldLabel: String = "",
+    val extraFieldValue: String = ""
 )
 
 fun cacheBatchProductCodeLabelsPdf(
@@ -811,7 +1038,12 @@ fun cacheBatchProductCodeLabelsPdf(
     mfgOrPkgDate = style.mfgOrPkgDate,
     expDate = style.expDate,
     dateTrackingTextScale = style.dateTrackingTextScale,
-    barcodeGraphicScale = style.barcodeGraphicScale
+    barcodeGraphicScale = style.barcodeGraphicScale,
+    showExtraField = style.showExtraField,
+    extraFieldLabel = style.extraFieldLabel,
+    extraFieldValue = style.extraFieldValue,
+    extraFieldTextScale = style.extraFieldTextScale,
+    showLogo = style.showLogo
 )
 
 fun cacheBatchProductCodeLabelsPdf(
@@ -834,7 +1066,12 @@ fun cacheBatchProductCodeLabelsPdf(
     mfgOrPkgDate: String = "",
     expDate: String = "",
     dateTrackingTextScale: Float = 1f,
-    barcodeGraphicScale: Float = 1f
+    barcodeGraphicScale: Float = 1f,
+    showExtraField: Boolean = false,
+    extraFieldLabel: String = "",
+    extraFieldValue: String = "",
+    extraFieldTextScale: Float = 1f,
+    showLogo: Boolean = false
 ): Pair<File, Uri>? {
     return try {
         val validItems = items.filter { it.barcode.isNotBlank() && it.quantity > 0 }
@@ -852,6 +1089,8 @@ fun cacheBatchProductCodeLabelsPdf(
                 val itemMfgType = item.mfgOrPkgType.ifBlank { mfgOrPkgType }.ifBlank { "Mfg" }
                 val itemMfgDate = item.mfgOrPkgDate.ifBlank { mfgOrPkgDate }
                 val itemExpDate = item.expDate.ifBlank { expDate }
+                val itemExtraFieldLabel = item.extraFieldLabel.ifBlank { extraFieldLabel }
+                val itemExtraFieldValue = item.extraFieldValue.ifBlank { extraFieldValue }
                 val bitmap = generateProductCodeLabelBitmap(
                     productName = item.productName,
                     barcode = item.barcode,
@@ -873,7 +1112,12 @@ fun cacheBatchProductCodeLabelsPdf(
                     mfgOrPkgDate = itemMfgDate,
                     expDate = itemExpDate,
                     dateTrackingTextScale = dateTrackingTextScale,
-                    barcodeGraphicScale = barcodeGraphicScale
+                    barcodeGraphicScale = barcodeGraphicScale,
+                    showExtraField = showExtraField || itemExtraFieldLabel.isNotBlank(),
+                    extraFieldLabel = itemExtraFieldLabel,
+                    extraFieldValue = itemExtraFieldValue,
+                    extraFieldTextScale = extraFieldTextScale,
+                    showLogo = showLogo
                 ) ?: continue
 
                 val copies = item.quantity.coerceIn(1, 500)
@@ -926,8 +1170,12 @@ fun isBarcodeTooDenseForLabel(
     // Printable barcode graphic width in mm is roughly widthMm minus horizontal padding (~12%)
     val printableWidthMm = (widthMm * 0.88f).coerceAtLeast(10f)
     val totalDots = printableWidthMm * dotsPerMm
-    // Code 128 has ~ 11 modules per symbol character plus quiet zone (min 10 modules each side), start/stop symbols (11 + 13)
-    val estimatedModules = (clean.length + 2) * 11 + 25
+    val estimatedModules = when (codeType) {
+        ProductCodeType.EAN_13 -> 115
+        ProductCodeType.EAN_8 -> 87
+        ProductCodeType.CODE_39 -> (clean.length + 2) * 16
+        else -> (clean.length + 2) * 11 + 25
+    }
     val moduleWidthDots = totalDots / estimatedModules
     return moduleWidthDots < 2.0f
 }

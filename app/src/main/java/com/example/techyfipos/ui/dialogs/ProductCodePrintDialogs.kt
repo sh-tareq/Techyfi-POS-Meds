@@ -625,11 +625,14 @@ enum class BatchPrintScope {
 fun BatchProductPickerSheet(
     allProducts: List<Product>,
     selectedBarcodes: Set<String>,
-    onSelectionChange: (Set<String>) -> Unit,
+    initialQuantities: Map<String, Int> = emptyMap(),
+    onSelectionChange: (Set<String>) -> Unit = {},
+    onSelectionAndQuantitiesChange: ((Set<String>, Map<String, Int>) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var tempSelected by remember { mutableStateOf(selectedBarcodes) }
+    var tempQuantities by remember { mutableStateOf(initialQuantities.toMutableMap()) }
 
     val validProducts = remember(allProducts) {
         allProducts.filter { it.barcode.isNotBlank() }
@@ -649,6 +652,7 @@ fun BatchProductPickerSheet(
 
     Dialog(
         onDismissRequest = {
+            onSelectionAndQuantitiesChange?.invoke(tempSelected, tempQuantities)
             onSelectionChange(tempSelected)
             onDismiss()
         },
@@ -865,13 +869,59 @@ fun BatchProductPickerSheet(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontSize = 11.sp
                                         )
-                                        Text(
-                                            text = formatTaka(prod.sellingPrice),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            fontSize = 12.sp
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = formatTaka(prod.sellingPrice),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                fontSize = 12.sp
+                                            )
+                                            if (isChecked) {
+                                                val qty = tempQuantities[prod.barcode] ?: 1
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                                    modifier = Modifier
+                                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                ) {
+                                                    IconButton(
+                                                        onClick = {
+                                                            val current = tempQuantities[prod.barcode] ?: 1
+                                                            if (current > 1) {
+                                                                tempQuantities = tempQuantities.toMutableMap().apply { put(prod.barcode, current - 1) }
+                                                            }
+                                                        },
+                                                        modifier = Modifier.size(24.dp)
+                                                    ) {
+                                                        Icon(Icons.Default.Remove, contentDescription = "Decrease", modifier = Modifier.size(14.dp))
+                                                    }
+                                                    Text(
+                                                        text = "$qty",
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.padding(horizontal = 4.dp)
+                                                    )
+                                                    IconButton(
+                                                        onClick = {
+                                                            val current = tempQuantities[prod.barcode] ?: 1
+                                                            if (current < 500) {
+                                                                tempQuantities = tempQuantities.toMutableMap().apply { put(prod.barcode, current + 1) }
+                                                            }
+                                                        },
+                                                        modifier = Modifier.size(24.dp)
+                                                    ) {
+                                                        Icon(Icons.Default.Add, contentDescription = "Increase", modifier = Modifier.size(14.dp))
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -895,6 +945,7 @@ fun BatchProductPickerSheet(
                     )
                     Button(
                         onClick = {
+                            onSelectionAndQuantitiesChange?.invoke(tempSelected, tempQuantities)
                             onSelectionChange(tempSelected)
                             onDismiss()
                         },
@@ -933,8 +984,17 @@ fun BatchProductCodePrintDialog(
     var customSelectedBarcodes by rememberSaveable { mutableStateOf(initiallySelectedBarcodes) }
     var showProductPickerSheet by remember { mutableStateOf(false) }
 
-    var copiesModeByStock by rememberSaveable { mutableStateOf(false) }
+    var copiesMode by rememberSaveable { mutableStateOf("FIXED") }
+    var customQuantities by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var batchCopies by rememberSaveable { mutableIntStateOf(1) }
+    var extraFieldTitle by rememberSaveable {
+        mutableStateOf(preferences.getString("extra_field_title", "") ?: "")
+    }
+    var extraFieldValue by rememberSaveable {
+        mutableStateOf(preferences.getString("extra_field_value", "") ?: "")
+    }
+    var failedRemainingItems by remember { mutableStateOf<List<ProductLabelItem>?>(null) }
+    var lastPrintedItems by remember { mutableStateOf<List<ProductLabelItem>?>(null) }
 
     var codeTypeName by rememberSaveable {
         mutableStateOf(preferences.getString("code_type", ProductCodeType.BARCODE.name) ?: ProductCodeType.BARCODE.name)
@@ -1024,7 +1084,7 @@ fun BatchProductCodePrintDialog(
         codeTypeName, labelSizeName, showPrice, priceTierName, showUnit, showBanglaDigits, showCodeNumber,
         showStoreName, storeNameInput, showDateTracking, customWidthInput, customHeightInput,
         productNameTextScale, priceTextScale, codeNumberTextScale, storeNameTextScale,
-        dateTrackingTextScale, barcodeGraphicScale
+        dateTrackingTextScale, barcodeGraphicScale, extraFieldTitle, extraFieldValue
     ) {
         val editor = preferences.edit()
             .putString("code_type", codeTypeName)
@@ -1043,6 +1103,8 @@ fun BatchProductCodePrintDialog(
             .putFloat("store_name_text_scale", storeNameTextScale)
             .putFloat("date_tracking_text_scale", dateTrackingTextScale)
             .putFloat("barcode_graphic_scale", barcodeGraphicScale)
+            .putString("extra_field_title", extraFieldTitle.trim())
+            .putString("extra_field_value", extraFieldValue.trim())
         if (parsedCustomWidth != null && parsedCustomWidth in 15f..150f) {
             editor.putFloat("custom_width_mm", parsedCustomWidth)
         }
@@ -1060,11 +1122,11 @@ fun BatchProductCodePrintDialog(
         }
     }
 
-    val unconstrainedLabelCount = remember(candidateProducts, copiesModeByStock, batchCopies) {
-        if (copiesModeByStock) {
-            candidateProducts.sumOf { stockToPrintCopies(it.stockQty) }
-        } else {
-            candidateProducts.size * batchCopies
+    val unconstrainedLabelCount = remember(candidateProducts, copiesMode, batchCopies, customQuantities) {
+        when (copiesMode) {
+            "STOCK" -> candidateProducts.sumOf { stockToPrintCopies(it.stockQty) }
+            "PER_PRODUCT" -> candidateProducts.sumOf { customQuantities[it.barcode] ?: 1 }
+            else -> candidateProducts.size * batchCopies
         }
     }
     val isBatchTruncated = unconstrainedLabelCount > 500
@@ -1098,7 +1160,8 @@ fun BatchProductCodePrintDialog(
         sampleProd, samplePriceString, codeType, labelSize, showPrice, showCodeNumber,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
         codeNumberTextScale, showStoreName, effectiveStoreName, storeNameTextScale,
-        showDateTracking, useProductDates, mfgOrPkgType, mfgOrPkgDate, expDate, dateTrackingTextScale, barcodeGraphicScale
+        showDateTracking, useProductDates, mfgOrPkgType, mfgOrPkgDate, expDate, dateTrackingTextScale, barcodeGraphicScale,
+        extraFieldTitle, extraFieldValue
     ) {
         if (sampleProd != null) {
             val sampleMfgType = if (useProductDates) (sampleProd.mfgOrPkgType ?: "Mfg") else mfgOrPkgType
@@ -1125,7 +1188,10 @@ fun BatchProductCodePrintDialog(
                 mfgOrPkgDate = sampleMfgDate,
                 expDate = sampleExpDate,
                 dateTrackingTextScale = dateTrackingTextScale,
-                barcodeGraphicScale = barcodeGraphicScale
+                barcodeGraphicScale = barcodeGraphicScale,
+                showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
+                extraFieldLabel = extraFieldTitle,
+                extraFieldValue = extraFieldValue
             )
         } else null
     }
@@ -1138,7 +1204,8 @@ fun BatchProductCodePrintDialog(
         codeType, labelSize, customWidthMm, customHeightMm, showPrice, priceTier,
         showUnit, showBanglaDigits, showCodeNumber, showStoreName, effectiveStoreName,
         showDateTracking, productNameTextScale, priceTextScale, codeNumberTextScale,
-        storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale
+        storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
+        extraFieldTitle, extraFieldValue
     ) {
         LabelStyleSettings(
             labelSize = labelSize,
@@ -1157,8 +1224,270 @@ fun BatchProductCodePrintDialog(
             codeNumberTextScale = codeNumberTextScale,
             storeNameTextScale = storeNameTextScale,
             dateTrackingTextScale = dateTrackingTextScale,
-            barcodeGraphicScale = barcodeGraphicScale
+            barcodeGraphicScale = barcodeGraphicScale,
+            showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
+            extraFieldLabel = extraFieldTitle,
+            extraFieldValue = extraFieldValue
         )
+    }
+
+    suspend fun executeBatchDirectPrint(items: List<ProductLabelItem>) {
+        val mode = invoiceSettings.labelPrintMode.trim().uppercase()
+        val labelTarget = invoiceSettings.resolvedLabelPrinterTarget()
+        val receiptTarget = invoiceSettings.resolvedReceiptPrinterTarget()
+
+        if (isSamePrinterTarget(labelTarget, receiptTarget)) {
+            withContext(Dispatchers.Main) {
+                isPrinting = false
+                printingProgressText = ""
+                Toast.makeText(context, context.getString(R.string.direct_print_error_label_same_as_receipt), Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+
+        val goDirect = mode != "SYSTEM" && labelTarget !is PrinterTarget.None && labelTarget.identifier.isNotBlank()
+        if (goDirect) {
+            var totalSent = 0
+            var failure: DirectPrintResult? = null
+            try {
+                val bitmapsWithCopies = mutableListOf<Pair<Bitmap, Int>>()
+                for ((idx, item) in items.withIndex()) {
+                    withContext(Dispatchers.Main) {
+                        printingProgressText = context.getString(R.string.batch_print_printing, idx + 1, items.size)
+                    }
+                    val itemMfgType = item.mfgOrPkgType.ifBlank { "Mfg" }
+                    val itemMfgDate = item.mfgOrPkgDate
+                    val itemExpDate = item.expDate
+                    val itemExtraLabel = item.extraFieldLabel.ifBlank { extraFieldTitle }
+                    val itemExtraVal = item.extraFieldValue.ifBlank { extraFieldValue }
+                    val bitmap = generateProductCodeLabelBitmap(
+                        productName = item.productName,
+                        barcode = item.barcode,
+                        formattedPrice = item.formattedPrice,
+                        codeType = codeType,
+                        labelSize = labelSize,
+                        showPrice = showPrice,
+                        showCodeNumber = showCodeNumber,
+                        customWidthMm = customWidthMm,
+                        customHeightMm = customHeightMm,
+                        productNameTextScale = productNameTextScale,
+                        priceTextScale = priceTextScale,
+                        codeNumberTextScale = codeNumberTextScale,
+                        showStoreName = showStoreName,
+                        storeName = effectiveStoreName,
+                        storeNameTextScale = storeNameTextScale,
+                        showDateTracking = showDateTracking,
+                        mfgOrPkgType = itemMfgType,
+                        mfgOrPkgDate = itemMfgDate,
+                        expDate = itemExpDate,
+                        dateTrackingTextScale = dateTrackingTextScale,
+                        barcodeGraphicScale = barcodeGraphicScale,
+                        showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
+                        extraFieldLabel = itemExtraLabel,
+                        extraFieldValue = itemExtraVal
+                    )
+                    if (bitmap != null) {
+                        bitmapsWithCopies.add(bitmap to item.quantity)
+                    }
+                }
+
+                val safeAcross = invoiceSettings.labelLabelsAcross.coerceIn(1, 3)
+                val (payloads, payloadCopies) = if (safeAcross > 1) {
+                    val multiUpPayloads = buildMultiUpTsplPayloads(
+                        bitmapsWithCopies = bitmapsWithCopies,
+                        labelWidthMm = effectiveWidthMm,
+                        labelHeightMm = effectiveHeightMm,
+                        labelsAcross = safeAcross,
+                        columnGapMm = invoiceSettings.labelColumnGapMm,
+                        gapMm = invoiceSettings.labelGapMm,
+                        darkness = invoiceSettings.labelDarkness,
+                        dpi = invoiceSettings.labelDpi,
+                        speed = invoiceSettings.labelPrintSpeed,
+                        xOffsetDots = invoiceSettings.labelXOffsetDots,
+                        yOffsetDots = invoiceSettings.labelYOffsetDots,
+                        direction = invoiceSettings.labelDirection,
+                        paperType = invoiceSettings.labelPaperType
+                    )
+                    multiUpPayloads to List(multiUpPayloads.size) { 1 }
+                } else {
+                    val singlePayloads = bitmapsWithCopies.map { (bmp, qty) ->
+                        buildTsplPayload(
+                            labelBitmap = bmp,
+                            widthMm = effectiveWidthMm,
+                            heightMm = effectiveHeightMm,
+                            gapMm = invoiceSettings.labelGapMm,
+                            copies = qty,
+                            darkness = invoiceSettings.labelDarkness,
+                            dpi = invoiceSettings.labelDpi,
+                            speed = invoiceSettings.labelPrintSpeed,
+                            xOffsetDots = invoiceSettings.labelXOffsetDots,
+                            yOffsetDots = invoiceSettings.labelYOffsetDots,
+                            direction = invoiceSettings.labelDirection,
+                            paperType = invoiceSettings.labelPaperType
+                        )
+                    }
+                    singlePayloads to bitmapsWithCopies.map { it.second }
+                }
+                bitmapsWithCopies.forEach { it.first.recycle() }
+
+                if (payloads.isNotEmpty()) {
+                    val batchRes = com.example.techyfipos.printer.printLabelPayloadsBatch(
+                        context = context,
+                        target = labelTarget,
+                        payloads = payloads,
+                        copiesPerPayload = payloadCopies,
+                        onProgress = { sent, total ->
+                            totalSentSoFar = sent
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                printingProgressText = context.getString(R.string.batch_print_printing, sent, total)
+                            }
+                        }
+                    )
+                    totalSent = batchRes.successfulCount
+                    if (batchRes.result !is DirectPrintResult.Success) {
+                        failure = batchRes.result
+                    }
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                android.util.Log.e("ProductCodePrintDialogs", "Batch label print failed", e)
+                failure = DirectPrintResult.Failed(e.localizedMessage ?: "Unknown error")
+            } finally {
+                withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
+                    isPrinting = false
+                    printingProgressText = ""
+                }
+            }
+
+            if (failure != null) {
+                var sentCounter = totalSent
+                val remaining = mutableListOf<ProductLabelItem>()
+                for (item in items) {
+                    if (sentCounter >= item.quantity) {
+                        sentCounter -= item.quantity
+                    } else if (sentCounter > 0) {
+                        val remQty = item.quantity - sentCounter
+                        sentCounter = 0
+                        remaining.add(item.copy(quantity = remQty))
+                    } else {
+                        remaining.add(item)
+                    }
+                }
+                failedRemainingItems = if (remaining.isNotEmpty()) remaining else null
+            } else {
+                failedRemainingItems = null
+                lastPrintedItems = items
+            }
+
+            val decision = decidePrintRouting(mode, labelTarget.identifier, failure, totalSent)
+            when (decision) {
+                RoutingDecision.DIRECT_OK -> {
+                    withContext(Dispatchers.Main) {
+                        val msg = context.getString(R.string.batch_print_success_fmt, totalSent)
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        onDismiss()
+                    }
+                }
+                RoutingDecision.SHOW_ERROR -> {
+                    if (totalSent > 0) {
+                        withContext(Dispatchers.Main) {
+                            val partialMsg = context.getString(R.string.batch_print_partial_failure, totalSent)
+                            Toast.makeText(context, partialMsg, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    failure?.let { showDirectPrintToast(context, it) }
+                }
+                RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
+                    if (totalSent > 0) {
+                        withContext(Dispatchers.Main) {
+                            val partialMsg = context.getString(R.string.batch_print_partial_failure, totalSent)
+                            Toast.makeText(context, partialMsg, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    failure?.let { showDirectPrintToast(context, it) }
+                    val pdfResult = cacheBatchProductCodeLabelsPdf(
+                        context = context,
+                        items = items,
+                        codeType = codeType,
+                        style = currentStyle
+                    )
+                    withContext(Dispatchers.Main) {
+                        if (pdfResult != null) {
+                            val opened = printPdfDocument(
+                                context = activity ?: context,
+                                pdfFile = pdfResult.first,
+                                jobName = context.getString(R.string.print_job_batch_labels),
+                                widthMm = effectiveWidthMm,
+                                heightMm = effectiveHeightMm
+                            )
+                            if (opened) onDismiss()
+                        }
+                    }
+                }
+                RoutingDecision.SYSTEM_DIALOG -> {
+                    val pdfResult = cacheBatchProductCodeLabelsPdf(
+                        context = context,
+                        items = items,
+                        codeType = codeType,
+                        style = currentStyle
+                    )
+                    withContext(Dispatchers.Main) {
+                        if (pdfResult != null) {
+                            val opened = printPdfDocument(
+                                context = activity ?: context,
+                                pdfFile = pdfResult.first,
+                                jobName = context.getString(R.string.print_job_batch_labels),
+                                widthMm = effectiveWidthMm,
+                                heightMm = effectiveHeightMm
+                            )
+                            if (opened) onDismiss()
+                        }
+                    }
+                }
+            }
+        } else {
+            val decision = decidePrintRouting(mode, "", DirectPrintResult.NoAddress)
+            when (decision) {
+                RoutingDecision.SHOW_ERROR -> {
+                    withContext(Dispatchers.Main) {
+                        isPrinting = false
+                        printingProgressText = ""
+                    }
+                    showDirectPrintToast(context, DirectPrintResult.NoAddress)
+                }
+                RoutingDecision.SYSTEM_DIALOG,
+                RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
+                    val pdfResult = cacheBatchProductCodeLabelsPdf(
+                        context = context,
+                        items = items,
+                        codeType = codeType,
+                        style = currentStyle
+                    )
+                    withContext(Dispatchers.Main) {
+                        isPrinting = false
+                        printingProgressText = ""
+                        if (pdfResult != null) {
+                            val opened = printPdfDocument(
+                                context = activity ?: context,
+                                pdfFile = pdfResult.first,
+                                jobName = context.getString(R.string.print_job_batch_labels),
+                                widthMm = effectiveWidthMm,
+                                heightMm = effectiveHeightMm
+                            )
+                            if (opened) onDismiss()
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.toast_failed_batch_labels_pdf), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                RoutingDecision.DIRECT_OK -> {
+                    withContext(Dispatchers.Main) {
+                        isPrinting = false
+                        printingProgressText = ""
+                    }
+                }
+            }
+        }
     }
 
     Dialog(
@@ -1355,6 +1684,51 @@ fun BatchProductCodePrintDialog(
                     }
                 }
 
+                failedRemainingItems?.let { remaining ->
+                    val remainingQty = remaining.sumOf { it.quantity }
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.batch_print_failed_banner, totalSentSoFar, remainingQty),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    isPrinting = true
+                                    totalSentSoFar = 0
+                                    printJob = scope.launch(Dispatchers.IO) {
+                                        executeBatchDirectPrint(remaining)
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Text(
+                                    stringResource(R.string.batch_print_retry_remaining, remainingQty),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onError
+                                )
+                            }
+                        }
+                    }
+                }
+
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
                 // Scrollable Settings
@@ -1364,6 +1738,49 @@ fun BatchProductCodePrintDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Templates Row (LBL-18)
+                    Text(
+                        stringResource(R.string.label_presets_title),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val presets = remember { getDefaultLabelPresets() }
+                        presets.forEach { preset ->
+                            val presetName = preset.nameRes?.let { stringResource(it) } ?: preset.name
+                            FilterChip(
+                                selected = false,
+                                onClick = {
+                                    labelSizeName = preset.style.labelSize.name
+                                    customWidthInput = preset.style.customWidthMm.toString().removeSuffix(".0")
+                                    customHeightInput = preset.style.customHeightMm.toString().removeSuffix(".0")
+                                    showPrice = preset.style.showPrice
+                                    priceTierName = preset.style.priceTier.name
+                                    showCodeNumber = preset.style.showCodeNumber
+                                    showStoreName = preset.style.showStoreName
+                                    showDateTracking = preset.style.showDateTracking
+                                    extraFieldTitle = preset.style.extraFieldLabel
+                                    extraFieldValue = preset.style.extraFieldValue
+                                    productNameTextScale = preset.style.productNameTextScale
+                                    priceTextScale = preset.style.priceTextScale
+                                    codeNumberTextScale = preset.style.codeNumberTextScale
+                                    storeNameTextScale = preset.style.storeNameTextScale
+                                    dateTrackingTextScale = preset.style.dateTrackingTextScale
+                                    barcodeGraphicScale = preset.style.barcodeGraphicScale
+                                    Toast.makeText(context, context.getString(R.string.label_preset_saved_toast), Toast.LENGTH_SHORT).show()
+                                },
+                                label = { Text(presetName, fontSize = 11.5.sp) },
+                                leadingIcon = { Icon(Icons.Default.DashboardCustomize, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            )
+                        }
+                    }
+
                     // Scope: All vs In-Stock Only vs Custom
                     Text(
                         stringResource(R.string.batch_print_scope),
@@ -1511,7 +1928,7 @@ fun BatchProductCodePrintDialog(
                     }
                 }
 
-                // Copies Mode
+                // Copies Mode (LBL-15)
                 Text(
                     stringResource(R.string.batch_print_copies_mode),
                     fontWeight = FontWeight.SemiBold,
@@ -1520,24 +1937,37 @@ fun BatchProductCodePrintDialog(
                 )
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     SegmentedButton(
-                        selected = !copiesModeByStock,
-                        onClick = { copiesModeByStock = false },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        selected = copiesMode == "FIXED",
+                        onClick = { copiesMode = "FIXED" },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(stringResource(R.string.batch_print_fixed_copies), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.batch_print_fixed_copies), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                     SegmentedButton(
-                        selected = copiesModeByStock,
-                        onClick = { copiesModeByStock = true },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        selected = copiesMode == "STOCK",
+                        onClick = { copiesMode = "STOCK" },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(stringResource(R.string.batch_print_stock_qty), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.batch_print_stock_qty), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                    }
+                    SegmentedButton(
+                        selected = copiesMode == "PER_PRODUCT",
+                        onClick = {
+                            copiesMode = "PER_PRODUCT"
+                            if (customQuantities.isEmpty()) {
+                                customQuantities = candidateProducts.associate { it.barcode to 1 }
+                            }
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.batch_print_custom_per_product), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
-                AnimatedVisibility(visible = !copiesModeByStock) {
+                AnimatedVisibility(visible = copiesMode == "FIXED") {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -1556,7 +1986,41 @@ fun BatchProductCodePrintDialog(
                     }
                 }
 
-                // Code Type: Barcode vs QR Code
+                AnimatedVisibility(visible = copiesMode == "PER_PRODUCT") {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showProductPickerSheet = true }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.batch_print_custom_per_product),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    stringResource(R.string.batch_picker_qty_title) + ": " + candidateProducts.sumOf { customQuantities[it.barcode] ?: 1 } + " " + stringResource(R.string.product_code_total_pages_labels_label).lowercase(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                            TextButton(onClick = { showProductPickerSheet = true }) {
+                                Text(stringResource(R.string.edit), fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
+                // Code Type (LBL-16)
                 Text(
                     stringResource(R.string.batch_print_code_type),
                     fontWeight = FontWeight.SemiBold,
@@ -1564,22 +2028,40 @@ fun BatchProductCodePrintDialog(
                     color = MaterialTheme.colorScheme.primary
                 )
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FilterChip(
                         selected = codeType == ProductCodeType.BARCODE,
                         onClick = { codeTypeName = ProductCodeType.BARCODE.name },
-                        label = { Text(stringResource(R.string.barcode_image)) },
-                        leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                        modifier = Modifier.weight(1f)
+                        label = { Text("Code 128") },
+                        leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                    FilterChip(
+                        selected = codeType == ProductCodeType.EAN_13,
+                        onClick = { codeTypeName = ProductCodeType.EAN_13.name },
+                        label = { Text(stringResource(R.string.code_type_ean13)) },
+                        leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                    FilterChip(
+                        selected = codeType == ProductCodeType.EAN_8,
+                        onClick = { codeTypeName = ProductCodeType.EAN_8.name },
+                        label = { Text(stringResource(R.string.code_type_ean8)) },
+                        leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                    FilterChip(
+                        selected = codeType == ProductCodeType.CODE_39,
+                        onClick = { codeTypeName = ProductCodeType.CODE_39.name },
+                        label = { Text(stringResource(R.string.code_type_code39)) },
+                        leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
                     )
                     FilterChip(
                         selected = codeType == ProductCodeType.QR_CODE,
                         onClick = { codeTypeName = ProductCodeType.QR_CODE.name },
                         label = { Text(stringResource(R.string.qr_code)) },
-                        leadingIcon = { Icon(Icons.Default.QrCode2, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                        modifier = Modifier.weight(1f)
+                        leadingIcon = { Icon(Icons.Default.QrCode2, contentDescription = null, modifier = Modifier.size(18.dp)) }
                     )
                 }
 
@@ -1896,6 +2378,44 @@ fun BatchProductCodePrintDialog(
                     }
                 }
 
+                // Additional Field Section (LBL-18)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.label_extra_field_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = extraFieldTitle,
+                                onValueChange = { extraFieldTitle = it.take(30) },
+                                label = { Text(stringResource(R.string.label_extra_field_name), fontSize = 11.sp) },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = extraFieldValue,
+                                onValueChange = { extraFieldValue = it.take(40) },
+                                label = { Text(stringResource(R.string.label_extra_field_value), fontSize = 11.sp) },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
                 // Collapsible Label Styling & Sizing Section
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -2082,6 +2602,26 @@ fun BatchProductCodePrintDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                    if (!isPrinting && !isGenerating && lastPrintedItems != null) {
+                        OutlinedButton(
+                            onClick = {
+                                lastPrintedItems?.let { lastItems ->
+                                    isPrinting = true
+                                    totalSentSoFar = 0
+                                    printJob = scope.launch(Dispatchers.IO) {
+                                        executeBatchDirectPrint(lastItems)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(42.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.batch_print_reprint_last), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
                     Button(
                         onClick = {
                             if (candidateProducts.isEmpty()) {
@@ -2098,9 +2638,9 @@ fun BatchProductCodePrintDialog(
                             isPrinting = true
                             totalSentSoFar = 0
                             printJob = scope.launch(Dispatchers.IO) {
-                                val items = buildBatchLabelItems(
+                                val batchBuild = buildBatchLabelItemsResult(
                                     candidateProducts = candidateProducts,
-                                    copiesModeByStock = copiesModeByStock,
+                                    copiesModeByStock = copiesMode == "STOCK",
                                     batchCopies = batchCopies,
                                     priceTier = priceTier,
                                     showUnit = showUnit,
@@ -2109,221 +2649,20 @@ fun BatchProductCodePrintDialog(
                                     mfgOrPkgType = mfgOrPkgType,
                                     mfgOrPkgDate = mfgOrPkgDate,
                                     expDate = expDate,
+                                    customQuantities = if (copiesMode == "PER_PRODUCT") customQuantities else emptyMap(),
                                     maxTotalLabels = 500
                                 )
-
-                                val mode = invoiceSettings.labelPrintMode.trim().uppercase()
-                                val labelTarget = invoiceSettings.resolvedLabelPrinterTarget()
-                                val receiptTarget = invoiceSettings.resolvedReceiptPrinterTarget()
-
-                                if (isSamePrinterTarget(labelTarget, receiptTarget)) {
+                                if (batchBuild.cutProducts.isNotEmpty()) {
                                     withContext(Dispatchers.Main) {
-                                        isPrinting = false
-                                        printingProgressText = ""
-                                        Toast.makeText(context, context.getString(R.string.direct_print_error_label_same_as_receipt), Toast.LENGTH_LONG).show()
-                                    }
-                                    return@launch
-                                }
-
-                                val goDirect = mode != "SYSTEM" && labelTarget !is PrinterTarget.None && labelTarget.identifier.isNotBlank()
-                                if (goDirect) {
-                                    var totalSent = 0
-                                    var failure: DirectPrintResult? = null
-                                    try {
-                                        val payloads = mutableListOf<ByteArray>()
-                                        val payloadCopies = mutableListOf<Int>()
-                                        for ((idx, item) in items.withIndex()) {
-                                            withContext(Dispatchers.Main) {
-                                                printingProgressText = context.getString(R.string.batch_print_printing, idx + 1, items.size)
-                                            }
-                                            val itemMfgType = item.mfgOrPkgType.ifBlank { "Mfg" }
-                                            val itemMfgDate = item.mfgOrPkgDate
-                                            val itemExpDate = item.expDate
-                                            val bitmap = generateProductCodeLabelBitmap(
-                                                productName = item.productName,
-                                                barcode = item.barcode,
-                                                formattedPrice = item.formattedPrice,
-                                                codeType = codeType,
-                                                labelSize = labelSize,
-                                                showPrice = showPrice,
-                                                showCodeNumber = showCodeNumber,
-                                                customWidthMm = customWidthMm,
-                                                customHeightMm = customHeightMm,
-                                                productNameTextScale = productNameTextScale,
-                                                priceTextScale = priceTextScale,
-                                                codeNumberTextScale = codeNumberTextScale,
-                                                showStoreName = showStoreName,
-                                                storeName = effectiveStoreName,
-                                                storeNameTextScale = storeNameTextScale,
-                                                showDateTracking = showDateTracking,
-                                                mfgOrPkgType = itemMfgType,
-                                                mfgOrPkgDate = itemMfgDate,
-                                                expDate = itemExpDate,
-                                                dateTrackingTextScale = dateTrackingTextScale,
-                                                barcodeGraphicScale = barcodeGraphicScale
-                                            )
-                                            if (bitmap != null) {
-                                                try {
-                                                    payloads.add(
-                                                        buildTsplPayload(
-                                                            labelBitmap = bitmap,
-                                                            widthMm = effectiveWidthMm,
-                                                            heightMm = effectiveHeightMm,
-                                                            gapMm = invoiceSettings.labelGapMm,
-                                                            copies = item.quantity,
-                                                            darkness = invoiceSettings.labelDarkness,
-                                                            dpi = invoiceSettings.labelDpi,
-                                                            speed = invoiceSettings.labelPrintSpeed,
-                                                            xOffsetDots = invoiceSettings.labelXOffsetDots,
-                                                            yOffsetDots = invoiceSettings.labelYOffsetDots,
-                                                            direction = invoiceSettings.labelDirection,
-                                                            paperType = invoiceSettings.labelPaperType
-                                                        )
-                                                    )
-                                                    payloadCopies.add(item.quantity)
-                                                } finally {
-                                                    bitmap.recycle()
-                                                }
-                                            }
-                                        }
-                                        if (payloads.isNotEmpty()) {
-                                            val batchRes = com.example.techyfipos.printer.printLabelPayloadsBatch(
-                                                context = context,
-                                                target = labelTarget,
-                                                payloads = payloads,
-                                                copiesPerPayload = payloadCopies,
-                                                onProgress = { sent, total ->
-                                                    totalSentSoFar = sent
-                                                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                                        printingProgressText = context.getString(R.string.batch_print_printing, sent, total)
-                                                    }
-                                                }
-                                            )
-                                            totalSent = batchRes.successfulCount
-                                            if (batchRes.result !is DirectPrintResult.Success) {
-                                                failure = batchRes.result
-                                            }
-                                        }
-                                    } catch (e: Exception) {
-                                        if (e is kotlinx.coroutines.CancellationException) throw e
-                                        android.util.Log.e("ProductCodePrintDialogs", "Batch label print failed", e)
-                                        failure = DirectPrintResult.Failed(e.localizedMessage ?: "Unknown error")
-                                    } finally {
-                                        withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
-                                            isPrinting = false
-                                            printingProgressText = ""
-                                        }
-                                    }
-
-                                    val decision = decidePrintRouting(mode, labelTarget.identifier, failure, totalSent)
-                                    when (decision) {
-                                        RoutingDecision.DIRECT_OK -> {
-                                            withContext(Dispatchers.Main) {
-                                                val msg = context.getString(R.string.batch_print_success_fmt, totalSent)
-                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                                onDismiss()
-                                            }
-                                        }
-                                        RoutingDecision.SHOW_ERROR -> {
-                                            if (totalSent > 0) {
-                                                withContext(Dispatchers.Main) {
-                                                    val partialMsg = context.getString(R.string.batch_print_partial_failure, totalSent)
-                                                    Toast.makeText(context, partialMsg, Toast.LENGTH_LONG).show()
-                                                }
-                                            }
-                                            failure?.let { showDirectPrintToast(context, it) }
-                                        }
-                                        RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
-                                            if (totalSent > 0) {
-                                                withContext(Dispatchers.Main) {
-                                                    val partialMsg = context.getString(R.string.batch_print_partial_failure, totalSent)
-                                                    Toast.makeText(context, partialMsg, Toast.LENGTH_LONG).show()
-                                                }
-                                            }
-                                            failure?.let { showDirectPrintToast(context, it) }
-                                            val pdfResult = cacheBatchProductCodeLabelsPdf(
-                                                context = context,
-                                                items = items,
-                                                codeType = codeType,
-                                                style = currentStyle
-                                            )
-                                            withContext(Dispatchers.Main) {
-                                                if (pdfResult != null) {
-                                                    val opened = printPdfDocument(
-                                                        context = activity ?: context,
-                                                        pdfFile = pdfResult.first,
-                                                        jobName = context.getString(R.string.print_job_batch_labels),
-                                                        widthMm = effectiveWidthMm,
-                                                        heightMm = effectiveHeightMm
-                                                    )
-                                                    if (opened) onDismiss()
-                                                }
-                                            }
-                                        }
-                                        RoutingDecision.SYSTEM_DIALOG -> {
-                                            val pdfResult = cacheBatchProductCodeLabelsPdf(
-                                                context = context,
-                                                items = items,
-                                                codeType = codeType,
-                                                style = currentStyle
-                                            )
-                                            withContext(Dispatchers.Main) {
-                                                if (pdfResult != null) {
-                                                    val opened = printPdfDocument(
-                                                        context = activity ?: context,
-                                                        pdfFile = pdfResult.first,
-                                                        jobName = context.getString(R.string.print_job_batch_labels),
-                                                        widthMm = effectiveWidthMm,
-                                                        heightMm = effectiveHeightMm
-                                                    )
-                                                    if (opened) onDismiss()
-                                                }
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    val decision = decidePrintRouting(mode, "", DirectPrintResult.NoAddress)
-                                    when (decision) {
-                                        RoutingDecision.SHOW_ERROR -> {
-                                            withContext(Dispatchers.Main) {
-                                                isPrinting = false
-                                                printingProgressText = ""
-                                            }
-                                            showDirectPrintToast(context, DirectPrintResult.NoAddress)
-                                        }
-                                        RoutingDecision.SYSTEM_DIALOG,
-                                        RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
-                                            val pdfResult = cacheBatchProductCodeLabelsPdf(
-                                                context = context,
-                                                items = items,
-                                                codeType = codeType,
-                                                style = currentStyle
-                                            )
-                                            withContext(Dispatchers.Main) {
-                                                isPrinting = false
-                                                printingProgressText = ""
-                                                if (pdfResult != null) {
-                                                    val opened = printPdfDocument(
-                                                        context = activity ?: context,
-                                                        pdfFile = pdfResult.first,
-                                                        jobName = context.getString(R.string.print_job_batch_labels),
-                                                        widthMm = effectiveWidthMm,
-                                                        heightMm = effectiveHeightMm
-                                                    )
-                                                    if (opened) onDismiss()
-                                                } else {
-                                                    Toast.makeText(context, context.getString(R.string.toast_failed_batch_labels_pdf), Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
-                                        }
-                                        RoutingDecision.DIRECT_OK -> {
-                                            withContext(Dispatchers.Main) {
-                                                isPrinting = false
-                                                printingProgressText = ""
-                                            }
-                                        }
+                                        val cutNames = batchBuild.cutProducts.take(3).joinToString(", ")
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.batch_print_cut_products_toast, batchBuild.cutProducts.size, cutNames),
+                                            Toast.LENGTH_LONG
+                                        ).show()
                                     }
                                 }
+                                executeBatchDirectPrint(batchBuild.items)
                             }
                         },
                         modifier = Modifier.weight(1.2f).height(48.dp),
@@ -2383,9 +2722,9 @@ fun BatchProductCodePrintDialog(
                                 isGenerating = true
                                 printJob = scope.launch(Dispatchers.IO) {
                                     try {
-                                        val items = buildBatchLabelItems(
+                                        val batchBuild = buildBatchLabelItemsResult(
                                             candidateProducts = candidateProducts,
-                                            copiesModeByStock = copiesModeByStock,
+                                            copiesModeByStock = copiesMode == "STOCK",
                                             batchCopies = batchCopies,
                                             priceTier = priceTier,
                                             showUnit = showUnit,
@@ -2394,11 +2733,22 @@ fun BatchProductCodePrintDialog(
                                             mfgOrPkgType = mfgOrPkgType,
                                             mfgOrPkgDate = mfgOrPkgDate,
                                             expDate = expDate,
+                                            customQuantities = if (copiesMode == "PER_PRODUCT") customQuantities else emptyMap(),
                                             maxTotalLabels = 500
                                         )
+                                        if (batchBuild.cutProducts.isNotEmpty()) {
+                                            withContext(Dispatchers.Main) {
+                                                val cutNames = batchBuild.cutProducts.take(3).joinToString(", ")
+                                                Toast.makeText(
+                                                    context,
+                                                    context.getString(R.string.batch_print_cut_products_toast, batchBuild.cutProducts.size, cutNames),
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
+                                        }
                                         val result = cacheBatchProductCodeLabelsPdf(
                                             context = context,
-                                            items = items,
+                                            items = batchBuild.items,
                                             codeType = codeType,
                                             style = currentStyle
                                         )
@@ -2444,7 +2794,12 @@ fun BatchProductCodePrintDialog(
         BatchProductPickerSheet(
             allProducts = products,
             selectedBarcodes = customSelectedBarcodes,
+            initialQuantities = customQuantities,
             onSelectionChange = { customSelectedBarcodes = it },
+            onSelectionAndQuantitiesChange = { selected, quantities ->
+                customSelectedBarcodes = selected
+                customQuantities = quantities
+            },
             onDismiss = { showProductPickerSheet = false }
         )
     }
@@ -2466,8 +2821,10 @@ fun ProductCodeImageDialog(
         context.getSharedPreferences("product_code_image_settings", android.content.Context.MODE_PRIVATE)
     }
     val hadSavedStoreName = remember { preferences.contains("store_name") }
+    val recommendedCodeType = remember(product.barcode) { getRecommendedCodeType(product.barcode) }
     var codeTypeName by rememberSaveable {
-        mutableStateOf(preferences.getString("code_type", ProductCodeType.BARCODE.name) ?: ProductCodeType.BARCODE.name)
+        val stored = preferences.getString("code_type", null)
+        mutableStateOf(stored ?: recommendedCodeType.name)
     }
     var labelSizeName by rememberSaveable {
         val stored = preferences.getString("label_size", ProductCodeLabelSize.SIZE_50_X_30.name)
@@ -2493,6 +2850,12 @@ fun ProductCodeImageDialog(
     var mfgOrPkgType by rememberSaveable { mutableStateOf(product.mfgOrPkgType ?: "Mfg") }
     var mfgOrPkgDate by rememberSaveable { mutableStateOf(product.mfgOrPkgDate ?: "") }
     var expDate by rememberSaveable { mutableStateOf(product.expiryDate ?: "") }
+    var extraFieldTitle by rememberSaveable {
+        mutableStateOf(preferences.getString("extra_field_title", "") ?: "")
+    }
+    var extraFieldValue by rememberSaveable {
+        mutableStateOf(preferences.getString("extra_field_value", "") ?: "")
+    }
 
     val formattedPriceString = formatProductCodeLabelPriceString(
         tier = priceTier,
@@ -2560,7 +2923,8 @@ fun ProductCodeImageDialog(
         product, codeType, labelSize, showPrice, priceTierName, showUnit, showBanglaDigits, showCodeNumber, showStoreName, effectiveStoreName,
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
-        codeNumberTextScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale
+        codeNumberTextScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
+        extraFieldTitle, extraFieldValue
     ) {
         generateProductCodeLabelBitmap(
             productName = product.name,
@@ -2583,7 +2947,10 @@ fun ProductCodeImageDialog(
             mfgOrPkgDate = mfgOrPkgDate,
             expDate = expDate,
             dateTrackingTextScale = dateTrackingTextScale,
-            barcodeGraphicScale = barcodeGraphicScale
+            barcodeGraphicScale = barcodeGraphicScale,
+            showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
+            extraFieldLabel = extraFieldTitle,
+            extraFieldValue = extraFieldValue
         )
     }
 
@@ -2591,7 +2958,8 @@ fun ProductCodeImageDialog(
         codeTypeName, labelSizeName, showPrice, priceTierName, showUnit, showBanglaDigits, showCodeNumber, showStoreName, storeNameInput,
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthInput, customHeightInput, productNameTextScale, priceTextScale,
-        codeNumberTextScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale
+        codeNumberTextScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
+        extraFieldTitle, extraFieldValue
     ) {
         val editor = preferences.edit()
             .putString("code_type", codeTypeName)
@@ -2610,6 +2978,8 @@ fun ProductCodeImageDialog(
             .putFloat("store_name_text_scale", storeNameTextScale)
             .putFloat("date_tracking_text_scale", dateTrackingTextScale)
             .putFloat("barcode_graphic_scale", barcodeGraphicScale)
+            .putString("extra_field_title", extraFieldTitle.trim())
+            .putString("extra_field_value", extraFieldValue.trim())
         if (parsedCustomWidth != null && parsedCustomWidth in 15f..150f) {
             editor.putFloat("custom_width_mm", parsedCustomWidth)
         }
@@ -2725,20 +3095,105 @@ fun ProductCodeImageDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Templates Row (LBL-18)
+                    Text(
+                        stringResource(R.string.label_presets_title),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val presets = remember { getDefaultLabelPresets() }
+                        presets.forEach { preset ->
+                            val presetName = preset.nameRes?.let { stringResource(it) } ?: preset.name
+                            FilterChip(
+                                selected = false,
+                                onClick = {
+                                    labelSizeName = preset.style.labelSize.name
+                                    customWidthInput = preset.style.customWidthMm.toString().removeSuffix(".0")
+                                    customHeightInput = preset.style.customHeightMm.toString().removeSuffix(".0")
+                                    showPrice = preset.style.showPrice
+                                    priceTierName = preset.style.priceTier.name
+                                    showCodeNumber = preset.style.showCodeNumber
+                                    showStoreName = preset.style.showStoreName
+                                    showDateTracking = preset.style.showDateTracking
+                                    extraFieldTitle = preset.style.extraFieldLabel
+                                    extraFieldValue = preset.style.extraFieldValue
+                                    productNameTextScale = preset.style.productNameTextScale
+                                    priceTextScale = preset.style.priceTextScale
+                                    codeNumberTextScale = preset.style.codeNumberTextScale
+                                    storeNameTextScale = preset.style.storeNameTextScale
+                                    dateTrackingTextScale = preset.style.dateTrackingTextScale
+                                    barcodeGraphicScale = preset.style.barcodeGraphicScale
+                                    Toast.makeText(context, context.getString(R.string.label_preset_saved_toast), Toast.LENGTH_SHORT).show()
+                                },
+                                label = { Text(presetName, fontSize = 11.5.sp) },
+                                leadingIcon = { Icon(Icons.Default.DashboardCustomize, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            )
+                        }
+                    }
+
+                    // Code Type (LBL-16)
+                    val isEan13Valid = remember(product.barcode) { isValidEan13(product.barcode) }
+                    val isEan8Valid = remember(product.barcode) { isValidEan8(product.barcode) }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         FilterChip(
                             selected = codeType == ProductCodeType.BARCODE,
                             onClick = { codeTypeName = ProductCodeType.BARCODE.name },
-                            label = { Text(stringResource(R.string.barcode_image)) },
-                            leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                            modifier = Modifier.weight(1f)
+                            label = { Text("Code 128") },
+                            leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        )
+                        if (isEan13Valid) {
+                            FilterChip(
+                                selected = codeType == ProductCodeType.EAN_13,
+                                onClick = { codeTypeName = ProductCodeType.EAN_13.name },
+                                label = {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(stringResource(R.string.code_type_ean13))
+                                        if (recommendedCodeType == ProductCodeType.EAN_13) {
+                                            Text("★", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
+                                        }
+                                    }
+                                },
+                                leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                            )
+                        }
+                        if (isEan8Valid) {
+                            FilterChip(
+                                selected = codeType == ProductCodeType.EAN_8,
+                                onClick = { codeTypeName = ProductCodeType.EAN_8.name },
+                                label = {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(stringResource(R.string.code_type_ean8))
+                                        if (recommendedCodeType == ProductCodeType.EAN_8) {
+                                            Text("★", color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
+                                        }
+                                    }
+                                },
+                                leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                            )
+                        }
+                        FilterChip(
+                            selected = codeType == ProductCodeType.CODE_39,
+                            onClick = { codeTypeName = ProductCodeType.CODE_39.name },
+                            label = { Text(stringResource(R.string.code_type_code39)) },
+                            leadingIcon = { Icon(Icons.Default.ViewWeek, contentDescription = null, modifier = Modifier.size(18.dp)) }
                         )
                         FilterChip(
                             selected = codeType == ProductCodeType.QR_CODE,
                             onClick = { codeTypeName = ProductCodeType.QR_CODE.name },
                             label = { Text(stringResource(R.string.qr_code)) },
-                            leadingIcon = { Icon(Icons.Default.QrCode2, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                            modifier = Modifier.weight(1f)
+                            leadingIcon = { Icon(Icons.Default.QrCode2, contentDescription = null, modifier = Modifier.size(18.dp)) }
                         )
                     }
 
@@ -2910,6 +3365,45 @@ fun ProductCodeImageDialog(
                                 label = stringResource(R.string.products_exp_date_label),
                                 value = expDate,
                                 onValueChange = { expDate = it },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                // Additional Field Section (LBL-18)
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.label_extra_field_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = extraFieldTitle,
+                                onValueChange = { extraFieldTitle = it.take(30) },
+                                label = { Text(stringResource(R.string.label_extra_field_name), fontSize = 11.sp) },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = extraFieldValue,
+                                onValueChange = { extraFieldValue = it.take(40) },
+                                label = { Text(stringResource(R.string.label_extra_field_value), fontSize = 11.sp) },
+                                singleLine = true,
                                 modifier = Modifier.weight(1f)
                             )
                         }

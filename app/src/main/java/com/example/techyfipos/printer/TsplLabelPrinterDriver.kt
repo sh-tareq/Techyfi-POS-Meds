@@ -3,6 +3,8 @@ package com.example.techyfipos.printer
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -208,6 +210,125 @@ fun buildTsplPayload(
     )
 }
 
+/**
+ * Composes multiple label bitmaps horizontally into a single multi-up row bitmap
+ * for printing on 2-across or 3-across label rolls.
+ */
+fun composeMultiUpRowBitmap(
+    rowBitmaps: List<Bitmap>,
+    labelsAcross: Int,
+    columnGapMm: Float,
+    labelWidthMm: Float,
+    labelHeightMm: Float,
+    dpi: Int = 203
+): Pair<Bitmap, Float> {
+    val safeAcross = labelsAcross.coerceIn(1, 3)
+    if (safeAcross == 1 || rowBitmaps.isEmpty()) {
+        val bmp = rowBitmaps.firstOrNull() ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        return bmp to labelWidthMm
+    }
+    val safeGapMm = columnGapMm.coerceIn(0f, 20f)
+    val totalRowWidthMm = safeAcross * labelWidthMm + (safeAcross - 1) * safeGapMm
+    val dotsPerMm = dpi / 25.4f
+    val labelWidthDots = maxOf(1, (labelWidthMm * dotsPerMm).roundToInt())
+    val labelHeightDots = maxOf(1, (labelHeightMm * dotsPerMm).roundToInt())
+    val gapDots = (safeGapMm * dotsPerMm).roundToInt()
+    val totalWidthDots = maxOf(1, (totalRowWidthMm * dotsPerMm).roundToInt())
+
+    val composite = Bitmap.createBitmap(totalWidthDots, labelHeightDots, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(composite)
+    canvas.drawColor(android.graphics.Color.WHITE)
+
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    for (i in 0 until safeAcross) {
+        if (i < rowBitmaps.size) {
+            val src = rowBitmaps[i]
+            val left = i * (labelWidthDots + gapDots).toFloat()
+            val destRect = RectF(left, 0f, left + labelWidthDots, labelHeightDots.toFloat())
+            canvas.drawBitmap(src, null, destRect, paint)
+        }
+    }
+    return composite to totalRowWidthMm
+}
+
+fun buildMultiUpTsplPayloads(
+    bitmapsWithCopies: List<Pair<Bitmap, Int>>,
+    labelWidthMm: Float,
+    labelHeightMm: Float,
+    labelsAcross: Int = 1,
+    columnGapMm: Float = 2f,
+    gapMm: Float = 2f,
+    darkness: Int = 8,
+    invertBits: Boolean = TSPL_INVERT_BITS,
+    dpi: Int = 203,
+    speed: Float = 4.0f,
+    xOffsetDots: Int = 0,
+    yOffsetDots: Int = 0,
+    direction: Int = 1,
+    paperType: String = "GAP"
+): List<ByteArray> {
+    val safeAcross = labelsAcross.coerceIn(1, 3)
+    if (safeAcross <= 1) {
+        return bitmapsWithCopies.map { (bitmap, copies) ->
+            buildTsplPayload(
+                labelBitmap = bitmap,
+                widthMm = labelWidthMm,
+                heightMm = labelHeightMm,
+                gapMm = gapMm,
+                copies = copies,
+                darkness = darkness,
+                invertBits = invertBits,
+                dpi = dpi,
+                speed = speed,
+                xOffsetDots = xOffsetDots,
+                yOffsetDots = yOffsetDots,
+                direction = direction,
+                paperType = paperType
+            )
+        }
+    }
+
+    val flatBitmaps = mutableListOf<Bitmap>()
+    for ((bitmap, copies) in bitmapsWithCopies) {
+        val safeCopies = copies.coerceIn(1, 500)
+        repeat(safeCopies) {
+            flatBitmaps.add(bitmap)
+        }
+    }
+
+    val payloads = mutableListOf<ByteArray>()
+    for (chunk in flatBitmaps.chunked(safeAcross)) {
+        val (compositeBitmap, totalRowWidthMm) = composeMultiUpRowBitmap(
+            rowBitmaps = chunk,
+            labelsAcross = safeAcross,
+            columnGapMm = columnGapMm,
+            labelWidthMm = labelWidthMm,
+            labelHeightMm = labelHeightMm,
+            dpi = dpi
+        )
+        val payload = buildTsplPayload(
+            labelBitmap = compositeBitmap,
+            widthMm = totalRowWidthMm,
+            heightMm = labelHeightMm,
+            gapMm = gapMm,
+            copies = 1,
+            darkness = darkness,
+            invertBits = invertBits,
+            dpi = dpi,
+            speed = speed,
+            xOffsetDots = xOffsetDots,
+            yOffsetDots = yOffsetDots,
+            direction = direction,
+            paperType = paperType
+        )
+        if (compositeBitmap != chunk.firstOrNull()) {
+            compositeBitmap.recycle()
+        }
+        payloads.add(payload)
+    }
+    return payloads
+}
+
 data class LabelJob(
     val bitmap: Bitmap,
     val copies: Int = 1
@@ -235,23 +356,45 @@ suspend fun printLabel(
     xOffsetDots: Int = 0,
     yOffsetDots: Int = 0,
     direction: Int = 1,
-    paperType: String = "GAP"
+    paperType: String = "GAP",
+    labelsAcross: Int = 1,
+    columnGapMm: Float = 2.0f
 ): DirectPrintResult = withContext(Dispatchers.IO) {
-    val payload = buildTsplPayload(
-        labelBitmap = labelBitmap,
-        widthMm = widthMm,
-        heightMm = heightMm,
-        gapMm = gapMm,
-        copies = copies,
-        darkness = darkness,
-        dpi = dpi,
-        speed = speed,
-        xOffsetDots = xOffsetDots,
-        yOffsetDots = yOffsetDots,
-        direction = direction,
-        paperType = paperType
-    )
-    sendToPrinter(context, target, listOf(payload))
+    val safeAcross = labelsAcross.coerceIn(1, 3)
+    if (safeAcross > 1) {
+        val payloads = buildMultiUpTsplPayloads(
+            bitmapsWithCopies = listOf(labelBitmap to copies),
+            labelWidthMm = widthMm,
+            labelHeightMm = heightMm,
+            labelsAcross = safeAcross,
+            columnGapMm = columnGapMm,
+            gapMm = gapMm,
+            darkness = darkness,
+            dpi = dpi,
+            speed = speed,
+            xOffsetDots = xOffsetDots,
+            yOffsetDots = yOffsetDots,
+            direction = direction,
+            paperType = paperType
+        )
+        sendToPrinter(context, target, payloads)
+    } else {
+        val payload = buildTsplPayload(
+            labelBitmap = labelBitmap,
+            widthMm = widthMm,
+            heightMm = heightMm,
+            gapMm = gapMm,
+            copies = copies,
+            darkness = darkness,
+            dpi = dpi,
+            speed = speed,
+            xOffsetDots = xOffsetDots,
+            yOffsetDots = yOffsetDots,
+            direction = direction,
+            paperType = paperType
+        )
+        sendToPrinter(context, target, listOf(payload))
+    }
 }
 
 suspend fun printLabel(
@@ -268,7 +411,9 @@ suspend fun printLabel(
     xOffsetDots: Int = 0,
     yOffsetDots: Int = 0,
     direction: Int = 1,
-    paperType: String = "GAP"
+    paperType: String = "GAP",
+    labelsAcross: Int = 1,
+    columnGapMm: Float = 2.0f
 ): DirectPrintResult {
     val target = if (address.trim().startsWith("usb:", ignoreCase = true)) {
         PrinterTarget.Usb(address.trim())
@@ -291,7 +436,9 @@ suspend fun printLabel(
         xOffsetDots = xOffsetDots,
         yOffsetDots = yOffsetDots,
         direction = direction,
-        paperType = paperType
+        paperType = paperType,
+        labelsAcross = labelsAcross,
+        columnGapMm = columnGapMm
     )
 }
 
@@ -313,20 +460,23 @@ suspend fun printLabelsBatch(
     xOffsetDots: Int = 0,
     yOffsetDots: Int = 0,
     direction: Int = 1,
-    paperType: String = "GAP"
+    paperType: String = "GAP",
+    labelsAcross: Int = 1,
+    columnGapMm: Float = 2.0f
 ): BatchLabelPrintResult = withContext(Dispatchers.IO) {
     if (jobs.isEmpty()) {
         return@withContext BatchLabelPrintResult(DirectPrintResult.Success, 0)
     }
 
-    val payloads = jobs.map { job ->
-        kotlinx.coroutines.currentCoroutineContext().ensureActive()
-        buildTsplPayload(
-            labelBitmap = job.bitmap,
-            widthMm = widthMm,
-            heightMm = heightMm,
+    val safeAcross = labelsAcross.coerceIn(1, 3)
+    val payloads = if (safeAcross > 1) {
+        buildMultiUpTsplPayloads(
+            bitmapsWithCopies = jobs.map { it.bitmap to it.copies },
+            labelWidthMm = widthMm,
+            labelHeightMm = heightMm,
+            labelsAcross = safeAcross,
+            columnGapMm = columnGapMm,
             gapMm = gapMm,
-            copies = job.copies,
             darkness = darkness,
             invertBits = invertBits,
             dpi = dpi,
@@ -336,8 +486,28 @@ suspend fun printLabelsBatch(
             direction = direction,
             paperType = paperType
         )
+    } else {
+        jobs.map { job ->
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            buildTsplPayload(
+                labelBitmap = job.bitmap,
+                widthMm = widthMm,
+                heightMm = heightMm,
+                gapMm = gapMm,
+                copies = job.copies,
+                darkness = darkness,
+                invertBits = invertBits,
+                dpi = dpi,
+                speed = speed,
+                xOffsetDots = xOffsetDots,
+                yOffsetDots = yOffsetDots,
+                direction = direction,
+                paperType = paperType
+            )
+        }
     }
-    printLabelPayloadsBatch(context, target, payloads, jobs.map { it.copies })
+    val copiesPerPayload = if (safeAcross > 1) payloads.map { safeAcross } else jobs.map { it.copies }
+    printLabelPayloadsBatch(context, target, payloads, copiesPerPayload)
 }
 
 suspend fun printLabelsBatch(
@@ -354,7 +524,9 @@ suspend fun printLabelsBatch(
     xOffsetDots: Int = 0,
     yOffsetDots: Int = 0,
     direction: Int = 1,
-    paperType: String = "GAP"
+    paperType: String = "GAP",
+    labelsAcross: Int = 1,
+    columnGapMm: Float = 2.0f
 ): BatchLabelPrintResult {
     val target = if (address.trim().startsWith("usb:", ignoreCase = true)) {
         PrinterTarget.Usb(address.trim())
@@ -377,7 +549,9 @@ suspend fun printLabelsBatch(
         xOffsetDots = xOffsetDots,
         yOffsetDots = yOffsetDots,
         direction = direction,
-        paperType = paperType
+        paperType = paperType,
+        labelsAcross = labelsAcross,
+        columnGapMm = columnGapMm
     )
 }
 
@@ -505,7 +679,9 @@ object TsplLabelPrinterDriver {
         xOffsetDots: Int = 0,
         yOffsetDots: Int = 0,
         direction: Int = 1,
-        paperType: String = "GAP"
+        paperType: String = "GAP",
+        labelsAcross: Int = 1,
+        columnGapMm: Float = 2.0f
     ): BatchLabelPrintResult = com.example.techyfipos.printer.printLabelsBatch(
         context = context,
         target = target,
@@ -519,7 +695,9 @@ object TsplLabelPrinterDriver {
         xOffsetDots = xOffsetDots,
         yOffsetDots = yOffsetDots,
         direction = direction,
-        paperType = paperType
+        paperType = paperType,
+        labelsAcross = labelsAcross,
+        columnGapMm = columnGapMm
     )
 
     suspend fun printLabelsBatch(
@@ -535,7 +713,9 @@ object TsplLabelPrinterDriver {
         xOffsetDots: Int = 0,
         yOffsetDots: Int = 0,
         direction: Int = 1,
-        paperType: String = "GAP"
+        paperType: String = "GAP",
+        labelsAcross: Int = 1,
+        columnGapMm: Float = 2.0f
     ): BatchLabelPrintResult = com.example.techyfipos.printer.printLabelsBatch(
         context = context,
         address = address,
@@ -549,7 +729,9 @@ object TsplLabelPrinterDriver {
         xOffsetDots = xOffsetDots,
         yOffsetDots = yOffsetDots,
         direction = direction,
-        paperType = paperType
+        paperType = paperType,
+        labelsAcross = labelsAcross,
+        columnGapMm = columnGapMm
     )
 }
 

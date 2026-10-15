@@ -1611,6 +1611,68 @@ private fun OptimizedSettingsHome(
                 }
             }
 
+            // Multi-Up: Labels across roll (1, 2, 3) and Column Gap (mm)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_label_labels_across),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = currentSettings.labelLabelsAcross == 1,
+                        onClick = { onUpdateSettings(currentSettings.copy(labelLabelsAcross = 1)) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_label_labels_across_1), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    }
+                    SegmentedButton(
+                        selected = currentSettings.labelLabelsAcross == 2,
+                        onClick = { onUpdateSettings(currentSettings.copy(labelLabelsAcross = 2)) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_label_labels_across_2), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    }
+                    SegmentedButton(
+                        selected = currentSettings.labelLabelsAcross == 3,
+                        onClick = { onUpdateSettings(currentSettings.copy(labelLabelsAcross = 3)) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_label_labels_across_3), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+
+            if (currentSettings.labelLabelsAcross > 1) {
+                var colGapText by remember(currentSettings.labelColumnGapMm) {
+                    mutableStateOf(currentSettings.labelColumnGapMm.toString())
+                }
+                val colGapFloat = colGapText.toFloatOrNull()
+                val isColGapError = colGapFloat == null || colGapFloat !in 0f..10f
+                OutlinedTextField(
+                    value = colGapText,
+                    onValueChange = { input ->
+                        colGapText = input
+                        val v = input.toFloatOrNull()
+                        if (v != null && v in 0f..10f) {
+                            onUpdateSettings(currentSettings.copy(labelColumnGapMm = v))
+                        }
+                    },
+                    isError = isColGapError,
+                    supportingText = if (isColGapError) {
+                        { Text(stringResource(R.string.settings_label_column_gap_error), color = MaterialTheme.colorScheme.error) }
+                    } else null,
+                    label = { Text(stringResource(R.string.settings_label_column_gap)) },
+                    suffix = { Text("mm", fontWeight = FontWeight.Bold) },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             // Darkness slider (0-15)
             var localLabelDarkness by remember(currentSettings.labelDarkness) {
                 mutableStateOf(currentSettings.labelDarkness.toFloat().coerceIn(0f, 15f))
