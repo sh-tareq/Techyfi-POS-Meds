@@ -1725,7 +1725,8 @@ private fun shareCustomerStatement(
         appendLine("${if (isBangla) "বর্তমান বকেয়া" else "Outstanding Due"}: ${formatTaka(customer.outstandingAmount, isBangla = isBangla)}")
         if (customer.creditLimit > 0.0) {
             val pct = ((customer.outstandingAmount / customer.creditLimit) * 100).toInt()
-            appendLine("${if (isBangla) "ক্রেডিট সীমা" else "Credit Limit"}: ${formatTaka(customer.creditLimit, isBangla = isBangla)} ($pct% used)")
+            val pctStr = if (isBangla) "${toBanglaDigits(pct.toString())}% ব্যবহৃত" else "$pct% used"
+            appendLine("${if (isBangla) "ক্রেডিট সীমা" else "Credit Limit"}: ${formatTaka(customer.creditLimit, isBangla = isBangla)} ($pctStr)")
         }
         appendLine("${if (isBangla) "সর্বমোট পরিশোধ" else "Total Repaid to Date"}: ${formatTaka(totalRepaid, isBangla = isBangla)}")
         appendLine("--------------------------------")
@@ -3193,10 +3194,10 @@ fun DuesAuditCard(
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 14.sp,
                     color = when (entry.type) {
-                        DuesAuditType.REPAYMENT -> Color(0xFF059669)
-                        DuesAuditType.CREDIT_SALE -> Color(0xFFD97706)
-                        DuesAuditType.RETURN_ADJUSTMENT -> Color(0xFF2563EB)
-                        DuesAuditType.MANUAL_DUE -> Color(0xFF9333EA)
+                        DuesAuditType.REPAYMENT -> MaterialTheme.extendedColors.success
+                        DuesAuditType.CREDIT_SALE -> MaterialTheme.extendedColors.warning
+                        DuesAuditType.RETURN_ADJUSTMENT -> MaterialTheme.colorScheme.primary
+                        DuesAuditType.MANUAL_DUE -> MaterialTheme.colorScheme.tertiary
                     }
                 )
             }
@@ -4207,6 +4208,7 @@ fun AddDueDialog(
     val errorEnterCustomerName = stringResource(R.string.dues_error_enter_customer_name)
     val errorInvalidPhone = stringResource(R.string.dues_error_invalid_phone)
     val errorInvalidDueAmount = stringResource(R.string.dues_error_invalid_due_amount)
+    val errorCreditLimitExceeded = stringResource(R.string.error_credit_limit_exceeded_auth)
 
     val addedDue = amount.toDoubleOrNull() ?: 0.0
     val totalUpdatedDue = initialDue + addedDue
@@ -4844,7 +4846,7 @@ fun AddDueDialog(
                             } else if (dueVal <= 0.0) {
                                 errorMessage = errorInvalidDueAmount
                             } else if (isOverLimit && !canOverrideLimit) {
-                                errorMessage = "Credit limit exceeded: Supervisor or Owner authorization required"
+                                errorMessage = errorCreditLimitExceeded
                             } else {
                                 isSaving = true
                                 onAddDue(cleanName, cleanPhone, dueVal, limitValFinal, note.trim().takeIf { it.isNotBlank() }) { success ->

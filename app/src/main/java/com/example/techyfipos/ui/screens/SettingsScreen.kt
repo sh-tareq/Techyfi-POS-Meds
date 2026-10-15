@@ -541,8 +541,8 @@ private fun OptimizedSettingsHome(
                 Column {
                     Text(
                         stringResource(R.string.settings_idle_lock_title),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         stringResource(R.string.settings_idle_lock_subtitle),
@@ -572,8 +572,8 @@ private fun OptimizedSettingsHome(
                                 30 -> stringResource(R.string.settings_idle_lock_30m)
                                 else -> stringResource(R.string.settings_idle_lock_60m)
                             },
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp,
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
@@ -5763,7 +5763,7 @@ fun SettingsScreen(
                                 val ok = GoogleDriveHelper.testDriveConnection(context, connection.email).isSuccess
                                 Toast.makeText(
                                     context,
-                                    if (ok) "Google Drive connection test passed!" else "Google Drive test failed. Please re-authenticate.",
+                                    context.getString(if (ok) R.string.settings_drive_test_passed else R.string.settings_drive_test_failed),
                                     Toast.LENGTH_LONG
                                 ).show()
                             }

@@ -3224,7 +3224,12 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
                         onCollision(res.existingCustomer)
                     }
                     is com.example.techyfipos.data.CustomerPhoneUpdateResult.Error -> {
-                        val msg = if (com.example.techyfipos.utils.isAppBangla()) "অকার্যকর মোবাইল নম্বর (কমপক্ষে ৫ সংখ্যার হতে হবে)" else res.message
+                        val msg = if (res.message.contains("Invalid phone number", ignoreCase = true)) {
+                            if (com.example.techyfipos.utils.isAppBangla()) "অকার্যকর মোবাইল নম্বর (কমপক্ষে ৫ সংখ্যার হতে হবে)" else res.message
+                        } else {
+                            val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                            com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(locCtx, res.message)
+                        }
                         onError(msg)
                     }
                 }
@@ -4086,11 +4091,13 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         viewModelScope.launch {
             try {
                 if (!repository.isSessionOwner() && !hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
-                    onComplete(false, "Staff management permission required")
+                    val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                    onComplete(false, locCtx.getString(R.string.user_management_permission_required))
                     return@launch
                 }
                 if (role == AppRoles.OWNER && !repository.isSessionOwner()) {
-                    onComplete(false, "Owner privileges required to add an owner")
+                    val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                    onComplete(false, locCtx.getString(R.string.error_unauthorized_owner))
                     return@launch
                 }
                 repository.createUser(
@@ -4126,11 +4133,13 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         viewModelScope.launch {
             try {
                 if (!repository.isSessionOwner() && !hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
-                    onComplete(false, "Staff management permission required")
+                    val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                    onComplete(false, locCtx.getString(R.string.user_management_permission_required))
                     return@launch
                 }
                 if (customPermissions != null && !repository.isSessionOwner() && !hasPermission(AppPermissions.SYSTEM_PERMISSIONS)) {
-                    onComplete(false, "Permission management privileges required")
+                    val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                    onComplete(false, locCtx.getString(R.string.error_unauthorized_permission))
                     return@launch
                 }
                 repository.updateStaff(
@@ -4280,8 +4289,10 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
                 is com.example.techyfipos.data.PinVerifyResult.Locked -> {
                     val s = (res.remainingMillis + 999L) / 1000L
                     _lockoutSeconds.value = s
-                    val msg = if (com.example.techyfipos.utils.isAppBangla()) {
-                        "অতিরিক্ত ব্যর্থ প্রচেষ্টা। $s সেকেন্ড পরে আবার চেষ্টা করুন।"
+                    val isBn = com.example.techyfipos.utils.isAppBangla()
+                    val sStr = if (isBn) com.example.techyfipos.utils.toBanglaDigits(s.toString()) else s.toString()
+                    val msg = if (isBn) {
+                        "অতিরিক্ত ব্যর্থ প্রচেষ্টা। $sStr সেকেন্ড পরে আবার চেষ্টা করুন।"
                     } else {
                         "Too many failed attempts. Try again in $s seconds."
                     }
@@ -4298,9 +4309,11 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
                 is com.example.techyfipos.data.PinVerifyResult.Invalid -> {
                     val lockSec = (res.remainingMillis + 999L) / 1000L
                     _lockoutSeconds.value = lockSec
+                    val isBn = com.example.techyfipos.utils.isAppBangla()
+                    val lockSecStr = if (isBn) com.example.techyfipos.utils.toBanglaDigits(lockSec.toString()) else lockSec.toString()
                     val message = if (lockSec > 0L) {
-                        if (com.example.techyfipos.utils.isAppBangla()) {
-                            "অতিরিক্ত ব্যর্থ প্রচেষ্টা। $lockSec সেকেন্ড পরে আবার চেষ্টা করুন।"
+                        if (isBn) {
+                            "অতিরিক্ত ব্যর্থ প্রচেষ্টা। $lockSecStr সেকেন্ড পরে আবার চেষ্টা করুন।"
                         } else {
                             "Too many failed attempts. Try again in $lockSec seconds."
                         }
@@ -5402,7 +5415,12 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                         onCollision(res.existingCustomer)
                     }
                     is com.example.techyfipos.data.CustomerPhoneUpdateResult.Error -> {
-                        val msg = if (com.example.techyfipos.utils.isAppBangla()) "অকার্যকর মোবাইল নম্বর (কমপক্ষে ৫ সংখ্যার হতে হবে)" else res.message
+                        val msg = if (res.message.contains("Invalid phone number", ignoreCase = true)) {
+                            if (com.example.techyfipos.utils.isAppBangla()) "অকার্যকর মোবাইল নম্বর (কমপক্ষে ৫ সংখ্যার হতে হবে)" else res.message
+                        } else {
+                            val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                            com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(locCtx, res.message)
+                        }
                         onError(msg)
                     }
                 }

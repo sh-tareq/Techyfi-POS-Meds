@@ -3163,6 +3163,13 @@
     <string name="dues_receipt_reprint_badge">RECORDED PAYMENT (REPRINT)</string>
     <string name="date_yesterday_fmt">Yesterday, %1$s</string>
     <string name="dossier_credit_charge_reversal_overpayment">Overpayment Reversal</string>
+    <string name="settings_drive_test_passed">Google Drive connection test passed!</string>
+    <string name="settings_drive_test_failed">Google Drive test failed. Please re-authenticate.</string>
+    <string name="error_credit_limit_exceeded_auth">Credit limit exceeded: Supervisor or Owner authorization required</string>
+    <string name="store_credit_voucher_disabled_msg">This voucher is %1$s and cannot be printed, shared, or redeemed.</string>
+    <string name="audit_by_cashier_fmt"> - By: %1$s</string>
+    <string name="print_unable_to_write_document">Unable to write print document</string>
+    <string name="scanner_banner_cart_total">• Cart Total: %1$s</string>
 </resources>
 
 

@@ -1219,7 +1219,7 @@ fun RegisterCloseScreen(
                         }.onFailure {
                             onError()
                             coroutineScope.launch {
-                                snackbarHostState.showSnackbar(it.localizedMessage ?: context.getString(R.string.register_close_failed))
+                                snackbarHostState.showSnackbar(getLocalizedRepositoryErrorMessage(context, it))
                             }
                         }
                     }

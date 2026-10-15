@@ -100,5 +100,9 @@ class P3AuditFixesTest {
     fun testR22_26_excelBarcodeLeadingZerosPreservation() {
         val plain = ExcelHelper.preserveLeadingZeros("123456")
         assertEquals("123456", plain)
+
+        // 10-digit number starting with '1' (dropped leading 0 from 01712345678)
+        val phoneBarcode = ExcelHelper.preserveLeadingZeros("1712345678")
+        assertEquals("01712345678", phoneBarcode)
     }
 }

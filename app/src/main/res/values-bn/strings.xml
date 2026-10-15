@@ -3165,4 +3165,11 @@
     <string name="dues_receipt_reprint_badge">পরিশোধের রসিদ (পুনঃমুদ্রণ)</string>
     <string name="date_yesterday_fmt">গতকাল, %1$s</string>
     <string name="dossier_credit_charge_reversal_overpayment">অতিরিক্ত পেমেন্ট রিভার্সাল</string>
+    <string name="settings_drive_test_passed">গুগল ড্রাইভ সংযোগ পরীক্ষা সফল হয়েছে!</string>
+    <string name="settings_drive_test_failed">গুগল ড্রাইভ পরীক্ষা ব্যর্থ হয়েছে। অনুগ্রহ করে পুনরায় প্রমাণীকরণ করুন।</string>
+    <string name="error_credit_limit_exceeded_auth">ক্রেডিট সীমা অতিক্রম করেছে: সুপারভাইজার বা মালিকের অনুমোদন প্রয়োজন</string>
+    <string name="store_credit_voucher_disabled_msg">এই ভাউচারটি %1$s এবং এটি প্রিন্ট, শেয়ার বা ব্যবহার করা যাবে না।</string>
+    <string name="audit_by_cashier_fmt"> - দ্বারা: %1$s</string>
+    <string name="print_unable_to_write_document">প্রিন্ট ডকুমেন্ট লেখা সম্ভব হয়নি</string>
+    <string name="scanner_banner_cart_total">• মোট কার্ট: %1$s</string>
 </resources>
