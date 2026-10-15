@@ -430,7 +430,7 @@ private fun AddStaffDialog(
     val currentUser by authViewModel.currentUser.collectAsState()
     val callerRole = currentUser?.role ?: if (isOwner) AppRoles.OWNER else AppRoles.CASHIER
     val allowedRoles = when (callerRole) {
-        AppRoles.OWNER -> listOf(AppRoles.CASHIER, AppRoles.MANAGER)
+        AppRoles.OWNER -> listOf(AppRoles.CASHIER, AppRoles.MANAGER, AppRoles.OWNER)
         AppRoles.MANAGER -> listOf(AppRoles.CASHIER, AppRoles.MANAGER)
         else -> listOf(AppRoles.CASHIER)
     }
@@ -478,7 +478,7 @@ private fun AddStaffDialog(
 
                 RoleSelectorRow(
                     selectedRole = selectedRole,
-                    allowOwnerRole = false,
+                    allowOwnerRole = callerRole == AppRoles.OWNER,
                     allowedRoles = allowedRoles,
                     onRoleSelected = { role ->
                         selectedRole = role
@@ -570,9 +570,9 @@ private fun EditStaffDialog(
     val isEditingOwner = user.role == AppRoles.OWNER
     val callerRole = currentUser?.role ?: if (isOwner) AppRoles.OWNER else AppRoles.CASHIER
     val hasPermissionsCapability = isOwner || (currentUser != null && AppPermissions.hasPermission(currentUser!!, AppPermissions.SYSTEM_PERMISSIONS))
-    val canChangeRole = !isSelf && !isEditingOwner && hasPermissionsCapability
+    val canChangeRole = !isSelf && (callerRole == AppRoles.OWNER || (!isEditingOwner && hasPermissionsCapability))
     val allowedRoles = when (callerRole) {
-        AppRoles.OWNER -> listOf(AppRoles.CASHIER, AppRoles.MANAGER)
+        AppRoles.OWNER -> listOf(AppRoles.CASHIER, AppRoles.MANAGER, AppRoles.OWNER)
         AppRoles.MANAGER -> listOf(AppRoles.CASHIER, AppRoles.MANAGER)
         else -> listOf(AppRoles.CASHIER)
     }
@@ -634,12 +634,12 @@ private fun EditStaffDialog(
 
                 RoleSelectorRow(
                     selectedRole = editRole,
-                    allowOwnerRole = isEditingOwner,
-                    allowedRoles = if (isEditingOwner) listOf(AppRoles.OWNER) else allowedRoles,
+                    allowOwnerRole = callerRole == AppRoles.OWNER || isEditingOwner,
+                    allowedRoles = if (callerRole == AppRoles.OWNER) listOf(AppRoles.CASHIER, AppRoles.MANAGER, AppRoles.OWNER) else (if (isEditingOwner) listOf(AppRoles.OWNER) else allowedRoles),
                     enabled = canChangeRole,
                     onRoleSelected = { if (canChangeRole) editRole = it }
                 )
-                if (isEditingOwner) {
+                if (isEditingOwner && callerRole != AppRoles.OWNER) {
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.users_owner_role_fixed_note),

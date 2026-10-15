@@ -12,22 +12,17 @@ import org.mockito.Mockito
 class OwnerDecisionsTest {
 
     @Test
-    fun testR20_29_singleOwnerPromotionPolicy() {
-        val existingRoleCashier = AppRoles.CASHIER
-        val targetRoleOwner = AppRoles.OWNER
+    fun testR20_29_multiOwnerPromotionPolicy() {
+        // Non-owner caller (CASHIER or MANAGER) cannot promote anyone to OWNER
+        assertFalse(AppRoles.canPromoteToOwner(AppRoles.CASHIER, AppRoles.OWNER))
+        assertFalse(AppRoles.canPromoteToOwner(AppRoles.MANAGER, AppRoles.OWNER))
 
-        // Policy rule: cannot promote non-owner to owner
-        val isPromotionAllowed = AppRoles.canPromoteToOwner(existingRoleCashier, targetRoleOwner)
-        assertFalse(isPromotionAllowed)
+        // Existing OWNER caller can promote/assign staff to OWNER
+        assertTrue(AppRoles.canPromoteToOwner(AppRoles.OWNER, AppRoles.OWNER))
 
-        // Existing owner keeping owner role is allowed
-        val existingRoleOwner = AppRoles.OWNER
-        val isOwnerPreserved = AppRoles.canPromoteToOwner(existingRoleOwner, targetRoleOwner)
-        assertTrue(isOwnerPreserved)
-
-        // Manager cannot be promoted to owner
-        val existingRoleManager = AppRoles.MANAGER
-        assertFalse(AppRoles.canPromoteToOwner(existingRoleManager, targetRoleOwner))
+        // Non-owner target roles are allowed for appropriate callers
+        assertTrue(AppRoles.canPromoteToOwner(AppRoles.OWNER, AppRoles.MANAGER))
+        assertTrue(AppRoles.canPromoteToOwner(AppRoles.OWNER, AppRoles.CASHIER))
     }
 
     @Test

@@ -59,8 +59,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 - [x] **R22-31 MED Reported. Delegated managers can't save edits for users with custom permissions, or for themselves.** (R21-14 regression.) `EditStaffDialog` (`ManageUsersScreen.kt` about 697) re-sends the target's existing `customPermissions` when the role is unchanged, so a manager without `SYSTEM_PERMISSIONS` is refused on any edit (name, PIN, discount), and editing yourself always hits "Users cannot edit their own permissions" (repo about 4444). Fix: send `null` when permissions are unchanged (they are edited only in the matrix dialog) and treat an unchanged set as no change in the repo.
 
-- [ ] **R22-07 LOW-MED Reported. Anyone with Shop Settings can turn off the idle lock.** `SettingsScreen.kt` about 516-582 saves through `saveInvoiceSettingsData` (needs only `SYSTEM_SHOP_SETTINGS`). Gate the setting on `isOwner` (read-only for others), matching Reset and Repair Dues on the same page.
-  deferred: awaiting owner decision (see Owner questions)
+- [x] **R22-07 LOW-MED Reported. Anyone with Shop Settings can turn off the idle lock.** (Resolved per owner decision: anyone with Shop Settings access can configure idle lock; gated with `canEditSettings` and `error_unauthorized_permission`).
 
 ---
 
@@ -119,7 +118,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 - [x] **R22-21 LOW-MED Reported. R21-24 leftovers.** Local auto-backups list still shows `_latest.json` and calls `listFiles` on the main thread (`SettingsScreen.kt` about 5671-5675). `websiteUrl` is printed nowhere; `decimalQuantitiesEnabled` is dead; `driveBackupTime` has no UI. Loyalty EXPIRING_SOON still selects already-expired points (VM about 4849, 4856).
 
-- [ ] **R22-22 LOW Reported. Existing installs with two owners get stuck** (deferred: awaiting owner decision on whether to let owner demote extra owners or demote automatically.) (R20-29 decision). `updateStaff` forbids any owner role change (repo about 4415) and the device PIN reset picks `firstOrNull` owner (about 4266). Add a one-time cleanup (let the owner demote extra owners) or an owner picker for the reset.
+- [x] **R22-22 LOW Reported. Existing installs with two owners get stuck.** (Resolved per owner decision: Multi-Owner system implemented. Owners can create, promote, and demote extra owners while guarding that at least one active owner remains).
 
 ---
 

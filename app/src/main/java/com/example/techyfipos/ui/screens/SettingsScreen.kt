@@ -5479,7 +5479,7 @@ fun SettingsScreen(
                     currentSettings = currentSettings,
                     onUpdateSettings = { updated ->
                         if (!canEditSettings) {
-                            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.error_unauthorized_permission), Toast.LENGTH_SHORT).show()
                         } else {
                             currentSettings = updated
                             settingsViewModel.saveInvoiceSettingsData(updated) { ok ->

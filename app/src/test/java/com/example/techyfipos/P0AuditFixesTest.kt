@@ -17,6 +17,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import kotlinx.coroutines.flow.first
 import org.junit.Test
 
 class P0AuditFixesTest {
@@ -204,6 +205,7 @@ class P0AuditFixesTest {
             category = "Cat",
             purchasePrice = 50.0,
             sellingPrice = 100.0,
+            mrpPrice = 150.0,
             stockQty = 10.0,
             reorderLevel = 1,
             unit = "pcs"
@@ -449,5 +451,35 @@ class P0AuditFixesTest {
                 repo.deleteUser(owner)
             }
         }
+    }
+
+    @Test
+    fun testMultiOwner_creationPromotionAndDemotion() = kotlinx.coroutines.test.runTest {
+        val owner1 = User(id = 1L, name = "Owner 1", pinHash = hashSha256("1111"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val cashier = User(id = 2L, name = "Cashier", pinHash = hashSha256("2222"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, isActive = true)
+        val (repo, _) = createRepositoryWithUsers(listOf(owner1, cashier))
+        repo.setSessionUser(owner1)
+
+        // 1. Existing Owner CAN create a second Owner account
+        val owner2Id = repo.createUser("Owner 2", "3333", AppRoles.OWNER)
+        assertTrue(owner2Id > 0L)
+        val owner2 = repo.allUsers.first().find { it.id == owner2Id }
+        assertNotNull(owner2)
+        assertEquals(AppRoles.OWNER, owner2?.role)
+
+        // 2. Existing Owner CAN promote Cashier to Owner
+        repo.updateStaff(userId = cashier.id, newName = "Cashier Now Owner", newRole = AppRoles.OWNER)
+        val promotedCashier = repo.allUsers.first().find { it.id == cashier.id }
+        assertEquals(AppRoles.OWNER, promotedCashier?.role)
+
+        // 3. With 3 owners, Owner 1 CAN demote Owner 2 to Manager
+        repo.updateStaff(userId = owner2Id, newName = "Owner 2", newRole = AppRoles.MANAGER)
+        val demotedOwner2 = repo.allUsers.first().find { it.id == owner2Id }
+        assertEquals(AppRoles.MANAGER, demotedOwner2?.role)
+
+        // 4. Owner 1 CAN delete demoted user
+        repo.deleteUser(demotedOwner2!!)
+        val deleted = repo.allUsers.first().find { it.id == owner2Id }
+        assertTrue(deleted == null)
     }
 }

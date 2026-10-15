@@ -4389,9 +4389,6 @@ class DataRepository(
                 throw UnauthorizedException("Cannot grant maximum discount higher than your own")
             }
         }
-        if (role == AppRoles.OWNER && users.any { it.role == AppRoles.OWNER }) {
-            throw IllegalStateException("An owner account already exists")
-        }
         if (customPermissions != null) {
             if (!hasPermission(AppPermissions.SYSTEM_PERMISSIONS) && !isSessionOwner()) {
                 throw UnauthorizedException("Permission SYSTEM_PERMISSIONS required to set custom permissions")
@@ -4429,10 +4426,12 @@ class DataRepository(
     }
 
     /** Called only after Android has confirmed the device owner's lock-screen credential. */
-    suspend fun resetOwnerPinAfterDeviceCredential(newPin: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun resetOwnerPinAfterDeviceCredential(newPin: String, targetOwnerId: Long? = null): Boolean = withContext(Dispatchers.IO) {
         if (newPin.length != 4 || !newPin.all(Char::isDigit)) return@withContext false
         val users = userDao.getAllUsersOnce()
-        val owner = users.firstOrNull { it.role == AppRoles.OWNER } ?: return@withContext false
+        val owner = (if (targetOwnerId != null) users.firstOrNull { it.id == targetOwnerId && it.role == AppRoles.OWNER } else null)
+            ?: users.firstOrNull { it.role == AppRoles.OWNER }
+            ?: return@withContext false
         if (users.any { it.id != owner.id && pinMatches(newPin, it.pinHash) }) return@withContext false
         userDao.updatePinHash(owner.id, hashPin(newPin))
         val now = System.currentTimeMillis()
@@ -4622,12 +4621,18 @@ class DataRepository(
             }
         }
 
-        if (!AppRoles.canPromoteToOwner(existing.role, targetRole)) {
-            throw IllegalStateException("Cannot promote staff to owner; only one owner account is supported")
+        val callerRole = sessionUser?.role ?: AppRoles.CASHIER
+        if (!AppRoles.canPromoteToOwner(callerRole, targetRole)) {
+            throw UnauthorizedException("Non-owners cannot assign owner role")
         }
 
         if (existing.role == AppRoles.OWNER && targetRole != AppRoles.OWNER) {
-            throw IllegalStateException("The only owner account cannot be changed to another role")
+            if (!isSessionOwner()) {
+                throw UnauthorizedException("Only an owner can change another owner's role")
+            }
+            if (userDao.getActiveOwnerCount() <= 1) {
+                throw IllegalStateException("The only owner account cannot be changed to another role")
+            }
         }
 
         val targetActive = isActive ?: existing.isActive
