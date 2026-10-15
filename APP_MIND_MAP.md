@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-14 (app version 2.6.79-V14-10-2026, build `Techyfi-POS-Final-V14-10-2026.apk`; versionCode 220955; DB schema version 38)
+Last updated: 2026-10-15 (app version 2.6.80-V15-10-2026, build `Techyfi-POS-Final-V15-10-2026.apk`; versionCode 220956; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -20,6 +20,7 @@ mindmap
             Full master access across all screens, ledgers, settings, and danger zone
             Can toggle on/off any of the 33 permissions per staff account
             Add, edit, deactivate, or delete staff members
+            Multi-owner architecture (can add multiple owners, demote extra owners, last active owner protected)
           Store Manager
             Operational oversight: inventory, stock inwarding, suppliers, customer CRM, shift register closing, and P&L reports
             Acts as Supervisor for PIN-elevation authorization
@@ -30,7 +31,8 @@ mindmap
           Supervisor PIN Elevation
             Managers or Owners can elevate restricted actions without logging out the cashier
             Required for discount over limit, cart void, sales return, khata write-off, and danger zone settings
-            Elevation auto-expires after action completion or 5 minutes
+            Cryptographic cart hash invalidates elevation on cart modification (items, qty, price mode)
+            Elevation auto-expires after action completion or strictly 5 minutes
           Granular 33-Permission Matrix across 9 Categories
             Sales & Checkout, Returns & Refunds, Inventory & Catalog, Customers & Dues, Reports & Cash Register, Loyalty & Rewards, Suppliers, Expenses, System Administration
           Repository-enforced mutation security
@@ -41,9 +43,11 @@ mindmap
           Unauthenticated remote backup restore backdoor removed from MainActivity
           Strict PIN authentication enforced for database restore routines
           Low-stock notification deep-link route preserved across terminal lock and unlock
-          Single owner policy: cannot create duplicate owners or promote staff to owner
+          Multi-owner policy: owners can create multiple owners or demote extra owners while preserving at least one owner
           Device-credential PIN reset requires high-priority owner acknowledgment on next login
           Configurable idle auto-lock with off / 5m / 15m / 30m / 60m thresholds
+          Unified background auto-lock strictly follows idle timeout
+          Modal dialog and bottom sheet touch tracking via Modifier.trackUserActivity prevents mid-entry lockouts
       Adaptive Layout Resolution Engine
         Breakpoints & Form Factor Detection
           Compact Phone (< 600dp)
@@ -1036,15 +1040,15 @@ mindmap
 ## Current Android package
 
 - Application ID: `com.techyfi.pos`
-- Version code: `220955`
-- Version name: `2.6.79-V14-10-2026`
+- Version code: `220956`
+- Version name: `2.6.80-V15-10-2026`
 - Upgrade rule: retain the same application ID and signing identity, and always increase the version code.
 - Signing SHA-1:
   - Active key (from Sep 29, 2026 onwards): `08:4A:15:4B:BB:A4:61:B7:98:C7:E2:62:F8:CE:C3:BA:8B:52:3A:FA` (keystore at `~/.android/debug.keystore`).
   - Legacy key (prior to Sep 29, 2026): `D6:7B:BD:1C:48:92:D4:FC:7F:D5:1F:D1:CB:22:79:B5:6F:C8:AD:9C`.
   - Both must be registered as Android OAuth 2.0 Client IDs in Google Cloud Console under `com.techyfi.pos` for Google Drive backup/restore.
 - Database version: `38` (v15→16 reminder tracking, v16→17 purchasePriceAtSale snapshot, v17→18 return refund-splitting, v18→19 register shift states, v19→20 due reminders, v20→21 unified customers CRM, v21→22 users RBAC, v24→25 sale audit logs, v33→34, v34→35, v35→36, v36→37, and v37→38 cleaning legacy voucher phone fallback with nullable customerPhone support).
-- Current build: `Techyfi-POS-Final-V14-10-2026.apk` (versionCode 220955) - R8 minified and resource-shrunk, Receipt Auto-Cut reliability hardening, deterministic GS r 1 status query socket drain, adaptive Bluetooth chunk pacing (15-35 ms), post-raster settling delay (250 ms), Cut Command Style selector UI, settings RBAC enforcement, and long receipt cut diagnostics. Dual Printer Architecture (Direct Bluetooth & USB ESC/POS for Receipts with auto-cut and feed lines, TSPL for Labels, Android Print Service fallback, thread-safe dispatch & reliable chunked transport, printer conflict guard). Full single and batch label copy selector (1-500, presets 1, 2, 3, 5, 10, 20, stock qty), direct Bluetooth and USB TSPL dispatch & PDF share, and multi-page print document layout adapter.
+- Current build: `Techyfi-POS-Final-V15-10-2026.apk` (versionCode 220956) - R8 minified and resource-shrunk, Audit Round 22 comprehensive platform hardening, Multi-Owner architecture (create, promote, demote extra owners while guarding last active owner), supervisor auth lockout integrity and cart alteration hash invalidation, 5-minute elevation timeout, unified background auto-lock strictly following idle-lock duration (0 = never), separate window modal touch tracking via Modifier.trackUserActivity, normalized timeout restored settings, USB label printer batch routing, label bitmap height calculation & multi-target conflict guards, profit and tax line-item apportioning parity, Google Drive offline error unwrapping, factory reset reminder cancellation & image cleanup, localized error bus integration, and 100% test suite pass (222/222 unit tests).
 - This is the project's only mind map and the single source of truth for architecture, workflows, limitations, business rules, release metadata, and verification history.
 
 ## Primary code map
@@ -2880,6 +2884,44 @@ mindmap
   - Pure logic unit tests in `PrinterRoutingAndDriverTest.kt` passing 100%.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V14-10-2026.apk` (versionCode 220955, versionName "2.6.79-V14-10-2026"), R8 minified and resource-shrunk, prepared as an in-place update for the existing installed app.
+
+### Audit Round 22 Comprehensive Platform Hardening & Multi-Owner Architecture (Version 2.6.80-V15-10-2026, Build V15-10-2026)
+- **Multi-Owner Account Architecture & RBAC Security (R22-07, R22-22, R22-29, R22-30, R22-31)**:
+  - Enabled full Multi-Owner account support: existing Owners can create multiple Owner accounts, promote staff members to Owner, and demote extra Owner accounts to Manager or Cashier.
+  - Guarded against orphaned systems by strictly preventing the deletion, deactivation, or demotion of the last remaining active Owner account.
+  - Gated Shop Settings and idle lock configuration with `canEditSettings` permission checks and unauthorized access toasts.
+  - Resolved manager delegated user edit regression: editing staff accounts with custom permissions or self-editing now properly sends null for unchanged permissions instead of triggering unauthorized permission errors.
+- **Supervisor Authorization, PIN Lockout & Idle Auto-Lock Integrity (R22-01, R22-02, R22-03, R22-04, R22-09, R22-19, R22-20)**:
+  - Cashiers locked out by supervisor auth failures cannot bypass lockout using their own PIN; lockout state survives user login/logout.
+  - Discount elevation approvals compute and validate a cryptographic cart hash (items, quantities, and price mode); any cart alteration immediately invalidates approval.
+  - Elevated permissions strictly expire after 5 minutes or upon checkout completion.
+  - Unified background auto-lock with `idleLockDurationMinutes`: minimizing the app locks upon return only if the configured idle period (5m, 15m, 30m, 60m) has elapsed; disabled when set to Off (0m).
+  - Added shared `Modifier.trackUserActivity()` detecting touch input on dialog and bottom-sheet windows to prevent premature idle lockouts during extensive modal form entry.
+  - Normalized non-standard restored timeout values from legacy backups to ensure an option button is always selected in Settings.
+  - Fixed status-bar theming across Splash and Lock screens to prevent white-flash crossfades.
+- **Thermal & TSPL Printer Subsystem Hardening (R22-08, R22-10, R22-11, R22-12, R22-13, R22-14, R22-15)**:
+  - Fixed batch label printing ignoring USB label printers by routing jobs through `resolvedLabelPrinterTarget()` and `isSamePrinterTarget` verification.
+  - Resolved label and receipt conflict detection to properly inspect both Bluetooth and USB connection targets.
+  - Handled USB permission grants, device disconnects, and status updates gracefully without app freezing.
+  - Corrected label height calculation and TSPL bitmap rasterization to prevent clipping on 1-column, 2-column, and custom label formats.
+- **Accounting, Tax, Margin & Profit Parity (R22-32, R22-33, R22-34, R22-35)**:
+  - Fixed realized profit calculation for partial due sales to accurately reflect collected cash fractions.
+  - Apportioned overall invoice discounts and taxes proportionally across line items to guarantee strict ledger and report parity.
+  - Clamped bulk-adjusted catalog prices to maximum retail price (MRP) when configured.
+  - Preserved leading zeros during barcode Excel spreadsheet import via Apache POI.
+- **Data Safety, Recovery & Clean State Management (R22-16, R22-17, R22-18, R22-21, R22-25, R22-26)**:
+  - Google Drive backup error reporting now unwraps underlying network/offline causes to display actionable localized error messages.
+  - Hardened Factory Reset routine to cancel scheduled alarms before wiping database tables and prune orphaned image files and cached cart snapshots.
+  - Filtered internal `_latest.json` markers and offloaded local backup directory scanning from the main thread.
+  - Allowed inventory adjustment users without full catalog edit rights to update stock levels without modifying other product metadata.
+  - Added Cash Reconciliation rows to Shift Z-Reports and CSV exports.
+  - Clearly stamped reprinted receipts with localized reprint notices to avoid confusing historical records with new full payments.
+- **Localization, Design Tokens & Ergonomics (R22-23, R22-24, R22-27, R22-28)**:
+  - Centralized repository error bus to map raw SQLite and data exceptions into polished, human-friendly Bengali and English messages.
+  - Replaced lingering hardcoded colors with Material 3 semantic theme tokens and verified touch targets exceed 48dp across all screens.
+  - Standardized all strings across `strings.xml` and `values-bn/strings.xml` with strictly zero em dash characters.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V15-10-2026.apk` (versionCode 220956, versionName "2.6.80-V15-10-2026"), R8 minified and resource-shrunk, fully tested and ready as an in-place upgrade.
 
 ## Maintenance note
 
