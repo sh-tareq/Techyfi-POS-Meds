@@ -1212,7 +1212,13 @@ suspend fun printLabelImages(
         widthMm = widthMm,
         heightMm = heightMm,
         gapMm = settings.labelGapMm,
-        darkness = settings.labelDarkness
+        darkness = settings.labelDarkness,
+        dpi = settings.labelDpi,
+        speed = settings.labelPrintSpeed,
+        xOffsetDots = settings.labelXOffsetDots,
+        yOffsetDots = settings.labelYOffsetDots,
+        direction = settings.labelDirection,
+        paperType = settings.labelPaperType
     )
     val directResult = batchResult.result
 

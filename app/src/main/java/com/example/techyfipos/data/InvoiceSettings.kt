@@ -88,6 +88,12 @@ data class InvoiceSettingsData(
     val labelPrinterAddress: String = "",
     val labelGapMm: Float = 2f,
     val labelDarkness: Int = 8,
+    val labelDpi: Int = 203,
+    val labelPrintSpeed: Float = 4.0f,
+    val labelXOffsetDots: Int = 0,
+    val labelYOffsetDots: Int = 0,
+    val labelDirection: Int = 1,
+    val labelPaperType: String = "GAP",
     val allowNegativeInventory: Boolean = false,
     val decimalQuantitiesEnabled: Boolean = true,
     val paperRollWidthMm: Int = 80,
@@ -232,6 +238,12 @@ data class InvoiceSettingsData(
             put("labelPrinterAddress", labelPrinterAddress)
             put("labelGapMm", labelGapMm.toDouble())
             put("labelDarkness", labelDarkness)
+            put("labelDpi", labelDpi)
+            put("labelPrintSpeed", labelPrintSpeed.toDouble())
+            put("labelXOffsetDots", labelXOffsetDots)
+            put("labelYOffsetDots", labelYOffsetDots)
+            put("labelDirection", labelDirection)
+            put("labelPaperType", labelPaperType)
             put("allowNegativeInventory", allowNegativeInventory)
             put("decimalQuantitiesEnabled", decimalQuantitiesEnabled)
             put("paperRollWidthMm", paperRollWidthMm)
@@ -352,6 +364,14 @@ data class InvoiceSettingsData(
                     labelPrinterAddress = json.optString("labelPrinterAddress", ""),
                     labelGapMm = json.optDouble("labelGapMm", 2.0).toFloat(),
                     labelDarkness = json.optInt("labelDarkness", 8),
+                    labelDpi = json.optInt("labelDpi", 203).let { if (it == 300) 300 else 203 },
+                    labelPrintSpeed = json.optDouble("labelPrintSpeed", 4.0).toFloat().coerceIn(1.5f, 6.0f),
+                    labelXOffsetDots = json.optInt("labelXOffsetDots", 0),
+                    labelYOffsetDots = json.optInt("labelYOffsetDots", 0),
+                    labelDirection = json.optInt("labelDirection", 1).let { if (it == 0) 0 else 1 },
+                    labelPaperType = json.optString("labelPaperType", "GAP").trim().uppercase().let {
+                        if (it in listOf("GAP", "CONTINUOUS", "BLACK_MARK")) it else "GAP"
+                    },
                     allowNegativeInventory = json.optBoolean("allowNegativeInventory", false),
                     decimalQuantitiesEnabled = json.optBoolean("decimalQuantitiesEnabled", true),
                     paperRollWidthMm = json.optInt("paperRollWidthMm", 80),

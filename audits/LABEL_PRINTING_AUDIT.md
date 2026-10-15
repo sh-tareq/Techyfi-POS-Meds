@@ -80,12 +80,12 @@ Line numbers are approximate. Search for the quoted code if they have moved.
 
 ## P2: Print quality and hardware support
 
-- [ ] **LBL-12 HIGH Reported. Printer DPI is hardcoded to 203 (8 dots/mm).**
+- [x] **LBL-12 HIGH Reported. Printer DPI is hardcoded to 203 (8 dots/mm).**
   - `Tspl` `buildTsplPayload` (~128-129) uses `widthMm * 8f`. On a 300 dpi printer the 1-bit bitmap covers only about two thirds of the label.
   - Fix: add `labelDpi` (203 or 300, default 203) to `InvoiceSettingsData` (`data/InvoiceSettings.kt`, JSON read and write at ~229-234 and ~347-354, keep old backups loading with the default). Add a selector in the Label Printer card in Settings. Use `dpi / 25.4` dots per mm in `buildTsplPayload`, and pass it through `printLabelsBatch`, `printLabel`, `printLabelPayloadsBatch` callers (Dialogs ~1943, Bill ~1195). Add strings (en and bn).
   - Test: `buildTsplPayload` header and `BITMAP` width for 203 and 300 dpi.
 
-- [ ] **LBL-13 MED Reported. Small labels can produce barcodes that do not scan.**
+- [x] **LBL-13 MED Reported. Small labels can produce barcodes that do not scan.**
   - `Img` draws at 20 px/mm and ZXing picks an integer module width at that scale, then `Tspl` downscales with filtering and thresholds to 1 bit. On 25x15 mm labels each bar is about 1.2 dots, so bars come out 1 or 2 dots wide.
   - Fix options (pick one, document the choice):
     1. Render the barcode directly at printer resolution with an integer module width of at least 2 dots, then paste it into the label at 1:1 (no resampling).
@@ -93,7 +93,7 @@ Line numbers are approximate. Search for the quoted code if they have moved.
   - Also: when the computed module width is under 2 dots, show a warning in the preview ("Barcode too dense for this label size") and offer a larger label or QR.
   - Replace the per-pixel `setPixel` loop (Img ~272-276) with `IntArray` + `setPixels` while you are there.
 
-- [ ] **LBL-14 LOW Reported. No printer calibration controls.**
+- [x] **LBL-14 LOW Reported. No printer calibration controls.**
   - Settings Label Printer card only has mode, device, gap and darkness. `Tspl` hardcodes `DIRECTION 1` and has no `SPEED`, `REFERENCE`/offset, or paper type.
   - Fix (small version): add print speed, horizontal and vertical offset (dots), mirror/direction, and a paper-type choice (gap, continuous, black mark). Persist in `InvoiceSettingsData`. Emit `SPEED`, `REFERENCE`, `DIRECTION`, `GAP`/`BLINE` accordingly.
   - The gap field (Settings ~1421-1444) ignores values outside 0..20 without feedback. Show an `isError` state and a supporting text.

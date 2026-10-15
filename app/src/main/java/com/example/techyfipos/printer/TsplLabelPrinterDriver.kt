@@ -86,7 +86,12 @@ fun buildTsplPayload(
     darkness: Int,
     bitmapBytes: ByteArray,
     targetWidthDots: Int,
-    targetHeightDots: Int
+    targetHeightDots: Int,
+    speed: Float = 4.0f,
+    xOffsetDots: Int = 0,
+    yOffsetDots: Int = 0,
+    direction: Int = 1,
+    paperType: String = "GAP"
 ): ByteArray {
     val safeCopies = copies.coerceAtLeast(1)
     val safeDarkness = darkness.coerceIn(0, 15)
@@ -95,12 +100,27 @@ fun buildTsplPayload(
     val safeHeightDots = maxOf(1, targetHeightDots)
     val widthBytes = (safeWidthDots + 7) / 8
 
-    val header = "SIZE ${formatMm(widthMm)} mm,${formatMm(heightMm)} mm\r\n" +
-        "GAP ${formatMm(safeGapMm)} mm,0 mm\r\n" +
-        "DIRECTION 1\r\n" +
-        "DENSITY $safeDarkness\r\n" +
-        "CLS\r\n" +
-        "BITMAP 0,0,$widthBytes,$safeHeightDots,0,"
+    val sb = StringBuilder()
+    sb.append("SIZE ${formatMm(widthMm)} mm,${formatMm(heightMm)} mm\r\n")
+    if (paperType.equals("CONTINUOUS", ignoreCase = true)) {
+        sb.append("GAP 0 mm,0 mm\r\n")
+    } else if (paperType.equals("BLACK_MARK", ignoreCase = true)) {
+        sb.append("BLINE ${formatMm(safeGapMm)} mm,0 mm\r\n")
+    } else {
+        sb.append("GAP ${formatMm(safeGapMm)} mm,0 mm\r\n")
+    }
+    if (speed > 0f) {
+        val speedStr = if (speed % 1f == 0f) speed.toInt().toString() else formatMm(speed)
+        sb.append("SPEED $speedStr\r\n")
+    }
+    if (xOffsetDots != 0 || yOffsetDots != 0) {
+        sb.append("REFERENCE $xOffsetDots,$yOffsetDots\r\n")
+    }
+    sb.append("DIRECTION $direction\r\n")
+    sb.append("DENSITY $safeDarkness\r\n")
+    sb.append("CLS\r\n")
+    sb.append("BITMAP 0,0,$widthBytes,$safeHeightDots,0,")
+    val header = sb.toString()
 
     val footer = "\r\nPRINT 1,$safeCopies\r\n"
 
@@ -124,10 +144,17 @@ fun buildTsplPayload(
     gapMm: Float,
     copies: Int,
     darkness: Int,
-    invertBits: Boolean = TSPL_INVERT_BITS
+    invertBits: Boolean = TSPL_INVERT_BITS,
+    dpi: Int = 203,
+    speed: Float = 4.0f,
+    xOffsetDots: Int = 0,
+    yOffsetDots: Int = 0,
+    direction: Int = 1,
+    paperType: String = "GAP"
 ): ByteArray {
-    val targetWidthDots = maxOf(1, (widthMm * 8f).roundToInt())
-    val targetHeightDots = maxOf(1, (heightMm * 8f).roundToInt())
+    val dotsPerMm = dpi / 25.4f
+    val targetWidthDots = maxOf(1, (widthMm * dotsPerMm).roundToInt())
+    val targetHeightDots = maxOf(1, (heightMm * dotsPerMm).roundToInt())
 
     val srcAspect = labelBitmap.width.toFloat() / labelBitmap.height.toFloat()
     val targetAspect = targetWidthDots.toFloat() / targetHeightDots.toFloat()
@@ -172,7 +199,12 @@ fun buildTsplPayload(
         darkness = safeDarkness,
         bitmapBytes = rawBytes,
         targetWidthDots = targetWidthDots,
-        targetHeightDots = targetHeightDots
+        targetHeightDots = targetHeightDots,
+        speed = speed,
+        xOffsetDots = xOffsetDots,
+        yOffsetDots = yOffsetDots,
+        direction = direction,
+        paperType = paperType
     )
 }
 
@@ -197,9 +229,28 @@ suspend fun printLabel(
     heightMm: Float,
     gapMm: Float,
     copies: Int,
-    darkness: Int
+    darkness: Int,
+    dpi: Int = 203,
+    speed: Float = 4.0f,
+    xOffsetDots: Int = 0,
+    yOffsetDots: Int = 0,
+    direction: Int = 1,
+    paperType: String = "GAP"
 ): DirectPrintResult = withContext(Dispatchers.IO) {
-    val payload = buildTsplPayload(labelBitmap, widthMm, heightMm, gapMm, copies, darkness)
+    val payload = buildTsplPayload(
+        labelBitmap = labelBitmap,
+        widthMm = widthMm,
+        heightMm = heightMm,
+        gapMm = gapMm,
+        copies = copies,
+        darkness = darkness,
+        dpi = dpi,
+        speed = speed,
+        xOffsetDots = xOffsetDots,
+        yOffsetDots = yOffsetDots,
+        direction = direction,
+        paperType = paperType
+    )
     sendToPrinter(context, target, listOf(payload))
 }
 
@@ -211,7 +262,13 @@ suspend fun printLabel(
     heightMm: Float,
     gapMm: Float,
     copies: Int,
-    darkness: Int
+    darkness: Int,
+    dpi: Int = 203,
+    speed: Float = 4.0f,
+    xOffsetDots: Int = 0,
+    yOffsetDots: Int = 0,
+    direction: Int = 1,
+    paperType: String = "GAP"
 ): DirectPrintResult {
     val target = if (address.trim().startsWith("usb:", ignoreCase = true)) {
         PrinterTarget.Usb(address.trim())
@@ -220,7 +277,22 @@ suspend fun printLabel(
     } else {
         PrinterTarget.None
     }
-    return printLabel(context, target, labelBitmap, widthMm, heightMm, gapMm, copies, darkness)
+    return printLabel(
+        context = context,
+        target = target,
+        labelBitmap = labelBitmap,
+        widthMm = widthMm,
+        heightMm = heightMm,
+        gapMm = gapMm,
+        copies = copies,
+        darkness = darkness,
+        dpi = dpi,
+        speed = speed,
+        xOffsetDots = xOffsetDots,
+        yOffsetDots = yOffsetDots,
+        direction = direction,
+        paperType = paperType
+    )
 }
 
 /**
@@ -235,7 +307,13 @@ suspend fun printLabelsBatch(
     heightMm: Float,
     gapMm: Float,
     darkness: Int,
-    invertBits: Boolean = TSPL_INVERT_BITS
+    invertBits: Boolean = TSPL_INVERT_BITS,
+    dpi: Int = 203,
+    speed: Float = 4.0f,
+    xOffsetDots: Int = 0,
+    yOffsetDots: Int = 0,
+    direction: Int = 1,
+    paperType: String = "GAP"
 ): BatchLabelPrintResult = withContext(Dispatchers.IO) {
     if (jobs.isEmpty()) {
         return@withContext BatchLabelPrintResult(DirectPrintResult.Success, 0)
@@ -250,7 +328,13 @@ suspend fun printLabelsBatch(
             gapMm = gapMm,
             copies = job.copies,
             darkness = darkness,
-            invertBits = invertBits
+            invertBits = invertBits,
+            dpi = dpi,
+            speed = speed,
+            xOffsetDots = xOffsetDots,
+            yOffsetDots = yOffsetDots,
+            direction = direction,
+            paperType = paperType
         )
     }
     printLabelPayloadsBatch(context, target, payloads, jobs.map { it.copies })
@@ -264,7 +348,13 @@ suspend fun printLabelsBatch(
     heightMm: Float,
     gapMm: Float,
     darkness: Int,
-    invertBits: Boolean = TSPL_INVERT_BITS
+    invertBits: Boolean = TSPL_INVERT_BITS,
+    dpi: Int = 203,
+    speed: Float = 4.0f,
+    xOffsetDots: Int = 0,
+    yOffsetDots: Int = 0,
+    direction: Int = 1,
+    paperType: String = "GAP"
 ): BatchLabelPrintResult {
     val target = if (address.trim().startsWith("usb:", ignoreCase = true)) {
         PrinterTarget.Usb(address.trim())
@@ -273,7 +363,22 @@ suspend fun printLabelsBatch(
     } else {
         PrinterTarget.None
     }
-    return printLabelsBatch(context, target, jobs, widthMm, heightMm, gapMm, darkness, invertBits)
+    return printLabelsBatch(
+        context = context,
+        target = target,
+        jobs = jobs,
+        widthMm = widthMm,
+        heightMm = heightMm,
+        gapMm = gapMm,
+        darkness = darkness,
+        invertBits = invertBits,
+        dpi = dpi,
+        speed = speed,
+        xOffsetDots = xOffsetDots,
+        yOffsetDots = yOffsetDots,
+        direction = direction,
+        paperType = paperType
+    )
 }
 
 /**
@@ -331,9 +436,28 @@ object TsplLabelPrinterDriver {
         heightMm: Float,
         gapMm: Float,
         copies: Int,
-        darkness: Int
+        darkness: Int,
+        dpi: Int = 203,
+        speed: Float = 4.0f,
+        xOffsetDots: Int = 0,
+        yOffsetDots: Int = 0,
+        direction: Int = 1,
+        paperType: String = "GAP"
     ): DirectPrintResult = com.example.techyfipos.printer.printLabel(
-        context, target, labelBitmap, widthMm, heightMm, gapMm, copies, darkness
+        context = context,
+        target = target,
+        labelBitmap = labelBitmap,
+        widthMm = widthMm,
+        heightMm = heightMm,
+        gapMm = gapMm,
+        copies = copies,
+        darkness = darkness,
+        dpi = dpi,
+        speed = speed,
+        xOffsetDots = xOffsetDots,
+        yOffsetDots = yOffsetDots,
+        direction = direction,
+        paperType = paperType
     )
 
     suspend fun printLabel(
@@ -344,9 +468,28 @@ object TsplLabelPrinterDriver {
         heightMm: Float,
         gapMm: Float,
         copies: Int,
-        darkness: Int
+        darkness: Int,
+        dpi: Int = 203,
+        speed: Float = 4.0f,
+        xOffsetDots: Int = 0,
+        yOffsetDots: Int = 0,
+        direction: Int = 1,
+        paperType: String = "GAP"
     ): DirectPrintResult = com.example.techyfipos.printer.printLabel(
-        context, address, labelBitmap, widthMm, heightMm, gapMm, copies, darkness
+        context = context,
+        address = address,
+        labelBitmap = labelBitmap,
+        widthMm = widthMm,
+        heightMm = heightMm,
+        gapMm = gapMm,
+        copies = copies,
+        darkness = darkness,
+        dpi = dpi,
+        speed = speed,
+        xOffsetDots = xOffsetDots,
+        yOffsetDots = yOffsetDots,
+        direction = direction,
+        paperType = paperType
     )
 
     suspend fun printLabelsBatch(
@@ -356,9 +499,27 @@ object TsplLabelPrinterDriver {
         widthMm: Float,
         heightMm: Float,
         gapMm: Float,
-        darkness: Int
+        darkness: Int,
+        dpi: Int = 203,
+        speed: Float = 4.0f,
+        xOffsetDots: Int = 0,
+        yOffsetDots: Int = 0,
+        direction: Int = 1,
+        paperType: String = "GAP"
     ): BatchLabelPrintResult = com.example.techyfipos.printer.printLabelsBatch(
-        context, target, jobs, widthMm, heightMm, gapMm, darkness
+        context = context,
+        target = target,
+        jobs = jobs,
+        widthMm = widthMm,
+        heightMm = heightMm,
+        gapMm = gapMm,
+        darkness = darkness,
+        dpi = dpi,
+        speed = speed,
+        xOffsetDots = xOffsetDots,
+        yOffsetDots = yOffsetDots,
+        direction = direction,
+        paperType = paperType
     )
 
     suspend fun printLabelsBatch(
@@ -368,9 +529,27 @@ object TsplLabelPrinterDriver {
         widthMm: Float,
         heightMm: Float,
         gapMm: Float,
-        darkness: Int
+        darkness: Int,
+        dpi: Int = 203,
+        speed: Float = 4.0f,
+        xOffsetDots: Int = 0,
+        yOffsetDots: Int = 0,
+        direction: Int = 1,
+        paperType: String = "GAP"
     ): BatchLabelPrintResult = com.example.techyfipos.printer.printLabelsBatch(
-        context, address, jobs, widthMm, heightMm, gapMm, darkness
+        context = context,
+        address = address,
+        jobs = jobs,
+        widthMm = widthMm,
+        heightMm = heightMm,
+        gapMm = gapMm,
+        darkness = darkness,
+        dpi = dpi,
+        speed = speed,
+        xOffsetDots = xOffsetDots,
+        yOffsetDots = yOffsetDots,
+        direction = direction,
+        paperType = paperType
     )
 }
 

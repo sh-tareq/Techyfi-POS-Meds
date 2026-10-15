@@ -1421,6 +1421,68 @@ private fun OptimizedSettingsHome(
                 }
             }
 
+            // Resolution (DPI): 203 DPI vs 300 DPI
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_label_dpi_title),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = currentSettings.labelDpi != 300,
+                        onClick = { onUpdateSettings(currentSettings.copy(labelDpi = 203)) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_label_dpi_203), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    SegmentedButton(
+                        selected = currentSettings.labelDpi == 300,
+                        onClick = { onUpdateSettings(currentSettings.copy(labelDpi = 300)) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_label_dpi_300), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Paper Type: Gap, Continuous, Black Mark
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_label_paper_type),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = currentSettings.labelPaperType == "GAP",
+                        onClick = { onUpdateSettings(currentSettings.copy(labelPaperType = "GAP")) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_label_paper_gap), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    }
+                    SegmentedButton(
+                        selected = currentSettings.labelPaperType == "CONTINUOUS",
+                        onClick = { onUpdateSettings(currentSettings.copy(labelPaperType = "CONTINUOUS")) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_label_paper_continuous), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    }
+                    SegmentedButton(
+                        selected = currentSettings.labelPaperType == "BLACK_MARK",
+                        onClick = { onUpdateSettings(currentSettings.copy(labelPaperType = "BLACK_MARK")) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_label_paper_black_mark), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+
             // Label gap field (mm)
             var gapText by remember { mutableStateOf(currentSettings.labelGapMm.toString()) }
             LaunchedEffect(currentSettings.labelGapMm) {
@@ -1430,6 +1492,8 @@ private fun OptimizedSettingsHome(
                     gapText = currentSettings.labelGapMm.toString()
                 }
             }
+            val gapFloat = gapText.toFloatOrNull()
+            val isGapError = gapFloat == null || gapFloat !in 0f..20f
             OutlinedTextField(
                 value = gapText,
                 onValueChange = { input ->
@@ -1440,12 +1504,112 @@ private fun OptimizedSettingsHome(
                         }
                     }
                 },
+                isError = isGapError,
+                supportingText = if (isGapError) {
+                    { Text(stringResource(R.string.label_gap_range_error), color = MaterialTheme.colorScheme.error) }
+                } else null,
                 label = { Text(stringResource(R.string.settings_label_gap_label)) },
                 suffix = { Text("mm", fontWeight = FontWeight.Bold) },
                 singleLine = true,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // Print Speed (in/s)
+            var localSpeed by remember(currentSettings.labelPrintSpeed) {
+                mutableStateOf(currentSettings.labelPrintSpeed.coerceIn(1.5f, 6.0f))
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_label_print_speed) + ": " +
+                        stringResource(R.string.settings_label_print_speed_fmt, localSpeed),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Slider(
+                    value = localSpeed,
+                    onValueChange = { localSpeed = (it * 2).roundToInt() / 2f },
+                    onValueChangeFinished = {
+                        onUpdateSettings(currentSettings.copy(labelPrintSpeed = localSpeed))
+                    },
+                    valueRange = 1.5f..6.0f,
+                    steps = 8,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Print Direction: Normal (1) vs Inverted (0)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_label_direction),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = currentSettings.labelDirection == 1,
+                        onClick = { onUpdateSettings(currentSettings.copy(labelDirection = 1)) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_label_direction_normal), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    }
+                    SegmentedButton(
+                        selected = currentSettings.labelDirection == 0,
+                        onClick = { onUpdateSettings(currentSettings.copy(labelDirection = 0)) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.settings_label_direction_inverted), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+
+            // Offset Calibration (X, Y dots)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_label_offset_title),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    var xOffText by remember(currentSettings.labelXOffsetDots) {
+                        mutableStateOf(currentSettings.labelXOffsetDots.toString())
+                    }
+                    OutlinedTextField(
+                        value = xOffText,
+                        onValueChange = { input ->
+                            xOffText = input
+                            input.toIntOrNull()?.let { v ->
+                                if (v in -200..200) onUpdateSettings(currentSettings.copy(labelXOffsetDots = v))
+                            }
+                        },
+                        label = { Text(stringResource(R.string.settings_label_x_offset)) },
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                    var yOffText by remember(currentSettings.labelYOffsetDots) {
+                        mutableStateOf(currentSettings.labelYOffsetDots.toString())
+                    }
+                    OutlinedTextField(
+                        value = yOffText,
+                        onValueChange = { input ->
+                            yOffText = input
+                            input.toIntOrNull()?.let { v ->
+                                if (v in -200..200) onUpdateSettings(currentSettings.copy(labelYOffsetDots = v))
+                            }
+                        },
+                        label = { Text(stringResource(R.string.settings_label_y_offset)) },
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
 
             // Darkness slider (0-15)
             var localLabelDarkness by remember(currentSettings.labelDarkness) {

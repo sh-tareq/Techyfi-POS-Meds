@@ -3188,4 +3188,23 @@
     <string name="batch_print_use_product_dates_hint">সংরক্ষিত তারিখ ছাড়া পণ্যগুলোতে তারিখের লাইন ছাড়া প্রিন্ট হবে</string>
     <string name="copies_range_error">কপির সংখ্যা অবশ্যই %1$d থেকে %2$d-এর মধ্যে হতে হবে</string>
     <string name="stock_badge_fmt">স্টক: %1$s</string>
+    <string name="settings_label_dpi_title">প্রিন্টার রেজোলিউশন (DPI)</string>
+    <string name="settings_label_dpi_203">২০৩ ডিপিআই (স্ট্যান্ডার্ড)</string>
+    <string name="settings_label_dpi_300">৩০০ ডিপিআই (হাই রেজোলিউশন)</string>
+    <string name="settings_label_paper_type">লেবেল পেপারের ধরন</string>
+    <string name="settings_label_paper_gap">গ্যাপ / ডাই-কাট</string>
+    <string name="settings_label_paper_continuous">কন্টিনিউয়াস</string>
+    <string name="settings_label_paper_black_mark">ব্ল্যাক মার্ক</string>
+    <string name="settings_label_print_speed">প্রিন্ট গতি</string>
+    <string name="settings_label_print_speed_fmt">%.1f ইঞ্চি/সেকেন্ড</string>
+    <string name="settings_label_direction">প্রিন্টের দিক</string>
+    <string name="settings_label_direction_normal">স্বাভাবিক</string>
+    <string name="settings_label_direction_inverted">উল্টো (১৮০°)</string>
+    <string name="settings_label_offset_title">প্রিন্ট অফসেট ক্যালিব্রেশন</string>
+    <string name="settings_label_x_offset">X অফসেট (ডট)</string>
+    <string name="settings_label_y_offset">Y অফসেট (ডট)</string>
+    <string name="label_gap_range_error">গ্যাপ ০ থেকে ২০ মিলিমিটারের মধ্যে হতে হবে</string>
+    <string name="barcode_too_dense_warning">এই লেবেল সাইজের জন্য বারকোড খুব ঘন</string>
+    <string name="barcode_too_dense_hint">স্ক্যানার পড়তে সমস্যা হতে পারে। বড় লেবেল বা কিউআর কোড বেছে নিন।</string>
+    <string name="switch_to_qr">কিউআর ব্যবহার করুন</string>
 </resources>

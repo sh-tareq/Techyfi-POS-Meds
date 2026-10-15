@@ -2,6 +2,8 @@ package com.example.techyfipos.printer
 
 import android.graphics.Bitmap
 import com.example.techyfipos.data.InvoiceSettingsData
+import com.example.techyfipos.utils.ProductCodeType
+import com.example.techyfipos.utils.isBarcodeTooDenseForLabel
 import com.example.techyfipos.utils.RoutingDecision
 import com.example.techyfipos.utils.decidePrintRouting
 import com.example.techyfipos.utils.reportCanvasWidth
@@ -337,6 +339,113 @@ class PrinterRoutingAndDriverTest {
         assertTrue(textHigh.contains("DENSITY 15\r\n"))
         assertTrue(textHigh.contains("GAP 3 mm,0 mm\r\n"))
         assertTrue(textHigh.contains("PRINT 1,5\r\n"))
+    }
+
+    // 10b. Tests for buildTsplPayload DPI and calibration (LBL-12, LBL-14)
+    @Test
+    fun `buildTsplPayload calculates correct BITMAP width for 203 and 300 dpi`() {
+        val dummyBytes = byteArrayOf(0x01)
+        val dots203 = (40f * 203f / 25.4f).toInt()
+        val payload203 = buildTsplPayload(
+            widthMm = 40f,
+            heightMm = 30f,
+            gapMm = 2f,
+            copies = 1,
+            darkness = 8,
+            bitmapBytes = dummyBytes,
+            targetWidthDots = dots203,
+            targetHeightDots = 240
+        )
+        val text203 = String(payload203, Charsets.US_ASCII)
+        assertTrue(text203.contains("BITMAP 0,0,40,240,0,"))
+
+        val dots300 = kotlin.math.round(40f * 300f / 25.4f).toInt()
+        val payload300 = buildTsplPayload(
+            widthMm = 40f,
+            heightMm = 30f,
+            gapMm = 2f,
+            copies = 1,
+            darkness = 8,
+            bitmapBytes = dummyBytes,
+            targetWidthDots = dots300,
+            targetHeightDots = 354
+        )
+        val text300 = String(payload300, Charsets.US_ASCII)
+        assertTrue(text300.contains("BITMAP 0,0,59,354,0,"))
+    }
+
+    @Test
+    fun `buildTsplPayload emits SPEED, REFERENCE, DIRECTION, and paper type commands`() {
+        val dummyBytes = byteArrayOf(0x01)
+        val payload = buildTsplPayload(
+            widthMm = 50f,
+            heightMm = 30f,
+            gapMm = 3f,
+            copies = 2,
+            darkness = 10,
+            bitmapBytes = dummyBytes,
+            targetWidthDots = 400,
+            targetHeightDots = 240,
+            speed = 5.0f,
+            xOffsetDots = 16,
+            yOffsetDots = -8,
+            direction = 0,
+            paperType = "BLACK_MARK"
+        )
+        val text = String(payload, Charsets.US_ASCII)
+        assertTrue(text.contains("SIZE 50 mm,30 mm\r\n"))
+        assertTrue(text.contains("BLINE 3 mm,0 mm\r\n"))
+        assertTrue(text.contains("SPEED 5\r\n"))
+        assertTrue(text.contains("REFERENCE 16,-8\r\n"))
+        assertTrue(text.contains("DIRECTION 0\r\n"))
+        assertTrue(text.contains("DENSITY 10\r\n"))
+
+        val continuousPayload = buildTsplPayload(
+            widthMm = 50f,
+            heightMm = 30f,
+            gapMm = 0f,
+            copies = 1,
+            darkness = 8,
+            bitmapBytes = dummyBytes,
+            targetWidthDots = 400,
+            targetHeightDots = 240,
+            paperType = "CONTINUOUS"
+        )
+        val continuousText = String(continuousPayload, Charsets.US_ASCII)
+        assertTrue(continuousText.contains("GAP 0 mm,0 mm\r\n"))
+    }
+
+    @Test
+    fun `isBarcodeTooDenseForLabel detects dense barcode on narrow labels`() {
+        // 12-digit barcode on a narrow 25mm label at 203 DPI is under 2 dots per module
+        assertTrue(isBarcodeTooDenseForLabel("123456789012", ProductCodeType.BARCODE, 25f, 203))
+
+        // Short barcode on a standard 50mm label at 203 DPI has plenty of space
+        assertFalse(isBarcodeTooDenseForLabel("123456", ProductCodeType.BARCODE, 50f, 203))
+
+        // QR Code is a 2D matrix, not affected by 1D module width restriction
+        assertFalse(isBarcodeTooDenseForLabel("123456789012", ProductCodeType.QR_CODE, 25f, 203))
+    }
+
+    @Test
+    fun `InvoiceSettingsData persists and restores labelDpi and calibration settings`() {
+        val original = InvoiceSettingsData(
+            labelDpi = 300,
+            labelPrintSpeed = 5.5f,
+            labelXOffsetDots = 12,
+            labelYOffsetDots = -6,
+            labelDirection = 0,
+            labelPaperType = "BLACK_MARK"
+        )
+        val json = original.toJson()
+        val restored = InvoiceSettingsData.fromJson(json)
+
+        assertEquals(300, restored.labelDpi)
+        assertEquals(5.5f, restored.labelPrintSpeed, 0.01f)
+        assertEquals(12, restored.labelXOffsetDots)
+        assertEquals(-6, restored.labelYOffsetDots)
+        assertEquals(0, restored.labelDirection)
+        assertEquals("BLACK_MARK", restored.labelPaperType)
     }
 
     // 11. Tests for formatBluetoothDeviceDisplay()

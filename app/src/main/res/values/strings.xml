@@ -3186,6 +3186,25 @@
     <string name="batch_print_use_product_dates_hint">Products without saved dates will print without date lines</string>
     <string name="copies_range_error">Copies must be between %1$d and %2$d</string>
     <string name="stock_badge_fmt">Stock: %1$s</string>
+    <string name="settings_label_dpi_title">Printer Resolution (DPI)</string>
+    <string name="settings_label_dpi_203">203 DPI (Standard)</string>
+    <string name="settings_label_dpi_300">300 DPI (High Resolution)</string>
+    <string name="settings_label_paper_type">Label Paper Type</string>
+    <string name="settings_label_paper_gap">Gap / Die-cut</string>
+    <string name="settings_label_paper_continuous">Continuous</string>
+    <string name="settings_label_paper_black_mark">Black Mark</string>
+    <string name="settings_label_print_speed">Print Speed</string>
+    <string name="settings_label_print_speed_fmt">%.1f in/s</string>
+    <string name="settings_label_direction">Print Direction</string>
+    <string name="settings_label_direction_normal">Normal</string>
+    <string name="settings_label_direction_inverted">Inverted (180°)</string>
+    <string name="settings_label_offset_title">Print Offset Calibration</string>
+    <string name="settings_label_x_offset">X Offset (dots)</string>
+    <string name="settings_label_y_offset">Y Offset (dots)</string>
+    <string name="label_gap_range_error">Gap must be between 0 and 20 mm</string>
+    <string name="barcode_too_dense_warning">Barcode too dense for this label size</string>
+    <string name="barcode_too_dense_hint">Scanners may struggle to read this. Use a larger label or switch to QR Code.</string>
+    <string name="switch_to_qr">Use QR</string>
 </resources>
 
 

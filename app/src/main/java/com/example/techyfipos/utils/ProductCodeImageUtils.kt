@@ -269,11 +269,14 @@ fun generateProductCodeLabelBitmap(
         val hints = mapOf(EncodeHintType.MARGIN to if (codeType == ProductCodeType.QR_CODE) 1 else 6)
         val matrix = MultiFormatWriter().encode(cleanBarcode, format, codeWidth, codeHeight, hints)
         val codeBitmap = Bitmap.createBitmap(codeWidth, codeHeight, Bitmap.Config.ARGB_8888)
+        val pixels = IntArray(codeWidth * codeHeight)
         for (y in 0 until codeHeight) {
+            val rowOffset = y * codeWidth
             for (x in 0 until codeWidth) {
-                codeBitmap.setPixel(x, y, if (matrix[x, y]) Color.BLACK else Color.WHITE)
+                pixels[rowOffset + x] = if (matrix[x, y]) Color.BLACK else Color.WHITE
             }
         }
+        codeBitmap.setPixels(pixels, 0, codeWidth, 0, 0, codeWidth, codeHeight)
         val codeLeft = (width - codeWidth) / 2f
         canvas.drawBitmap(codeBitmap, codeLeft, top.toFloat(), null)
         codeBitmap.recycle()
@@ -727,4 +730,30 @@ fun cacheBatchProductCodeLabelsPdf(
         null
     }
 }
+
+/**
+ * Estimates whether a 1D barcode on the given label width results in a narrow bar (module) width
+ * of less than 2 printer dots at the specified DPI (typically 203 or 300).
+ * Commercial 1D scanners require at least 2 dots (>= 10 mils at 203 DPI) for reliable scanning.
+ * When true, callers should display a density warning and recommend a larger label size or QR Code.
+ */
+fun isBarcodeTooDenseForLabel(
+    barcode: String,
+    codeType: ProductCodeType,
+    widthMm: Float,
+    dpi: Int = 203
+): Boolean {
+    if (codeType == ProductCodeType.QR_CODE) return false
+    val clean = barcode.trim()
+    if (clean.isEmpty()) return false
+    val dotsPerMm = dpi / 25.4f
+    // Printable barcode graphic width in mm is roughly widthMm minus horizontal padding (~12%)
+    val printableWidthMm = (widthMm * 0.88f).coerceAtLeast(10f)
+    val totalDots = printableWidthMm * dotsPerMm
+    // Code 128 has ~ 11 modules per symbol character plus quiet zone (min 10 modules each side), start/stop symbols (11 + 13)
+    val estimatedModules = (clean.length + 2) * 11 + 25
+    val moduleWidthDots = totalDots / estimatedModules
+    return moduleWidthDots < 2.0f
+}
+
 

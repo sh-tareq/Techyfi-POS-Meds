@@ -1957,6 +1957,42 @@ fun BatchProductCodePrintDialog(
                     }
                 }
 
+                val isBatchSampleDense = remember(sampleProd?.barcode, codeType, effectiveWidthMm, invoiceSettings.labelDpi) {
+                    sampleProd?.barcode?.let { isBarcodeTooDenseForLabel(it, codeType, effectiveWidthMm, invoiceSettings.labelDpi) } ?: false
+                }
+                if (isBatchSampleDense) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.barcode_too_dense_warning),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Text(
+                                    text = stringResource(R.string.barcode_too_dense_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                            TextButton(onClick = { codeTypeName = ProductCodeType.QR_CODE.name }) {
+                                Text(stringResource(R.string.switch_to_qr), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
                 // Summary Badge
                 Surface(
                     shape = RoundedCornerShape(12.dp),
@@ -2132,7 +2168,13 @@ fun BatchProductCodePrintDialog(
                                                             heightMm = effectiveHeightMm,
                                                             gapMm = invoiceSettings.labelGapMm,
                                                             copies = item.quantity,
-                                                            darkness = invoiceSettings.labelDarkness
+                                                            darkness = invoiceSettings.labelDarkness,
+                                                            dpi = invoiceSettings.labelDpi,
+                                                            speed = invoiceSettings.labelPrintSpeed,
+                                                            xOffsetDots = invoiceSettings.labelXOffsetDots,
+                                                            yOffsetDots = invoiceSettings.labelYOffsetDots,
+                                                            direction = invoiceSettings.labelDirection,
+                                                            paperType = invoiceSettings.labelPaperType
                                                         )
                                                     )
                                                     payloadCopies.add(item.quantity)
@@ -2758,6 +2800,42 @@ fun ProductCodeImageDialog(
                                 stringResource(R.string.code_generation_failed),
                                 color = MaterialTheme.colorScheme.error
                             )
+                        }
+                    }
+                }
+
+                val isSingleDense = remember(product.barcode, codeType, selectedLabelWidthMm, invoiceSettings.labelDpi) {
+                    isBarcodeTooDenseForLabel(product.barcode, codeType, selectedLabelWidthMm, invoiceSettings.labelDpi)
+                }
+                if (isSingleDense) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.barcode_too_dense_warning),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Text(
+                                    text = stringResource(R.string.barcode_too_dense_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                            TextButton(onClick = { codeTypeName = ProductCodeType.QR_CODE.name }) {
+                                Text(stringResource(R.string.switch_to_qr), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
