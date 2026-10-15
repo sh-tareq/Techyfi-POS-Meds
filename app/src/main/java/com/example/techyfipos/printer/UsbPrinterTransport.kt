@@ -44,11 +44,18 @@ fun findUsbDeviceByKey(usbManager: UsbManager, deviceKey: String): UsbDevice? {
     // Try exact match with serial number if provided
     if (id.serialNumber.isNotBlank()) {
         val exact = devices.firstOrNull { dev ->
-            dev.vendorId == id.vendorId &&
-                dev.productId == id.productId &&
-                try { dev.serialNumber?.equals(id.serialNumber, ignoreCase = true) == true } catch (_: SecurityException) { false }
+            if (dev.vendorId != id.vendorId || dev.productId != id.productId) return@firstOrNull false
+            val readableSerial = try { dev.serialNumber } catch (_: SecurityException) { null } catch (_: Exception) { null }
+            readableSerial?.equals(id.serialNumber, ignoreCase = true) == true
         }
         if (exact != null) return exact
+
+        // Do NOT fall back to VID:PID if any device with this VID:PID has a readable serial that differs!
+        return devices.firstOrNull { dev ->
+            if (dev.vendorId != id.vendorId || dev.productId != id.productId) return@firstOrNull false
+            val readableSerial = try { dev.serialNumber } catch (_: SecurityException) { null } catch (_: Exception) { null }
+            readableSerial == null
+        }
     }
 
     // Fall back to vendorId and productId
@@ -104,8 +111,17 @@ fun findPrinterInterfaceAndEndpoint(device: UsbDevice): Pair<UsbInterface, UsbEn
  * Checks if a USB device is likely a thermal receipt or label printer.
  */
 fun isLikelyUsbPrinter(device: UsbDevice): Boolean {
+    val excludedClasses = setOf(
+        UsbConstants.USB_CLASS_HID, // 3
+        UsbConstants.USB_CLASS_MASS_STORAGE, // 8
+        UsbConstants.USB_CLASS_HUB, // 9
+        UsbConstants.USB_CLASS_WIRELESS_CONTROLLER // 224
+    )
+    if (device.deviceClass in excludedClasses) return false
+
     for (i in 0 until device.interfaceCount) {
         val iface = device.getInterface(i)
+        if (iface.interfaceClass in excludedClasses) return false
         if (iface.interfaceClass == UsbConstants.USB_CLASS_PRINTER) return true
     }
     if (device.deviceClass == UsbConstants.USB_CLASS_PRINTER) return true
@@ -113,6 +129,7 @@ fun isLikelyUsbPrinter(device: UsbDevice): Boolean {
     // Check for bulk OUT endpoint as fallback for vendor-specific class 255
     for (i in 0 until device.interfaceCount) {
         val iface = device.getInterface(i)
+        if (iface.interfaceClass in excludedClasses) continue
         for (j in 0 until iface.endpointCount) {
             val ep = iface.getEndpoint(j)
             if (ep.direction == UsbConstants.USB_DIR_OUT && ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK) {
@@ -180,54 +197,70 @@ fun isUsbDeviceAttached(context: Context, deviceKey: String): Boolean {
 suspend fun requestUsbPermission(context: Context, usbManager: UsbManager, device: UsbDevice): Boolean {
     if (usbManager.hasPermission(device)) return true
 
-    return suspendCancellableCoroutine { continuation ->
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(recvContext: Context, intent: Intent) {
-                if (intent.action == ACTION_USB_PERMISSION) {
-                    val receivedDevice: UsbDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
-                    }
-                    if (receivedDevice != null && receivedDevice.deviceId == device.deviceId) {
-                        val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+    val result = kotlinx.coroutines.withTimeoutOrNull(60_000L) {
+        suspendCancellableCoroutine<Boolean> { continuation ->
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(recvContext: Context, intent: Intent) {
+                    if (intent.action == ACTION_USB_PERMISSION) {
                         try {
                             recvContext.unregisterReceiver(this)
                         } catch (_: Exception) {}
+                        val receivedDevice: UsbDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                        }
+                        val matches = receivedDevice == null || receivedDevice.deviceId == device.deviceId ||
+                            (receivedDevice.vendorId == device.vendorId && receivedDevice.productId == device.productId)
+                        val granted = if (matches) {
+                            intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+                        } else {
+                            false
+                        }
                         if (continuation.isActive) {
                             continuation.resume(granted)
                         }
                     }
                 }
             }
-        }
 
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        } else {
-            PendingIntent.FLAG_UPDATE_CURRENT
-        }
-        val intent = Intent(ACTION_USB_PERMISSION).apply {
-            setPackage(context.packageName)
-        }
-        val permissionIntent = PendingIntent.getBroadcast(context, 0, intent, flags)
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+            val intent = Intent(ACTION_USB_PERMISSION).apply {
+                setPackage(context.packageName)
+            }
+            val permissionIntent = PendingIntent.getBroadcast(context, 0, intent, flags)
 
-        ContextCompat.registerReceiver(
-            context,
-            receiver,
-            IntentFilter(ACTION_USB_PERMISSION),
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
+            ContextCompat.registerReceiver(
+                context,
+                receiver,
+                IntentFilter(ACTION_USB_PERMISSION),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
 
-        continuation.invokeOnCancellation {
+            continuation.invokeOnCancellation {
+                try {
+                    context.unregisterReceiver(receiver)
+                } catch (_: Exception) {}
+            }
+
             try {
-                context.unregisterReceiver(receiver)
-            } catch (_: Exception) {}
+                usbManager.requestPermission(device, permissionIntent)
+            } catch (e: Exception) {
+                try {
+                    context.unregisterReceiver(receiver)
+                } catch (_: Exception) {}
+                if (continuation.isActive) {
+                    continuation.resume(false)
+                }
+            }
         }
-
-        usbManager.requestPermission(device, permissionIntent)
     }
+    return result ?: false
 }
 
 /**
@@ -270,12 +303,12 @@ suspend fun sendToUsbPrinter(
             val endpoint = pair.second
 
             val connection = usbManager.openDevice(device)
-                ?: return@withContext DirectPrintResult.Failed("Could not open USB printer connection")
+                ?: return@withContext DirectPrintResult.UsbOpenFailed
 
             val claimed = connection.claimInterface(iface, true)
             if (!claimed) {
                 connection.close()
-                return@withContext DirectPrintResult.Failed("Could not claim USB printer interface")
+                return@withContext DirectPrintResult.UsbClaimInterfaceFailed
             }
 
             timing?.recordConnected("USB", 1, false)
@@ -294,7 +327,7 @@ suspend fun sendToUsbPrinter(
                         val length = minOf(chunkSize, segment.size - offset)
                         val transferred = connection.bulkTransfer(endpoint, segment, offset, length, USB_TRANSFER_TIMEOUT_MS)
                         if (transferred <= 0) {
-                            return@withContext DirectPrintResult.Failed("USB transfer failed (code $transferred)")
+                            return@withContext DirectPrintResult.UsbTransferFailed(transferred)
                         }
                         offset += transferred
                     }
@@ -309,8 +342,9 @@ suspend fun sendToUsbPrinter(
                 timing?.recordDrainDone(false)
                 DirectPrintResult.Success
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e(TAG, "USB communication failed: ${e.message}", e)
-                DirectPrintResult.Failed(e.localizedMessage ?: e.message ?: "USB communication error")
+                DirectPrintResult.UsbCommunicationError(e.localizedMessage ?: e.message ?: "USB communication error")
             } finally {
                 try {
                     connection.releaseInterface(iface)

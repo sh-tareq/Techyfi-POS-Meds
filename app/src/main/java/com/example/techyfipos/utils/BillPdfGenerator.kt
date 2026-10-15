@@ -458,7 +458,13 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
     }
 
     // 2. Store Header Text
-    totalHeight += if (is58) 36f else 45f // Store Name
+    val measurePaintTitle = Paint().apply {
+        textSize = textSizeTitle
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+    val headerStoreName = bill.shopName.ifBlank { settings.storeName }
+    val headerNameLines = wrapItemNameByPixelWidth(headerStoreName, width - 40f, measurePaintTitle)
+    totalHeight += headerNameLines.size * 34f + 11f
     if (settings.showAddress && bill.shopAddress.ifBlank { settings.address }.isNotBlank()) totalHeight += (if (is58) 28f else 34f)
     val effectivePhone = bill.shopPhone.ifBlank {
         if (settings.phoneSecondary.isNotBlank()) "${settings.phonePrimary} | ${settings.phoneSecondary}" else settings.phonePrimary
@@ -1136,7 +1142,12 @@ fun generateZReportJpeg(
     var totalHeight = if (is58) 32f else 40f
 
     // 1. Header
-    totalHeight += if (is58) 36f else 45f // Store Name
+    val storePaint = Paint().apply {
+        textSize = if (is58) 22f else 28f
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+    }
+    val zStoreHeightLines = wrapItemNameByPixelWidth(reportStoreName(settings), width - (sidePad * 2), storePaint)
+    totalHeight += zStoreHeightLines.size * (if (is58) 28f else 35f)
     totalHeight += if (is58) 28f else 35f // DAILY CLOSING Z-REPORT
     totalHeight += dividerH // Double divider
 
@@ -1170,7 +1181,16 @@ fun generateZReportJpeg(
         totalHeight += sectionHeaderH // CASH RECONCILIATION
         totalHeight += 9 * lineH // items + divider + expected cash
         if (data.countedCash != null) {
-            totalHeight += 3 * lineH // counted cash + variance + reason
+            totalHeight += 2 * lineH // counted cash + variance
+            if (!data.varianceReason.isNullOrBlank()) {
+                val reasonPaint = Paint().apply {
+                    textSize = if (is58) 14f else 17f
+                    typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+                }
+                val reasonFullText = "${if (isBangla) "পার্থক্য কারণ: " else "Variance Reason: "}${data.varianceReason}"
+                val reasonLines = wrapItemNameByPixelWidth(reasonFullText, width - (sidePad * 2), reasonPaint)
+                totalHeight += reasonLines.size * (if (is58) 20f else 24f) + 4f
+            }
         }
         totalHeight += dividerH
     }
@@ -1232,7 +1252,8 @@ fun generateZReportJpeg(
     val generatedDate = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US).format(Date())
     canvas.drawText(if (isBangla) "প্রস্তুত  : $generatedDate" else "Generated : $generatedDate", sidePad, y, paint)
     y += lineH
-    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: ${data.itemsSold}" else "Invoices  : ${data.transactionCount} | Units Sold: ${data.itemsSold}", sidePad, y, paint)
+    val formattedUnits = formatUnitsSold(data.itemsSold, isBangla = isBangla)
+    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: $formattedUnits" else "Invoices  : ${data.transactionCount} | Units Sold: $formattedUnits", sidePad, y, paint)
     y += if (is58) 28f else 35f
 
     paint.textAlign = Paint.Align.CENTER
@@ -1442,7 +1463,12 @@ fun generateXReportJpeg(
     val sectionHeaderH = if (is58) 28f else 34f
 
     var totalHeight = if (is58) 32f else 40f
-    totalHeight += if (is58) 36f else 45f // Store Name
+    val storePaint = Paint().apply {
+        textSize = if (is58) 22f else 28f
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+    }
+    val xStoreLines = wrapItemNameByPixelWidth(reportStoreName(settings), width - (sidePad * 2), storePaint)
+    totalHeight += xStoreLines.size * (if (is58) 28f else 35f)
     totalHeight += if (is58) 28f else 35f // MID-SHIFT X-REPORT (INTERIM)
     totalHeight += dividerH // Double divider
     totalHeight += lineH // Period
@@ -1468,7 +1494,13 @@ fun generateXReportJpeg(
         totalHeight += data.topProducts.take(8).size * lineH
         totalHeight += dividerH
     }
-    totalHeight += if (is58) 28f else 35f // *** END OF X-REPORT (INTERIM) ***
+    val footerPaint = Paint().apply {
+        textSize = if (is58) 16f else 20f
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+    }
+    val xFooterHeightText = if (isBangla) "*** সাময়িক রিডিং (দিন বন্ধ হবে না) ***" else "*** INTERIM READING (DOES NOT CLOSE DAY) ***"
+    val xFooterHeightLines = wrapItemNameByPixelWidth(xFooterHeightText, width - (sidePad * 2), footerPaint)
+    totalHeight += xFooterHeightLines.size * (if (is58) 22f else 28f)
     if (settings.showPoweredBy) {
         totalHeight += if (is58) 24f else 30f // Powered by footer
     }
@@ -1493,7 +1525,6 @@ fun generateXReportJpeg(
     var y = if (is58) 36f else 45f
     boldPaint.textSize = if (is58) 22f else 28f
     boldPaint.textAlign = Paint.Align.CENTER
-    val xStoreLines = wrapItemNameByPixelWidth(reportStoreName(settings), width - (sidePad * 2), boldPaint)
     for (sLine in xStoreLines) {
         canvas.drawText(sLine, width / 2f, y, boldPaint)
         y += if (is58) 28f else 35f
@@ -1514,7 +1545,8 @@ fun generateXReportJpeg(
     val generatedDate = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US).format(Date())
     canvas.drawText(if (isBangla) "প্রস্তুত  : $generatedDate" else "Generated : $generatedDate", sidePad, y, paint)
     y += lineH
-    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: ${data.itemsSold}" else "Invoices  : ${data.transactionCount} | Units Sold: ${data.itemsSold}", sidePad, y, paint)
+    val formattedUnits = formatUnitsSold(data.itemsSold, isBangla = isBangla)
+    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: $formattedUnits" else "Invoices  : ${data.transactionCount} | Units Sold: $formattedUnits", sidePad, y, paint)
     y += if (is58) 28f else 35f
 
     paint.textAlign = Paint.Align.CENTER

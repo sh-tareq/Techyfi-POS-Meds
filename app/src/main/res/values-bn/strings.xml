@@ -2915,7 +2915,7 @@
     <string name="settings_cut_style_gs_v">GS V</string>
     <string name="settings_cut_style_legacy">ESC i/m</string>
     <string name="settings_cut_style_gs_v_feed">GS V n</string>
-    <string name="settings_cut_command_style_hint">আপনার প্রিন্টার স্ট্যান্ডার্ড GS V কমান্ডে কাগজ না কাটলে তবেই এটি পরিবর্তন করুন।</string>
+    <string name="settings_cut_command_style_hint">কাগজ না কাটলে অন্য কাট কমান্ড স্টাইল দিয়ে দেখুন (Epson মডেলে ESC i এবং ESC m দুটোই আংশিক কাট হিসেবে কাজ করে)।</string>
     <string name="settings_save_failed">সেটিংস সংরক্ষণ ব্যর্থ হয়েছে</string>
     <string name="settings_receipt_cut_system_note">কাগজ কাটার নিয়ন্ত্রণ শুধুমাত্র সরাসরি প্রিন্টিংয়ের জন্য প্রযোজ্য।</string>
     <string name="settings_label_picker_same_as_receipt_dialog">এই ডিভাইসটি ইতিমধ্যে আপনার রসিদ প্রিন্টার হিসেবে নির্ধারিত। রসিদ প্রিন্টারে লেবেল প্রিন্ট করা যায় না। আপনার লেবেল প্রিন্টার নির্বাচন করুন, যেমন Deli E886BW।</string>
@@ -3135,4 +3135,10 @@
     <string name="settings_idle_lock_60m">৬০ মি.</string>
     <string name="owner_pin_reset_audit_title">মালিকের পিন রিসেট হিস্ট্রি</string>
     <string name="owner_pin_reset_audit_info">ডিভাইস ক্রেডেনশিয়াল দ্বারা সর্বশেষ রিসেট: %1$s, ডিভাইস %2$s</string>
+    <string name="direct_print_error_usb_open_failed">ইউএসবি প্রিন্টার সংযোগ খোলা যায়নি</string>
+    <string name="direct_print_error_usb_claim_failed">ইউএসবি প্রিন্টার ইন্টারফেস অ্যাক্সেস করা যায়নি</string>
+    <string name="direct_print_error_usb_transfer_failed">ইউএসবি ডেটা ট্রান্সফার ব্যর্থ হয়েছে (কোড %1$d)</string>
+    <string name="direct_print_error_usb_comm">ইউএসবি যোগাযোগে ত্রুটি: %1$s</string>
+    <string name="settings_usb_not_connected">কোন ইউএসবি প্রিন্টার সংযুক্ত নেই</string>
+    <string name="batch_print_cancel">বাতিল</string>
 </resources>

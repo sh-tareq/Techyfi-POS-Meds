@@ -272,6 +272,7 @@ fun RegisterCloseScreen(
     // Z-Report / X-Report dialog flags
     var showPnlZReportDialog by remember { mutableStateOf(false) }
     var showXReportDialog by remember { mutableStateOf(false) }
+    var isPrintingReport by remember { mutableStateOf(false) }
     var showShareFormatDialog by remember { mutableStateOf(false) }
     var showXShareFormatDialog by remember { mutableStateOf(false) }
     var closedShiftZReport by remember { mutableStateOf<Pair<SalesReportData, String>?>(null) }
@@ -1222,43 +1223,54 @@ fun RegisterCloseScreen(
             canExport = canExport,
             onDismiss = { showXReportDialog = false },
             onPrint = {
+                if (!isPrintingReport) {
+                    isPrintingReport = true
+                    coroutineScope.launch {
+                        try {
+                            val jpegFile = withContext(Dispatchers.IO) {
+                                generateXReportJpeg(context, r, rangeLabel, canViewPnl = canViewPnl, settings = invoiceSettings)
+                            }
+                            val ok = printReceiptImage(
+                                context = context,
+                                activity = context.findActivity(),
+                                imageFile = jpegFile,
+                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "এক্স-রিপোর্ট - $rangeLabel" else "X-Report - $rangeLabel",
+                                settings = invoiceSettings,
+                                kickDrawer = false
+                            )
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            if (e is kotlinx.coroutines.CancellationException) throw e
+                            Toast.makeText(context, context.getString(R.string.toast_print_error_fmt, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
+                        } finally {
+                            isPrintingReport = false
+                        }
+                    }
+                }
+            },
+            onSave = {
                 coroutineScope.launch {
                     try {
                         val jpegFile = withContext(Dispatchers.IO) {
                             generateXReportJpeg(context, r, rangeLabel, canViewPnl = canViewPnl, settings = invoiceSettings)
                         }
-                        val ok = printReceiptImage(
-                            context = context,
-                            activity = context.findActivity(),
-                            imageFile = jpegFile,
-                            jobName = if (com.example.techyfipos.utils.isAppBangla()) "এক্স-রিপোর্ট - $rangeLabel" else "X-Report - $rangeLabel",
-                            settings = invoiceSettings,
-                            kickDrawer = false
-                        )
-                        if (ok) {
-                            Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                        when (val res = withContext(Dispatchers.IO) { saveBillJpegToDownloads(context, jpegFile) }) {
+                            is FileSaveResult.PublicSaved -> {
+                                Toast.makeText(context, context.getString(R.string.z_report_x_saved_toast), Toast.LENGTH_LONG).show()
+                            }
+                            is FileSaveResult.PrivateFallback -> {
+                                Toast.makeText(context, context.getString(R.string.file_saved_private_fallback, res.path), Toast.LENGTH_LONG).show()
+                            }
+                            FileSaveResult.Failed -> {
+                                Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
+                            }
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(context, context.getString(R.string.toast_print_error_fmt, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                     }
-                }
-            },
-            onSave = {
-                try {
-                    val jpegFile = generateXReportJpeg(context, r, rangeLabel, canViewPnl = canViewPnl, settings = invoiceSettings)
-                    when (val res = saveBillJpegToDownloads(context, jpegFile)) {
-                        is FileSaveResult.PublicSaved -> {
-                            Toast.makeText(context, context.getString(R.string.z_report_x_saved_toast), Toast.LENGTH_LONG).show()
-                        }
-                        is FileSaveResult.PrivateFallback -> {
-                            Toast.makeText(context, context.getString(R.string.file_saved_private_fallback, res.path), Toast.LENGTH_LONG).show()
-                        }
-                        FileSaveResult.Failed -> {
-                            Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                 }
             },
             onShare = {
@@ -1295,43 +1307,54 @@ fun RegisterCloseScreen(
                 }
             },
             onPrint = {
+                if (!isPrintingReport) {
+                    isPrintingReport = true
+                    coroutineScope.launch {
+                        try {
+                            val jpegFile = withContext(Dispatchers.IO) {
+                                generateZReportJpeg(context, r, label, canViewPnl = canViewPnl, settings = invoiceSettings)
+                            }
+                            val ok = printReceiptImage(
+                                context = context,
+                                activity = context.findActivity(),
+                                imageFile = jpegFile,
+                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "জেড-রিপোর্ট - $label" else "Z-Report - $label",
+                                settings = invoiceSettings,
+                                kickDrawer = false
+                            )
+                            if (ok) {
+                                Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            if (e is kotlinx.coroutines.CancellationException) throw e
+                            Toast.makeText(context, context.getString(R.string.z_report_print_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
+                        } finally {
+                            isPrintingReport = false
+                        }
+                    }
+                }
+            },
+            onSave = {
                 coroutineScope.launch {
                     try {
                         val jpegFile = withContext(Dispatchers.IO) {
                             generateZReportJpeg(context, r, label, canViewPnl = canViewPnl, settings = invoiceSettings)
                         }
-                        val ok = printReceiptImage(
-                            context = context,
-                            activity = context.findActivity(),
-                            imageFile = jpegFile,
-                            jobName = if (com.example.techyfipos.utils.isAppBangla()) "জেড-রিপোর্ট - $label" else "Z-Report - $label",
-                            settings = invoiceSettings,
-                            kickDrawer = false
-                        )
-                        if (ok) {
-                            Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                        when (val res = withContext(Dispatchers.IO) { saveBillJpegToDownloads(context, jpegFile) }) {
+                            is FileSaveResult.PublicSaved -> {
+                                Toast.makeText(context, context.getString(R.string.z_report_z_saved_toast), Toast.LENGTH_LONG).show()
+                            }
+                            is FileSaveResult.PrivateFallback -> {
+                                Toast.makeText(context, context.getString(R.string.file_saved_private_fallback, res.path), Toast.LENGTH_LONG).show()
+                            }
+                            FileSaveResult.Failed -> {
+                                Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
+                            }
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(context, context.getString(R.string.z_report_print_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                     }
-                }
-            },
-            onSave = {
-                try {
-                    val jpegFile = generateZReportJpeg(context, r, label, canViewPnl = canViewPnl, settings = invoiceSettings)
-                    when (val res = saveBillJpegToDownloads(context, jpegFile)) {
-                        is FileSaveResult.PublicSaved -> {
-                            Toast.makeText(context, context.getString(R.string.z_report_z_saved_toast), Toast.LENGTH_LONG).show()
-                        }
-                        is FileSaveResult.PrivateFallback -> {
-                            Toast.makeText(context, context.getString(R.string.file_saved_private_fallback, res.path), Toast.LENGTH_LONG).show()
-                        }
-                        FileSaveResult.Failed -> {
-                            Toast.makeText(context, context.getString(R.string.z_report_save_failed_toast), Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(context, context.getString(R.string.z_report_save_error_toast, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
                 }
             },
             onShare = {

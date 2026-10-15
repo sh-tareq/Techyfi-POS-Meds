@@ -6275,6 +6275,7 @@ fun DueRepaymentReceiptDialog(
     @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
     val isSettled = data.remainingDue <= 0.001
+    var isPrintingReceipt by remember { mutableStateOf(false) }
     var isCopied by remember { mutableStateOf(false) }
     LaunchedEffect(isCopied) {
         if (isCopied) {
@@ -6831,24 +6832,35 @@ fun DueRepaymentReceiptDialog(
                         // Print Button (Blue Gradient with 3D Printer Icon)
                         Button(
                             onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val fileToPrint = receiptFile
-                                if (fileToPrint != null) {
-                                    coroutineScope.launch {
-                                        val ok = printReceiptImage(
-                                            context = context,
-                                            activity = context.findActivity(),
-                                            imageFile = fileToPrint,
-                                            jobName = if (com.example.techyfipos.utils.isAppBangla()) "বকেয়া_ভাউচার_${data.customerName}" else "Due_Voucher_${data.customerName}",
-                                            settings = settings.copy(paperRollWidthMm = selectedRollWidth),
-                                            kickDrawer = false
-                                        )
-                                        if (ok) {
-                                            Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                                if (!isPrintingReceipt) {
+                                    val fileToPrint = receiptFile
+                                    if (fileToPrint != null) {
+                                        isPrintingReceipt = true
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        coroutineScope.launch {
+                                            try {
+                                                val ok = printReceiptImage(
+                                                    context = context,
+                                                    activity = context.findActivity(),
+                                                    imageFile = fileToPrint,
+                                                    jobName = if (com.example.techyfipos.utils.isAppBangla()) "বকেয়া_ভাউচার_${data.customerName}" else "Due_Voucher_${data.customerName}",
+                                                    settings = settings.copy(paperRollWidthMm = selectedRollWidth),
+                                                    kickDrawer = false
+                                                )
+                                                if (ok) {
+                                                    Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                                                }
+                                            } catch (e: Exception) {
+                                                if (e is kotlinx.coroutines.CancellationException) throw e
+                                                Toast.makeText(context, context.getString(R.string.toast_print_error_fmt, getLocalizedRepositoryErrorMessage(context, e)), Toast.LENGTH_SHORT).show()
+                                            } finally {
+                                                isPrintingReceipt = false
+                                            }
                                         }
                                     }
                                 }
                             },
+                            enabled = !isPrintingReceipt,
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),

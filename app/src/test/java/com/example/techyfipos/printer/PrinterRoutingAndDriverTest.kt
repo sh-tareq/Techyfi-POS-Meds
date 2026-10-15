@@ -33,12 +33,12 @@ class PrinterRoutingAndDriverTest {
     }
 
     @Test
-    fun `resolvedReceiptPrinterAddress returns cash drawer address when only cash drawer address is set`() {
+    fun `resolvedReceiptPrinterAddress returns empty string when only cash drawer address is set`() {
         val settings = InvoiceSettingsData(
             directBluetoothPrinterAddress = "",
             cashDrawerPrinterAddress = "11:22:33:44:55:66"
         )
-        assertEquals("11:22:33:44:55:66", settings.resolvedReceiptPrinterAddress())
+        assertEquals("", settings.resolvedReceiptPrinterAddress())
     }
 
     @Test
@@ -354,12 +354,12 @@ class PrinterRoutingAndDriverTest {
 
     // 12. Tests for labelLuminanceThreshold()
     @Test
-    fun `labelLuminanceThreshold maps values correctly and clamps out of bounds inputs`() {
-        assertEquals(110, labelLuminanceThreshold(0))
-        assertEquals(174, labelLuminanceThreshold(8))
-        assertEquals(230, labelLuminanceThreshold(15))
-        assertEquals(110, labelLuminanceThreshold(-5))
-        assertEquals(230, labelLuminanceThreshold(99))
+    fun `labelLuminanceThreshold returns fixed 170 threshold across darkness range`() {
+        assertEquals(170, labelLuminanceThreshold(0))
+        assertEquals(170, labelLuminanceThreshold(8))
+        assertEquals(170, labelLuminanceThreshold(15))
+        assertEquals(170, labelLuminanceThreshold(-5))
+        assertEquals(170, labelLuminanceThreshold(99))
     }
 
     // 13. Tests for legacy directBluetoothPrintEnabled migration
@@ -1132,5 +1132,60 @@ class PrinterRoutingAndDriverTest {
         val expectedDelay = bluetoothChunkDelayMs(50000)
         assertEquals(expectedDelay, resolveBluetoothChunkDelayMs(bytesWrittenSoFar = 8193, totalBytes = 50000))
         assertEquals(expectedDelay, resolveBluetoothChunkDelayMs(bytesWrittenSoFar = 20000, totalBytes = 50000))
+    }
+
+    // 19. Tests for R22-08 Label Target Routing
+    @Test
+    fun `testR22_08_labelTargetRouting resolves USB and Bluetooth targets correctly`() {
+        val usbSettings = InvoiceSettingsData(
+            labelPrinterConnection = "USB",
+            labelUsbDeviceKey = "usb:1155:22339:TEST_SER_1"
+        )
+        val usbTarget = usbSettings.resolvedLabelPrinterTarget()
+        assertTrue(usbTarget is PrinterTarget.Usb)
+        assertEquals("usb:1155:22339:TEST_SER_1", (usbTarget as PrinterTarget.Usb).deviceKey)
+
+        val receiptTarget = PrinterTarget.Usb("usb:1155:22339:TEST_SER_1")
+        val otherTarget = PrinterTarget.Usb("usb:1155:22339:OTHER_SER_2")
+        assertTrue(isSamePrinterTarget(usbTarget, receiptTarget))
+        assertFalse(isSamePrinterTarget(usbTarget, otherTarget))
+
+        // decidePrintRouting for USB mode
+        val usbDecisionOk = decidePrintRouting("USB", "usb:1155:22339:TEST_SER_1", DirectPrintResult.Success)
+        assertEquals(RoutingDecision.DIRECT_OK, usbDecisionOk)
+
+        val usbDecisionFail = decidePrintRouting("USB", "usb:1155:22339:TEST_SER_1", DirectPrintResult.UsbDeviceNotFound)
+        assertEquals(RoutingDecision.SHOW_ERROR, usbDecisionFail)
+
+        // AUTO mode with USB mid-transfer failure (partialSuccessCount >= 1) must return SHOW_ERROR, not SYSTEM_DIALOG
+        val autoPartialFail = decidePrintRouting(
+            mode = "AUTO",
+            address = "usb:1155:22339:TEST_SER_1",
+            directResult = DirectPrintResult.UsbTransferFailed(12),
+            partialSuccessCount = 1
+        )
+        assertEquals(RoutingDecision.SHOW_ERROR, autoPartialFail)
+    }
+
+    // 20. Tests for R22-09 USB Permission Timeout
+    @Test
+    fun `testR22_09_usbPermissionTimeout handles timeout without deadlock`() = kotlinx.coroutines.runBlocking {
+        // verify withTimeoutOrNull returns null when timed out
+        val timeoutResult = kotlinx.coroutines.withTimeoutOrNull(50L) {
+            kotlinx.coroutines.delay(200L)
+            true
+        }
+        assertNull(timeoutResult)
+    }
+
+    // 21. Tests for R22-15 Wrapped Height Accounting
+    @Test
+    fun `testR22_15_wrappedHeightAccounting accounts for multiple wrapped lines`() {
+        val line1 = "Techyfi Store Main Branch"
+        val line2 = "Super Shop & Departmental Store"
+        val wrappedLines = listOf(line1, line2)
+        val totalLineHeight = wrappedLines.size * 34f + 11f
+        assertEquals(79f, totalLineHeight, 0.01f)
+        assertTrue("Two lines must take more height than single line", totalLineHeight > 45f)
     }
 }

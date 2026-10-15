@@ -134,18 +134,6 @@ data class InvoiceSettingsData(
                 PrinterTarget.Bluetooth(direct)
             }
         }
-        val drawerConn = cashDrawerPrinterConnection.trim().uppercase()
-        if (drawerConn == "USB" && cashDrawerUsbDeviceKey.isNotBlank()) {
-            return PrinterTarget.Usb(cashDrawerUsbDeviceKey.trim())
-        }
-        val drawer = cashDrawerPrinterAddress.trim()
-        if (drawer.isNotBlank()) {
-            return if (drawer.startsWith("usb:", ignoreCase = true)) {
-                PrinterTarget.Usb(drawer)
-            } else {
-                PrinterTarget.Bluetooth(drawer)
-            }
-        }
         return PrinterTarget.None
     }
 

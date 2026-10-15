@@ -105,8 +105,6 @@ fun printBillJpeg(context: Context, imageFile: File, jobName: String, paperRollW
         val pageHeightMils = (pageWidthMils * aspectRatio).toInt().coerceAtLeast(1)
 
         val adapter = object : PrintDocumentAdapter() {
-            private var decodedBitmap: Bitmap? = null
-
             override fun onLayout(
                 oldAttributes: PrintAttributes?,
                 newAttributes: PrintAttributes?,
@@ -141,15 +139,14 @@ fun printBillJpeg(context: Context, imageFile: File, jobName: String, paperRollW
                     return
                 }
                 Thread {
+                    var bmp: Bitmap? = null
                     try {
                         if (cancellationSignal?.isCanceled == true) {
                             callback?.onWriteCancelled()
                             output.close()
                             return@Thread
                         }
-                        val bmp = decodedBitmap ?: BitmapFactory.decodeFile(imageFile.absolutePath).also {
-                            decodedBitmap = it
-                        }
+                        bmp = BitmapFactory.decodeFile(imageFile.absolutePath)
                         if (bmp == null) {
                             callback?.onWriteFailed(context.getString(R.string.print_could_not_decode_receipt_image))
                             output.close()
@@ -182,14 +179,10 @@ fun printBillJpeg(context: Context, imageFile: File, jobName: String, paperRollW
                         callback?.onWriteFailed(e.localizedMessage)
                         try { output.close() } catch (_: Exception) {}
                         e.printStackTrace()
+                    } finally {
+                        bmp?.recycle()
                     }
                 }.start()
-            }
-
-            override fun onFinish() {
-                super.onFinish()
-                decodedBitmap?.recycle()
-                decodedBitmap = null
             }
         }
 
@@ -773,7 +766,7 @@ fun decidePrintRouting(
     val normalizedMode = mode.trim().uppercase()
     return when (normalizedMode) {
         "SYSTEM" -> RoutingDecision.SYSTEM_DIALOG
-        "BLUETOOTH" -> {
+        "BLUETOOTH", "USB" -> {
             if (trimmedAddress.isBlank() || directResult !is DirectPrintResult.Success) {
                 RoutingDecision.SHOW_ERROR
             } else {
@@ -810,33 +803,13 @@ suspend fun showDirectPrintToast(context: Context, result: DirectPrintResult) = 
         is DirectPrintResult.UsbNoPermission -> context.getString(R.string.direct_print_error_usb_no_permission)
         is DirectPrintResult.UsbNoPrinterInterface -> context.getString(R.string.direct_print_error_usb_no_printer_interface)
         is DirectPrintResult.UsbNotSupported -> context.getString(R.string.direct_print_error_usb_not_supported)
+        is DirectPrintResult.UsbOpenFailed -> context.getString(R.string.direct_print_error_usb_open_failed)
+        is DirectPrintResult.UsbClaimInterfaceFailed -> context.getString(R.string.direct_print_error_usb_claim_failed)
+        is DirectPrintResult.UsbTransferFailed -> context.getString(R.string.direct_print_error_usb_transfer_failed, result.code)
+        is DirectPrintResult.UsbCommunicationError -> context.getString(R.string.direct_print_error_usb_comm, result.reason)
         is DirectPrintResult.Failed -> context.getString(R.string.direct_print_error_connection_failed, result.message)
     }
     Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-    if (result is DirectPrintResult.NoPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        val perm = android.Manifest.permission.BLUETOOTH_CONNECT
-        val activity = context.findActivity()
-        if (activity != null) {
-            val prefs = context.getSharedPreferences("printer_perms", Context.MODE_PRIVATE)
-            val alreadyRequested = prefs.getBoolean("bt_connect_requested", false)
-            val shouldShowRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(activity, perm)
-
-            if (!alreadyRequested || shouldShowRationale) {
-                prefs.edit().putBoolean("bt_connect_requested", true).apply()
-                androidx.core.app.ActivityCompat.requestPermissions(activity, arrayOf(perm), 1001)
-            } else {
-                try {
-                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", context.packageName, null)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    context.startActivity(intent)
-                } catch (e: Exception) {
-                    android.util.Log.w("BillActions", "Could not open app settings: ${e.message}")
-                }
-            }
-        }
-    }
 }
 
 /**
@@ -954,8 +927,17 @@ suspend fun printReceiptImage(
 
     val resolveFallbackFile: suspend () -> File? = {
         imageFile ?: if (billForFallback != null) {
-            withContext(Dispatchers.IO) {
-                generateBillJpeg(context, billForFallback, receiptLanguage)
+            try {
+                withContext(Dispatchers.IO) {
+                    generateBillJpeg(context, billForFallback, receiptLanguage)
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                android.util.Log.e("BillActions", "Failed to generate bill fallback JPEG", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, context.getString(R.string.print_could_not_decode_receipt_image), Toast.LENGTH_SHORT).show()
+                }
+                null
             }
         } else null
     }
@@ -966,11 +948,12 @@ suspend fun printReceiptImage(
             "printReceiptImage: route=system, target=${target::class.simpleName}(${target.identifier}), cutMode=${settings.receiptCutMode}, cutStyle=${settings.receiptCutCommandStyle}, feedLines=${settings.receiptFeedLinesBeforeCut}, jobName=$jobName"
         )
         val fileToPrint = resolveFallbackFile()
-        return if (fileToPrint != null) {
+        if (fileToPrint != null) {
             withContext(Dispatchers.Main) {
                 printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
             }
-        } else false
+        }
+        return false
     }
 
     Log.d(
@@ -993,12 +976,14 @@ suspend fun printReceiptImage(
                     withContext(Dispatchers.Main) {
                         printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
                     }
-                } else false
+                }
+                false
             }
             RoutingDecision.DIRECT_OK -> true
         }
     }
 
+    val locallyDecoded = cachedBitmap == null && imageFile != null
     val bitmap = if (cachedBitmap != null && !cachedBitmap.isRecycled) {
         effectiveTiming.recordDecodeDone()
         cachedBitmap
@@ -1012,29 +997,36 @@ suspend fun printReceiptImage(
         effectiveTiming.recordDecodeDone()
         null
     }
-    val directResult: DirectPrintResult = if (bitmap != null) {
-        val paperDots = if (settings.paperRollWidthMm == 58) 384 else 576
-        EscPosPrinterDriver.printReceiptDirect(
-            context = context,
-            target = target,
-            bitmap = bitmap,
-            paperWidthDots = paperDots,
-            autoKickDrawer = kickDrawer,
-            darkness = settings.receiptDarkness,
-            cutMode = ReceiptCutMode.fromString(settings.receiptCutMode),
-            feedLines = settings.receiptFeedLinesBeforeCut,
-            cutCommandStyle = settings.receiptCutCommandStyle,
-            timing = effectiveTiming
-        )
-    } else {
-        DirectPrintResult.Failed(context.getString(R.string.print_could_not_decode_receipt_image))
+    val directResult: DirectPrintResult = try {
+        if (bitmap != null) {
+            val paperDots = if (settings.paperRollWidthMm == 58) 384 else 576
+            EscPosPrinterDriver.printReceiptDirect(
+                context = context,
+                target = target,
+                bitmap = bitmap,
+                paperWidthDots = paperDots,
+                autoKickDrawer = kickDrawer,
+                darkness = settings.receiptDarkness,
+                cutMode = ReceiptCutMode.fromString(settings.receiptCutMode),
+                feedLines = settings.receiptFeedLinesBeforeCut,
+                cutCommandStyle = settings.receiptCutCommandStyle,
+                timing = effectiveTiming
+            )
+        } else {
+            DirectPrintResult.Failed(context.getString(R.string.print_could_not_decode_receipt_image))
+        }
+    } finally {
+        if (locallyDecoded) {
+            bitmap?.recycle()
+        }
     }
 
     kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
         cleanOldPrintCacheFiles(context)
     }
 
-    val decision = decidePrintRouting(mode, target.identifier, directResult)
+    val partialSuccess = if (directResult is DirectPrintResult.UsbTransferFailed) 1 else 0
+    val decision = decidePrintRouting(mode, target.identifier, directResult, partialSuccessCount = partialSuccess)
     Log.d("BillActions", "printReceiptImage: directResult=$directResult, decision=$decision")
     return when (decision) {
         RoutingDecision.DIRECT_OK -> true
@@ -1049,7 +1041,8 @@ suspend fun printReceiptImage(
                 withContext(Dispatchers.Main) {
                     printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
                 }
-            } else false
+            }
+            false
         }
         RoutingDecision.SYSTEM_DIALOG -> {
             val fileToPrint = resolveFallbackFile()
@@ -1057,7 +1050,8 @@ suspend fun printReceiptImage(
                 withContext(Dispatchers.Main) {
                     printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
                 }
-            } else false
+            }
+            false
         }
     }
 }
@@ -1140,24 +1134,33 @@ suspend fun printLabelImages(
     context: Context,
     activity: Activity?,
     labels: List<Bitmap>,
-    pdfFallback: File,
+    pdfFallback: File? = null,
     widthMm: Float,
     heightMm: Float,
     copies: Int,
     jobName: String,
-    settings: InvoiceSettingsData
+    settings: InvoiceSettingsData,
+    pdfFallbackBuilder: (suspend () -> File?)? = null
 ): Boolean {
     val mode = settings.labelPrintMode.trim().uppercase()
     val labelTarget = settings.resolvedLabelPrinterTarget()
     val receiptTarget = settings.resolvedReceiptPrinterTarget()
 
-    if (mode == "SYSTEM") {
-        return withContext(Dispatchers.Main) {
-            printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
-        }
+    val resolvePdf: suspend () -> File? = {
+        pdfFallback ?: pdfFallbackBuilder?.invoke()
     }
 
-    if (isSamePrinterTarget(labelTarget, receiptTarget) || isSamePrinter(settings.labelPrinterAddress, settings.resolvedReceiptPrinterAddress())) {
+    if (mode == "SYSTEM") {
+        val file = resolvePdf()
+        if (file != null) {
+            withContext(Dispatchers.Main) {
+                printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
+            }
+        }
+        return false
+    }
+
+    if (isSamePrinterTarget(labelTarget, receiptTarget)) {
         withContext(Dispatchers.Main) {
             Toast.makeText(
                 context,
@@ -1177,9 +1180,13 @@ suspend fun printLabelImages(
             }
             RoutingDecision.SYSTEM_DIALOG,
             RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
-                withContext(Dispatchers.Main) {
-                    printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+                val file = resolvePdf()
+                if (file != null) {
+                    withContext(Dispatchers.Main) {
+                        printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
+                    }
                 }
+                false
             }
             RoutingDecision.DIRECT_OK -> true
         }
@@ -1216,14 +1223,22 @@ suspend fun printLabelImages(
         }
         RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
             showDirectPrintToast(context, directResult)
-            withContext(Dispatchers.Main) {
-                printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+            val file = resolvePdf()
+            if (file != null) {
+                withContext(Dispatchers.Main) {
+                    printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
+                }
             }
+            false
         }
         RoutingDecision.SYSTEM_DIALOG -> {
-            withContext(Dispatchers.Main) {
-                printPdfDocument(activity ?: context, pdfFallback, jobName, widthMm, heightMm)
+            val file = resolvePdf()
+            if (file != null) {
+                withContext(Dispatchers.Main) {
+                    printPdfDocument(activity ?: context, file, jobName, widthMm, heightMm)
+                }
             }
+            false
         }
     }
 }

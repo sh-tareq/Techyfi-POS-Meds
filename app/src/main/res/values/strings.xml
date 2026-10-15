@@ -2913,7 +2913,7 @@
     <string name="settings_cut_style_gs_v">GS V</string>
     <string name="settings_cut_style_legacy">ESC i/m</string>
     <string name="settings_cut_style_gs_v_feed">GS V n</string>
-    <string name="settings_cut_command_style_hint">Only change this if your printer does not cut paper with the standard GS V command.</string>
+    <string name="settings_cut_command_style_hint">If the paper does not cut, try another cut command style (Epson models treat both ESC i and ESC m as partial cuts).</string>
     <string name="settings_save_failed">Failed to save settings</string>
     <string name="settings_receipt_cut_system_note">Paper cut control only applies to direct printing.</string>
     <string name="settings_label_picker_same_as_receipt_dialog">This device is already your receipt printer. A receipt printer cannot print labels. Choose your label printer, such as the Deli E886BW.</string>
@@ -3133,6 +3133,12 @@
     <string name="settings_idle_lock_60m">60 min</string>
     <string name="owner_pin_reset_audit_title">Owner PIN Reset History</string>
     <string name="owner_pin_reset_audit_info">Last reset via device credentials: %1$s on device %2$s</string>
+    <string name="direct_print_error_usb_open_failed">Could not open USB printer connection</string>
+    <string name="direct_print_error_usb_claim_failed">Could not access USB printer interface</string>
+    <string name="direct_print_error_usb_transfer_failed">USB data transfer failed (code %1$d)</string>
+    <string name="direct_print_error_usb_comm">USB communication error: %1$s</string>
+    <string name="settings_usb_not_connected">No USB printer connected</string>
+    <string name="batch_print_cancel">Cancel</string>
 </resources>
 
 

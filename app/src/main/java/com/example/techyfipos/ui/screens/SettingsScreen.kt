@@ -3,7 +3,10 @@
 package com.example.techyfipos.ui.screens
 
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.Uri
@@ -39,6 +42,7 @@ import com.example.techyfipos.printer.formatPrinterTargetDisplay
 import com.example.techyfipos.printer.formatUsbDeviceDisplay
 import com.example.techyfipos.printer.buildUsbDeviceKey
 import com.example.techyfipos.printer.isLikelyUsbPrinter
+import com.example.techyfipos.printer.requestUsbPermission
 import com.example.techyfipos.utils.executeReceiptCutTest
 import com.example.techyfipos.utils.showDirectPrintToast
 import com.example.techyfipos.ui.components.*
@@ -67,7 +71,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.text.selection.SelectionContainer
-import android.content.Intent
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.asImageBitmap
 import com.example.techyfipos.data.InvoiceSettingsData
@@ -332,8 +335,6 @@ private fun OptimizedSettingsHome(
     onAllowNegativeInventoryChanged: (Boolean) -> Unit = {},
     cashDrawerKickEnabled: Boolean = true,
     onCashDrawerKickChanged: (Boolean) -> Unit = {},
-    cashDrawerPrinterAddress: String = "",
-    onCashDrawerPrinterSelected: (String) -> Unit = {},
     onLanguageSelected: (String) -> Unit,
     onThemeModeSelected: (String) -> Unit = {},
     onLayoutModeSelected: (String) -> Unit = {},
@@ -869,10 +870,19 @@ private fun OptimizedSettingsHome(
                             modifier = Modifier.weight(1f),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Realistic3DBluetoothPrinterIcon(
-                                size = 28.dp,
-                                isConnected = receiptTarget !is PrinterTarget.None
-                            )
+                            if (receiptTarget is PrinterTarget.Usb) {
+                                Icon(
+                                    Icons.Default.Usb,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            } else {
+                                Realistic3DBluetoothPrinterIcon(
+                                    size = 28.dp,
+                                    isConnected = receiptTarget !is PrinterTarget.None
+                                )
+                            }
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
@@ -880,9 +890,13 @@ private fun OptimizedSettingsHome(
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold
                                 )
-                                val receiptDisplay = formatPrinterTargetDisplay(context, receiptTarget)
+                                val receiptDisplay = remember(receiptTarget) {
+                                    formatPrinterTargetDisplay(context, receiptTarget)
+                                }
                                 Text(
-                                    if (receiptDisplay.isNotBlank()) receiptDisplay else stringResource(R.string.settings_bluetooth_not_paired),
+                                    if (receiptDisplay.isNotBlank()) receiptDisplay
+                                    else if (receiptTarget is PrinterTarget.Usb) stringResource(R.string.settings_usb_not_connected)
+                                    else stringResource(R.string.settings_bluetooth_not_paired),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray
                                 )
@@ -943,8 +957,8 @@ private fun OptimizedSettingsHome(
                     ) {
                         OutlinedButton(
                             onClick = {
+                                isTestingCut = true
                                 scope.launch(Dispatchers.IO) {
-                                    isTestingCut = true
                                     val cutModeEnum = ReceiptCutMode.fromString(currentSettings.receiptCutMode)
                                     val cutTiming = com.example.techyfipos.printer.PrintTiming()
                                     val res = try {
@@ -961,9 +975,12 @@ private fun OptimizedSettingsHome(
                                         if (e is kotlinx.coroutines.CancellationException) throw e
                                         android.util.Log.e("SettingsScreen", "Test cut failed", e)
                                         DirectPrintResult.Failed(e.message ?: "Cut test failed")
+                                    } finally {
+                                        withContext(Dispatchers.Main) {
+                                            isTestingCut = false
+                                        }
                                     }
                                     withContext(Dispatchers.Main) {
-                                        isTestingCut = false
                                         if (res is DirectPrintResult.Success) {
                                             val msg = if (cutModeEnum == ReceiptCutMode.NONE) {
                                                 context.getString(R.string.settings_test_cut_success_none)
@@ -997,8 +1014,8 @@ private fun OptimizedSettingsHome(
 
                         OutlinedButton(
                             onClick = {
+                                isTestingLongCut = true
                                 scope.launch(Dispatchers.IO) {
-                                    isTestingLongCut = true
                                     val cutModeEnum = ReceiptCutMode.fromString(currentSettings.receiptCutMode)
                                     val cutTiming = com.example.techyfipos.printer.PrintTiming()
                                     val res = try {
@@ -1015,9 +1032,12 @@ private fun OptimizedSettingsHome(
                                         if (e is kotlinx.coroutines.CancellationException) throw e
                                         android.util.Log.e("SettingsScreen", "Long test cut failed", e)
                                         DirectPrintResult.Failed(e.message ?: "Long cut test failed")
+                                    } finally {
+                                        withContext(Dispatchers.Main) {
+                                            isTestingLongCut = false
+                                        }
                                     }
                                     withContext(Dispatchers.Main) {
-                                        isTestingLongCut = false
                                         if (res is DirectPrintResult.Success) {
                                             val msg = if (cutModeEnum == ReceiptCutMode.NONE) {
                                                 context.getString(R.string.settings_test_cut_long_success_none)
@@ -1346,10 +1366,19 @@ private fun OptimizedSettingsHome(
                             modifier = Modifier.weight(1f),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Realistic3DBluetoothPrinterIcon(
-                                size = 28.dp,
-                                isConnected = labelTarget !is PrinterTarget.None
-                            )
+                            if (labelTarget is PrinterTarget.Usb) {
+                                Icon(
+                                    Icons.Default.Usb,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            } else {
+                                Realistic3DBluetoothPrinterIcon(
+                                    size = 28.dp,
+                                    isConnected = labelTarget !is PrinterTarget.None
+                                )
+                            }
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
@@ -1357,7 +1386,7 @@ private fun OptimizedSettingsHome(
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold
                                 )
-                                val labelDisplay = formatPrinterTargetDisplay(context, labelTarget)
+                                val labelDisplay = remember(labelTarget) { formatPrinterTargetDisplay(context, labelTarget) }
                                 Text(
                                     if (labelDisplay.isNotBlank()) labelDisplay else stringResource(R.string.settings_bluetooth_not_paired),
                                     style = MaterialTheme.typography.bodySmall,
@@ -1541,20 +1570,32 @@ private fun OptimizedSettingsHome(
                 ) {
                     val drawerTarget = currentSettings.resolvedCashDrawerPrinterTarget()
                     val hasDrawerPrinter = drawerTarget !is PrinterTarget.None
-                    Realistic3DBluetoothPrinterIcon(
-                        size = 32.dp,
-                        isConnected = hasDrawerPrinter
-                    )
+                    if (drawerTarget is PrinterTarget.Usb) {
+                        Icon(
+                            Icons.Default.Usb,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    } else {
+                        Realistic3DBluetoothPrinterIcon(
+                            size = 32.dp,
+                            isConnected = hasDrawerPrinter
+                        )
+                    }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(stringResource(R.string.settings_cash_drawer_device), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                        val displayAddress = if (currentSettings.cashDrawerPrinterAddress.isBlank() && currentSettings.cashDrawerUsbDeviceKey.isBlank()) {
-                            val receiptTarget = currentSettings.resolvedReceiptPrinterTarget()
-                            val formattedReceipt = formatPrinterTargetDisplay(context, receiptTarget)
-                            if (formattedReceipt.isNotBlank()) stringResource(R.string.settings_cash_drawer_same_as_receipt) + " ($formattedReceipt)"
-                            else stringResource(R.string.settings_cash_drawer_same_as_receipt)
-                        } else {
-                            formatPrinterTargetDisplay(context, drawerTarget)
+                        val hasDedicatedDrawerTarget = currentSettings.cashDrawerPrinterAddress.isNotBlank() || currentSettings.cashDrawerUsbDeviceKey.isNotBlank()
+                        val receiptTarget = currentSettings.resolvedReceiptPrinterTarget()
+                        val displayAddress = remember(drawerTarget, receiptTarget, hasDedicatedDrawerTarget) {
+                            if (!hasDedicatedDrawerTarget) {
+                                val formattedReceipt = formatPrinterTargetDisplay(context, receiptTarget)
+                                if (formattedReceipt.isNotBlank()) context.getString(R.string.settings_cash_drawer_same_as_receipt) + " ($formattedReceipt)"
+                                else context.getString(R.string.settings_cash_drawer_same_as_receipt)
+                            } else {
+                                formatPrinterTargetDisplay(context, drawerTarget)
+                            }
                         }
                         Text(
                             displayAddress,
@@ -1602,8 +1643,10 @@ private fun OptimizedSettingsHome(
     }
 
     if (showPrinterPicker) {
+        val hasDedicatedDrawerTarget = currentSettings.cashDrawerPrinterAddress.isNotBlank() || currentSettings.cashDrawerUsbDeviceKey.isNotBlank()
         CombinedPrinterPickerDialog(
-            currentTarget = currentSettings.resolvedCashDrawerPrinterTarget(),
+            currentTarget = if (hasDedicatedDrawerTarget) currentSettings.resolvedCashDrawerPrinterTarget() else PrinterTarget.None,
+            disabledPrinterTarget = currentSettings.resolvedLabelPrinterTarget(),
             showSameAsReceiptOption = true,
             receiptPrinterTarget = currentSettings.resolvedReceiptPrinterTarget(),
             onSelected = { target ->
@@ -1644,7 +1687,8 @@ private fun OptimizedSettingsHome(
                     val updated = when (target) {
                         is PrinterTarget.Usb -> currentSettings.copy(
                             receiptPrinterConnection = "USB",
-                            receiptUsbDeviceKey = target.deviceKey
+                            receiptUsbDeviceKey = target.deviceKey,
+                            directBluetoothPrinterAddress = ""
                         )
                         is PrinterTarget.Bluetooth -> currentSettings.copy(
                             receiptPrinterConnection = "BLUETOOTH",
@@ -1676,7 +1720,8 @@ private fun OptimizedSettingsHome(
                     val updated = when (target) {
                         is PrinterTarget.Usb -> currentSettings.copy(
                             labelPrinterConnection = "USB",
-                            labelUsbDeviceKey = target.deviceKey
+                            labelUsbDeviceKey = target.deviceKey,
+                            labelPrinterAddress = ""
                         )
                         is PrinterTarget.Bluetooth -> currentSettings.copy(
                             labelPrinterConnection = "BLUETOOTH",
@@ -1926,6 +1971,7 @@ private fun CombinedPrinterPickerDialog(
 
     // USB state
     val usbManager = remember { context.getSystemService(Context.USB_SERVICE) as? UsbManager }
+    val dialogScope = rememberCoroutineScope()
     var showAllUsb by remember { mutableStateOf(false) }
     var usbDevices by remember { mutableStateOf<List<UsbDevice>>(emptyList()) }
 
@@ -1940,6 +1986,28 @@ private fun CombinedPrinterPickerDialog(
 
     LaunchedEffect(showAllUsb) {
         refreshUsbDevices()
+    }
+
+    DisposableEffect(context) {
+        val filter = IntentFilter().apply {
+            addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+            addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+        }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context?, intent: Intent?) {
+                refreshUsbDevices()
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+        onDispose {
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (_: Exception) {}
+        }
     }
 
     AlertDialog(
@@ -2145,7 +2213,7 @@ private fun CombinedPrinterPickerDialog(
                                             )
                                             val receiptDisplay = formatPrinterTargetDisplay(context, receiptPrinterTarget)
                                             Text(
-                                                if (receiptDisplay.isNotBlank()) receiptDisplay else stringResource(R.string.settings_bluetooth_not_paired),
+                                                if (receiptDisplay.isNotBlank()) receiptDisplay else stringResource(R.string.settings_usb_not_connected),
                                                 fontSize = 11.sp,
                                                 color = Color.Gray
                                             )
@@ -2175,7 +2243,7 @@ private fun CombinedPrinterPickerDialog(
                                                 fontSize = 14.sp
                                             )
                                             Text(
-                                                stringResource(R.string.settings_bluetooth_not_paired),
+                                                stringResource(R.string.settings_usb_not_connected),
                                                 fontSize = 11.sp,
                                                 color = Color.Gray
                                             )
@@ -2204,9 +2272,39 @@ private fun CombinedPrinterPickerDialog(
                                     val prodName = try { dev.productName } catch (_: Exception) { null }
                                     val mfgName = try { dev.manufacturerName } catch (_: Exception) { null }
                                     val displayName = formatUsbDeviceDisplay(prodName, mfgName, dev.vendorId, dev.productId)
+                                    val vidHex = "%04X".format(dev.vendorId)
+                                    val pidHex = "%04X".format(dev.productId)
+                                    val serial = try {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                            if (usbManager?.hasPermission(dev) == true) dev.serialNumber else null
+                                        } else {
+                                            dev.serialNumber
+                                        }
+                                    } catch (_: SecurityException) {
+                                        null
+                                    } catch (_: Exception) {
+                                        null
+                                    }
+                                    val hexDisplay = if (!serial.isNullOrBlank()) {
+                                        "USB VID:$vidHex PID:$pidHex (S/N: $serial)"
+                                    } else {
+                                        "USB VID:$vidHex PID:$pidHex"
+                                    }
 
                                     Surface(
-                                        onClick = { if (!isConflict) onSelected(target) },
+                                        onClick = {
+                                            if (!isConflict) {
+                                                if (usbManager != null && !usbManager.hasPermission(dev)) {
+                                                    dialogScope.launch {
+                                                        requestUsbPermission(context, usbManager, dev)
+                                                        val finalKey = buildUsbDeviceKey(dev)
+                                                        onSelected(PrinterTarget.Usb(finalKey))
+                                                    }
+                                                } else {
+                                                    onSelected(target)
+                                                }
+                                            }
+                                        },
                                         shape = RoundedCornerShape(8.dp),
                                         enabled = !isConflict,
                                         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
@@ -2223,7 +2321,7 @@ private fun CombinedPrinterPickerDialog(
                                                     fontSize = 14.sp,
                                                     color = if (isConflict) Color.Gray else MaterialTheme.colorScheme.onSurface
                                                 )
-                                                Text(deviceKey, fontSize = 11.sp, color = Color.Gray)
+                                                Text(hexDisplay, fontSize = 11.sp, color = Color.Gray)
                                                 if (isConflict) {
                                                     Text(
                                                         stringResource(R.string.settings_label_printer_same_as_receipt_warning),
@@ -4996,6 +5094,43 @@ fun SettingsScreen(
     var inspectedBackupMetadata by remember { mutableStateOf<com.example.techyfipos.utils.BackupPackageManager.BackupMetadata?>(null) }
     var isInspectingBackup by remember { mutableStateOf(false) }
     var isRestoringFromDrive by remember { mutableStateOf(false) }
+    var isPrintingTestReceipt by remember { mutableStateOf(false) }
+
+    fun launchTestReceiptPrint(jobTitle: String, generateFile: suspend () -> File?) {
+        if (isPrintingTestReceipt) return
+        isPrintingTestReceipt = true
+        scope.launch(Dispatchers.IO) {
+            try {
+                val testFile = generateFile()
+                if (testFile == null) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, context.getString(R.string.direct_print_error_connection_failed, "Generation failed"), Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+                val act = activity ?: context.findActivity()
+                if (act != null) {
+                    printReceiptImage(
+                        context = context,
+                        activity = act,
+                        imageFile = testFile,
+                        jobName = jobTitle,
+                        settings = currentSettings,
+                        kickDrawer = false
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, context.getString(R.string.direct_print_error_connection_failed, e.localizedMessage ?: "Unknown error"), Toast.LENGTH_SHORT).show()
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    isPrintingTestReceipt = false
+                }
+            }
+        }
+    }
 
     val completeDriveAuthorization: (AuthorizationResult) -> Unit = { authorizationResult ->
         scope.launch {
@@ -5339,21 +5474,6 @@ fun SettingsScreen(
                             }
                         }
                     },
-                    cashDrawerPrinterAddress = currentSettings.cashDrawerPrinterAddress,
-                    onCashDrawerPrinterSelected = { address ->
-                        if (!canEditSettings) {
-                            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
-                        } else {
-                            val updated = currentSettings.copy(cashDrawerPrinterAddress = address)
-                            currentSettings = updated
-                            settingsViewModel.saveInvoiceSettingsData(updated) { ok ->
-                                if (!ok) {
-                                    Toast.makeText(context, context.getString(R.string.settings_save_failed), Toast.LENGTH_SHORT).show()
-                                    currentSettings = invoiceSettingsData
-                                }
-                            }
-                        }
-                    },
                     onLanguageSelected = settingsViewModel::saveLanguage,
                     onThemeModeSelected = settingsViewModel::saveThemeMode,
                     currentLayoutMode = currentLayoutMode,
@@ -5413,8 +5533,9 @@ fun SettingsScreen(
                         Toast.makeText(context, context.getString(R.string.settings_toast_due_receipt_saved), Toast.LENGTH_SHORT).show()
                     },
                     onTestPrint = {
-                        scope.launch(Dispatchers.IO) {
-                            val testFile = generateDueRepaymentJpeg(
+                        val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_পরিশোধ_#১" else "Test_Repayment_#1"
+                        launchTestReceiptPrint(job) {
+                            generateDueRepaymentJpeg(
                                 context = context,
                                 customerName = "Rahim Store",
                                 customerPhone = "01812345678",
@@ -5427,14 +5548,6 @@ fun SettingsScreen(
                                 storePhone = currentSettings.phonePrimary,
                                 isBangla = false,
                                 settings = currentSettings
-                            )
-                            printReceiptImage(
-                                context = context,
-                                activity = activity ?: context.findActivity(),
-                                imageFile = testFile,
-                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_পরিশোধ_#১" else "Test_Repayment_#1",
-                                settings = currentSettings,
-                                kickDrawer = false
                             )
                         }
                     }
@@ -5449,16 +5562,9 @@ fun SettingsScreen(
                         Toast.makeText(context, context.getString(R.string.settings_toast_shop_identity_saved), Toast.LENGTH_SHORT).show()
                     },
                     onTestPrint = {
-                        scope.launch(Dispatchers.IO) {
-                            val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
-                            printReceiptImage(
-                                context = context,
-                                activity = activity ?: context.findActivity(),
-                                imageFile = testFile,
-                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12",
-                                settings = currentSettings,
-                                kickDrawer = false
-                            )
+                        val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12"
+                        launchTestReceiptPrint(job) {
+                            generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
                         }
                     }
                 )
@@ -5475,16 +5581,9 @@ fun SettingsScreen(
                         }
                     },
                     onTestPrint = {
-                        scope.launch(Dispatchers.IO) {
-                            val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
-                            printReceiptImage(
-                                context = context,
-                                activity = activity ?: context.findActivity(),
-                                imageFile = testFile,
-                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12",
-                                settings = currentSettings,
-                                kickDrawer = false
-                            )
+                        val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12"
+                        launchTestReceiptPrint(job) {
+                            generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
                         }
                     }
                 )
@@ -5496,16 +5595,9 @@ fun SettingsScreen(
                         Toast.makeText(context, context.getString(R.string.settings_toast_qr_links_saved), Toast.LENGTH_SHORT).show()
                     },
                     onTestPrint = {
-                        scope.launch(Dispatchers.IO) {
-                            val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
-                            printReceiptImage(
-                                context = context,
-                                activity = activity ?: context.findActivity(),
-                                imageFile = testFile,
-                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12",
-                                settings = currentSettings,
-                                kickDrawer = false
-                            )
+                        val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12"
+                        launchTestReceiptPrint(job) {
+                            generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
                         }
                     }
                 )
@@ -5533,16 +5625,9 @@ fun SettingsScreen(
                         Toast.makeText(context, context.getString(R.string.settings_toast_receipt_layout_saved), Toast.LENGTH_SHORT).show()
                     },
                     onTestPrint = {
-                        scope.launch(Dispatchers.IO) {
-                            val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
-                            printReceiptImage(
-                                context = context,
-                                activity = activity ?: context.findActivity(),
-                                imageFile = testFile,
-                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12",
-                                settings = currentSettings,
-                                kickDrawer = false
-                            )
+                        val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12"
+                        launchTestReceiptPrint(job) {
+                            generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
                         }
                     },
                     onResetForm = {

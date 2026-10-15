@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -29,6 +30,10 @@ sealed class DirectPrintResult {
     object UsbNoPermission : DirectPrintResult()
     object UsbNoPrinterInterface : DirectPrintResult()
     object UsbNotSupported : DirectPrintResult()
+    object UsbOpenFailed : DirectPrintResult()
+    object UsbClaimInterfaceFailed : DirectPrintResult()
+    data class UsbTransferFailed(val code: Int) : DirectPrintResult()
+    data class UsbCommunicationError(val reason: String) : DirectPrintResult()
     data class Failed(val message: String) : DirectPrintResult()
 }
 
@@ -377,87 +382,100 @@ suspend fun sendToBluetoothPrinter(
             delay(CONNECT_SETTLE_MS)
             timing?.recordSettleDone()
 
-            val os: OutputStream = socket.outputStream
             val totalBytes = segments.sumOf { it.size }
-            val chunkDelayMs = bluetoothChunkDelayMs(totalBytes)
-            val writeStartTime = System.currentTimeMillis()
-            var bytesWrittenSoFar = 0
-            for ((index, segment) in segments.withIndex()) {
-                var offset = 0
-                while (offset < segment.size) {
-                    val length = minOf(CHUNK_SIZE, segment.size - offset)
-                    if (index == 0 && offset == 0) {
-                        timing?.recordFirstChunkWritten()
-                    }
-                    os.write(segment, offset, length)
-                    offset += length
-                    bytesWrittenSoFar += length
-                    if (offset < segment.size) {
-                        delay(resolveBluetoothChunkDelayMs(bytesWrittenSoFar, totalBytes))
-                    }
-                }
-                onSegmentSent?.invoke(index)
-                val delayMs = perSegmentDelaysMs?.getOrNull(index) ?: delayBetweenSegmentsMs
-                if (delayMs > 0L) {
-                    os.flush()
-                    delay(delayMs)
-                }
-            }
-            os.flush()
-            timing?.recordLastChunkWritten()
-            val writeElapsedMs = System.currentTimeMillis() - writeStartTime
+            val maxJobTimeoutMs = (25_000L + (totalBytes / 1000L) * 200L).coerceIn(25_000L, 60_000L)
+            var watchdogJob: kotlinx.coroutines.Job? = null
 
-            // Query status deterministically with GS r 1 (transmit paper sensor status).
-            // Since ESC/POS commands are executed sequentially, receiving a response byte
-            // proves that all preceding commands (raster bands, feed lines, and cut) were consumed.
-            var replyReceived = false
-            val statusKey = trimmedAddress.lowercase()
-            val timeoutMs = bluetoothResponseTimeoutMs(totalBytes)
-            val queryStatus = awaitStatusReply && !statusReplyUnsupported.contains(statusKey)
-            if (queryStatus) try {
-                val inputStream = socket.inputStream
-                while (inputStream.available() > 0) {
-                    inputStream.read()
+            try {
+                watchdogJob = kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                    delay(maxJobTimeoutMs)
+                    Log.w(TAG, "Bluetooth print job watchdog fired after $maxJobTimeoutMs ms; forcibly closing socket")
+                    try { socket?.close() } catch (_: Exception) {}
                 }
-                os.write(byteArrayOf(0x1D, 0x72, 0x01))
-                os.flush()
 
-                val deadline = System.currentTimeMillis() + timeoutMs
-                while (System.currentTimeMillis() < deadline) {
-                    if (inputStream.available() > 0) {
-                        val b = inputStream.read()
-                        if (b != -1) {
-                            replyReceived = true
-                            break
+                val os: OutputStream = socket.outputStream
+                val chunkDelayMs = bluetoothChunkDelayMs(totalBytes)
+                val writeStartTime = System.currentTimeMillis()
+                var bytesWrittenSoFar = 0
+                for ((index, segment) in segments.withIndex()) {
+                    var offset = 0
+                    while (offset < segment.size) {
+                        val length = minOf(CHUNK_SIZE, segment.size - offset)
+                        if (index == 0 && offset == 0) {
+                            timing?.recordFirstChunkWritten()
+                        }
+                        os.write(segment, offset, length)
+                        offset += length
+                        bytesWrittenSoFar += length
+                        if (offset < segment.size) {
+                            delay(resolveBluetoothChunkDelayMs(bytesWrittenSoFar, totalBytes))
                         }
                     }
-                    delay(50L)
+                    onSegmentSent?.invoke(index)
+                    val delayMs = perSegmentDelaysMs?.getOrNull(index) ?: delayBetweenSegmentsMs
+                    if (delayMs > 0L) {
+                        os.flush()
+                        delay(delayMs)
+                    }
                 }
-            } catch (queryEx: Exception) {
-                Log.w(TAG, "Status query check skipped or errored: ${queryEx.message}")
-            }
-            if (queryStatus) {
-                if (replyReceived) statusReplyUnsupported.remove(statusKey) else statusReplyUnsupported.add(statusKey)
-            }
+                os.flush()
+                timing?.recordLastChunkWritten()
+                val writeElapsedMs = System.currentTimeMillis() - writeStartTime
 
-            val drainMs = if (replyReceived) {
-                // Reply received: printer finished job and cutter. Brief settle for blade retraction.
-                150L
-            } else if (queryStatus) {
-                // The query already waited the full (size scaled) timeout without a reply, so only settle briefly.
-                POST_PRINT_DRAIN_MS
-            } else {
-                // Labels, drawer pulse, or a printer known not to answer: payload-scaled drain.
-                bluetoothPostPrintDrainMs(totalBytes)
+                // Query status deterministically with GS r 1 (transmit paper sensor status).
+                // Since ESC/POS commands are executed sequentially, receiving a response byte
+                // proves that all preceding commands (raster bands, feed lines, and cut) were consumed.
+                var replyReceived = false
+                val timeoutMs = bluetoothResponseTimeoutMs(totalBytes)
+                val queryStatus = awaitStatusReply && !statusReplyUnsupported.contains(statusKey)
+                if (queryStatus) try {
+                    val inputStream = socket.inputStream
+                    while (inputStream.available() > 0) {
+                        inputStream.read()
+                    }
+                    os.write(byteArrayOf(0x1D, 0x72, 0x01))
+                    os.flush()
+
+                    val deadline = System.currentTimeMillis() + timeoutMs
+                    while (System.currentTimeMillis() < deadline) {
+                        if (inputStream.available() > 0) {
+                            val b = inputStream.read()
+                            if (b != -1) {
+                                replyReceived = true
+                                break
+                            }
+                        }
+                        delay(50L)
+                    }
+                } catch (queryEx: Exception) {
+                    Log.w(TAG, "Status query check skipped or errored: ${queryEx.message}")
+                }
+                if (queryStatus) {
+                    if (replyReceived) statusReplyUnsupported.remove(statusKey) else statusReplyUnsupported.add(statusKey)
+                }
+
+                val drainMs = if (replyReceived) {
+                    // Reply received: printer finished job and cutter. Brief settle for blade retraction.
+                    150L
+                } else if (queryStatus) {
+                    // The query already waited the full (size scaled) timeout without a reply, so only settle briefly.
+                    POST_PRINT_DRAIN_MS
+                } else {
+                    // Labels, drawer pulse, or a printer known not to answer: payload-scaled drain.
+                    bluetoothPostPrintDrainMs(totalBytes)
+                }
+                delay(drainMs)
+                timing?.recordDrainDone(replyReceived)
+                Log.d(
+                    TAG,
+                    "sendToBluetoothPrinter: totalBytes=$totalBytes, chunkDelayMs=$chunkDelayMs, writeElapsedMs=$writeElapsedMs, queryStatus=$queryStatus, drainMs=$drainMs, replyReceived=$replyReceived"
+                )
+                DirectPrintResult.Success
+            } finally {
+                watchdogJob?.cancel()
             }
-            delay(drainMs)
-            timing?.recordDrainDone(replyReceived)
-            Log.d(
-                TAG,
-                "sendToBluetoothPrinter: totalBytes=$totalBytes, chunkDelayMs=$chunkDelayMs, writeElapsedMs=$writeElapsedMs, queryStatus=$queryStatus, drainMs=$drainMs, replyReceived=$replyReceived"
-            )
-            DirectPrintResult.Success
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Bluetooth communication failed: ${e.message}", e)
             DirectPrintResult.Failed(e.localizedMessage ?: e.message ?: "Bluetooth communication error")
         } finally {

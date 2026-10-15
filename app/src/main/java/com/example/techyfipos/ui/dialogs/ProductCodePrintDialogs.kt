@@ -44,10 +44,9 @@ import com.example.techyfipos.R
 import com.example.techyfipos.data.db.Product
 import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.data.SettingsDataStore
-import com.example.techyfipos.printer.DirectPrintResult
-import com.example.techyfipos.printer.buildTsplPayload
-import com.example.techyfipos.printer.TsplLabelPrinterDriver
+import com.example.techyfipos.printer.*
 import com.example.techyfipos.utils.*
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -942,6 +941,7 @@ fun BatchProductCodePrintDialog(
     var isGenerating by remember { mutableStateOf(false) }
     var isPrinting by remember { mutableStateOf(false) }
     var printingProgressText by remember { mutableStateOf("") }
+    var printJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     val codeType = ProductCodeType.entries.firstOrNull { it.name == codeTypeName } ?: ProductCodeType.BARCODE
     val labelSize = ProductCodeLabelSize.entries.firstOrNull { it.name == labelSizeName }
@@ -1053,9 +1053,16 @@ fun BatchProductCodePrintDialog(
     }
 
     Dialog(
-        onDismissRequest = { if (!isGenerating) onDismiss() },
-        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
+        onDismissRequest = { if (!isGenerating && !isPrinting) onDismiss() },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = false,
+            dismissOnBackPress = !isPrinting && !isGenerating
+        )
     ) {
+        BackHandler(enabled = isPrinting || isGenerating) {
+            // Prevent back dismiss while printing or generating
+        }
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.94f)
@@ -1884,17 +1891,20 @@ fun BatchProductCodePrintDialog(
                                 }
 
                                 val mode = invoiceSettings.labelPrintMode.trim().uppercase()
-                                val address = invoiceSettings.labelPrinterAddress.trim()
+                                val labelTarget = invoiceSettings.resolvedLabelPrinterTarget()
+                                val receiptTarget = invoiceSettings.resolvedReceiptPrinterTarget()
 
-                                val goDirect = mode != "SYSTEM" && address.isNotBlank()
-                                if (goDirect && com.example.techyfipos.printer.isSamePrinter(address, invoiceSettings.resolvedReceiptPrinterAddress())) {
-                                    // Never send TSPL to the ESC/POS receipt printer (prints garbage).
+                                if (isSamePrinterTarget(labelTarget, receiptTarget)) {
                                     withContext(Dispatchers.Main) {
                                         isPrinting = false
                                         printingProgressText = ""
                                         Toast.makeText(context, context.getString(R.string.direct_print_error_label_same_as_receipt), Toast.LENGTH_LONG).show()
                                     }
-                                } else if (goDirect) {
+                                    return@launch
+                                }
+
+                                val goDirect = mode != "SYSTEM" && labelTarget !is PrinterTarget.None && labelTarget.identifier.isNotBlank()
+                                if (goDirect) {
                                     var totalSent = 0
                                     var failure: DirectPrintResult? = null
                                     try {
@@ -1928,7 +1938,6 @@ fun BatchProductCodePrintDialog(
                                                 barcodeGraphicScale = barcodeGraphicScale
                                             )
                                             if (bitmap != null) {
-                                                // Convert right away and free the full-resolution bitmap.
                                                 try {
                                                     payloads.add(
                                                         buildTsplPayload(
@@ -1949,9 +1958,14 @@ fun BatchProductCodePrintDialog(
                                         if (payloads.isNotEmpty()) {
                                             val batchRes = com.example.techyfipos.printer.printLabelPayloadsBatch(
                                                 context = context,
-                                                address = address,
+                                                target = labelTarget,
                                                 payloads = payloads,
-                                                copiesPerPayload = payloadCopies
+                                                copiesPerPayload = payloadCopies,
+                                                onProgress = { sent, total ->
+                                                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                                        printingProgressText = context.getString(R.string.batch_print_printing, sent, total)
+                                                    }
+                                                }
                                             )
                                             totalSent = batchRes.successfulCount
                                             if (batchRes.result !is DirectPrintResult.Success) {
@@ -1968,59 +1982,161 @@ fun BatchProductCodePrintDialog(
                                             printingProgressText = ""
                                         }
                                     }
-                                    val failed = failure
-                                    if (failed != null) {
-                                        if (totalSent > 0) {
+
+                                    val decision = decidePrintRouting(mode, labelTarget.identifier, failure, totalSent)
+                                    when (decision) {
+                                        RoutingDecision.DIRECT_OK -> {
                                             withContext(Dispatchers.Main) {
-                                                val partialMsg = context.getString(R.string.batch_print_partial_failure, totalSent)
-                                                Toast.makeText(context, partialMsg, Toast.LENGTH_LONG).show()
+                                                val msg = context.getString(R.string.batch_print_success_fmt, totalSent)
+                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                                onDismiss()
                                             }
                                         }
-                                        showDirectPrintToast(context, failed)
-                                    } else {
-                                        withContext(Dispatchers.Main) {
-                                            val msg = context.getString(R.string.batch_print_success_fmt, totalSent)
-                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                            onDismiss()
+                                        RoutingDecision.SHOW_ERROR -> {
+                                            if (totalSent > 0) {
+                                                withContext(Dispatchers.Main) {
+                                                    val partialMsg = context.getString(R.string.batch_print_partial_failure, totalSent)
+                                                    Toast.makeText(context, partialMsg, Toast.LENGTH_LONG).show()
+                                                }
+                                            }
+                                            failure?.let { showDirectPrintToast(context, it) }
+                                        }
+                                        RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
+                                            if (totalSent > 0) {
+                                                withContext(Dispatchers.Main) {
+                                                    val partialMsg = context.getString(R.string.batch_print_partial_failure, totalSent)
+                                                    Toast.makeText(context, partialMsg, Toast.LENGTH_LONG).show()
+                                                }
+                                            }
+                                            failure?.let { showDirectPrintToast(context, it) }
+                                            val pdfResult = cacheBatchProductCodeLabelsPdf(
+                                                context = context,
+                                                items = items,
+                                                codeType = codeType,
+                                                labelSize = labelSize,
+                                                customWidthMm = customWidthMm,
+                                                customHeightMm = customHeightMm,
+                                                showPrice = showPrice,
+                                                showCodeNumber = showCodeNumber,
+                                                showStoreName = showStoreName,
+                                                storeName = storeNameInput,
+                                                productNameTextScale = productNameTextScale,
+                                                priceTextScale = priceTextScale,
+                                                codeNumberTextScale = codeNumberTextScale,
+                                                storeNameTextScale = storeNameTextScale,
+                                                showDateTracking = showDateTracking,
+                                                mfgOrPkgType = mfgOrPkgType,
+                                                mfgOrPkgDate = mfgOrPkgDate,
+                                                expDate = expDate,
+                                                dateTrackingTextScale = dateTrackingTextScale,
+                                                barcodeGraphicScale = barcodeGraphicScale
+                                            )
+                                            withContext(Dispatchers.Main) {
+                                                if (pdfResult != null) {
+                                                    val opened = printPdfDocument(
+                                                        context = activity ?: context,
+                                                        pdfFile = pdfResult.first,
+                                                        jobName = context.getString(R.string.print_job_batch_labels),
+                                                        widthMm = effectiveWidthMm,
+                                                        heightMm = effectiveHeightMm
+                                                    )
+                                                    if (opened) onDismiss()
+                                                }
+                                            }
+                                        }
+                                        RoutingDecision.SYSTEM_DIALOG -> {
+                                            val pdfResult = cacheBatchProductCodeLabelsPdf(
+                                                context = context,
+                                                items = items,
+                                                codeType = codeType,
+                                                labelSize = labelSize,
+                                                customWidthMm = customWidthMm,
+                                                customHeightMm = customHeightMm,
+                                                showPrice = showPrice,
+                                                showCodeNumber = showCodeNumber,
+                                                showStoreName = showStoreName,
+                                                storeName = storeNameInput,
+                                                productNameTextScale = productNameTextScale,
+                                                priceTextScale = priceTextScale,
+                                                codeNumberTextScale = codeNumberTextScale,
+                                                storeNameTextScale = storeNameTextScale,
+                                                showDateTracking = showDateTracking,
+                                                mfgOrPkgType = mfgOrPkgType,
+                                                mfgOrPkgDate = mfgOrPkgDate,
+                                                expDate = expDate,
+                                                dateTrackingTextScale = dateTrackingTextScale,
+                                                barcodeGraphicScale = barcodeGraphicScale
+                                            )
+                                            withContext(Dispatchers.Main) {
+                                                if (pdfResult != null) {
+                                                    val opened = printPdfDocument(
+                                                        context = activity ?: context,
+                                                        pdfFile = pdfResult.first,
+                                                        jobName = context.getString(R.string.print_job_batch_labels),
+                                                        widthMm = effectiveWidthMm,
+                                                        heightMm = effectiveHeightMm
+                                                    )
+                                                    if (opened) onDismiss()
+                                                }
+                                            }
                                         }
                                     }
                                 } else {
-                                    val pdfResult = cacheBatchProductCodeLabelsPdf(
-                                        context = context,
-                                        items = items,
-                                        codeType = codeType,
-                                        labelSize = labelSize,
-                                        customWidthMm = customWidthMm,
-                                        customHeightMm = customHeightMm,
-                                        showPrice = showPrice,
-                                        showCodeNumber = showCodeNumber,
-                                        showStoreName = showStoreName,
-                                        storeName = storeNameInput,
-                                        productNameTextScale = productNameTextScale,
-                                        priceTextScale = priceTextScale,
-                                        codeNumberTextScale = codeNumberTextScale,
-                                        storeNameTextScale = storeNameTextScale,
-                                        showDateTracking = showDateTracking,
-                                        mfgOrPkgType = mfgOrPkgType,
-                                        mfgOrPkgDate = mfgOrPkgDate,
-                                        expDate = expDate,
-                                        dateTrackingTextScale = dateTrackingTextScale,
-                                        barcodeGraphicScale = barcodeGraphicScale
-                                    )
-                                    withContext(Dispatchers.Main) {
-                                        isPrinting = false
-                                        printingProgressText = ""
-                                        if (pdfResult != null) {
-                                            val opened = printPdfDocument(
-                                                context = activity ?: context,
-                                                pdfFile = pdfResult.first,
-                                                jobName = context.getString(R.string.print_job_batch_labels),
-                                                widthMm = effectiveWidthMm,
-                                                heightMm = effectiveHeightMm
+                                    val decision = decidePrintRouting(mode, "", DirectPrintResult.NoAddress)
+                                    when (decision) {
+                                        RoutingDecision.SHOW_ERROR -> {
+                                            withContext(Dispatchers.Main) {
+                                                isPrinting = false
+                                                printingProgressText = ""
+                                            }
+                                            showDirectPrintToast(context, DirectPrintResult.NoAddress)
+                                        }
+                                        RoutingDecision.SYSTEM_DIALOG,
+                                        RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
+                                            val pdfResult = cacheBatchProductCodeLabelsPdf(
+                                                context = context,
+                                                items = items,
+                                                codeType = codeType,
+                                                labelSize = labelSize,
+                                                customWidthMm = customWidthMm,
+                                                customHeightMm = customHeightMm,
+                                                showPrice = showPrice,
+                                                showCodeNumber = showCodeNumber,
+                                                showStoreName = showStoreName,
+                                                storeName = storeNameInput,
+                                                productNameTextScale = productNameTextScale,
+                                                priceTextScale = priceTextScale,
+                                                codeNumberTextScale = codeNumberTextScale,
+                                                storeNameTextScale = storeNameTextScale,
+                                                showDateTracking = showDateTracking,
+                                                mfgOrPkgType = mfgOrPkgType,
+                                                mfgOrPkgDate = mfgOrPkgDate,
+                                                expDate = expDate,
+                                                dateTrackingTextScale = dateTrackingTextScale,
+                                                barcodeGraphicScale = barcodeGraphicScale
                                             )
-                                            if (opened) onDismiss()
-                                        } else {
-                                            Toast.makeText(context, context.getString(R.string.toast_failed_batch_labels_pdf), Toast.LENGTH_SHORT).show()
+                                            withContext(Dispatchers.Main) {
+                                                isPrinting = false
+                                                printingProgressText = ""
+                                                if (pdfResult != null) {
+                                                    val opened = printPdfDocument(
+                                                        context = activity ?: context,
+                                                        pdfFile = pdfResult.first,
+                                                        jobName = context.getString(R.string.print_job_batch_labels),
+                                                        widthMm = effectiveWidthMm,
+                                                        heightMm = effectiveHeightMm
+                                                    )
+                                                    if (opened) onDismiss()
+                                                } else {
+                                                    Toast.makeText(context, context.getString(R.string.toast_failed_batch_labels_pdf), Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                        RoutingDecision.DIRECT_OK -> {
+                                            withContext(Dispatchers.Main) {
+                                                isPrinting = false
+                                                printingProgressText = ""
+                                            }
                                         }
                                     }
                                 }
@@ -2030,24 +2146,36 @@ fun BatchProductCodePrintDialog(
                         shape = RoundedCornerShape(14.dp),
                         enabled = !isGenerating && !isPrinting && candidateProducts.isNotEmpty()
                     ) {
-                        if (isPrinting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                printingProgressText.ifBlank { stringResource(R.string.batch_print_generating) },
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else {
-                            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(stringResource(R.string.batch_print_direct_print_btn), fontWeight = FontWeight.Bold)
-                        }
+                        Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.batch_print_direct_print_btn), fontWeight = FontWeight.Bold)
                     }
+                }
+
+                if (isPrinting) {
+                    Button(
+                        onClick = {
+                            printJob?.cancel()
+                            isPrinting = false
+                            printingProgressText = ""
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.weight(1.2f).height(48.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onError,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.batch_print_cancel),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onError
+                        )
+                    }
+                } else {
 
                     OutlinedButton(
                         onClick = {
@@ -2577,31 +2705,30 @@ fun ProductCodeImageDialog(
                                 scope.launch {
                                     if (bitmap != null) {
                                         isPrinting = true
-                                        val cached = withContext(Dispatchers.IO) {
-                                            cacheProductCodeLabelPdf(
-                                                context = context,
-                                                bitmap = bitmap,
-                                                productName = product.name,
-                                                codeType = codeType,
-                                                widthMm = selectedLabelWidthMm,
-                                                heightMm = selectedLabelHeightMm,
-                                                copies = printCopies
-                                            )
-                                        }
-                                        val pdfFallback = cached?.first
-                                        if (pdfFallback != null) {
+                                        try {
                                             val opened = printLabelImages(
                                                 context = context,
                                                 activity = activity ?: context.findActivity(),
                                                 labels = listOf(bitmap),
-                                                pdfFallback = pdfFallback,
+                                                pdfFallbackBuilder = {
+                                                    withContext(Dispatchers.IO) {
+                                                        cacheProductCodeLabelPdf(
+                                                            context = context,
+                                                            bitmap = bitmap,
+                                                            productName = product.name,
+                                                            codeType = codeType,
+                                                            widthMm = selectedLabelWidthMm,
+                                                            heightMm = selectedLabelHeightMm,
+                                                            copies = printCopies
+                                                        )?.first
+                                                    }
+                                                },
                                                 widthMm = selectedLabelWidthMm,
                                                 heightMm = selectedLabelHeightMm,
                                                 copies = printCopies,
                                                 jobName = context.getString(R.string.print_job_product_label_fmt, product.name),
                                                 settings = invoiceSettings
                                             )
-                                            isPrinting = false
                                             if (opened) {
                                                 val msg = context.getString(R.string.labels_sent_to_printer_fmt, printCopies)
                                                 actionStatus = msg
@@ -2609,9 +2736,8 @@ fun ProductCodeImageDialog(
                                             } else {
                                                 actionStatus = context.getString(R.string.code_image_print_failed)
                                             }
-                                        } else {
+                                        } finally {
                                             isPrinting = false
-                                            actionStatus = context.getString(R.string.code_image_print_failed)
                                         }
                                     } else {
                                         actionStatus = context.getString(R.string.code_image_print_failed)
@@ -2954,31 +3080,30 @@ fun ProductCodeImageDialog(
                                 scope.launch {
                                     if (bitmap != null) {
                                         isPrinting = true
-                                        val cached = withContext(Dispatchers.IO) {
-                                            cacheProductCodeLabelPdf(
-                                                context = context,
-                                                bitmap = bitmap,
-                                                productName = product.name,
-                                                codeType = codeType,
-                                                widthMm = selectedLabelWidthMm,
-                                                heightMm = selectedLabelHeightMm,
-                                                copies = printCopies
-                                            )
-                                        }
-                                        val pdfFallback = cached?.first
-                                        if (pdfFallback != null) {
+                                        try {
                                             val opened = printLabelImages(
                                                 context = context,
                                                 activity = activity ?: context.findActivity(),
                                                 labels = listOf(bitmap),
-                                                pdfFallback = pdfFallback,
+                                                pdfFallbackBuilder = {
+                                                    withContext(Dispatchers.IO) {
+                                                        cacheProductCodeLabelPdf(
+                                                            context = context,
+                                                            bitmap = bitmap,
+                                                            productName = product.name,
+                                                            codeType = codeType,
+                                                            widthMm = selectedLabelWidthMm,
+                                                            heightMm = selectedLabelHeightMm,
+                                                            copies = printCopies
+                                                        )?.first
+                                                    }
+                                                },
                                                 widthMm = selectedLabelWidthMm,
                                                 heightMm = selectedLabelHeightMm,
                                                 copies = printCopies,
                                                 jobName = context.getString(R.string.print_job_product_label_fmt, product.name),
                                                 settings = invoiceSettings
                                             )
-                                            isPrinting = false
                                             if (opened) {
                                                 val msg = context.getString(R.string.labels_sent_to_printer_fmt, printCopies)
                                                 actionStatus = msg
@@ -2986,9 +3111,8 @@ fun ProductCodeImageDialog(
                                             } else {
                                                 actionStatus = context.getString(R.string.code_image_print_failed)
                                             }
-                                        } else {
+                                        } finally {
                                             isPrinting = false
-                                            actionStatus = context.getString(R.string.code_image_print_failed)
                                         }
                                     } else {
                                         actionStatus = context.getString(R.string.code_image_print_failed)

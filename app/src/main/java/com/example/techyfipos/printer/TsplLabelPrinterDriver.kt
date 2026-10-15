@@ -15,10 +15,10 @@ private fun formatMm(value: Float): String =
     if (value % 1f == 0f) value.toInt().toString() else String.format(Locale.US, "%.1f", value)
 
 /**
- * Calculates luminance threshold for TSPL label binarization from darkness setting (0..15).
- * Higher darkness setting results in higher threshold (more pixels treated as black).
+ * Fixed luminance threshold around 170 for TSPL label binarization.
+ * Preserves crisp 1-bit text and barcode edge geometry while darkness setting controls printer DENSITY.
  */
-fun labelLuminanceThreshold(darkness: Int): Int = 110 + darkness.coerceIn(0, 15) * 8
+fun labelLuminanceThreshold(darkness: Int): Int = 170
 
 /**
  * Pure function converting pixel coordinates into TSPL raster BITMAP payload bytes.
@@ -283,7 +283,8 @@ suspend fun printLabelPayloadsBatch(
     context: Context,
     target: PrinterTarget,
     payloads: List<ByteArray>,
-    copiesPerPayload: List<Int>
+    copiesPerPayload: List<Int>,
+    onProgress: ((sentCount: Int, totalCount: Int) -> Unit)? = null
 ): BatchLabelPrintResult = withContext(Dispatchers.IO) {
     if (payloads.isEmpty()) {
         return@withContext BatchLabelPrintResult(DirectPrintResult.Success, 0)
@@ -296,6 +297,7 @@ suspend fun printLabelPayloadsBatch(
         perSegmentDelaysMs = List(payloads.size) { 100L },
         onSegmentSent = { index ->
             totalSuccessfulCopies += copiesPerPayload.getOrElse(index) { 1 }
+            onProgress?.invoke(index + 1, payloads.size)
         }
     )
     BatchLabelPrintResult(res, totalSuccessfulCopies)
@@ -305,7 +307,8 @@ suspend fun printLabelPayloadsBatch(
     context: Context,
     address: String,
     payloads: List<ByteArray>,
-    copiesPerPayload: List<Int>
+    copiesPerPayload: List<Int>,
+    onProgress: ((sentCount: Int, totalCount: Int) -> Unit)? = null
 ): BatchLabelPrintResult {
     val target = if (address.trim().startsWith("usb:", ignoreCase = true)) {
         PrinterTarget.Usb(address.trim())
@@ -314,7 +317,7 @@ suspend fun printLabelPayloadsBatch(
     } else {
         PrinterTarget.None
     }
-    return printLabelPayloadsBatch(context, target, payloads, copiesPerPayload)
+    return printLabelPayloadsBatch(context, target, payloads, copiesPerPayload, onProgress)
 }
 
 object TsplLabelPrinterDriver {
