@@ -3182,6 +3182,10 @@
     <string name="batch_print_wholesale_missing_warning">%1$d selected products have no wholesale price set and will print standard selling price.</string>
     <string name="products_price_tier_mrp_not_set_hint">MRP not set (uses selling price)</string>
     <string name="products_price_tier_wholesale_not_set_hint">Wholesale not set (uses selling price)</string>
+    <string name="batch_print_use_product_dates">Use each product\'s own dates</string>
+    <string name="batch_print_use_product_dates_hint">Products without saved dates will print without date lines</string>
+    <string name="copies_range_error">Copies must be between %1$d and %2$d</string>
+    <string name="stock_badge_fmt">Stock: %1$s</string>
 </resources>
 
 

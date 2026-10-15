@@ -582,6 +582,47 @@ fun shareProductCodeLabelPdf(context: Context, pdfUri: Uri, productName: String)
     }
 }
 
+fun clampCopies(copies: Int?, min: Int = 1, max: Int = 500): Int {
+    if (copies == null) return min
+    return copies.coerceIn(min, max)
+}
+
+fun stockToPrintCopies(stockQty: Double, minCopies: Int = 1, maxCopies: Int = 500): Int {
+    if (stockQty <= 0.0) return minCopies
+    return kotlin.math.ceil(stockQty).toInt().coerceIn(minCopies, maxCopies)
+}
+
+fun formatStockQuantityBadge(stockQty: Double): String {
+    return if (stockQty % 1.0 == 0.0) {
+        stockQty.toLong().toString()
+    } else {
+        String.format(java.util.Locale.US, "%.2f", stockQty).trimEnd('0').trimEnd('.')
+    }
+}
+
+fun resolveLabelDimensionsMm(
+    labelSize: ProductCodeLabelSize,
+    customWidthMm: Float,
+    customHeightMm: Float
+): Pair<Float, Float> {
+    return if (labelSize == ProductCodeLabelSize.CUSTOM) {
+        val w = customWidthMm.coerceIn(15f, 150f)
+        val h = customHeightMm.coerceIn(10f, 200f)
+        Pair(w, h)
+    } else {
+        Pair(labelSize.widthMm, labelSize.heightMm)
+    }
+}
+
+fun resolveConfiguredLabelDimensionsMm(context: Context): Pair<Float, Float> {
+    val prefs = context.getSharedPreferences("product_code_image_settings", Context.MODE_PRIVATE)
+    val sizeName = prefs.getString("label_size", ProductCodeLabelSize.SIZE_50_X_30.name)
+    val size = ProductCodeLabelSize.entries.firstOrNull { it.name == sizeName } ?: ProductCodeLabelSize.SIZE_50_X_30
+    val customW = prefs.getFloat("custom_width_mm", 50f)
+    val customH = prefs.getFloat("custom_height_mm", 30f)
+    return resolveLabelDimensionsMm(size, customW, customH)
+}
+
 private fun String.hasBengali(): Boolean = any { it in '\u0980'..'\u09FF' }
 
 data class ProductLabelItem(
@@ -622,17 +663,16 @@ fun cacheBatchProductCodeLabelsPdf(
 
         val directory = File(context.cacheDir, "product_codes").apply { mkdirs() }
         val file = File(directory, "batch_labels_${System.currentTimeMillis()}.pdf")
-        val effectiveWidthMm = if (labelSize == ProductCodeLabelSize.CUSTOM) customWidthMm else labelSize.widthMm
-        val effectiveHeightMm = if (labelSize == ProductCodeLabelSize.CUSTOM) customHeightMm else labelSize.heightMm
+        val (effectiveWidthMm, effectiveHeightMm) = resolveLabelDimensionsMm(labelSize, customWidthMm, customHeightMm)
         val (pageWidthPoints, pageHeightPoints) = productCodeLabelPdfPageSize(effectiveWidthMm, effectiveHeightMm)
 
         val document = PdfDocument()
         var pageNumber = 0
         try {
             for (item in validItems) {
-                val itemMfgType = if (mfgOrPkgDate.isNotBlank()) mfgOrPkgType else (item.mfgOrPkgType.ifBlank { mfgOrPkgType })
-                val itemMfgDate = mfgOrPkgDate.ifBlank { item.mfgOrPkgDate }
-                val itemExpDate = expDate.ifBlank { item.expDate }
+                val itemMfgType = item.mfgOrPkgType.ifBlank { mfgOrPkgType }.ifBlank { "Mfg" }
+                val itemMfgDate = item.mfgOrPkgDate.ifBlank { mfgOrPkgDate }
+                val itemExpDate = item.expDate.ifBlank { expDate }
                 val bitmap = generateProductCodeLabelBitmap(
                     productName = item.productName,
                     barcode = item.barcode,

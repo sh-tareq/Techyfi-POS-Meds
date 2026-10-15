@@ -260,16 +260,7 @@ private fun SettingsMasterCard(
 }
 
 fun getConfiguredLabelDimensions(context: Context): Pair<Float, Float> {
-    val prefs = context.getSharedPreferences("product_code_image_settings", Context.MODE_PRIVATE)
-    val sizeName = prefs.getString("label_size", ProductCodeLabelSize.SIZE_50_X_30.name)
-    val size = ProductCodeLabelSize.entries.firstOrNull { it.name == sizeName } ?: ProductCodeLabelSize.SIZE_50_X_30
-    return if (size == ProductCodeLabelSize.CUSTOM) {
-        val w = prefs.getFloat("custom_width_mm", 50f).coerceAtLeast(10f)
-        val h = prefs.getFloat("custom_height_mm", 30f).coerceAtLeast(10f)
-        Pair(w, h)
-    } else {
-        Pair(size.widthMm, size.heightMm)
-    }
+    return com.example.techyfipos.utils.resolveConfiguredLabelDimensionsMm(context)
 }
 
 private fun buildTestLabelBitmap(
@@ -306,12 +297,25 @@ private fun buildTestLabelBitmap(
     return bmp
 }
 
-private fun buildTestLabelPdf(bitmap: android.graphics.Bitmap, cacheDir: java.io.File): java.io.File {
+private fun buildTestLabelPdf(
+    bitmap: android.graphics.Bitmap,
+    widthMm: Float,
+    heightMm: Float,
+    cacheDir: java.io.File
+): java.io.File {
     val pdfFile = java.io.File(cacheDir, "test_label_fallback.pdf")
     val pdfDocument = android.graphics.pdf.PdfDocument()
-    val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(bitmap.width, bitmap.height, 1).create()
+    val (pageWidthPoints, pageHeightPoints) = com.example.techyfipos.utils.productCodeLabelPdfPageSize(widthMm, heightMm)
+    val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(pageWidthPoints, pageHeightPoints, 1).create()
     val page = pdfDocument.startPage(pageInfo)
-    page.canvas.drawBitmap(bitmap, 0f, 0f, null)
+    page.canvas.drawColor(android.graphics.Color.WHITE)
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG or android.graphics.Paint.FILTER_BITMAP_FLAG)
+    page.canvas.drawBitmap(
+        bitmap,
+        null,
+        android.graphics.RectF(0f, 0f, pageWidthPoints.toFloat(), pageHeightPoints.toFloat()),
+        paint
+    )
     pdfDocument.finishPage(page)
     pdfFile.outputStream().use { pdfDocument.writeTo(it) }
     pdfDocument.close()
@@ -1490,7 +1494,7 @@ private fun OptimizedSettingsHome(
                             val testStoreName = currentSettings.storeName.takeIf { it.isNotBlank() && it != "My Shop" }
                                 ?: context.getString(R.string.settings_default_store_name)
                             val testBitmap = buildTestLabelBitmap(testStoreName, labelW, labelH)
-                            val dummyPdf = buildTestLabelPdf(testBitmap, context.cacheDir)
+                            val dummyPdf = buildTestLabelPdf(testBitmap, labelW, labelH, context.cacheDir)
                             printLabelImages(
                                 context = context,
                                 activity = context.findActivity(),

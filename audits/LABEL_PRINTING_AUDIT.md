@@ -54,27 +54,27 @@ Line numbers are approximate. Search for the quoted code if they have moved.
 
 ## P1: Wrong output or data
 
-- [ ] **LBL-06 MED Verified. Batch prints one Mfg/Exp date on every label.**
+- [x] **LBL-06 MED Verified. Batch prints one Mfg/Exp date on every label.**
   - Dialogs ~916-918 hold a single `mfgOrPkgDate` / `expDate`, passed to every item. The single dialog uses `product.mfgOrPkgDate`, `product.expiryDate` (~2324-2326). Batch ignores per-product dates.
   - Fix: add an option "Use each product's own dates" (default on when date tracking is shown), with the manual override as the alternative. Carry `mfgOrPkgType`, `mfgOrPkgDate`, `expDate` in `ProductLabelItem` (Img ~569) and render per item in `cacheBatchProductCodeLabelsPdf` and the direct-print loop. Products with no date print no date line.
 
-- [ ] **LBL-07 MED Verified. Copies field can disagree with what prints.**
+- [x] **LBL-07 MED Verified. Copies field can disagree with what prints.**
   - Dialogs ~1360-1366 (batch) and ~2622-2628 (single): the text field only updates the count when the typed value is within 1..500. Clearing it, typing 0 or typing 600 leaves the old count while the field shows something else.
   - Fix: on focus loss and before printing, clamp to 1..500 and write the clamped value back into the text. Show an error state while the text is invalid. Extract one shared `CopiesStepper` composable and use it in both dialogs (removes the duplicated block).
 
-- [ ] **LBL-08 MED Verified. Single dialog overwrites a user-cleared store name.**
+- [x] **LBL-08 MED Verified. Single dialog overwrites a user-cleared store name.**
   - Dialogs ~2379-2383 re-applies `configuredStoreName` whenever it changes and `!hadSavedStoreName`, even after the user cleared the field. The batch dialog also checks `storeNameInput.isBlank()` (~955).
   - Fix: use the same guard in both, or move the default into a shared helper.
 
-- [ ] **LBL-09 LOW Verified. Status colour decided by string matching.**
+- [x] **LBL-09 LOW Verified. Status colour decided by string matching.**
   - Dialogs ~2830 (`status.contains("printer")`, `contains("প্রিন্টার")`) and ~3205 (only matches the saved message). The bottom status line shows "labels sent to printer" in error red.
   - Fix: hold status as `data class ActionStatus(val text: String, val isError: Boolean)` and colour from `isError`.
 
-- [ ] **LBL-10 LOW Verified. Fractional stock quantity is truncated.**
+- [x] **LBL-10 LOW Verified. Fractional stock quantity is truncated.**
   - `stockQty.toInt()` is used for copies-from-stock and the "Stock: N" badge (Dialogs ~791, ~998, ~1872, ~2199, ~2677). A product with 0.5 stock shows "Stock: 0" in the normal colour; 2.5 prints 2 labels.
   - Fix: decide the rule (round up or down) once in a helper and use it everywhere. Format the badge with the same number formatter the rest of the app uses for quantities.
 
-- [ ] **LBL-11 LOW Reported. Test label differences.**
+- [x] **LBL-11 LOW Reported. Test label differences.**
   - `Settings` `getConfiguredLabelDimensions` (~262) clamps custom size to a minimum of 10 mm, while the dialog clamps width to 15 mm (Dialogs ~949-950). `buildTestLabelPdf` (~309) sizes the PDF page in bitmap pixels (points) not mm, so the system-dialog page size is wrong.
   - Fix: share one `resolveLabelDimensionsMm(...)` helper between the dialogs and Settings, and use `productCodeLabelPdfPageSize` for the test PDF.
 

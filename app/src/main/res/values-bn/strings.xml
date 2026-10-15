@@ -3184,4 +3184,8 @@
     <string name="batch_print_wholesale_missing_warning">%1$dটি নির্বাচিত পণ্যের পাইকারি মূল্য নির্ধারণ করা নেই, সাধারণ বিক্রয় মূল্য প্রিন্ট হবে।</string>
     <string name="products_price_tier_mrp_not_set_hint">এমআরপি নির্ধারণ করা নেই (বিক্রয় মূল্য ব্যবহৃত হবে)</string>
     <string name="products_price_tier_wholesale_not_set_hint">পাইকারি মূল্য নির্ধারণ করা নেই (বিক্রয় মূল্য ব্যবহৃত হবে)</string>
+    <string name="batch_print_use_product_dates">প্রতিটি পণ্যের নিজস্ব তারিখ ব্যবহার করুন</string>
+    <string name="batch_print_use_product_dates_hint">সংরক্ষিত তারিখ ছাড়া পণ্যগুলোতে তারিখের লাইন ছাড়া প্রিন্ট হবে</string>
+    <string name="copies_range_error">কপির সংখ্যা অবশ্যই %1$d থেকে %2$d-এর মধ্যে হতে হবে</string>
+    <string name="stock_badge_fmt">স্টক: %1$s</string>
 </resources>

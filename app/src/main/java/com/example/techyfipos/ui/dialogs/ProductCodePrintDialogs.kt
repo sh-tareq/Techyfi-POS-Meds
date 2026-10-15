@@ -58,10 +58,172 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.focus.onFocusChanged
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+
+data class ActionStatus(val text: String, val isError: Boolean)
+
+@Composable
+fun CopiesStepper(
+    copies: Int,
+    onCopiesChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    min: Int = 1,
+    max: Int = 500,
+    presets: List<Int> = listOf(1, 2, 3, 5, 10, 20, 50, 100),
+    stockQuantity: Double? = null
+) {
+    var text by remember(copies) { mutableStateOf(copies.toString()) }
+    var isFocused by remember { mutableStateOf(false) }
+    val parsed = text.toIntOrNull()
+    val isError = parsed == null || parsed !in min..max
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    Icons.Default.ContentCopy,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = stringResource(R.string.label_copies_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        val clamped = (copies - 1).coerceIn(min, max)
+                        text = clamped.toString()
+                        onCopiesChange(clamped)
+                    },
+                    enabled = copies > min,
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease_copies))
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(
+                        1.dp,
+                        if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier.width(68.dp).height(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        BasicTextField(
+                            value = text,
+                            onValueChange = { newVal ->
+                                val filtered = newVal.filter { it.isDigit() }.take(4)
+                                text = filtered
+                                val p = filtered.toIntOrNull()
+                                if (p != null && p in min..max) {
+                                    onCopiesChange(p)
+                                }
+                            },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                            ),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    if (isFocused && !focusState.isFocused) {
+                                        val clamped = clampCopies(text.toIntOrNull(), min, max)
+                                        text = clamped.toString()
+                                        onCopiesChange(clamped)
+                                    }
+                                    isFocused = focusState.isFocused
+                                }
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = {
+                        val clamped = (copies + 1).coerceIn(min, max)
+                        text = clamped.toString()
+                        onCopiesChange(clamped)
+                    },
+                    enabled = copies < max,
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase_copies))
+                }
+            }
+        }
+
+        if (isError) {
+            Text(
+                text = stringResource(R.string.copies_range_error, min, max),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        // Quick Preset Chips
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            presets.forEach { preset ->
+                FilterChip(
+                    selected = copies == preset,
+                    onClick = {
+                        text = preset.toString()
+                        onCopiesChange(preset)
+                    },
+                    label = { Text("$preset", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.height(32.dp)
+                )
+            }
+
+            if (stockQuantity != null) {
+                val stockCount = stockToPrintCopies(stockQuantity, min, max)
+                if (stockCount !in presets) {
+                    FilterChip(
+                        selected = copies == stockCount,
+                        onClick = {
+                            text = stockCount.toString()
+                            onCopiesChange(stockCount)
+                        },
+                        label = { Text(stringResource(R.string.preset_stock_copies_fmt, stockCount), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Inventory2, contentDescription = null, modifier = Modifier.size(14.dp))
+                        },
+                        modifier = Modifier.height(32.dp)
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun PriceTierSwitcherCard(
@@ -788,14 +950,14 @@ fun BatchProductPickerSheet(
                                             overflow = TextOverflow.Ellipsis,
                                             modifier = Modifier.weight(1f)
                                         )
-                                        val stockColor = if (prod.stockQty <= 0) MaterialTheme.colorScheme.error
+                                        val stockColor = if (prod.stockQty <= 0.0) MaterialTheme.colorScheme.error
                                         else MaterialTheme.colorScheme.primary
                                         Surface(
                                             color = stockColor.copy(alpha = 0.12f),
                                             shape = RoundedCornerShape(6.dp)
                                         ) {
                                             Text(
-                                                text = "Stock: ${prod.stockQty.toInt()}",
+                                                text = stringResource(R.string.stock_badge_fmt, formatStockQuantityBadge(prod.stockQty)),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = stockColor,
@@ -875,7 +1037,7 @@ fun BatchProductCodePrintDialog(
     val preferences = remember {
         context.getSharedPreferences("product_code_image_settings", Context.MODE_PRIVATE)
     }
-    val hadSavedStoreName = remember { preferences.contains("store_name") && !preferences.getString("store_name", "").isNullOrBlank() }
+    val hadSavedStoreName = remember { preferences.contains("store_name") }
 
     var scopeMode by rememberSaveable {
         mutableStateOf(if (initiallySelectedBarcodes.isNotEmpty()) BatchPrintScope.CUSTOM else BatchPrintScope.ALL)
@@ -885,7 +1047,6 @@ fun BatchProductCodePrintDialog(
 
     var copiesModeByStock by rememberSaveable { mutableStateOf(false) }
     var batchCopies by rememberSaveable { mutableIntStateOf(1) }
-    var batchCopiesInputText by rememberSaveable { mutableStateOf("1") }
 
     var codeTypeName by rememberSaveable {
         mutableStateOf(preferences.getString("code_type", ProductCodeType.BARCODE.name) ?: ProductCodeType.BARCODE.name)
@@ -920,6 +1081,7 @@ fun BatchProductCodePrintDialog(
         mutableStateOf(preferences.getString("store_name", "") ?: "")
     }
     var showDateTracking by rememberSaveable { mutableStateOf(preferences.getBoolean("show_date_tracking", false)) }
+    var useProductDates by rememberSaveable { mutableStateOf(true) }
     var mfgOrPkgType by rememberSaveable { mutableStateOf("Mfg") }
     var mfgOrPkgDate by rememberSaveable { mutableStateOf("") }
     var expDate by rememberSaveable { mutableStateOf("") }
@@ -956,8 +1118,7 @@ fun BatchProductCodePrintDialog(
         ?: ProductCodeLabelSize.SIZE_50_X_30
     val customWidthMm = customWidthInput.toFloatOrNull()?.coerceIn(15f, 150f) ?: 50f
     val customHeightMm = customHeightInput.toFloatOrNull()?.coerceIn(10f, 200f) ?: 30f
-    val effectiveWidthMm = if (labelSize == ProductCodeLabelSize.CUSTOM) customWidthMm else labelSize.widthMm
-    val effectiveHeightMm = if (labelSize == ProductCodeLabelSize.CUSTOM) customHeightMm else labelSize.heightMm
+    val (effectiveWidthMm, effectiveHeightMm) = resolveLabelDimensionsMm(labelSize, customWidthMm, customHeightMm)
     val effectiveStoreName = storeNameInput.ifBlank { configuredStoreName }
 
     LaunchedEffect(configuredStoreName) {
@@ -1004,7 +1165,7 @@ fun BatchProductCodePrintDialog(
 
     val unconstrainedLabelCount = remember(candidateProducts, copiesModeByStock, batchCopies) {
         if (copiesModeByStock) {
-            candidateProducts.sumOf { kotlin.math.max(1, it.stockQty.toInt()) }
+            candidateProducts.sumOf { stockToPrintCopies(it.stockQty) }
         } else {
             candidateProducts.size * batchCopies
         }
@@ -1032,12 +1193,12 @@ fun BatchProductCodePrintDialog(
         sampleProd, samplePriceString, codeType, labelSize, showPrice, showCodeNumber,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
         codeNumberTextScale, showStoreName, effectiveStoreName, storeNameTextScale,
-        showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate, dateTrackingTextScale, barcodeGraphicScale
+        showDateTracking, useProductDates, mfgOrPkgType, mfgOrPkgDate, expDate, dateTrackingTextScale, barcodeGraphicScale
     ) {
         if (sampleProd != null) {
-            val sampleMfgType = if (mfgOrPkgDate.isNotBlank()) mfgOrPkgType else (sampleProd.mfgOrPkgType ?: mfgOrPkgType)
-            val sampleMfgDate = mfgOrPkgDate.ifBlank { sampleProd.mfgOrPkgDate.orEmpty() }
-            val sampleExpDate = expDate.ifBlank { sampleProd.expiryDate.orEmpty() }
+            val sampleMfgType = if (useProductDates) (sampleProd.mfgOrPkgType ?: "Mfg") else mfgOrPkgType
+            val sampleMfgDate = if (useProductDates) sampleProd.mfgOrPkgDate.orEmpty() else mfgOrPkgDate
+            val sampleExpDate = if (useProductDates) sampleProd.expiryDate.orEmpty() else expDate
             generateProductCodeLabelBitmap(
                 productName = sampleProd.name,
                 barcode = sampleProd.barcode,
@@ -1320,110 +1481,10 @@ fun BatchProductCodePrintDialog(
                             modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.ContentCopy,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.label_copies_title),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    IconButton(
-                                        onClick = {
-                                            if (batchCopies > 1) {
-                                                batchCopies--
-                                                batchCopiesInputText = batchCopies.toString()
-                                            }
-                                        },
-                                        enabled = batchCopies > 1,
-                                        modifier = Modifier.size(44.dp)
-                                    ) {
-                                        Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease_copies))
-                                    }
-
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.surface,
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-                                        modifier = Modifier.width(64.dp).height(40.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            BasicTextField(
-                                                value = batchCopiesInputText,
-                                                onValueChange = { newVal ->
-                                                    val filtered = newVal.filter { it.isDigit() }.take(3)
-                                                    batchCopiesInputText = filtered
-                                                    val parsed = filtered.toIntOrNull()
-                                                    if (parsed != null && parsed in 1..500) {
-                                                        batchCopies = parsed
-                                                    }
-                                                },
-                                                singleLine = true,
-                                                textStyle = MaterialTheme.typography.titleMedium.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                    textAlign = TextAlign.Center,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                ),
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
-                                    }
-
-                                    IconButton(
-                                        onClick = {
-                                            if (batchCopies < 500) {
-                                                batchCopies++
-                                                batchCopiesInputText = batchCopies.toString()
-                                            }
-                                        },
-                                        enabled = batchCopies < 500,
-                                        modifier = Modifier.size(44.dp)
-                                    ) {
-                                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase_copies))
-                                    }
-                                }
-                            }
-
-                            // Horizontally scrollable quick preset chips: 1, 2, 3, 5, 10, 20, 50, 100
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                listOf(1, 2, 3, 5, 10, 20, 50, 100).forEach { preset ->
-                                    FilterChip(
-                                        selected = batchCopies == preset,
-                                        onClick = {
-                                            batchCopies = preset
-                                            batchCopiesInputText = preset.toString()
-                                        },
-                                        label = { Text("$preset") },
-                                        modifier = Modifier.height(30.dp)
-                                    )
-                                }
-                            }
+                            CopiesStepper(
+                                copies = batchCopies,
+                                onCopiesChange = { batchCopies = it }
+                            )
                         }
                     }
                 }
@@ -1664,54 +1725,92 @@ fun BatchProductCodePrintDialog(
                             .padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            color = MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                         ) {
-                            Text(
-                                text = stringResource(R.string.products_date_tracking_info_label),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { useProductDates = !useProductDates }
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                FilterChip(
-                                    selected = mfgOrPkgType == "Mfg",
-                                    onClick = { mfgOrPkgType = "Mfg" },
-                                    label = { Text(stringResource(R.string.products_mfg_abbr), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                                    leadingIcon = { Animated3DFactoryIcon() },
-                                    modifier = Modifier.height(32.dp)
-                                )
-                                FilterChip(
-                                    selected = mfgOrPkgType == "Pkg",
-                                    onClick = { mfgOrPkgType = "Pkg" },
-                                    label = { Text(stringResource(R.string.products_pkg_abbr), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                                    leadingIcon = { Animated3DPackageIcon(fontSize = 14.sp) },
-                                    modifier = Modifier.height(32.dp)
-                                )
+                                Checkbox(checked = useProductDates, onCheckedChange = { useProductDates = it })
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.batch_print_use_product_dates),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    if (useProductDates) {
+                                        Text(
+                                            text = stringResource(R.string.batch_print_use_product_dates_hint),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
                             }
                         }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            DateInputField(
-                                label = if (mfgOrPkgType == "Pkg") stringResource(R.string.products_pkg_date_label) else stringResource(R.string.products_mfg_date_label),
-                                value = mfgOrPkgDate,
-                                onValueChange = { mfgOrPkgDate = it },
-                                modifier = Modifier.weight(1f)
-                            )
-                            DateInputField(
-                                label = stringResource(R.string.products_exp_date_label),
-                                value = expDate,
-                                onValueChange = { expDate = it },
-                                modifier = Modifier.weight(1f)
-                            )
+                        AnimatedVisibility(visible = !useProductDates) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.products_date_tracking_info_label),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        FilterChip(
+                                            selected = mfgOrPkgType == "Mfg",
+                                            onClick = { mfgOrPkgType = "Mfg" },
+                                            label = { Text(stringResource(R.string.products_mfg_abbr), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                            leadingIcon = { Animated3DFactoryIcon() },
+                                            modifier = Modifier.height(32.dp)
+                                        )
+                                        FilterChip(
+                                            selected = mfgOrPkgType == "Pkg",
+                                            onClick = { mfgOrPkgType = "Pkg" },
+                                            label = { Text(stringResource(R.string.products_pkg_abbr), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                            leadingIcon = { Animated3DPackageIcon(fontSize = 14.sp) },
+                                            modifier = Modifier.height(32.dp)
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    DateInputField(
+                                        label = if (mfgOrPkgType == "Pkg") stringResource(R.string.products_pkg_date_label) else stringResource(R.string.products_mfg_date_label),
+                                        value = mfgOrPkgDate,
+                                        onValueChange = { mfgOrPkgDate = it },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    DateInputField(
+                                        label = stringResource(R.string.products_exp_date_label),
+                                        value = expDate,
+                                        onValueChange = { expDate = it },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -1944,9 +2043,10 @@ fun BatchProductCodePrintDialog(
                             printJob = scope.launch(Dispatchers.IO) {
                                 var remainingAllowed = 500
                                 val items = mutableListOf<ProductLabelItem>()
+                                val effectiveCopies = clampCopies(batchCopies)
                                 for (prod in candidateProducts) {
                                     if (remainingAllowed <= 0) break
-                                    val requestedQty = if (copiesModeByStock) kotlin.math.max(1, prod.stockQty.toInt()) else batchCopies
+                                    val requestedQty = if (copiesModeByStock) stockToPrintCopies(prod.stockQty) else effectiveCopies
                                     val qty = requestedQty.coerceAtMost(remainingAllowed)
                                     remainingAllowed -= qty
                                     val priceString = formatProductCodeLabelPriceString(
@@ -1957,15 +2057,18 @@ fun BatchProductCodePrintDialog(
                                         showUnit = showUnit,
                                         showBanglaDigits = showBanglaDigits
                                     )
+                                    val itemMfgType = if (useProductDates) (prod.mfgOrPkgType ?: "Mfg") else mfgOrPkgType
+                                    val itemMfgDate = if (useProductDates) prod.mfgOrPkgDate.orEmpty() else mfgOrPkgDate
+                                    val itemExpDate = if (useProductDates) prod.expiryDate.orEmpty() else expDate
                                     items.add(
                                         ProductLabelItem(
                                             productName = prod.name,
                                             barcode = prod.barcode,
                                             formattedPrice = priceString,
                                             quantity = qty,
-                                            mfgOrPkgType = prod.mfgOrPkgType ?: "Mfg",
-                                            mfgOrPkgDate = prod.mfgOrPkgDate.orEmpty(),
-                                            expDate = prod.expiryDate.orEmpty()
+                                            mfgOrPkgType = itemMfgType,
+                                            mfgOrPkgDate = itemMfgDate,
+                                            expDate = itemExpDate
                                         )
                                     )
                                 }
@@ -1994,9 +2097,9 @@ fun BatchProductCodePrintDialog(
                                             withContext(Dispatchers.Main) {
                                                 printingProgressText = context.getString(R.string.batch_print_printing, idx + 1, items.size)
                                             }
-                                            val itemMfgType = if (mfgOrPkgDate.isNotBlank()) mfgOrPkgType else (item.mfgOrPkgType.ifBlank { mfgOrPkgType })
-                                            val itemMfgDate = mfgOrPkgDate.ifBlank { item.mfgOrPkgDate }
-                                            val itemExpDate = expDate.ifBlank { item.expDate }
+                                            val itemMfgType = item.mfgOrPkgType.ifBlank { "Mfg" }
+                                            val itemMfgDate = item.mfgOrPkgDate
+                                            val itemExpDate = item.expDate
                                             val bitmap = generateProductCodeLabelBitmap(
                                                 productName = item.productName,
                                                 barcode = item.barcode,
@@ -2109,9 +2212,9 @@ fun BatchProductCodePrintDialog(
                                                 codeNumberTextScale = codeNumberTextScale,
                                                 storeNameTextScale = storeNameTextScale,
                                                 showDateTracking = showDateTracking,
-                                                mfgOrPkgType = mfgOrPkgType,
-                                                mfgOrPkgDate = mfgOrPkgDate,
-                                                expDate = expDate,
+                                                mfgOrPkgType = if (useProductDates) "Mfg" else mfgOrPkgType,
+                                                mfgOrPkgDate = if (useProductDates) "" else mfgOrPkgDate,
+                                                expDate = if (useProductDates) "" else expDate,
                                                 dateTrackingTextScale = dateTrackingTextScale,
                                                 barcodeGraphicScale = barcodeGraphicScale
                                             )
@@ -2145,9 +2248,9 @@ fun BatchProductCodePrintDialog(
                                                 codeNumberTextScale = codeNumberTextScale,
                                                 storeNameTextScale = storeNameTextScale,
                                                 showDateTracking = showDateTracking,
-                                                mfgOrPkgType = mfgOrPkgType,
-                                                mfgOrPkgDate = mfgOrPkgDate,
-                                                expDate = expDate,
+                                                mfgOrPkgType = if (useProductDates) "Mfg" else mfgOrPkgType,
+                                                mfgOrPkgDate = if (useProductDates) "" else mfgOrPkgDate,
+                                                expDate = if (useProductDates) "" else expDate,
                                                 dateTrackingTextScale = dateTrackingTextScale,
                                                 barcodeGraphicScale = barcodeGraphicScale
                                             )
@@ -2285,9 +2388,10 @@ fun BatchProductCodePrintDialog(
                                     try {
                                         var remainingAllowed = 500
                                         val items = mutableListOf<ProductLabelItem>()
+                                        val effectiveCopies = clampCopies(batchCopies)
                                         for (prod in candidateProducts) {
                                             if (remainingAllowed <= 0) break
-                                            val requestedQty = if (copiesModeByStock) kotlin.math.max(1, prod.stockQty.toInt()) else batchCopies
+                                            val requestedQty = if (copiesModeByStock) stockToPrintCopies(prod.stockQty) else effectiveCopies
                                             val qty = requestedQty.coerceAtMost(remainingAllowed)
                                             remainingAllowed -= qty
                                             val priceString = formatProductCodeLabelPriceString(
@@ -2298,15 +2402,18 @@ fun BatchProductCodePrintDialog(
                                                 showUnit = showUnit,
                                                 showBanglaDigits = showBanglaDigits
                                             )
+                                            val itemMfgType = if (useProductDates) (prod.mfgOrPkgType ?: "Mfg") else mfgOrPkgType
+                                            val itemMfgDate = if (useProductDates) prod.mfgOrPkgDate.orEmpty() else mfgOrPkgDate
+                                            val itemExpDate = if (useProductDates) prod.expiryDate.orEmpty() else expDate
                                             items.add(
                                                 ProductLabelItem(
                                                     productName = prod.name,
                                                     barcode = prod.barcode,
                                                     formattedPrice = priceString,
                                                     quantity = qty,
-                                                    mfgOrPkgType = prod.mfgOrPkgType ?: "Mfg",
-                                                    mfgOrPkgDate = prod.mfgOrPkgDate.orEmpty(),
-                                                    expDate = prod.expiryDate.orEmpty()
+                                                    mfgOrPkgType = itemMfgType,
+                                                    mfgOrPkgDate = itemMfgDate,
+                                                    expDate = itemExpDate
                                                 )
                                             )
                                         }
@@ -2326,9 +2433,9 @@ fun BatchProductCodePrintDialog(
                                             codeNumberTextScale = codeNumberTextScale,
                                             storeNameTextScale = storeNameTextScale,
                                             showDateTracking = showDateTracking,
-                                            mfgOrPkgType = mfgOrPkgType,
-                                            mfgOrPkgDate = mfgOrPkgDate,
-                                            expDate = expDate,
+                                            mfgOrPkgType = if (useProductDates) "Mfg" else mfgOrPkgType,
+                                            mfgOrPkgDate = if (useProductDates) "" else mfgOrPkgDate,
+                                            expDate = if (useProductDates) "" else expDate,
                                             dateTrackingTextScale = dateTrackingTextScale,
                                             barcodeGraphicScale = barcodeGraphicScale
                                         )
@@ -2395,7 +2502,7 @@ fun ProductCodeImageDialog(
     val preferences = remember {
         context.getSharedPreferences("product_code_image_settings", android.content.Context.MODE_PRIVATE)
     }
-    val hadSavedStoreName = remember { preferences.contains("store_name") && !preferences.getString("store_name", "").isNullOrBlank() }
+    val hadSavedStoreName = remember { preferences.contains("store_name") }
     var codeTypeName by rememberSaveable {
         mutableStateOf(preferences.getString("code_type", ProductCodeType.BARCODE.name) ?: ProductCodeType.BARCODE.name)
     }
@@ -2461,19 +2568,17 @@ fun ProductCodeImageDialog(
         mutableFloatStateOf(preferences.getFloat("barcode_graphic_scale", 1f))
     }
     var labelSizeMenuExpanded by remember { mutableStateOf(false) }
-    var actionStatus by remember { mutableStateOf<String?>(null) }
+    var actionStatus by remember { mutableStateOf<ActionStatus?>(null) }
     var isSaving by remember { mutableStateOf(false) }
     var isPrinting by remember { mutableStateOf(false) }
     var printCopies by rememberSaveable { mutableIntStateOf(1) }
-    var copiesInputText by rememberSaveable { mutableStateOf("1") }
 
     val codeType = ProductCodeType.entries.firstOrNull { it.name == codeTypeName } ?: ProductCodeType.BARCODE
     val labelSize = ProductCodeLabelSize.entries.firstOrNull { it.name == labelSizeName }
         ?: ProductCodeLabelSize.SIZE_50_X_30
     val customWidthMm = customWidthInput.toFloatOrNull()?.coerceIn(15f, 150f) ?: 50f
     val customHeightMm = customHeightInput.toFloatOrNull()?.coerceIn(10f, 200f) ?: 30f
-    val selectedLabelWidthMm = if (labelSize == ProductCodeLabelSize.CUSTOM) customWidthMm else labelSize.widthMm
-    val selectedLabelHeightMm = if (labelSize == ProductCodeLabelSize.CUSTOM) customHeightMm else labelSize.heightMm
+    val (selectedLabelWidthMm, selectedLabelHeightMm) = resolveLabelDimensionsMm(labelSize, customWidthMm, customHeightMm)
     val effectiveStoreName = storeNameInput.ifBlank { configuredStoreName }
 
     LaunchedEffect(configuredStoreName) {
@@ -2670,125 +2775,11 @@ fun ProductCodeImageDialog(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.ContentCopy,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = stringResource(R.string.label_copies_title),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            // Stepper controls: [-] [ 1 ] [+]
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        if (printCopies > 1) {
-                                            printCopies--
-                                            copiesInputText = printCopies.toString()
-                                        }
-                                    },
-                                    enabled = printCopies > 1,
-                                    modifier = Modifier.size(44.dp)
-                                ) {
-                                    Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease_copies))
-                                }
-
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surface,
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-                                    modifier = Modifier.width(64.dp).height(40.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        BasicTextField(
-                                            value = copiesInputText,
-                                            onValueChange = { newVal ->
-                                                val filtered = newVal.filter { it.isDigit() }.take(3)
-                                                copiesInputText = filtered
-                                                val parsed = filtered.toIntOrNull()
-                                                if (parsed != null && parsed in 1..500) {
-                                                    printCopies = parsed
-                                                }
-                                            },
-                                            singleLine = true,
-                                            textStyle = MaterialTheme.typography.titleMedium.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                textAlign = TextAlign.Center,
-                                                color = MaterialTheme.colorScheme.primary
-                                            ),
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
-                                }
-
-                                IconButton(
-                                    onClick = {
-                                        if (printCopies < 500) {
-                                            printCopies++
-                                            copiesInputText = printCopies.toString()
-                                        }
-                                    },
-                                    enabled = printCopies < 500,
-                                    modifier = Modifier.size(44.dp)
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase_copies))
-                                }
-                            }
-                        }
-
-                        // Quick Preset Chips: 1, 2, 3, 5, 10, 20, 50, 100, and Stock Qty if available
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            listOf(1, 2, 3, 5, 10, 20, 50, 100).forEach { preset ->
-                                FilterChip(
-                                    selected = printCopies == preset,
-                                    onClick = {
-                                        printCopies = preset
-                                        copiesInputText = preset.toString()
-                                    },
-                                    label = { Text("$preset") },
-                                    modifier = Modifier.height(30.dp)
-                                )
-                            }
-
-                            val stockCount = product.stockQty.toInt()
-                            if (stockCount > 0 && stockCount !in listOf(1, 2, 3, 5, 10, 20, 50, 100)) {
-                                val clampedStock = stockCount.coerceIn(1, 500)
-                                FilterChip(
-                                    selected = printCopies == clampedStock,
-                                    onClick = {
-                                        printCopies = clampedStock
-                                        copiesInputText = clampedStock.toString()
-                                    },
-                                    label = { Text(stringResource(R.string.preset_stock_copies_fmt, clampedStock)) },
-                                    modifier = Modifier.height(30.dp)
-                                )
-                            }
-                        }
+                        CopiesStepper(
+                            copies = printCopies,
+                            onCopiesChange = { printCopies = it },
+                            stockQuantity = product.stockQty
+                        )
                     }
                 }
 
@@ -2807,6 +2798,7 @@ fun ProductCodeImageDialog(
                                     if (bitmap != null) {
                                         isPrinting = true
                                         try {
+                                            val effectiveCopies = clampCopies(printCopies)
                                             val outcome = printLabelImages(
                                                 context = context,
                                                 activity = activity ?: context.findActivity(),
@@ -2820,36 +2812,36 @@ fun ProductCodeImageDialog(
                                                             codeType = codeType,
                                                             widthMm = selectedLabelWidthMm,
                                                             heightMm = selectedLabelHeightMm,
-                                                            copies = printCopies
+                                                            copies = effectiveCopies
                                                         )?.first
                                                     }
                                                 },
                                                 widthMm = selectedLabelWidthMm,
                                                 heightMm = selectedLabelHeightMm,
-                                                copies = printCopies,
+                                                copies = effectiveCopies,
                                                 jobName = context.getString(R.string.print_job_product_label_fmt, product.name),
                                                 settings = invoiceSettings
                                             )
                                             when (outcome) {
                                                 com.example.techyfipos.utils.LabelPrintOutcome.SENT_DIRECT -> {
-                                                    val msg = context.getString(R.string.labels_sent_to_printer_fmt, printCopies)
-                                                    actionStatus = msg
+                                                    val msg = context.getString(R.string.labels_sent_to_printer_fmt, effectiveCopies)
+                                                    actionStatus = ActionStatus(msg, isError = false)
                                                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                                 }
                                                 com.example.techyfipos.utils.LabelPrintOutcome.OPENED_SYSTEM_DIALOG -> {
                                                     val msg = context.getString(R.string.print_system_dialog_opened)
-                                                    actionStatus = msg
+                                                    actionStatus = ActionStatus(msg, isError = false)
                                                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                                 }
                                                 com.example.techyfipos.utils.LabelPrintOutcome.FAILED -> {
-                                                    actionStatus = context.getString(R.string.code_image_print_failed)
+                                                    actionStatus = ActionStatus(context.getString(R.string.code_image_print_failed), isError = true)
                                                 }
                                             }
                                         } finally {
                                             isPrinting = false
                                         }
                                     } else {
-                                        actionStatus = context.getString(R.string.code_image_print_failed)
+                                        actionStatus = ActionStatus(context.getString(R.string.code_image_print_failed), isError = true)
                                     }
                                 }
                             },
@@ -2879,7 +2871,7 @@ fun ProductCodeImageDialog(
                                             codeType = codeType,
                                             widthMm = selectedLabelWidthMm,
                                             heightMm = selectedLabelHeightMm,
-                                            copies = printCopies
+                                            copies = clampCopies(printCopies)
                                         )
                                     }
                                     if (cached != null) {
@@ -2889,10 +2881,10 @@ fun ProductCodeImageDialog(
                                             product.name
                                         )
                                         if (!shared) {
-                                            actionStatus = context.getString(R.string.code_image_share_failed)
+                                            actionStatus = ActionStatus(context.getString(R.string.code_image_share_failed), isError = true)
                                         }
                                     } else {
-                                        actionStatus = context.getString(R.string.code_image_share_failed)
+                                        actionStatus = ActionStatus(context.getString(R.string.code_image_share_failed), isError = true)
                                     }
                                 }
                             },
@@ -2911,9 +2903,9 @@ fun ProductCodeImageDialog(
                                     }
                                     isSaving = false
                                     actionStatus = if (savedUri != null) {
-                                        context.getString(R.string.code_image_saved)
+                                        ActionStatus(context.getString(R.string.code_image_saved), isError = false)
                                     } else {
-                                        context.getString(R.string.code_image_save_failed)
+                                        ActionStatus(context.getString(R.string.code_image_save_failed), isError = true)
                                     }
                                 }
                             },
@@ -2933,14 +2925,10 @@ fun ProductCodeImageDialog(
                 actionStatus?.let { status ->
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        status,
+                        status.text,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
-                        color = if (status == context.getString(R.string.code_image_saved) || status.contains("printer") || status.contains("প্রিন্টার")) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.error
-                        },
+                        color = if (status.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -3216,23 +3204,23 @@ fun ProductCodeImageDialog(
                                             when (outcome) {
                                                 com.example.techyfipos.utils.LabelPrintOutcome.SENT_DIRECT -> {
                                                     val msg = context.getString(R.string.labels_sent_to_printer_fmt, printCopies)
-                                                    actionStatus = msg
+                                                    actionStatus = ActionStatus(msg, isError = false)
                                                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                                 }
                                                 com.example.techyfipos.utils.LabelPrintOutcome.OPENED_SYSTEM_DIALOG -> {
                                                     val msg = context.getString(R.string.print_system_dialog_opened)
-                                                    actionStatus = msg
+                                                    actionStatus = ActionStatus(msg, isError = false)
                                                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                                 }
                                                 com.example.techyfipos.utils.LabelPrintOutcome.FAILED -> {
-                                                    actionStatus = context.getString(R.string.code_image_print_failed)
+                                                    actionStatus = ActionStatus(context.getString(R.string.code_image_print_failed), isError = true)
                                                 }
                                             }
                                         } finally {
                                             isPrinting = false
                                         }
                                     } else {
-                                        actionStatus = context.getString(R.string.code_image_print_failed)
+                                        actionStatus = ActionStatus(context.getString(R.string.code_image_print_failed), isError = true)
                                     }
                                 }
                             },
@@ -3272,10 +3260,10 @@ fun ProductCodeImageDialog(
                                             product.name
                                         )
                                         if (!shared) {
-                                            actionStatus = context.getString(R.string.code_image_share_failed)
+                                            actionStatus = ActionStatus(context.getString(R.string.code_image_share_failed), isError = true)
                                         }
                                     } else {
-                                        actionStatus = context.getString(R.string.code_image_share_failed)
+                                        actionStatus = ActionStatus(context.getString(R.string.code_image_share_failed), isError = true)
                                     }
                                 }
                             },
@@ -3294,9 +3282,9 @@ fun ProductCodeImageDialog(
                                     }
                                     isSaving = false
                                     actionStatus = if (savedUri != null) {
-                                        context.getString(R.string.code_image_saved)
+                                        ActionStatus(context.getString(R.string.code_image_saved), isError = false)
                                     } else {
-                                        context.getString(R.string.code_image_save_failed)
+                                        ActionStatus(context.getString(R.string.code_image_save_failed), isError = true)
                                     }
                                 }
                             },
@@ -3316,13 +3304,13 @@ fun ProductCodeImageDialog(
                 actionStatus?.let { status ->
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        status,
+                        status.text,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
-                        color = if (status == context.getString(R.string.code_image_saved)) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
+                        color = if (status.isError) {
                             MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
                         },
                         style = MaterialTheme.typography.bodySmall
                     )
