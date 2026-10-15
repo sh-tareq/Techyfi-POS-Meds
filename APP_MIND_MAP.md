@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-15 (app version 2.6.80-V15-10-2026, build `Techyfi-POS-Final-V15-10-2026.apk`; versionCode 220956; DB schema version 38)
+Last updated: 2026-10-16 (app version 2.6.81-V16-10-2026, build `Techyfi-POS-Final-V16-10-2026.apk`; versionCode 220957; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -1048,7 +1048,7 @@ mindmap
   - Legacy key (prior to Sep 29, 2026): `D6:7B:BD:1C:48:92:D4:FC:7F:D5:1F:D1:CB:22:79:B5:6F:C8:AD:9C`.
   - Both must be registered as Android OAuth 2.0 Client IDs in Google Cloud Console under `com.techyfi.pos` for Google Drive backup/restore.
 - Database version: `38` (v15→16 reminder tracking, v16→17 purchasePriceAtSale snapshot, v17→18 return refund-splitting, v18→19 register shift states, v19→20 due reminders, v20→21 unified customers CRM, v21→22 users RBAC, v24→25 sale audit logs, v33→34, v34→35, v35→36, v36→37, and v37→38 cleaning legacy voucher phone fallback with nullable customerPhone support).
-- Current build: `Techyfi-POS-Final-V15-10-2026.apk` (versionCode 220956) - R8 minified and resource-shrunk, Audit Round 22 comprehensive platform hardening, Multi-Owner architecture (create, promote, demote extra owners while guarding last active owner), supervisor auth lockout integrity and cart alteration hash invalidation, 5-minute elevation timeout, unified background auto-lock strictly following idle-lock duration (0 = never), separate window modal touch tracking via Modifier.trackUserActivity, normalized timeout restored settings, USB label printer batch routing, label bitmap height calculation & multi-target conflict guards, profit and tax line-item apportioning parity, Google Drive offline error unwrapping, factory reset reminder cancellation & image cleanup, localized error bus integration, and 100% test suite pass (222/222 unit tests).
+- Current build: `Techyfi-POS-Final-V16-10-2026.apk` (versionCode 220957) - R8 minified and resource-shrunk, comprehensive Label Printing Audit hardening (LBL-01 to LBL-30), high-resolution hardware printhead rasterization (203 DPI and 300 DPI), EAN-13 / EAN-8 validation and auto-recommendation, multi-up roll printing (2 and 3 across), 5 industry preset templates, per-product batch quantity steppers with 500-label cap, sticky preview headers, full Bengali and English localization, and 100% test suite pass (249/249 unit tests).
 - This is the project's only mind map and the single source of truth for architecture, workflows, limitations, business rules, release metadata, and verification history.
 
 ## Primary code map
@@ -2922,6 +2922,38 @@ mindmap
   - Standardized all strings across `strings.xml` and `values-bn/strings.xml` with strictly zero em dash characters.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V15-10-2026.apk` (versionCode 220956, versionName "2.6.80-V15-10-2026"), R8 minified and resource-shrunk, fully tested and ready as an in-place upgrade.
+
+### Label Printing System Audit Hardening (Version 2.6.81-V16-10-2026, Build V16-10-2026)
+- **High-Resolution Thermal Rasterization & DPI Support (LBL-01, LBL-12)**:
+  - Bitmaps now render at exact physical printhead resolution (8 dots/mm at 203 DPI, 11.81 dots/mm at 300 DPI) using dynamic DPI scaling.
+  - Added 203 DPI and 300 DPI printhead resolution toggle in Settings and InvoiceSettingsData, calculating byte widths and bitmap coordinates dynamically.
+- **Data Integrity & Pricing Safeguards (LBL-02, LBL-05, LBL-07, LBL-10, LBL-11)**:
+  - Guarded empty or blank product names with localized fallback `R.string.unnamed_product_label`.
+  - Format helper `formatProductCodeLabelPriceString` safely falls back to selling price whenever MRP or wholesale price is unset (0.0), preventing bogus "৳0" prices on printed labels.
+  - Copies inputs clamped to valid 1..500 range with supporting error texts.
+  - Stock-to-copies helper `stockToPrintCopies` applies ceiling rounding and protects against fractional/zero stock.
+  - Custom label dimensions enforce physical limits (width: 15..100 mm, height: 10..150 mm) with real-time error states.
+- **Async Batch Printing Architecture & Memory Safety (LBL-04, LBL-06, LBL-15, LBL-19)**:
+  - Background streaming via `printLabelPayloadsBatch` converts bitmaps to TSPL byte arrays on Dispatchers.IO and immediately recycles them.
+  - Batch printing strictly enforces a 500-label safety cap and alerts users with localized toasts detailing which products were excluded.
+  - Added per-product quantity stepper in `BatchProductPickerSheet` with 3-mode segmented button (Fixed Copies, Stock Quantity, Per Product).
+  - Added partial print failure tracking with "Retry Remaining" and "Reprint Last Batch" recovery options.
+- **Barcode Formats & Thermal Density Analysis (LBL-13, LBL-16)**:
+  - Added checksum-validated EAN-13 and EAN-8 barcode generation alongside Code 128, QR Code, and Code 39.
+  - Automatic recommendation badges suggest EAN-13/8 for valid 13-digit and 8-digit GTINs.
+  - Thermal density check warns when barcode data contains too many modules for narrow label sizes (<= 25 mm).
+- **Multi-Up Rolls, Templates & Hardware Calibration (LBL-14, LBL-17, LBL-18)**:
+  - Added multi-up roll compositor `composeMultiUpRowBitmap` supporting 1, 2, or 3 labels across the roll with configurable column gap.
+  - Added 5 industry preset templates (Standard Retail, Grocery & Expiry, Jewelry Mini Tag, Apparel & Dual Price, Warehouse & Shipping) plus custom extra text fields and logo toggle.
+  - Added TSPL calibration settings: print speed (1.5 - 6.0 ips), direction/mirroring, reference offset (x, y dots), and paper type (GAP, CONTINUOUS, BLACK_MARK).
+- **UX Polish, Token Alignment & Complete Test Coverage (LBL-20 to LBL-30)**:
+  - Sticky live preview header in single and batch dialogs with sample product switching.
+  - Removed duplicate action rows and unified collapsible advanced sections and date tracking defaults.
+  - Synchronized 100% of strings across `values/strings.xml` and `values-bn/strings.xml` with zero em dashes.
+  - Material 3 semantic theme tokens and >= 48dp touch targets applied across all label dialogs.
+  - Added dedicated test suite `LabelPrintingAuditUnitTest.kt` (18 tests) verifying routing, fallbacks, 203/300 DPI calculations, copies clamping, batch caps, EAN checksums, and multi-up geometry.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V16-10-2026.apk` (versionCode 220957, versionName "2.6.81-V16-10-2026"), R8 minified and resource-shrunk, prepared as an in-place upgrade.
 
 ## Maintenance note
 
