@@ -1685,31 +1685,38 @@ fun DenominationCounterDialog(
                         }
 
                         // Quick Switch Hint
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
                                 text = stringResource(R.string.denom_dont_wanna_count),
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = stringResource(R.string.denom_enter_total_directly),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.clickable {
+                            Surface(
+                                onClick = {
                                     mode = DenomCounterMode.QUICK
                                     if (directTotalInput.isBlank() && detailedSum > 0) {
                                         directTotalInput = detailedSum.toString()
                                     }
-                                }
-                            )
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.denom_enter_total_directly),
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                )
+                            }
                         }
                     } else {
                         // MODE 2: QUICK TOTAL AMOUNT

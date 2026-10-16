@@ -636,12 +636,13 @@ private fun OptimizedSettingsHome(
                         selected = kotlin.math.abs(defaultCostPercentage - pct) < 0.5,
                         onClick = { onDefaultCostPercentageChanged(pct) },
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = presets.size),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        icon = {}
                     ) {
                         Text(
-                            text = if (pct == 100.0) stringResource(R.string.settings_default_cost_preset_breakeven) else "${pct.toInt()}%",
+                            text = "${pct.toInt()}%",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             maxLines = 1
                         )
                     }

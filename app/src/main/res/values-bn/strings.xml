@@ -1586,9 +1586,9 @@
     <string name="sales_report_period_month">🗓️ এই মাস</string>
     <string name="sales_report_period_year">📊 এই বছর</string>
     <string name="sales_report_period_custom">⚙️ কাস্টম</string>
-    <string name="sales_report_empty_switch_week">🔄 %1$s</string>
-    <string name="sales_report_empty_switch_month">🗓️ %1$s</string>
-    <string name="sales_report_empty_switch_year">📊 %1$s</string>
+    <string name="sales_report_empty_switch_week">%1$s</string>
+    <string name="sales_report_empty_switch_month">%1$s</string>
+    <string name="sales_report_empty_switch_year">%1$s</string>
     <string name="sales_report_tab_overview">সারসংক্ষেপ</string>
     <string name="sales_report_tab_hourly">ঘণ্টাভিত্তিক</string>
     <string name="sales_report_tab_products">শীর্ষ পণ্যসমূহ</string>

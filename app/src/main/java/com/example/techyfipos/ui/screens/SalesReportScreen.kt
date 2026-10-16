@@ -919,9 +919,14 @@ private fun EmptyReportState(
                             FilledTonalButton(
                                 onClick = { onSelectPeriod(ReportPeriod.WEEK) },
                                 shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                             ) {
-                                Text(stringResource(R.string.sales_report_empty_switch_week, stringResource(R.string.sales_report_period_week)), fontSize = 11.sp)
+                                Text(
+                                    text = stringResource(R.string.sales_report_empty_switch_week, stringResource(R.string.sales_report_period_week)),
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
                             }
                         }
 
@@ -929,9 +934,14 @@ private fun EmptyReportState(
                             FilledTonalButton(
                                 onClick = { onSelectPeriod(ReportPeriod.MONTH) },
                                 shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                             ) {
-                                Text(stringResource(R.string.sales_report_empty_switch_month, stringResource(R.string.sales_report_period_month)), fontSize = 11.sp)
+                                Text(
+                                    text = stringResource(R.string.sales_report_empty_switch_month, stringResource(R.string.sales_report_period_month)),
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
                             }
                         }
 
@@ -939,9 +949,14 @@ private fun EmptyReportState(
                             FilledTonalButton(
                                 onClick = { onSelectPeriod(ReportPeriod.YEAR) },
                                 shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                             ) {
-                                Text(stringResource(R.string.sales_report_empty_switch_year, stringResource(R.string.sales_report_period_year)), fontSize = 11.sp)
+                                Text(
+                                    text = stringResource(R.string.sales_report_empty_switch_year, stringResource(R.string.sales_report_period_year)),
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
                             }
                         }
                     }
