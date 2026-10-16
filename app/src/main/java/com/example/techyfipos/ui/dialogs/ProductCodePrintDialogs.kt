@@ -60,6 +60,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.focus.onFocusChanged
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -1252,6 +1254,7 @@ fun BatchProductCodePrintDialog(
             try {
                 val bitmapsWithCopies = mutableListOf<Pair<Bitmap, Int>>()
                 for ((idx, item) in items.withIndex()) {
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
                     withContext(Dispatchers.Main) {
                         printingProgressText = context.getString(R.string.batch_print_printing, idx + 1, items.size)
                     }
@@ -2597,31 +2600,32 @@ fun BatchProductCodePrintDialog(
                 }
             }
 
+            if (!isPrinting && !isGenerating && lastPrintedItems != null) {
+                OutlinedButton(
+                    onClick = {
+                        lastPrintedItems?.let { lastItems ->
+                            isPrinting = true
+                            totalSentSoFar = 0
+                            printJob = scope.launch(Dispatchers.IO) {
+                                executeBatchDirectPrint(lastItems)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.batch_print_reprint_last), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             // Action Buttons: Direct Print and Share PDF
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                    if (!isPrinting && !isGenerating && lastPrintedItems != null) {
-                        OutlinedButton(
-                            onClick = {
-                                lastPrintedItems?.let { lastItems ->
-                                    isPrinting = true
-                                    totalSentSoFar = 0
-                                    printJob = scope.launch(Dispatchers.IO) {
-                                        executeBatchDirectPrint(lastItems)
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth().height(42.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(stringResource(R.string.batch_print_reprint_last), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
                     Button(
                         onClick = {
                             if (candidateProducts.isEmpty()) {

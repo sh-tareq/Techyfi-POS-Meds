@@ -8,6 +8,7 @@ import com.example.techyfipos.printer.BatchLabelPrintResult
 import com.example.techyfipos.printer.DirectPrintResult
 import com.example.techyfipos.printer.LabelJob
 import com.example.techyfipos.utils.LabelPrintOutcome
+import com.example.techyfipos.utils.ProductCodeLabelSize
 import com.example.techyfipos.utils.ProductCodePriceTier
 import com.example.techyfipos.utils.ProductCodeType
 import com.example.techyfipos.utils.buildBatchLabelItemsResult
@@ -17,6 +18,7 @@ import com.example.techyfipos.utils.getRecommendedCodeType
 import com.example.techyfipos.utils.isValidEan13
 import com.example.techyfipos.utils.isValidEan8
 import com.example.techyfipos.utils.printLabelImages
+import com.example.techyfipos.utils.resolveLabelDimensionsMm
 import com.example.techyfipos.utils.stockToPrintCopies
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -573,4 +575,56 @@ class LabelPrintingAuditUnitTest {
         assertEquals(LabelPrintOutcome.OPENED_SYSTEM_DIALOG, autoOutcome)
         assertTrue(autoPdfOpened)
     }
+
+    // 8. Tests for LabelPrintOutcome Properties (LBL-03)
+    @Test
+    fun testLabelPrintOutcomeProperties() {
+        assertTrue(LabelPrintOutcome.SENT_DIRECT.isSuccess)
+        assertTrue(LabelPrintOutcome.OPENED_SYSTEM_DIALOG.isSuccess)
+        assertFalse(LabelPrintOutcome.FAILED.isSuccess)
+    }
+
+    // 9. Tests for Label Dimensions Clamping (LBL-11, LBL-25)
+    @Test
+    fun testResolveLabelDimensionsClamping() {
+        // Standard predefined sizes return exact dimensions
+        val standard50x30 = resolveLabelDimensionsMm(ProductCodeLabelSize.SIZE_50_X_30, 0f, 0f)
+        assertEquals(50f, standard50x30.first, 0.01f)
+        assertEquals(30f, standard50x30.second, 0.01f)
+
+        // Custom size below minimum (min is 15 mm width, 10 mm height)
+        val customBelowMin = resolveLabelDimensionsMm(ProductCodeLabelSize.CUSTOM, 5f, 5f)
+        assertEquals(15f, customBelowMin.first, 0.01f)
+        assertEquals(10f, customBelowMin.second, 0.01f)
+
+        // Custom size above maximum (max is 150 mm width, 200 mm height)
+        val customAboveMax = resolveLabelDimensionsMm(ProductCodeLabelSize.CUSTOM, 200f, 250f)
+        assertEquals(150f, customAboveMax.first, 0.01f)
+        assertEquals(200f, customAboveMax.second, 0.01f)
+
+        // Valid custom size within bounds
+        val customValid = resolveLabelDimensionsMm(ProductCodeLabelSize.CUSTOM, 60f, 40f)
+        assertEquals(60f, customValid.first, 0.01f)
+        assertEquals(40f, customValid.second, 0.01f)
+    }
+
+    // 10. Tests for InvoiceSettingsData labelDpi JSON Deserialization (LBL-12)
+    @Test
+    fun testInvoiceSettingsDpiDefaulting() {
+        // Legacy backup without labelDpi field defaults to 203
+        val legacyJson = """{"storeName":"Legacy POS Store"}"""
+        val legacySettings = InvoiceSettingsData.fromJson(legacyJson)
+        assertEquals(203, legacySettings.labelDpi)
+
+        // Explicit 300 DPI
+        val json300 = """{"storeName":"300 DPI Store","labelDpi":300}"""
+        val settings300 = InvoiceSettingsData.fromJson(json300)
+        assertEquals(300, settings300.labelDpi)
+
+        // Any non-300 value falls back to 203
+        val jsonOther = """{"storeName":"Other DPI Store","labelDpi":600}"""
+        val settingsOther = InvoiceSettingsData.fromJson(jsonOther)
+        assertEquals(203, settingsOther.labelDpi)
+    }
 }
+
