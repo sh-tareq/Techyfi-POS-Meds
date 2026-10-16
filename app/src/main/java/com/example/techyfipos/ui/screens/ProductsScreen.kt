@@ -1047,54 +1047,21 @@ fun ProductsScreen(
         },
         floatingActionButton = {
             if (!isTablet) {
-                // 🟢 3D Emerald Jewel Floating Action Button (Collapses to jewel on scroll)
-                AnimatedContent(
-                    targetState = isScrolling,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(220)) + scaleIn(initialScale = 0.85f))
-                            .togetherWith(fadeOut(animationSpec = tween(180)) + scaleOut(targetScale = 0.85f))
-                    },
-                    label = "fab_collapse_anim"
-                ) { scrolling ->
-                    if (scrolling) {
-                        FloatingActionButton(
-                            onClick = { showAddDialog = true },
-                            containerColor = Color(0xFF059669),
-                            contentColor = Color.White,
-                            shape = CircleShape,
-                            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp, pressedElevation = 10.dp),
-                            modifier = Modifier.size(52.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.products_add_product_button), modifier = Modifier.size(24.dp), tint = Color.White)
-                        }
-                    } else {
-                        ExtendedFloatingActionButton(
-                            onClick = { showAddDialog = true },
-                            containerColor = Color(0xFF059669),
-                            contentColor = Color.White,
-                            shape = RoundedCornerShape(26.dp),
-                            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp, pressedElevation = 10.dp),
-                            icon = {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = Color.White.copy(alpha = 0.25f),
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
-                                    }
-                                }
-                            },
-                            text = {
-                                Text(
-                                    stringResource(R.string.products_add_product_button),
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 13.sp,
-                                    letterSpacing = 0.3.sp
-                                )
-                            }
-                        )
-                    }
+                // 🟢 3D Emerald Floating Action Button (Compact circular FAB on phones to preserve product card action dock visibility)
+                FloatingActionButton(
+                    onClick = { showAddDialog = true },
+                    containerColor = Color(0xFF059669),
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp, pressedElevation = 10.dp),
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.products_add_product_button),
+                        modifier = Modifier.size(26.dp),
+                        tint = Color.White
+                    )
                 }
             }
         },
@@ -5104,14 +5071,15 @@ private fun ProductGridCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Barcode Capsule [#846656005286]
                 Surface(
                     onClick = onGenerateCode,
                     shape = RoundedCornerShape(4.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    modifier = Modifier.weight(1.2f, fill = false)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -5139,7 +5107,8 @@ private fun ProductGridCard(
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                 }
             }

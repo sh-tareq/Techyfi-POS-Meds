@@ -655,6 +655,20 @@ private fun OptimizedSettingsHome(
             }
             val parsedCost = customCostText.toDoubleOrNull()
             val isCostInvalid = parsedCost != null && (parsedCost < 0.0 || parsedCost > 100.0)
+            val percentVisualTransformation = remember {
+                androidx.compose.ui.text.input.VisualTransformation { text ->
+                    if (text.isEmpty()) {
+                        androidx.compose.ui.text.input.TransformedText(text, androidx.compose.ui.text.input.OffsetMapping.Identity)
+                    } else {
+                        val transformed = androidx.compose.ui.text.AnnotatedString(text.text + "%")
+                        val offsetMapping = object : androidx.compose.ui.text.input.OffsetMapping {
+                            override fun originalToTransformed(offset: Int): Int = offset
+                            override fun transformedToOriginal(offset: Int): Int = offset.coerceAtMost(text.length)
+                        }
+                        androidx.compose.ui.text.input.TransformedText(transformed, offsetMapping)
+                    }
+                }
+            }
 
             OutlinedTextField(
                 value = customCostText,
@@ -672,7 +686,8 @@ private fun OptimizedSettingsHome(
                     { Text(stringResource(R.string.cost_margin_range_error), color = MaterialTheme.colorScheme.error) }
                 } else null,
                 label = { Text(stringResource(R.string.settings_custom_cost_margin_label)) },
-                suffix = { Text("%", fontWeight = FontWeight.Bold) },
+                visualTransformation = percentVisualTransformation,
+                textStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
                 singleLine = true,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth().padding(top = 2.dp)

@@ -726,12 +726,11 @@ fun ExpenseAnalyticsHeroCard(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp)
                     ) {
-                        Text("➕", fontSize = 12.sp)
-                        Spacer(Modifier.width(4.dp))
                         Text(
                             text = stringResource(R.string.expense_add_expense_button),
                             fontWeight = FontWeight.ExtraBold,
@@ -747,12 +746,11 @@ fun ExpenseAnalyticsHeroCard(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp)
                     ) {
-                        Text("💵", fontSize = 12.sp)
-                        Spacer(Modifier.width(4.dp))
                         Text(
                             text = stringResource(R.string.expense_add_cash_in_button),
                             fontWeight = FontWeight.ExtraBold,

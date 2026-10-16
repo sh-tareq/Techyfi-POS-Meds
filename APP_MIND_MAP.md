@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-16 (app version 2.6.82-V16-10-2026, build `Techyfi-POS-Final-V16-10-2026.apk`; versionCode 220958; DB schema version 38)
+Last updated: 2026-10-16 (app version 2.6.83-V16-10-2026, build `Techyfi-POS-Final-V16-10-2026.apk`; versionCode 220959; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -2970,6 +2970,28 @@ mindmap
   - Standardized all preset labels to clean percentage values ("50%", "70%", "85%", "100%"), eliminating text truncation and ensuring perfect visual symmetry across the 4 segment buttons.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V16-10-2026.apk` (versionCode 220958, versionName "2.6.82-V16-10-2026"), R8 minified and resource-shrunk, prepared as an in-place update for existing installations.
+
+### UI/UX & Layout Formatting Hardening V2 (Version 2.6.83-V16-10-2026, Build V16-10-2026)
+- **Floating Action Button Compact Footprint & Category Row Proportions (`ProductsScreen.kt`)**:
+  - Replaced wide `ExtendedFloatingActionButton` on mobile handsets (`!isTablet`) with a standard 56dp circular `FloatingActionButton` (shape = CircleShape).
+  - Eliminates FAB obstruction over the right-hand column's product card action buttons (`± Stock`, `Barcode`, `More Menu`) while keeping full accessibility and tactile elevation.
+  - Balanced `ProductGridCard` meta row with proportional `fill = false` weights between barcode capsule (`1.2f`) and category text (`1.0f`), preventing premature category truncation (`বিউটি...`) on long barcodes.
+- **Data Table Horizontal Panning Architecture (`CustomersScreen.kt`)**:
+  - Implemented `Modifier.horizontalScroll(rememberScrollState())` on `CustomerDataTable` with a guaranteed `688.dp` minimum content width.
+  - Replaced fragile fractional weights with dedicated, fixed column widths for Checkbox (48dp), Customer Name/Phone (170dp), Tag (100dp), Spend/Due (140dp), Orders/Points (90dp), and Action Shortcuts (140dp).
+  - Eliminates vertical letter-splitting and line-wrapping artifacts on mobile displays (e.g. `Ret \n ail`, `016717663 \n 76`, `৳10,07 \n 9.75`).
+- **Loyalty Member Card Ergonomics & FAB List Clearance (`LoyaltyScreen.kt`)**:
+  - Relocated lifetime spent metrics (`৳2,340 spent`) to a dedicated third row within the member info column.
+  - Completely prevents the 4-line vertical text squishing bug (`৳2,3 \n 40 \n spen \n t`) caused by cramming tier badges, phone numbers, and currency values into a narrow row.
+  - Increased `LazyColumn` bottom content padding to `96.dp`, ensuring bottom member cards (e.g. "মাদ্রাসা") remain fully visible above the floating action button and system navigation bars.
+- **Custom Cost Percentage Input Formatting (`SettingsScreen.kt`)**:
+  - Replaced remote right-aligned `suffix = { Text("%") }` in `OutlinedTextField` with an inline `PercentVisualTransformation()`.
+  - Positions the percentage symbol directly adjacent to typed values (`100%`) without an unnatural 300dp gap, matching the preset chips and report description text.
+- **Dual Expense Action Button Alignment (`ExpensesScreen.kt`)**:
+  - Removed duplicate emoji prefixes (`➕` and `💵`) that conflicted with pre-existing string resource prefixes (`+ Record Expense` and `+ Cash In Float`).
+  - Added compact `PaddingValues(horizontal = 8.dp, vertical = 0.dp)` ensuring both action buttons fit comfortably on compact screens without ellipsis truncation (`+ Record Expe...`).
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V16-10-2026.apk` (versionCode 220959, versionName "2.6.83-V16-10-2026"), R8 minified and resource-shrunk, prepared as an in-place update for existing installations.
 
 ## Maintenance note
 

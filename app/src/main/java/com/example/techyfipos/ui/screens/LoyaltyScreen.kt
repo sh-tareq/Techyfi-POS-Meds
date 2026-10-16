@@ -176,7 +176,7 @@ fun LoyaltyScreen(
 
             // 4. ULTRA-COMPACT CUSTOMER LIST
             LazyColumn(
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(start = 12.dp, top = 6.dp, end = 12.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -794,7 +794,7 @@ private fun CompactLoyaltyRow(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    // Line 2: Tier Badge Capsule + Phone + Dot + Spent
+                    // Line 2: Tier Badge Capsule + Inactive Badge + Phone
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -819,18 +819,17 @@ private fun CompactLoyaltyRow(
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text(
-                            text = "•",
-                            fontSize = 10.sp,
-                            color = Color.Gray
-                        )
-                        Text(
-                            text = stringResource(R.string.loyalty_spent_suffix, formatTaka(member.lifetimeSpent)),
-                            fontSize = 11.sp,
-                            color = Color(0xFF059669),
-                            fontWeight = FontWeight.SemiBold
-                        )
                     }
+
+                    // Line 3: Spent Suffix (dedicated line, zero wrapping)
+                    Text(
+                        text = stringResource(R.string.loyalty_spent_suffix, formatTaka(member.lifetimeSpent)),
+                        fontSize = 11.sp,
+                        color = Color(0xFF059669),
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
                 // Points Pill (compact vertical 2-line badge saves ~55dp horizontal width for customer names)

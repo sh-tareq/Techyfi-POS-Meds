@@ -952,6 +952,7 @@ fun CustomerDataTable(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val horizontalScrollState = rememberScrollState()
 
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -959,7 +960,12 @@ fun CustomerDataTable(
         color = MaterialTheme.colorScheme.surface,
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .horizontalScroll(horizontalScrollState)
+                .widthIn(min = 688.dp)
+        ) {
             // Table Header Row
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -976,11 +982,11 @@ fun CustomerDataTable(
                         onCheckedChange = { onSelectAll() },
                         modifier = Modifier.size(48.dp)
                     )
-                    Text(stringResource(R.string.customer_col_customer), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(2.2f))
-                    Text(stringResource(R.string.customer_col_tag), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1.1f))
-                    Text(stringResource(R.string.customer_col_spend_due), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1.6f))
-                    Text(stringResource(R.string.customer_col_orders), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                    Text(stringResource(R.string.customer_col_actions), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.width(150.dp))
+                    Text(stringResource(R.string.customer_col_customer), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.width(170.dp))
+                    Text(stringResource(R.string.customer_col_tag), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.width(100.dp))
+                    Text(stringResource(R.string.customer_col_spend_due), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.width(140.dp))
+                    Text(stringResource(R.string.customer_col_orders), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.width(90.dp))
+                    Text(stringResource(R.string.customer_col_actions), fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.width(140.dp))
                 }
             }
 
@@ -1004,7 +1010,7 @@ fun CustomerDataTable(
                         )
 
                         // Customer Info
-                        Column(modifier = Modifier.weight(2.2f)) {
+                        Column(modifier = Modifier.width(170.dp)) {
                             Text(
                                 text = customer.name,
                                 fontWeight = FontWeight.Bold,
@@ -1020,7 +1026,7 @@ fun CustomerDataTable(
                         }
 
                         // Segment Tag
-                        Box(modifier = Modifier.weight(1.1f)) {
+                        Box(modifier = Modifier.width(100.dp)) {
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
                                 color = when (customer.tag) {
@@ -1046,7 +1052,7 @@ fun CustomerDataTable(
                         }
 
                         // Spend / Due
-                        Column(modifier = Modifier.weight(1.6f)) {
+                        Column(modifier = Modifier.width(140.dp)) {
                             Text(
                                 text = formatTaka(customer.lifetimeSpent),
                                 fontWeight = FontWeight.Bold,
@@ -1074,31 +1080,31 @@ fun CustomerDataTable(
                         }
 
                         // Orders
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.width(90.dp)) {
                             Text(stringResource(R.string.customers_table_orders_count, customer.totalOrders), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
                             Text(stringResource(R.string.customers_table_loyalty_points, customer.loyaltyPoints), fontSize = 11.sp, color = Color(0xFFE5A100))
                         }
 
                         // Action Shortcuts
                         Row(
-                            modifier = Modifier.width(150.dp),
+                            modifier = Modifier.width(140.dp),
                             horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             IconButton(
                                 onClick = { onStartSale(customer) },
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(44.dp)
                             ) {
                                 Icon(Icons.Default.ShoppingCart, contentDescription = stringResource(R.string.customer_start_sale_cd), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
                             }
                             IconButton(
                                 onClick = { openWhatsAppChat(context, customer.phone) },
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(44.dp)
                             ) {
                                 Text("💬", fontSize = 14.sp)
                             }
                             IconButton(
                                 onClick = { onCustomerClick(customer) },
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(44.dp)
                             ) {
                                 Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.customer_profile_cd), modifier = Modifier.size(17.dp))
                             }
