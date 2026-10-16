@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-16 (app version 2.6.81-V16-10-2026, build `Techyfi-POS-Final-V16-10-2026.apk`; versionCode 220957; DB schema version 38)
+Last updated: 2026-10-16 (app version 2.6.82-V16-10-2026, build `Techyfi-POS-Final-V16-10-2026.apk`; versionCode 220958; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -2954,6 +2954,22 @@ mindmap
   - Added dedicated test suite `LabelPrintingAuditUnitTest.kt` (18 tests) verifying routing, fallbacks, 203/300 DPI calculations, copies clamping, batch caps, EAN checksums, and multi-up geometry.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V16-10-2026.apk` (versionCode 220957, versionName "2.6.81-V16-10-2026"), R8 minified and resource-shrunk, prepared as an in-place upgrade.
+
+### UI/UX & Layout Formatting Hardening (Version 2.6.82-V16-10-2026, Build V16-10-2026)
+- **TopAppBar Responsive Space Reclamation (`SuppliersScreen.kt`)**:
+  - Reclaimed ~90dp of horizontal TopAppBar width on compact phone screens by rendering the `Active Hub` status pill conditionally on `isTablet`.
+  - Guarantees the primary screen title "Suppliers & Purchases" renders fully without ellipsis clipping on mobile handsets.
+- **Analytics Period Switch Layout Polish (`SalesReportScreen.kt`)**:
+  - Eliminated duplicate emoji prefixes in historical period switch actions across English and Bengali resource files.
+  - Applied compact touch-padded button sizing (`PaddingValues(horizontal = 8.dp, vertical = 6.dp)`) with `maxLines = 1` and `softWrap = false`, preventing multi-line text wrapping on all screen widths.
+- **Denomination Counter Interaction & Formatting Ergonomics (`RegisterCloseScreen.kt`)**:
+  - Replaced constrained horizontal row in `DenomCounterDialog` with a centered column structure consisting of helper text and a dedicated, rounded pill button.
+  - Completely eliminated awkward mid-phrase line breaks ("directly" wrapping on a second line) while providing an intuitive, touch-friendly direct total input shortcut.
+- **Cost Margin Estimation Segmented Controls Symmetry (`SettingsScreen.kt`)**:
+  - Stripped default Material 3 checkmark icons from `SegmentedButton` to give full horizontal width to percentage labels.
+  - Standardized all preset labels to clean percentage values ("50%", "70%", "85%", "100%"), eliminating text truncation and ensuring perfect visual symmetry across the 4 segment buttons.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V16-10-2026.apk` (versionCode 220958, versionName "2.6.82-V16-10-2026"), R8 minified and resource-shrunk, prepared as an in-place update for existing installations.
 
 ## Maintenance note
 
