@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-17 (app version 2.6.89-Final-V6, build `Techyfi-POS-Final-V6.apk`; versionCode 220965; DB schema version 38)
+Last updated: 2026-10-17 (app version 2.6.90-Final-V7, build `Techyfi-POS-Final-V7.apk`; versionCode 220966; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3113,6 +3113,19 @@ mindmap
   - Verified complex Bengali vowel diacritics, conjuncts, ascenders, and descenders (`চন্দ্রবিন্দু`, `হ্রস্ব উ-কার`, `হ্রস্ব ই-কার`, `র-ফলা`, `যুক্তাক্ষর`) render with zero clipping across all search bars.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V6.apk` (versionCode 220965, versionName "2.6.89-Final-V6"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
+
+### Release Final-V7: Dues Layout Harmonization & Complete Physical Device Live Verification (Version 2.6.90-Final-V7, Build Final-V7)
+- **Harmonized Dues Filter Button & Date Period Chips (`DuesScreen.kt`)**:
+  - Standardized Dues Filter button from 48dp `FilledTonalIconButton` to a 46dp `Surface` with 12dp squircle corners and dynamic red border, perfectly aligning with the 46dp `PosSearchBox`.
+  - Upgraded Dues Date Period Chips (`All`, `Today`, `Week`, `Month`, `Custom 📅`) with horizontal scrolling, custom date range support, and unified 28dp pill heights with emerald selection theme.
+  - Aligned debtors sort dropdown menu trigger button.
+- **Physical Phone Verification & Interactive Testing (`cb5fdfb5`)**:
+  - Full end-to-end verification of `Techyfi-POS-Final-V7.apk` on physical Xiaomi MI 8.
+  - Verified PIN lock & unlock (`1234`).
+  - Tested live text entry, focused accent border animation, single-line placeholder ellipsis, animated clear (`✕`) action, and keyboard dismissal across Products, Sales History, Dues, Expenses, Suppliers, Loyalty, and Settings.
+  - Validated English and Bengali locale rendering (`বাংলা`) with complete vowel and conjunct diacritic clearance.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V7.apk` (versionCode 220966, versionName "2.6.90-Final-V7"), 37MB release build located in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
 
 ## Maintenance note
 

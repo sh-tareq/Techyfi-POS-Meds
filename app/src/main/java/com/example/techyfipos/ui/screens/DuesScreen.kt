@@ -327,9 +327,18 @@ fun DuesScreen(
         }
     }
 
-    val filteredPayments = remember(allPayments, paymentStart, paymentEnd) {
-        allPayments.filter { it.timestamp in startOfDay(paymentStart)..endOfDay(paymentEnd) }
-            .sortedByDescending { it.timestamp }
+    val filteredPayments = remember(allPayments, paymentStart, paymentEnd, searchQuery, customerByPhone) {
+        val query = searchQuery.trim().lowercase()
+        allPayments.filter { payment ->
+            val inDate = payment.timestamp in startOfDay(paymentStart)..endOfDay(paymentEnd)
+            if (!inDate) return@filter false
+            if (query.isBlank()) return@filter true
+            val customerName = customerByPhone[payment.customerPhone]?.customerName?.lowercase() ?: ""
+            payment.customerPhone.lowercase().contains(query) ||
+                customerName.contains(query) ||
+                (payment.referenceNote?.lowercase()?.contains(query) == true) ||
+                payment.paymentMethod.lowercase().contains(query)
+        }.sortedByDescending { it.timestamp }
     }
     val dateRangeLabel = remember(paymentStart, paymentEnd) {
         val start = DateFormatters.formatDate(paymentStart)
@@ -547,7 +556,7 @@ fun DuesScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Row 1: Search + Date Range Pill Button + Filter Button
+                    // Row 1: Spacious Search Box + Matching 46dp 3D Filter Funnel Button
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -561,95 +570,36 @@ fun DuesScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        // Quick Date Pill Button (opens Date Range Picker / Dropdown)
-                        Box {
-                            Surface(
-                                onClick = { showDuePeriodMenu = true },
-                                shape = RoundedCornerShape(10.dp),
-                                color = Color(0xFFEEF2FF),
-                                border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
-                                modifier = Modifier.height(48.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Realistic3DCalendarIcon(size = 16.dp)
-                                    Text(
-                                        text = when (duePeriod) {
-                                            DuePeriodFilter.ALL_TIME -> stringResource(R.string.dues_period_all_time)
-                                            DuePeriodFilter.TODAY -> stringResource(R.string.dues_period_today)
-                                            DuePeriodFilter.THIS_WEEK -> stringResource(R.string.dues_period_this_week)
-                                            DuePeriodFilter.THIS_MONTH -> stringResource(R.string.dues_period_this_month)
-                                            DuePeriodFilter.CUSTOM -> {
-                                                val s = DateFormatters.formatDate(customDueStart ?: now)
-                                                val e = DateFormatters.formatDate(customDueEnd ?: now)
-                                                if (s == e) s else "$s – $e"
-                                            }
-                                        },
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF4338CA),
-                                        maxLines = 1
-                                    )
-                                    Icon(
-                                        Icons.Default.ArrowDropDown,
-                                        contentDescription = null,
-                                        tint = Color(0xFF4338CA),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                            DropdownMenu(showDuePeriodMenu, onDismissRequest = { showDuePeriodMenu = false }) {
-                                listOf(
-                                    DuePeriodFilter.ALL_TIME,
-                                    DuePeriodFilter.TODAY,
-                                    DuePeriodFilter.THIS_WEEK,
-                                    DuePeriodFilter.THIS_MONTH,
-                                    DuePeriodFilter.CUSTOM
-                                ).forEach { period ->
-                                    val label = when (period) {
-                                        DuePeriodFilter.ALL_TIME -> stringResource(R.string.dues_period_all_time)
-                                        DuePeriodFilter.TODAY -> stringResource(R.string.dues_period_today)
-                                        DuePeriodFilter.THIS_WEEK -> stringResource(R.string.dues_period_this_week)
-                                        DuePeriodFilter.THIS_MONTH -> stringResource(R.string.dues_period_this_month)
-                                        DuePeriodFilter.CUSTOM -> stringResource(R.string.dues_period_custom_range)
-                                    }
-                                    DropdownMenuItem(
-                                        text = { Text(label, fontSize = 12.5.sp) },
-                                        onClick = {
-                                            showDuePeriodMenu = false
-                                            if (period == DuePeriodFilter.CUSTOM) {
-                                                showDuesStartPicker = true
-                                            } else {
-                                                duePeriod = period
-                                            }
-                                        },
-                                        leadingIcon = if (duePeriod == period) ({ Icon(Icons.Default.Check, null, Modifier.size(16.dp)) }) else null
-                                    )
-                                }
-                            }
-                        }
-
-                        // 3D Filter Funnel Button with Badge
+                        // 3D Filter Funnel Button with Badge (Unified 46dp height & 12dp squircle)
                         BadgedBox(
                             badge = { if (minimumDue.isNotBlank()) Badge { Text("1") } }
                         ) {
-                            FilledTonalIconButton(
+                            Surface(
                                 onClick = {
                                     draftMinimumDue = minimumDue
                                     showFilters = true
                                 },
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.size(48.dp)
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (minimumDue.isNotBlank()) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = if (minimumDue.isNotBlank()) PosSectionColors.Dues.copy(alpha = 0.8f)
+                                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                                ),
+                                shadowElevation = 0.5.dp,
+                                modifier = Modifier.size(46.dp)
                             ) {
-                                Realistic3DFilterIcon(size = 20.dp)
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Realistic3DFilterIcon(size = 20.dp)
+                                }
                             }
                         }
                     }
 
-                    // Row 2: Micro Period Chips + Count & Sort Toggle
+                    // Row 2: Complete Date Period Chips (All, Today, Week, Month, Custom 📅) + Debtors Count & Sort
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -657,6 +607,7 @@ fun DuesScreen(
                     ) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .weight(1f, fill = false)
                                 .horizontalScroll(rememberScrollState())
@@ -665,30 +616,49 @@ fun DuesScreen(
                                 DuePeriodFilter.ALL_TIME,
                                 DuePeriodFilter.TODAY,
                                 DuePeriodFilter.THIS_WEEK,
-                                DuePeriodFilter.THIS_MONTH
+                                DuePeriodFilter.THIS_MONTH,
+                                DuePeriodFilter.CUSTOM
                             ).forEach { period ->
+                                val isSelected = duePeriod == period
                                 val label = when (period) {
                                     DuePeriodFilter.ALL_TIME -> stringResource(R.string.dues_period_chip_all)
                                     DuePeriodFilter.TODAY -> stringResource(R.string.dues_period_chip_today)
                                     DuePeriodFilter.THIS_WEEK -> stringResource(R.string.dues_period_chip_week)
                                     DuePeriodFilter.THIS_MONTH -> stringResource(R.string.dues_period_chip_month)
-                                    else -> ""
+                                    DuePeriodFilter.CUSTOM -> {
+                                        if (isSelected && customDueStart != null && customDueEnd != null) {
+                                            val s = DateFormatters.formatDate(customDueStart!!)
+                                            val e = DateFormatters.formatDate(customDueEnd!!)
+                                            if (s == e) s else "$s – $e"
+                                        } else {
+                                            stringResource(R.string.dues_period_custom_range)
+                                        }
+                                    }
                                 }
-                                val isSelected = duePeriod == period
                                 Surface(
-                                    onClick = { duePeriod = period },
+                                    onClick = {
+                                        if (period == DuePeriodFilter.CUSTOM) {
+                                            showDuesStartPicker = true
+                                        } else {
+                                            duePeriod = period
+                                        }
+                                    },
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) Color(0xFF059669) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                                     border = if (isSelected) null else BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                    modifier = Modifier.height(26.dp)
+                                    modifier = Modifier.height(28.dp)
                                 ) {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp),
                                         modifier = Modifier.padding(horizontal = 8.dp)
                                     ) {
+                                        if (period == DuePeriodFilter.CUSTOM) {
+                                            Realistic3DCalendarIcon(size = 12.dp)
+                                        }
                                         Text(
                                             text = label,
-                                            fontSize = 10.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                             color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -711,13 +681,19 @@ fun DuesScreen(
                                 TextButton(
                                     onClick = { showSortMenu = true },
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                                    modifier = Modifier.height(26.dp)
+                                    modifier = Modifier.height(28.dp)
                                 ) {
                                     Text(
                                         text = stringResource(R.string.dues_sort_button),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF059669)
+                                    )
+                                    Icon(
+                                        Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = Color(0xFF059669),
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 }
                                 DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
