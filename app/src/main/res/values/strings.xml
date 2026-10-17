@@ -3241,8 +3241,24 @@
     <string name="label_extra_field_value">Field Value</string>
     <string name="batch_print_retry_remaining">Retry Remaining (%1$d)</string>
     <string name="batch_print_failed_banner">Printing stopped after %1$d labels. %2$d labels remaining.</string>
-    <string name="batch_print_reprint_last">Reprint Last Batch</string>
     <string name="edit">Edit</string>
+
+    <!-- Global Settings Search (N-15) -->
+    <string name="settings_search_placeholder">Search settings, printers, backup, PINs…</string>
+    <string name="settings_search_clear_cd">Clear search query</string>
+    <string name="settings_chip_all">All</string>
+    <string name="settings_chip_printers">Printers</string>
+    <string name="settings_chip_receipt">Receipt</string>
+    <string name="settings_chip_security">Security</string>
+    <string name="settings_chip_cloud">Backup</string>
+    <string name="settings_chip_preferences">General</string>
+    <string name="settings_search_matches_count">%1$d matching settings found</string>
+    <string name="settings_search_no_results_title">No matching settings found</string>
+    <string name="settings_search_no_results_desc">Check for typos or try searching in English or বাংলা.</string>
+    <string name="settings_search_suggested_title">Popular Searches:</string>
+    <string name="settings_search_filter_by_category">Filtered by category</string>
+    <string name="settings_search_open_action">Open</string>
+    <string name="batch_print_reprint_last">Reprint Last Batch</string>
 </resources>
 
 

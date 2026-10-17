@@ -3243,6 +3243,22 @@
     <string name="label_extra_field_value">ফিল্ডের মান</string>
     <string name="batch_print_retry_remaining">বাকিগুলো পুনরায় প্রিন্ট করুন (%1$d)</string>
     <string name="batch_print_failed_banner">%1$dটি লেবেলের পর প্রিন্ট থেমে গেছে। %2$dটি বাকি রয়েছে।</string>
-    <string name="batch_print_reprint_last">শেষ ব্যাচ পুনরায় প্রিন্ট করুন</string>
     <string name="edit">সম্পাদনা</string>
+
+    <!-- Global Settings Search (N-15) -->
+    <string name="settings_search_placeholder">প্রিন্টার, ব্যাকআপ, পিন, রিসিট খুঁজুন…</string>
+    <string name="settings_search_clear_cd">অনুসন্ধান মুছুন</string>
+    <string name="settings_chip_all">সব</string>
+    <string name="settings_chip_printers">প্রিন্টার</string>
+    <string name="settings_chip_receipt">রশিদ</string>
+    <string name="settings_chip_security">নিরাপত্তা</string>
+    <string name="settings_chip_cloud">ব্যাকআপ</string>
+    <string name="settings_chip_preferences">সাধারণ</string>
+    <string name="settings_search_matches_count">%1$dটি ফলাফল পাওয়া গেছে</string>
+    <string name="settings_search_no_results_title">কোন সেটিংস পাওয়া যায়নি</string>
+    <string name="settings_search_no_results_desc">বানান সঠিক আছে কিনা দেখুন অথবা ইংরেজিতে অনুসন্ধান করুন।</string>
+    <string name="settings_search_suggested_title">জনপ্রিয় অনুসন্ধান:</string>
+    <string name="settings_search_filter_by_category">ক্যাটাগরি অনুযায়ী ফিল্টারকৃত</string>
+    <string name="settings_search_open_action">খুলুন</string>
+    <string name="batch_print_reprint_last">পূর্ববর্তী ব্যাচ পুনরায় প্রিন্ট করুন</string>
 </resources>

@@ -1,0 +1,1892 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS — Global Settings Search Interactive Design & UI/UX Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-light: #6366F1;
+      --primary-glow: rgba(99, 102, 241, 0.35);
+      --primary-subtle: rgba(79, 70, 229, 0.12);
+      
+      --emerald: #10B981;
+      --emerald-glow: rgba(16, 185, 129, 0.3);
+      --amber: #F59E0B;
+      --rose: #EF4444;
+      --rose-glow: rgba(239, 68, 68, 0.3);
+      --sky: #0284C7;
+      --violet: #8B5CF6;
+      --teal: #0D9488;
+      
+      --bg-base: #090D16;
+      --bg-surface: #111827;
+      --bg-card: #162032;
+      --bg-card-hover: #1E2B45;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(99, 102, 241, 0.35);
+      
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-dim: #64748B;
+      
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+      
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
+      --shadow-3d: 0 20px 40px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      
+      --font-latin: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-bangla: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-base: #F8FAFC;
+      --bg-surface: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F1F5F9;
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --border-highlight: rgba(79, 70, 229, 0.35);
+      
+      --text-main: #0F172A;
+      --text-muted: #475569;
+      --text-dim: #94A3B8;
+      
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.12);
+      --shadow-3d: 0 12px 28px -8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-latin);
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding: 24px;
+      min-height: 100vh;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    [data-lang="bn"] body,
+    [data-lang="bn"] .bn-font {
+      font-family: var(--font-bangla);
+    }
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    /* Top Nav Bar */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo-3d {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 20px rgba(79, 70, 229, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      font-size: 22px;
+      transform: perspective(400px) rotateX(8deg) rotateY(-8deg);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .brand-logo-3d:hover {
+      transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1.05);
+    }
+
+    .brand-info h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--emerald);
+      padding: 2px 10px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .brand-info p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .controls-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-toggle {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-toggle:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-highlight);
+      transform: translateY(-1px);
+    }
+    .btn-toggle.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary-light);
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
+
+    /* Main Workspace Layout */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 440px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 1080px) {
+      .preview-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Phone / Tablet Device Frame */
+    .device-shell-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .device-shell {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-surface);
+      border-radius: 36px;
+      border: 3px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 840px;
+      position: relative;
+      transition: max-width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    [data-theme="light"] .device-shell {
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.2);
+    }
+
+    .device-shell.tablet-mode {
+      max-width: 760px;
+      height: 840px;
+    }
+
+    /* Device Status Bar & Header */
+    .phone-notch {
+      padding: 10px 18px 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      background: var(--bg-surface);
+      z-index: 10;
+    }
+
+    .pos-app-bar {
+      padding: 8px 16px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      z-index: 10;
+    }
+
+    .back-btn-mock {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-main);
+      font-size: 16px;
+      transition: background 0.15s ease;
+    }
+    .back-btn-mock:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .app-bar-title-block {
+      flex: 1;
+    }
+    .app-bar-title-block h2 {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+    .app-bar-title-block p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Settings Scroll Content Container */
+    .settings-scroll-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+    }
+
+    /* 💎 GLOBAL SEARCH BAR COMPONENT */
+    .search-bar-hero-container {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(139, 92, 246, 0.08) 100%);
+      border: 1.5px solid rgba(99, 102, 241, 0.35);
+      border-radius: var(--radius-lg);
+      padding: 12px;
+      box-shadow: 0 8px 24px rgba(79, 70, 229, 0.15);
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .search-bar-hero-container:focus-within {
+      border-color: var(--primary-light);
+      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.22) 0%, rgba(139, 92, 246, 0.14) 100%);
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      padding: 2px 10px 2px 14px;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.2s ease;
+    }
+    .search-input-wrapper:focus-within {
+      border-color: var(--primary-light);
+    }
+
+    .search-icon-3d {
+      font-size: 18px;
+      margin-right: 10px;
+      color: var(--primary-light);
+      display: flex;
+      align-items: center;
+      animation: floatSubtle 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatSubtle {
+      0% { transform: translateY(0px) rotate(0deg); }
+      100% { transform: translateY(-2px) rotate(-6deg); }
+    }
+
+    .search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 0;
+    }
+    .search-input::placeholder {
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .clear-search-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      transition: all 0.2s ease;
+    }
+    .clear-search-btn:hover {
+      background: var(--rose);
+      color: #fff;
+    }
+    .clear-search-btn.visible {
+      display: flex;
+    }
+
+    /* Category Filter Chips Bar */
+    .filter-chips-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-top: 8px;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .filter-chips-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip-item {
+      padding: 5px 11px;
+      border-radius: var(--radius-full);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .chip-item:hover {
+      border-color: var(--primary-light);
+      color: var(--text-main);
+    }
+    .chip-item.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary-light);
+      box-shadow: 0 2px 8px var(--primary-glow);
+    }
+
+    /* Search Results Layer */
+    .search-results-section {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .search-results-section.active {
+      display: flex;
+    }
+
+    .results-count-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    .badge-matches {
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--primary-light);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 10.5px;
+    }
+
+    .result-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .result-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-highlight);
+      background: var(--bg-card-hover);
+      box-shadow: var(--shadow-md);
+    }
+    .result-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3.5px;
+      background: var(--primary-light);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .result-card:hover::before {
+      opacity: 1;
+    }
+
+    .result-icon-squircle {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .result-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .result-breadcrumb {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--primary-light);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .result-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.25;
+      margin-bottom: 2px;
+    }
+
+    .result-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .result-action {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .badge-pill-state {
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+    .badge-pill-state.emerald {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-pill-state.indigo {
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--primary-light);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+    .badge-pill-state.rose {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--rose);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .nav-arrow-btn {
+      color: var(--text-dim);
+      font-size: 14px;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+    .result-card:hover .nav-arrow-btn {
+      color: var(--primary-light);
+      transform: translateX(3px);
+    }
+
+    /* Highlight matching query */
+    mark {
+      background: rgba(245, 158, 11, 0.3);
+      color: #FCD34D;
+      padding: 0 2px;
+      border-radius: 3px;
+    }
+
+    /* Normal Settings View Sections (shown when not searching) */
+    .normal-settings-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .normal-settings-flow.hidden {
+      display: none;
+    }
+
+    /* Master Card */
+    .master-card {
+      background: linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%);
+      border-radius: 20px;
+      padding: 16px;
+      color: #fff;
+      box-shadow: 0 12px 28px rgba(30, 27, 75, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(199, 210, 254, 0.2);
+    }
+    .master-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .master-tag {
+      font-size: 10px;
+      font-weight: 800;
+      color: #C7D2FE;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .master-shop-name {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: -0.01em;
+      margin-bottom: 3px;
+    }
+    .master-address {
+      font-size: 11.5px;
+      color: #E0E7FF;
+      margin-bottom: 14px;
+    }
+    .master-pill-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .master-pill {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-full);
+      padding: 4px 10px;
+      font-size: 10.5px;
+      font-weight: 700;
+    }
+
+    /* Setting Card Generic */
+    .setting-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .setting-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .setting-card-title h3 {
+      font-size: 13.5px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+    .setting-card-title p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .segmented-picker {
+      display: flex;
+      background: var(--bg-surface);
+      border-radius: 10px;
+      padding: 3px;
+      border: 1px solid var(--border-subtle);
+      gap: 3px;
+    }
+    .segmented-btn {
+      flex: 1;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    .segmented-btn.active {
+      background: var(--bg-card);
+      color: var(--text-main);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Section Label */
+    .section-label {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 6px 4px 0;
+    }
+
+    /* Nav Item Row */
+    .nav-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .nav-item-row:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-highlight);
+    }
+    .nav-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-item-title h4 {
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .nav-item-title p {
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+
+    /* Empty state */
+    .empty-search-state {
+      padding: 40px 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .empty-icon {
+      font-size: 42px;
+      animation: floatSubtle 2.5s infinite alternate;
+    }
+    .empty-title {
+      font-size: 15px;
+      font-weight: 800;
+    }
+    .empty-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      max-width: 260px;
+      line-height: 1.4;
+    }
+    .suggested-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    .suggest-tag {
+      background: var(--primary-subtle);
+      color: var(--primary-light);
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid rgba(99, 102, 241, 0.25);
+    }
+    .suggest-tag:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* Right Documentation & Specification Column */
+    .spec-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .spec-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .spec-card h2 {
+      font-size: 17px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--primary-light);
+    }
+
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .feature-icon-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: var(--primary-subtle);
+      color: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      border: 1px solid rgba(99, 102, 241, 0.25);
+    }
+
+    .feature-content h3 {
+      font-size: 13.5px;
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+
+    .feature-content p {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .code-snippet {
+      background: #0B0F19;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      font-family: var(--font-code);
+      font-size: 11.5px;
+      color: #E2E8F0;
+      overflow-x: auto;
+      line-height: 1.6;
+      margin-top: 10px;
+    }
+    .code-comment { color: #64748B; }
+    .code-keyword { color: #818CF8; font-weight: 700; }
+    .code-string { color: #34D399; }
+    .code-function { color: #38BDF8; }
+
+    /* Interactive Feedback Toast */
+    .toast-popup {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1E293B;
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--primary-light);
+      box-shadow: var(--shadow-lg);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 9999;
+    }
+    .toast-popup.visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Switch Component */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #334155;
+      transition: .3s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Top Navigation Bar -->
+  <header class="top-bar">
+    <div class="brand-wrap">
+      <div class="brand-logo-3d">⚙️</div>
+      <div class="brand-info">
+        <h1>Techyfi POS Settings <span class="badge-status">● Interactive Architecture Preview</span></h1>
+        <p>Global Settings Search Bar Design & Multilingual Navigation Specification</p>
+      </div>
+    </div>
+
+    <div class="controls-wrap">
+      <button class="btn-toggle" id="btnLangToggle" onclick="toggleLanguage()">
+        <span>🌐</span> <span id="langLabel">Language: English</span>
+      </button>
+      <button class="btn-toggle" id="btnThemeToggle" onclick="toggleTheme()">
+        <span id="themeIcon">🌙</span> <span id="themeLabel">Dark Mode</span>
+      </button>
+      <button class="btn-toggle" id="btnDeviceToggle" onclick="toggleDeviceMode()">
+        <span id="deviceIcon">📱</span> <span id="deviceLabel">View: Phone (380dp)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Interactive Workspace Grid -->
+  <div class="preview-grid">
+
+    <!-- Left Column: Device Mockup -->
+    <div class="device-shell-wrapper">
+      <div class="device-shell" id="deviceShell">
+        <!-- Status Bar -->
+        <div class="phone-notch">
+          <span>09:41</span>
+          <span>●●● 5G  🔋 100%</span>
+        </div>
+
+        <!-- POS Top App Bar -->
+        <div class="pos-app-bar">
+          <div class="back-btn-mock">❮</div>
+          <div class="app-bar-title-block">
+            <h2 id="screenTitle">Settings</h2>
+            <p id="screenSubtitle">Hardware, receipt format & business preferences</p>
+          </div>
+        </div>
+
+        <!-- Settings Scroll Content -->
+        <div class="settings-scroll-body" id="settingsBody">
+
+          <!-- 💎 1. GLOBAL SEARCH BAR HERO CONTAINER -->
+          <div class="search-bar-hero-container">
+            <div class="search-input-wrapper">
+              <span class="search-icon-3d">🔍</span>
+              <input 
+                type="text" 
+                class="search-input" 
+                id="settingsSearchInput"
+                placeholder="Search settings, printers, backup, PINs..." 
+                autocomplete="off"
+                oninput="onSearchQueryChanged(this.value)"
+              />
+              <button class="clear-search-btn" id="clearSearchBtn" onclick="clearSearch()">✕</button>
+            </div>
+
+            <!-- Category Filter Chips -->
+            <div class="filter-chips-scroll" id="chipsScroll">
+              <div class="chip-item active" onclick="selectChip('all')"><span id="chipAll">All</span></div>
+              <div class="chip-item" onclick="selectChip('printers')">🖨️ <span id="chipPrinters">Printers</span></div>
+              <div class="chip-item" onclick="selectChip('receipt')">🧾 <span id="chipReceipt">Receipt</span></div>
+              <div class="chip-item" onclick="selectChip('security')">🔒 <span id="chipSecurity">Security</span></div>
+              <div class="chip-item" onclick="selectChip('cloud')">☁️ <span id="chipCloud">Backup</span></div>
+              <div class="chip-item" onclick="selectChip('preferences')">⚙️ <span id="chipPrefs">General</span></div>
+            </div>
+          </div>
+
+          <!-- 💎 2. SEARCH RESULTS LAYER (Revealed dynamically) -->
+          <div class="search-results-section" id="searchResultsSection">
+            <div class="results-count-bar">
+              <span id="resultsCountText">Showing matching settings</span>
+              <span class="badge-matches" id="matchesBadge">0 matches</span>
+            </div>
+            
+            <div id="resultsCardsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Dynamic Cards Inserted Here via JS -->
+            </div>
+          </div>
+
+          <!-- 💎 3. NORMAL SETTINGS FLOW (Shown when not searching) -->
+          <div class="normal-settings-flow" id="normalSettingsFlow">
+            
+            <!-- Master Executive Card -->
+            <div class="master-card">
+              <div class="master-header">
+                <div class="master-tag">⚙️ Techyfi POS Engine</div>
+                <div class="master-pill" style="background: rgba(16, 185, 129, 0.25); border-color: rgba(16, 185, 129, 0.4);">
+                  ● Cloud Active
+                </div>
+              </div>
+              <div class="master-shop-name" id="shopNameDisplay">Tareq Enterprise POS</div>
+              <div class="master-address" id="shopAddressDisplay">House 12, Road 4, Sector 7, Uttara, Dhaka</div>
+              <div class="master-pill-row">
+                <span class="master-pill">🖨️ 80mm Roll</span>
+                <span class="master-pill">📦 Stock Check: ON</span>
+                <span class="master-pill">🔒 Multi-User RBAC</span>
+              </div>
+            </div>
+
+            <!-- Quick Setting 1: Language -->
+            <div class="setting-card">
+              <div class="setting-card-header">
+                <div style="font-size: 26px;">🌐</div>
+                <div class="setting-card-title">
+                  <h3 id="cardLangTitle">App Interface Language</h3>
+                  <p id="cardLangSubtitle">Choose primary UI and receipt typography language</p>
+                </div>
+              </div>
+              <div class="segmented-picker">
+                <button class="segmented-btn active" id="segLangEn" onclick="setAppLanguage('en')">English</button>
+                <button class="segmented-btn" id="segLangBn" onclick="setAppLanguage('bn')">বাংলা</button>
+              </div>
+            </div>
+
+            <!-- Quick Setting 2: Theme -->
+            <div class="setting-card">
+              <div class="setting-card-header">
+                <div style="font-size: 26px;">🌓</div>
+                <div class="setting-card-title">
+                  <h3 id="cardThemeTitle">Theme Mode</h3>
+                  <p id="cardThemeSubtitle">Visual display mode for counter lighting</p>
+                </div>
+              </div>
+              <div class="segmented-picker">
+                <button class="segmented-btn" onclick="setTheme('SYSTEM')">Auto</button>
+                <button class="segmented-btn" onclick="setTheme('LIGHT')">Light</button>
+                <button class="segmented-btn active" onclick="setTheme('DARK')">Dark</button>
+              </div>
+            </div>
+
+            <!-- Section: Business Setup -->
+            <div class="section-label" id="secBusinessSetup">Business Setup & Receipts</div>
+            <div class="nav-item-row" onclick="triggerToast('Opening Receipt & Invoice Layout')">
+              <div class="nav-item-left">
+                <div style="font-size: 24px;">🖨️</div>
+                <div class="nav-item-title">
+                  <h4 id="rowReceiptTitle">Receipt & Invoice Layout</h4>
+                  <p id="rowReceiptSubtitle">Store header, address, footer notice & QR codes</p>
+                </div>
+              </div>
+              <span class="badge-pill-state emerald" id="badgeConfigured">Configured</span>
+            </div>
+
+            <!-- Section: Business Rules -->
+            <div class="section-label" id="secBusinessRules">Business Rules & Security</div>
+            <div class="nav-item-row" onclick="triggerToast('Opening Staff Management & Permissions')">
+              <div class="nav-item-left">
+                <div style="font-size: 24px;">🛡️</div>
+                <div class="nav-item-title">
+                  <h4 id="rowStaffTitle">Staff PINs & 33 Permissions</h4>
+                  <p id="rowStaffSubtitle">Role-based access for Managers and Cashiers</p>
+                </div>
+              </div>
+              <span class="badge-pill-state indigo">Owner Only</span>
+            </div>
+
+            <div class="nav-item-row" style="cursor: default;">
+              <div class="nav-item-left">
+                <div style="font-size: 24px;">📦</div>
+                <div class="nav-item-title">
+                  <h4 id="rowNegativeStockTitle">Allow Negative Inventory</h4>
+                  <p id="rowNegativeStockSubtitle">Permit sales when stock drops below 0</p>
+                </div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" onchange="triggerToast(this.checked ? 'Negative Stock Permitted' : 'Negative Stock Blocked')">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Section: Printers -->
+            <div class="section-label" id="secPrinters">Printers & Hardware</div>
+            <div class="nav-item-row" onclick="triggerToast('Opening Printer Selector')">
+              <div class="nav-item-left">
+                <div style="font-size: 24px;">⚡</div>
+                <div class="nav-item-title">
+                  <h4 id="rowPrinterTitle">Receipt Thermal Printer</h4>
+                  <p id="rowPrinterSubtitle">Bluetooth direct ESC/POS or USB cable</p>
+                </div>
+              </div>
+              <span class="badge-pill-state emerald">RP-80BT Connected</span>
+            </div>
+
+            <!-- Section: Cloud -->
+            <div class="section-label" id="secCloud">Cloud & Data Management</div>
+            <div class="nav-item-row" onclick="triggerToast('Opening Google Drive Backup')">
+              <div class="nav-item-left">
+                <div style="font-size: 24px;">☁️</div>
+                <div class="nav-item-title">
+                  <h4 id="rowCloudTitle">Google Drive Cloud Backup</h4>
+                  <p id="rowCloudSubtitle">Encrypted daily auto-sync of sales database</p>
+                </div>
+              </div>
+              <span class="badge-pill-state emerald">Connected</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size: 12px; color: var(--text-dim); text-align: center;">
+        💡 Click on search bar or category chips to interact with real-time settings filtering.
+      </p>
+    </div>
+
+    <!-- Right Column: Architectural Specification & Proposed Feature Design -->
+    <div class="spec-column">
+
+      <!-- Spec Card 1: Executive Overview -->
+      <div class="spec-card">
+        <h2>✨ Proposed Global Settings Search Architecture</h2>
+        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+          With over 7,300 lines of code and dozens of specialized settings across hardware, receipt formatting, tax, staff permissions, and cloud backups, store owners frequently waste time navigating multi-tiered menus. This proposed <strong>Global Settings Search</strong> introduces instant, friction-free discovery with bilingual intelligence.
+        </p>
+
+        <div class="feature-list">
+          <!-- Feature 1 -->
+          <div class="feature-item">
+            <div class="feature-icon-badge">⚡</div>
+            <div class="feature-content">
+              <h3>Real-Time Bilingual Fuzzy Index (Bangla & English)</h3>
+              <p>Supports searching in standard English (e.g. <em>"printer"</em>, <em>"drive"</em>, <em>"pin"</em>, <em>"margin"</em>) and authentic Bengali retail terms (e.g. <em>"প্রিন্টার"</em>, <em>"রশিদ"</em>, <em>"ক্লাউড"</em>, <em>"বকেয়া"</em>, <em>"কাগজ"</em>, <em>"ট্যাক্স"</em>) with instant phonetic matching.</p>
+            </div>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="feature-item">
+            <div class="feature-icon-badge">🎯</div>
+            <div class="feature-content">
+              <h3>Deep-Linking & Direct Action Execution</h3>
+              <p>Tapping any search result directly navigates and opens the exact target subpage or dialog (e.g., jump straight to <code>SettingsPage.SHOP_LOGO</code> or <code>showReceiptPrinterPicker</code>) without manual back-and-forth navigation.</p>
+            </div>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="feature-item">
+            <div class="feature-icon-badge">🏷️</div>
+            <div class="feature-content">
+              <h3>Domain Category Filter Chips</h3>
+              <p>Interactive horizontal chip bar (<code>All</code>, <code>Printers</code>, <code>Receipt</code>, <code>Security</code>, <code>Backup</code>, <code>General</code>) allows store owners to narrow down results with a single tap.</p>
+            </div>
+          </div>
+
+          <!-- Feature 4 -->
+          <div class="feature-item">
+            <div class="feature-icon-badge">🎨</div>
+            <div class="feature-content">
+              <h3>3D Iconography & Material 3 Visual Polish</h3>
+              <p>Each search result renders an eye-catching 3D squircle badge with colored ambient drop shadows, clear breadcrumbs (<code>Settings > Hardware > Thermal Printer</code>), and live state pills (<code>Connected</code>, <code>80mm</code>, <code>ON</code>).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spec Card 2: Interactive Try It Out Prompts -->
+      <div class="spec-card">
+        <h2>🧪 Interactive Search Query Test Bed</h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+          Click any of these pre-configured search queries to see live bilingual filtering in the phone mockup:
+        </p>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn-toggle" onclick="runPresetSearch('printer')">🔍 "printer"</button>
+          <button class="btn-toggle" onclick="runPresetSearch('রশিদ')">🔍 "রশিদ" (Receipt)</button>
+          <button class="btn-toggle" onclick="runPresetSearch('cloud')">🔍 "cloud"</button>
+          <button class="btn-toggle" onclick="runPresetSearch('বকেয়া')">🔍 "বকেয়া" (Dues)</button>
+          <button class="btn-toggle" onclick="runPresetSearch('pin')">🔍 "pin"</button>
+          <button class="btn-toggle" onclick="runPresetSearch('কাগজ')">🔍 "কাগজ" (Paper)</button>
+          <button class="btn-toggle" onclick="runPresetSearch('negative')">🔍 "negative"</button>
+          <button class="btn-toggle" onclick="runPresetSearch('ট্যাক্স')">🔍 "ট্যাক্স" (Tax)</button>
+          <button class="btn-toggle" onclick="clearSearch()">🔄 Reset Search</button>
+        </div>
+      </div>
+
+      <!-- Spec Card 3: Proposed Kotlin Implementation Blueprint -->
+      <div class="spec-card">
+        <h2>💻 Jetpack Compose Implementation Blueprint</h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">
+          Proposed data structure and composable hierarchy for <a href="#" style="color: var(--primary-light); text-decoration: none; font-weight: 700;">SettingsScreen.kt</a>:
+        </p>
+
+        <div class="code-snippet">
+<span class="code-keyword">data class</span> SettingsSearchItem(
+    <span class="code-keyword">val</span> id: String,
+    <span class="code-keyword">val</span> titleRes: Int,
+    <span class="code-keyword">val</span> subtitleRes: Int,
+    <span class="code-keyword">val</span> category: SettingsCategory,
+    <span class="code-keyword">val</span> keywordsEn: List&lt;String&gt;,
+    <span class="code-keyword">val</span> keywordsBn: List&lt;String&gt;,
+    <span class="code-keyword">val</span> icon: @Composable (Dp) -&gt; Unit,
+    <span class="code-keyword">val</span> currentStatus: (InvoiceSettingsData) -&gt; String,
+    <span class="code-keyword">val</span> targetAction: () -&gt; Unit
+)
+
+<span class="code-comment">// In SettingsScreen.kt header:</span>
+<span class="code-keyword">var</span> searchQuery <span class="code-keyword">by</span> rememberSaveable { mutableStateOf(<span class="code-string">""</span>) }
+<span class="code-keyword">var</span> selectedCategory <span class="code-keyword">by</span> rememberSaveable { mutableStateOf(SettingsCategory.ALL) }
+
+SettingsGlobalSearchBar(
+    query = searchQuery,
+    onQueryChange = { searchQuery = it },
+    selectedCategory = selectedCategory,
+    onCategorySelected = { selectedCategory = it },
+    onClear = { searchQuery = <span class="code-string">""</span> }
+)
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Interactive Toast -->
+<div class="toast-popup" id="toastPopup">
+  <span id="toastIcon">✨</span>
+  <span id="toastMessage">Action triggered!</span>
+</div>
+
+<script>
+  // Comprehensive Settings Database for Search
+  const SETTINGS_DATABASE = [
+    {
+      id: 'receipt_printer',
+      category: 'printers',
+      icon: '🖨️',
+      color: '#3B82F6',
+      breadcrumbEn: 'Printers & Hardware > Thermal Printer',
+      breadcrumbBn: 'প্রিন্টার ও হার্ডওয়্যার > রশিদ প্রিন্টার',
+      titleEn: 'Receipt Thermal Printer',
+      titleBn: 'রশিদ থার্মাল প্রিন্টার সংযোগ',
+      descEn: 'Configure Bluetooth direct ESC/POS printer or USB cable connection for printing receipts.',
+      descBn: 'ব্লুটুথ অথবা ইউএসবি ক্যাবলের মাধ্যমে সরাসরি থার্মাল ক্যাশ স্লিপ ও চালান প্রিন্ট করুন।',
+      keywords: ['printer', 'receipt', 'bluetooth', 'usb', 'esc', 'pos', 'thermal', 'print', 'রশিদ', 'প্রিন্টার', 'ব্লুটুথ', 'থার্মাল', 'ছাপানো'],
+      statusEn: 'RP-80BT Connected',
+      statusBn: 'RP-80BT সংযুক্ত',
+      statusType: 'emerald'
+    },
+    {
+      id: 'paper_width',
+      category: 'printers',
+      icon: '📜',
+      color: '#0D9488',
+      breadcrumbEn: 'Printers & Hardware > Paper Roll Width',
+      breadcrumbBn: 'প্রিন্টার ও হার্ডওয়্যার > কাগজের রোল সাইজ',
+      titleEn: 'Paper Roll Width (58mm / 80mm)',
+      titleBn: 'কাগজের সাইজ নির্বাচন (৫৮ মিমি / ৮০ মিমি)',
+      descEn: 'Select standard 80mm wide counter roll or 58mm compact portable thermal paper roll.',
+      descBn: 'দোকানের কাউন্টার ৮০ মিমি অথবা পোর্টেবল ৫৮ মিমি থার্মাল পেপার রোল নির্বাচন করুন।',
+      keywords: ['paper', 'roll', 'width', '58mm', '80mm', 'size', 'receipt', 'কাগজ', 'রোল', 'সাইজ', '৫৮মিমি', '৮০মিমি'],
+      statusEn: '80mm Selected',
+      statusBn: '৮০ মিমি সক্রিয়',
+      statusType: 'indigo'
+    },
+    {
+      id: 'auto_cut',
+      category: 'printers',
+      icon: '✂️',
+      color: '#0284C7',
+      breadcrumbEn: 'Printers & Hardware > Auto Cutter Pulse',
+      breadcrumbBn: 'প্রিন্টার ও হার্ডওয়্যার > অটো পেপার কাটার',
+      titleEn: 'Auto Receipt Paper Cutter Test',
+      titleBn: 'স্বয়ংক্রিয় পেপার কাটার কমান্ড টেস্ট',
+      descEn: 'Send ESC/POS full or partial paper cut commands after each customer transaction invoice.',
+      descBn: 'বিক্রয় শেষে স্বয়ংক্রিয়ভাবে রশিদ কাটার জন্য ইএসসি/পস কাটার কমান্ড পরীক্ষা করুন।',
+      keywords: ['cut', 'cutter', 'auto cut', 'paper cut', 'কাটার', 'রশিদ কাটা', 'অটো কাট'],
+      statusEn: 'Available',
+      statusBn: 'প্রস্তুত',
+      statusType: 'indigo'
+    },
+    {
+      id: 'barcode_label_printer',
+      category: 'printers',
+      icon: '🏷️',
+      color: '#8B5CF6',
+      breadcrumbEn: 'Printers & Hardware > Label Printer',
+      breadcrumbBn: 'প্রিন্টার ও হার্ডওয়্যার > লেবেল ও বারকোড প্রিন্টার',
+      titleEn: 'Product Barcode & Price Label Printer',
+      titleBn: 'বারকোড ও মূল্য স্টিকার প্রিন্টার',
+      descEn: 'Set up TSPL/CPCL label printer for sticky price tags (30x20mm, 40x30mm, 50x30mm, 50x40mm).',
+      descBn: 'পণ্যের গায়ে স্টিকার লাগানোর জন্য বারকোড লেবেল প্রিন্টার ও সাইজ কনফিগার করুন।',
+      keywords: ['label', 'barcode', 'sticker', 'price tag', 'tspl', 'বারকোড', 'লেবেল', 'স্টিকার', 'ট্যাগ'],
+      statusEn: '40x30mm',
+      statusBn: '৪০x৩০ মিমি',
+      statusType: 'indigo'
+    },
+    {
+      id: 'receipt_layout',
+      category: 'receipt',
+      icon: '🧾',
+      color: '#4F46E5',
+      breadcrumbEn: 'Business Setup > Receipt Layout',
+      breadcrumbBn: 'ব্যবসা সেটআপ > রশিদ লেআউট ও ডিজাইন',
+      titleEn: 'Receipt & Invoice Layout Customization',
+      titleBn: 'ক্যাশ মেমো ও রশিদ লেআউট কাস্টমাইজেশন',
+      descEn: 'Customize store name, contact details, greetings, vat registration, and custom notes.',
+      descBn: 'রশিদে দোকানের নাম, ঠিকানা, মোবাইল নম্বর, ভ্যাট রেজি: ও ধন্যবাদ বার্তা সাজান।',
+      keywords: ['receipt', 'layout', 'invoice', 'memo', 'header', 'footer', 'note', 'রশিদ', 'চালান', 'মেমো', 'নাম', 'ঠিকানা'],
+      statusEn: 'Configured',
+      statusBn: 'কনফিগার করা',
+      statusType: 'emerald'
+    },
+    {
+      id: 'shop_logo',
+      category: 'receipt',
+      icon: '🖼️',
+      color: '#6366F1',
+      breadcrumbEn: 'Business Setup > Shop Logo',
+      breadcrumbBn: 'ব্যবসা সেটআপ > দোকানের লোগো',
+      titleEn: 'Shop Logo Upload & Thermal Dithering',
+      titleBn: 'দোকানের লোগো আপলোড ও থার্মাল প্রিন্ট',
+      descEn: 'Upload company logo with high-contrast monochrome dithering for crisp receipt headers.',
+      descBn: 'রশিদের উপরে দোকানের চমৎকার মনোগ্রাম বা লোগো প্রিন্ট করার জন্য ইমেজ আপলোড করুন।',
+      keywords: ['logo', 'brand', 'monogram', 'image', 'photo', 'লোগো', 'ছবি', 'ব্র্যান্ড', 'মনোগ্রাম'],
+      statusEn: 'Logo Active',
+      statusBn: 'লোগো চালু',
+      statusType: 'emerald'
+    },
+    {
+      id: 'qr_payment_links',
+      category: 'receipt',
+      icon: '📲',
+      color: '#EC4899',
+      breadcrumbEn: 'Business Setup > QR Payment Links',
+      breadcrumbBn: 'ব্যবসা সেটআপ > পেমেন্ট কিউআর কোড',
+      titleEn: 'bKash, Nagad, Rocket & Bank QR Codes',
+      titleBn: 'বিকাশ, নগদ, রকেট ও ব্যাংক কিউআর কোড',
+      descEn: 'Embed dynamic merchant or personal payment QR codes on every printed customer invoice.',
+      descBn: 'কাস্টমার যাতে স্ক্যান করে টাকা দিতে পারে সেজন্য চালানে বিকাশ ও নগদ কিউআর প্রিন্ট করুন।',
+      keywords: ['qr', 'bkash', 'nagad', 'rocket', 'bank', 'payment', 'বিকাশ', 'নগদ', 'রকেট', 'কিউআর', 'পেমেন্ট'],
+      statusEn: '2 Codes Active',
+      statusBn: '২টি কিউআর চালু',
+      statusType: 'emerald'
+    },
+    {
+      id: 'due_receipt_voucher',
+      category: 'receipt',
+      icon: '💰',
+      color: '#F59E0B',
+      breadcrumbEn: 'Business Setup > Due Receipt Voucher',
+      breadcrumbBn: 'ব্যবসা সেটআপ > বকেয়া আদায় রশিদ',
+      titleEn: 'Due Repayment Money Receipt Slip',
+      titleBn: 'বকেয়া টাকা জমা ও আদায় রশিদ (Money Receipt)',
+      descEn: 'Configure layout for money collection vouchers when customers pay off ledger dues.',
+      descBn: 'গ্রাহক বকেয়া পরিশোধ করলে মানি রিসিট স্লিপ প্রিন্টের লেআউট ও টার্মস নির্ধারণ করুন।',
+      keywords: ['due', 'money receipt', 'voucher', 'khata', 'repayment', 'বকেয়া', 'মানি রিসিট', 'ভাউচার', 'খাতা', 'আদায়'],
+      statusEn: 'Ready',
+      statusBn: 'প্রস্তুত',
+      statusType: 'indigo'
+    },
+    {
+      id: 'staff_pins_rbac',
+      category: 'security',
+      icon: '🛡️',
+      color: '#8B5CF6',
+      breadcrumbEn: 'Security & Access > Staff RBAC',
+      breadcrumbBn: 'নিরাপত্তা ও অনুমতি > স্টাফ একাউন্ট ও অনুমতি',
+      titleEn: 'Staff Management & 33 Permission Matrix',
+      titleBn: 'স্টাফ একাউন্ট, ৪ ডিজিট পিন ও অনুমতি নিয়ন্ত্রণ',
+      descEn: 'Manage Manager and Cashier accounts, supervisor PIN elevation, and discount limits.',
+      descBn: 'ম্যানেজার ও ক্যাশিয়ারের আলাদা পিন, পারমিশন ও সর্বোচ্চ ছাড়ের সীমা নির্ধারণ করুন।',
+      keywords: ['staff', 'pin', 'manager', 'cashier', 'permission', 'rbac', 'security', 'স্টাফ', 'পিন', 'ক্যাশিয়ার', 'অনুমতি', 'নিরাপত্তা'],
+      statusEn: 'Owner Only',
+      statusBn: 'শুধুমাত্র মালিক',
+      statusType: 'rose'
+    },
+    {
+      id: 'idle_auto_lock',
+      category: 'security',
+      icon: '🔒',
+      color: '#4F46E5',
+      breadcrumbEn: 'Security & Access > Idle Lock',
+      breadcrumbBn: 'নিরাপত্তা ও অনুমতি > অটো লক টাইমআউট',
+      titleEn: 'Terminal Idle Auto-Lock Timeout',
+      titleBn: 'নিষ্ক্রিয় থাকলে অটো টার্মিনাল লক (Auto-Lock)',
+      descEn: 'Automatically lock terminal after 5, 15, 30, or 60 minutes of register inactivity.',
+      descBn: 'কাউন্টার ছেড়ে গেলে নির্দিষ্ট সময় পর স্বয়ংক্রিয়ভাবে পিন লক স্ক্রিন দেখান।',
+      keywords: ['lock', 'idle', 'timeout', 'auto lock', 'screen lock', 'লক', 'অটো লক', 'স্ক্রিন লক', 'নিষ্ক্রিয়'],
+      statusEn: '15 Minutes',
+      statusBn: '১৫ মিনিট',
+      statusType: 'indigo'
+    },
+    {
+      id: 'negative_inventory',
+      category: 'security',
+      icon: '📦',
+      color: '#F43F5E',
+      breadcrumbEn: 'Business Rules > Stock Control',
+      breadcrumbBn: 'ব্যবসা নিয়ম > স্টক নিয়ন্ত্রণ',
+      titleEn: 'Allow Negative Inventory Selling',
+      titleBn: 'স্টক শূন্য হলেও বিক্রি করার অনুমতি (Negative Stock)',
+      descEn: 'Permit items to be sold even when registered quantity reaches zero or negative.',
+      descBn: 'দোকানে স্টক ০ হয়ে গেলেও ক্যাশিয়ার যাতে পণ্য বিক্রি চালিয়ে যেতে পারে।',
+      keywords: ['negative', 'stock', 'inventory', 'overage', 'zero stock', 'স্টক', 'নেগেটিভ', 'ইনভেন্টরি', 'ঘাটতি'],
+      statusEn: 'Disabled (Safe)',
+      statusBn: 'বন্ধ (নিরাপদ)',
+      statusType: 'indigo'
+    },
+    {
+      id: 'tax_vat',
+      category: 'security',
+      icon: '🧮',
+      color: '#10B981',
+      breadcrumbEn: 'Business Rules > Tax & VAT',
+      breadcrumbBn: 'ব্যবসা নিয়ম > ট্যাক্স ও ভ্যাট',
+      titleEn: 'VAT / Tax Calculation & Invoicing',
+      titleBn: 'ভ্যাট ও ট্যাক্স হিসাব পদ্ধতি',
+      descEn: 'Configure Inclusive vs Exclusive VAT percentages and tax identification numbers.',
+      descBn: 'ইনক্লুসিভ বা এক্সক্লুসিভ ভ্যাট এবং চালানে ভ্যাট নিবন্ধন নম্বর সংযুক্ত করুন।',
+      keywords: ['tax', 'vat', 'mushak', 'percentage', 'ট্যাক্স', 'ভ্যাট', 'মূসক', 'শতাংশ'],
+      statusEn: 'VAT Active (7.5%)',
+      statusBn: 'ভ্যাট চালু (৭.৫%)',
+      statusType: 'emerald'
+    },
+    {
+      id: 'google_drive_backup',
+      category: 'cloud',
+      icon: '☁️',
+      color: '#0284C7',
+      breadcrumbEn: 'Cloud & Data > Google Drive',
+      breadcrumbBn: 'ক্লাউড ও ডাটা > গুগল ড্রাইভ ব্যাকআপ',
+      titleEn: 'Google Drive Automatic Cloud Backup',
+      titleBn: 'গুগল ড্রাইভ অটোমেটিক ক্লাউড ব্যাকআপ',
+      descEn: 'Sync encrypted sales, customer ledgers, and inventory backups directly to personal Drive.',
+      descBn: 'মোবাইল নষ্ট হলেও ডাটা নিরাপদ রাখতে সরাসরি ব্যক্তিগত গুগল ড্রাইভে ব্যাকআপ রাখুন।',
+      keywords: ['cloud', 'drive', 'google', 'backup', 'sync', 'গুগল', 'ড্রাইভ', 'ক্লাউড', 'ব্যাকআপ', 'সিঙ্ক'],
+      statusEn: 'Connected',
+      statusBn: 'সংযুক্ত',
+      statusType: 'emerald'
+    },
+    {
+      id: 'local_database_backup',
+      category: 'cloud',
+      icon: '💾',
+      color: '#0D9488',
+      breadcrumbEn: 'Cloud & Data > Local Backup',
+      breadcrumbBn: 'ক্লাউড ও ডাটা > ডিভাইস ফাইল ব্যাকআপ',
+      titleEn: 'Local Storage Database Backup & Restore',
+      titleBn: 'ডিভাইস মেমোরিতে ডাটা ব্যাকআপ ও রিস্টোর',
+      descEn: 'Create instant encrypted SQLite database snapshots on device downloads folder.',
+      descBn: 'মেমোরি কার্ড বা ফোন স্টোরেজে তাৎক্ষণিক ব্যাকআপ ফাইল (.db) সংরক্ষণ ও উদ্ধার করুন।',
+      keywords: ['local', 'backup', 'restore', 'export', 'sqlite', 'লোকাল', 'মেমোরি', 'ব্যাকআপ', 'রিস্টোর'],
+      statusEn: 'Last: Today',
+      statusBn: 'সর্বশেষ: আজ',
+      statusType: 'indigo'
+    },
+    {
+      id: 'due_ledger_repair',
+      category: 'cloud',
+      icon: '🔧',
+      color: '#F59E0B',
+      breadcrumbEn: 'Cloud & Data > Khata Audit',
+      breadcrumbBn: 'ক্লাউড ও ডাটা > বকেয়া খাতা অডিট ও মেরামত',
+      titleEn: 'Customer Due Ledger Deduplication & Audit',
+      titleBn: 'ডুপ্লিকেট বকেয়া খাতা অনুসন্ধান ও সমাধান',
+      descEn: 'Detect and auto-merge duplicate customer profiles with identical mobile numbers.',
+      descBn: 'একই মোবাইল নম্বরের একাধিক খাতা থাকলে তা একত্র করে সঠিক ব্যালেন্স সমন্বয় করুন।',
+      keywords: ['repair', 'audit', 'due', 'khata', 'merge', 'duplicate', 'বকেয়া', 'খাতা', 'মেরামত', 'অডিট'],
+      statusEn: 'Clean (0 Issues)',
+      statusBn: 'সঠিক (কোন সমস্যা নেই)',
+      statusType: 'emerald'
+    },
+    {
+      id: 'app_language_pref',
+      category: 'preferences',
+      icon: '🌐',
+      color: '#4F46E5',
+      breadcrumbEn: 'Preferences > Language',
+      breadcrumbBn: 'পছন্দ > ভাষা',
+      titleEn: 'App Interface Language (English / বাংলা)',
+      titleBn: 'অ্যাপের ভাষা পরিবর্তন (English / বাংলা)',
+      descEn: 'Instant language switcher between English and authentic Bengali retail terminology.',
+      descBn: 'পুরো অ্যাপের ভাষা ও বোতাম তাৎক্ষণিক বাংলা অথবা ইংরেজিতে পরিবর্তন করুন।',
+      keywords: ['language', 'bangla', 'english', 'locale', 'ভাষা', 'বাংলা', 'ইংরেজি'],
+      statusEn: 'English',
+      statusBn: 'বাংলা',
+      statusType: 'indigo'
+    },
+    {
+      id: 'theme_mode_pref',
+      category: 'preferences',
+      icon: '🌓',
+      color: '#8B5CF6',
+      breadcrumbEn: 'Preferences > Theme Mode',
+      breadcrumbBn: 'পছন্দ > থিম মোড',
+      titleEn: 'Theme Mode (System / Light / Dark)',
+      titleBn: 'থিম মোড (সিস্টেম / লাইট / ডার্ক)',
+      descEn: 'Switch between sleek AMOLED dark mode or crisp daylight counter theme.',
+      descBn: 'দোকানের আলোর সাথে মানানসই ডার্ক বা লাইট মোড নির্বাচন করুন।',
+      keywords: ['theme', 'dark', 'light', 'mode', 'color', 'থিম', 'ডার্ক', 'লাইট', 'কালার'],
+      statusEn: 'Dark',
+      statusBn: 'ডার্ক',
+      statusType: 'indigo'
+    },
+    {
+      id: 'ui_layout_mode_pref',
+      category: 'preferences',
+      icon: '📱',
+      color: '#0284C7',
+      breadcrumbEn: 'Preferences > Layout Mode',
+      breadcrumbBn: 'পছন্দ > লেআউট মোড',
+      titleEn: 'UI Layout Mode (Auto / Tablet / Phone)',
+      titleBn: 'স্ক্রিন লেআউট মোড (অটো / ট্যাবলেট / ফোন)',
+      descEn: 'Force dual-pane tablet layout with navigation rail or compact mobile bottom bar.',
+      descBn: 'ট্যাবলেটের স্প্লিট স্ক্রিন বা মোবাইলের সিঙ্গেল কলাম লেআউট নির্ধারণ করুন।',
+      keywords: ['layout', 'tablet', 'phone', 'split', 'screen', 'লেআউট', 'ট্যাবলেট', 'ফোন', 'স্ক্রিন'],
+      statusEn: 'Auto',
+      statusBn: 'অটো',
+      statusType: 'indigo'
+    },
+    {
+      id: 'default_cost_margin_pref',
+      category: 'preferences',
+      icon: '📊',
+      color: '#10B981',
+      breadcrumbEn: 'Preferences > Profit Margin',
+      breadcrumbBn: 'পছন্দ > লাভের মার্জিন',
+      titleEn: 'Default Cost & Profit Margin Estimation',
+      titleBn: 'ডিফল্ট ক্রয়মূল্য ও আনুমানিক লাভ মার্জিন',
+      descEn: 'Set fallback cost percentage (50%, 70%, 85%, 100%) for custom unlisted items.',
+      descBn: 'তালিকাভুক্ত না থাকা পণ্যের ক্ষেত্রে কত শতাংশ ক্রয়মূল্য ও লাভ ধরা হবে তা ঠিক করুন।',
+      keywords: ['cost', 'margin', 'profit', 'percentage', 'লাভ', 'মার্জিন', 'ক্রয়মূল্য', 'শতাংশ'],
+      statusEn: '100% Cost (0% Profit)',
+      statusBn: '১০০% ক্রয়মূল্য',
+      statusType: 'indigo'
+    },
+    {
+      id: 'cash_drawer_kick',
+      category: 'printers',
+      icon: '💵',
+      color: '#F59E0B',
+      breadcrumbEn: 'Hardware > Cash Drawer',
+      breadcrumbBn: 'হার্ডওয়্যার > ক্যাশ ড্রয়ার',
+      titleEn: 'Cash Drawer Electronic Kick Pulse',
+      titleBn: 'স্বয়ংক্রিয় ক্যাশ ড্রয়ার খোলা (Cash Drawer Kick)',
+      descEn: 'Trigger RJ11/RJ12 drawer kick pulse automatically on invoice completion or manually test pin.',
+      descBn: 'নগদ বিক্রি সম্পন্ন হলে স্বয়ংক্রিয়ভাবে ক্যাশ ড্রয়ার খোলার সংকেত পাঠান।',
+      keywords: ['drawer', 'cash drawer', 'kick', 'pulse', 'rj11', 'ক্যাশ ড্রয়ার', 'ড্রয়ার', 'টাকার বাক্স'],
+      statusEn: 'Enabled',
+      statusBn: 'চালু',
+      statusType: 'emerald'
+    },
+    {
+      id: 'factory_reset_danger',
+      category: 'security',
+      icon: '⚠️',
+      color: '#EF4444',
+      breadcrumbEn: 'Danger Zone > Factory Reset',
+      breadcrumbBn: 'সতর্কতা > ডাটাবেজ রিসেট',
+      titleEn: 'Factory Data Reset (Wipe Database)',
+      titleBn: 'ডাটাবেজ সম্পূর্ণ মুছে ফেলা (Factory Reset)',
+      descEn: 'Owner-only double authenticated wipe of all transactions, customers, and items.',
+      descBn: 'শুধুমাত্র মালিকের পিন দিয়ে সকল বিক্রি, হিসাব ও পণ্য মুছে নতুন করে শুরু করুন।',
+      keywords: ['reset', 'wipe', 'delete', 'danger', 'factory', 'রিসেট', 'মুছে ফেলা', 'বিপদ'],
+      statusEn: 'Protected',
+      statusBn: 'সুরক্ষিত',
+      statusType: 'rose'
+    }
+  ];
+
+  // State
+  let currentLanguage = 'en';
+  let currentTheme = 'dark';
+  let isTablet = false;
+  let activeCategory = 'all';
+  let currentQuery = '';
+
+  // DOM Elements
+  const searchInput = document.getElementById('settingsSearchInput');
+  const clearBtn = document.getElementById('clearSearchBtn');
+  const searchResultsSection = document.getElementById('searchResultsSection');
+  const normalSettingsFlow = document.getElementById('normalSettingsFlow');
+  const resultsContainer = document.getElementById('resultsCardsContainer');
+  const matchesBadge = document.getElementById('matchesBadge');
+  const resultsCountText = document.getElementById('resultsCountText');
+  const toast = document.getElementById('toastPopup');
+  const toastMsg = document.getElementById('toastMessage');
+
+  function onSearchQueryChanged(query) {
+    currentQuery = query.trim().toLowerCase();
+    
+    if (currentQuery.length > 0) {
+      clearBtn.classList.add('visible');
+      normalSettingsFlow.classList.add('hidden');
+      searchResultsSection.classList.add('active');
+      renderSearchResults();
+    } else {
+      clearBtn.classList.remove('visible');
+      if (activeCategory === 'all') {
+        normalSettingsFlow.classList.remove('hidden');
+        searchResultsSection.classList.remove('active');
+      } else {
+        renderSearchResults();
+      }
+    }
+  }
+
+  function clearSearch() {
+    searchInput.value = '';
+    currentQuery = '';
+    clearBtn.classList.remove('visible');
+    activeCategory = 'all';
+    updateCategoryChipsUI();
+    normalSettingsFlow.classList.remove('hidden');
+    searchResultsSection.classList.remove('active');
+    searchInput.focus();
+  }
+
+  function selectChip(category) {
+    activeCategory = category;
+    updateCategoryChipsUI();
+
+    if (category !== 'all' || currentQuery.length > 0) {
+      normalSettingsFlow.classList.add('hidden');
+      searchResultsSection.classList.add('active');
+      renderSearchResults();
+    } else {
+      normalSettingsFlow.classList.remove('hidden');
+      searchResultsSection.classList.remove('active');
+    }
+  }
+
+  function updateCategoryChipsUI() {
+    const chips = document.querySelectorAll('.chip-item');
+    chips.forEach(c => c.classList.remove('active'));
+    
+    const chipMap = {
+      'all': 0,
+      'printers': 1,
+      'receipt': 2,
+      'security': 3,
+      'cloud': 4,
+      'preferences': 5
+    };
+    if (chips[chipMap[activeCategory]]) {
+      chips[chipMap[activeCategory]].classList.add('active');
+    }
+  }
+
+  function renderSearchResults() {
+    const isBn = currentLanguage === 'bn';
+    
+    const filtered = SETTINGS_DATABASE.filter(item => {
+      // Category Match
+      const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
+      if (!matchesCategory) return false;
+
+      // Query Match (if empty query, show all in that category)
+      if (!currentQuery) return true;
+
+      // Match in Title, Desc, Breadcrumb, or Keywords
+      const title = (isBn ? item.titleBn : item.titleEn).toLowerCase();
+      const desc = (isBn ? item.descBn : item.descEn).toLowerCase();
+      const breadcrumb = (isBn ? item.breadcrumbBn : item.breadcrumbEn).toLowerCase();
+      const keywordsMatch = item.keywords.some(k => k.toLowerCase().includes(currentQuery));
+
+      return title.includes(currentQuery) || desc.includes(currentQuery) || breadcrumb.includes(currentQuery) || keywordsMatch;
+    });
+
+    matchesBadge.innerText = `${filtered.length} ${isBn ? 'টি ফলাফল' : 'matches'}`;
+    resultsCountText.innerText = currentQuery 
+      ? (isBn ? `"${currentQuery}" এর ফলাফল:` : `Results for "${currentQuery}":`)
+      : (isBn ? 'ক্যাটাগরি অনুযায়ী সেটিংস তালিকা:' : 'Filtered settings category:');
+
+    if (filtered.length === 0) {
+      resultsContainer.innerHTML = `
+        <div class="empty-search-state">
+          <div class="empty-icon">🔍</div>
+          <div class="empty-title">${isBn ? 'কোন সেটিংস পাওয়া যায়নি' : 'No matching settings found'}</div>
+          <div class="empty-subtitle">
+            ${isBn ? 'বানান সঠিক আছে কিনা দেখুন অথবা নিচের জনপ্রিয় সার্চ চেষ্টা করুন:' : 'Check for typos or try one of these popular settings search terms:'}
+          </div>
+          <div class="suggested-tags">
+            <span class="suggest-tag" onclick="runPresetSearch('printer')">${isBn ? '🖨️ প্রিন্টার' : '🖨️ Printer'}</span>
+            <span class="suggest-tag" onclick="runPresetSearch('backup')">${isBn ? '☁️ ব্যাকআপ' : '☁️ Backup'}</span>
+            <span class="suggest-tag" onclick="runPresetSearch('pin')">${isBn ? '🔒 স্টাফ পিন' : '🔒 Staff PIN'}</span>
+            <span class="suggest-tag" onclick="runPresetSearch('vat')">${isBn ? '🧮 ভ্যাট' : '🧮 VAT & Tax'}</span>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    resultsContainer.innerHTML = filtered.map(item => {
+      const title = isBn ? item.titleBn : item.titleEn;
+      const desc = isBn ? item.descBn : item.descEn;
+      const breadcrumb = isBn ? item.breadcrumbBn : item.breadcrumbEn;
+      const status = isBn ? item.statusBn : item.statusEn;
+
+      // Highlight matching query
+      const highlightedTitle = highlightMatch(title, currentQuery);
+      const highlightedDesc = highlightMatch(desc, currentQuery);
+
+      return `
+        <div class="result-card" onclick="handleCardClick('${item.id}', '${title.replace(/'/g, "\\'")}')">
+          <div class="result-icon-squircle" style="background: ${item.color}22; border: 1px solid ${item.color}44;">
+            ${item.icon}
+          </div>
+          <div class="result-content">
+            <div class="result-breadcrumb">
+              <span>●</span> ${breadcrumb}
+            </div>
+            <div class="result-title">${highlightedTitle}</div>
+            <div class="result-desc">${highlightedDesc}</div>
+          </div>
+          <div class="result-action">
+            <span class="badge-pill-state ${item.statusType}">${status}</span>
+            <span class="nav-arrow-btn">➔</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function highlightMatch(text, query) {
+    if (!query) return text;
+    const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+  }
+
+  function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function runPresetSearch(term) {
+    searchInput.value = term;
+    searchInput.focus();
+    onSearchQueryChanged(term);
+  }
+
+  function handleCardClick(id, title) {
+    triggerToast(currentLanguage === 'bn' ? `খোলা হচ্ছে: ${title}` : `Opening: ${title}`);
+  }
+
+  function triggerToast(msg) {
+    toastMsg.innerText = msg;
+    toast.classList.add('visible');
+    setTimeout(() => {
+      toast.classList.remove('visible');
+    }, 2400);
+  }
+
+  // Language Switcher
+  function toggleLanguage() {
+    setAppLanguage(currentLanguage === 'en' ? 'bn' : 'en');
+  }
+
+  function setAppLanguage(lang) {
+    currentLanguage = lang;
+    document.documentElement.setAttribute('data-lang', lang);
+    document.getElementById('langLabel').innerText = lang === 'en' ? 'Language: English' : 'ভাষা: বাংলা';
+    
+    // Update segmented buttons
+    document.getElementById('segLangEn').classList.toggle('active', lang === 'en');
+    document.getElementById('segLangBn').classList.toggle('active', lang === 'bn');
+
+    // Update screen headers
+    if (lang === 'bn') {
+      document.getElementById('screenTitle').innerText = 'সেটিংস';
+      document.getElementById('screenSubtitle').innerText = 'হার্ডওয়্যার, ক্যাশ মেমো লেআউট ও ব্যবসা নিয়মাবলী';
+      document.getElementById('settingsSearchInput').placeholder = 'প্রিন্টার, ব্যাকআপ, পিন, রিসিট খুঁজুন...';
+      document.getElementById('chipAll').innerText = 'সব';
+      document.getElementById('chipPrinters').innerText = 'প্রিন্টার';
+      document.getElementById('chipReceipt').innerText = 'রশিদ';
+      document.getElementById('chipSecurity').innerText = 'নিরাপত্তা';
+      document.getElementById('chipCloud').innerText = 'ব্যাকআপ';
+      document.getElementById('chipPrefs').innerText = 'সাধারণ';
+      document.getElementById('cardLangTitle').innerText = 'অ্যাপের ভাষা';
+      document.getElementById('cardLangSubtitle').innerText = 'ইংরেজি অথবা প্রাকৃতিক বাংলা বাণিজ্যিক পরিভাষা নির্বাচন করুন';
+      document.getElementById('cardThemeTitle').innerText = 'থিম মোড';
+      document.getElementById('cardThemeSubtitle').innerText = 'কাউন্টারের আলোর সুবিধার্থে ডার্ক বা লাইট মোড';
+      document.getElementById('secBusinessSetup').innerText = 'ব্যবসা তথ্য ও মেমো';
+      document.getElementById('rowReceiptTitle').innerText = 'রশিদ ও ক্যাশ মেমো লেআউট';
+      document.getElementById('rowReceiptSubtitle').innerText = 'দোকানের পরিচিতি, লোগো, ফুটার ও কিউআর লিংক';
+      document.getElementById('secBusinessRules').innerText = 'ব্যবসা নিয়ম ও নিরাপত্তা';
+      document.getElementById('rowStaffTitle').innerText = 'স্টাফ পিন ও ৩৩টি পারমিশন';
+      document.getElementById('rowStaffSubtitle').innerText = 'ম্যানেজার ও ক্যাশিয়ারের ভূমিকা ভিত্তিক নিয়ন্ত্রণ';
+      document.getElementById('rowNegativeStockTitle').innerText = 'নেগেটিভ স্টক বিক্রি অনুমতি';
+      document.getElementById('rowNegativeStockSubtitle').innerText = 'পণ্য ঘাটতি থাকলেও বিক্রি চালু রাখার অনুমতি';
+      document.getElementById('secPrinters').innerText = 'প্রিন্টার ও হার্ডওয়্যার';
+      document.getElementById('rowPrinterTitle').innerText = 'রশিদ থার্মাল প্রিন্টার';
+      document.getElementById('rowPrinterSubtitle').innerText = 'ব্লুটুথ অথবা ইউএসবি তারযুক্ত সংযোগ';
+      document.getElementById('secCloud').innerText = 'ক্লাউড ও ডাটা ব্যাকআপ';
+      document.getElementById('rowCloudTitle').innerText = 'গুগল ড্রাইভ ক্লাউড ব্যাকআপ';
+      document.getElementById('rowCloudSubtitle').innerText = 'দৈনিক স্বয়ংক্রিয় এনক্রিপ্টেড ডাটাবেজ ব্যাকআপ';
+      document.getElementById('badgeConfigured').innerText = 'সক্রিয়';
+    } else {
+      document.getElementById('screenTitle').innerText = 'Settings';
+      document.getElementById('screenSubtitle').innerText = 'Hardware, receipt format & business preferences';
+      document.getElementById('settingsSearchInput').placeholder = 'Search settings, printers, backup, PINs...';
+      document.getElementById('chipAll').innerText = 'All';
+      document.getElementById('chipPrinters').innerText = 'Printers';
+      document.getElementById('chipReceipt').innerText = 'Receipt';
+      document.getElementById('chipSecurity').innerText = 'Security';
+      document.getElementById('chipCloud').innerText = 'Backup';
+      document.getElementById('chipPrefs').innerText = 'General';
+      document.getElementById('cardLangTitle').innerText = 'App Interface Language';
+      document.getElementById('cardLangSubtitle').innerText = 'Choose primary UI and receipt typography language';
+      document.getElementById('cardThemeTitle').innerText = 'Theme Mode';
+      document.getElementById('cardThemeSubtitle').innerText = 'Visual display mode for counter lighting';
+      document.getElementById('secBusinessSetup').innerText = 'Business Setup & Receipts';
+      document.getElementById('rowReceiptTitle').innerText = 'Receipt & Invoice Layout';
+      document.getElementById('rowReceiptSubtitle').innerText = 'Store header, address, footer notice & QR codes';
+      document.getElementById('secBusinessRules').innerText = 'Business Rules & Security';
+      document.getElementById('rowStaffTitle').innerText = 'Staff PINs & 33 Permissions';
+      document.getElementById('rowStaffSubtitle').innerText = 'Role-based access for Managers and Cashiers';
+      document.getElementById('rowNegativeStockTitle').innerText = 'Allow Negative Inventory';
+      document.getElementById('rowNegativeStockSubtitle').innerText = 'Permit sales when stock drops below 0';
+      document.getElementById('secPrinters').innerText = 'Printers & Hardware';
+      document.getElementById('rowPrinterTitle').innerText = 'Receipt Thermal Printer';
+      document.getElementById('rowPrinterSubtitle').innerText = 'Bluetooth direct ESC/POS or USB cable';
+      document.getElementById('secCloud').innerText = 'Cloud & Data Management';
+      document.getElementById('rowCloudTitle').innerText = 'Google Drive Cloud Backup';
+      document.getElementById('rowCloudSubtitle').innerText = 'Encrypted daily auto-sync of sales database';
+      document.getElementById('badgeConfigured').innerText = 'Configured';
+    }
+
+    if (currentQuery.length > 0 || activeCategory !== 'all') {
+      renderSearchResults();
+    }
+  }
+
+  // Theme Switcher
+  function toggleTheme() {
+    setTheme(currentTheme === 'dark' ? 'LIGHT' : 'DARK');
+  }
+
+  function setTheme(theme) {
+    currentTheme = theme.toLowerCase();
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    document.getElementById('themeIcon').innerText = currentTheme === 'dark' ? '🌙' : '☀️';
+    document.getElementById('themeLabel').innerText = currentTheme === 'dark' ? 'Dark Mode' : 'Light Mode';
+  }
+
+  // Device Mode Switcher (Phone vs Tablet)
+  function toggleDeviceMode() {
+    isTablet = !isTablet;
+    const shell = document.getElementById('deviceShell');
+    const label = document.getElementById('deviceLabel');
+    const icon = document.getElementById('deviceIcon');
+
+    if (isTablet) {
+      shell.classList.add('tablet-mode');
+      label.innerText = 'View: Tablet (760dp)';
+      icon.innerText = '💻';
+      triggerToast('Switched to Tablet (760dp) Container Mode');
+    } else {
+      shell.classList.remove('tablet-mode');
+      label.innerText = 'View: Phone (380dp)';
+      icon.innerText = '📱';
+      triggerToast('Switched to Phone (380dp) Container Mode');
+    }
+  }
+</script>
+
+</body>
+</html>

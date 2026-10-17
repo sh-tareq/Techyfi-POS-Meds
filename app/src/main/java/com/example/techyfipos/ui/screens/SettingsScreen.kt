@@ -54,6 +54,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -322,6 +323,743 @@ private fun buildTestLabelPdf(
     pdfDocument.close()
     return pdfFile
 }
+private enum class SettingsSearchCategory(
+    val titleRes: Int,
+    val iconEmoji: String
+) {
+    ALL(R.string.settings_chip_all, "✨"),
+    PRINTERS(R.string.settings_chip_printers, "🖨️"),
+    RECEIPT(R.string.settings_chip_receipt, "🧾"),
+    SECURITY(R.string.settings_chip_security, "🔒"),
+    CLOUD(R.string.settings_chip_cloud, "☁️"),
+    PREFERENCES(R.string.settings_chip_preferences, "⚙️")
+}
+
+private data class SettingsSearchItem(
+    val id: String,
+    val titleRes: Int,
+    val subtitleRes: Int,
+    val category: SettingsSearchCategory,
+    val keywords: List<String>,
+    val breadcrumb: String,
+    val icon: @Composable (Dp) -> Unit,
+    val status: String? = null,
+    val statusColor: Color = Color(0xFF10B981),
+    val onClick: () -> Unit
+)
+
+@Composable
+private fun SettingsGlobalSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    selectedCategory: SettingsSearchCategory,
+    onCategorySelected: (SettingsSearchCategory) -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Search Input Row
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(
+                    1.dp,
+                    if (query.isNotBlank()) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                ),
+                shadowElevation = if (query.isNotBlank()) 2.dp else 0.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = if (query.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (query.isEmpty()) {
+                            Text(
+                                text = stringResource(R.string.settings_search_placeholder),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.outline,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = query,
+                            onValueChange = onQueryChange,
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
+                        )
+                    }
+                    if (query.isNotEmpty()) {
+                        IconButton(
+                            onClick = onClear,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = stringResource(R.string.settings_search_clear_cd),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Category Chips Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SettingsSearchCategory.entries.forEach { category ->
+                    val isSelected = selectedCategory == category
+                    Surface(
+                        onClick = { onCategorySelected(category) },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(
+                            1.dp,
+                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                        ),
+                        shadowElevation = if (isSelected) 2.dp else 0.dp
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(category.iconEmoji, fontSize = 11.5.sp)
+                            Text(
+                                text = stringResource(category.titleRes),
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSearchResultsDeck(
+    items: List<SettingsSearchItem>,
+    query: String,
+    onClearQuery: () -> Unit,
+    onPresetClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Result summary header
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = if (query.isNotBlank()) {
+                    stringResource(R.string.settings_search_matches_count, items.size)
+                } else {
+                    stringResource(R.string.settings_search_filter_by_category)
+                },
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+            ) {
+                Text(
+                    text = "${items.size}",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                )
+            }
+        }
+
+        if (items.isEmpty()) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("🔍", fontSize = 38.sp)
+                    Text(
+                        text = stringResource(R.string.settings_search_no_results_title),
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_search_no_results_desc),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.outline,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.settings_search_suggested_title),
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("Printer", "রশিদ", "Backup", "PIN", "কাগজ", "VAT").forEach { tag ->
+                            Surface(
+                                onClick = { onPresetClick(tag) },
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                            ) {
+                                Text(
+                                    text = tag,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            items.forEach { item ->
+                SettingsSearchResultCard(item = item)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSearchResultCard(
+    item: SettingsSearchItem,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = item.onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
+        shadowElevation = 1.dp,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center
+            ) {
+                item.icon(28.dp)
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+                    Text(
+                        text = item.breadcrumb,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 0.3.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = stringResource(item.titleRes),
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(1.dp))
+                Text(
+                    text = stringResource(item.subtitleRes),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 14.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (item.status != null) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = item.statusColor.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, item.statusColor.copy(alpha = 0.3f))
+                    ) {
+                        Text(
+                            text = item.status,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = item.statusColor,
+                            maxLines = 1,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = stringResource(R.string.settings_search_open_action),
+                    tint = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+private fun buildSettingsSearchItems(
+    currentSettings: InvoiceSettingsData,
+    paperRollWidthMm: Int,
+    driveConnected: Boolean,
+    taxEnabled: Boolean,
+    allowNegativeInventory: Boolean,
+    cashDrawerKickEnabled: Boolean,
+    currentThemeMode: String,
+    currentLayoutMode: String,
+    defaultCostPercentage: Double,
+    isOwner: Boolean,
+    onReceiptClick: () -> Unit,
+    onTaxClick: () -> Unit,
+    onManageUsersClick: () -> Unit,
+    onBackupClick: () -> Unit,
+    onTransferClick: () -> Unit,
+    onAboutClick: () -> Unit,
+    onResetClick: () -> Unit,
+    onRepairDuesClick: () -> Unit,
+    onOpenShopIdentity: () -> Unit,
+    onOpenShopLogo: () -> Unit,
+    onOpenQrCodeLinks: () -> Unit,
+    onOpenDueReceipt: () -> Unit,
+    onOpenReceiptLayout: () -> Unit,
+    onOpenReceiptPrinterPicker: () -> Unit,
+    onOpenLabelPrinterPicker: () -> Unit,
+    onToggleNegativeStock: () -> Unit,
+    onToggleCashDrawer: () -> Unit
+): List<SettingsSearchItem> {
+    val items = mutableListOf<SettingsSearchItem>()
+
+    // 1. Receipt Thermal Printer
+    items.add(
+        SettingsSearchItem(
+            id = "receipt_printer",
+            titleRes = R.string.settings_receipt_printer_title,
+            subtitleRes = R.string.settings_receipt_printer_subtitle,
+            category = SettingsSearchCategory.PRINTERS,
+            keywords = listOf("printer", "receipt", "bluetooth", "usb", "esc", "pos", "thermal", "print", "roll", "58mm", "80mm", "প্রিন্টার", "রশিদ", "ব্লুটুথ", "থার্মাল", "ছাপানো", "কাউন্টার", "রোল"),
+            breadcrumb = "PRINTERS > THERMAL PRINTER",
+            icon = { size -> Realistic3DPrinterIcon(size = size) },
+            status = if (currentSettings.resolvedReceiptPrinterTarget() !is PrinterTarget.None) "Connected" else "Setup",
+            statusColor = if (currentSettings.resolvedReceiptPrinterTarget() !is PrinterTarget.None) Color(0xFF10B981) else Color(0xFF6B7280),
+            onClick = onOpenReceiptPrinterPicker
+        )
+    )
+
+    // 2. Paper Roll Width (58mm / 80mm)
+    items.add(
+        SettingsSearchItem(
+            id = "paper_width",
+            titleRes = R.string.settings_paper_roll_width_title,
+            subtitleRes = R.string.settings_paper_roll_width_desc,
+            category = SettingsSearchCategory.PRINTERS,
+            keywords = listOf("paper", "roll", "width", "58mm", "80mm", "size", "receipt", "কাগজ", "রোল", "সাইজ", "৫৮মিমি", "৮০মিমি"),
+            breadcrumb = "PRINTERS > PAPER ROLL",
+            icon = { size -> Realistic3DReceiptPaperIcon(size = size) },
+            status = "${paperRollWidthMm}mm",
+            statusColor = Color(0xFF4F46E5),
+            onClick = onOpenReceiptLayout
+        )
+    )
+
+    // 3. Product Label & Barcode Printer
+    items.add(
+        SettingsSearchItem(
+            id = "label_printer",
+            titleRes = R.string.settings_label_printer_title,
+            subtitleRes = R.string.settings_label_printer_subtitle,
+            category = SettingsSearchCategory.PRINTERS,
+            keywords = listOf("label", "barcode", "sticker", "price tag", "tspl", "print", "বারকোড", "লেবেল", "স্টিকার", "ট্যাগ"),
+            breadcrumb = "PRINTERS > LABEL PRINTER",
+            icon = { size -> Realistic3DPrinterIcon(size = size) },
+            status = if (currentSettings.resolvedLabelPrinterTarget() !is PrinterTarget.None) "Configured" else "Setup",
+            statusColor = Color(0xFF8B5CF6),
+            onClick = onOpenLabelPrinterPicker
+        )
+    )
+
+    // 4. Cash Drawer Kick Pulse
+    items.add(
+        SettingsSearchItem(
+            id = "cash_drawer",
+            titleRes = R.string.settings_cash_drawer_kick_title,
+            subtitleRes = R.string.settings_cash_drawer_kick_subtitle,
+            category = SettingsSearchCategory.PRINTERS,
+            keywords = listOf("drawer", "cash drawer", "kick", "pulse", "rj11", "ক্যাশ ড্রয়ার", "ড্রয়ার", "টাকার বাক্স"),
+            breadcrumb = "HARDWARE > CASH DRAWER",
+            icon = { size -> Realistic3DCashDrawerKickIcon(size = size) },
+            status = if (cashDrawerKickEnabled) "Kick ON" else "Kick OFF",
+            statusColor = if (cashDrawerKickEnabled) Color(0xFF10B981) else Color(0xFF6B7280),
+            onClick = onToggleCashDrawer
+        )
+    )
+
+    // 5. Receipt & Invoice Layout
+    items.add(
+        SettingsSearchItem(
+            id = "receipt_layout",
+            titleRes = R.string.settings_row_receipt_layout_title,
+            subtitleRes = R.string.settings_row_receipt_layout_subtitle,
+            category = SettingsSearchCategory.RECEIPT,
+            keywords = listOf("receipt", "layout", "invoice", "memo", "header", "footer", "note", "format", "রশিদ", "চালান", "মেমো", "নাম", "ঠিকানা", "দোকান"),
+            breadcrumb = "RECEIPT > LAYOUT",
+            icon = { size -> Realistic3DPrinterIcon(size = size) },
+            status = if (currentSettings.storeName.isNotBlank()) "Configured" else "Setup",
+            statusColor = Color(0xFF10B981),
+            onClick = onReceiptClick
+        )
+    )
+
+    // 6. Shop Identity & Contacts
+    items.add(
+        SettingsSearchItem(
+            id = "shop_identity",
+            titleRes = R.string.settings_row_shop_identity_title,
+            subtitleRes = R.string.settings_row_shop_identity_subtitle,
+            category = SettingsSearchCategory.RECEIPT,
+            keywords = listOf("identity", "shop", "name", "address", "phone", "email", "outlet", "নাম", "ঠিকানা", "মোবাইল", "পরিচিতি", "দোকান"),
+            breadcrumb = "RECEIPT > SHOP IDENTITY",
+            icon = { size -> Realistic3DStoreIcon(size = size) },
+            status = currentSettings.storeName.ifBlank { "Not Set" },
+            statusColor = Color(0xFF4F46E5),
+            onClick = onOpenShopIdentity
+        )
+    )
+
+    // 7. Shop Logo Upload
+    items.add(
+        SettingsSearchItem(
+            id = "shop_logo",
+            titleRes = R.string.settings_row_shop_logo_title,
+            subtitleRes = R.string.settings_row_shop_logo_subtitle,
+            category = SettingsSearchCategory.RECEIPT,
+            keywords = listOf("logo", "brand", "monogram", "image", "photo", "dither", "thermal", "লোগো", "ছবি", "ব্র্যান্ড", "মনোগ্রাম"),
+            breadcrumb = "RECEIPT > SHOP LOGO",
+            icon = { size -> Realistic3DStoreIcon(size = size) },
+            status = if (currentSettings.showLogo) "Active" else "Off",
+            statusColor = Color(0xFF10B981),
+            onClick = onOpenShopLogo
+        )
+    )
+
+    // 8. QR Code Payment Links (bKash, Nagad, etc.)
+    items.add(
+        SettingsSearchItem(
+            id = "qr_payment",
+            titleRes = R.string.settings_row_qr_links_title,
+            subtitleRes = R.string.settings_row_qr_links_subtitle,
+            category = SettingsSearchCategory.RECEIPT,
+            keywords = listOf("qr", "bkash", "nagad", "rocket", "bank", "payment", "বিকাশ", "নগদ", "রকেট", "কিউআর", "পেমেন্ট"),
+            breadcrumb = "RECEIPT > PAYMENT QR",
+            icon = { size -> Realistic3DQrCodeIcon(size = size) },
+            status = if (currentSettings.showQr) "Active" else "Off",
+            statusColor = if (currentSettings.showQr) Color(0xFF10B981) else Color(0xFF6B7280),
+            onClick = onOpenQrCodeLinks
+        )
+    )
+
+    // 9. Due Money Receipt Voucher
+    items.add(
+        SettingsSearchItem(
+            id = "due_receipt",
+            titleRes = R.string.settings_row_due_receipt_title,
+            subtitleRes = R.string.settings_row_due_receipt_subtitle,
+            category = SettingsSearchCategory.RECEIPT,
+            keywords = listOf("due", "money receipt", "voucher", "khata", "repayment", "collection", "বকেয়া", "মানি রিসিট", "ভাউচার", "খাতা", "আদায়"),
+            breadcrumb = "RECEIPT > DUE VOUCHER",
+            icon = { size -> Realistic3DRepaymentSealIcon(size = size) },
+            status = "Ready",
+            statusColor = Color(0xFF4F46E5),
+            onClick = onOpenDueReceipt
+        )
+    )
+
+    // 10. Staff PINs & 33 Permissions (RBAC)
+    items.add(
+        SettingsSearchItem(
+            id = "staff_pins",
+            titleRes = R.string.settings_row_staff_pins_title,
+            subtitleRes = R.string.settings_row_staff_pins_subtitle,
+            category = SettingsSearchCategory.SECURITY,
+            keywords = listOf("staff", "pin", "manager", "cashier", "permission", "rbac", "security", "access", "স্টাফ", "পিন", "ক্যাশিয়ার", "অনুমতি", "নিরাপত্তা", "ম্যানেজার"),
+            breadcrumb = "SECURITY > STAFF & ACCESS",
+            icon = { size -> Realistic3DStaffShieldLockIcon(size = size) },
+            status = "Owner Only",
+            statusColor = Color(0xFF8B5CF6),
+            onClick = onManageUsersClick
+        )
+    )
+
+    // 11. Allow Negative Inventory
+    items.add(
+        SettingsSearchItem(
+            id = "negative_inventory",
+            titleRes = R.string.settings_allow_negative_inventory_title,
+            subtitleRes = R.string.settings_allow_negative_inventory_desc,
+            category = SettingsSearchCategory.SECURITY,
+            keywords = listOf("negative", "stock", "inventory", "overage", "zero stock", "স্টক", "নেগেটিভ", "ইনভেন্টরি", "ঘাটতি"),
+            breadcrumb = "BUSINESS RULES > STOCK OVERAGE",
+            icon = { size -> Realistic3DNegativeStockWarningIcon(size = size) },
+            status = if (allowNegativeInventory) "Permitted" else "Blocked (Safe)",
+            statusColor = if (allowNegativeInventory) Color(0xFFF59E0B) else Color(0xFF10B981),
+            onClick = onToggleNegativeStock
+        )
+    )
+
+    // 12. VAT / Tax Calculation
+    items.add(
+        SettingsSearchItem(
+            id = "tax_vat",
+            titleRes = R.string.settings_row_tax_title,
+            subtitleRes = R.string.settings_row_tax_subtitle,
+            category = SettingsSearchCategory.SECURITY,
+            keywords = listOf("tax", "vat", "mushak", "percentage", "invoice", "ট্যাক্স", "ভ্যাট", "মূসক", "শতাংশ"),
+            breadcrumb = "BUSINESS RULES > VAT & TAX",
+            icon = { size -> Realistic3DTaxCalculatorIcon(size = size) },
+            status = if (taxEnabled) "Active" else "Off",
+            statusColor = if (taxEnabled) Color(0xFF10B981) else Color(0xFF6B7280),
+            onClick = onTaxClick
+        )
+    )
+
+    // 13. Terminal Idle Auto-Lock
+    items.add(
+        SettingsSearchItem(
+            id = "idle_lock",
+            titleRes = R.string.settings_idle_lock_title,
+            subtitleRes = R.string.settings_idle_lock_subtitle,
+            category = SettingsSearchCategory.SECURITY,
+            keywords = listOf("lock", "idle", "timeout", "auto lock", "screen lock", "লক", "অটো লক", "স্ক্রিন লক", "নিষ্ক্রিয়"),
+            breadcrumb = "SECURITY > AUTO-LOCK",
+            icon = { size -> Realistic3DGearIcon(size = size) },
+            status = if (currentSettings.idleLockDurationMinutes == 0) "Never" else "${currentSettings.idleLockDurationMinutes}m",
+            statusColor = Color(0xFF4F46E5),
+            onClick = onTaxClick
+        )
+    )
+
+    // 14. Google Drive Cloud Backup
+    items.add(
+        SettingsSearchItem(
+            id = "google_drive",
+            titleRes = R.string.settings_row_backup_restore_title,
+            subtitleRes = R.string.settings_row_backup_restore_subtitle,
+            category = SettingsSearchCategory.CLOUD,
+            keywords = listOf("cloud", "drive", "google", "backup", "sync", "গুগল", "ড্রাইভ", "ক্লাউড", "ব্যাকআপ", "সিঙ্ক"),
+            breadcrumb = "DATA & CLOUD > GOOGLE DRIVE",
+            icon = { size -> Realistic3DCloudBackupIcon(size = size) },
+            status = if (driveConnected) "Connected" else "Local Ready",
+            statusColor = if (driveConnected) Color(0xFF10B981) else Color(0xFF2563EB),
+            onClick = onBackupClick
+        )
+    )
+
+    // 15. Excel / Data Transfer Export
+    items.add(
+        SettingsSearchItem(
+            id = "data_transfer",
+            titleRes = R.string.settings_row_import_export_title,
+            subtitleRes = R.string.settings_row_import_export_subtitle,
+            category = SettingsSearchCategory.CLOUD,
+            keywords = listOf("transfer", "export", "excel", "csv", "data", "স্থানান্তর", "এক্সপোর্ট", "এক্সেল"),
+            breadcrumb = "DATA & CLOUD > EXCEL EXPORT",
+            icon = { size -> Realistic3DSpreadsheetTransferIcon(size = size) },
+            status = "Excel/CSV",
+            statusColor = Color(0xFF059669),
+            onClick = onTransferClick
+        )
+    )
+
+    // 16. Due Khata Ledger Deduplication & Repair
+    items.add(
+        SettingsSearchItem(
+            id = "due_repair",
+            titleRes = R.string.settings_repair_dues_title,
+            subtitleRes = R.string.settings_repair_dues_subtitle,
+            category = SettingsSearchCategory.CLOUD,
+            keywords = listOf("repair", "audit", "due", "khata", "merge", "duplicate", "clean", "বকেয়া", "খাতা", "মেরামত", "অডিট"),
+            breadcrumb = "DATA & CLOUD > KHATA REPAIR",
+            icon = { size -> Realistic3DResetWarningIcon(size = size) },
+            status = "Audit",
+            statusColor = Color(0xFFF59E0B),
+            onClick = onRepairDuesClick
+        )
+    )
+
+    // 17. App Interface Language
+    items.add(
+        SettingsSearchItem(
+            id = "app_language",
+            titleRes = R.string.settings_app_language_title,
+            subtitleRes = R.string.settings_app_language_subtitle,
+            category = SettingsSearchCategory.PREFERENCES,
+            keywords = listOf("language", "bangla", "english", "locale", "text", "ভাষা", "বাংলা", "ইংরেজি"),
+            breadcrumb = "PREFERENCES > LANGUAGE",
+            icon = { size -> Realistic3DLangGlobeIcon(size = size) },
+            status = "English / বাংলা",
+            statusColor = Color(0xFF4F46E5),
+            onClick = { /* already in preferences */ }
+        )
+    )
+
+    // 18. Theme Mode (System / Light / Dark)
+    items.add(
+        SettingsSearchItem(
+            id = "theme_mode",
+            titleRes = R.string.settings_theme_mode_title,
+            subtitleRes = R.string.settings_theme_mode_subtitle,
+            category = SettingsSearchCategory.PREFERENCES,
+            keywords = listOf("theme", "dark", "light", "mode", "color", "system", "amoled", "থিম", "ডার্ক", "লাইট", "কালার"),
+            breadcrumb = "PREFERENCES > THEME",
+            icon = { size -> Realistic3DThemeEclipseIcon(size = size) },
+            status = currentThemeMode,
+            statusColor = Color(0xFF8B5CF6),
+            onClick = { /* already in preferences */ }
+        )
+    )
+
+    // 19. UI Layout Mode (Auto / Tablet / Phone)
+    items.add(
+        SettingsSearchItem(
+            id = "ui_layout",
+            titleRes = R.string.settings_ui_layout_title,
+            subtitleRes = R.string.settings_ui_layout_subtitle,
+            category = SettingsSearchCategory.PREFERENCES,
+            keywords = listOf("layout", "tablet", "phone", "split", "screen", "auto", "responsive", "লেআউট", "ট্যাবলেট", "ফোন", "স্ক্রিন"),
+            breadcrumb = "PREFERENCES > LAYOUT",
+            icon = { size -> Realistic3DDeviceLayoutIcon(size = size) },
+            status = currentLayoutMode,
+            statusColor = Color(0xFF4F46E5),
+            onClick = { /* already in preferences */ }
+        )
+    )
+
+    // 20. Default Cost Margin %
+    items.add(
+        SettingsSearchItem(
+            id = "default_cost",
+            titleRes = R.string.settings_default_cost_title,
+            subtitleRes = R.string.settings_default_cost_subtitle,
+            category = SettingsSearchCategory.PREFERENCES,
+            keywords = listOf("cost", "margin", "profit", "percentage", "estimation", "লাভ", "মার্জিন", "ক্রয়মূল্য", "শতাংশ"),
+            breadcrumb = "PREFERENCES > PROFIT MARGIN",
+            icon = { size -> Realistic3DGearIcon(size = size) },
+            status = "${defaultCostPercentage.toInt()}% Cost",
+            statusColor = Color(0xFF10B981),
+            onClick = { /* already in preferences */ }
+        )
+    )
+
+    // 21. About & System Diagnostics
+    items.add(
+        SettingsSearchItem(
+            id = "about",
+            titleRes = R.string.settings_row_about_title,
+            subtitleRes = R.string.settings_row_about_subtitle,
+            category = SettingsSearchCategory.PREFERENCES,
+            keywords = listOf("about", "version", "system", "diagnostics", "build", "সংস্করণ", "বিবরণ", "তথ্য"),
+            breadcrumb = "SYSTEM > ABOUT",
+            icon = { size -> Realistic3DInfoBadgeIcon(size = size) },
+            status = "v${com.example.techyfipos.BuildConfig.VERSION_NAME}",
+            statusColor = Color(0xFF7C3AED),
+            onClick = onAboutClick
+        )
+    )
+
+    // 22. Danger Zone Factory Reset
+    if (isOwner) {
+        items.add(
+            SettingsSearchItem(
+                id = "factory_reset",
+                titleRes = R.string.settings_factory_reset_title,
+                subtitleRes = R.string.settings_factory_reset_subtitle,
+                category = SettingsSearchCategory.SECURITY,
+                keywords = listOf("reset", "wipe", "delete", "danger", "factory", "database", "রিসেট", "মুছে ফেলা", "বিপদ", "ডাটাবেজ"),
+                breadcrumb = "DANGER ZONE > FACTORY RESET",
+                icon = { size -> Realistic3DResetWarningIcon(size = size) },
+                status = "Protected",
+                statusColor = Color(0xFFEF4444),
+                onClick = onResetClick
+            )
+        )
+    }
+
+    return items
+}
 
 @Composable
 private fun OptimizedSettingsHome(
@@ -356,6 +1094,11 @@ private fun OptimizedSettingsHome(
     onAboutClick: () -> Unit,
     onResetClick: () -> Unit,
     onRepairDuesClick: () -> Unit = {},
+    onOpenShopIdentity: () -> Unit = {},
+    onOpenShopLogo: () -> Unit = {},
+    onOpenQrCodeLinks: () -> Unit = {},
+    onOpenDueReceipt: () -> Unit = {},
+    onOpenReceiptLayout: () -> Unit = {},
     isOwner: Boolean = false,
     ownerPinResetAudit: com.example.techyfipos.data.OwnerPinResetAudit? = null
 ) {
@@ -366,7 +1109,84 @@ private fun OptimizedSettingsHome(
     var showLabelPrinterPicker by remember { mutableStateOf(false) }
     var printerConflictDialogMessage by remember { mutableStateOf<String?>(null) }
 
-    // 💎 Settings Master Executive Card
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedCategory by rememberSaveable { mutableStateOf(SettingsSearchCategory.ALL) }
+
+    // 🔍 Global Settings Search Bar & Category Filter Chips
+    SettingsGlobalSearchBar(
+        query = searchQuery,
+        onQueryChange = { searchQuery = it },
+        selectedCategory = selectedCategory,
+        onCategorySelected = { selectedCategory = it },
+        onClear = {
+            searchQuery = ""
+            selectedCategory = SettingsSearchCategory.ALL
+        }
+    )
+
+    val isSearching = searchQuery.isNotBlank() || selectedCategory != SettingsSearchCategory.ALL
+
+    if (isSearching) {
+        val searchItems = remember(
+            currentSettings, paperRollWidthMm, driveConnected, allowNegativeInventory,
+            taxEnabled, cashDrawerKickEnabled, currentThemeMode, currentLayoutMode,
+            defaultCostPercentage, isOwner
+        ) {
+            buildSettingsSearchItems(
+                currentSettings = currentSettings,
+                paperRollWidthMm = paperRollWidthMm,
+                driveConnected = driveConnected,
+                taxEnabled = taxEnabled,
+                allowNegativeInventory = allowNegativeInventory,
+                cashDrawerKickEnabled = cashDrawerKickEnabled,
+                currentThemeMode = currentThemeMode,
+                currentLayoutMode = currentLayoutMode,
+                defaultCostPercentage = defaultCostPercentage,
+                isOwner = isOwner,
+                onReceiptClick = onReceiptClick,
+                onTaxClick = onTaxClick,
+                onManageUsersClick = onManageUsersClick,
+                onBackupClick = onBackupClick,
+                onTransferClick = onTransferClick,
+                onAboutClick = onAboutClick,
+                onResetClick = onResetClick,
+                onRepairDuesClick = onRepairDuesClick,
+                onOpenShopIdentity = onOpenShopIdentity,
+                onOpenShopLogo = onOpenShopLogo,
+                onOpenQrCodeLinks = onOpenQrCodeLinks,
+                onOpenDueReceipt = onOpenDueReceipt,
+                onOpenReceiptLayout = onOpenReceiptLayout,
+                onOpenReceiptPrinterPicker = { showReceiptPrinterPicker = true },
+                onOpenLabelPrinterPicker = { showLabelPrinterPicker = true },
+                onToggleNegativeStock = { onAllowNegativeInventoryChanged(!allowNegativeInventory) },
+                onToggleCashDrawer = { onCashDrawerKickChanged(!cashDrawerKickEnabled) }
+            )
+        }
+
+        val filteredItems = remember(searchQuery, selectedCategory, searchItems) {
+            val q = searchQuery.trim().lowercase(Locale.getDefault())
+            searchItems.filter { item ->
+                val matchesCategory = selectedCategory == SettingsSearchCategory.ALL || item.category == selectedCategory
+                if (!matchesCategory) return@filter false
+                if (q.isEmpty()) return@filter true
+                item.keywords.any { it.contains(q, ignoreCase = true) } ||
+                    context.getString(item.titleRes).contains(q, ignoreCase = true) ||
+                    context.getString(item.subtitleRes).contains(q, ignoreCase = true) ||
+                    item.breadcrumb.contains(q, ignoreCase = true)
+            }
+        }
+
+        SettingsSearchResultsDeck(
+            items = filteredItems,
+            query = searchQuery,
+            onClearQuery = {
+                searchQuery = ""
+                selectedCategory = SettingsSearchCategory.ALL
+            },
+            onPresetClick = { searchQuery = it }
+        )
+    } else {
+        // 💎 Settings Master Executive Card
     SettingsMasterCard(
         storeName = storeName,
         address = address,
@@ -1900,123 +2720,6 @@ private fun OptimizedSettingsHome(
         }
     }
 
-    if (showPrinterPicker) {
-        val hasDedicatedDrawerTarget = currentSettings.cashDrawerPrinterAddress.isNotBlank() || currentSettings.cashDrawerUsbDeviceKey.isNotBlank()
-        CombinedPrinterPickerDialog(
-            currentTarget = if (hasDedicatedDrawerTarget) currentSettings.resolvedCashDrawerPrinterTarget() else PrinterTarget.None,
-            disabledPrinterTarget = currentSettings.resolvedLabelPrinterTarget(),
-            showSameAsReceiptOption = true,
-            receiptPrinterTarget = currentSettings.resolvedReceiptPrinterTarget(),
-            onSelected = { target ->
-                val updated = when (target) {
-                    is PrinterTarget.Usb -> currentSettings.copy(
-                        cashDrawerPrinterConnection = "USB",
-                        cashDrawerUsbDeviceKey = target.deviceKey,
-                        cashDrawerPrinterAddress = ""
-                    )
-                    is PrinterTarget.Bluetooth -> currentSettings.copy(
-                        cashDrawerPrinterConnection = "BLUETOOTH",
-                        cashDrawerPrinterAddress = target.address,
-                        cashDrawerUsbDeviceKey = ""
-                    )
-                    is PrinterTarget.None -> currentSettings.copy(
-                        cashDrawerPrinterConnection = "BLUETOOTH",
-                        cashDrawerPrinterAddress = "",
-                        cashDrawerUsbDeviceKey = ""
-                    )
-                }
-                // onUpdateSettings already persists every drawer field; do not also write the
-                // selection into the legacy Bluetooth address field (it would hold a USB key).
-                onUpdateSettings(updated)
-                showPrinterPicker = false
-            },
-            onDismiss = { showPrinterPicker = false }
-        )
-    }
-
-    if (showReceiptPrinterPicker) {
-        CombinedPrinterPickerDialog(
-            currentTarget = currentSettings.resolvedReceiptPrinterTarget(),
-            disabledPrinterTarget = currentSettings.resolvedLabelPrinterTarget(),
-            onSelected = { target ->
-                if (isSamePrinterTarget(target, currentSettings.resolvedLabelPrinterTarget())) {
-                    printerConflictDialogMessage = context.getString(R.string.settings_receipt_picker_same_as_label_dialog)
-                } else {
-                    val updated = when (target) {
-                        is PrinterTarget.Usb -> currentSettings.copy(
-                            receiptPrinterConnection = "USB",
-                            receiptUsbDeviceKey = target.deviceKey,
-                            directBluetoothPrinterAddress = ""
-                        )
-                        is PrinterTarget.Bluetooth -> currentSettings.copy(
-                            receiptPrinterConnection = "BLUETOOTH",
-                            directBluetoothPrinterAddress = target.address,
-                            receiptUsbDeviceKey = ""
-                        )
-                        is PrinterTarget.None -> currentSettings.copy(
-                            receiptPrinterConnection = "BLUETOOTH",
-                            directBluetoothPrinterAddress = "",
-                            receiptUsbDeviceKey = ""
-                        )
-                    }
-                    onUpdateSettings(updated)
-                }
-                showReceiptPrinterPicker = false
-            },
-            onDismiss = { showReceiptPrinterPicker = false }
-        )
-    }
-
-    if (showLabelPrinterPicker) {
-        CombinedPrinterPickerDialog(
-            currentTarget = currentSettings.resolvedLabelPrinterTarget(),
-            disabledPrinterTarget = currentSettings.resolvedReceiptPrinterTarget(),
-            onSelected = { target ->
-                if (isSamePrinterTarget(target, currentSettings.resolvedReceiptPrinterTarget())) {
-                    printerConflictDialogMessage = context.getString(R.string.settings_label_picker_same_as_receipt_dialog)
-                } else {
-                    val updated = when (target) {
-                        is PrinterTarget.Usb -> currentSettings.copy(
-                            labelPrinterConnection = "USB",
-                            labelUsbDeviceKey = target.deviceKey,
-                            labelPrinterAddress = ""
-                        )
-                        is PrinterTarget.Bluetooth -> currentSettings.copy(
-                            labelPrinterConnection = "BLUETOOTH",
-                            labelPrinterAddress = target.address,
-                            labelUsbDeviceKey = ""
-                        )
-                        is PrinterTarget.None -> currentSettings.copy(
-                            labelPrinterConnection = "BLUETOOTH",
-                            labelPrinterAddress = "",
-                            labelUsbDeviceKey = ""
-                        )
-                    }
-                    onUpdateSettings(updated)
-                }
-                showLabelPrinterPicker = false
-            },
-            onDismiss = { showLabelPrinterPicker = false }
-        )
-    }
-
-    printerConflictDialogMessage?.let { message ->
-        AlertDialog(
-            onDismissRequest = { printerConflictDialogMessage = null },
-            title = {
-                Text(
-                    text = stringResource(R.string.settings_printer_conflict_title),
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = { Text(message) },
-            confirmButton = {
-                TextButton(onClick = { printerConflictDialogMessage = null }) {
-                    Text(stringResource(R.string.ok), fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -2170,6 +2873,125 @@ private fun OptimizedSettingsHome(
             }
             Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.error)
         }
+    }
+    } // Closes else (standard settings flow)
+
+    if (showPrinterPicker) {
+        val hasDedicatedDrawerTarget = currentSettings.cashDrawerPrinterAddress.isNotBlank() || currentSettings.cashDrawerUsbDeviceKey.isNotBlank()
+        CombinedPrinterPickerDialog(
+            currentTarget = if (hasDedicatedDrawerTarget) currentSettings.resolvedCashDrawerPrinterTarget() else PrinterTarget.None,
+            disabledPrinterTarget = currentSettings.resolvedLabelPrinterTarget(),
+            showSameAsReceiptOption = true,
+            receiptPrinterTarget = currentSettings.resolvedReceiptPrinterTarget(),
+            onSelected = { target ->
+                val updated = when (target) {
+                    is PrinterTarget.Usb -> currentSettings.copy(
+                        cashDrawerPrinterConnection = "USB",
+                        cashDrawerUsbDeviceKey = target.deviceKey,
+                        cashDrawerPrinterAddress = ""
+                    )
+                    is PrinterTarget.Bluetooth -> currentSettings.copy(
+                        cashDrawerPrinterConnection = "BLUETOOTH",
+                        cashDrawerPrinterAddress = target.address,
+                        cashDrawerUsbDeviceKey = ""
+                    )
+                    is PrinterTarget.None -> currentSettings.copy(
+                        cashDrawerPrinterConnection = "BLUETOOTH",
+                        cashDrawerPrinterAddress = "",
+                        cashDrawerUsbDeviceKey = ""
+                    )
+                }
+                // onUpdateSettings already persists every drawer field; do not also write the
+                // selection into the legacy Bluetooth address field (it would hold a USB key).
+                onUpdateSettings(updated)
+                showPrinterPicker = false
+            },
+            onDismiss = { showPrinterPicker = false }
+        )
+    }
+
+    if (showReceiptPrinterPicker) {
+        CombinedPrinterPickerDialog(
+            currentTarget = currentSettings.resolvedReceiptPrinterTarget(),
+            disabledPrinterTarget = currentSettings.resolvedLabelPrinterTarget(),
+            onSelected = { target ->
+                if (isSamePrinterTarget(target, currentSettings.resolvedLabelPrinterTarget())) {
+                    printerConflictDialogMessage = context.getString(R.string.settings_receipt_picker_same_as_label_dialog)
+                } else {
+                    val updated = when (target) {
+                        is PrinterTarget.Usb -> currentSettings.copy(
+                            receiptPrinterConnection = "USB",
+                            receiptUsbDeviceKey = target.deviceKey,
+                            directBluetoothPrinterAddress = ""
+                        )
+                        is PrinterTarget.Bluetooth -> currentSettings.copy(
+                            receiptPrinterConnection = "BLUETOOTH",
+                            directBluetoothPrinterAddress = target.address,
+                            receiptUsbDeviceKey = ""
+                        )
+                        is PrinterTarget.None -> currentSettings.copy(
+                            receiptPrinterConnection = "BLUETOOTH",
+                            directBluetoothPrinterAddress = "",
+                            receiptUsbDeviceKey = ""
+                        )
+                    }
+                    onUpdateSettings(updated)
+                }
+                showReceiptPrinterPicker = false
+            },
+            onDismiss = { showReceiptPrinterPicker = false }
+        )
+    }
+
+    if (showLabelPrinterPicker) {
+        CombinedPrinterPickerDialog(
+            currentTarget = currentSettings.resolvedLabelPrinterTarget(),
+            disabledPrinterTarget = currentSettings.resolvedReceiptPrinterTarget(),
+            onSelected = { target ->
+                if (isSamePrinterTarget(target, currentSettings.resolvedReceiptPrinterTarget())) {
+                    printerConflictDialogMessage = context.getString(R.string.settings_label_picker_same_as_receipt_dialog)
+                } else {
+                    val updated = when (target) {
+                        is PrinterTarget.Usb -> currentSettings.copy(
+                            labelPrinterConnection = "USB",
+                            labelUsbDeviceKey = target.deviceKey,
+                            labelPrinterAddress = ""
+                        )
+                        is PrinterTarget.Bluetooth -> currentSettings.copy(
+                            labelPrinterConnection = "BLUETOOTH",
+                            labelPrinterAddress = target.address,
+                            labelUsbDeviceKey = ""
+                        )
+                        is PrinterTarget.None -> currentSettings.copy(
+                            labelPrinterConnection = "BLUETOOTH",
+                            labelPrinterAddress = "",
+                            labelUsbDeviceKey = ""
+                        )
+                    }
+                    onUpdateSettings(updated)
+                }
+                showLabelPrinterPicker = false
+            },
+            onDismiss = { showLabelPrinterPicker = false }
+        )
+    }
+
+    printerConflictDialogMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { printerConflictDialogMessage = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.settings_printer_conflict_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { printerConflictDialogMessage = null }) {
+                    Text(stringResource(R.string.ok), fontWeight = FontWeight.Bold)
+                }
+            }
+        )
     }
 }
 
@@ -5826,6 +6648,11 @@ fun SettingsScreen(
                             Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
                         }
                     },
+                    onOpenShopIdentity = { settingsPage = SettingsPage.SHOP_IDENTITY },
+                    onOpenShopLogo = { settingsPage = SettingsPage.SHOP_LOGO },
+                    onOpenQrCodeLinks = { settingsPage = SettingsPage.QR_CODE_LINKS },
+                    onOpenDueReceipt = { settingsPage = SettingsPage.DUE_RECEIPT },
+                    onOpenReceiptLayout = { settingsPage = SettingsPage.RECEIPT_LAYOUT },
                     isOwner = isOwner,
                     ownerPinResetAudit = remember { settingsViewModel.getOwnerPinResetAudit() }
                 )

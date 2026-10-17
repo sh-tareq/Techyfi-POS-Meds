@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-17 (app version 2.6.87-Final-V4, build `Techyfi-POS-Final-V4.apk`; versionCode 220963; DB schema version 38)
+Last updated: 2026-10-17 (app version 2.6.88-Final-V5, build `Techyfi-POS-Final-V5.apk`; versionCode 220964; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3076,6 +3076,19 @@ mindmap
   - **Baseline Aligned Metric Values & Spacing**: Standardized primary metric values (`14.sp`, `FontWeight.ExtraBold`, `maxLines = 1, softWrap = false`) and secondary metric values (`10.5.sp`, `FontWeight.Bold`, `maxLines = 1, softWrap = false`) with unified `Spacer(Modifier.height(5.dp))` and `Spacer(Modifier.height(2.dp))` vertical rhythm across all 3 cards.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V4.apk` (versionCode 220963, versionName "2.6.87-Final-V4"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
+
+### Release Final-V5: Global Settings Search & Deep-Linking System (Version 2.6.88-Final-V5, Build Final-V5)
+- **Global Settings Search Bar & Quick Filter Chips (`SettingsScreen.kt`, `strings.xml`, `values-bn/strings.xml`)**:
+  - **Omni-Search Engine**: Added an integrated search header at the top of the Settings home screen with instant search capability across all 19 configuration areas, preferences, hardware setups, and danger zone utilities.
+  - **Bilingual Keyword Indexing**: Indexed all settings with comprehensive English and natural Bangla retail vocabulary (e.g., searching for "bkash", "বিকাশ", "প্রিন্টার", "ভ্যাট", "পাসওয়ার্ড", "ড্রয়ার", "রশিদ", "ব্যাকআপ" instantly surfaces the exact matching setting tile).
+  - **Category Filter Chips**: Fast horizontal scroll row with chips for `All`, `Printers` (`প্রিন্টার`), `Receipt` (`রশিদ`), `Security` (`নিরাপত্তা`), `Backup` (`ব্যাকআপ`), and `General` (`সাধারণ`) with active selection indicators and match counts.
+  - **Live Setting Interactions & Deep-Linking**:
+    - Direct toggles inline for Negative Stock / Stock Enforcement and Cash Drawer Kick.
+    - Direct modal launchers for Receipt Printer Picker and Barcode Label Printer Picker.
+    - Deep-links straight into nested subpages: Shop Identity, Shop Logo, QR Payment Links, Due Receipt Voucher Layout, Receipt Paper Layout, Tax & VAT Rules, Staff PIN Access Control, Google Drive Backup, and Database Migration.
+  - **Empty-State Assist Deck**: Provides suggestions and popular presets (`Printers`, `Backup`, `VAT`, `Staff PIN`, `Logo`, `Cash Drawer`) when query returns no matches or when discovering settings.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V5.apk` (versionCode 220964, versionName "2.6.88-Final-V5"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
 
 ## Maintenance note
 
