@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-17 (app version 2.6.88-Final-V5, build `Techyfi-POS-Final-V5.apk`; versionCode 220964; DB schema version 38)
+Last updated: 2026-10-17 (app version 2.6.89-Final-V6, build `Techyfi-POS-Final-V6.apk`; versionCode 220965; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
