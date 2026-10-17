@@ -4121,7 +4121,7 @@ fun CustomerDueRow(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
                             modifier = Modifier.weight(1.05f).height(48.dp)
                         ) {
-                            Realistic3DWalletCollectIcon(size = 12.dp)
+                            Realistic3DWalletCollectIcon(size = 13.dp)
                             Spacer(Modifier.width(2.dp))
                             Text(stringResource(R.string.dues_collect_button), fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
@@ -4145,7 +4145,12 @@ fun CustomerDueRow(
                         contentPadding = PaddingValues(horizontal = 3.dp, vertical = 0.dp),
                         modifier = Modifier.weight(0.90f).height(48.dp)
                     ) {
-                        Realistic3DMessageReminderIcon(size = 11.dp)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Message,
+                            contentDescription = null,
+                            tint = Color(0xFF4F46E5),
+                            modifier = Modifier.size(13.dp)
+                        )
                         Spacer(Modifier.width(2.dp))
                         Text(stringResource(R.string.dues_remind_button), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
                     }
@@ -4156,7 +4161,12 @@ fun CustomerDueRow(
                         contentPadding = PaddingValues(horizontal = 3.dp, vertical = 0.dp),
                         modifier = Modifier.weight(0.75f).height(48.dp)
                     ) {
-                        Realistic3DPhoneDialerIcon(size = 11.dp)
+                        Icon(
+                            imageVector = Icons.Default.Phone,
+                            contentDescription = null,
+                            tint = Color(0xFF059669),
+                            modifier = Modifier.size(13.dp)
+                        )
                         Spacer(Modifier.width(2.dp))
                         Text(stringResource(R.string.dues_call_button), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
                     }
@@ -5196,7 +5206,12 @@ fun CustomerDueDetailsView(
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                 modifier = Modifier.weight(1f).height(48.dp)
             ) {
-                Realistic3DMessageReminderIcon(size = 14.dp)
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Message,
+                    contentDescription = null,
+                    tint = Color(0xFF4F46E5),
+                    modifier = Modifier.size(15.dp)
+                )
                 Spacer(Modifier.width(3.dp))
                 Text(stringResource(R.string.dues_remind_button), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
             }
@@ -5207,7 +5222,12 @@ fun CustomerDueDetailsView(
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                 modifier = Modifier.weight(0.9f).height(48.dp)
             ) {
-                Realistic3DPhoneDialerIcon(size = 14.dp)
+                Icon(
+                    imageVector = Icons.Default.Phone,
+                    contentDescription = null,
+                    tint = Color(0xFF059669),
+                    modifier = Modifier.size(15.dp)
+                )
                 Spacer(Modifier.width(3.dp))
                 Text(stringResource(R.string.dues_call_button), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
             }

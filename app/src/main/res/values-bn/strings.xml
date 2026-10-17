@@ -791,8 +791,8 @@
     <string name="sales_report_period_expenses">সময়ের মোট খরচ</string>
     <string name="sales_report_operating_profit">প্রকৃত পরিচালন মুনাফা</string>
     <string name="sales_report_supplier_due">সরবরাহকারী বাকি (দেনা)</string>
-    <string name="sales_report_view_expenses">খরচের হিসাব দেখুন ›</string>
-    <string name="sales_report_view_suppliers">সরবরাহকারী দেখুন ›</string>
+    <string name="sales_report_view_expenses">খরচ</string>
+    <string name="sales_report_view_suppliers">সাপ্লায়ার</string>
     <string name="dues_payment_range_label">পেমেন্ট পরিসীমা</string>
     <string name="dues_change_range_button">পরিবর্তন ›</string>
     <string name="dues_no_customers_match">\'%1$s\' এর সাথে কোনো গ্রাহক মেলেনি</string>

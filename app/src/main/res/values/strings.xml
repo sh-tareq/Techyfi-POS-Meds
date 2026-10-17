@@ -791,8 +791,8 @@
     <string name="sales_report_period_expenses">Period Expenses</string>
     <string name="sales_report_operating_profit">Net Operating Profit</string>
     <string name="sales_report_supplier_due">Vendor Payables (Due)</string>
-    <string name="sales_report_view_expenses">View Expenses ›</string>
-    <string name="sales_report_view_suppliers">View Vendors ›</string>
+    <string name="sales_report_view_expenses">Expenses</string>
+    <string name="sales_report_view_suppliers">Vendors</string>
     <string name="dues_payment_range_label">PAYMENT RANGE</string>
     <string name="dues_change_range_button">Change ›</string>
     <string name="dues_no_customers_match">No customers match \'%1$s\'</string>

@@ -3057,6 +3057,20 @@ mindmap
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V2.apk` (versionCode 220961, versionName "2.6.85-Final-V2"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
 
+### Release Final-V3: Business Health Layout Formatting & Customer Due Action Icons (Version 2.6.86-Final-V3, Build Final-V3)
+- **Business Health & Cross-Reference Box Formatting Fix (`SalesReportScreen.kt`, `strings.xml`, `values-bn/strings.xml`)**:
+  - Enforced uniform `Modifier.height(IntrinsicSize.Max)` on the container `Row` with each card set to `Modifier.weight(1f).fillMaxHeight()`, completely resolving the ragged, unequal card heights.
+  - Aligned metric value baselines across all 3 cards by constraining titles to `minLines = 2, maxLines = 2, lineHeight = 13.sp`.
+  - Replaced long embedded-chevron strings with compact single-line labels (`Expenses` / `খরচ` and `Vendors` / `সাপ্লায়ার`) coupled with non-wrapping `Icon(Icons.Default.ChevronRight, modifier = Modifier.size(12.dp))`, eliminating the awkward text wrapping where `>` broke onto its own line (`View Expenses \n >`).
+  - Added an aligned status badge (`🟢 Profitable` / `🔴 Net Loss`) to the Net Operating Profit card footer, establishing perfect symmetry and balance across all three cards.
+- **Relevant Action Button Icons for Collect, Call & Remind (`DuesScreen.kt`, `StockCheckComponents.kt`)**:
+  - **Collect Action**: Redesigned `Realistic3DWalletCollectIcon` in `StockCheckComponents.kt` into a razor-sharp banknote icon with white/slate gradient body, emerald center currency seal, and security dots, replacing the previous unidentifiable white crescent.
+  - **Remind Action**: Integrated official `Icons.AutoMirrored.Filled.Message` vector icon in indigo (`Color(0xFF4F46E5)`), replacing the indistinct purple dot with an unmistakable message/reminder glyph.
+  - **Call Action**: Integrated official `Icons.Default.Phone` vector icon in emerald (`Color(0xFF059669)`), replacing the abstract green bullseye dot with an unmistakable phone handset glyph.
+  - Updated both `CustomerDueRow` and `CustomerDetailHeader` in `DuesScreen.kt` for cohesive, professional UI standards across the entire dues workflow.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V3.apk` (versionCode 220962, versionName "2.6.86-Final-V3"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
+
 ## Maintenance note
 
 Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS/`.

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -1760,35 +1761,12 @@ fun Realistic3DPhoneDialerIcon(
         modifier = modifier.size(size),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val s = this.size.minDimension
-            val cx = s / 2f
-            val cy = s / 2f
-
-            // Emerald Handset Base
-            drawRoundRect(
-                brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFF34D399), Color(0xFF059669), Color(0xFF065F46)),
-                    start = Offset(2.dp.toPx(), 2.dp.toPx()),
-                    end = Offset(s - 2.dp.toPx(), s - 2.dp.toPx())
-                ),
-                topLeft = Offset(2.dp.toPx(), 2.dp.toPx()),
-                size = Size(s - 4.dp.toPx(), s - 4.dp.toPx()),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
-            )
-
-            // Receiver cutout
-            drawCircle(
-                color = Color.White,
-                center = Offset(cx, cy),
-                radius = s * 0.22f
-            )
-            drawCircle(
-                color = Color(0xFF059669),
-                center = Offset(cx, cy),
-                radius = s * 0.12f
-            )
-        }
+        Icon(
+            imageVector = Icons.Default.Phone,
+            contentDescription = null,
+            tint = Color(0xFF059669),
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
@@ -1800,45 +1778,16 @@ fun Realistic3DMessageReminderIcon(
     modifier: Modifier = Modifier,
     size: Dp = 18.dp
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "reminderAnim")
-    val pulse by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "reminderPulse"
-    )
-
     Box(
         modifier = modifier.size(size),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val s = this.size.minDimension
-            val cx = s / 2f
-            val cy = s / 2f
-
-            // Indigo Speech Bubble
-            drawRoundRect(
-                brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFF818CF8), Color(0xFF4F46E5), Color(0xFF312E81)),
-                    start = Offset(2.dp.toPx(), 2.dp.toPx()),
-                    end = Offset(s - 2.dp.toPx(), s - 2.dp.toPx())
-                ),
-                topLeft = Offset(2.dp.toPx(), 2.dp.toPx()),
-                size = Size(s - 4.dp.toPx(), s - 4.dp.toPx()),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(5.dp.toPx(), 5.dp.toPx())
-            )
-
-            // Alert Notification Dot
-            drawCircle(
-                color = Color(0xFFFBBF24),
-                center = Offset(cx + s * 0.22f, cy - s * 0.22f),
-                radius = (s * 0.10f) * pulse
-            )
-        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Message,
+            contentDescription = null,
+            tint = Color(0xFF4F46E5),
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
@@ -1989,7 +1938,7 @@ fun Realistic3DReminderBellIcon(
 
 
 /**
- * Realistic 3D Wallet Collect Icon for payment collection button.
+ * Realistic 3D Cash Note / Collect Icon for payment collection button.
  */
 @Composable
 fun Realistic3DWalletCollectIcon(
@@ -2001,30 +1950,33 @@ fun Realistic3DWalletCollectIcon(
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val s = this.size.minDimension
-            val cx = s / 2f
-            val cy = s / 2f
-
-            // Wallet Body
+            val w = this.size.width
+            val h = this.size.height
+            // Banknote Body
             drawRoundRect(
-                brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFFFFFFFF), Color(0xFFE2E8F0)),
-                    start = Offset(1.dp.toPx(), 2.dp.toPx()),
-                    end = Offset(s - 1.dp.toPx(), s - 2.dp.toPx())
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color.White, Color(0xFFF1F5F9))
                 ),
-                topLeft = Offset(1.dp.toPx(), 2.dp.toPx()),
-                size = Size(s - 2.dp.toPx(), s - 4.dp.toPx()),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                topLeft = Offset(0.5.dp.toPx(), h * 0.12f),
+                size = Size(w - 1.dp.toPx(), h * 0.76f),
+                cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
             )
-
-            // Emerald Clasp
-            drawRoundRect(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(Color(0xFF34D399), Color(0xFF059669))
-                ),
-                topLeft = Offset(cx + 1.dp.toPx(), cy - 2.dp.toPx()),
-                size = Size(s * 0.35f, 4.dp.toPx()),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx(), 2.dp.toPx())
+            // Emerald Currency Seal Circle in Center
+            drawCircle(
+                color = Color(0xFF059669),
+                radius = h * 0.22f,
+                center = Offset(w / 2f, h / 2f)
+            )
+            // Left & Right Security Dots
+            drawCircle(
+                color = Color(0xFF059669),
+                radius = h * 0.08f,
+                center = Offset(w * 0.22f, h / 2f)
+            )
+            drawCircle(
+                color = Color(0xFF059669),
+                radius = h * 0.08f,
+                center = Offset(w * 0.78f, h / 2f)
             )
         }
     }

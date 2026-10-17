@@ -1100,8 +1100,11 @@ private fun OverviewPanel(
                         )
                     }
 
+                    val isBn = isAppBangla()
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Max),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // 1. Period Expenses
@@ -1111,30 +1114,61 @@ private fun OverviewPanel(
                             border = BorderStroke(1.dp, Color(0xFFFECACA)),
                             modifier = Modifier
                                 .weight(1f)
+                                .fillMaxHeight()
                                 .clickable(enabled = onNavigateToExpenses != null) { onNavigateToExpenses?.invoke() }
                         ) {
-                            Column(Modifier.padding(10.dp)) {
-                                Text(
-                                    text = stringResource(R.string.sales_report_period_expenses),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF991B1B)
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = formatTaka(periodExpenseTotal),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFFDC2626)
-                                )
-                                if (onNavigateToExpenses != null) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 8.dp, vertical = 9.dp),
+                                verticalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.sales_report_period_expenses),
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF991B1B),
+                                        minLines = 2,
+                                        maxLines = 2,
+                                        lineHeight = 13.sp,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = stringResource(R.string.sales_report_view_expenses),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFB91C1C)
+                                        text = formatTaka(periodExpenseTotal),
+                                        fontSize = 13.5.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFFDC2626),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        softWrap = false
                                     )
+                                }
+
+                                if (onNavigateToExpenses != null) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(1.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.sales_report_view_expenses),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFB91C1C),
+                                            maxLines = 1,
+                                            softWrap = false
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(12.dp),
+                                            tint = Color(0xFFB91C1C)
+                                        )
+                                    }
+                                } else {
+                                    Spacer(Modifier.height(8.dp))
                                 }
                             }
                         }
@@ -1145,22 +1179,63 @@ private fun OverviewPanel(
                                 shape = RoundedCornerShape(12.dp),
                                 color = if (netOperatingProfit >= 0) Color(0xFFF0FDF4) else Color(0xFFFEF2F2),
                                 border = BorderStroke(1.dp, if (netOperatingProfit >= 0) Color(0xFFBBF7D0) else Color(0xFFFECACA)),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
                             ) {
-                                Column(Modifier.padding(10.dp)) {
-                                    Text(
-                                        text = stringResource(R.string.sales_report_operating_profit),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (netOperatingProfit >= 0) Color(0xFF166534) else Color(0xFF991B1B)
-                                    )
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        text = formatTaka(netOperatingProfit),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = if (netOperatingProfit >= 0) Color(0xFF16A34A) else Color(0xFFDC2626)
-                                    )
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 8.dp, vertical = 9.dp),
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.sales_report_operating_profit),
+                                            fontSize = 10.5.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (netOperatingProfit >= 0) Color(0xFF166534) else Color(0xFF991B1B),
+                                            minLines = 2,
+                                            maxLines = 2,
+                                            lineHeight = 13.sp,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            text = formatTaka(netOperatingProfit),
+                                            fontSize = 13.5.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = if (netOperatingProfit >= 0) Color(0xFF16A34A) else Color(0xFFDC2626),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            softWrap = false
+                                        )
+                                    }
+
+                                    Spacer(Modifier.height(8.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(if (netOperatingProfit >= 0) Color(0xFF16A34A) else Color(0xFFDC2626))
+                                        )
+                                        Text(
+                                            text = if (netOperatingProfit >= 0) {
+                                                if (isBn) "লাভজনক" else "Profitable"
+                                            } else {
+                                                if (isBn) "লোকসান" else "Net Loss"
+                                            },
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (netOperatingProfit >= 0) Color(0xFF15803D) else Color(0xFFB91C1C),
+                                            maxLines = 1,
+                                            softWrap = false
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1172,30 +1247,61 @@ private fun OverviewPanel(
                             border = BorderStroke(1.dp, Color(0xFFFDE68A)),
                             modifier = Modifier
                                 .weight(1f)
+                                .fillMaxHeight()
                                 .clickable(enabled = onNavigateToSuppliers != null) { onNavigateToSuppliers?.invoke() }
                         ) {
-                            Column(Modifier.padding(10.dp)) {
-                                Text(
-                                    text = stringResource(R.string.sales_report_supplier_due),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF92400E)
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = formatTaka(totalSupplierDue),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFFD97706)
-                                )
-                                if (onNavigateToSuppliers != null) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 8.dp, vertical = 9.dp),
+                                verticalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.sales_report_supplier_due),
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF92400E),
+                                        minLines = 2,
+                                        maxLines = 2,
+                                        lineHeight = 13.sp,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = stringResource(R.string.sales_report_view_suppliers),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFB45309)
+                                        text = formatTaka(totalSupplierDue),
+                                        fontSize = 13.5.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFFD97706),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        softWrap = false
                                     )
+                                }
+
+                                if (onNavigateToSuppliers != null) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(1.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.sales_report_view_suppliers),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFB45309),
+                                            maxLines = 1,
+                                            softWrap = false
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(12.dp),
+                                            tint = Color(0xFFB45309)
+                                        )
+                                    }
+                                } else {
+                                    Spacer(Modifier.height(8.dp))
                                 }
                             }
                         }
