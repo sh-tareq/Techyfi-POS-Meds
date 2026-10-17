@@ -1074,7 +1074,7 @@ fun AddEditProductDialog(
                                         BasicTextField(
                                             value = wholesalePrice,
                                             onValueChange = { input ->
-                                                val filtered = input.filter { it.isDigit() || it == '.' }
+                                                val filtered = com.example.techyfipos.utils.sanitizeNumericInput(input)
                                                 if (filtered.count { it == '.' } <= 1) wholesalePrice = filtered.take(8)
                                             },
                                             textStyle = TextStyle(
@@ -1360,7 +1360,7 @@ fun AddEditProductDialog(
                                         BasicTextField(
                                             value = reorderLevel,
                                             onValueChange = { input ->
-                                                val filtered = input.filter { it.isDigit() }
+                                                val filtered = com.example.techyfipos.utils.toEnglishDigits(input).filter { it.isDigit() }
                                                 reorderLevel = filtered.take(5)
                                             },
                                             textStyle = TextStyle(

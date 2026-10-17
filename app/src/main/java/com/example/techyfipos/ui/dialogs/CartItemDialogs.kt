@@ -282,7 +282,7 @@ fun CreditLimitWarningDialog(
                 OutlinedTextField(
                     value = ownerPin,
                     onValueChange = { input ->
-                        ownerPin = input.filter { it.isDigit() }
+                        ownerPin = toEnglishDigits(input).filter { it.isDigit() }
                         pinError = false
                     },
                     label = { Text(stringResource(R.string.cart_owner_pin_label)) },

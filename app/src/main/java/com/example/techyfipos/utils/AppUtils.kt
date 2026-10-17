@@ -246,7 +246,7 @@ fun generateQrCodeBitmap(text: String, size: Int = 512): android.graphics.Bitmap
  */
 fun parseExpiryDateToMillis(rawDate: String?): Long? {
     if (rawDate.isNullOrBlank()) return null
-    val clean = rawDate.trim()
+    val clean = toEnglishDigits(rawDate.trim())
 
     val separators = charArrayOf('-', '/', '.', ' ')
     val parts = clean.split(*separators).filter { it.isNotBlank() }

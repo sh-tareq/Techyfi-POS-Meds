@@ -138,6 +138,7 @@ import com.example.techyfipos.ui.viewmodel.ProductsViewModel
 import com.example.techyfipos.utils.HardwareBarcodeScanner
 import com.example.techyfipos.utils.toEnglishDigits
 import com.example.techyfipos.utils.toBanglaDigits
+import com.example.techyfipos.utils.isAppBangla
 import com.example.techyfipos.utils.beepAndVibrate
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.formatMoney
@@ -2568,7 +2569,7 @@ fun ProductsScreen(
                     // Min Price
                     OutlinedTextField(
                         value = minimumPrice,
-                        onValueChange = { minimumPrice = it.filter { char -> char.isDigit() || char == '.' } },
+                        onValueChange = { minimumPrice = toEnglishDigits(it).filter { char -> char.isDigit() || char == '.' } },
                         placeholder = { Text(stringResource(R.string.products_min_price_placeholder), fontSize = 12.sp) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
@@ -2586,7 +2587,7 @@ fun ProductsScreen(
                     // Max Price
                     OutlinedTextField(
                         value = maximumPrice,
-                        onValueChange = { maximumPrice = it.filter { char -> char.isDigit() || char == '.' } },
+                        onValueChange = { maximumPrice = toEnglishDigits(it).filter { char -> char.isDigit() || char == '.' } },
                         placeholder = { Text(stringResource(R.string.products_max_price_placeholder), fontSize = 12.sp) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
@@ -2934,7 +2935,8 @@ fun ProductsScreen(
                         note = note,
                         onResult = { result ->
                             if (result.isSuccess) {
-                                val sStr = if (updated.stockQty % 1.0 == 0.0) updated.stockQty.toLong().toString() else String.format(Locale.US, "%.2f", updated.stockQty).trimEnd('0').trimEnd('.')
+                                val rawStockStr = if (updated.stockQty % 1.0 == 0.0) updated.stockQty.toLong().toString() else String.format(Locale.US, "%.2f", updated.stockQty).trimEnd('0').trimEnd('.')
+                                val sStr = if (isAppBangla()) toBanglaDigits(rawStockStr) else rawStockStr
                                 Toast.makeText(
                                     context,
                                     context.getString(R.string.products_stock_saved_toast, product.name, sStr, product.unit),
@@ -2953,7 +2955,8 @@ fun ProductsScreen(
                         }
                     )
                 } else {
-                    val sStr = if (updated.stockQty % 1.0 == 0.0) updated.stockQty.toLong().toString() else String.format(Locale.US, "%.2f", updated.stockQty).trimEnd('0').trimEnd('.')
+                    val rawStockStr = if (updated.stockQty % 1.0 == 0.0) updated.stockQty.toLong().toString() else String.format(Locale.US, "%.2f", updated.stockQty).trimEnd('0').trimEnd('.')
+                    val sStr = if (isAppBangla()) toBanglaDigits(rawStockStr) else rawStockStr
                     Toast.makeText(
                         context,
                         context.getString(R.string.products_stock_saved_toast, product.name, sStr, product.unit),
@@ -4392,7 +4395,8 @@ fun ProductItemRow(
     val productImage = rememberUriImagePainter(product.imageUri)
     val isOut = product.stockQty <= 0.0
     val isLow = product.stockQty > 0.0 && product.stockQty <= product.reorderLevel
-    val sStr = if (product.stockQty % 1.0 == 0.0) product.stockQty.toLong().toString() else String.format(Locale.US, "%.1f", product.stockQty)
+    val rawStockStr = if (product.stockQty % 1.0 == 0.0) product.stockQty.toLong().toString() else String.format(Locale.US, "%.1f", product.stockQty)
+    val sStr = if (isAppBangla()) toBanglaDigits(rawStockStr) else rawStockStr
 
     Card(
         modifier = Modifier
@@ -4564,6 +4568,7 @@ fun ProductItemRow(
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF047857),
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         softWrap = false
                     )
                     Text(
@@ -4572,6 +4577,7 @@ fun ProductItemRow(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         softWrap = false
                     )
                 }
@@ -4799,6 +4805,7 @@ fun ProductItemRow(
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF047857),
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         softWrap = false
                     )
                     Text(
@@ -4807,6 +4814,7 @@ fun ProductItemRow(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         softWrap = false
                     )
                 }
@@ -4935,7 +4943,8 @@ private fun ProductGridCard(
     val productImage = rememberUriImagePainter(product.imageUri)
     val isOut = product.stockQty <= 0.0
     val isLow = product.stockQty > 0.0 && product.stockQty <= product.reorderLevel
-    val sStr = if (product.stockQty % 1.0 == 0.0) product.stockQty.toLong().toString() else String.format(Locale.US, "%.1f", product.stockQty)
+    val rawStockStr = if (product.stockQty % 1.0 == 0.0) product.stockQty.toLong().toString() else String.format(Locale.US, "%.1f", product.stockQty)
+    val sStr = if (isAppBangla()) toBanglaDigits(rawStockStr) else rawStockStr
 
     Card(
         modifier = Modifier
@@ -5133,6 +5142,7 @@ private fun ProductGridCard(
                     fontWeight = FontWeight.ExtraBold,
                     color = Color(0xFF047857),
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     softWrap = false
                 )
                 Text(
@@ -5141,6 +5151,7 @@ private fun ProductGridCard(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     softWrap = false
                 )
             }

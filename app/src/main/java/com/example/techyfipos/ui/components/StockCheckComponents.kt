@@ -33,6 +33,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.techyfipos.R
 import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.isAppBangla
+import com.example.techyfipos.utils.toBanglaDigits
 
 /**
  * Realistic 3D Isometric Package Icon with dynamic gradients,
@@ -437,7 +439,10 @@ fun FinancialMarginCard(
         ((profit / purchasePrice) * 100).toInt()
     } else 0
     val totalAssetVal = (quantity * purchasePrice).coerceAtLeast(0.0)
-    val qtyDisplay = if (quantity % 1.0 == 0.0) "${quantity.toInt()}" else "$quantity"
+    val isBn = isAppBangla()
+    val marginDisplay = if (isBn) toBanglaDigits(marginPercent.toString()) else marginPercent.toString()
+    val rawQtyDisplay = if (quantity % 1.0 == 0.0) "${quantity.toInt()}" else "$quantity"
+    val qtyDisplay = if (isBn) toBanglaDigits(rawQtyDisplay) else rawQtyDisplay
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -598,7 +603,7 @@ fun FinancialMarginCard(
                         border = BorderStroke(1.dp, if (profit >= 0) Color(0xFFA7F3D0) else Color(0xFFFECACA))
                     ) {
                         Text(
-                            text = "${if (profit >= 0) "+" else ""}${formatTaka(profit)} (${marginPercent}%)",
+                            text = "${if (profit >= 0) "+" else ""}${formatTaka(profit)} (${marginDisplay}%)",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (profit >= 0) Color(0xFF065F46) else Color(0xFFDC2626),

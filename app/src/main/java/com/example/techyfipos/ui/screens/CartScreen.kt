@@ -950,7 +950,7 @@ fun CartScreen(
                                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                Text(preset.name, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                                Text(preset.name, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                                 Row(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1144,7 +1144,7 @@ fun CartScreen(
                             ) {
                                 Text("⏸️", fontSize = 15.sp)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.held_cart_hold_button), fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+                                Text(stringResource(R.string.held_cart_hold_button), fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
 
                             // Continue to Checkout Button
@@ -1170,6 +1170,7 @@ fun CartScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 13.sp,
                                     maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                     softWrap = false
                                 )
                             }
@@ -3362,6 +3363,7 @@ fun CartItemRow(
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             softWrap = false
                         )
                         Surface(

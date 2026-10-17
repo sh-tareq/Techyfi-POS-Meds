@@ -5,6 +5,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.example.techyfipos.data.AppPermissions
 import com.example.techyfipos.utils.localMillisToUtcMidnight
 import com.example.techyfipos.utils.utcMidnightToLocalMidnight
+import com.example.techyfipos.utils.toEnglishDigits
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -3692,7 +3693,7 @@ private fun DuesFilterBottomSheet(
             // Custom Min Due input
             OutlinedTextField(
                 value = draftMin,
-                onValueChange = { draftMin = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                onValueChange = { draftMin = toEnglishDigits(it).filter { ch -> ch.isDigit() || ch == '.' } },
                 label = { Text(stringResource(R.string.dues_custom_minimum_due_label)) },
                 placeholder = { Text(stringResource(R.string.dues_example_1500_placeholder)) },
                 prefix = { Text("${formatMoney(0.0).take(1)} ", fontWeight = FontWeight.Bold) },
@@ -4538,7 +4539,7 @@ fun AddDueDialog(
                                     BasicTextField(
                                         value = amount,
                                         onValueChange = {
-                                            amount = it.filter { ch -> ch.isDigit() || ch == '.' }
+                                            amount = toEnglishDigits(it).filter { ch -> ch.isDigit() || ch == '.' }
                                             errorMessage = null
                                         },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -4786,7 +4787,7 @@ fun AddDueDialog(
                                     }
                                     BasicTextField(
                                         value = creditLimit,
-                                        onValueChange = { creditLimit = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                                        onValueChange = { creditLimit = toEnglishDigits(it).filter { ch -> ch.isDigit() || ch == '.' } },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                         singleLine = true,
                                         textStyle = TextStyle(
@@ -5124,8 +5125,10 @@ fun CustomerDueDetailsView(
                         )
                         if (customer.creditLimit > 0.0) {
                             val pct = ((customer.outstandingAmount / customer.creditLimit) * 100).coerceIn(0.0, 100.0)
+                            val isBn = com.example.techyfipos.utils.isAppBangla()
+                            val pctStr = if (isBn) com.example.techyfipos.utils.toBanglaDigits(String.format(Locale.US, "%.0f", pct)) else String.format(Locale.US, "%.0f", pct)
                             Text(
-                                text = stringResource(R.string.dues_limit_percent_detail, formatTaka(customer.creditLimit), String.format(Locale.US, "%.0f", pct)),
+                                text = stringResource(R.string.dues_limit_percent_detail, formatTaka(customer.creditLimit), pctStr),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (pct >= 80) Color(0xFFFCA5A5) else Color(0xFF86EFAC)
@@ -7065,7 +7068,7 @@ fun SetCreditLimitDialog(
                 )
                 OutlinedTextField(
                     value = text,
-                    onValueChange = { text = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                    onValueChange = { text = toEnglishDigits(it).filter { ch -> ch.isDigit() || ch == '.' } },
                     label = { Text(stringResource(R.string.dues_credit_limit_label)) },
                     placeholder = { Text(stringResource(R.string.dues_no_limit_placeholder)) },
                     prefix = { Text("${formatMoney(0.0).take(1)} ") },
@@ -7161,7 +7164,7 @@ fun EditDueCustomerDialog(
                 )
                 OutlinedTextField(
                     value = creditLimitStr,
-                    onValueChange = { creditLimitStr = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                    onValueChange = { creditLimitStr = toEnglishDigits(it).filter { ch -> ch.isDigit() || ch == '.' } },
                     label = { Text(stringResource(R.string.dues_credit_limit_label)) },
                     prefix = { Text("${formatMoney(0.0).take(1)} ") },
                     singleLine = true,

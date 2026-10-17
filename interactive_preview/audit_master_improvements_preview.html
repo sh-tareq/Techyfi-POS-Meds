@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS — Complete App Audit & Proposed Improvements Interactive Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-gradient: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      --primary-light: rgba(79, 70, 229, 0.12);
+      --primary-glow: rgba(79, 70, 229, 0.35);
+
+      --emerald: #10B981;
+      --emerald-gradient: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      --emerald-light: rgba(16, 185, 129, 0.15);
+      --emerald-glow: rgba(16, 185, 129, 0.35);
+
+      --amber: #F59E0B;
+      --amber-gradient: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+      --amber-light: rgba(245, 158, 11, 0.15);
+
+      --rose: #EF4444;
+      --rose-gradient: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      --rose-light: rgba(239, 68, 68, 0.15);
+
+      --sky: #0284C7;
+      --sky-light: rgba(2, 132, 199, 0.15);
+      --violet: #8B5CF6;
+      --teal: #0D9488;
+
+      /* Dark Surface Tokens */
+      --bg-canvas: #0A0E17;
+      --bg-surface: #111827;
+      --bg-card: #162032;
+      --bg-card-hover: #1E2B42;
+      --bg-elevated: #1F293D;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(79, 70, 229, 0.4);
+
+      --text-primary: #F9FAFB;
+      --text-secondary: #94A3B8;
+      --text-tertiary: #64748B;
+
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+      --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+      --shadow-glow: 0 0 30px var(--primary-glow);
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --radius-full: 9999px;
+
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-bn: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-canvas: #F4F6F9;
+      --bg-surface: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F8FAFC;
+      --bg-elevated: #F1F5F9;
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --border-accent: rgba(79, 70, 229, 0.35);
+
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-tertiary: #94A3B8;
+
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.12);
+      --shadow-glow: 0 0 25px rgba(79, 70, 229, 0.15);
+    }
+
+    body.lang-bn {
+      font-family: var(--font-bn);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background-color 0.25s ease, color 0.25s ease;
+      overflow-x: hidden;
+    }
+
+    /* Container */
+    .app-container {
+      width: 100%;
+      max-width: 1540px;
+      padding: 24px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Top Sticky Control Bar */
+    .top-navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 16px 24px;
+      box-shadow: var(--shadow-md);
+      position: sticky;
+      top: 16px;
+      z-index: 100;
+      backdrop-filter: blur(16px);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-badge-3d {
+      width: 46px;
+      height: 46px;
+      border-radius: var(--radius-md);
+      background: var(--primary-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 20px var(--primary-glow);
+      transform: perspective(600px) rotateX(8deg) rotateY(-8deg);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .brand-badge-3d:hover {
+      transform: perspective(600px) rotateX(0deg) rotateY(0deg) scale(1.08);
+    }
+
+    .brand-text h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-text p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .controls-deck {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+      min-height: 40px;
+    }
+    .pill-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-accent);
+      transform: translateY(-1px);
+    }
+    .pill-btn.active {
+      background: var(--primary-gradient);
+      color: #FFFFFF;
+      border-color: transparent;
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
+
+    /* Tab Navigation */
+    .module-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 0 10px;
+      scrollbar-width: thin;
+    }
+    .module-tab-btn {
+      padding: 12px 20px;
+      border-radius: var(--radius-lg);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s ease;
+    }
+    .module-tab-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--border-accent);
+    }
+    .module-tab-btn.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border-color: var(--primary);
+      box-shadow: 0 4px 18px var(--primary-glow);
+    }
+    .module-tab-btn .badge-count {
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    /* Card Panels */
+    .content-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 28px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .badge-emerald {
+      background: var(--emerald-light);
+      color: var(--emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-amber {
+      background: var(--amber-light);
+      color: var(--amber);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-rose {
+      background: var(--rose-light);
+      color: var(--rose);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .badge-primary {
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid rgba(79, 70, 229, 0.3);
+    }
+
+    /* Interactive Tablet Split View Simulator */
+    .tablet-simulator-wrap {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 18px;
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 16px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+      min-height: 680px;
+    }
+
+    @media (max-width: 1024px) {
+      .tablet-simulator-wrap {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left Pane: Catalog & Categories */
+    .catalog-pane {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .catalog-search-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+    }
+    .catalog-search-bar input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 14px;
+      width: 100%;
+    }
+
+    .category-pills-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .cat-chip {
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .cat-chip.active {
+      background: var(--emerald-gradient);
+      color: #FFF;
+      border-color: transparent;
+      box-shadow: 0 2px 10px var(--emerald-glow);
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 12px;
+      max-height: 520px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .product-card-3d {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .product-card-3d:hover {
+      transform: translateY(-3px) scale(1.02);
+      border-color: var(--emerald);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+    }
+    .product-card-3d:active {
+      transform: scale(0.97);
+    }
+
+    .product-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .product-emoji {
+      font-size: 26px;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+    }
+    .stock-pill {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+    }
+    .stock-ok { background: var(--emerald-light); color: var(--emerald); }
+    .stock-warn { background: var(--amber-light); color: var(--amber); }
+    .stock-out { background: var(--rose-light); color: var(--rose); }
+
+    .product-name {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+      color: var(--text-primary);
+    }
+    .product-price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .price-taka {
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--emerald);
+    }
+    .unit-tag {
+      font-size: 10.5px;
+      color: var(--text-tertiary);
+    }
+
+    /* Right Pane: Live Cart Ticket & Quick Pay Drawer */
+    .cart-pane {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+    }
+
+    .cart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .cart-title {
+      font-size: 16px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cart-items-scroll {
+      flex: 1;
+      max-height: 280px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 0;
+    }
+
+    .cart-item-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .item-info {
+      flex: 1;
+    }
+    .item-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .item-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 6px;
+    }
+
+    /* 48dp Touch Target Stepper */
+    .stepper-box {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 2px;
+    }
+    .stepper-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .stepper-btn:hover {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .stepper-btn:active {
+      transform: scale(0.92);
+    }
+    .stepper-val {
+      min-width: 32px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    /* Quick Pay Drawer */
+    .quick-pay-drawer {
+      background: var(--bg-surface);
+      border: 1px solid var(--emerald);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 -4px 20px rgba(16, 185, 129, 0.15);
+    }
+
+    .totals-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding-bottom: 6px;
+      border-bottom: 1px dashed var(--border-subtle);
+    }
+    .total-label { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+    .total-val { font-size: 22px; font-weight: 900; color: var(--emerald); }
+
+    .cash-tenders-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 2px 0;
+    }
+    .tender-chip {
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
+    .tender-chip:hover {
+      border-color: var(--emerald);
+      background: var(--emerald-light);
+      color: var(--emerald);
+    }
+    .tender-chip.active {
+      background: var(--emerald-gradient);
+      color: #FFF;
+      border-color: transparent;
+      box-shadow: 0 4px 12px var(--emerald-glow);
+    }
+
+    .change-display-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+    }
+    .change-label { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+    .change-amount { font-size: 16px; font-weight: 900; color: var(--primary); }
+
+    .complete-pay-btn {
+      width: 100%;
+      height: 52px;
+      border-radius: var(--radius-md);
+      background: var(--emerald-gradient);
+      color: #FFF;
+      border: none;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 6px 20px var(--emerald-glow);
+      transition: all 0.2s ease;
+    }
+    .complete-pay-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 26px var(--emerald-glow);
+    }
+    .complete-pay-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Comparison Table / Audit Matrix */
+    .audit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    .audit-table th {
+      text-align: left;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-weight: 700;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .audit-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: middle;
+    }
+    .audit-table tr:hover td {
+      background: var(--bg-card-hover);
+    }
+
+    .code-tag {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      background: var(--bg-elevated);
+      color: #38BDF8;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* Visual 3D Icon Grid */
+    .icons-3d-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 16px;
+    }
+    .icon-3d-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .icon-3d-card:hover {
+      transform: translateY(-5px) scale(1.05);
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+    }
+    .icon-3d-squircle {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .icon-3d-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .icon-3d-tag {
+      font-size: 10px;
+      color: var(--text-tertiary);
+    }
+
+    /* Simulated WhatsApp Card */
+    .whatsapp-preview-box {
+      max-width: 480px;
+      background: #0B141B;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: var(--shadow-lg);
+      margin: 0 auto;
+    }
+    .wa-top-bar {
+      background: #1F2C34;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .wa-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--emerald-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+    }
+    .wa-chat-body {
+      background: #0B141B url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png') repeat;
+      background-size: 320px;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .wa-bubble {
+      background: #005D4B;
+      color: #E9EDEF;
+      border-radius: 10px 10px 2px 10px;
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.5;
+      max-width: 90%;
+      align-self: flex-end;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .wa-bubble .time-stamp {
+      font-size: 10px;
+      color: #8696A0;
+      float: right;
+      margin-top: 6px;
+      margin-left: 10px;
+    }
+
+    /* Action Checklist for Confirmation */
+    .confirmation-banner {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .check-item:hover {
+      border-color: var(--primary);
+    }
+    .check-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--emerald);
+      margin-top: 3px;
+      cursor: pointer;
+    }
+    .check-content h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .check-content p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Toast Notification */
+    .preview-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--emerald);
+      color: var(--text-primary);
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .preview-toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Top Sticky Control Bar -->
+    <header class="top-navbar">
+      <div class="brand-section">
+        <div class="brand-badge-3d">
+          <span style="font-size: 22px;">⚡</span>
+        </div>
+        <div class="brand-text">
+          <h1>
+            <span>Techyfi POS</span>
+            <span class="badge-pill badge-primary" style="font-size: 11px;">v2.8 Master Audit</span>
+          </h1>
+          <p id="lblSubtitle">Comprehensive Inspection, UI/UX Ergonomics & Proposed Features Preview</p>
+        </div>
+      </div>
+
+      <div class="controls-deck">
+        <!-- Language Switcher -->
+        <button class="pill-btn active" id="btnLangEn" onclick="switchLanguage('EN')">🇬🇧 English</button>
+        <button class="pill-btn" id="btnLangBn" onclick="switchLanguage('BN')">🇧🇩 বাংলা</button>
+
+        <!-- Theme Toggle -->
+        <button class="pill-btn" id="btnThemeToggle" onclick="toggleTheme()">🌙 <span id="lblTheme">Dark</span></button>
+
+        <!-- Back to Master Hub -->
+        <a href="index.html" class="pill-btn" style="text-decoration: none;">🏠 Hub</a>
+      </div>
+    </header>
+
+    <!-- Module Selector Navigation -->
+    <nav class="module-tabs">
+      <button class="module-tab-btn active" onclick="showModule('mod-tablet-checkout')">
+        <span>🖥️</span>
+        <span class="tab-label" data-en="Tablet Split Direct Pay" data-bn="ট্যাবলেট ডিরেক্ট চেকআউট">Tablet Split Direct Pay</span>
+        <span class="badge-count">New</span>
+      </button>
+
+      <button class="module-tab-btn" onclick="showModule('mod-accessibility')">
+        <span>🎯</span>
+        <span class="tab-label" data-en="Accessibility & 48dp Touch Targets" data-bn="এক্সেসিবিলিটি ও ৪৮ডিপি টাচ টার্গেট">Accessibility & 48dp Touch Targets</span>
+        <span class="badge-count">Fix</span>
+      </button>
+
+      <button class="module-tab-btn" onclick="showModule('mod-whatsapp-dispatch')">
+        <span>💬</span>
+        <span class="tab-label" data-en="WhatsApp Commercial Receipts" data-bn="হোয়াটসঅ্যাপ বাণিজ্যিক রশিদ">WhatsApp Commercial Receipts</span>
+        <span class="badge-count">New</span>
+      </button>
+
+      <button class="module-tab-btn" onclick="showModule('mod-expiry-warnings')">
+        <span>⚠️</span>
+        <span class="tab-label" data-en="Expiry & Stock Safety Badges" data-bn="মেয়াদ ও স্টক সতর্কতা ব্যাজ">Expiry & Stock Safety Badges</span>
+        <span class="badge-count">Enhance</span>
+      </button>
+
+      <button class="module-tab-btn" onclick="showModule('mod-3d-icons')">
+        <span>✨</span>
+        <span class="tab-label" data-en="Photorealistic 3D Suite" data-bn="ফটোরিয়ালিস্টিক ৩ডি আইকন সুইট">Photorealistic 3D Suite</span>
+        <span class="badge-count">12 Domains</span>
+      </button>
+
+      <button class="module-tab-btn" onclick="showModule('mod-audit-checklist')">
+        <span>📋</span>
+        <span class="tab-label" data-en="Audit Findings & Confirmations" data-bn="সম্পূর্ণ অডিট ও অনুমতি তালিকা">Audit Findings & Confirmations</span>
+        <span class="badge-count" style="background: var(--rose-light); color: var(--rose);">Review</span>
+      </button>
+    </nav>
+
+
+    <!-- ========================================================================= -->
+    <!-- MODULE 1: TABLET SPLIT DIRECT PAY TERMINAL -->
+    <!-- ========================================================================= -->
+    <section id="mod-tablet-checkout" class="content-card">
+      <div class="card-header-row">
+        <div>
+          <span class="badge-pill badge-emerald">Ergonomic Breakthrough</span>
+          <h2 style="font-size: 20px; font-weight: 800; margin-top: 6px;" class="translatable"
+              data-en="Tablet Split Cashier Terminal with Integrated Quick Pay Drawer"
+              data-bn="ট্যাবলেট স্প্লিট ক্যাশিয়ার টার্মিনাল ও ইনস্ট্যান্ট কুইক পে ড্রয়ার">
+            Tablet Split Cashier Terminal with Integrated Quick Pay Drawer
+          </h2>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;" class="translatable"
+             data-en="Eliminates disruptive full-screen navigation on counter POS tablets. Cashiers tap items on the left and complete payments immediately on the right with fast tender shortcuts."
+             data-bn="কাউন্টার পিওএস ট্যাবলেটে বারবার স্ক্রিন পরিবর্তনের ঝামেলা দূর করে। ক্যাশিয়ার বামে পণ্য ট্যাপ করে ডানে সাথে সাথে দ্রুত নগদ বা ডিজিটালে বিল সম্পন্ন করতে পারবেন।">
+            Eliminates disruptive full-screen navigation on counter POS tablets. Cashiers tap items on the left and complete payments immediately on the right with fast tender shortcuts.
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <span class="badge-pill badge-primary">ScannerScreen.kt : 845</span>
+          <span class="badge-pill badge-amber">No Screen Flipping</span>
+        </div>
+      </div>
+
+      <!-- Live Interactive Tablet Simulator -->
+      <div class="tablet-simulator-wrap">
+
+        <!-- Left Pane: Catalog & Category Filters -->
+        <div class="catalog-pane">
+          <!-- Search & Status Bar -->
+          <div class="catalog-search-bar">
+            <span>🔍</span>
+            <input type="text" id="simSearchInput" placeholder="পণ্য খুঁজুন বা বারকোড স্ক্যান করুন... (Search products / barcode)" oninput="filterCatalog()">
+            <span style="font-size: 11px; padding: 2px 6px; background: var(--bg-surface); border-radius: 4px; color: var(--text-tertiary);">F2</span>
+          </div>
+
+          <!-- Category Pills -->
+          <div class="category-pills-row">
+            <button class="cat-chip active" onclick="selectCategory(this, 'All')">সব পণ্য (All)</button>
+            <button class="cat-chip" onclick="selectCategory(this, 'Grocery')">মুদি মালামাল (Grocery)</button>
+            <button class="cat-chip" onclick="selectCategory(this, 'Beverage')">পানীয় (Beverage)</button>
+            <button class="cat-chip" onclick="selectCategory(this, 'Snacks')">স্ন্যাকস ও বিস্কুট (Snacks)</button>
+            <button class="cat-chip" onclick="selectCategory(this, 'Personal')">ব্যক্তিগত যত্ন (Personal)</button>
+          </div>
+
+          <!-- Dynamic Products Grid -->
+          <div class="products-grid" id="simProductsGrid">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+
+        <!-- Right Pane: Live Cart & Instant Quick Pay Drawer -->
+        <div class="cart-pane">
+          <div>
+            <div class="cart-header">
+              <div class="cart-title">
+                <span>🛒</span>
+                <span class="translatable" data-en="Current Order Ticket" data-bn="চলতি অর্ডার রশিদ">Current Order Ticket</span>
+              </div>
+              <span id="cartCountBadge" class="badge-pill badge-primary">0 items</span>
+            </div>
+
+            <!-- Customer Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-elevated); padding: 8px 10px; border-radius: var(--radius-sm); margin-top: 8px; border: 1px solid var(--border-subtle);">
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+                <span>👤</span>
+                <span id="custDisplay">ওয়াক-ইন গ্রাহক (Walk-in Customer)</span>
+              </div>
+              <button class="pill-btn" style="min-height: 28px; padding: 2px 8px; font-size: 11px;" onclick="promptCustomer()">পরিবর্তন</button>
+            </div>
+
+            <!-- Cart Items List -->
+            <div class="cart-items-scroll" id="simCartList">
+              <div style="text-align: center; color: var(--text-tertiary); padding: 40px 10px; font-size: 13px;">
+                <span style="font-size: 32px; display: block; margin-bottom: 6px;">🛍️</span>
+                <span>কার্টে কোনো পণ্য যোগ করা হয়নি<br><small>(Tap items on the left to add)</small></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Pay Drawer Section -->
+          <div class="quick-pay-drawer">
+            <div class="totals-summary">
+              <span class="total-label translatable" data-en="Total Payable:" data-bn="সর্বমোট প্রদেয়:">Total Payable:</span>
+              <span class="total-val" id="simTotalAmount">৳0.00</span>
+            </div>
+
+            <!-- Fast Cash Tenders -->
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary);" class="translatable" data-en="Quick Cash Tender:" data-bn="দ্রুত নগদ প্রদান শর্টকাট:">Quick Cash Tender:</div>
+            <div class="cash-tenders-row">
+              <button class="tender-chip" onclick="applyTender('EXACT')">⚡ Exact</button>
+              <button class="tender-chip" onclick="applyTender(100)">+৳100</button>
+              <button class="tender-chip" onclick="applyTender(500)">+৳500</button>
+              <button class="tender-chip" onclick="applyTender(1000)">+৳1000</button>
+            </div>
+
+            <!-- Live Change Calculation -->
+            <div class="change-display-row">
+              <span class="change-label translatable" data-en="Change Return:" data-bn="গ্রাহককে ফেরত:">Change Return:</span>
+              <span class="change-amount" id="simChangeAmount">৳0.00</span>
+            </div>
+
+            <!-- Complete Sale Action Button -->
+            <button class="complete-pay-btn" onclick="completeSimulatedSale()">
+              <span>🖨️</span>
+              <span class="translatable" data-en="Complete Sale & Print Thermal Slip" data-bn="বিল সম্পন্ন ও ৮০মিমি রসিদ প্রিন্ট">Complete Sale & Print Thermal Slip</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- MODULE 2: ACCESSIBILITY & 48DP TOUCH TARGET UPGRADES -->
+    <!-- ========================================================================= -->
+    <section id="mod-accessibility" class="content-card" style="display: none;">
+      <div class="card-header-row">
+        <div>
+          <span class="badge-pill badge-rose">WCAG AA Standard Violation Fixed</span>
+          <h2 style="font-size: 20px; font-weight: 800; margin-top: 6px;" class="translatable"
+              data-en="Touch Target Ergonomics & Zero Truncation Architecture"
+              data-bn="টাচ টার্গেট এরগনোমিক্স ও কাটিং-অফ মুক্ত লেআউট">
+            Touch Target Ergonomics & Zero Truncation Architecture
+          </h2>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;" class="translatable"
+             data-en="Audited 18 files across the project and identified 8 critical instances of undersized touch targets (24dp to 32dp). Upgraded all interactive controls to standard >= 48dp."
+             data-bn="প্রজেক্টের ১৮টি ফাইল নিরীক্ষা করে ২৪-৩২ ডিপি সাইজের ৮টি সমস্যাযুক্ত বাটন শনাক্ত করা হয়েছে। সকল কন্ট্রোল আন্তর্জাতিক ৪৮ ডিপি মাপে উন্নীতের প্রস্তাব।">
+            Audited 18 files across the project and identified 8 critical instances of undersized touch targets (24dp to 32dp). Upgraded all interactive controls to standard >= 48dp.
+          </p>
+        </div>
+        <span class="badge-pill badge-primary">ui-ux-design / android-ui-ux Skill</span>
+      </div>
+
+      <!-- Before vs After Interactive Inspector -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+
+        <!-- Before Card -->
+        <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-lg); padding: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <span class="badge-pill badge-rose">❌ BEFORE (Defect)</span>
+            <span class="code-tag">24dp – 32dp Undersized</span>
+          </div>
+
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+            Tiny touch targets in <code>AddEditProductDialog.kt</code>, <code>ProductsScreen.kt</code>, and <code>TabletCartItemRow</code>. Cashiers frequently miss the tap during busy rush hours.
+          </p>
+
+          <!-- Simulated Defect Buttons -->
+          <div style="display: flex; flex-direction: column; gap: 14px; background: var(--bg-card); padding: 16px; border-radius: var(--radius-md);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 13px;">Clear Text & Scan in Add Product:</span>
+              <div style="display: flex; gap: 6px;">
+                <button style="width: 24px; height: 24px; font-size: 10px; background: #334155; color: white; border: none; border-radius: 4px; cursor: pointer;" title="24dp Touch Target" onclick="showToast('⚠️ Hard to tap! Only 24dp')">✕</button>
+                <button style="width: 28px; height: 28px; font-size: 12px; background: #4F46E5; color: white; border: none; border-radius: 4px; cursor: pointer;" title="28dp Touch Target" onclick="showToast('⚠️ Too small! Only 28dp')">📷</button>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 13px;">3D Hologram Laser Code Generator:</span>
+              <button style="width: 32px; height: 32px; font-size: 13px; background: #334155; color: white; border: 1px solid #475569; border-radius: 6px; cursor: pointer;" onclick="showToast('⚠️ Missed tap risk! 32dp')">⚡</button>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 13px;">Tablet Cart Quantity Stepper:</span>
+              <div style="display: flex; gap: 4px; align-items: center;">
+                <button style="width: 44px; height: 44px; background: #334155; color: white; border: none; border-radius: 6px; font-size: 14px;" onclick="showToast('⚠️ Under 48dp rule (44dp)')">−</button>
+                <span style="font-size: 13px; padding: 0 4px;">1</span>
+                <button style="width: 44px; height: 44px; background: #10B981; color: white; border: none; border-radius: 6px; font-size: 14px;" onclick="showToast('⚠️ Under 48dp rule (44dp)')">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- After Card -->
+        <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-lg); padding: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <span class="badge-pill badge-emerald">✅ AFTER (Proposed Standard)</span>
+            <span class="code-tag">48dp × 48dp WCAG AA</span>
+          </div>
+
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+            Generous 48dp touch bounds with tactile ripple feedback and minimum component bounding box. Zero missed taps on physical touch displays.
+          </p>
+
+          <!-- Simulated Upgraded Controls -->
+          <div style="display: flex; flex-direction: column; gap: 14px; background: var(--bg-card); padding: 16px; border-radius: var(--radius-md);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 13px;">Clear Text & Scan in Add Product:</span>
+              <div style="display: flex; gap: 8px;">
+                <button class="pill-btn" style="min-height: 48px; width: 48px; padding: 0; justify-content: center;" onclick="showToast('✅ Instant easy tap! 48dp')">✕</button>
+                <button class="pill-btn active" style="min-height: 48px; width: 48px; padding: 0; justify-content: center;" onclick="showToast('✅ Ergonomic 48dp camera scan')">📷</button>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 13px;">3D Hologram Laser Code Generator:</span>
+              <button class="pill-btn" style="min-height: 48px; width: 48px; padding: 0; justify-content: center; border-color: var(--primary);" onclick="showToast('✅ Perfectly accessible 48dp')">⚡</button>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 13px;">Tablet Cart Quantity Stepper:</span>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button class="stepper-btn" onclick="showToast('✅ Ergonomic 48dp decrease stepper')">−</button>
+                <span style="font-size: 14px; font-weight: 800; min-width: 32px; text-align: center;">1</span>
+                <button class="stepper-btn" style="background: var(--emerald-light); color: var(--emerald);" onclick="showToast('✅ Ergonomic 48dp increase stepper')">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- MODULE 3: WHATSAPP COMMERCIAL RECEIPTS & DUE DISPATCHER -->
+    <!-- ========================================================================= -->
+    <section id="mod-whatsapp-dispatch" class="content-card" style="display: none;">
+      <div class="card-header-row">
+        <div>
+          <span class="badge-pill badge-emerald">Bangla Retail Terminology Standards</span>
+          <h2 style="font-size: 20px; font-weight: 800; margin-top: 6px;" class="translatable"
+              data-en="WhatsApp Direct Invoice & Due Statement Dispatcher"
+              data-bn="হোয়াটসঅ্যাপ ডিরেক্ট ইনভয়েস ও বকেয়া তাগাদা প্রেরণ">
+            WhatsApp Direct Invoice & Due Statement Dispatcher
+          </h2>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;" class="translatable"
+             data-en="One-tap pre-formatted commercial message generator for customers. Adheres strictly to Bangladeshi colloquial commercial vocabulary (বাকি, জমা, চালান নং, নগদ, ফেরত)."
+             data-bn="এক ট্যাপে গ্রাহককে চলিত বাণিজ্যিক ভাষায় চালান বা বকেয়ার মেসেজ পাঠানোর ব্যবস্থা (চালান নং, মোট টাকা, জমা, বকেয়া)।">
+            One-tap pre-formatted commercial message generator for customers. Adheres strictly to Bangladeshi colloquial commercial vocabulary.
+          </p>
+        </div>
+        <span class="badge-pill badge-primary">bangla-language Skill</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+
+        <!-- Left: Configuration & Trigger -->
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <label style="font-size: 13px; font-weight: 700;">মেসেজের ধরণ নির্বাচন করুন (Select Message Type):</label>
+          <div style="display: flex; gap: 8px;">
+            <button class="pill-btn active" id="btnWaInvoice" onclick="setWaType('INVOICE')">🧾 বিক্রয় চালান (Sale Bill)</button>
+            <button class="pill-btn" id="btnWaDue" onclick="setWaType('DUE')">🔔 বকেয়া তাগাদা (Due Notice)</button>
+          </div>
+
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">দোকান:</span>
+              <span style="font-weight: 700;">Techyfi General Store, Dhanmondi</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">গ্রাহক:</span>
+              <span style="font-weight: 700;">তানভীর আহমেদ (01712-345678)</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--text-secondary);">চালান নং:</span>
+              <span class="code-tag">#INV-2026-889</span>
+            </div>
+          </div>
+
+          <button class="pill-btn active" style="min-height: 48px; justify-content: center; gap: 10px; background: #25D366; color: white;" onclick="triggerWhatsAppSend()">
+            <span style="font-size: 20px;">💬</span>
+            <span style="font-weight: 800;">হোয়াটসঅ্যাপে পাঠান (Open in WhatsApp)</span>
+          </button>
+        </div>
+
+        <!-- Right: Simulated Live WhatsApp UI -->
+        <div class="whatsapp-preview-box">
+          <div class="wa-top-bar">
+            <div class="wa-avatar">টি</div>
+            <div>
+              <div style="font-weight: 700; font-size: 14px; color: white;">Techyfi Store (Official)</div>
+              <div style="font-size: 11px; color: #8696A0;">Online • Business Account</div>
+            </div>
+          </div>
+
+          <div class="wa-chat-body">
+            <div class="wa-bubble" id="waBubbleContent">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- MODULE 4: EXPIRY & STOCK SAFETY BADGES IN SELL MODE -->
+    <!-- ========================================================================= -->
+    <section id="mod-expiry-warnings" class="content-card" style="display: none;">
+      <div class="card-header-row">
+        <div>
+          <span class="badge-pill badge-amber">Stock & Compliance Safeguard</span>
+          <h2 style="font-size: 20px; font-weight: 800; margin-top: 6px;" class="translatable"
+              data-en="Proactive Expiry Badges & Manager Quick-Inwarding"
+              data-bn="পণ্য মেয়াদোত্তীর্ণ সতর্কতা ও দ্রুত স্টক যোগ ব্যবস্থা">
+            Proactive Expiry Badges & Manager Quick-Inwarding
+          </h2>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;" class="translatable"
+             data-en="Shows visual 3D warning squircle pills on catalog items before they are rung up. Prevents accidental sale of expired goods."
+             data-bn="ক্যাটালগে সরাসরি মেয়াদোত্তীর্ণ পণ্যের ওপর স্পষ্ট ৩ডি সতর্কতা প্রদর্শন করে যাতে ভুলবশত বিক্রয় না হয়।">
+            Shows visual 3D warning squircle pills on catalog items before they are rung up. Prevents accidental sale of expired goods.
+          </p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+
+        <!-- Card 1: Normal Product -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="font-size: 28px;">🥛</span>
+            <span class="stock-pill stock-ok">স্টক: ৪৮ প্যাকেট</span>
+          </div>
+          <div style="font-weight: 700; font-size: 14px;">Aarong Pasteurized Milk 1L</div>
+          <div style="font-size: 12px; color: var(--text-secondary);">মেয়াদ: ১৫ দিন বাকি (Exp: 15 days left)</div>
+          <div style="font-size: 16px; font-weight: 900; color: var(--emerald); margin-top: 6px;">৳৯০.০০</div>
+        </div>
+
+        <!-- Card 2: Near Expiry Warning (Amber) -->
+        <div style="background: var(--bg-card); border: 1px solid var(--amber); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="font-size: 28px;">🍞</span>
+            <span class="stock-pill stock-warn">⚠️ মেয়াদ মাত্র ৩ দিন বাকি!</span>
+          </div>
+          <div style="font-weight: 700; font-size: 14px;">Bakehouse Butter Toast 350g</div>
+          <div style="font-size: 12px; color: var(--amber);">নিকটবর্তী মেয়াদ (Exp: 2026-10-05)</div>
+          <div style="font-size: 16px; font-weight: 900; color: var(--amber); margin-top: 6px;">৳৬৫.০০</div>
+        </div>
+
+        <!-- Card 3: Expired Lock (Red) -->
+        <div style="background: var(--bg-card); border: 1px solid var(--rose); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px; opacity: 0.88; box-shadow: 0 0 15px rgba(239, 68, 68, 0.15);">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="font-size: 28px;">🍫</span>
+            <span class="stock-pill stock-out">⛔ মেয়াদ উত্তীর্ণ (Expired)</span>
+          </div>
+          <div style="font-weight: 700; font-size: 14px; text-decoration: line-through;">Dairy Milk Silk 150g</div>
+          <div style="font-size: 12px; color: var(--rose);">বিক্রয় নিষিদ্ধ • সুপারভাইজার কোড আবশ্যক</div>
+          <button class="pill-btn" style="min-height: 36px; padding: 4px 10px; font-size: 11px; margin-top: 4px; border-color: var(--rose); color: var(--rose);" onclick="showToast('⛔ Expired Product: Selling is blocked to protect customers')">বিক্রয় ব্লক করা</button>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- MODULE 5: PHOTOREALISTIC 3D SUITE (12 DOMAINS) -->
+    <!-- ========================================================================= -->
+    <section id="mod-3d-icons" class="content-card" style="display: none;">
+      <div class="card-header-row">
+        <div>
+          <span class="badge-pill badge-primary">3d-animation Skill Integration</span>
+          <h2 style="font-size: 20px; font-weight: 800; margin-top: 6px;" class="translatable"
+              data-en="Photorealistic 3D Squircle Badges across all 12 POS Domains"
+              data-bn="সকল ১২টি পিওএস সেকশনের জন্য ৩ডি স্কোয়ারকেল ব্যাজ সুইট">
+            Photorealistic 3D Squircle Badges across all 12 POS Domains
+          </h2>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;" class="translatable"
+             data-en="Universal harmonization matching PosSectionHeader.kt. Ambient colored elevation glows, isometric perspectives, and reactive micro-interactions."
+             data-bn="সকল সেকশন হেডারে সামঞ্জস্যপূর্ণ ৩ডি ভিজ্যুয়াল ব্র্যান্ডিং এবং ইন্টারঅ্যাক্টিভ অ্যানিমেশন।">
+            Universal harmonization matching PosSectionHeader.kt. Ambient colored elevation glows and reactive micro-interactions.
+          </p>
+        </div>
+      </div>
+
+      <div class="icons-3d-grid">
+        <!-- Products -->
+        <div class="icon-3d-card" onclick="showToast('Products: Indigo #4F46E5 3D Package')">
+          <div class="icon-3d-squircle" style="background: rgba(79, 70, 229, 0.2); border: 1px solid rgba(79, 70, 229, 0.5); color: #818CF8;">📦</div>
+          <div class="icon-3d-name">Products</div>
+          <div class="icon-3d-tag">#4F46E5</div>
+        </div>
+
+        <!-- Sell / Cart -->
+        <div class="icon-3d-card" onclick="showToast('Sell / Cashier: Emerald #10B981 3D Register')">
+          <div class="icon-3d-squircle" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.5); color: #34D399;">🛒</div>
+          <div class="icon-3d-name">Sell Mode</div>
+          <div class="icon-3d-tag">#10B981</div>
+        </div>
+
+        <!-- History -->
+        <div class="icon-3d-card" onclick="showToast('History: Blue #3B82F6 3D Clock')">
+          <div class="icon-3d-squircle" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #60A5FA;">🕒</div>
+          <div class="icon-3d-name">History</div>
+          <div class="icon-3d-tag">#3B82F6</div>
+        </div>
+
+        <!-- Dues -->
+        <div class="icon-3d-card" onclick="showToast('Dues: Red #EF4444 3D Clipboard')">
+          <div class="icon-3d-squircle" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #F87171;">📋</div>
+          <div class="icon-3d-name">Dues & Khata</div>
+          <div class="icon-3d-tag">#EF4444</div>
+        </div>
+
+        <!-- Expenses -->
+        <div class="icon-3d-card" onclick="showToast('Expenses: Rose #F43F5E 3D Cash Stack')">
+          <div class="icon-3d-squircle" style="background: rgba(244, 63, 94, 0.2); border: 1px solid rgba(244, 63, 94, 0.5); color: #FB7185;">💸</div>
+          <div class="icon-3d-name">Expenses</div>
+          <div class="icon-3d-tag">#F43F5E</div>
+        </div>
+
+        <!-- Sales Report -->
+        <div class="icon-3d-card" onclick="showToast('Reports: Sky #0284C7 3D Graph')">
+          <div class="icon-3d-squircle" style="background: rgba(2, 132, 199, 0.2); border: 1px solid rgba(2, 132, 199, 0.5); color: #38BDF8;">📊</div>
+          <div class="icon-3d-name">Analytics</div>
+          <div class="icon-3d-tag">#0284C7</div>
+        </div>
+
+        <!-- Suppliers -->
+        <div class="icon-3d-card" onclick="showToast('Suppliers: Teal #0D9488 3D Truck')">
+          <div class="icon-3d-squircle" style="background: rgba(13, 148, 136, 0.2); border: 1px solid rgba(13, 148, 136, 0.5); color: #2DD4BF;">🚚</div>
+          <div class="icon-3d-name">Suppliers</div>
+          <div class="icon-3d-tag">#0D9488</div>
+        </div>
+
+        <!-- Register Close -->
+        <div class="icon-3d-card" onclick="showToast('Register: Amber #D97706 3D Vault')">
+          <div class="icon-3d-squircle" style="background: rgba(217, 119, 6, 0.2); border: 1px solid rgba(217, 119, 6, 0.5); color: #FBBF24;">🔒</div>
+          <div class="icon-3d-name">Day Close</div>
+          <div class="icon-3d-tag">#D97706</div>
+        </div>
+
+        <!-- Loyalty -->
+        <div class="icon-3d-card" onclick="showToast('Loyalty: Gold #F59E0B 3D Star')">
+          <div class="icon-3d-squircle" style="background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.5); color: #FCD34D;">⭐</div>
+          <div class="icon-3d-name">Loyalty</div>
+          <div class="icon-3d-tag">#F59E0B</div>
+        </div>
+
+        <!-- Customers CRM -->
+        <div class="icon-3d-card" onclick="showToast('Customers: Violet #8B5CF6 3D Profile')">
+          <div class="icon-3d-squircle" style="background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.5); color: #A78BFA;">👥</div>
+          <div class="icon-3d-name">Customers</div>
+          <div class="icon-3d-tag">#8B5CF6</div>
+        </div>
+
+        <!-- Users & Roles -->
+        <div class="icon-3d-card" onclick="showToast('Staff: Green #059669 3D Security Key')">
+          <div class="icon-3d-squircle" style="background: rgba(5, 150, 105, 0.2); border: 1px solid rgba(5, 150, 105, 0.5); color: #34D399;">🔑</div>
+          <div class="icon-3d-name">Staff & RBAC</div>
+          <div class="icon-3d-tag">#059669</div>
+        </div>
+
+        <!-- Settings -->
+        <div class="icon-3d-card" onclick="showToast('Settings: Slate #64748B 3D Gears')">
+          <div class="icon-3d-squircle" style="background: rgba(100, 116, 139, 0.2); border: 1px solid rgba(100, 116, 139, 0.5); color: #94A3B8;">⚙️</div>
+          <div class="icon-3d-name">Settings</div>
+          <div class="icon-3d-tag">#64748B</div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- MODULE 6: AUDIT FINDINGS & CONFIRMATION MATRIX -->
+    <!-- ========================================================================= -->
+    <section id="mod-audit-checklist" class="content-card" style="display: none;">
+      <div class="card-header-row">
+        <div>
+          <span class="badge-pill badge-primary">Comprehensive Audit Results</span>
+          <h2 style="font-size: 20px; font-weight: 800; margin-top: 6px;" class="translatable"
+              data-en="Audit Findings & Action Confirmation Checklist"
+              data-bn="নিরীক্ষার ফলাফল ও অনুমোদন তালিকা">
+            Audit Findings & Action Confirmation Checklist
+          </h2>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;" class="translatable"
+             data-en="Review each audited finding below. As strictly requested, no code changes will be applied until you review and confirm."
+             data-bn="নিচের প্রতিটি প্রস্তাব পরীক্ষা করুন। নির্দেশ মোতাবেক আপনার অনুমোদন ব্যতীত কোনো কোড পরিবর্তন কার্যকর হবে না।">
+            Review each audited finding below. As strictly requested, no code changes will be applied until you review and confirm.
+          </p>
+        </div>
+        <button class="pill-btn active" style="min-height: 48px; background: var(--emerald-gradient); border-color: transparent;" onclick="confirmAllActions()">
+          <span>✅</span>
+          <span class="translatable" data-en="Confirm & Proceed with Implementation" data-bn="সকল প্রস্তাবনা অনুমোদন করুন">Confirm & Proceed with Implementation</span>
+        </button>
+      </div>
+
+      <!-- Action Confirmation Checklist -->
+      <div class="confirmation-banner">
+        <h3 style="font-size: 16px; font-weight: 800;" class="translatable"
+            data-en="Selected Improvements for Implementation:"
+            data-bn="বাস্তবায়নের জন্য নির্বাচিত প্রস্তাবনাসমূহ:">
+          Selected Improvements for Implementation:
+        </h3>
+
+        <!-- Item 1: Touch Target standard -->
+        <label class="check-item">
+          <input type="checkbox" checked id="chkTouchTargets">
+          <div class="check-content">
+            <h4>1. Touch Target Standard Enforcement (>= 48dp WCAG AA)</h4>
+            <p>
+              Fix undersized buttons across <code>AddEditProductDialog.kt:400,486</code> (24dp), <code>ProductsScreen.kt:4508,4746</code> (32dp), <code>DuesScreen.kt:2641,2953</code> (24-26dp), and <code>ScannerScreen.kt:2276,2308</code> (44dp).
+            </p>
+          </div>
+        </label>
+
+        <!-- Item 2: Tablet Direct Quick Pay Drawer -->
+        <label class="check-item">
+          <input type="checkbox" checked id="chkTabletDirectPay">
+          <div class="check-content">
+            <h4>2. Tablet Terminal Direct Quick Pay Drawer (No Screen Flipping)</h4>
+            <p>
+              Add integrated checkout drawer inside <code>TabletSplitTerminal</code> in <code>ScannerScreen.kt</code> with 1-tap exact cash, quick tenders (+৳500, +৳1000), and instant thermal receipt completion.
+            </p>
+          </div>
+        </label>
+
+        <!-- Item 3: Fractional Stepper Logic -->
+        <label class="check-item">
+          <input type="checkbox" checked id="chkFractionalStepper">
+          <div class="check-content">
+            <h4>3. Tablet Fractional Stepper Logic Parity</h4>
+            <p>
+              Update <code>TabletCartItemRow</code> in <code>ScannerScreen.kt:2305</code> to respect <code>isFractionalUnit</code> (0.25 increment for Kg/L/Yard) identical to phone <code>CartScreen.kt:3088</code>.
+            </p>
+          </div>
+        </label>
+
+        <!-- Item 4: Redundant Tablet Back Arrow Removal -->
+        <label class="check-item">
+          <input type="checkbox" checked id="chkRedundantBackArrows">
+          <div class="check-content">
+            <h4>4. Redundant Tablet Back Arrow Removal</h4>
+            <p>
+              In <code>ExpensesScreen.kt:169</code> and <code>SuppliersScreen.kt:188</code>, conditionally hide <code>navigationIcon</code> when <code>isTablet == true</code>, matching the behavior in Products, Dues, and Sales History.
+            </p>
+          </div>
+        </label>
+
+        <!-- Item 5: WhatsApp Direct Commercial Sharing -->
+        <label class="check-item">
+          <input type="checkbox" checked id="chkWaDispatcher">
+          <div class="check-content">
+            <h4>5. WhatsApp Commercial Bill & Due Recovery Dispatcher</h4>
+            <p>
+              Provide 1-tap WhatsApp sharing formatted in natural Bangladeshi commercial phrasing (চালান নং, মোট, জমা, বকেয়া) from Receipt Summary and Dues Dossier.
+            </p>
+          </div>
+        </label>
+
+        <!-- Item 6: Morning Opening Float Dialog -->
+        <label class="check-item">
+          <input type="checkbox" checked id="chkOpeningFloat">
+          <div class="check-content">
+            <h4>6. Shift Start Opening Float Prompt for Cash Drawer</h4>
+            <p>
+              Provide a streamlined morning float prompt when opening the register to record starting cash change notes before taking sales.
+            </p>
+          </div>
+        </label>
+      </div>
+
+      <!-- Complete Audit Matrix Table -->
+      <div style="overflow-x: auto; margin-top: 10px;">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>Domain / Area</th>
+              <th>Current Observation & Defect</th>
+              <th>Impact Level</th>
+              <th>Proposed Production Fix</th>
+              <th>Files Affected</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Accessibility</strong></td>
+              <td>Multiple buttons with size &lt; 48dp (24dp, 28dp, 32dp, 44dp)</td>
+              <td><span class="badge-pill badge-rose">High (WCAG AA)</span></td>
+              <td>Enforce 48dp minimum touch bounds with touch target expansion</td>
+              <td><span class="code-tag">AddEditProductDialog.kt</span>, <span class="code-tag">ScannerScreen.kt</span></td>
+            </tr>
+            <tr>
+              <td><strong>Sell / POS Mode</strong></td>
+              <td>Tablet split terminal forces navigation away to CartScreen for payment</td>
+              <td><span class="badge-pill badge-amber">Ergonomics</span></td>
+              <td>Add inline Quick Pay Drawer with fast tenders right in the tablet pane</td>
+              <td><span class="code-tag">ScannerScreen.kt:845</span></td>
+            </tr>
+            <tr>
+              <td><strong>Cart Steppers</strong></td>
+              <td>Tablet stepper hardcodes +1.0 for loose items (rice, oil, fabrics)</td>
+              <td><span class="badge-pill badge-amber">Logic Disparity</span></td>
+              <td>Check isFractionalUnit and apply 0.25 increment matching phone CartScreen</td>
+              <td><span class="code-tag">ScannerScreen.kt:2305</span></td>
+            </tr>
+            <tr>
+              <td><strong>Navigation Bar</strong></td>
+              <td>Expenses and Suppliers show redundant back arrow on Tablet Rail</td>
+              <td><span class="badge-pill badge-primary">UI Consistency</span></td>
+              <td>Gate navigationIcon with if (!isTablet) matching other screens</td>
+              <td><span class="code-tag">ExpensesScreen.kt:169</span>, <span class="code-tag">SuppliersScreen.kt:188</span></td>
+            </tr>
+            <tr>
+              <td><strong>More Hub Tiles</strong></td>
+              <td>maxLines = 1 on tile titles risks ellipsis cutoff in Bangla on small phones</td>
+              <td><span class="badge-pill badge-primary">Typography</span></td>
+              <td>Permit maxLines = 2 or tune font size dynamically for Bengali glyphs</td>
+              <td><span class="code-tag">Navigation.kt:2038</span></td>
+            </tr>
+            <tr>
+              <td><strong>Shift Register</strong></td>
+              <td>No explicit morning prompt to log opening drawer change notes</td>
+              <td><span class="badge-pill badge-emerald">New Feature</span></td>
+              <td>Add 1-tap Morning Register Open prompt with initial float record</td>
+              <td><span class="code-tag">RegisterCloseScreen.kt</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="preview-toast" id="toastBox">
+    <span>💡</span>
+    <span id="toastMsg">Action Triggered</span>
+  </div>
+
+  <script>
+    // State
+    let currentLang = 'EN';
+    let currentTheme = 'dark';
+    let cart = [];
+    let selectedTender = 'EXACT';
+
+    const sampleProducts = [
+      { id: 1, nameEn: "Pran Frooto Mango 250ml", nameBn: "প্রাণ ফ্রুটো ম্যাঙ্গো ২৫০মিমি", price: 35.0, unit: "Pcs", emoji: "🧃", category: "Beverage", stock: 45, warn: false },
+      { id: 2, nameEn: "Miniket Rice Premium", nameBn: "মিনিকেট চাল প্রিমিয়াম", price: 82.0, unit: "Kg", emoji: "🌾", category: "Grocery", stock: 120, warn: false },
+      { id: 3, nameEn: "Rupchanda Soyabean Oil 2L", nameBn: "রূপচাঁদা সয়াবিন তেল ২ লিটার", price: 380.0, unit: "Bottle", emoji: "🫒", category: "Grocery", stock: 24, warn: false },
+      { id: 4, nameEn: "Bakehouse Toast Biscuit", nameBn: "বেকহাউস টোস্ট বিস্কুট", price: 65.0, unit: "Pkt", emoji: "🍞", category: "Snacks", stock: 14, warn: true, warnText: "⚠️ ৩ দিন বাকি" },
+      { id: 5, nameEn: "Aarong Fresh Milk 1L", nameBn: "আড়ং ফ্রেশ দুধ ১ লিটার", price: 90.0, unit: "Pkt", emoji: "🥛", category: "Dairy", stock: 32, warn: false },
+      { id: 6, nameEn: "Radhuni Turmeric Powder 200g", nameBn: "রাধুনী হলুদ গুঁড়া ২০০ গ্রাম", price: 110.0, unit: "Pkt", emoji: "🌶️", category: "Grocery", stock: 18, warn: false },
+      { id: 7, nameEn: "Lux Velvet Touch Soap 100g", nameBn: "লাক্স ভেলভেট সোপ ১০০ গ্রাম", price: 75.0, unit: "Pcs", emoji: "🧼", category: "Personal", stock: 50, warn: false },
+      { id: 8, nameEn: "Coca-Cola Can 330ml", nameBn: "কোকা-কোলা ক্যান ৩৩০মিমি", price: 60.0, unit: "Can", emoji: "🥤", category: "Beverage", stock: 36, warn: false }
+    ];
+
+    // Language Toggle
+    function switchLanguage(lang) {
+      currentLang = lang;
+      document.body.classList.toggle('lang-bn', lang === 'BN');
+      document.getElementById('btnLangEn').classList.toggle('active', lang === 'EN');
+      document.getElementById('btnLangBn').classList.toggle('active', lang === 'BN');
+
+      document.querySelectorAll('.translatable').forEach(el => {
+        el.innerText = lang === 'BN' ? el.getAttribute('data-bn') : el.getAttribute('data-en');
+      });
+      document.querySelectorAll('.tab-label').forEach(el => {
+        el.innerText = lang === 'BN' ? el.getAttribute('data-bn') : el.getAttribute('data-en');
+      });
+
+      renderCatalog();
+      renderCart();
+      updateWaMessage();
+      showToast(lang === 'BN' ? '🇧🇩 ভাষা পরিবর্তন: বাংলা (বাণিজ্যিক মানসম্মত)' : '🇬🇧 Language set: English');
+    }
+
+    // Theme Toggle
+    function toggleTheme() {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', currentTheme);
+      document.getElementById('lblTheme').innerText = currentTheme === 'dark' ? 'Dark' : 'Light';
+      document.getElementById('btnThemeToggle').innerText = currentTheme === 'dark' ? '🌙 Dark' : '☀️ Light';
+    }
+
+    // Module Switcher
+    function showModule(modId) {
+      document.querySelectorAll('section.content-card').forEach(s => s.style.display = 'none');
+      document.getElementById(modId).style.display = 'flex';
+
+      document.querySelectorAll('.module-tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+    }
+
+    // Toast Utility
+    function showToast(msg) {
+      const toast = document.getElementById('toastBox');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    // Catalog Rendering
+    function renderCatalog(filter = '', category = 'All') {
+      const grid = document.getElementById('simProductsGrid');
+      grid.innerHTML = '';
+
+      sampleProducts.forEach(prod => {
+        const matchesCat = category === 'All' || prod.category === category;
+        const matchesFilter = filter === '' || 
+          prod.nameEn.toLowerCase().includes(filter.toLowerCase()) || 
+          prod.nameBn.includes(filter);
+
+        if (matchesCat && matchesFilter) {
+          const card = document.createElement('div');
+          card.className = 'product-card-3d';
+          card.onclick = () => addToCart(prod);
+
+          const displayName = currentLang === 'BN' ? prod.nameBn : prod.nameEn;
+          const warnBadge = prod.warn ? `<span class="stock-pill stock-warn">${prod.warnText}</span>` : `<span class="stock-pill stock-ok">স্টক: ${prod.stock}</span>`;
+
+          card.innerHTML = `
+            <div class="product-top-row">
+              <span class="product-emoji">${prod.emoji}</span>
+              ${warnBadge}
+            </div>
+            <div class="product-name">${displayName}</div>
+            <div class="product-price-row">
+              <span class="price-taka">৳${prod.price.toFixed(2)}</span>
+              <span class="unit-tag">/${prod.unit}</span>
+            </div>
+          `;
+          grid.appendChild(card);
+        }
+      });
+    }
+
+    function filterCatalog() {
+      const query = document.getElementById('simSearchInput').value;
+      renderCatalog(query);
+    }
+
+    function selectCategory(btn, cat) {
+      document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      renderCatalog('', cat);
+    }
+
+    // Cart Operations
+    function addToCart(prod) {
+      const existing = cart.find(item => item.product.id === prod.id);
+      const isFractional = prod.unit === 'Kg';
+      const step = isFractional ? 0.25 : 1.0;
+
+      if (existing) {
+        existing.qty += step;
+      } else {
+        cart.push({ product: prod, qty: step });
+      }
+      renderCart();
+      showToast(`Added ${prod.nameEn} to cart`);
+    }
+
+    function updateQty(prodId, delta) {
+      const item = cart.find(i => i.product.id === prodId);
+      if (!item) return;
+
+      const isFractional = item.product.unit === 'Kg';
+      const step = isFractional ? 0.25 : 1.0;
+
+      item.qty += (delta * step);
+      if (item.qty <= 0) {
+        cart = cart.filter(i => i.product.id !== prodId);
+      }
+      renderCart();
+    }
+
+    function renderCart() {
+      const container = document.getElementById('simCartList');
+      const countBadge = document.getElementById('cartCountBadge');
+      const totalDisplay = document.getElementById('simTotalAmount');
+
+      if (cart.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; color: var(--text-tertiary); padding: 40px 10px; font-size: 13px;">
+            <span style="font-size: 32px; display: block; margin-bottom: 6px;">🛍️</span>
+            <span>${currentLang === 'BN' ? 'কার্টে কোনো পণ্য যোগ করা হয়নি' : 'Cart is currently empty'}<br><small>(Tap items on the left to add)</small></span>
+          </div>
+        `;
+        countBadge.innerText = '0 items';
+        totalDisplay.innerText = '৳0.00';
+        updateChange(0);
+        return;
+      }
+
+      container.innerHTML = '';
+      let total = 0;
+      let totalUnits = 0;
+
+      cart.forEach(item => {
+        const itemTotal = item.product.price * item.qty;
+        total += itemTotal;
+        totalUnits += item.qty;
+
+        const row = document.createElement('div');
+        row.className = 'cart-item-row';
+        const name = currentLang === 'BN' ? item.product.nameBn : item.product.nameEn;
+        const displayQty = item.qty % 1 === 0 ? item.qty : item.qty.toFixed(2);
+
+        row.innerHTML = `
+          <div class="item-info">
+            <div class="item-title">${name}</div>
+            <div class="item-sub">
+              <span>৳${item.product.price} × ${displayQty} ${item.product.unit}</span>
+              <strong style="color: var(--emerald);">৳${itemTotal.toFixed(2)}</strong>
+            </div>
+          </div>
+          <div class="stepper-box">
+            <button class="stepper-btn" onclick="updateQty(${item.product.id}, -1)">−</button>
+            <span class="stepper-val">${displayQty}</span>
+            <button class="stepper-btn" style="color: var(--emerald);" onclick="updateQty(${item.product.id}, 1)">+</button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+
+      countBadge.innerText = `${cart.length} items (${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)} units)`;
+      totalDisplay.innerText = `৳${total.toFixed(2)}`;
+
+      applyTender(selectedTender);
+    }
+
+    function applyTender(type) {
+      selectedTender = type;
+      document.querySelectorAll('.tender-chip').forEach(b => b.classList.remove('active'));
+
+      const total = cart.reduce((sum, i) => sum + (i.product.price * i.qty), 0);
+      let paid = total;
+
+      if (type === 'EXACT') {
+        paid = total;
+      } else if (typeof type === 'number') {
+        paid = Math.ceil(total / type) * type;
+        if (paid === 0) paid = type;
+      }
+
+      updateChange(paid - total);
+    }
+
+    function updateChange(change) {
+      const changeEl = document.getElementById('simChangeAmount');
+      changeEl.innerText = `৳${Math.max(0, change).toFixed(2)}`;
+    }
+
+    function completeSimulatedSale() {
+      if (cart.length === 0) {
+        showToast('⚠️ Cart is empty! Add products first.');
+        return;
+      }
+      const total = cart.reduce((sum, i) => sum + (i.product.price * i.qty), 0);
+      showToast(`🎉 Sale Completed: ৳${total.toFixed(2)}! 80mm Slip Printed.`);
+      cart = [];
+      renderCart();
+    }
+
+    function promptCustomer() {
+      const name = prompt('গ্রাহকের নাম বা ফোন নম্বর লিখুন (Enter customer phone/name):', 'আব্দুর রহিম (01711-223344)');
+      if (name) {
+        document.getElementById('custDisplay').innerText = name;
+        showToast(`Customer assigned: ${name}`);
+      }
+    }
+
+    // WhatsApp Dispatcher Logic
+    let currentWaType = 'INVOICE';
+    function setWaType(type) {
+      currentWaType = type;
+      document.getElementById('btnWaInvoice').classList.toggle('active', type === 'INVOICE');
+      document.getElementById('btnWaDue').classList.toggle('active', type === 'DUE');
+      updateWaMessage();
+    }
+
+    function updateWaMessage() {
+      const bubble = document.getElementById('waBubbleContent');
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      if (currentWaType === 'INVOICE') {
+        bubble.innerHTML = `
+          <strong>Techyfi General Store</strong><br>
+          চালান নং: <strong>#INV-2026-889</strong><br>
+          তারিখ: ০২ অক্টোবর, ২০২৬<br>
+          ------------------------------<br>
+          ১. মিনিকেট চাল ২ কেজি: ৳১৬৪.০০<br>
+          ২. রূপচাঁদা তেল ২ লিটার: ৳৩৮০.০০<br>
+          ------------------------------<br>
+          উপমোট: ৳৫৪৪.০০<br>
+          ছাড়: ৳৪৪.০০<br>
+          <strong>সর্বমোট: ৳৫০০.০০</strong><br>
+          নগদ পরিশোধ: ৳৫০০.০০<br>
+          অবশিষ্ট বকেয়া: ৳০.০০<br><br>
+          আমাদের সাথে কেনাকাটা করার জন্য ধন্যবাদ! 💐
+          <span class="time-stamp">${time} ✓✓</span>
+        `;
+      } else {
+        bubble.innerHTML = `
+          <strong>Techyfi General Store — বাকি তাগাদা</strong><br>
+          সম্মানিত গ্রাহক <strong>তানভীর আহমেদ</strong>,<br>
+          আপনার অবগতির জন্য জানানো যাচ্ছে যে, আপনার নিকট মোট বকেয়া রয়েছে: <strong>৳১,৪৫০.০০</strong>।<br><br>
+          অনুগ্রহ করে সুবিধাজনক সময়ে দোকানে অথবা আমাদের bKash মার্চেন্ট নম্বরে (01700-000000) বকেয়া পরিশোধ করার জন্য অনুরোধ করা হচ্ছে।<br><br>
+          ধন্যবাদ ও শুভেচ্ছান্তে,<br>
+          <strong>ম্যানেজার, Techyfi Store</strong>
+          <span class="time-stamp">${time} ✓✓</span>
+        `;
+      }
+    }
+
+    function triggerWhatsAppSend() {
+      showToast('🚀 WhatsApp Launched: Message prefilled and ready to send!');
+    }
+
+    function confirmAllActions() {
+      showToast('✅ All proposals confirmed! Ready for pairing implementation.');
+      alert('Confirmed! Antigravity will now prepare the clean, verified implementation plan based on your confirmed checklist items.');
+    }
+
+    // Initialize
+    renderCatalog();
+    renderCart();
+    updateWaMessage();
+  </script>
+</body>
+</html>

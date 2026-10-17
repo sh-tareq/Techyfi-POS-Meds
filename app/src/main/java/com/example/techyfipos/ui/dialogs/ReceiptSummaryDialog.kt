@@ -714,7 +714,7 @@ fun ReceiptSummaryDialog(
                                         receiptText,
                                         color = Color.White,
                                         modifier = Modifier.padding(6.dp),
-                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                        fontFamily = if (receiptLanguage.equals("BN", ignoreCase = true)) androidx.compose.ui.text.font.FontFamily.Default else androidx.compose.ui.text.font.FontFamily.Monospace,
                                         fontSize = 11.5.sp
                                     )
                                 }

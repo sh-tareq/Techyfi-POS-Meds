@@ -1132,14 +1132,14 @@ fun SalesHistoryScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = draftMinimumTotal,
-                        onValueChange = { draftMinimumTotal = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                        onValueChange = { draftMinimumTotal = toEnglishDigits(it).filter { ch -> ch.isDigit() || ch == '.' } },
                         label = { Text(stringResource(R.string.history_filter_min_taka)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = draftMaximumTotal,
-                        onValueChange = { draftMaximumTotal = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                        onValueChange = { draftMaximumTotal = toEnglishDigits(it).filter { ch -> ch.isDigit() || ch == '.' } },
                         label = { Text(stringResource(R.string.history_filter_max_taka)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f)

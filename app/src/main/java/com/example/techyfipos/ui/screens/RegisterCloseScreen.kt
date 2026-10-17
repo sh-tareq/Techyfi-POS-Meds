@@ -36,6 +36,7 @@ import com.example.techyfipos.theme.extendedColors
 import com.example.techyfipos.utils.isZeroMoney
 import com.example.techyfipos.utils.startOfDay
 import com.example.techyfipos.utils.endOfDay
+import com.example.techyfipos.utils.toEnglishDigits
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -1753,7 +1754,7 @@ fun DenominationCounterDialog(
                                 OutlinedTextField(
                                     value = directTotalInput,
                                     onValueChange = { input ->
-                                        directTotalInput = input.filter { it.isDigit() || it == '.' }
+                                        directTotalInput = toEnglishDigits(input).filter { it.isDigit() || it == '.' }
                                     },
                                     leadingIcon = {
                                         Text(formatMoney(0.0).take(1), fontSize = 22.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
@@ -2076,7 +2077,7 @@ fun DenominationRowItem(
                     color = item.badgeColor
                 ) {
                     Text(
-                        text = item.label,
+                        text = formatTaka(item.value.toDouble()),
                         color = Color.White,
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Black,
@@ -2184,7 +2185,7 @@ fun AddCashFloatDialog(
 
                 OutlinedTextField(
                     value = amountText,
-                    onValueChange = { input -> amountText = input.filter { it.isDigit() || it == '.' } },
+                    onValueChange = { input -> amountText = toEnglishDigits(input).filter { it.isDigit() || it == '.' } },
                     label = { Text(stringResource(R.string.register_close_amount_label)) },
                     leadingIcon = { Text(formatMoney(0.0).take(1), fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     singleLine = true,
@@ -2305,7 +2306,7 @@ fun SafeDropDialog(
 
                 OutlinedTextField(
                     value = amountText,
-                    onValueChange = { input -> amountText = input.filter { it.isDigit() || it == '.' } },
+                    onValueChange = { input -> amountText = toEnglishDigits(input).filter { it.isDigit() || it == '.' } },
                     label = { Text(stringResource(R.string.day_close_safe_drop_amount)) },
                     leadingIcon = { Text(formatMoney(0.0).take(1), fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     singleLine = true,
@@ -2555,7 +2556,7 @@ fun CloseRegisterReconciliationDialog(
                 // Actual Counted Cash Input
                 OutlinedTextField(
                     value = actualCashText,
-                    onValueChange = { input -> actualCashText = input.filter { it.isDigit() || it == '.' } },
+                    onValueChange = { input -> actualCashText = toEnglishDigits(input).filter { it.isDigit() || it == '.' } },
                     label = { Text(stringResource(R.string.register_close_actual_counted_cash)) },
                     leadingIcon = { Text(formatMoney(0.0).take(1), fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     singleLine = true,

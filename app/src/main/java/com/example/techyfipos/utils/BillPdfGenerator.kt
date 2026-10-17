@@ -262,7 +262,7 @@ fun formatPaymentMethodBangla(method: String): String {
 
 fun buildBillReceiptText(bill: BillData, receiptLanguage: String = "EN"): String {
     val isBn = receiptLanguage.equals("BN", ignoreCase = true)
-    val date = SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.US).format(Date(bill.timestampMillis))
+    val date = if (isBn) DateFormatters.formatDateTime(bill.timestampMillis, Locale.forLanguageTag("bn")) else SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.US).format(Date(bill.timestampMillis))
     val settings = bill.settingsData
     val sb = StringBuilder()
     val defaultShopName = "Techyfi POS"
@@ -697,12 +697,11 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
     currentY += 35f
 
     // 4. Meta Info
-    val dateStr = SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.US).format(Date(bill.timestampMillis))
-    val invIdStr = if (isBn) toBanglaDigits(bill.saleId.toString()) else bill.saleId.toString()
+    val dateStr = if (isBn) DateFormatters.formatDateTime(bill.timestampMillis, Locale.forLanguageTag("bn")) else SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.US).format(Date(bill.timestampMillis))
+    val invIdStr = bill.saleId.toString()
     canvas.drawText(if (isBn) "চালান নং : #$invIdStr" else "Invoice  : #${bill.saleId}", sidePad, currentY + 20f, paintText)
     currentY += rowStep
-    val effDateStr = if (isBn) toBanglaDigits(dateStr) else dateStr
-    canvas.drawText(if (isBn) "তারিখ    : $effDateStr" else "Date     : $dateStr", sidePad, currentY + 20f, paintText)
+    canvas.drawText(if (isBn) "তারিখ    : $dateStr" else "Date     : $dateStr", sidePad, currentY + 20f, paintText)
     currentY += rowStep
     val cashierVal = bill.cashierName.ifBlank { settings.cashierName }
     if (settings.showCashier) {
@@ -766,7 +765,8 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
             currentY += rowStep
         }
         if (!item.note.isNullOrBlank()) {
-            val noteLines = wrapItemNameByPixelWidth("• Note: ${item.note}", colItemMaxW, paintText)
+            val notePrefix = if (isBn) "• নোট: " else "• Note: "
+            val noteLines = wrapItemNameByPixelWidth("$notePrefix${item.note}", colItemMaxW, paintText)
             noteLines.forEach { nLine ->
                 canvas.drawText(nLine, colItemX + 8f, currentY + 20f, paintText)
                 currentY += rowStep
@@ -905,7 +905,7 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
         canvas.drawText(String.format(Locale.US, if (isBn) "গ্রাহক    : %s" else "Customer : %s", custName), sidePad, currentY + 20f, paintText)
         currentY += 30f
         if (bill.customerPhone.isNotBlank()) {
-            val custPhoneDisp = if (isBn) toBanglaDigits(bill.customerPhone) else bill.customerPhone
+            val custPhoneDisp = bill.customerPhone
             canvas.drawText(String.format(Locale.US, if (isBn) "ফোন      : %s" else "Phone    : %s", custPhoneDisp), sidePad, currentY + 20f, paintText)
             currentY += 30f
         }
@@ -1280,11 +1280,12 @@ fun generateZReportJpeg(
     paint.textAlign = Paint.Align.LEFT
     canvas.drawText(if (isBangla) "সময়কাল   : $rangeLabel" else "Period    : $rangeLabel", sidePad, y, paint)
     y += lineH
-    val generatedDate = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US).format(Date())
+    val generatedDate = if (isBangla) DateFormatters.formatDateTime(System.currentTimeMillis(), Locale.forLanguageTag("bn")) else SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US).format(Date())
     canvas.drawText(if (isBangla) "প্রস্তুত  : $generatedDate" else "Generated : $generatedDate", sidePad, y, paint)
     y += lineH
     val formattedUnits = formatUnitsSold(data.itemsSold, isBangla = isBangla)
-    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: $formattedUnits" else "Invoices  : ${data.transactionCount} | Units Sold: $formattedUnits", sidePad, y, paint)
+    val txCountStr = if (isBangla) toBanglaDigits(data.transactionCount.toString()) else data.transactionCount.toString()
+    canvas.drawText(if (isBangla) "চালান     : $txCountStr | পণ্য বিক্রয়: $formattedUnits" else "Invoices  : ${data.transactionCount} | Units Sold: $formattedUnits", sidePad, y, paint)
     y += if (is58) 28f else 35f
 
     paint.textAlign = Paint.Align.CENTER
@@ -1310,11 +1311,11 @@ fun generateZReportJpeg(
     if (data.totalRefunds > 0.0) {
         drawKeyValue(if (isBangla) "ফেরত / রিফান্ড" else "Returns / Refunds", "-${formatTaka(data.totalRefunds, isBangla = isBangla)}")
     }
-    drawKeyValue(if (isBangla) "নীট বিক্রয়" else "Net Sales", formatTaka(data.totalRevenue, isBangla = isBangla))
+    drawKeyValue(if (isBangla) "প্রকৃত বিক্রয়" else "Net Sales", formatTaka(data.totalRevenue, isBangla = isBangla))
     if (data.totalTax > 0.0) {
         drawKeyValue(if (isBangla) "কর / ভ্যাট" else "Tax (VAT)", formatTaka(data.totalTax, isBangla = isBangla))
     }
-    drawKeyValue(if (isBangla) "প্রদত্ত ছাড়" else "Discounts Given", formatTaka(data.totalDiscount, isBangla = isBangla))
+    drawKeyValue(if (isBangla) "মোট ছাড়" else "Discounts Given", formatTaka(data.totalDiscount, isBangla = isBangla))
     if (data.totalLoyaltyDiscount > 0.0) {
         drawKeyValue(if (isBangla) "লয়্যালটি পয়েন্ট ছাড়" else "Loyalty Redeemed", "-${formatTaka(data.totalLoyaltyDiscount, isBangla = isBangla)}")
     }
@@ -1573,11 +1574,12 @@ fun generateXReportJpeg(
     paint.textAlign = Paint.Align.LEFT
     canvas.drawText(if (isBangla) "সময়কাল   : $rangeLabel" else "Period    : $rangeLabel", sidePad, y, paint)
     y += lineH
-    val generatedDate = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US).format(Date())
+    val generatedDate = if (isBangla) DateFormatters.formatDateTime(System.currentTimeMillis(), Locale.forLanguageTag("bn")) else SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.US).format(Date())
     canvas.drawText(if (isBangla) "প্রস্তুত  : $generatedDate" else "Generated : $generatedDate", sidePad, y, paint)
     y += lineH
     val formattedUnits = formatUnitsSold(data.itemsSold, isBangla = isBangla)
-    canvas.drawText(if (isBangla) "চালান     : ${data.transactionCount} | পণ্য বিক্রয়: $formattedUnits" else "Invoices  : ${data.transactionCount} | Units Sold: $formattedUnits", sidePad, y, paint)
+    val txCountStr = if (isBangla) toBanglaDigits(data.transactionCount.toString()) else data.transactionCount.toString()
+    canvas.drawText(if (isBangla) "চালান     : $txCountStr | পণ্য বিক্রয়: $formattedUnits" else "Invoices  : ${data.transactionCount} | Units Sold: $formattedUnits", sidePad, y, paint)
     y += if (is58) 28f else 35f
 
     paint.textAlign = Paint.Align.CENTER
@@ -2421,25 +2423,32 @@ fun generateStoreCreditVoucherJpeg(
     // Metadata Rows
     val metaLeft = sidePad
     val dateFormat = SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.US)
-    val issueDateStr = dateFormat.format(Date(voucher.issuedAt))
-    val expiryDateStr = voucher.expiresAt?.let { dateFormat.format(Date(it)) } ?: (if (isBn) "মেয়াদহীন" else "No Expiry")
+    val issueDateStr = if (isBn) DateFormatters.formatDateTime(voucher.issuedAt, Locale.forLanguageTag("bn")) else dateFormat.format(Date(voucher.issuedAt))
+    val expiryDateStr = voucher.expiresAt?.let {
+        if (isBn) DateFormatters.formatDateTime(it, Locale.forLanguageTag("bn")) else dateFormat.format(Date(it))
+    } ?: (if (isBn) "মেয়াদহীন" else "No Expiry")
+
+    val colonX = metaLeft + (if (is58) 120f else 160f)
+    val valueX = colonX + 12f
 
     fun drawMetaRow(labelEn: String, labelBn: String, value: String) {
         val lbl = if (isBn) labelBn else labelEn
-        canvas.drawText(String.format(Locale.US, "%-14s : %s", lbl, value), metaLeft, currentY + metaRowH - 6f, paintText)
+        canvas.drawText(lbl, metaLeft, currentY + metaRowH - 6f, paintText)
+        canvas.drawText(":", colonX, currentY + metaRowH - 6f, paintText)
+        canvas.drawText(value, valueX, currentY + metaRowH - 6f, paintText)
         currentY += metaRowH
     }
 
     drawMetaRow("Voucher Code", "ভাউচার কোড", voucher.code)
-    drawMetaRow("Issue Date", "ইস্যুর তারিখ", if (isBn) toBanglaDigits(issueDateStr) else issueDateStr)
-    drawMetaRow("Valid Until", "মেয়াদ উত্তীর্ণ", if (isBn) toBanglaDigits(expiryDateStr) else expiryDateStr)
+    drawMetaRow("Issue Date", "ইস্যুর তারিখ", issueDateStr)
+    drawMetaRow("Valid Until", "মেয়াদ উত্তীর্ণ", expiryDateStr)
 
     if (voucher.sourceSaleId != null) {
         drawMetaRow("Source Inv", "মূল চালান", "#${voucher.sourceSaleId}")
     }
 
     val custDisp = customerName ?: voucher.customerPhone ?: (if (isBn) "সাধারণ ক্রেতা" else "Walk-in Customer")
-    drawMetaRow("Customer", "গ্রাহক", if (isBn && custDisp == voucher.customerPhone) toBanglaDigits(custDisp) else custDisp)
+    drawMetaRow("Customer", "গ্রাহক", custDisp)
 
     val statusDisp = if (voucher.status == "ACTIVE") (if (isBn) "সক্রিয়" else "ACTIVE") else voucher.status
     drawMetaRow("Status", "অবস্থা", statusDisp)
@@ -2557,8 +2566,10 @@ fun buildStoreCreditVoucherText(
     storePhone: String,
     isBangla: Boolean = false
 ): String {
-    val issueDateStr = SimpleDateFormat("dd-MMM-yyyy", Locale.US).format(Date(voucher.issuedAt))
-    val expiryStr = voucher.expiresAt?.let { SimpleDateFormat("dd-MMM-yyyy", Locale.US).format(Date(it)) } ?: (if (isBangla) "মেয়াদহীন" else "No Expiry")
+    val issueDateStr = if (isBangla) DateFormatters.formatDate(voucher.issuedAt, Locale.forLanguageTag("bn")) else SimpleDateFormat("dd-MMM-yyyy", Locale.US).format(Date(voucher.issuedAt))
+    val expiryStr = voucher.expiresAt?.let {
+        if (isBangla) DateFormatters.formatDate(it, Locale.forLanguageTag("bn")) else SimpleDateFormat("dd-MMM-yyyy", Locale.US).format(Date(it))
+    } ?: (if (isBangla) "মেয়াদহীন" else "No Expiry")
     val amtStr = if (isBangla) formatTakaBn(voucher.remainingBalance) else formatTaka(voucher.remainingBalance)
 
     return if (isBangla) {
@@ -2567,9 +2578,9 @@ fun buildStoreCreditVoucherText(
         ----------------------------------
         🎟️ ভাউচার কোড: ${voucher.code}
         💰 মূল্য: $amtStr
-        📅 ইস্যুর তারিখ: ${toBanglaDigits(issueDateStr)}
-        ⏳ মেয়াদ উত্তীর্ণ: ${toBanglaDigits(expiryStr)}
-        ${if (!voucher.customerPhone.isNullOrBlank()) "👤 গ্রাহক: ${toBanglaDigits(voucher.customerPhone)}" else ""}
+        📅 ইস্যুর তারিখ: $issueDateStr
+        ⏳ মেয়াদ উত্তীর্ণ: $expiryStr
+        ${if (!voucher.customerPhone.isNullOrBlank()) "👤 গ্রাহক: ${voucher.customerPhone}" else ""}
         ----------------------------------
         আমাদের দোকানে কেনাকাটার সময় এই ভাউচার কোডটি ক্যাশিয়ারে দেখিয়ে মূল্য ছাড় নিন।
         ${if (storePhone.isNotBlank()) "যোগাযোগ: $storePhone" else ""}

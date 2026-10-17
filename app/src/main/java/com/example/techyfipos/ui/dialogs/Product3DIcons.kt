@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.techyfipos.R
+import com.example.techyfipos.utils.toEnglishDigits
 
 @Composable
 fun Animated3DPackageIcon(
@@ -566,14 +567,15 @@ fun DateInputField(
     var initMonth = calendar.get(java.util.Calendar.MONTH)
     var initDay = calendar.get(java.util.Calendar.DAY_OF_MONTH)
 
-    if (value.length >= 8 && value.contains("-")) {
-        val parts = value.split("-")
+    val englishVal = remember(value) { toEnglishDigits(value.trim()) }
+    if (englishVal.length >= 6) {
+        val parts = englishVal.split(Regex("[-/.]"))
         if (parts.size == 3) {
             val d = parts[0].toIntOrNull()
             val m = parts[1].toIntOrNull()
             val y = parts[2].toIntOrNull()
             if (d != null && m != null && y != null) {
-                initDay = d
+                initDay = d.coerceIn(1, 31)
                 initMonth = (m - 1).coerceIn(0, 11)
                 initYear = if (y < 100) 2000 + y else y
             }
@@ -620,7 +622,8 @@ fun DateInputField(
                 BasicTextField(
                     value = value,
                     onValueChange = { newValue ->
-                        val filtered = newValue.filter { it.isDigit() || it == '-' }.take(8)
+                        val english = toEnglishDigits(newValue)
+                        val filtered = english.filter { it.isDigit() || it == '-' || it == '/' }.take(10)
                         onValueChange(filtered)
                     },
                     textStyle = LocalTextStyle.current.copy(

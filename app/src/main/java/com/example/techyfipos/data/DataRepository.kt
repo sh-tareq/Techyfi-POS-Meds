@@ -2,6 +2,7 @@ package com.example.techyfipos.data
 
 import android.content.Context
 import com.example.techyfipos.data.db.*
+import com.example.techyfipos.utils.DateFormatters
 import com.example.techyfipos.utils.normalizePhone
 import com.example.techyfipos.utils.toEnglishDigits
 import kotlinx.coroutines.flow.Flow
@@ -2045,7 +2046,7 @@ class DataRepository(
     suspend fun addCustomerNote(phone: String, noteText: String, category: String = "General"): Boolean = withContext(Dispatchers.IO) {
         val cleanPhone = normalizePhone(phone)
         val customer = customerDao.getCustomerByPhone(cleanPhone) ?: return@withContext false
-        val timeStr = java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
+        val timeStr = DateFormatters.formatDateTime(System.currentTimeMillis())
         val newEntry = "• [$timeStr | $category] ${noteText.trim()}"
         val updatedNotes = if (customer.notes.isNullOrBlank()) newEntry else "$newEntry\u001E${customer.notes}"
         customerDao.upsertCustomer(customer.copy(notes = updatedNotes, updatedAt = System.currentTimeMillis()))

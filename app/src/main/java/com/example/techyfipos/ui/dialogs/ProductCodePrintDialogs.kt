@@ -136,7 +136,7 @@ fun CopiesStepper(
                         BasicTextField(
                             value = text,
                             onValueChange = { newVal ->
-                                val filtered = newVal.filter { it.isDigit() }.take(4)
+                                val filtered = toEnglishDigits(newVal).filter { it.isDigit() }.take(4)
                                 text = filtered
                                 val p = filtered.toIntOrNull()
                                 if (p != null && p in min..max) {

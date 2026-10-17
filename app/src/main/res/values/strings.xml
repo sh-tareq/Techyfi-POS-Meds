@@ -613,7 +613,7 @@
     <string name="cart_reason_split_details_required">Enter the wallet number or card digits for each split row</string>
     <string name="cart_reason_wallet_number_required">Enter the 11-digit %1$s mobile number</string>
     <string name="cart_reason_card_digits_required">Enter the card\'s last 4 digits</string>
-    <string name="cart_reason_total_zero">Sale total cannot be ৳0 (100% discount is not allowed)</string>
+    <string name="cart_reason_total_zero" formatted="false">Sale total cannot be ৳0 (100% discount is not allowed)</string>
     <string name="cart_reason_cash_insufficient">Cash received is less than the grand total</string>
     <string name="cart_reason_generic_incomplete">Complete the required information</string>
     <string name="cart_scan_product_added">%1$s added</string>
@@ -854,7 +854,7 @@
     <string name="dues_collected_this_month_label">COLLECTED THIS MONTH</string>
     <string name="dues_total_credit_label">TOTAL CREDIT</string>
     <string name="dues_total_repaid_label">TOTAL REPAID</string>
-    <string name="dues_recovery_percent_label">RECOVERY %</string>
+    <string name="dues_recovery_percent_label" formatted="false">RECOVERY %</string>
     <string name="dues_overdue_badge">Overdue</string>
     <string name="dues_settled_label">Settled</string>
     <string name="dues_limit_percent_row">Limit: %1$s (%2$d%%)</string>
@@ -906,7 +906,7 @@
     <string name="dues_overpaid_by_error">Exceeds due by +%1$s</string>
     <string name="dues_amount_received_label">Amount Received</string>
     <string name="dues_amount_up_to_error">Enter an amount up to %1$s</string>
-    <string name="dues_full_amount_chip">100% Full (%1$s)</string>
+    <string name="dues_full_amount_chip">100%% Full (%1$s)</string>
     <string name="dues_payment_channel_label">Payment Channel</string>
     <string name="dues_reference_note_label">Reference Or Note (Optional)</string>
     <string name="dues_share_receipt_after_saving_label">Share payment receipt after saving</string>
@@ -1228,7 +1228,7 @@
     <string name="settings_toast_template_downloaded">Template downloaded!</string>
     <string name="settings_transfer_subtitle">Import inventory or export products, sales and dues ledgers.</string>
     <string name="settings_transfer_title">Spreadsheets &amp; Excel Tools</string>
-    <string name="settings_value_100_verified">100% Verified</string>
+    <string name="settings_value_100_verified" formatted="false">100% Verified</string>
     <string name="settings_value_aes256_armed">AES-256 Armed</string>
     <string name="settings_value_country_bangladesh">Bangladesh 🇧🇩</string>
     <string name="settings_value_local_drive_ready">Local / Drive Ready</string>
@@ -1339,14 +1339,14 @@
     <string name="products_exit_batch">Exit Batch</string>
     <string name="products_stock_audit">Stock Audit</string>
     <string name="products_print_labels">Print Labels</string>
-    <string name="products_batch_price_pct">Price %</string>
+    <string name="products_batch_price_pct" formatted="false">Price %</string>
     <string name="products_batch_category">Category</string>
     <string name="products_batch_delete">Delete</string>
     <string name="products_filter_all_skus">All SKUs</string>
     <string name="products_filter_all_categories">All Categories</string>
     <string name="products_filter_low_stock_chip">⚠️ Low Stock</string>
     <string name="products_filter_out_of_stock_chip">🚫 Out of Stock</string>
-    <string name="products_filter_high_margin_chip">💎 High Margin (&gt;30%)</string>
+    <string name="products_filter_high_margin_chip" formatted="false">💎 High Margin (&gt;30%)</string>
     <string name="products_export_failed_storage">Export failed. Check storage permissions.</string>
     <string name="products_export_failed_open_file">Unable to open destination file.</string>
     <string name="products_export_error">Export error: %1$s</string>
@@ -1569,7 +1569,7 @@
     <string name="loyalty_settings_earn_rate">Spend for 1 Point (৳)</string>
     <string name="loyalty_settings_redeem_rate">Cash Value per Point (৳)</string>
     <string name="loyalty_settings_min_redeem">Min Points to Redeem</string>
-    <string name="loyalty_settings_max_discount">Max Bill Payable by Points (%)</string>
+    <string name="loyalty_settings_max_discount" formatted="false">Max Bill Payable by Points (%)</string>
     <string name="loyalty_settings_silver_thresh">Silver Spend Threshold (৳)</string>
     <string name="loyalty_settings_gold_thresh">Gold Spend Threshold (৳)</string>
     <string name="loyalty_settings_platinum_thresh">Platinum Spend Threshold (৳)</string>
@@ -1834,9 +1834,9 @@
     <string name="users_permissions_title">Permissions: %1$s</string>
     <string name="users_permissions_reset_defaults">Reset to Defaults</string>
     <string name="users_permissions_saved">Permissions updated successfully</string>
-    <string name="users_max_discount_label">Max Discount %</string>
+    <string name="users_max_discount_label" formatted="false">Max Discount %</string>
     <string name="users_max_discount_hint">Discounts above this require supervisor PIN</string>
-    <string name="users_max_discount_invalid_error">Enter a valid discount between 0 and 100%</string>
+    <string name="users_max_discount_invalid_error" formatted="false">Enter a valid discount between 0 and 100%</string>
     <string name="users_supervisor_auth_title">Supervisor Authorization</string>
     <string name="users_supervisor_auth_desc">This action requires Manager or Admin authorization.</string>
     <string name="users_supervisor_enter_pin">Enter 4-Digit Supervisor PIN</string>
@@ -2241,7 +2241,7 @@
     <!-- Default Cost Margin Estimation Settings -->
     <string name="settings_default_cost_title">Default Cost Margin Estimation</string>
     <string name="settings_default_cost_subtitle">Assumed cost for items with no recorded purchase price</string>
-    <string name="settings_default_cost_preset_breakeven">100% (Break-even)</string>
+    <string name="settings_default_cost_preset_breakeven" formatted="false">100% (Break-even)</string>
     <string name="settings_default_cost_description">Unrecorded items assume %1$s%% cost (%2$s%% estimated profit margin) in reports.</string>
 
     <!-- Customers Screen & Dossier Localization -->
@@ -2275,7 +2275,7 @@
     <string name="supplier_view_all_invoices">View all %1$d purchase invoices →</string>
     <string name="supplier_view_all_payments">View all %1$d payments →</string>
     <string name="cart_discount_fixed_bdt">Fixed (৳)</string>
-    <string name="cart_discount_percent_label">Percentage (%)</string>
+    <string name="cart_discount_percent_label" formatted="false">Percentage (%)</string>
     <string name="cart_line_total_preview">Line total: %1$s</string>
     <string name="cart_discounted_unit_price">Discounted unit: %1$s</string>
 
@@ -2499,7 +2499,7 @@
     <string name="cart_quick_sale_note">Quick Sale</string>
     <string name="bulk_price_dialog_title">Bulk Price Adjustment</string>
     <string name="bulk_price_adjust_desc">Adjust prices for %1$d selected product(s).</string>
-    <string name="bulk_price_mode_percentage">Percentage (%)</string>
+    <string name="bulk_price_mode_percentage" formatted="false">Percentage (%)</string>
     <string name="bulk_price_mode_fixed">Fixed (৳)</string>
     <string name="bulk_price_dir_increase">Increase (+)</string>
     <string name="bulk_price_dir_decrease">Decrease (-)</string>
@@ -3212,7 +3212,7 @@
     <string name="batch_picker_selected_fmt">%1$d selected</string>
     <string name="batch_labels_share_subject">Batch_Labels</string>
     <string name="reset_all_sizes">Reset all</string>
-    <string name="reset_size_hint">Scales above 100% may auto-fit if label height is constrained</string>
+    <string name="reset_size_hint" formatted="false">Scales above 100% may auto-fit if label height is constrained</string>
     <string name="batch_preview_prev_sample">Previous sample</string>
     <string name="batch_preview_next_sample">Next sample</string>
     <string name="batch_print_custom_per_product">Per Product</string>

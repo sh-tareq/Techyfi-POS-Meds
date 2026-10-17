@@ -3734,7 +3734,8 @@ fun StockCheckBottomSheet(
                     OutlinedTextField(
                         value = stockInputText,
                         onValueChange = { input ->
-                            val filtered = input.filter { it.isDigit() || it == '.' }
+                            val english = toEnglishDigits(input)
+                            val filtered = english.filter { it.isDigit() || it == '.' }
                             if (filtered.count { it == '.' } <= 1) {
                                 stockInputText = filtered.take(7)
                             }

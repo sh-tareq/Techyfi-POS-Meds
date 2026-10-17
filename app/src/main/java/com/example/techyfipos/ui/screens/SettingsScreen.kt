@@ -45,6 +45,8 @@ import com.example.techyfipos.printer.isLikelyUsbPrinter
 import com.example.techyfipos.printer.requestUsbPermission
 import com.example.techyfipos.utils.executeReceiptCutTest
 import com.example.techyfipos.utils.showDirectPrintToast
+import com.example.techyfipos.utils.toEnglishDigits
+import com.example.techyfipos.utils.DateFormatters
 import com.example.techyfipos.ui.components.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -107,7 +109,6 @@ import com.example.techyfipos.utils.GoogleDriveHelper
 import com.example.techyfipos.utils.SigningCertificateHelper
 import com.example.techyfipos.utils.formatTaka
 import androidx.compose.ui.window.DialogProperties
-import com.example.techyfipos.utils.DateFormatters
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 
 private enum class SettingsPage {
@@ -289,7 +290,7 @@ private fun buildTestLabelBitmap(
     val sizeText = "${if (widthMm % 1f == 0f) widthMm.toInt() else widthMm} x ${if (heightMm % 1f == 0f) heightMm.toInt() else heightMm} mm"
     canvas.drawText(sizeText, centerX, targetHeightDots * 0.68f, paint)
     canvas.drawText(
-        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()),
+        DateFormatters.formatReportTimestamp(System.currentTimeMillis()),
         centerX,
         targetHeightDots * 0.88f,
         paint
@@ -673,7 +674,7 @@ private fun OptimizedSettingsHome(
             OutlinedTextField(
                 value = customCostText,
                 onValueChange = { input ->
-                    val sanitized = input.filter { ch -> ch.isDigit() || ch == '.' }
+                    val sanitized = toEnglishDigits(input).filter { ch -> ch.isDigit() || ch == '.' }
                     customCostText = sanitized
                     sanitized.toDoubleOrNull()?.let { value ->
                         if (value in 0.0..100.0) {
@@ -739,8 +740,7 @@ private fun OptimizedSettingsHome(
         )
         if (isOwner && ownerPinResetAudit != null) {
             val formattedDate = remember(ownerPinResetAudit.timestamp) {
-                java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault())
-                    .format(java.util.Date(ownerPinResetAudit.timestamp))
+                DateFormatters.formatDateTime(ownerPinResetAudit.timestamp)
             }
             Surface(
                 shape = RoundedCornerShape(8.dp),
@@ -2687,7 +2687,7 @@ private fun TaxSettings(
                 OutlinedTextField(
                     value = rateText,
                     onValueChange = { input ->
-                        val sanitized = input.filter { ch -> ch.isDigit() || ch == '.' }
+                        val sanitized = toEnglishDigits(input).filter { ch -> ch.isDigit() || ch == '.' }
                         rateText = sanitized
                         sanitized.toDoubleOrNull()?.let { rate ->
                             if (rate in 0.0..100.0) {

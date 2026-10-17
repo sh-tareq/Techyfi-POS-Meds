@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-16 (app version 2.6.83-V16-10-2026, build `Techyfi-POS-Final-V16-10-2026.apk`; versionCode 220959; DB schema version 38)
+Last updated: 2026-10-17 (app version 2.6.84-Final-V1, build `Techyfi-POS-Final-V1.apk`; versionCode 220960; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -92,6 +92,11 @@ mindmap
         Natural Bangladeshi retail terminology (বাকি, জমা, হালখাতা, ক্যাশ রেজিস্ট্রার, ভাউচার)
         Font padding disabled and line heights tuned across all typography tokens
         PDF Invoice and X/Z report canvas headers use Typeface.SANS_SERIF preventing tofu glyphs
+        Pixel-exact 3-column coordinate layout on canvas vouchers (metaLeft, colonX, valueX) preventing font drift
+        Invariant ASCII dynamic data preservation (customer phone, invoice IDs, barcodes) for dialability & scan search
+        Bengali keyboard digit (০-৯) sanitization via toEnglishDigits across all input fields preventing parse failure
+        Zero phantom specifiers & escaped %% symbols preventing Java Formatter crashes
+        Fallback thermal preview uses FontFamily.Default for Bangla preventing monospace glyph clipping
       Accessibility & Ergonomic Touch Architecture
         Minimum 48dp touch target sizing enforced across icon buttons, chips, and steppers
         High-contrast Material 3 surfaces adhering to WCAG AA guidelines
@@ -2992,6 +2997,40 @@ mindmap
   - Added compact `PaddingValues(horizontal = 8.dp, vertical = 0.dp)` ensuring both action buttons fit comfortably on compact screens without ellipsis truncation (`+ Record Expe...`).
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V16-10-2026.apk` (versionCode 220959, versionName "2.6.83-V16-10-2026"), R8 minified and resource-shrunk, prepared as an in-place update for existing installations.
+
+### Global Text Formatting, Localization & Numeral System Hardening (Version 2.6.84-Final-V1, Build Techyfi-POS-Final-V1.apk)
+- **String Resource Specifier Parity & Crash Prevention**:
+  - Escaped literal `%` characters to `%%` (e.g. `dues_full_amount_chip`: `100%% Full (%1$s)`) eliminating runtime `UnknownFormatConversionException: Conversion = 'F'` crashes.
+  - Added `formatted="false"` or `%%` across all strings with phantom format specifiers in English and Bengali resources, dropping placeholder count mismatches between English and Bengali from 8 to 0.
+  - Replaced archaic term `ঋণগ্রহীতা` with natural Bangladeshi retail phrasing `বকেয়াদার কাস্টমার` in `dues_total_outstanding_borrowers`.
+- **Bengali Soft Keyboard Numeral Parsing (`০-৯`)**:
+  - Kotlin's `Char.isDigit()` evaluates to `true` for Bengali numerals (`০-৯`), but JVM `toDoubleOrNull()`, `toIntOrNull()`, and `Long.parseLong()` strictly require ASCII `0-9`.
+  - Added `toEnglishDigits()` input sanitization before digit filtering across all numerical inputs:
+    - Sales History price range filters (`draftMinimumTotal`, `draftMaximumTotal`).
+    - Products catalog price range filters (`minimumPrice`, `maximumPrice`).
+    - Dues & Khata debt limits, repayment amounts, and dossier limit editors.
+    - Settings custom cost presets and VAT rates.
+    - Cash Register closing direct total, safe drop, and cash count fields.
+    - Scanner manual stock adjustment inputs.
+    - Product editor wholesale prices and reorder levels.
+    - Supervisor/Owner elevation PIN inputs.
+    - Barcode and product code label copy counts.
+- **Date Input Sanitization & Expiry Parsing**:
+  - Expanded `DateInputField` intake from `take(8)` to `take(10)` in `Product3DIcons.kt`, resolving the bug where 4-digit years (`2026`) truncated to `20` (interpreted as year 2020).
+  - Sanitized raw date inputs in `AppUtils.parseExpiryDateToMillis` with `toEnglishDigits()`, allowing dates typed with Bengali keyboards to parse correctly into epoch milliseconds.
+- **Thermal Receipts, Store Vouchers & Z-Reports Alignment (`BillPdfGenerator.kt`)**:
+  - Re-engineered `drawMetaRow` in store credit voucher bitmap generator to draw label (`metaLeft`), colon (`colonX`), and value (`valueX`) at deterministic pixel X coordinates, eliminating colon misalignment caused by proportional Bengali typography.
+  - Invariant business data preserved in ASCII digits: customer phone numbers, invoice IDs, and transaction barcodes remain in ASCII for dialability, WhatsApp links, and scanner search.
+  - Standardized date formatting on Bengali receipts via `DateFormatters.formatDateTime(timestamp, Locale.forLanguageTag("bn"))`, eliminating hybrid English month strings.
+  - Standardized transaction counts and units sold so English and Bengali digits never mix within the same string.
+  - Updated commercial terminology: `নীট বিক্রয়` -> `প্রকৃত বিক্রয়` (Net Sales), `প্রদತ್ತ ছাড়` -> `মোট ছাড়` (Discounts Given).
+- **Monospace Font Glyph Clipping Fix (`ReceiptSummaryDialog.kt`)**:
+  - Dynamically configured fallback receipt typography to `FontFamily.Default` when receipt language is `"BN"`, falling back to `FontFamily.Monospace` only for English receipts, preventing broken conjuncts and font clipping on Android handsets.
+- **Compose Text Overflow & Ellipsis Polish**:
+  - Added `overflow = TextOverflow.Ellipsis` to single-line text composables across `ProductsScreen.kt` (tablet/phone rows, grid cards, price/unit badges) and `CartScreen.kt` (preset chips, held cart hold button, checkout CTA button, item unit prices).
+  - Localized unit margin percentages and stock asset quantities in `StockCheckComponents.kt` using `toBanglaDigits()`.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V1.apk` (versionCode 220960, versionName "2.6.84-Final-V1"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
 
 ## Maintenance note
 

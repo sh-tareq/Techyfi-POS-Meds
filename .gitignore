@@ -13,3 +13,5 @@ local.properties
 window_dump.xml
 Backup Files/
 *.apk
+.vscode/
+screenshots/

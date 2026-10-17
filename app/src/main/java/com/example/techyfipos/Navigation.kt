@@ -718,8 +718,7 @@ fun MainNavigation() {
             if (unacknowledgedPinResetTime != null) {
                 val ts = unacknowledgedPinResetTime ?: 0L
                 val dateStr = remember(ts) {
-                    java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault())
-                        .format(java.util.Date(ts))
+                    com.example.techyfipos.utils.DateFormatters.formatDateTime(ts)
                 }
                 AlertDialog(
                     onDismissRequest = { /* Force explicit user acknowledgment */ },
