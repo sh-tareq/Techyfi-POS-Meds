@@ -553,69 +553,13 @@ fun DuesScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                androidx.compose.foundation.text.BasicTextField(
-                                    value = searchQuery,
-                                    onValueChange = { searchQuery = it },
-                                    singleLine = true,
-                                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    ),
-                                    modifier = Modifier.weight(1f),
-                                    decorationBox = { innerTextField ->
-                                    Box(
-                                        contentAlignment = Alignment.CenterStart,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        if (searchQuery.isBlank()) {
-                                            Text(
-                                                stringResource(R.string.dues_search_placeholder),
-                                                fontSize = 12.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                color = MaterialTheme.colorScheme.outline
-                                            )
-                                        }
-                                        innerTextField()
-                                    }
-                                }
-                                )
-                                if (searchQuery.isNotBlank()) {
-                                    IconButton(
-                                        onClick = { searchQuery = "" },
-                                        modifier = Modifier.size(48.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Close,
-                                            contentDescription = stringResource(R.string.cd_clear),
-                                            tint = MaterialTheme.colorScheme.outline,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        PosSearchBox(
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            placeholderText = stringResource(R.string.dues_search_placeholder),
+                            accentColor = PosSectionColors.Dues,
+                            modifier = Modifier.weight(1f)
+                        )
 
                         // Quick Date Pill Button (opens Date Range Picker / Dropdown)
                         Box {
@@ -3066,21 +3010,12 @@ fun DuesAuditHistorySheet(
             }
 
             // Search bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                placeholder = { Text(stringResource(R.string.dues_search_audit_placeholder), fontSize = 12.sp, maxLines = 1) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                trailingIcon = if (searchQuery.isNotEmpty()) {
-                    {
-                        IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(48.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_clear), modifier = Modifier.size(18.dp))
-                        }
-                    }
-                } else null,
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp)
+            PosSearchBox(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                placeholderText = stringResource(R.string.dues_search_audit_placeholder),
+                accentColor = PosSectionColors.Dues,
+                modifier = Modifier.fillMaxWidth()
             )
 
             // Filter Chips (Type)

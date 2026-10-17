@@ -1356,66 +1356,13 @@ fun ProductsScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Full-width Search Box with 3D Optical Magnifier & Embedded Laser Scanner
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
-                    shadowElevation = 0.5.dp,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = stringResource(R.string.products_search_cd),
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            if (searchQuery.isEmpty()) {
-                                Text(
-                                    text = stringResource(R.string.products_search_placeholder),
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    maxLines = 1
-                                )
-                            }
-                            BasicTextField(
-                                value = searchQuery,
-                                onValueChange = { productsViewModel.setSearchQuery(it) },
-                                singleLine = true,
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Medium
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(
-                                onClick = { productsViewModel.setSearchQuery("") },
-                                modifier = Modifier.size(48.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.clear_search),
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Spacer(Modifier.width(4.dp))
-                        }
+                PosSearchBox(
+                    query = searchQuery,
+                    onQueryChange = { productsViewModel.setSearchQuery(it) },
+                    placeholderText = stringResource(R.string.products_search_placeholder),
+                    accentColor = PosSectionColors.Products,
+                    modifier = Modifier.weight(1f),
+                    trailingContent = {
                         // Embedded 3D Hardware Barcode Scanner Button
                         Surface(
                             onClick = {
@@ -1426,14 +1373,14 @@ fun ProductsScreen(
                             },
                             shape = RoundedCornerShape(8.dp),
                             color = if (stockScannerEnabled) Color(0xFF4F46E5) else Color(0xFFEEF2FF),
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Realistic3DHardwareBarcodeScannerIcon(size = 20.dp, animate = true)
                             }
                         }
                     }
-                }
+                )
 
                 // Native Tune/Filter Button (Opens Filter Bottom Sheet)
                 val hasActiveFilters = selectedCategory != null ||

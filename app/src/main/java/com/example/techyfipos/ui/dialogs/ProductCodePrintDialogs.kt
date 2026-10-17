@@ -65,6 +65,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import com.example.techyfipos.ui.components.PosSearchBox
+import com.example.techyfipos.ui.components.PosSectionColors
 
 data class ActionStatus(val text: String, val isError: Boolean)
 
@@ -726,28 +728,11 @@ fun BatchProductPickerSheet(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // Search field
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = {
-                        Text(
-                            stringResource(R.string.batch_print_search_placeholder),
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp))
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
+                PosSearchBox(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    placeholderText = stringResource(R.string.batch_print_search_placeholder),
+                    accentColor = PosSectionColors.Products,
                     modifier = Modifier.fillMaxWidth()
                 )
 

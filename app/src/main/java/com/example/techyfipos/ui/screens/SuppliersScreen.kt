@@ -475,26 +475,11 @@ fun SuppliersScreen(
 
             // Compact Search Bar
             item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text(stringResource(R.string.supplier_search_hint), fontSize = 12.5.sp) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search), tint = Color(0xFF94A3B8), modifier = Modifier.size(20.dp)) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear), tint = Color(0xFF94A3B8), modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                    ),
+                PosSearchBox(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    placeholderText = stringResource(R.string.supplier_search_hint),
+                    accentColor = PosSectionColors.Suppliers,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -1139,14 +1124,14 @@ fun SuppliersScreen(
             },
             text = {
                 Column(modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp)) {
-                    OutlinedTextField(
-                        value = pickerSearchQuery,
-                        onValueChange = { pickerSearchQuery = it },
-                        placeholder = { Text(stringResource(R.string.supplier_search_hint), fontSize = 12.sp) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp)
+                    PosSearchBox(
+                        query = pickerSearchQuery,
+                        onQueryChange = { pickerSearchQuery = it },
+                        placeholderText = stringResource(R.string.supplier_search_hint),
+                        accentColor = PosSectionColors.Suppliers,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
                     )
                     if (filteredSuppliersForInflow.isEmpty()) {
                         Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {

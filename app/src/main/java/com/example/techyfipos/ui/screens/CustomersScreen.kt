@@ -409,20 +409,11 @@ fun CustomersScreen(
                     .padding(horizontal = 14.dp)
             ) {
                 // Search Bar
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { customerViewModel.setSearchQuery(it) },
-                    placeholder = { Text(stringResource(R.string.customer_search_placeholder), fontSize = 12.5.sp) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp)) },
-                    trailingIcon = {
-                        if (searchQuery.isNotBlank()) {
-                            IconButton(onClick = { customerViewModel.setSearchQuery("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.customer_clear_cd), modifier = Modifier.size(16.dp))
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
+                PosSearchBox(
+                    query = searchQuery,
+                    onQueryChange = { customerViewModel.setSearchQuery(it) },
+                    placeholderText = stringResource(R.string.customer_search_placeholder),
+                    accentColor = PosSectionColors.Customers,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)

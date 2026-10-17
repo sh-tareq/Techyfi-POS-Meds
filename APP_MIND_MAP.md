@@ -3088,7 +3088,31 @@ mindmap
     - Deep-links straight into nested subpages: Shop Identity, Shop Logo, QR Payment Links, Due Receipt Voucher Layout, Receipt Paper Layout, Tax & VAT Rules, Staff PIN Access Control, Google Drive Backup, and Database Migration.
   - **Empty-State Assist Deck**: Provides suggestions and popular presets (`Printers`, `Backup`, `VAT`, `Staff PIN`, `Logo`, `Cash Drawer`) when query returns no matches or when discovering settings.
 - **Release Deliverable**:
-  - `Techyfi-POS-Final-V5.apk` (versionCode 220964, versionName "2.6.88-Final-V5"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
+### Release Final-V6: App-Wide Search Box Overhaul & Unified PosSearchBox System (Version 2.6.89-Final-V6, Build Final-V6)
+- **Unified Standardized Search Component (`PosSearchBox.kt`)**:
+  - Implemented `PosSearchBox` in `com.example.techyfipos.ui.components` featuring:
+    - **Zero Vertical Baseline Clipping**: Vertically-centered `BasicTextField` wrapped inside a compact 46dp `Surface`, eliminating Material 3's minimum 56dp height constraints that previously clipped text baselines in constrained text fields.
+    - **Safe Single-Line Placeholder Truncation**: Enforced `maxLines = 1` and `TextOverflow.Ellipsis` for both English and Bangla placeholder texts, preventing multi-line text wrapping behind input content.
+    - **Section-Calibrated Accent Borders**: Subtle `BorderStroke` transitioning dynamically to section themes (`PosSectionColors.Products`, `PosSectionColors.SalesHistory`, `PosSectionColors.Dues`, `PosSectionColors.Customers`, `PosSectionColors.Suppliers`, `PosSectionColors.Expenses`, `PosSectionColors.Loyalty`, `PosSectionColors.Settings`) upon focus or text entry.
+    - **Animated Clear (`✕`) Button**: Accessible touch target with smooth enter/exit animations (`fadeIn + scaleIn` / `fadeOut + scaleOut`), resetting query and firing `onClear` callback.
+    - **Keyboard & Action Management**: Integrated `KeyboardOptions(imeAction = ImeAction.Search)` with automatic keyboard hiding and focus clearance via `LocalSoftwareKeyboardController` and `LocalFocusManager`.
+    - **Trailing Content Slot**: Flexible trailing slot supporting embedded secondary actions (such as the 3D hardware barcode scanner toggle button in `ProductsScreen`).
+- **Complete App-Wide Search Box Standardization**:
+  - **Products Screen (`ProductsScreen.kt`)**: Replaced ad-hoc search surface with `PosSearchBox(accentColor = PosSectionColors.Products)` while preserving the embedded 3D optical barcode laser toggle button inside its trailing slot.
+  - **Sales History Screen (`SalesHistoryScreen.kt`)**: Replaced un-truncated search box with `PosSearchBox(accentColor = PosSectionColors.SalesHistory)`.
+  - **Customer Dues Screen (`DuesScreen.kt`)**: Replaced both main dues search box and dues audit log search box (`OutlinedTextField` forced to 48dp) with `PosSearchBox(accentColor = PosSectionColors.Dues)`.
+  - **Customers & CRM Screen (`CustomersScreen.kt`)**: Replaced `OutlinedTextField` with `PosSearchBox(accentColor = PosSectionColors.Customers)`.
+  - **Suppliers & Inflow Screen (`SuppliersScreen.kt`)**: Replaced both main vendor directory search box and inward stock supplier picker search dialog with `PosSearchBox(accentColor = PosSectionColors.Suppliers)`.
+  - **Expenses Screen (`ExpensesScreen.kt`)**: Replaced baseline-clipping `OutlinedTextField` (forced to 50dp) with `PosSearchBox(accentColor = PosSectionColors.Expenses)`.
+  - **Customer Loyalty Screen (`LoyaltyScreen.kt`)**: Replaced clipped `OutlinedTextField` (forced to 50dp) with `PosSearchBox(accentColor = PosSectionColors.Loyalty)`.
+  - **Stock Audit Dialogs (`StockAuditDialogs.kt`)**: Standardized both stock audit logs search bar and product picker search dialog with `PosSearchBox(accentColor = PosSectionColors.Products)`.
+  - **Product Code Print Dialogs (`ProductCodePrintDialogs.kt`)**: Standardized batch print product search bar with `PosSearchBox(accentColor = PosSectionColors.Products)`.
+  - **Settings Screen (`SettingsScreen.kt`)**: Standardized global settings search input with `PosSearchBox(accentColor = MaterialTheme.colorScheme.primary)`.
+- **Bilingual & Typography Verification**:
+  - Validated live on physical Xiaomi phone (`cb5fdfb5`) in both English and Bengali locales.
+  - Verified complex Bengali vowel diacritics, conjuncts, ascenders, and descenders (`চন্দ্রবিন্দু`, `হ্রস্ব উ-কার`, `হ্রস্ব ই-কার`, `র-ফলা`, `যুক্তাক্ষর`) render with zero clipping across all search bars.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V6.apk` (versionCode 220965, versionName "2.6.89-Final-V6"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
 
 ## Maintenance note
 

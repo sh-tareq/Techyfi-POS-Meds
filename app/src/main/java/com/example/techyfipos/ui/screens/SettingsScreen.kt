@@ -368,66 +368,14 @@ private fun SettingsGlobalSearchBar(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Search Input Row
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(
-                    1.dp,
-                    if (query.isNotBlank()) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                ),
-                shadowElevation = if (query.isNotBlank()) 2.dp else 0.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        tint = if (query.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Box(modifier = Modifier.weight(1f)) {
-                        if (query.isEmpty()) {
-                            Text(
-                                text = stringResource(R.string.settings_search_placeholder),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.outline,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        androidx.compose.foundation.text.BasicTextField(
-                            value = query,
-                            onValueChange = onQueryChange,
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
-                        )
-                    }
-                    if (query.isNotEmpty()) {
-                        IconButton(
-                            onClick = onClear,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = stringResource(R.string.settings_search_clear_cd),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-            }
+            PosSearchBox(
+                query = query,
+                onQueryChange = onQueryChange,
+                placeholderText = stringResource(R.string.settings_search_placeholder),
+                accentColor = MaterialTheme.colorScheme.primary,
+                onClear = onClear,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             // Category Chips Row
             Row(

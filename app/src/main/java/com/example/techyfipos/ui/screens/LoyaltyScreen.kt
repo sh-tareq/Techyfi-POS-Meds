@@ -631,27 +631,13 @@ private fun LoyaltySearchBar(
     onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        placeholder = { Text(stringResource(R.string.loyalty_search), fontSize = 13.sp) },
-        leadingIcon = {
-            Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        },
-        trailingIcon = {
-            if (query.isNotBlank()) {
-                IconButton(onClick = onClear) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_search_cd), tint = Color.Gray)
-                }
-            }
-        },
-        singleLine = true,
-        shape = RoundedCornerShape(12.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            focusedContainerColor = MaterialTheme.colorScheme.surface
-        ),
-        modifier = modifier.height(50.dp)
+    PosSearchBox(
+        query = query,
+        onQueryChange = onQueryChange,
+        placeholderText = stringResource(R.string.loyalty_search),
+        accentColor = PosSectionColors.Loyalty,
+        onClear = onClear,
+        modifier = modifier
     )
 }
 

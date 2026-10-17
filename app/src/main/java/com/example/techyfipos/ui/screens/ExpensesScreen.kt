@@ -267,27 +267,12 @@ fun ExpensesScreen(
 
             // 3. Search Bar
             item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text(stringResource(R.string.expense_search_hint), fontSize = 12.5.sp) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search), tint = Color.Gray, modifier = Modifier.size(20.dp)) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear), tint = Color.Gray, modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedContainerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
+                PosSearchBox(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    placeholderText = stringResource(R.string.expense_search_hint),
+                    accentColor = PosSectionColors.Expenses,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 

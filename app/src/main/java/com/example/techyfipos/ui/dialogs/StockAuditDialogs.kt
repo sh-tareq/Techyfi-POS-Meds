@@ -27,6 +27,8 @@ import com.example.techyfipos.data.db.Product
 import com.example.techyfipos.ui.screens.localizedAdjustmentReasonLabel
 import com.example.techyfipos.utils.DateFormatters
 import java.util.Locale
+import com.example.techyfipos.ui.components.PosSearchBox
+import com.example.techyfipos.ui.components.PosSectionColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,14 +115,12 @@ fun StockAuditHistorySheet(
                 }
             }
 
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text(stringResource(R.string.products_search_audit_placeholder), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+            PosSearchBox(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                placeholderText = stringResource(R.string.products_search_audit_placeholder),
+                accentColor = PosSectionColors.Products,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Row(
@@ -342,14 +342,12 @@ private fun ProductPickerForAdjustmentDialog(
                     }
                 }
 
-                OutlinedTextField(
-                    value = search,
-                    onValueChange = { search = it },
-                    label = { Text(stringResource(R.string.products_search_product_or_barcode)) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                PosSearchBox(
+                    query = search,
+                    onQueryChange = { search = it },
+                    placeholderText = stringResource(R.string.products_search_product_or_barcode),
+                    accentColor = PosSectionColors.Products,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 if (filteredProducts.isEmpty()) {
