@@ -851,7 +851,7 @@
     <string name="dues_recovery_rate_label">Recovery Rate</string>
     <string name="dues_credit_recovery_rate_full_label">Credit Recovery Rate</string>
     <string name="dues_total_outstanding_borrowers">Total Outstanding (%1$d Borrowers)</string>
-    <string name="dues_collected_this_month_label">COLLECTED THIS MONTH</string>
+    <string name="dues_collected_this_month_label">Collected This Month</string>
     <string name="dues_total_credit_label">TOTAL CREDIT</string>
     <string name="dues_total_repaid_label">TOTAL REPAID</string>
     <string name="dues_recovery_percent_label" formatted="false">RECOVERY %</string>

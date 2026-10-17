@@ -3038,6 +3038,25 @@ mindmap
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V1.apk` (versionCode 220960, versionName "2.6.84-Final-V1"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
 
+### Release Final-V2: Dues Screen WhatsApp Button & "Collected This Month" Layout Overhaul (Version 2.6.85-Final-V2, Build Final-V2)
+- **WhatsApp Action Button Truncation Fix (`DuesScreen.kt`)**:
+  - Fixed horizontal button clipping in `CustomerDueRow` where "WhatsApp" truncated to "WhatsA" on mobile handsets.
+  - Rebalanced row action weights: WhatsApp button given `weight(1.35f)` with `fontSize = 9.5.sp`, `softWrap = false`, and `maxLines = 1`; Call button reduced to `weight(0.75f)`; Remind button to `weight(0.90f)`; and Collect button at `weight(1.05f)`.
+  - Replaced system emoji `💬` with photorealistic `Realistic3DWhatsAppIcon(size = 13.dp, animate = false)`, preserving tight horizontal bounding boxes.
+  - Constrained 3-dots `IconButton` to `Modifier.size(36.dp)` with `spacedBy(4.dp)`, freeing 20dp+ of horizontal space for button content.
+  - All buttons strictly maintain `height(48.dp)` complying with Material 3 touch target standards.
+- **WhatsApp Bengali Numeral Sanitization & Resilient Fallback (`BillActions.kt`)**:
+  - Resolved critical silent failure in `openWhatsAppReminder` and `openWhatsAppChat` where customer phone numbers containing Bengali numerals (`০-৯`) had all digits stripped by `Regex("[^0-9+]")`, failing with "No phone number available".
+  - Sanitized phone input via `toEnglishDigits(phone)` before stripping non-digits across `openWhatsAppReminder`, `openWhatsAppChat`, `openPhoneDialer`, and `openPaymentReminder`.
+  - Upgraded WhatsApp dispatching to a 4-tier resilient URI fallback sequence: `whatsapp://send` -> `https://api.whatsapp.com/send` -> `https://wa.me/` -> system text share sheet or clipboard.
+  - Localized `onWhatsApp` dispatch reminder messages bilingually according to `isAppBangla()` and `formatTaka(..., isBangla)`.
+- **"Collected This Month" Header Formatting & Collision Fix (`DuesScreen.kt`, `strings.xml`)**:
+  - Updated string resource `dues_collected_this_month_label` from shouting all-caps `COLLECTED THIS MONTH` (20 uppercase characters) to title-case `Collected This Month` in `strings.xml`.
+  - Assigned `Modifier.weight(1f).padding(end = 8.dp)` with `maxLines = 1, overflow = TextOverflow.Ellipsis` to the left `Column` in the credit recovery summary card header, preventing text like `Total Outstanding (1 Borrowers)` / `মোট বকেয়া (১ জন বকেয়াদার কাস্টমার)` from colliding into the right surface border or leaving orphan clipped text (`s)`).
+  - Formatted the right `Surface` with `fontSize = 10.sp`, `softWrap = false`, and `maxLines = 1` for `Collected This Month`, with amount `+৳...` neatly right-aligned directly beneath it, eliminating awkward 2-line wrapped text (`COLLECTED THIS \n MONTH`).
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V2.apk` (versionCode 220961, versionName "2.6.85-Final-V2"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
+
 ## Maintenance note
 
 Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS/`.

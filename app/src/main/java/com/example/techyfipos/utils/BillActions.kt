@@ -605,7 +605,7 @@ fun shareReceiptAsText(context: Context, text: String): Boolean {
 
 /** Opens the system dialer, or copies the phone number when no dialer is available. */
 fun openPhoneDialer(context: Context, phone: String): Boolean {
-    val normalizedPhone = phone.trim()
+    val normalizedPhone = toEnglishDigits(phone.trim())
     if (normalizedPhone.isEmpty()) {
         Toast.makeText(context, context.getString(R.string.no_phone_number_available), Toast.LENGTH_SHORT).show()
         return false
@@ -628,7 +628,7 @@ fun openPhoneDialer(context: Context, phone: String): Boolean {
 
 /** Opens an addressed SMS reminder and falls back to the general share sheet. */
 fun openPaymentReminder(context: Context, phone: String, message: String): Boolean {
-    val normalizedPhone = phone.trim()
+    val normalizedPhone = toEnglishDigits(phone.trim())
     if (normalizedPhone.isEmpty()) {
         Toast.makeText(context, context.getString(R.string.no_phone_number_available), Toast.LENGTH_SHORT).show()
         return false
@@ -659,9 +659,10 @@ fun openPaymentReminder(context: Context, phone: String, message: String): Boole
     }
 }
 
-/** Opens WhatsApp chat with prefilled payment reminder message. */
+/** Opens WhatsApp chat with prefilled payment reminder message. Resilient with Bengali digit sanitization and multi-tier fallbacks. */
 fun openWhatsAppReminder(context: Context, phone: String, message: String): Boolean {
-    val rawDigits = phone.replace(Regex("[^0-9+]"), "")
+    val cleanPhone = toEnglishDigits(phone)
+    val rawDigits = cleanPhone.replace(Regex("[^0-9+]"), "")
     if (rawDigits.isEmpty()) {
         Toast.makeText(context, context.getString(R.string.no_phone_number_available), Toast.LENGTH_SHORT).show()
         return false
@@ -691,15 +692,26 @@ fun openWhatsAppReminder(context: Context, phone: String, message: String): Bool
             target.startActivity(intent)
             true
         } catch (_: Exception) {
-            // 3. Fallback to standard share sheet or clipboard
-            shareReceiptAsText(context, message)
+            // 3. Fallback to https://wa.me/
+            try {
+                val waMeUri = Uri.parse("https://wa.me/$international?text=${Uri.encode(message)}")
+                val intent = Intent(Intent.ACTION_VIEW, waMeUri).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                target.startActivity(intent)
+                true
+            } catch (_: Exception) {
+                // 4. Fallback to standard share sheet or clipboard
+                shareReceiptAsText(context, message)
+            }
         }
     }
 }
 
-/** Opens WhatsApp chat directly for a customer phone with resilient 3-tier fallback. */
+/** Opens WhatsApp chat directly for a customer phone with resilient 4-tier fallback. */
 fun openWhatsAppChat(context: Context, phone: String): Boolean {
-    val rawDigits = phone.replace(Regex("[^0-9+]"), "")
+    val cleanPhone = toEnglishDigits(phone)
+    val rawDigits = cleanPhone.replace(Regex("[^0-9+]"), "")
     if (rawDigits.isEmpty()) {
         Toast.makeText(context, context.getString(R.string.no_phone_number_available), Toast.LENGTH_SHORT).show()
         return false
@@ -729,11 +741,21 @@ fun openWhatsAppChat(context: Context, phone: String): Boolean {
             target.startActivity(intent)
             true
         } catch (_: Exception) {
-            // 3. Fallback to clipboard
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            clipboard?.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_customer_phone), phone.trim()))
-            Toast.makeText(context, context.getString(R.string.toast_phone_copied_whatsapp_unavailable), Toast.LENGTH_SHORT).show()
-            false
+            // 3. Try https://wa.me/
+            try {
+                val waMeUri = Uri.parse("https://wa.me/$international")
+                val intent = Intent(Intent.ACTION_VIEW, waMeUri).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                target.startActivity(intent)
+                true
+            } catch (_: Exception) {
+                // 4. Fallback to clipboard
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                clipboard?.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_customer_phone), phone.trim()))
+                Toast.makeText(context, context.getString(R.string.toast_phone_copied_whatsapp_unavailable), Toast.LENGTH_SHORT).show()
+                false
+            }
         }
     }
 }

@@ -992,8 +992,12 @@ fun DuesScreen(
                                         onClick = { duesViewModel.selectCustomer(customer) },
                                         onCollect = { paymentCustomer = customer },
                                         onWhatsApp = {
-                                            val shop = storeName.ifBlank { "আমাদের দোকান" }
-                                            val waMessage = "আসসালামু আলাইকুম জনাব ${customer.customerName},\n${shop} থেকে আপনার বকেয়া হিসাবের বিবরণী:\n• মোট অপরিশোধিত বকেয়া: ${formatTaka(customer.outstandingAmount)}\nঅনুগ্রহপূর্বক সুবিধাজনক সময়ে বকেয়া পরিশোধ করার জন্য বিনীত অনুরোধ করা যাচ্ছে। ধন্যবাদ।"
+                                            val shop = storeName.trim().ifBlank { if (isAppBangla) "আমাদের প্রতিষ্ঠান" else "Our Store" }
+                                            val waMessage = if (isAppBangla) {
+                                                "আসসালামু আলাইকুম জনাব ${customer.customerName},\n${shop} থেকে আপনার বকেয়া হিসাবের বিবরণী:\n• মোট অপরিশোধিত বকেয়া: ${formatTaka(customer.outstandingAmount, isBangla = true)}\nঅনুগ্রহপূর্বক সুবিধাজনক সময়ে বকেয়া পরিশোধ করার জন্য বিনীত অনুরোধ করা যাচ্ছে। ধন্যবাদ।"
+                                            } else {
+                                                "Dear ${customer.customerName},\nOutstanding balance statement from ${shop}:\n• Total Outstanding Due: ${formatTaka(customer.outstandingAmount, isBangla = false)}\nPlease settle the due balance at your earliest convenience. Thank you."
+                                            }
                                             openWhatsAppReminder(context, customer.customerPhone, waMessage)
                                         },
                                         onRemind = {
@@ -1087,8 +1091,12 @@ fun DuesScreen(
                                         onClick = { duesViewModel.selectCustomer(customer) },
                                         onCollect = { paymentCustomer = customer },
                                         onWhatsApp = {
-                                            val shop = storeName.ifBlank { "আমাদের দোকান" }
-                                            val waMessage = "আসসালামু আলাইকুম জনাব ${customer.customerName},\n${shop} থেকে আপনার বকেয়া হিসাবের বিবরণী:\n• মোট অপরিশোধিত বকেয়া: ${formatTaka(customer.outstandingAmount)}\nঅনুগ্রহপূর্বক সুবিধাজনক সময়ে বকেয়া পরিশোধ করার জন্য বিনীত অনুরোধ করা যাচ্ছে। ধন্যবাদ।"
+                                            val shop = storeName.trim().ifBlank { if (isAppBangla) "আমাদের প্রতিষ্ঠান" else "Our Store" }
+                                            val waMessage = if (isAppBangla) {
+                                                "আসসালামু আলাইকুম জনাব ${customer.customerName},\n${shop} থেকে আপনার বকেয়া হিসাবের বিবরণী:\n• মোট অপরিশোধিত বকেয়া: ${formatTaka(customer.outstandingAmount, isBangla = true)}\nঅনুগ্রহপূর্বক সুবিধাজনক সময়ে বকেয়া পরিশোধ করার জন্য বিনীত অনুরোধ করা যাচ্ছে। ধন্যবাদ।"
+                                            } else {
+                                                "Dear ${customer.customerName},\nOutstanding balance statement from ${shop}:\n• Total Outstanding Due: ${formatTaka(customer.outstandingAmount, isBangla = false)}\nPlease settle the due balance at your earliest convenience. Thank you."
+                                            }
                                             openWhatsAppReminder(context, customer.customerPhone, waMessage)
                                         },
                                         onRemind = {
@@ -3863,43 +3871,56 @@ private fun DuesExecutiveSummaryCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 8.dp)
+                        ) {
                             Text(
                                 text = if (showRateMode) stringResource(R.string.dues_credit_recovery_rate_full_label) else stringResource(R.string.dues_total_outstanding_borrowers, outstandingCustomers),
                                 fontSize = 11.sp,
                                 color = Color(0xFFFDA4AF),
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
                                 text = if (showRateMode) "${String.format(Locale.US, "%.1f", recoveryRate)}%" else formatTaka(outstanding),
-                                fontSize = 24.sp,
+                                fontSize = 22.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = if (showRateMode) Color(0xFF34D399) else Color.White,
-                                letterSpacing = (-0.5).sp
+                                letterSpacing = (-0.5).sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
 
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(10.dp),
                             color = Color.Black.copy(alpha = 0.25f),
                             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
                         ) {
                             Column(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                                 horizontalAlignment = Alignment.End
                             ) {
                                 Text(
                                     text = stringResource(R.string.dues_collected_this_month_label),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFDA4AF)
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFFDA4AF),
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
+                                Spacer(Modifier.height(1.dp))
                                 Text(
                                     text = "+${formatTaka(collectedThisMonth)}",
-                                    fontSize = 14.sp,
+                                    fontSize = 13.5.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFF34D399)
+                                    color = Color(0xFF34D399),
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
@@ -4088,7 +4109,7 @@ fun CustomerDueRow(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (customer.outstandingAmount > 0) {
@@ -4096,48 +4117,48 @@ fun CustomerDueRow(
                         Button(
                             onClick = onCollect,
                             shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
                             modifier = Modifier.weight(1.05f).height(48.dp)
                         ) {
-                            Realistic3DWalletCollectIcon(size = 13.dp)
-                            Spacer(Modifier.width(3.dp))
-                            Text(stringResource(R.string.dues_collect_button), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Realistic3DWalletCollectIcon(size = 12.dp)
+                            Spacer(Modifier.width(2.dp))
+                            Text(stringResource(R.string.dues_collect_button), fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
                     }
 
                     Button(
                         onClick = onWhatsApp,
                         shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF065F46)),
-                        modifier = Modifier.weight(1.05f).height(48.dp)
+                        modifier = Modifier.weight(1.35f).height(48.dp)
                     ) {
-                        Text("💬", fontSize = 11.5.sp)
+                        Realistic3DWhatsAppIcon(size = 13.dp, animate = false)
                         Spacer(Modifier.width(3.dp))
-                        Text("WhatsApp", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA7F3D0), maxLines = 1)
+                        Text("WhatsApp", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA7F3D0), maxLines = 1, softWrap = false)
                     }
 
                     OutlinedButton(
                         onClick = onRemind,
                         shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                        modifier = Modifier.weight(0.95f).height(48.dp)
+                        contentPadding = PaddingValues(horizontal = 3.dp, vertical = 0.dp),
+                        modifier = Modifier.weight(0.90f).height(48.dp)
                     ) {
-                        Realistic3DMessageReminderIcon(size = 12.dp)
-                        Spacer(Modifier.width(3.dp))
-                        Text(stringResource(R.string.dues_remind_button), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        Realistic3DMessageReminderIcon(size = 11.dp)
+                        Spacer(Modifier.width(2.dp))
+                        Text(stringResource(R.string.dues_remind_button), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
                     }
 
                     OutlinedButton(
                         onClick = onCall,
                         shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                        modifier = Modifier.weight(0.9f).height(48.dp)
+                        contentPadding = PaddingValues(horizontal = 3.dp, vertical = 0.dp),
+                        modifier = Modifier.weight(0.75f).height(48.dp)
                     ) {
-                        Realistic3DPhoneDialerIcon(size = 13.dp)
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.dues_call_button), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        Realistic3DPhoneDialerIcon(size = 11.dp)
+                        Spacer(Modifier.width(2.dp))
+                        Text(stringResource(R.string.dues_call_button), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
                     }
                 } else {
                     Spacer(Modifier.weight(1f))
@@ -4148,7 +4169,7 @@ fun CustomerDueRow(
                 Box {
                     IconButton(
                         onClick = { showCardMenu = true },
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
                             Icons.Default.MoreVert,
