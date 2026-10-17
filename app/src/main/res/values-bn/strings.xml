@@ -2373,8 +2373,8 @@
     <string name="sales_report_hourly_distribution_breakdown">২৪ ঘণ্টার ঘণ্টাভিত্তিক বিবরণ</string>
     <string name="sales_report_best_day_format">সেরা দিন: %1$s</string>
     <string name="sales_report_peak_hour_badge">পিক আওয়ার</string>
-    <string name="sales_report_busiest_hour_badge">সবচেয়ে ব্যস্ত সময়</string>
-    <string name="sales_report_active_hours_badge">সক্রিয় ঘণ্টা</string>
+    <string name="sales_report_busiest_hour_badge">ব্যস্ততম সময়</string>
+    <string name="sales_report_active_hours_badge">সক্রিয় সময়</string>
     <string name="sales_report_hourly_volume_curve">ঘণ্টাভিত্তিক বিক্রির কার্ভ</string>
     <string name="sales_report_24h_timeline_analysis">২৪ ঘণ্টার টাইমলাইন বিশ্লেষণ</string>
     <string name="sales_report_timeslot_breakdown">টাইম-স্লট বিবরণ</string>

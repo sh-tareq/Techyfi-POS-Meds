@@ -1639,7 +1639,9 @@ private fun HourlyPanel(data: SalesReportData, canViewPnl: Boolean = true) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         // 3-KPI Highlight Cards
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Max),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Peak Sales Hour Card
@@ -1647,29 +1649,51 @@ private fun HourlyPanel(data: SalesReportData, canViewPnl: Boolean = true) {
                 shape = RoundedCornerShape(14.dp),
                 color = Color(0xFFEFF6FF),
                 border = BorderStroke(1.dp, Color(0xFFBFDBFE)),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             ) {
-                Column(Modifier.padding(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("🔥", fontSize = 12.sp)
-                        Text(stringResource(R.string.sales_report_peak_hour_badge), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1E40AF), letterSpacing = 0.4.sp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 9.dp, vertical = 11.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("🔥", fontSize = 11.5.sp)
+                        Text(
+                            text = stringResource(R.string.sales_report_peak_hour_badge),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1E40AF),
+                            letterSpacing = 0.2.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(5.dp))
                     Text(
                         text = peakHour?.hourLabel ?: stringResource(R.string.sales_report_none),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF1E3A8A),
                         maxLines = 1,
-                        softWrap = false
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = peakHour?.let { formatTaka(it.revenue) } ?: "৳0",
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF2563EB),
                         maxLines = 1,
-                        softWrap = false
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -1679,29 +1703,51 @@ private fun HourlyPanel(data: SalesReportData, canViewPnl: Boolean = true) {
                 shape = RoundedCornerShape(14.dp),
                 color = Color(0xFFECFDF5),
                 border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             ) {
-                Column(Modifier.padding(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("⚡", fontSize = 12.sp)
-                        Text(stringResource(R.string.sales_report_busiest_hour_badge), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF065F46), letterSpacing = 0.4.sp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 9.dp, vertical = 11.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("⚡", fontSize = 11.5.sp)
+                        Text(
+                            text = stringResource(R.string.sales_report_busiest_hour_badge),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF065F46),
+                            letterSpacing = 0.2.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(5.dp))
                     Text(
                         text = busiestHour?.hourLabel ?: stringResource(R.string.sales_report_none),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF064E3B),
                         maxLines = 1,
-                        softWrap = false
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = busiestHour?.let { stringResource(R.string.sales_report_invoices_format, it.transactionCount) } ?: stringResource(R.string.sales_report_invoices_format, 0),
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF059669),
                         maxLines = 1,
-                        softWrap = false
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -1711,30 +1757,52 @@ private fun HourlyPanel(data: SalesReportData, canViewPnl: Boolean = true) {
                 shape = RoundedCornerShape(14.dp),
                 color = Color(0xFFFAF5FF),
                 border = BorderStroke(1.dp, Color(0xFFE9D5FF)),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             ) {
-                Column(Modifier.padding(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("⏱️", fontSize = 12.sp)
-                        Text(stringResource(R.string.sales_report_active_hours_badge), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF6B21A8), letterSpacing = 0.4.sp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 9.dp, vertical = 11.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("⏱️", fontSize = 11.5.sp)
+                        Text(
+                            text = stringResource(R.string.sales_report_active_hours_badge),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF6B21A8),
+                            letterSpacing = 0.2.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                    Spacer(Modifier.height(4.dp))
-                    val activeHoursCount = data.hourlyBreakdown.count { it.transactionCount > 0 }
+                    Spacer(Modifier.height(5.dp))
+                    val activeHoursCount = activeHours.size
                     Text(
                         text = stringResource(R.string.sales_report_hours_format, activeHoursCount),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF581C87),
                         maxLines = 1,
-                        softWrap = false
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = stringResource(R.string.sales_report_tracked_format, data.hourlyBreakdown.size),
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF7E22CE),
                         maxLines = 1,
-                        softWrap = false
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }

@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-17 (app version 2.6.84-Final-V1, build `Techyfi-POS-Final-V1.apk`; versionCode 220960; DB schema version 38)
+Last updated: 2026-10-17 (app version 2.6.87-Final-V4, build `Techyfi-POS-Final-V4.apk`; versionCode 220963; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3068,8 +3068,14 @@ mindmap
   - **Remind Action**: Integrated official `Icons.AutoMirrored.Filled.Message` vector icon in indigo (`Color(0xFF4F46E5)`), replacing the indistinct purple dot with an unmistakable message/reminder glyph.
   - **Call Action**: Integrated official `Icons.Default.Phone` vector icon in emerald (`Color(0xFF059669)`), replacing the abstract green bullseye dot with an unmistakable phone handset glyph.
   - Updated both `CustomerDueRow` and `CustomerDetailHeader` in `DuesScreen.kt` for cohesive, professional UI standards across the entire dues workflow.
+### Release Final-V4: Hourly Sales Peak & Activity Metric Boxes Formatting Fix (Version 2.6.87-Final-V4, Build Final-V4)
+- **Hourly Sales 3-KPI Highlight Cards Formatting & Alignment Fix (`SalesReportScreen.kt`, `strings.xml`, `values-bn/strings.xml`)**:
+  - **Eliminated Disoriented Baseline Offsets**: Fixed the issue where Tile 1 ("Peak Hour") was 1 line while Tile 2 ("Busiest Hour") and Tile 3 ("Active Hours") wrapped to 2 lines, pushing primary values (`8 PM`, `9 PM`, `20 Hours`) and subtitles out of horizontal alignment.
+  - **Equal Height Constraints**: Added `Modifier.height(IntrinsicSize.Max)` to the parent `Row` and `Modifier.weight(1f).fillMaxHeight()` to all three `Surface` tiles, guaranteeing identical card heights and balanced borders across the entire 3-column deck.
+  - **Fixed Vertically Disoriented Emojis**: Converted badge titles from uppercase (`BUSIEST HOUR`, `ACTIVE HOURS`) to clean Title Case (`Peak Hour`, `Busiest Hour`, `Active Hours`; Bangla: `পিক আওয়ার`, `ব্যস্ততম সময়`, `সক্রিয় সময়`). Tuned card padding to `horizontal = 9.dp, vertical = 11.dp` and badge typography to `fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.2.sp, maxLines = 1`, ensuring the leading emojis (`🔥`, `⚡`, `⏱️`) sit crisply beside their titles on a single line instead of floating awkwardly in the vertical center of wrapped multi-line text.
+  - **Baseline Aligned Metric Values & Spacing**: Standardized primary metric values (`14.sp`, `FontWeight.ExtraBold`, `maxLines = 1, softWrap = false`) and secondary metric values (`10.5.sp`, `FontWeight.Bold`, `maxLines = 1, softWrap = false`) with unified `Spacer(Modifier.height(5.dp))` and `Spacer(Modifier.height(2.dp))` vertical rhythm across all 3 cards.
 - **Release Deliverable**:
-  - `Techyfi-POS-Final-V3.apk` (versionCode 220962, versionName "2.6.86-Final-V3"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
+  - `Techyfi-POS-Final-V4.apk` (versionCode 220963, versionName "2.6.87-Final-V4"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
 
 ## Maintenance note
 

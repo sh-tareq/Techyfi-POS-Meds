@@ -2376,9 +2376,9 @@
     <string name="sales_report_daily_sales_profit">Daily sales &amp; profit volume</string>
     <string name="sales_report_hourly_distribution_breakdown">24-hour hourly distribution breakdown</string>
     <string name="sales_report_best_day_format">Best Day: %1$s</string>
-    <string name="sales_report_peak_hour_badge">PEAK HOUR</string>
-    <string name="sales_report_busiest_hour_badge">BUSIEST HOUR</string>
-    <string name="sales_report_active_hours_badge">ACTIVE HOURS</string>
+    <string name="sales_report_peak_hour_badge">Peak Hour</string>
+    <string name="sales_report_busiest_hour_badge">Busiest Hour</string>
+    <string name="sales_report_active_hours_badge">Active Hours</string>
     <string name="sales_report_hourly_volume_curve">Hourly Volume Curve</string>
     <string name="sales_report_24h_timeline_analysis">24-hour timeline analysis</string>
     <string name="sales_report_timeslot_breakdown">Time-Slot Breakdown</string>
