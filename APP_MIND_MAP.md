@@ -3029,6 +3029,12 @@ mindmap
 - **Compose Text Overflow & Ellipsis Polish**:
   - Added `overflow = TextOverflow.Ellipsis` to single-line text composables across `ProductsScreen.kt` (tablet/phone rows, grid cards, price/unit badges) and `CartScreen.kt` (preset chips, held cart hold button, checkout CTA button, item unit prices).
   - Localized unit margin percentages and stock asset quantities in `StockCheckComponents.kt` using `toBanglaDigits()`.
+- **Sales Report Executive Summary Responsive Metrics Grid (`SalesReportScreen.kt`)**:
+  - Replaced cramped 4-column horizontal `Row(Arrangement.SpaceBetween)` with a responsive architecture:
+    - Compact Mobile (< 600dp): 2x2 Grid of frosted translucent `ExecutiveMetricCell` tiles (`Color.Black.copy(alpha = 0.22f)` with subtle 1dp border).
+    - Tablet (>= 600dp): Single row of 4 equally-weighted (`Modifier.weight(1f)`) tiles with `spacedBy(10.dp)`.
+  - Completely eliminated the severe text collision and character wrapping bug where labels collided into `COMPLETED ORDERSUNITS SOLDDISCOUNTS GIVENORDER` and currency values wrapped characters onto a second line (`৳1,161.9 \n 9`).
+  - Localized transaction counts, units sold, and margin percentages using `toBanglaDigits()` and `isAppBangla()`.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V1.apk` (versionCode 220960, versionName "2.6.84-Final-V1"), R8 minified and resource-shrunk, fully tested and prepared in project root directory as a direct in-place update.
 

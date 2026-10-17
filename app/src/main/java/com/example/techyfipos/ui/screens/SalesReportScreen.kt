@@ -49,6 +49,7 @@ import com.example.techyfipos.utils.endOfDay
 import com.example.techyfipos.utils.localMillisToUtcMidnight
 import com.example.techyfipos.utils.utcMidnightToLocalMidnight
 import com.example.techyfipos.utils.toBanglaDigits
+import com.example.techyfipos.utils.isAppBangla
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.util.Calendar
 import java.util.Date
@@ -420,6 +421,7 @@ fun SalesReportScreen(
                     previous = previousReport,
                     periodExpenseTotal = periodExpenseTotal,
                     canViewPnl = canViewPnl,
+                    isTablet = isTablet,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -626,6 +628,7 @@ private fun ReportExecutiveSummaryCard(
     previous: SalesReportData?,
     periodExpenseTotal: Double = 0.0,
     canViewPnl: Boolean = true,
+    isTablet: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showProfitMode by remember { mutableStateOf(false) }
@@ -634,6 +637,11 @@ private fun ReportExecutiveSummaryCard(
     val effectiveNetProfit = data.netProfit
     val marginPercent = if (netSales == 0.0) 0.0 else (effectiveNetProfit / netSales * 100)
     val growthDelta = change(data.totalRevenue, previous?.totalRevenue)
+    val isBn = isAppBangla()
+    fun fmtPct(value: Double): String {
+        val s = String.format(Locale.US, "%.1f", value)
+        return if (isBn) toBanglaDigits(s) else s
+    }
 
     Surface(
         modifier = modifier,
@@ -726,8 +734,8 @@ private fun ReportExecutiveSummaryCard(
                             letterSpacing = (-0.6).sp
                         )
                         Text(
-                            text = if (showProfitMode) "${stringResource(R.string.sales_report_net_margin)} (${String.format(Locale.US, "%.1f", marginPercent)}%)"
-                                   else "${stringResource(R.string.sales_report_total_revenue)} (${growthDelta?.let { "${if (it >= 0) "+" else ""}${String.format(Locale.US, "%.1f", it)}%" } ?: ""})",
+                            text = if (showProfitMode) "${stringResource(R.string.sales_report_net_margin)} (${fmtPct(marginPercent)}%)"
+                                   else "${stringResource(R.string.sales_report_total_revenue)} (${growthDelta?.let { "${if (it >= 0) "+" else ""}${fmtPct(it)}%" } ?: ""})",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFFA5B4FC)
@@ -751,7 +759,7 @@ private fun ReportExecutiveSummaryCard(
                                     color = Color(0xFF34D399)
                                 )
                                 Text(
-                                    text = "${stringResource(R.string.sales_report_profit_margin)} (${String.format(Locale.US, "%.1f", marginPercent)}%)",
+                                    text = "${stringResource(R.string.sales_report_profit_margin)} (${fmtPct(marginPercent)}%)",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFC7D2FE)
@@ -770,28 +778,75 @@ private fun ReportExecutiveSummaryCard(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 4-Column Bottom Grid
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(stringResource(R.string.sales_report_completed_orders).uppercase(), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFC7D2FE))
-                        Text("${data.transactionCount}", fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                // Bottom Metrics Grid: 4-Column on Tablet, Responsive 2x2 Grid on Mobile
+                val txCountStr = if (isBn) toBanglaDigits(data.transactionCount.toString()) else "${data.transactionCount}"
+                val rawItemsSold = if (data.itemsSold % 1.0 == 0.0) data.itemsSold.toLong().toString() else String.format(java.util.Locale.US, "%.2f", data.itemsSold).trimEnd('0').trimEnd('.')
+                val itemsSoldStr = if (isBn) toBanglaDigits(rawItemsSold) else rawItemsSold
+
+                if (isTablet) {
+                    // Single row of 4 weighted tiles for Tablet displays (width >= 600dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ExecutiveMetricCell(
+                            label = stringResource(R.string.sales_report_completed_orders),
+                            value = txCountStr,
+                            modifier = Modifier.weight(1f)
+                        )
+                        ExecutiveMetricCell(
+                            label = stringResource(R.string.sales_report_units_sold),
+                            value = itemsSoldStr,
+                            modifier = Modifier.weight(1f)
+                        )
+                        ExecutiveMetricCell(
+                            label = stringResource(R.string.sales_report_discounts_given),
+                            value = formatTaka(data.totalDiscount),
+                            modifier = Modifier.weight(1f)
+                        )
+                        ExecutiveMetricCell(
+                            label = stringResource(R.string.sales_report_avg_order_value),
+                            value = formatTaka(average),
+                            modifier = Modifier.weight(1f)
+                        )
                     }
-                    Column {
-                        Text(stringResource(R.string.sales_report_units_sold).uppercase(), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFC7D2FE))
-                        val itemsSoldStr = if (data.itemsSold % 1.0 == 0.0) data.itemsSold.toLong().toString() else String.format(java.util.Locale.US, "%.2f", data.itemsSold).trimEnd('0').trimEnd('.')
-                        Text("$itemsSoldStr", fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                    }
-                    Column {
-                        Text(stringResource(R.string.sales_report_discounts_given).uppercase(), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFC7D2FE))
-                        Text(formatTaka(data.totalDiscount), fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                    }
-                    Column {
-                        Text(stringResource(R.string.sales_report_avg_order_value).uppercase(), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFC7D2FE))
-                        Text(formatTaka(average), fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                } else {
+                    // 2x2 Grid of frosted tiles for Compact Mobile screens (< 600dp)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            ExecutiveMetricCell(
+                                label = stringResource(R.string.sales_report_completed_orders),
+                                value = txCountStr,
+                                modifier = Modifier.weight(1f)
+                            )
+                            ExecutiveMetricCell(
+                                label = stringResource(R.string.sales_report_units_sold),
+                                value = itemsSoldStr,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            ExecutiveMetricCell(
+                                label = stringResource(R.string.sales_report_discounts_given),
+                                value = formatTaka(data.totalDiscount),
+                                modifier = Modifier.weight(1f)
+                            )
+                            ExecutiveMetricCell(
+                                label = stringResource(R.string.sales_report_avg_order_value),
+                                value = formatTaka(average),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
 
@@ -826,6 +881,46 @@ private fun ReportExecutiveSummaryCard(
                     NetProfitBreakdownRow(stringResource(R.string.sales_report_net_profit), effectiveNetProfit, isTotal = true)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ExecutiveMetricCell(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = Color.Black.copy(alpha = 0.22f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 7.dp)
+        ) {
+            Text(
+                text = label.uppercase(),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFFC7D2FE),
+                letterSpacing = 0.4.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = value,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = false
+            )
         }
     }
 }
@@ -1278,13 +1373,15 @@ private fun OverviewPanel(
                                     softWrap = false,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                val itemsSoldStr = if (peak.itemsSold % 1.0 == 0.0) peak.itemsSold.toLong().toString() else String.format(Locale.US, "%.1f", peak.itemsSold)
+                                val rawPeakItems = if (peak.itemsSold % 1.0 == 0.0) peak.itemsSold.toLong().toString() else String.format(Locale.US, "%.1f", peak.itemsSold)
+                                val itemsSoldStr = if (isAppBangla()) toBanglaDigits(rawPeakItems) else rawPeakItems
                                 Text(
                                     text = stringResource(R.string.sales_report_hourly_invoices_units_sold, peak.transactionCount, itemsSoldStr),
                                     fontSize = 10.5.sp,
                                     color = Color(0xFFB45309),
                                     maxLines = 1,
-                                    softWrap = false
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                             Spacer(Modifier.width(8.dp))
@@ -1691,11 +1788,15 @@ private fun HourlyPanel(data: SalesReportData, canViewPnl: Boolean = true) {
                                                 }
                                             }
                                         }
-                                        val itemsQtyStr = if (hourData.itemsSold % 1.0 == 0.0) hourData.itemsSold.toLong().toString() else String.format(Locale.US, "%.1f", hourData.itemsSold)
+                                        val rawHourQty = if (hourData.itemsSold % 1.0 == 0.0) hourData.itemsSold.toLong().toString() else String.format(Locale.US, "%.1f", hourData.itemsSold)
+                                        val itemsQtyStr = if (isAppBangla()) toBanglaDigits(rawHourQty) else rawHourQty
                                         Text(
                                             text = stringResource(R.string.sales_report_hourly_invoices_units, hourData.transactionCount, itemsQtyStr),
                                             fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.outline
+                                            color = MaterialTheme.colorScheme.outline,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
