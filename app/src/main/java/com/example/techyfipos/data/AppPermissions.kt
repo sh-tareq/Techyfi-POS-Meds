@@ -268,4 +268,12 @@ object AppPermissions {
 
     fun isSystemPermission(permissionKey: String): Boolean =
         permissionKey.startsWith("system.", ignoreCase = true) || permissionKey.startsWith("system_", ignoreCase = true)
+
+    fun getEffectiveMaxDiscount(user: User?): Double {
+        if (user == null) return 10.0
+        if (user.role == AppRoles.OWNER || hasPermission(user, SALES_HIGH_DISCOUNT)) {
+            return 100.0
+        }
+        return user.maxDiscountPercent
+    }
 }

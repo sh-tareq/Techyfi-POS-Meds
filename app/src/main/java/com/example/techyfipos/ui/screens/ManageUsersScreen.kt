@@ -334,8 +334,13 @@ private fun StaffUserCard(
                             }
 
                             if (user.role == AppRoles.CASHIER) {
+                                val discFormatted = if (user.maxDiscountPercent % 1.0 == 0.0) {
+                                    user.maxDiscountPercent.toInt().toString()
+                                } else {
+                                    user.maxDiscountPercent.toString()
+                                }
                                 Text(
-                                    text = stringResource(R.string.users_max_discount_format, user.maxDiscountPercent.toInt()),
+                                    text = stringResource(R.string.users_max_discount_format, discFormatted),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -563,7 +568,11 @@ private fun EditStaffDialog(
     var editOldPin by remember(user) { mutableStateOf("") }
     var editRole by remember(user) { mutableStateOf(user.role) }
     var editActive by remember(user) { mutableStateOf(user.isActive) }
-    var editDiscount by remember(user) { mutableStateOf(user.maxDiscountPercent.toInt().toString()) }
+    var editDiscount by remember(user) {
+        mutableStateOf(
+            if (user.maxDiscountPercent % 1.0 == 0.0) user.maxDiscountPercent.toInt().toString() else user.maxDiscountPercent.toString()
+        )
+    }
     var editError by remember(user) { mutableStateOf<String?>(null) }
     val currentUser by authViewModel.currentUser.collectAsState()
     val isSelf = user.id == currentUser?.id
@@ -711,7 +720,9 @@ private fun EditStaffDialog(
                         editError = invalidDiscountMessage
                         return@Button
                     }
-                    val disc = if (editRole == AppRoles.CASHIER) (editDiscount.toDoubleOrNull() ?: 10.0) else 10.0
+                    val parsedDisc = editDiscount.toDoubleOrNull()
+                    val disc = if (editRole == AppRoles.CASHIER) parsedDisc else null
+                    val finalDisc = if (disc != null && kotlin.math.abs(disc - user.maxDiscountPercent) < 0.001) null else disc
                     authViewModel.updateStaff(
                         userId = user.id,
                         name = editName.trim(),
@@ -720,7 +731,7 @@ private fun EditStaffDialog(
                         role = editRole,
                         customPermissions = null,
                         isActive = editActive,
-                        maxDiscount = disc
+                        maxDiscount = finalDisc
                     ) { success, err ->
                         if (success) {
                             onSuccess()

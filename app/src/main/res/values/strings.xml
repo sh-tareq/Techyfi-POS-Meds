@@ -2424,7 +2424,7 @@
     <string name="products_select_all_cd">Select All</string>
     <string name="products_selected_count">%1$d selected</string>
     <string name="products_exit_selection_cd">Exit Selection</string>
-    <string name="users_max_discount_format">Max Disc: %1$d%%</string>
+    <string name="users_max_discount_format">Max Disc: %1$s%%</string>
     <string name="users_role_permissions_active_format">Role: %1$s · %2$d / %3$d Active</string>
     <string name="due_reminder_channel_name">Due Payment Reminders</string>
     <string name="due_reminder_channel_description">Automated due collection alerts and WhatsApp/SMS triggers</string>

@@ -2420,7 +2420,7 @@
     <string name="products_select_all_cd">সবগুলো নির্বাচন করুন</string>
     <string name="products_selected_count">%1$dটি নির্বাচিত</string>
     <string name="products_exit_selection_cd">নির্বাচন থেকে প্রস্থান করুন</string>
-    <string name="users_max_discount_format">সর্বোচ্চ ছাড়: %1$d%%</string>
+    <string name="users_max_discount_format">সর্বোচ্চ ছাড়: %1$s%%</string>
     <string name="users_role_permissions_active_format">ভূমিকা: %1$s · %2$d / %3$d সক্রিয়</string>
     <string name="due_reminder_channel_name">বকেয়া পেমেন্ট অনুস্মারক</string>
     <string name="due_reminder_channel_description">স্বয়ংক্রিয় বকেয়া সংগ্রহের সতর্কতা এবং হোয়াটসঅ্যাপ/এসএমএস ট্রিগার</string>

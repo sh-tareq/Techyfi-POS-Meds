@@ -4133,7 +4133,7 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         role: String,
         customPermissions: Set<String>?,
         isActive: Boolean,
-        maxDiscount: Double,
+        maxDiscount: Double?,
         onComplete: (Boolean, String?) -> Unit
     ) {
         viewModelScope.launch {
@@ -4172,7 +4172,7 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
                         role = role,
                         customPermissions = updatedPerms,
                         isActive = isActive,
-                        maxDiscountPercent = maxDiscount
+                        maxDiscountPercent = maxDiscount ?: (_currentUser.value?.maxDiscountPercent ?: 10.0)
                     )
                     setCurrentUser(updated)
                 }

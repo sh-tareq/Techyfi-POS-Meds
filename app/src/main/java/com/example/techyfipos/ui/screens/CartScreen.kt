@@ -314,7 +314,7 @@ fun CartScreen(
     val canHoldCart = isOwner || activePermissions.contains(AppPermissions.SALES_HOLD_CART)
     val canChangePriceTier = isOwner || activePermissions.contains(AppPermissions.SALES_PRICE_TIER)
     val canEditShopSettings = isOwner || activePermissions.contains(AppPermissions.SYSTEM_SHOP_SETTINGS)
-    val maxDiscountAllowed: Double = if (isOwner || activePermissions.contains(AppPermissions.SALES_HIGH_DISCOUNT)) 100.0 else userDiscountLimit
+    val maxDiscountAllowed: Double = AppPermissions.getEffectiveMaxDiscount(currentUser)
     val isCompletingSale by cartViewModel.isCompletingSale.collectAsStateWithLifecycle()
 
     val shopName by settingsViewModel.shopName.collectAsStateWithLifecycle()

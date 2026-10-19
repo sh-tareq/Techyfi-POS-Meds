@@ -325,6 +325,44 @@ class P0AuditFixesTest {
     }
 
     @Test
+    fun testR23_03_managerHighDiscountAllowedAndOwnerSelfEditSaves() = kotlinx.coroutines.test.runTest {
+        val manager = User(
+            id = 1L,
+            name = "Manager",
+            pinHash = hashSha256("1111"),
+            role = AppRoles.MANAGER,
+            maxDiscountPercent = 10.0,
+            isActive = true
+        )
+        val owner = User(
+            id = 2L,
+            name = "Owner",
+            pinHash = hashSha256("9999"),
+            role = AppRoles.OWNER,
+            maxDiscountPercent = 100.0,
+            isActive = true
+        )
+        val (repo, _) = createRepositoryWithUsers(listOf(manager, owner))
+
+        // Manager has SALES_HIGH_DISCOUNT by default, so effective max discount is 100%
+        val managerEffectiveMaxDiscount = AppPermissions.getEffectiveMaxDiscount(manager)
+        assertEquals(100.0, managerEffectiveMaxDiscount, 0.001)
+
+        // Owner can edit their own account (name and PIN) without being blocked by maxDiscount check
+        repo.setSessionUser(owner)
+        repo.updateStaff(
+            userId = owner.id,
+            newName = "Owner Updated",
+            newPin = "8888",
+            oldPin = "9999",
+            maxDiscount = null
+        )
+        val updatedOwner = repo.allUsers.first().firstOrNull { it.id == owner.id }
+        assertEquals("Owner Updated", updatedOwner?.name)
+        assertTrue(repo.verifyPinDetailed("8888") is PinVerifyResult.Success)
+    }
+
+    @Test
     fun testR22_02_ownerPinResetAlertSurvivesLoginsUntilAcknowledgedAndChanged() = kotlinx.coroutines.test.runTest {
         val cashier = User(id = 1L, name = "Cashier", pinHash = hashSha256("1111"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, isActive = true)
         val owner = User(id = 2L, name = "Owner", pinHash = hashSha256("9999"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)

@@ -1302,7 +1302,7 @@ class DataRepository(
                     }
                 }
 
-            val maxAllowedPercent = if (isSessionOwner()) 100.0 else (sessionUser?.maxDiscountPercent ?: 10.0)
+            val maxAllowedPercent = AppPermissions.getEffectiveMaxDiscount(sessionUser)
             val subtotalForDiscount = cartItemsWithNotes.sumOf { it.first.sellingPrice * it.second }
             val discountPercent = if (subtotalForDiscount > 0.0) (regularDiscountTaka / subtotalForDiscount) * 100.0 else 0.0
             val requiresSupervisorDiscount = regularDiscountTaka > 0.0 && (!hasDiscountPermission || discountPercent > maxAllowedPercent + 0.01)
@@ -4656,7 +4656,7 @@ class DataRepository(
             throw IllegalStateException("The only owner account cannot be deactivated")
         }
 
-        if (isSelf && maxDiscount != null && maxDiscount != existing.maxDiscountPercent) {
+        if (isSelf && maxDiscount != null && kotlin.math.abs(maxDiscount - existing.maxDiscountPercent) > 0.001) {
             throw UnauthorizedException("Users cannot change their own maximum discount")
         }
         if (!isSessionOwner() && maxDiscount != null && maxDiscount > (sessionUser?.maxDiscountPercent ?: 10.0)) {
