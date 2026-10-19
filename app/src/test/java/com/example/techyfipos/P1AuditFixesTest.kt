@@ -356,4 +356,61 @@ class P1AuditFixesTest {
         val wouldExceedRemainingDue = standalonePayments > remainingInvoiceDue + 0.001
         assertTrue("Voiding invoice A must be blocked because standalone payment would exceed remaining invoice dues", wouldExceedRemainingDue)
     }
+
+    @Test
+    fun testR23_19_banglaStockReasonMigration() = kotlinx.coroutines.test.runTest {
+        val updatedReasons = mutableMapOf<String, String>()
+        val mockAdjustmentDao = org.mockito.Mockito.mock(com.example.techyfipos.data.db.InventoryAdjustmentDao::class.java)
+        org.mockito.Mockito.`when`(mockAdjustmentDao.updateReason(org.mockito.Mockito.anyString(), org.mockito.Mockito.anyString())).thenAnswer { invocation ->
+            val old = invocation.getArgument<String>(0)
+            val new = invocation.getArgument<String>(1)
+            updatedReasons[old] = new
+            1
+        }
+
+        val prefsStorage = mutableMapOf<String, Any?>()
+        val mockEditor = org.mockito.Mockito.mock(android.content.SharedPreferences.Editor::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
+        org.mockito.Mockito.`when`(mockEditor.putBoolean(org.mockito.Mockito.anyString(), org.mockito.Mockito.anyBoolean())).thenAnswer { invocation ->
+            val key = invocation.getArgument<String>(0)
+            val value = invocation.getArgument<Boolean>(1)
+            prefsStorage[key] = value
+            mockEditor
+        }
+        val mockPrefs = org.mockito.Mockito.mock(android.content.SharedPreferences::class.java)
+        org.mockito.Mockito.`when`(mockPrefs.getBoolean(org.mockito.Mockito.anyString(), org.mockito.Mockito.anyBoolean())).thenAnswer { invocation ->
+            val key = invocation.getArgument<String>(0)
+            val defaultVal = invocation.getArgument<Boolean>(1)
+            prefsStorage[key] as? Boolean ?: defaultVal
+        }
+        org.mockito.Mockito.`when`(mockPrefs.edit()).thenReturn(mockEditor)
+
+        val mockContext = org.mockito.Mockito.mock(android.content.Context::class.java)
+        org.mockito.Mockito.`when`(mockContext.getSharedPreferences(org.mockito.Mockito.anyString(), org.mockito.Mockito.anyInt())).thenReturn(mockPrefs)
+
+        val mockDatabase = org.mockito.Mockito.mock(com.example.techyfipos.data.db.AppDatabase::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
+        org.mockito.Mockito.`when`(mockDatabase.inventoryAdjustmentDao()).thenReturn(mockAdjustmentDao)
+        val mockSettingsDataStore = org.mockito.Mockito.mock(com.example.techyfipos.data.SettingsDataStore::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
+
+        val repo = DataRepository(mockContext, mockDatabase, mockSettingsDataStore)
+
+        // Run normalization
+        repo.normalizeLegacyStockAdjustmentReasons(force = true)
+
+        // Verify historical Bangla strings from values-bn/strings.xml are mapped
+        assertEquals("Restock", updatedReasons["পুনরায় মজুদ"])
+        assertEquals("Restock", updatedReasons["পুনরায় মজুত"])
+        assertEquals("Discrepancy", updatedReasons["গরমিল"])
+        assertEquals("Discrepancy", updatedReasons["অসঙ্গতি"])
+        assertEquals("Discrepancy", updatedReasons["পার্থক্য"])
+        assertEquals("Damage", updatedReasons["ক্ষতিগ্রস্ত"])
+        assertEquals("Expired", updatedReasons["মেয়াদোত্তীর্ণ"])
+
+        // Verify flag was stored in SharedPreferences
+        assertEquals(true, prefsStorage["bangla_stock_reason_migration_done"])
+
+        // On next run without force, it should early-return and not invoke updateReason again
+        updatedReasons.clear()
+        repo.normalizeLegacyStockAdjustmentReasons(force = false)
+        assertTrue(updatedReasons.isEmpty())
+    }
 }

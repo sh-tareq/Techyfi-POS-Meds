@@ -591,15 +591,21 @@ class DataRepository(
         }
     }
 
-    suspend fun normalizeLegacyStockAdjustmentReasons() = withContext(Dispatchers.IO) {
+    suspend fun normalizeLegacyStockAdjustmentReasons(force: Boolean = false) = withContext(Dispatchers.IO) {
+        val prefs = context.getSharedPreferences("pos_prefs", Context.MODE_PRIVATE)
+        if (!force && prefs.getBoolean("bangla_stock_reason_migration_done", false)) {
+            return@withContext
+        }
         val mappings = mapOf(
-            "রিস্টক" to "Restock",
+            "পুনরায় মজুদ" to "Restock",
             "পুনরায় মজুত" to "Restock",
+            "রিস্টক" to "Restock",
+            "গরমিল" to "Discrepancy",
+            "অসঙ্গতি" to "Discrepancy",
+            "পার্থক্য" to "Discrepancy",
             "ক্ষতিগ্রস্ত" to "Damage",
             "নষ্ট" to "Damage",
             "মেয়াদোত্তীর্ণ" to "Expired",
-            "অসঙ্গতি" to "Discrepancy",
-            "পার্থক্য" to "Discrepancy",
             "নমুনা" to "Sample",
             "দোকানে ব্যবহার" to "Store Use",
             "অভ্যন্তরীণ ব্যবহার" to "Internal Use",
@@ -609,6 +615,7 @@ class DataRepository(
         for ((old, new) in mappings) {
             inventoryAdjustmentDao.updateReason(old, new)
         }
+        prefs.edit().putBoolean("bangla_stock_reason_migration_done", true).apply()
     }
 
     /** Atomically adjusts stock by [delta] in the DB, avoiding read-modify-write races between concurrent calls. */
