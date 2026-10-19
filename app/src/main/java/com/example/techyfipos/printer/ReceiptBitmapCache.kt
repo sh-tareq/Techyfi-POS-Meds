@@ -17,15 +17,19 @@ object ReceiptBitmapCache {
     /**
      * Pure function that formats a deterministic cache key.
      */
-    fun buildKey(saleId: Long, lang: String, paperWidthMm: Int): String =
-        "${saleId}_${lang.trim().uppercase()}_${paperWidthMm}"
+    fun buildKey(saleId: Long, lang: String, paperWidthMm: Int, billHash: Int? = null): String =
+        if (billHash != null) {
+            "${saleId}_${lang.trim().uppercase()}_${paperWidthMm}_${billHash}"
+        } else {
+            "${saleId}_${lang.trim().uppercase()}_${paperWidthMm}"
+        }
 
     /**
      * Retrieves the cached receipt bitmap if it matches the requested parameters and is not recycled.
      */
-    fun get(saleId: Long, lang: String, paperWidthMm: Int): Bitmap? {
+    fun get(saleId: Long, lang: String, paperWidthMm: Int, billHash: Int? = null): Bitmap? {
         synchronized(lock) {
-            val key = buildKey(saleId, lang, paperWidthMm)
+            val key = buildKey(saleId, lang, paperWidthMm, billHash)
             val bmp = cachedBitmap
             if (cachedKey == key && bmp != null && !bmp.isRecycled) {
                 return bmp
@@ -35,29 +39,22 @@ object ReceiptBitmapCache {
     }
 
     /**
-     * Stores a receipt bitmap in cache. Recycles any previously cached bitmap for a different key.
+     * Stores a receipt bitmap in cache. Does NOT recycle previous bitmaps because an in-flight
+     * print operation may still be actively reading them.
      */
-    fun put(saleId: Long, lang: String, paperWidthMm: Int, bitmap: Bitmap) {
+    fun put(saleId: Long, lang: String, paperWidthMm: Int, bitmap: Bitmap, billHash: Int? = null) {
         synchronized(lock) {
-            val key = buildKey(saleId, lang, paperWidthMm)
-            val oldBmp = cachedBitmap
-            if (cachedKey != key && oldBmp != null && !oldBmp.isRecycled && oldBmp !== bitmap) {
-                oldBmp.recycle()
-            }
+            val key = buildKey(saleId, lang, paperWidthMm, billHash)
             cachedKey = key
             cachedBitmap = bitmap
         }
     }
 
     /**
-     * Clears the cache and recycles any held bitmap.
+     * Clears the cache by dropping references without recycling, avoiding crashing in-flight prints.
      */
     fun clear() {
         synchronized(lock) {
-            val oldBmp = cachedBitmap
-            if (oldBmp != null && !oldBmp.isRecycled) {
-                oldBmp.recycle()
-            }
             cachedBitmap = null
             cachedKey = null
         }

@@ -13,6 +13,7 @@ import com.example.techyfipos.utils.reportStoreName
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -20,6 +21,7 @@ import org.junit.Test
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 
 class PrinterRoutingAndDriverTest {
@@ -1196,37 +1198,49 @@ class PrinterRoutingAndDriverTest {
     }
 
     @Test
-    fun `ReceiptBitmapCache caches bitmap and clear recycles it`() {
-        val mockBitmap = mock(Bitmap::class.java)
-        `when`(mockBitmap.isRecycled).thenReturn(false)
-
-        ReceiptBitmapCache.put(200L, "EN", 80, mockBitmap)
-        assertEquals(mockBitmap, ReceiptBitmapCache.get(200L, "EN", 80))
-        assertNull(ReceiptBitmapCache.get(200L, "BN", 80))
-        assertNull(ReceiptBitmapCache.get(201L, "EN", 80))
-        assertNull(ReceiptBitmapCache.get(200L, "EN", 58))
-
-        ReceiptBitmapCache.clear()
-        assertNull(ReceiptBitmapCache.get(200L, "EN", 80))
-        verify(mockBitmap).recycle()
+    fun `ReceiptBitmapCache buildKey changes with bill content hash`() {
+        val key1 = ReceiptBitmapCache.buildKey(101L, "EN", 80, 11111)
+        val key2 = ReceiptBitmapCache.buildKey(101L, "EN", 80, 22222)
+        assertEquals("101_EN_80_11111", key1)
+        assertEquals("101_EN_80_22222", key2)
+        assertNotEquals(key1, key2)
     }
 
     @Test
-    fun `ReceiptBitmapCache put recycles old bitmap when key changes`() {
+    fun `ReceiptBitmapCache caches bitmap and clear drops reference without recycling`() {
+        val mockBitmap = mock(Bitmap::class.java)
+        `when`(mockBitmap.isRecycled).thenReturn(false)
+
+        ReceiptBitmapCache.put(200L, "EN", 80, mockBitmap, 12345)
+        assertEquals(mockBitmap, ReceiptBitmapCache.get(200L, "EN", 80, 12345))
+        assertNull(ReceiptBitmapCache.get(200L, "BN", 80, 12345))
+        assertNull(ReceiptBitmapCache.get(201L, "EN", 80, 12345))
+        assertNull(ReceiptBitmapCache.get(200L, "EN", 58, 12345))
+        assertNull(ReceiptBitmapCache.get(200L, "EN", 80, 99999))
+
+        ReceiptBitmapCache.clear()
+        assertNull(ReceiptBitmapCache.get(200L, "EN", 80, 12345))
+        // Must never recycle to prevent crashing in-flight prints
+        verify(mockBitmap, never()).recycle()
+    }
+
+    @Test
+    fun `ReceiptBitmapCache put drops old reference without recycling when key changes`() {
         val oldBitmap = mock(Bitmap::class.java)
         val newBitmap = mock(Bitmap::class.java)
         `when`(oldBitmap.isRecycled).thenReturn(false)
         `when`(newBitmap.isRecycled).thenReturn(false)
 
-        ReceiptBitmapCache.put(301L, "EN", 80, oldBitmap)
-        assertEquals(oldBitmap, ReceiptBitmapCache.get(301L, "EN", 80))
+        ReceiptBitmapCache.put(301L, "EN", 80, oldBitmap, 100)
+        assertEquals(oldBitmap, ReceiptBitmapCache.get(301L, "EN", 80, 100))
 
-        ReceiptBitmapCache.put(302L, "EN", 80, newBitmap)
-        assertEquals(newBitmap, ReceiptBitmapCache.get(302L, "EN", 80))
-        verify(oldBitmap).recycle()
+        ReceiptBitmapCache.put(302L, "EN", 80, newBitmap, 200)
+        assertEquals(newBitmap, ReceiptBitmapCache.get(302L, "EN", 80, 200))
+        // Must not recycle old bitmap while in-flight prints may read it
+        verify(oldBitmap, never()).recycle()
 
         ReceiptBitmapCache.clear()
-        verify(newBitmap).recycle()
+        verify(newBitmap, never()).recycle()
     }
 
     // 18. Tests for resolveBluetoothChunkDelayMs

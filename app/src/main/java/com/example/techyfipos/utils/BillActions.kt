@@ -1334,7 +1334,7 @@ suspend fun printReceiptWithBluetoothFallback(
 
     val bitmapStartMs = System.currentTimeMillis()
     val paperWidth = settings.paperRollWidthMm
-    val cached = ReceiptBitmapCache.get(bill.saleId, receiptLanguage, paperWidth)
+    val cached = ReceiptBitmapCache.get(bill.saleId, receiptLanguage, paperWidth, bill.hashCode())
     val bitmapToPrint: Bitmap = if (cached != null) {
         effectiveTiming.recordGenerateDone()
         Log.d("BillActions", "PrintTiming: receipt bitmap cache hit (0 ms)")
@@ -1349,7 +1349,7 @@ suspend fun printReceiptWithBluetoothFallback(
             android.util.Log.e("BillActions", "Failed to generate bill bitmap", e)
             return false
         }
-        ReceiptBitmapCache.put(bill.saleId, receiptLanguage, paperWidth, bmp)
+        ReceiptBitmapCache.put(bill.saleId, receiptLanguage, paperWidth, bmp, bill.hashCode())
         effectiveTiming.recordGenerateDone()
         Log.d("BillActions", "PrintTiming: receipt bitmap generated in ${System.currentTimeMillis() - bitmapStartMs} ms")
         bmp

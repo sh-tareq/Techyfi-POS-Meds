@@ -39,6 +39,8 @@ import com.example.techyfipos.ui.viewmodel.SaleReturnSummary
 import com.example.techyfipos.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -199,11 +201,15 @@ fun ReceiptSummaryDialog(
 
     LaunchedEffect(activeBill, receiptLanguage) {
         val paperWidth = activeBill.settingsData.paperRollWidthMm
+        val billHash = activeBill.hashCode()
         withContext(Dispatchers.IO) {
             try {
+                ensureActive()
                 val bmp = generateBillBitmap(context, activeBill, receiptLanguage)
-                ReceiptBitmapCache.put(activeBill.saleId, receiptLanguage, paperWidth, bmp)
-                android.util.Log.d("ReceiptSummaryDialog", "Receipt bitmap pre-rendered in background for saleId=${activeBill.saleId}")
+                if (isActive) {
+                    ReceiptBitmapCache.put(activeBill.saleId, receiptLanguage, paperWidth, bmp, billHash)
+                    android.util.Log.d("ReceiptSummaryDialog", "Receipt bitmap pre-rendered in background for saleId=${activeBill.saleId}")
+                }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 android.util.Log.w("ReceiptSummaryDialog", "Background receipt pre-render failed: ${e.message}")
