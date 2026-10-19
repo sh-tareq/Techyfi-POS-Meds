@@ -1048,6 +1048,12 @@ fun BatchProductCodePrintDialog(
     var totalSentSoFar by remember { mutableIntStateOf(0) }
     var printJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            printJob?.cancel()
+        }
+    }
+
     val codeType = ProductCodeType.entries.firstOrNull { it.name == codeTypeName } ?: ProductCodeType.BARCODE
     val labelSize = ProductCodeLabelSize.entries.firstOrNull { it.name == labelSizeName }
         ?: ProductCodeLabelSize.SIZE_50_X_30
@@ -1281,6 +1287,7 @@ fun BatchProductCodePrintDialog(
 
                 val safeAcross = invoiceSettings.labelLabelsAcross.coerceIn(1, 3)
                 val (payloads, payloadCopies) = if (safeAcross > 1) {
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
                     val multiUpPayloads = buildMultiUpTsplPayloads(
                         bitmapsWithCopies = bitmapsWithCopies,
                         labelWidthMm = effectiveWidthMm,
@@ -1299,6 +1306,7 @@ fun BatchProductCodePrintDialog(
                     multiUpPayloads to List(multiUpPayloads.size) { 1 }
                 } else {
                     val singlePayloads = bitmapsWithCopies.map { (bmp, qty) ->
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
                         buildTsplPayload(
                             labelBitmap = bmp,
                             widthMm = effectiveWidthMm,
