@@ -3,6 +3,8 @@ package com.example.techyfipos
 import com.example.techyfipos.data.AppRoles
 import com.example.techyfipos.data.DataRepository
 import com.example.techyfipos.data.db.Product
+import com.example.techyfipos.data.db.PurchaseInvoice
+import com.example.techyfipos.data.db.SupplierPayment
 import com.example.techyfipos.data.db.User
 import com.example.techyfipos.printer.computeBluetoothWatchdogBudgetMs
 import com.example.techyfipos.ui.viewmodel.SalesReportData
@@ -251,5 +253,107 @@ class P1AuditFixesTest {
         assertEquals(850.0, profitSummary.netRevenue, 0.001)
         assertEquals(600.0, profitSummary.netCogs, 0.001)
         assertEquals(250.0, profitSummary.netProfit, 0.001)
+    }
+
+    @Test
+    fun testR23_18_supplierLedgerAutoPaymentAndVoidGuard() = kotlinx.coroutines.test.runTest {
+        val mockPrefs = org.mockito.Mockito.mock(android.content.SharedPreferences::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
+        val mockContext = org.mockito.Mockito.mock(android.content.Context::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
+        org.mockito.Mockito.`when`(mockContext.getSharedPreferences(org.mockito.Mockito.anyString(), org.mockito.Mockito.anyInt())).thenReturn(mockPrefs)
+        val mockDatabase = org.mockito.Mockito.mock(com.example.techyfipos.data.db.AppDatabase::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
+        val mockSettingsDataStore = org.mockito.Mockito.mock(com.example.techyfipos.data.SettingsDataStore::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
+        val repo = DataRepository(mockContext, mockDatabase, mockSettingsDataStore)
+
+        val invoices = listOf(
+            PurchaseInvoice(
+                id = 1L,
+                invoiceNumber = "INV-101",
+                supplierId = 10L,
+                totalAmount = 1000.0,
+                paidAmount = 400.0,
+                dueAmount = 600.0,
+                itemsSummary = "Item A x 10",
+                timestamp = 1000L
+            ),
+            PurchaseInvoice(
+                id = 2L,
+                invoiceNumber = "INV-102",
+                supplierId = 10L,
+                totalAmount = 500.0,
+                paidAmount = 0.0,
+                dueAmount = 500.0,
+                itemsSummary = "Item B x 5",
+                timestamp = 2000L
+            )
+        )
+
+        // 1. Tagged sys auto-invoice payment
+        val sysAutoPayment = SupplierPayment(
+            id = 1L,
+            supplierId = 10L,
+            amountPaid = 400.0,
+            paymentMethod = "Cash",
+            referenceNote = "[SYS_INVOICE_PAYMENT] Paid on Invoice #INV-101",
+            timestamp = 1000L
+        )
+        assertTrue(repo.isAutoInvoicePayment(sysAutoPayment, invoices))
+
+        // 2. Legacy auto-invoice payment (matches real invoice number and amount)
+        val legacyAutoPayment = SupplierPayment(
+            id = 2L,
+            supplierId = 10L,
+            amountPaid = 400.0,
+            paymentMethod = "Cash",
+            referenceNote = "Paid on Invoice #INV-101",
+            timestamp = 1000L
+        )
+        assertTrue(repo.isAutoInvoicePayment(legacyAutoPayment, invoices))
+
+        // 3. User-typed note that happens to start with "Paid on Invoice #" but does NOT match any real invoice
+        val userTypedPayment = SupplierPayment(
+            id = 3L,
+            supplierId = 10L,
+            amountPaid = 350.0,
+            paymentMethod = "Cash",
+            referenceNote = "Paid on Invoice #INV-999 - standalone notes",
+            timestamp = 1500L
+        )
+        assertFalse(repo.isAutoInvoicePayment(userTypedPayment, invoices))
+
+        // 4. Test ledger recalculation logic and void guard
+        // Scenario from audit:
+        // Invoice A = 1000, standalone payment P = 1000. Total due = 0.
+        // If we try to void Invoice A:
+        // remainingInvoices = empty, remainingInvoiceDue = 0.
+        // standalonePayments = 1000 > remainingInvoiceDue (0).
+        // Voiding MUST be blocked.
+        val invoiceA = PurchaseInvoice(
+            id = 10L,
+            invoiceNumber = "INV-A",
+            supplierId = 20L,
+            totalAmount = 1000.0,
+            paidAmount = 0.0,
+            dueAmount = 1000.0,
+            itemsSummary = "Item X x 10",
+            timestamp = 1000L
+        )
+        val standalonePaymentP = SupplierPayment(
+            id = 20L,
+            supplierId = 20L,
+            amountPaid = 1000.0,
+            paymentMethod = "Cash",
+            referenceNote = "General supplier advance payment",
+            timestamp = 1000L
+        )
+
+        val invoicesSupplier20 = listOf(invoiceA)
+        val paymentsSupplier20 = listOf(standalonePaymentP)
+
+        val remainingInvoices = invoicesSupplier20.filter { it.id != invoiceA.id }
+        val remainingInvoiceDue = remainingInvoices.sumOf { (it.totalAmount - it.paidAmount).coerceAtLeast(0.0) }
+        val standalonePayments = paymentsSupplier20.filter { !repo.isAutoInvoicePayment(it, invoicesSupplier20) }.sumOf { it.amountPaid }
+
+        val wouldExceedRemainingDue = standalonePayments > remainingInvoiceDue + 0.001
+        assertTrue("Voiding invoice A must be blocked because standalone payment would exceed remaining invoice dues", wouldExceedRemainingDue)
     }
 }

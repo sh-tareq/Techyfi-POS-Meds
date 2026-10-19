@@ -5478,7 +5478,7 @@ class DataRepository(
                         supplierId = supplierId,
                         amountPaid = paidAmount,
                         paymentMethod = paymentMethod,
-                        referenceNote = "Paid on Invoice #$invoiceNumber${if (!note.isNullOrBlank()) " - $note" else ""}",
+                        referenceNote = "[SYS_INVOICE_PAYMENT] Paid on Invoice #$invoiceNumber${if (!note.isNullOrBlank()) " - $note" else ""}",
                         timestamp = writeTimestamp,
                         performedByName = sessionUser?.name
                     )
@@ -5547,6 +5547,7 @@ class DataRepository(
                 }
                 purchaseInvoiceDao.insertPurchaseInvoiceItems(invoiceItems)
             }
+            recalculateSupplierBalancesFromLedger(supplierId, writeTimestamp)
             invId
         }
     }
@@ -5595,6 +5596,7 @@ class DataRepository(
                     )
                 )
             }
+            recalculateSupplierBalancesFromLedger(supplierId, timestamp)
             paymentId
         }
     }
@@ -5605,12 +5607,22 @@ class DataRepository(
     fun getSupplierPayments(supplierId: Long): Flow<List<SupplierPayment>> =
         supplierDao.getPaymentsForSupplier(supplierId)
 
+    internal fun isAutoInvoicePayment(payment: SupplierPayment, invoices: List<PurchaseInvoice>): Boolean {
+        val note = payment.referenceNote ?: return false
+        if (note.startsWith("[SYS_INVOICE_PAYMENT]")) return true
+        if (note.startsWith("Paid on Invoice #")) {
+            val invoiceNumber = note.removePrefix("Paid on Invoice #").substringBefore(" - ").trim()
+            return invoices.any { it.invoiceNumber == invoiceNumber && kotlin.math.abs(it.paidAmount - payment.amountPaid) < 0.01 }
+        }
+        return false
+    }
+
     internal suspend fun recalculateSupplierBalancesFromLedger(supplierId: Long, timestamp: Long = System.currentTimeMillis()) {
         val invoices = purchaseInvoiceDao.getInvoicesForSupplierOnce(supplierId)
         val payments = supplierDao.getPaymentsForSupplierOnce(supplierId)
         val totalPurchases = invoices.sumOf { it.totalAmount }
         val totalInvoiceDue = invoices.sumOf { (it.totalAmount - it.paidAmount).coerceAtLeast(0.0) }
-        val standalonePayments = payments.filter { it.referenceNote?.startsWith("Paid on Invoice #") != true }.sumOf { it.amountPaid }
+        val standalonePayments = payments.filter { !isAutoInvoicePayment(it, invoices) }.sumOf { it.amountPaid }
         val totalDue = (totalInvoiceDue - standalonePayments).coerceAtLeast(0.0)
         supplierDao.setSupplierBalances(
             supplierId = supplierId,
@@ -5625,7 +5637,8 @@ class DataRepository(
         database.withDriverTransaction {
             val payment = supplierDao.getSupplierPaymentById(paymentId)
                 ?: throw IllegalArgumentException("Supplier payment not found")
-            if (payment.referenceNote?.startsWith("Paid on Invoice #") == true) {
+            val invoices = purchaseInvoiceDao.getInvoicesForSupplierOnce(payment.supplierId)
+            if (isAutoInvoicePayment(payment, invoices)) {
                 throw IllegalStateException("Cannot void invoice payments directly. Void the purchase invoice instead.")
             }
             supplierDao.deleteSupplierPaymentById(paymentId)
@@ -5656,6 +5669,17 @@ class DataRepository(
         database.withDriverTransaction {
             val invoice = purchaseInvoiceDao.getInvoiceById(invoiceId)
                 ?: throw IllegalArgumentException("Invoice not found")
+
+            val invoices = purchaseInvoiceDao.getInvoicesForSupplierOnce(invoice.supplierId)
+            val payments = supplierDao.getPaymentsForSupplierOnce(invoice.supplierId)
+            val remainingInvoices = invoices.filter { it.id != invoiceId }
+            val remainingInvoiceDue = remainingInvoices.sumOf { (it.totalAmount - it.paidAmount).coerceAtLeast(0.0) }
+            val standalonePayments = payments.filter { !isAutoInvoicePayment(it, invoices) }.sumOf { it.amountPaid }
+
+            if (standalonePayments > remainingInvoiceDue + 0.001) {
+                throw IllegalStateException("Cannot void invoice #${invoice.invoiceNumber}: standalone payments ($standalonePayments) would exceed remaining invoice dues ($remainingInvoiceDue). Void or adjust standalone payments first.")
+            }
+
             val items = purchaseInvoiceDao.getItemsForInvoiceOnce(invoiceId)
             items.forEach { item ->
                 val product = productDao.getProductByBarcode(item.productBarcode)
@@ -5681,11 +5705,11 @@ class DataRepository(
             purchaseInvoiceDao.deletePurchaseInvoice(invoice)
 
             if (invoice.paidAmount > 0.0) {
-                val payments = supplierDao.getPaymentsForSupplierOnce(invoice.supplierId)
                 val targetRef = "Paid on Invoice #${invoice.invoiceNumber}"
                 val matchingPayment = payments.firstOrNull {
                     val ref = it.referenceNote.orEmpty()
-                    val matchesPrefix = ref == targetRef || ref.startsWith("$targetRef - ")
+                    val matchesPrefix = ref == targetRef || ref.startsWith("$targetRef - ") ||
+                            ref == "[SYS_INVOICE_PAYMENT] $targetRef" || ref.startsWith("[SYS_INVOICE_PAYMENT] $targetRef - ")
                     matchesPrefix && kotlin.math.abs(it.amountPaid - invoice.paidAmount) < 0.01
                 }
                 if (matchingPayment != null) {
