@@ -56,7 +56,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 ## P1: Broken features and regressions
 
-- [ ] **R23-08 HIGH Verified. Supervisor-approved Hold on the Scanner does nothing.** `ScannerScreen.kt` about 717-733: `SupervisorAuthDialog` calls `onAuthorized` first (`SupervisorAuthDialog.kt` about 52-53), which sets `pendingSupervisorActionPin = null`, then `onAuthorizedWithPin` finds it null. Fix: copy both lambdas before clearing, like `CartScreen.kt` about 3176, or use only `onAuthorizedWithPin`.
+- [x] **R23-08 HIGH Verified. Supervisor-approved Hold on the Scanner does nothing.** `ScannerScreen.kt` about 717-733: `SupervisorAuthDialog` calls `onAuthorized` first (`SupervisorAuthDialog.kt` about 52-53), which sets `pendingSupervisorActionPin = null`, then `onAuthorizedWithPin` finds it null. Fix: copy both lambdas before clearing, like `CartScreen.kt` about 3176, or use only `onAuthorizedWithPin`.
 
 - [ ] **R23-09 HIGH Verified. "Preview Z" button does nothing before the shift is closed.** `RegisterCloseScreen.kt` about 1310 is now `val zTarget = closedShiftZReport` (fallback dropped in `f33fb9e`); the button (about 355) only sets `showPnlZReportDialog = true`, and the flag stays true. The share-format dialog also depends on `zTarget`. Fix: use `closedShiftZReport ?: report?.let { it to rangeLabel }` for preview, and only the snapshot after Confirm.
 
