@@ -217,12 +217,16 @@ fun ScannerScreen(
             pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_hold_cart)
             pendingSupervisorActionPin = { pin ->
                 scope.launch {
-                    cartViewModel.authorizeHoldCartOverride(pin)
-                    cartViewModel.holdCurrentCart { success ->
-                        if (success) {
-                            showCartPreview = false
-                            Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
+                    val authorized = cartViewModel.authorizeHoldCartOverride(pin)
+                    if (authorized) {
+                        cartViewModel.holdCurrentCart { success ->
+                            if (success) {
+                                showCartPreview = false
+                                Toast.makeText(context, context.getString(R.string.cart_held_success_toast), Toast.LENGTH_SHORT).show()
+                            }
                         }
+                    } else {
+                        Toast.makeText(context, context.getString(R.string.users_supervisor_auth_failed), Toast.LENGTH_SHORT).show()
                     }
                 }
             }

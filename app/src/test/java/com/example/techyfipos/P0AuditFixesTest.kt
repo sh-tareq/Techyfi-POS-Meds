@@ -13,6 +13,7 @@ import com.example.techyfipos.ui.viewmodel.CartViewModel
 import com.example.techyfipos.ui.viewmodel.PriceMode
 import com.example.techyfipos.utils.formatUnitsSold
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
@@ -759,5 +760,39 @@ class P0AuditFixesTest {
         repo.deleteUser(demotedOwner2!!)
         val deleted = repo.allUsers.first().find { it.id == owner2Id }
         assertTrue(deleted == null)
+    }
+
+    @Test
+    fun testR23_07_discountAndCreditOverrideLifecycle() = kotlinx.coroutines.test.runTest {
+        val owner = User(id = 1L, name = "Owner", pinHash = hashSha256("1111"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val cashier = User(id = 2L, name = "Cashier", pinHash = hashSha256("2222"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, isActive = true)
+        val (repo, _) = createRepositoryWithUsers(listOf(owner, cashier))
+
+        // 1. Discount override granted by supervisor
+        val authOk = repo.authorizeDiscountOverride("1111", 50.0, "cart-hash-1")
+        assertTrue(authOk)
+        assertTrue(repo.hasValidDiscountOverride(50.0, "cart-hash-1"))
+        assertFalse(repo.hasValidDiscountOverride(55.0, "cart-hash-1"))
+        assertFalse(repo.hasValidDiscountOverride(50.0, "cart-hash-2"))
+
+        // 2. User session switch / logout clears discount and other override tokens
+        repo.setSessionUser(cashier)
+        assertFalse(repo.hasValidDiscountOverride(50.0, "cart-hash-1"))
+
+        // 3. Credit limit override lifecycle and amount clamping
+        repo.authorizeCreditLimitOverride("1111", "01711111111", 300.0, "hash-due")
+        assertTrue(repo.hasValidCreditLimitOverride("01711111111", requestedAmount = 300.0, cartHash = "hash-due"))
+        assertFalse(repo.hasValidCreditLimitOverride("01711111111", requestedAmount = 350.0, cartHash = "hash-due"))
+        assertFalse(repo.hasValidCreditLimitOverride("01899999999", requestedAmount = 100.0))
+
+        // Session clear clears credit override
+        repo.clearSession()
+        assertFalse(repo.hasValidCreditLimitOverride("01711111111", requestedAmount = 300.0, cartHash = "hash-due"))
+
+        // 4. Hold cart supervisor override authorization
+        assertFalse(repo.authorizeHoldCartOverride("9999")) // invalid PIN
+        assertTrue(repo.authorizeHoldCartOverride("1111")) // valid supervisor PIN
+        assertTrue(repo.consumeHoldCartOverride())
+        assertFalse(repo.consumeHoldCartOverride()) // consumed
     }
 }

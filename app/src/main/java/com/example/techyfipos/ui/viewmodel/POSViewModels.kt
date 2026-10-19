@@ -849,9 +849,6 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     val heldCartCount: StateFlow<Int> = repository.heldCartCount
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
-    fun grantHoldCartOverride(durationMs: Long = 60_000L) {
-        repository.grantHoldCartOverride(durationMs)
-    }
 
     fun holdCurrentCart(
         title: String? = null,
@@ -1091,8 +1088,9 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                 _cartItems.value = restored
                 _discountAmount.value = heldCart.discountAmount
                 _isPercentageDiscount.value = heldCart.isPercentageDiscount
-                _approvedForHash.value = payload.approvedForHash
-                _approvedMaxTaka.value = payload.approvedMaxTaka
+                val hasValidOverride = payload.approvedMaxTaka != null && repository.hasValidDiscountOverride(payload.approvedMaxTaka, payload.approvedForHash)
+                _approvedForHash.value = if (hasValidOverride) payload.approvedForHash else null
+                _approvedMaxTaka.value = if (hasValidOverride) (payload.approvedMaxTaka ?: 0.0) else 0.0
                 // Authoritative customer identity: DB entity row is the single source of truth.
                 // Fallback to legacy payload JSON only if the DB row column is null/blank (backwards-compatibility).
                 val authoritativeCustName = heldCart.customerName?.takeIf { it.isNotBlank() }

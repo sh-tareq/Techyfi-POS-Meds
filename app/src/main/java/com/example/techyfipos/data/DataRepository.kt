@@ -287,6 +287,17 @@ class DataRepository(
 
     fun setSessionUser(user: User?) {
         sessionUser = user
+        clearOverrideTokens()
+    }
+
+    fun clearOverrideTokens() = synchronized(this) {
+        pendingCreditOverride = null
+        pendingDiscountOverride = null
+        pendingHoldCartOverrideExpiresAt = 0L
+    }
+
+    fun clearSession() {
+        setSessionUser(null)
     }
 
     val currentSessionUser: User? get() = sessionUser
@@ -425,10 +436,6 @@ class DataRepository(
             pendingHoldCartOverrideExpiresAt = System.currentTimeMillis() + durationMs
         }
         true
-    }
-
-    internal fun grantHoldCartOverride(durationMs: Long = 60_000L) = synchronized(this) {
-        pendingHoldCartOverrideExpiresAt = System.currentTimeMillis() + durationMs
     }
 
     internal fun consumeHoldCartOverride(): Boolean = synchronized(this) {
@@ -2204,7 +2211,7 @@ class DataRepository(
             }
             val existingDue = existing?.outstandingAmount ?: 0.0
             if (effectiveLimit > 0.0 && existingDue + amount > effectiveLimit + 0.001) {
-                require(hasPermission(AppPermissions.DUES_OVERRIDE_LIMIT) || consumeCreditLimitOverride(cleanPhone)) {
+                require(hasPermission(AppPermissions.DUES_OVERRIDE_LIMIT) || consumeCreditLimitOverride(cleanPhone, requestedAmount = amount)) {
                     "Supervisor authorization required to exceed customer credit limit"
                 }
             }

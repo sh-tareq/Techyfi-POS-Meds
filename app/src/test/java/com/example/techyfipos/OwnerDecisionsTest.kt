@@ -38,13 +38,14 @@ class OwnerDecisionsTest {
 
         Mockito.`when`(mockContext.getSharedPreferences(Mockito.anyString(), Mockito.anyInt())).thenReturn(mockPrefs)
         Mockito.`when`(mockPrefs.getLong("owner_device_pin_reset_timestamp", 0L)).thenAnswer { resetTimestamp }
-        Mockito.`when`(mockPrefs.getBoolean("owner_device_pin_reset_acknowledged", false)).thenAnswer { acknowledged }
-        Mockito.`when`(mockPrefs.getBoolean("owner_pin_changed_after_reset", false)).thenAnswer { true }
+        Mockito.`when`(mockPrefs.getBoolean(Mockito.eq("owner_device_pin_reset_acknowledged"), Mockito.anyBoolean())).thenAnswer { acknowledged }
+        Mockito.`when`(mockPrefs.getBoolean(Mockito.eq("owner_pin_changed_after_reset"), Mockito.anyBoolean())).thenReturn(true)
         Mockito.`when`(mockPrefs.edit()).thenReturn(mockEditor)
         Mockito.`when`(mockEditor.putBoolean(Mockito.eq("owner_device_pin_reset_acknowledged"), Mockito.anyBoolean())).thenAnswer {
             acknowledged = it.getArgument(1)
             mockEditor
         }
+        Mockito.`when`(mockEditor.putLong(Mockito.anyString(), Mockito.anyLong())).thenReturn(mockEditor)
 
         val repo = com.example.techyfipos.data.DataRepository(mockContext, mockDb, mockDataStore)
 

@@ -473,7 +473,9 @@ fun CartScreen(
     var discountInput by rememberSaveable { mutableStateOf(editableAmount(discountAmount)) }
     val isSupervisorApprovedDiscount by cartViewModel.supervisorApprovedDiscount.collectAsStateWithLifecycle()
     val discountTaka = if (isPercentageDiscount) (subtotal * discountAmount / 100.0) else discountAmount
-    val isOverrideValid = cartViewModel.hasValidDiscountOverride(discountTaka)
+    val isOverrideValid = remember(discountTaka, isSupervisorApprovedDiscount, cartItems) {
+        cartViewModel.hasValidDiscountOverride(discountTaka)
+    }
     val hasApprovedDiscount = isSupervisorApprovedDiscount || isOverrideValid
     var scanUpdate by remember { mutableStateOf<CartScanUpdate?>(null) }
     var notFoundBarcode by remember { mutableStateOf<String?>(null) }
@@ -740,11 +742,15 @@ fun CartScreen(
                                     pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_hold_cart)
                                     pendingSupervisorActionPin = { pin ->
                                         scope.launch {
-                                            cartViewModel.authorizeHoldCartOverride(pin)
-                                            cartViewModel.holdCurrentCart { success ->
-                                                if (success) {
-                                                    Toast.makeText(context, heldCartHoldSuccessMessage, Toast.LENGTH_SHORT).show()
+                                            val authorized = cartViewModel.authorizeHoldCartOverride(pin)
+                                            if (authorized) {
+                                                cartViewModel.holdCurrentCart { success ->
+                                                    if (success) {
+                                                        Toast.makeText(context, heldCartHoldSuccessMessage, Toast.LENGTH_SHORT).show()
+                                                    }
                                                 }
+                                            } else {
+                                                Toast.makeText(context, context.getString(R.string.users_supervisor_auth_failed), Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     }
@@ -1114,17 +1120,8 @@ fun CartScreen(
                             // Hold Cart Button
                             Button(
                                 onClick = {
-                                    if (canHoldCart) {
+                                    if (canHoldCart || authViewModel != null) {
                                         showHoldCartDialog = true
-                                    } else if (authViewModel != null) {
-                                        pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_hold_cart)
-                                        pendingSupervisorActionPin = { pin ->
-                                            scope.launch {
-                                                cartViewModel.authorizeHoldCartOverride(pin)
-                                                showHoldCartDialog = true
-                                            }
-                                        }
-                                        showSupervisorAuthDialog = true
                                     } else {
                                         Toast.makeText(context, context.getString(R.string.permission_required_hold_cart), Toast.LENGTH_SHORT).show()
                                     }
@@ -1364,11 +1361,16 @@ fun CartScreen(
                                             val discountFormatted = if (isPercentageDiscount) "$sanitized%" else formatTaka(parsed)
                                             pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_discount, discountFormatted, maxDiscountAllowed.toInt())
                                             pendingSupervisorActionPin = { pin ->
-                                                discountInput = sanitized
-                                                cartViewModel.setDiscountAmount(parsed)
                                                 val maxDiscountTaka = if (isPercentageDiscount) (subtotal * parsed / 100.0) else parsed
                                                 scope.launch {
-                                                    cartViewModel.authorizeDiscountOverride(pin, maxDiscountTaka, cartViewModel.computeCartHash())
+                                                    val ok = cartViewModel.authorizeDiscountOverride(pin, maxDiscountTaka, cartViewModel.computeCartHash())
+                                                    if (ok) {
+                                                        discountInput = sanitized
+                                                        cartViewModel.setDiscountAmount(parsed)
+                                                    } else {
+                                                        discountInput = editableAmount(discountAmount)
+                                                        Toast.makeText(context, context.getString(R.string.users_supervisor_auth_failed), Toast.LENGTH_SHORT).show()
+                                                    }
                                                 }
                                             }
                                             showSupervisorAuthDialog = true
@@ -3070,11 +3072,33 @@ fun CartScreen(
                 Button(
                     onClick = {
                         val finalTitle = holdCustomerName.ifBlank { heldCartQuickHoldTag }
-                        cartViewModel.holdCurrentCart(title = finalTitle) { success ->
-                            if (success) {
-                                showHoldCartDialog = false
-                                Toast.makeText(context, context.getString(R.string.held_cart_held_toast, finalTitle), Toast.LENGTH_SHORT).show()
+                        if (canHoldCart) {
+                            cartViewModel.holdCurrentCart(title = finalTitle) { success ->
+                                if (success) {
+                                    showHoldCartDialog = false
+                                    Toast.makeText(context, context.getString(R.string.held_cart_held_toast, finalTitle), Toast.LENGTH_SHORT).show()
+                                }
                             }
+                        } else if (authViewModel != null) {
+                            pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_hold_cart)
+                            pendingSupervisorActionPin = { pin ->
+                                scope.launch {
+                                    val authorized = cartViewModel.authorizeHoldCartOverride(pin)
+                                    if (authorized) {
+                                        cartViewModel.holdCurrentCart(title = finalTitle) { success ->
+                                            if (success) {
+                                                showHoldCartDialog = false
+                                                Toast.makeText(context, context.getString(R.string.held_cart_held_toast, finalTitle), Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    } else {
+                                        Toast.makeText(context, context.getString(R.string.users_supervisor_auth_failed), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                            showSupervisorAuthDialog = true
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.permission_required_hold_cart), Toast.LENGTH_SHORT).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706), contentColor = MaterialTheme.colorScheme.onPrimary),
