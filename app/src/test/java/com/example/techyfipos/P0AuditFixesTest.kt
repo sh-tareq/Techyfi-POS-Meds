@@ -442,6 +442,56 @@ class P0AuditFixesTest {
     }
 
     @Test
+    fun testR23_05_pinCheckOraclesThrottledAndNeutral() = kotlinx.coroutines.test.runTest {
+        val owner = User(id = 1L, name = "Owner", pinHash = hashSha256("9999"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val manager = User(
+            id = 2L,
+            name = "Manager",
+            pinHash = hashSha256("5678"),
+            role = AppRoles.MANAGER,
+            maxDiscountPercent = 50.0,
+            isActive = true
+        )
+        val attacker = User(
+            id = 3L,
+            name = "Attacker Cashier",
+            pinHash = hashSha256("1111"),
+            role = AppRoles.CASHIER,
+            customPermissions = AppPermissions.serializePermissions(setOf(AppPermissions.SYSTEM_MANAGE_STAFF)),
+            maxDiscountPercent = 10.0,
+            isActive = true
+        )
+        val (repo, _) = createRepositoryWithUsers(listOf(owner, manager, attacker))
+        repo.setSessionUser(owner)
+
+        // 1. Wrong old PIN guesses in updateStaff return neutral "Invalid or unavailable PIN" and trigger lockout
+        for (i in 1..4) {
+            val ex = assertThrows(IllegalStateException::class.java) {
+                kotlinx.coroutines.runBlocking {
+                    repo.updateStaff(userId = manager.id, newName = "Manager", newPin = "4321", oldPin = "000$i")
+                }
+            }
+            assertEquals("Invalid or unavailable PIN", ex.message)
+        }
+
+        // 5th wrong old PIN triggers lockout
+        assertThrows(IllegalStateException::class.java) {
+            kotlinx.coroutines.runBlocking {
+                repo.updateStaff(userId = manager.id, newName = "Manager", newPin = "4321", oldPin = "0005")
+            }
+        }
+        assertTrue("Lockout must be active after 5 failed old-PIN attempts", repo.loginLockRemainingMillis() > 0L)
+
+        // 6th attempt is blocked by lockout
+        val lockedEx = assertThrows(IllegalStateException::class.java) {
+            kotlinx.coroutines.runBlocking {
+                repo.updateStaff(userId = manager.id, newName = "Manager", newPin = "4321", oldPin = "5678")
+            }
+        }
+        assertTrue("Expected lockout message", lockedEx.message?.contains("locked out") == true)
+    }
+
+    @Test
     fun testR22_02_ownerPinResetAlertSurvivesLoginsUntilAcknowledgedAndChanged() = kotlinx.coroutines.test.runTest {
         val cashier = User(id = 1L, name = "Cashier", pinHash = hashSha256("1111"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, isActive = true)
         val owner = User(id = 2L, name = "Owner", pinHash = hashSha256("9999"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)

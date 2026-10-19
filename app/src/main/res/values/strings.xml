@@ -2841,7 +2841,7 @@
     <string name="error_customer_has_dues">Cannot delete customer with outstanding dues</string>
     <string name="error_supplier_has_dues">Cannot delete supplier with active due balance</string>
     <string name="error_owner_exists">An owner account already exists</string>
-    <string name="error_pin_in_use">PIN already in use by another user</string>
+    <string name="error_pin_in_use">Invalid or unavailable PIN</string>
     <string name="error_cannot_delete_last_owner">The last owner account cannot be deleted</string>
     <string name="error_cannot_change_role_last_owner">The only owner account cannot be changed to another role</string>
     <string name="error_cannot_deactivate_last_owner">The only owner account cannot be deactivated</string>

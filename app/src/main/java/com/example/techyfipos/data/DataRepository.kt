@@ -4684,12 +4684,19 @@ class DataRepository(
         }
 
         val updatedPinHash = if (!newPin.isNullOrBlank()) {
+            val remaining = loginLockRemainingMillis()
+            if (remaining > 0L) {
+                throw IllegalStateException("Authentication locked out for ${remaining / 1000} seconds due to repeated failed attempts")
+            }
             require(newPin.length == 4 && newPin.all(Char::isDigit)) { "PIN must be 4 digits" }
             require(!oldPin.isNullOrBlank()) { "Current PIN is required to change PIN" }
             val currentOwner = sessionUser
             val matchesTarget = pinMatches(oldPin, existing.pinHash)
             val matchesSessionOwner = isSessionOwner() && currentOwner != null && pinMatches(oldPin, currentOwner.pinHash)
-            require(matchesTarget || matchesSessionOwner) { "Current PIN is incorrect" }
+            if (!matchesTarget && !matchesSessionOwner) {
+                recordFailedPinAttempt()
+                throw IllegalStateException("Invalid or unavailable PIN")
+            }
             if (all.any { it.id != userId && pinMatches(newPin, it.pinHash) }) {
                 recordFailedPinAttempt()
                 throw IllegalStateException("Invalid or unavailable PIN")

@@ -471,7 +471,9 @@ fun mapErrorToLocalizedMessageResId(msg: String?): Int? {
             R.string.error_supplier_has_dues
         msg.contains("An owner account already exists", ignoreCase = true) ->
             R.string.error_owner_exists
-        msg.contains("PIN already in use", ignoreCase = true) || msg.contains("Invalid or unavailable PIN", ignoreCase = true) ->
+        msg.contains("PIN already in use", ignoreCase = true) ||
+            msg.contains("Invalid or unavailable PIN", ignoreCase = true) ||
+            msg.contains("Current PIN is incorrect", ignoreCase = true) ->
             R.string.error_pin_in_use
         msg.contains("Cannot promote staff to owner", ignoreCase = true) ->
             R.string.users_cannot_promote_to_owner

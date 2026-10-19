@@ -2843,7 +2843,7 @@
     <string name="error_customer_has_dues">বকেয়া থাকা অবস্থায় গ্রাহক মুছে ফেলা যাবে না</string>
     <string name="error_supplier_has_dues">বকেয়া থাকা অবস্থায় সাপ্লায়ার মুছে ফেলা যাবে না</string>
     <string name="error_owner_exists">ইতিমধ্যে একজন মালিকের অ্যাকাউন্ট রয়েছে</string>
-    <string name="error_pin_in_use">এই পিনটি ইতিমধ্যে অন্য ব্যবহারকারীর অধীনে রয়েছে</string>
+    <string name="error_pin_in_use">পিনটি সঠিক নয় অথবা ব্যবহারযোগ্য নয়</string>
     <string name="error_cannot_delete_last_owner">সর্বশেষ মালিকের অ্যাকাউন্ট মুছে ফেলা যাবে না</string>
     <string name="error_cannot_change_role_last_owner">একমাত্র মালিকের অ্যাকাউন্টের ভূমিকা পরিবর্তন করা যাবে না</string>
     <string name="error_cannot_deactivate_last_owner">একমাত্র মালিকের অ্যাকাউন্ট নিষ্ক্রিয় করা যাবে না</string>
