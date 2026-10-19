@@ -283,6 +283,48 @@ class P0AuditFixesTest {
     }
 
     @Test
+    fun testR23_02_permissionMatrix_nonOwnerCannotGrantUnheldOrSystemPermissions() = kotlinx.coroutines.test.runTest {
+        val manager = User(
+            id = 1L,
+            name = "Manager",
+            pinHash = hashSha256("1111"),
+            role = AppRoles.MANAGER,
+            customPermissions = AppPermissions.serializePermissions(
+                setOf(AppPermissions.SYSTEM_PERMISSIONS, AppPermissions.SYSTEM_BACKUP_RESTORE, AppPermissions.SALES_SELL)
+            ),
+            maxDiscountPercent = 10.0,
+            isActive = true
+        )
+        val cashier = User(id = 2L, name = "Cashier", pinHash = hashSha256("2222"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, isActive = true)
+        val owner = User(id = 3L, name = "Owner", pinHash = hashSha256("9999"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val (repo, userDao) = createRepositoryWithUsers(listOf(manager, cashier, owner))
+
+        repo.setSessionUser(manager)
+
+        // Manager cannot grant SYSTEM_* permissions via updateStaffPermissions
+        val exSystem = assertThrows(DataRepository.UnauthorizedException::class.java) {
+            kotlinx.coroutines.runBlocking {
+                repo.updateStaffPermissions(cashier.id, setOf(AppPermissions.SALES_SELL, AppPermissions.SYSTEM_BACKUP_RESTORE))
+            }
+        }
+        assertTrue(exSystem.message?.contains("administrative") == true)
+
+        // Manager cannot grant permissions they do not hold
+        val exUnheld = assertThrows(DataRepository.UnauthorizedException::class.java) {
+            kotlinx.coroutines.runBlocking {
+                repo.updateStaffPermissions(cashier.id, setOf(AppPermissions.SALES_SELL, AppPermissions.REPORTS_VIEW_PNL))
+            }
+        }
+        assertTrue(exUnheld.message?.contains("do not hold") == true)
+
+        // Manager can grant subset of held non-system permissions
+        repo.updateStaffPermissions(cashier.id, setOf(AppPermissions.SALES_SELL))
+        val updatedCashier = repo.allUsers.first().firstOrNull { it.id == cashier.id }
+        val perms = AppPermissions.parsePermissionsJson(updatedCashier?.customPermissions)
+        assertEquals(setOf(AppPermissions.SALES_SELL), perms)
+    }
+
+    @Test
     fun testR22_02_ownerPinResetAlertSurvivesLoginsUntilAcknowledgedAndChanged() = kotlinx.coroutines.test.runTest {
         val cashier = User(id = 1L, name = "Cashier", pinHash = hashSha256("1111"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, isActive = true)
         val owner = User(id = 2L, name = "Owner", pinHash = hashSha256("9999"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)

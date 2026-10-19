@@ -797,6 +797,11 @@ private fun PermissionsMatrixDialog(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val currentUser by authViewModel.currentUser.collectAsStateWithLifecycle()
+    val isCallerOwner = currentUser?.role == AppRoles.OWNER
+    val callerPermissions = remember(currentUser) {
+        if (currentUser != null) AppPermissions.getEffectivePermissions(currentUser) else emptySet()
+    }
     val initialPermissions = remember(user) {
         AppPermissions.getEffectivePermissions(user).toMutableSet()
     }
@@ -863,7 +868,12 @@ private fun PermissionsMatrixDialog(
                 // Reset to role defaults button
                 OutlinedButton(
                     onClick = {
-                        currentPermissions = AppPermissions.getDefaultPermissionsForRole(user.role)
+                        val roleDefaults = AppPermissions.getDefaultPermissionsForRole(user.role)
+                        currentPermissions = if (isCallerOwner) {
+                            roleDefaults
+                        } else {
+                            roleDefaults.filter { !AppPermissions.isSystemPermission(it) && callerPermissions.contains(it) }.toSet()
+                        }
                     },
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -892,6 +902,8 @@ private fun PermissionsMatrixDialog(
                             PermissionCategorySection(
                                 category = category,
                                 activePermissions = currentPermissions,
+                                isCallerOwner = isCallerOwner,
+                                callerPermissions = callerPermissions,
                                 onPermissionToggled = { key, isEnabled ->
                                     currentPermissions = if (isEnabled) {
                                         currentPermissions + key
@@ -957,6 +969,8 @@ private fun PermissionsMatrixDialog(
 private fun PermissionCategorySection(
     category: PermissionCategory,
     activePermissions: Set<String>,
+    isCallerOwner: Boolean,
+    callerPermissions: Set<String>,
     onPermissionToggled: (String, Boolean) -> Unit
 ) {
     val categoryTitle = stringResource(category.titleRes)
@@ -994,9 +1008,11 @@ private fun PermissionCategorySection(
             Spacer(modifier = Modifier.height(10.dp))
 
             category.permissions.forEach { perm ->
+                val canToggle = isCallerOwner || (!AppPermissions.isSystemPermission(perm.key) && callerPermissions.contains(perm.key))
                 PermissionItemRow(
                     permission = perm,
                     isChecked = activePermissions.contains(perm.key),
+                    enabled = canToggle,
                     onCheckedChange = { onPermissionToggled(perm.key, it) }
                 )
             }
@@ -1008,6 +1024,7 @@ private fun PermissionCategorySection(
 private fun PermissionItemRow(
     permission: com.example.techyfipos.data.PermissionItem,
     isChecked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
@@ -1021,17 +1038,18 @@ private fun PermissionItemRow(
             Text(
                 text = stringResource(permission.titleRes),
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurface
+                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
             )
             Text(
                 text = stringResource(permission.descRes),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
         }
         Switch(
             checked = isChecked,
             onCheckedChange = onCheckedChange,
+            enabled = enabled,
             modifier = Modifier.scale(0.85f)
         )
     }

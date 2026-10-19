@@ -4761,6 +4761,15 @@ class DataRepository(
         if (sessionUser?.id == userId) {
             throw UnauthorizedException("Users cannot edit their own permissions")
         }
+        if (!isSessionOwner()) {
+            val granted = permissions ?: AppPermissions.getDefaultPermissions(existing.role)
+            if (granted.any { !hasPermission(it) }) {
+                throw UnauthorizedException("Cannot grant permissions that you do not hold")
+            }
+            if (granted.any { AppPermissions.isSystemPermission(it) }) {
+                throw UnauthorizedException("Only the owner may grant system administrative permissions")
+            }
+        }
         val permissionsJson = AppPermissions.serializePermissions(permissions)
         userDao.updatePermissions(userId, permissionsJson)
     }

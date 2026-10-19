@@ -11,6 +11,13 @@ object AppRoles {
 
     fun canPromoteToOwner(callerRole: String, targetRole: String): Boolean =
         targetRole != OWNER || callerRole == OWNER
+
+    fun roleLevel(role: String): Int = when (role.uppercase()) {
+        OWNER -> 3
+        MANAGER -> 2
+        CASHIER -> 1
+        else -> 0
+    }
 }
 
 data class PermissionItem(
@@ -258,4 +265,7 @@ object AppPermissions {
         if (user == null || !user.isActive) return false
         return user.role == AppRoles.OWNER || user.role == AppRoles.MANAGER
     }
+
+    fun isSystemPermission(permissionKey: String): Boolean =
+        permissionKey.startsWith("system.", ignoreCase = true) || permissionKey.startsWith("system_", ignoreCase = true)
 }
