@@ -4111,12 +4111,18 @@ class DataRepository(
                 val normBarcode = com.example.techyfipos.utils.toEnglishDigits(p.barcode.trim()).lowercase()
                 var existing = productDao.getProductByBarcode(normBarcode)
                 if (existing == null && normBarcode.all { it.isDigit() }) {
-                    val p1 = productDao.getProductByBarcode("0$normBarcode")
-                    val p2 = productDao.getProductByBarcode("00$normBarcode")
-                    if (p1 != null && p2 == null) {
-                        existing = p1
-                    } else if (p1 == null && p2 != null) {
-                        existing = p2
+                    if (normBarcode.startsWith("0") && normBarcode.length > 1) {
+                        val stripped = normBarcode.removePrefix("0")
+                        existing = productDao.getProductByBarcode(stripped)
+                    }
+                    if (existing == null) {
+                        val p1 = productDao.getProductByBarcode("0$normBarcode")
+                        val p2 = productDao.getProductByBarcode("00$normBarcode")
+                        if (p1 != null && p2 == null) {
+                            existing = p1
+                        } else if (p1 == null && p2 != null) {
+                            existing = p2
+                        }
                     }
                 }
                 if (existing != null) {

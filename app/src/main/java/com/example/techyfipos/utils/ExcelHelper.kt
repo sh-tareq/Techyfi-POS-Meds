@@ -70,12 +70,11 @@ object ExcelHelper {
     }
 
     @Suppress("DEPRECATION")
-    internal fun getCellStringValue(cell: Cell?, isBarcode: Boolean = false): String {
+    internal fun getCellStringValue(cell: Cell?, isBarcode: Boolean = false, padNumericBarcodes: Boolean = false): String {
         if (cell == null) return ""
         return when (cell.cellType) {
             Cell.CELL_TYPE_STRING -> {
-                val str = cell.stringCellValue.trim()
-                if (isBarcode) preserveLeadingZeros(str) else str
+                cell.stringCellValue.trim()
             }
             Cell.CELL_TYPE_NUMERIC -> {
                 if (DateUtil.isCellDateFormatted(cell)) {
@@ -88,14 +87,13 @@ object ExcelHelper {
                     } else {
                         numValue.toString()
                     }
-                    if (isBarcode) preserveLeadingZeros(raw) else raw
+                    if (isBarcode && padNumericBarcodes) preserveLeadingZeros(raw) else raw
                 }
             }
             Cell.CELL_TYPE_BOOLEAN -> cell.booleanCellValue.toString()
             Cell.CELL_TYPE_FORMULA -> {
                 try {
-                    val str = cell.stringCellValue.trim()
-                    if (isBarcode) preserveLeadingZeros(str) else str
+                    cell.stringCellValue.trim()
                 } catch (e: Exception) {
                     try {
                         if (DateUtil.isCellDateFormatted(cell)) {
@@ -108,7 +106,7 @@ object ExcelHelper {
                             } else {
                                 numValue.toString()
                             }
-                            if (isBarcode) preserveLeadingZeros(raw) else raw
+                            if (isBarcode && padNumericBarcodes) preserveLeadingZeros(raw) else raw
                         }
                     } catch (ex: Exception) {
                         ""
@@ -299,7 +297,7 @@ object ExcelHelper {
         }
     }
 
-    fun importProducts(inputStream: InputStream): ImportResult {
+    fun importProducts(inputStream: InputStream, padNumericBarcodes: Boolean = false): ImportResult {
         val importedList = mutableListOf<Product>()
         val failures = mutableListOf<String>()
         var successCount = 0
@@ -355,7 +353,7 @@ object ExcelHelper {
                 if (isRowEmpty) continue
 
                 try {
-                    val rawBarcode = colMap["barcode"]?.let { getCellStringValue(row.getCell(it), isBarcode = true) } ?: ""
+                    val rawBarcode = colMap["barcode"]?.let { getCellStringValue(row.getCell(it), isBarcode = true, padNumericBarcodes = padNumericBarcodes) } ?: ""
                     val barcode = toEnglishDigits(rawBarcode).trim().lowercase()
                     val name = colMap["name"]?.let { getCellStringValue(row.getCell(it)) } ?: ""
                     

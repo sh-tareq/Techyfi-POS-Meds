@@ -2069,8 +2069,8 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    suspend fun importProductsFromExcel(inputStream: java.io.InputStream): com.example.techyfipos.utils.ExcelHelper.ImportResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        val result = com.example.techyfipos.utils.ExcelHelper.importProducts(inputStream)
+    suspend fun importProductsFromExcel(inputStream: java.io.InputStream, padNumericBarcodes: Boolean = false): com.example.techyfipos.utils.ExcelHelper.ImportResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val result = com.example.techyfipos.utils.ExcelHelper.importProducts(inputStream, padNumericBarcodes)
         if (result.importedProducts.isNotEmpty()) {
             repository.upsertProducts(result.importedProducts, result.presentFields)
         }
@@ -3713,8 +3713,8 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    suspend fun importProductsFromExcel(inputStream: java.io.InputStream): com.example.techyfipos.utils.ExcelHelper.ImportResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        val result = com.example.techyfipos.utils.ExcelHelper.importProducts(inputStream)
+    suspend fun importProductsFromExcel(inputStream: java.io.InputStream, padNumericBarcodes: Boolean = false): com.example.techyfipos.utils.ExcelHelper.ImportResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val result = com.example.techyfipos.utils.ExcelHelper.importProducts(inputStream, padNumericBarcodes)
         if (result.importedProducts.isNotEmpty()) {
             repository.upsertProducts(result.importedProducts, result.presentFields)
         }

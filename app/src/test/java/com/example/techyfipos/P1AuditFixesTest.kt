@@ -1,5 +1,9 @@
 package com.example.techyfipos
 
+import com.example.techyfipos.data.AppRoles
+import com.example.techyfipos.data.DataRepository
+import com.example.techyfipos.data.db.Product
+import com.example.techyfipos.data.db.User
 import com.example.techyfipos.ui.viewmodel.SalesReportData
 import com.example.techyfipos.utils.ExcelHelper
 import org.junit.Assert.assertEquals
@@ -147,5 +151,57 @@ class P1AuditFixesTest {
         assertFalse(withoutPnl.contains("Net profit"))
         assertTrue(withoutPnl.contains("Gross sales,1100.0"))
         assertTrue(withoutPnl.contains("Net sales,1000.0"))
+    }
+
+    @Test
+    fun testR23_10_excelExportThenImportCreatesNoDuplicates() = kotlinx.coroutines.test.runTest {
+        val initialProducts = listOf(
+            Product(
+                barcode = "123456789012",
+                name = "UPC Product",
+                category = "General",
+                purchasePrice = 50.0,
+                sellingPrice = 100.0,
+                stockQty = 10.0,
+                reorderLevel = 2,
+                unit = "pcs"
+            ),
+            Product(
+                barcode = "1712345678",
+                name = "Mobile Sku",
+                category = "General",
+                purchasePrice = 40.0,
+                sellingPrice = 80.0,
+                stockQty = 5.0,
+                reorderLevel = 1,
+                unit = "pcs"
+            ),
+            Product(
+                barcode = "0012345",
+                name = "Zero Prefix",
+                category = "General",
+                purchasePrice = 10.0,
+                sellingPrice = 20.0,
+                stockQty = 15.0,
+                reorderLevel = 3,
+                unit = "pcs"
+            )
+        )
+
+        // 1. Export initial products to Excel
+        val outStream = java.io.ByteArrayOutputStream()
+        ExcelHelper.exportProducts(initialProducts, outStream)
+        val excelBytes = outStream.toByteArray()
+
+        // 2. Import products from the exported Excel
+        val inStream = java.io.ByteArrayInputStream(excelBytes)
+        val importResult = ExcelHelper.importProducts(inStream)
+
+        assertEquals(0, importResult.failCount)
+        assertEquals(3, importResult.importedProducts.size)
+
+        // 3. Assert imported barcodes match original barcodes exactly without prepended zeros
+        val importedBarcodes = importResult.importedProducts.map { it.barcode }
+        assertEquals(listOf("123456789012", "1712345678", "0012345"), importedBarcodes)
     }
 }
