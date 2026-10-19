@@ -4,6 +4,7 @@ import com.example.techyfipos.data.AppRoles
 import com.example.techyfipos.data.DataRepository
 import com.example.techyfipos.data.db.Product
 import com.example.techyfipos.data.db.User
+import com.example.techyfipos.printer.computeBluetoothWatchdogBudgetMs
 import com.example.techyfipos.ui.viewmodel.SalesReportData
 import com.example.techyfipos.utils.ExcelHelper
 import org.junit.Assert.assertEquals
@@ -203,5 +204,23 @@ class P1AuditFixesTest {
         // 3. Assert imported barcodes match original barcodes exactly without prepended zeros
         val importedBarcodes = importResult.importedProducts.map { it.barcode }
         assertEquals(listOf("123456789012", "1712345678", "0012345"), importedBarcodes)
+    }
+
+    @Test
+    fun testR23_12_bluetoothWatchdogBudgetForLargeBatches() {
+        // Base budget for empty or minimal job
+        val baseBudget = computeBluetoothWatchdogBudgetMs(0)
+        assertEquals(25_000L, baseBudget)
+
+        // For a 100-label batch of approximately 1.2 MB (1,200,000 bytes) with 100 segments (100 ms each = 10,000 ms total delay)
+        val batch1_2MbBytes = 1_200_000
+        val segmentCount = 100
+        val totalSegmentDelayMs = 10_000L
+        val budget1_2Mb = computeBluetoothWatchdogBudgetMs(batch1_2MbBytes, segmentCount, totalSegmentDelayMs)
+
+        // The job takes ~90s and was previously cut off by the hard 60s cap.
+        // It must now provide sufficient budget (> 90s and > 300s of headroom) without being capped at 60s.
+        assertTrue("Budget must be greater than 90s for a 1.2 MB job", budget1_2Mb > 90_000L)
+        assertTrue("Budget must comfortably accommodate 1.2 MB without 60s cap", budget1_2Mb >= 300_000L)
     }
 }

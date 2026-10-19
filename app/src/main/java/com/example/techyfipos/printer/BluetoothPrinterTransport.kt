@@ -384,13 +384,24 @@ suspend fun sendToBluetoothPrinter(
             timing?.recordSettleDone()
 
             val totalBytes = segments.sumOf { it.size }
-            val maxJobTimeoutMs = (25_000L + (totalBytes / 1000L) * 200L).coerceIn(25_000L, 60_000L)
+            val totalSegmentDelay = perSegmentDelaysMs?.sum() ?: (segments.size * delayBetweenSegmentsMs)
+            val maxJobTimeoutMs = computeBluetoothWatchdogBudgetMs(totalBytes, segments.size, totalSegmentDelay)
+            val lastWriteActivityMs = java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis())
             var watchdogJob: kotlinx.coroutines.Job? = null
 
             try {
                 watchdogJob = kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
-                    delay(maxJobTimeoutMs)
-                    Log.w(TAG, "Bluetooth print job watchdog fired after $maxJobTimeoutMs ms; forcibly closing socket")
+                    val deadline = System.currentTimeMillis() + maxJobTimeoutMs
+                    while (System.currentTimeMillis() < deadline) {
+                        val now = System.currentTimeMillis()
+                        if (now - lastWriteActivityMs.get() > 30_000L) {
+                            Log.w(TAG, "Bluetooth print job inactivity watchdog fired (no write for 30s); forcibly closing socket")
+                            try { socket?.close() } catch (_: Exception) {}
+                            return@launch
+                        }
+                        delay(1000L)
+                    }
+                    Log.w(TAG, "Bluetooth print job watchdog budget expired after $maxJobTimeoutMs ms; forcibly closing socket")
                     try { socket?.close() } catch (_: Exception) {}
                 }
 
@@ -407,12 +418,14 @@ suspend fun sendToBluetoothPrinter(
                             timing?.recordFirstChunkWritten()
                         }
                         os.write(segment, offset, length)
+                        lastWriteActivityMs.set(System.currentTimeMillis())
                         offset += length
                         bytesWrittenSoFar += length
                         if (offset < segment.size) {
                             delay(resolveBluetoothChunkDelayMs(bytesWrittenSoFar, totalBytes))
                         }
                     }
+                    lastWriteActivityMs.set(System.currentTimeMillis())
                     onSegmentSent?.invoke(index)
                     val delayMs = perSegmentDelaysMs?.getOrNull(index) ?: delayBetweenSegmentsMs
                     if (delayMs > 0L) {
@@ -510,6 +523,17 @@ suspend fun sendToBluetoothPrinter(
     delayBetweenSegmentsMs = 0L,
     perSegmentDelaysMs = perSegmentDelaysMs
 )
+
+fun computeBluetoothWatchdogBudgetMs(
+    totalBytes: Int,
+    segmentCount: Int = 1,
+    totalSegmentDelayMs: Long = 0L
+): Long {
+    val baseMs = 25_000L
+    val bytesPacingMs = (totalBytes.toLong() / 1000L) * 200L
+    val pacingMarginMs = (totalBytes.toLong() / 1024L) * 70L
+    return maxOf(baseMs, baseMs + bytesPacingMs + pacingMarginMs + totalSegmentDelayMs * 2L)
+}
 
 object BluetoothPrinterTransport {
     suspend fun sendToBluetoothPrinter(
