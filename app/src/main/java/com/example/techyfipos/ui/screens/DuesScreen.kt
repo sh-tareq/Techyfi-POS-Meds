@@ -1169,7 +1169,7 @@ fun DuesScreen(
             logs = reminderLogs,
             onCancelReminder = { phone -> duesViewModel.cancelScheduledReminder(context, phone) },
             onSendReminderNow = { reminder ->
-                val currentDue = duesViewModel.duesList.value.firstOrNull { it.customerPhone == reminder.customerPhone }?.outstandingAmount ?: reminder.dueAmount
+                val currentDue = duesViewModel.duesList.value.firstOrNull { it.customerPhone == reminder.customerPhone }?.outstandingAmount ?: 0.0
                 if (currentDue <= 0.001) {
                     android.widget.Toast.makeText(context, context.getString(R.string.dues_settled_no_reminder_toast), android.widget.Toast.LENGTH_SHORT).show()
                     duesViewModel.cancelScheduledReminder(context, reminder.customerPhone)
@@ -1191,8 +1191,7 @@ fun DuesScreen(
                         "WHATSAPP"
                     }
                     else -> {
-                        openWhatsAppReminder(context, reminder.customerPhone, message)
-                        openPaymentReminder(context, reminder.customerPhone, message)
+                        shareReceiptAsText(context, message)
                         "BOTH"
                     }
                 }

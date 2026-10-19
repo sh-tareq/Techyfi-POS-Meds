@@ -9,6 +9,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.work.WorkManager
@@ -22,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.URLEncoder
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -343,6 +345,56 @@ object DueReminderScheduler {
 
         Log.i(TAG, "Executing due reminder for $customerName ($normalizedPhone), channel=$channel")
 
+        val hasPermission = hasNotificationPermission(context)
+        if (!hasPermission) {
+            Log.w(TAG, "Notification permission not granted; skipping reminder for $normalizedPhone")
+            try {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.dues_reminder_permission_required_toast),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            } catch (_: Exception) {}
+
+            if (normalizedPhone.isNotBlank()) {
+                try {
+                    val dao = AppDatabase.getDatabase(context).scheduledDueReminderDao()
+                    if (isRecurring) {
+                        val nextFireAt = System.currentTimeMillis() + DueReminderWorker.RECURRING_INTERVAL_MILLIS
+                        dao.upsert(
+                            ScheduledDueReminder(
+                                customerPhone = normalizedPhone,
+                                customerName = customerName,
+                                dueAmount = dueAmount,
+                                channel = channel,
+                                scheduledAt = System.currentTimeMillis(),
+                                fireAt = nextFireAt,
+                                messageText = messageText,
+                                isRecurring = true
+                            )
+                        )
+                        scheduleAlarmManagerReminder(
+                            context = context,
+                            customerName = customerName,
+                            customerPhone = normalizedPhone,
+                            dueAmount = dueAmount,
+                            messageText = messageText,
+                            channel = channel,
+                            triggerAtMillis = nextFireAt,
+                            isRecurring = true
+                        )
+                    } else {
+                        dao.deleteByPhone(normalizedPhone)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to update reminder on missing permission: ${e.message}")
+                }
+            }
+            return false
+        }
+
         val notificationShown = showReminderNotification(
             context = context,
             customerName = customerName,
@@ -379,36 +431,73 @@ object DueReminderScheduler {
         if (normalizedPhone.isNotBlank()) {
             try {
                 val dao = AppDatabase.getDatabase(context).scheduledDueReminderDao()
-                if (isRecurring) {
-                    val nextFireAt = System.currentTimeMillis() + DueReminderWorker.RECURRING_INTERVAL_MILLIS
-                    dao.upsert(
-                        ScheduledDueReminder(
-                            customerPhone = normalizedPhone,
+                val prefs = context.getSharedPreferences("due_reminder_retries", Context.MODE_PRIVATE)
+                val retryKey = "retry_$normalizedPhone"
+
+                if (notificationShown) {
+                    prefs.edit().remove(retryKey).apply()
+                    if (isRecurring) {
+                        val nextFireAt = System.currentTimeMillis() + DueReminderWorker.RECURRING_INTERVAL_MILLIS
+                        dao.upsert(
+                            ScheduledDueReminder(
+                                customerPhone = normalizedPhone,
+                                customerName = customerName,
+                                dueAmount = dueAmount,
+                                channel = channel,
+                                scheduledAt = System.currentTimeMillis(),
+                                fireAt = nextFireAt,
+                                messageText = messageText,
+                                isRecurring = true
+                            )
+                        )
+                        scheduleAlarmManagerReminder(
+                            context = context,
                             customerName = customerName,
+                            customerPhone = normalizedPhone,
                             dueAmount = dueAmount,
-                            channel = channel,
-                            scheduledAt = System.currentTimeMillis(),
-                            fireAt = nextFireAt,
                             messageText = messageText,
+                            channel = channel,
+                            triggerAtMillis = nextFireAt,
                             isRecurring = true
                         )
-                    )
-                    // Schedule next alarm
-                    scheduleAlarmManagerReminder(
-                        context = context,
-                        customerName = customerName,
-                        customerPhone = normalizedPhone,
-                        dueAmount = dueAmount,
-                        messageText = messageText,
-                        channel = channel,
-                        triggerAtMillis = nextFireAt,
-                        isRecurring = true
-                    )
-                } else {
-                    if (notificationShown) {
-                        dao.deleteByPhone(normalizedPhone)
                     } else {
-                        Log.w(TAG, "Notification blocked/failed for $normalizedPhone; rescheduling retry")
+                        dao.deleteByPhone(normalizedPhone)
+                    }
+                } else {
+                    val currentRetries = prefs.getInt(retryKey, 0)
+                    if (currentRetries >= 3) {
+                        Log.w(TAG, "Max retries (3) reached for $normalizedPhone; dropping reminder")
+                        prefs.edit().remove(retryKey).apply()
+                        if (isRecurring) {
+                            val nextFireAt = System.currentTimeMillis() + DueReminderWorker.RECURRING_INTERVAL_MILLIS
+                            dao.upsert(
+                                ScheduledDueReminder(
+                                    customerPhone = normalizedPhone,
+                                    customerName = customerName,
+                                    dueAmount = dueAmount,
+                                    channel = channel,
+                                    scheduledAt = System.currentTimeMillis(),
+                                    fireAt = nextFireAt,
+                                    messageText = messageText,
+                                    isRecurring = true
+                                )
+                            )
+                            scheduleAlarmManagerReminder(
+                                context = context,
+                                customerName = customerName,
+                                customerPhone = normalizedPhone,
+                                dueAmount = dueAmount,
+                                messageText = messageText,
+                                channel = channel,
+                                triggerAtMillis = nextFireAt,
+                                isRecurring = true
+                            )
+                        } else {
+                            dao.deleteByPhone(normalizedPhone)
+                        }
+                    } else {
+                        prefs.edit().putInt(retryKey, currentRetries + 1).apply()
+                        Log.w(TAG, "Notification failed for $normalizedPhone; rescheduling retry ${currentRetries + 1}/3 in 15m")
                         val retryFireAt = System.currentTimeMillis() + (15 * 60 * 1000L)
                         dao.upsert(
                             ScheduledDueReminder(
@@ -419,7 +508,7 @@ object DueReminderScheduler {
                                 scheduledAt = System.currentTimeMillis(),
                                 fireAt = retryFireAt,
                                 messageText = messageText,
-                                isRecurring = false
+                                isRecurring = isRecurring
                             )
                         )
                         scheduleAlarmManagerReminder(
@@ -430,7 +519,7 @@ object DueReminderScheduler {
                             messageText = messageText,
                             channel = channel,
                             triggerAtMillis = retryFireAt,
-                            isRecurring = false
+                            isRecurring = isRecurring
                         )
                     }
                 }
@@ -442,6 +531,18 @@ object DueReminderScheduler {
         return notificationShown
     }
 
+    fun hasNotificationPermission(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            return false
+        }
+        return androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+
     private fun showReminderNotification(
         context: Context,
         customerName: String,
@@ -450,12 +551,7 @@ object DueReminderScheduler {
         messageText: String,
         channel: String
     ): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            androidx.core.content.ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.POST_NOTIFICATIONS
-            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
+        if (!hasNotificationPermission(context)) {
             Log.w(TAG, "POST_NOTIFICATIONS permission not granted; reminder notification skipped")
             return false
         }
