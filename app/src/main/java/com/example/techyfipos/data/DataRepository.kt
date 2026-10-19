@@ -4441,34 +4441,48 @@ class DataRepository(
     suspend fun resetOwnerPinAfterDeviceCredential(newPin: String, targetOwnerId: Long? = null): Boolean = withContext(Dispatchers.IO) {
         if (newPin.length != 4 || !newPin.all(Char::isDigit)) return@withContext false
         val users = userDao.getAllUsersOnce()
-        val owner = (if (targetOwnerId != null) users.firstOrNull { it.id == targetOwnerId && it.role == AppRoles.OWNER } else null)
-            ?: users.firstOrNull { it.role == AppRoles.OWNER }
-            ?: return@withContext false
+        val owner = if (targetOwnerId != null) {
+            users.firstOrNull { it.id == targetOwnerId && it.role == AppRoles.OWNER && it.isActive }
+                ?: return@withContext false
+        } else {
+            val activeOwners = users.filter { it.role == AppRoles.OWNER && it.isActive }
+            if (activeOwners.size == 1) activeOwners.first() else return@withContext false
+        }
         if (users.any { it.id != owner.id && pinMatches(newPin, it.pinHash) }) return@withContext false
         userDao.updatePinHash(owner.id, hashPin(newPin))
         val now = System.currentTimeMillis()
         val device = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}".trim()
-        context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE).edit()
+        val prefs = context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE)
+        prefs.edit()
             .putLong("owner_device_pin_reset_timestamp", now)
+            .putLong("reset_owner_id", owner.id)
+            .putString("reset_owner_name", owner.name)
             .putBoolean("owner_device_pin_reset_acknowledged", false)
-            .putBoolean("owner_pin_changed_after_reset", false)
+            .putBoolean("owner_pin_changed_after_reset", true)
             .putString("owner_device_pin_reset_device", device)
             .apply()
         true
     }
 
-    fun getUnacknowledgedOwnerPinResetTimestamp(): Long {
+    fun getUnacknowledgedOwnerPinResetTimestamp(targetOwnerId: Long? = null): Long {
         val prefs = context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE)
         val ts = prefs.getLong("owner_device_pin_reset_timestamp", 0L)
         if (ts == 0L) return 0L
         val acknowledged = prefs.getBoolean("owner_device_pin_reset_acknowledged", false)
-        val pinChanged = prefs.getBoolean("owner_pin_changed_after_reset", false)
-        return if (!acknowledged || !pinChanged) ts else 0L
+        val pinChanged = prefs.getBoolean("owner_pin_changed_after_reset", true)
+        val resetOwnerId = prefs.getLong("reset_owner_id", 0L)
+        if (acknowledged && pinChanged) return 0L
+        if (targetOwnerId != null && resetOwnerId != 0L && targetOwnerId != resetOwnerId) {
+            return 0L
+        }
+        return ts
     }
 
-    fun acknowledgeOwnerPinReset() {
+    fun acknowledgeOwnerPinReset(acknowledgedByUserId: Long? = null) {
+        val ackBy = acknowledgedByUserId ?: sessionUser?.id ?: 0L
         context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE).edit()
             .putBoolean("owner_device_pin_reset_acknowledged", true)
+            .putLong("acknowledged_by", ackBy)
             .apply()
     }
 
@@ -4476,11 +4490,15 @@ class DataRepository(
         val prefs = context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE)
         val ts = prefs.getLong("owner_device_pin_reset_timestamp", 0L)
         if (ts == 0L) return null
+        val ackBy = prefs.getLong("acknowledged_by", 0L).takeIf { it > 0L }
         return OwnerPinResetAudit(
             timestamp = ts,
             device = prefs.getString("owner_device_pin_reset_device", "Unknown Device") ?: "Unknown Device",
             acknowledged = prefs.getBoolean("owner_device_pin_reset_acknowledged", false),
-            pinChangedAfterReset = prefs.getBoolean("owner_pin_changed_after_reset", false)
+            pinChangedAfterReset = prefs.getBoolean("owner_pin_changed_after_reset", true),
+            resetOwnerId = prefs.getLong("reset_owner_id", 0L),
+            resetOwnerName = prefs.getString("reset_owner_name", "") ?: "",
+            acknowledgedBy = ackBy
         )
     }
 
@@ -4659,7 +4677,7 @@ class DataRepository(
             throw UnauthorizedException("Non-owners cannot assign owner role")
         }
 
-        if (existing.role == AppRoles.OWNER && targetRole != AppRoles.OWNER) {
+        if (existing.role == AppRoles.OWNER && existing.isActive && targetRole != AppRoles.OWNER) {
             if (!isSessionOwner()) {
                 throw UnauthorizedException("Only an owner can change another owner's role")
             }
@@ -4672,7 +4690,7 @@ class DataRepository(
         if (isSelf && targetActive != existing.isActive) {
             throw UnauthorizedException("Users cannot change their own active status")
         }
-        if (existing.role == AppRoles.OWNER && !targetActive && userDao.getActiveOwnerCount() <= 1) {
+        if (existing.role == AppRoles.OWNER && existing.isActive && !targetActive && userDao.getActiveOwnerCount() <= 1) {
             throw IllegalStateException("The only owner account cannot be deactivated")
         }
 
@@ -5965,6 +5983,9 @@ data class OwnerPinResetAudit(
     val timestamp: Long,
     val device: String,
     val acknowledged: Boolean,
-    val pinChangedAfterReset: Boolean
+    val pinChangedAfterReset: Boolean,
+    val resetOwnerId: Long = 0L,
+    val resetOwnerName: String = "",
+    val acknowledgedBy: Long? = null
 )
 

@@ -91,6 +91,10 @@ fun LockScreen(
     var recoveryPin by remember { mutableStateOf("") }
     var recoveryPinConfirm by remember { mutableStateOf("") }
 
+    val allUsers by authViewModel.users.collectAsStateWithLifecycle()
+    val activeOwners = remember(allUsers) { allUsers.filter { it.role == com.example.techyfipos.data.AppRoles.OWNER && it.isActive } }
+    var selectedRecoveryOwnerId by remember(activeOwners) { mutableStateOf<Long?>(activeOwners.firstOrNull()?.id) }
+
     val verificationCancelledText = stringResource(R.string.lock_device_verification_cancelled)
     val pinResetSuccessText = stringResource(R.string.lock_pin_reset_success)
     val pinInUseErrorText = stringResource(R.string.lock_pin_in_use_error)
@@ -101,6 +105,7 @@ fun LockScreen(
         if (result.resultCode == Activity.RESULT_OK) {
             recoveryPin = ""
             recoveryPinConfirm = ""
+            selectedRecoveryOwnerId = activeOwners.firstOrNull()?.id
             showPinRecoveryDialog = true
         } else {
             errorMessage = verificationCancelledText
@@ -572,6 +577,40 @@ fun LockScreen(
                 var recoveryPinVisible by remember { mutableStateOf(false) }
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(stringResource(R.string.lock_ownership_verified))
+                    if (activeOwners.size > 1) {
+                        var ownerDropdownExpanded by remember { mutableStateOf(false) }
+                        val selectedOwner = activeOwners.firstOrNull { it.id == selectedRecoveryOwnerId } ?: activeOwners.first()
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = selectedOwner.name,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text(stringResource(R.string.owner_account_label)) },
+                                trailingIcon = {
+                                    IconButton(onClick = { ownerDropdownExpanded = true }) {
+                                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { ownerDropdownExpanded = true }
+                            )
+                            DropdownMenu(
+                                expanded = ownerDropdownExpanded,
+                                onDismissRequest = { ownerDropdownExpanded = false }
+                            ) {
+                                activeOwners.forEach { owner ->
+                                    DropdownMenuItem(
+                                        text = { Text(owner.name) },
+                                        onClick = {
+                                            selectedRecoveryOwnerId = owner.id
+                                            ownerDropdownExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                     OutlinedTextField(
                         value = recoveryPin,
                         onValueChange = { recoveryPin = it.filter(Char::isDigit).take(4) },
@@ -614,9 +653,10 @@ fun LockScreen(
             },
             confirmButton = {
                 Button(
-                    enabled = recoveryPin.length == 4 && recoveryPin == recoveryPinConfirm,
+                    enabled = recoveryPin.length == 4 && recoveryPin == recoveryPinConfirm && (activeOwners.isEmpty() || selectedRecoveryOwnerId != null),
                     onClick = {
-                        authViewModel.resetOwnerPinAfterDeviceCredential(recoveryPin) { success ->
+                        val targetOwnerId = selectedRecoveryOwnerId ?: activeOwners.firstOrNull()?.id
+                        authViewModel.resetOwnerPinAfterDeviceCredential(recoveryPin, targetOwnerId) { success ->
                             showPinRecoveryDialog = false
                             if (success) {
                                 pin = ""

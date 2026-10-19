@@ -516,17 +516,65 @@ class P0AuditFixesTest {
 
         // Owner acknowledges alert
         repo.acknowledgeOwnerPinReset()
-        assertTrue("Alert must still be pending until owner changes PIN", repo.getUnacknowledgedOwnerPinResetTimestamp() > 0L)
+        assertEquals("Alert cleared after acknowledgment because recovery PIN counts as the change", 0L, repo.getUnacknowledgedOwnerPinResetTimestamp())
 
-        // Owner updates PIN
+        // Owner can also update PIN
         repo.updateStaff(userId = owner.id, newName = "Owner", newPin = "3333", oldPin = "2222")
-        assertEquals("Alert cleared after acknowledgment AND pin change", 0L, repo.getUnacknowledgedOwnerPinResetTimestamp())
+        assertEquals(0L, repo.getUnacknowledgedOwnerPinResetTimestamp())
 
         // Permanent audit record remains in Settings
         val audit = repo.getOwnerPinResetAudit()
         assertNotNull(audit)
         assertTrue(audit!!.acknowledged)
         assertTrue(audit.pinChangedAfterReset)
+    }
+
+    @Test
+    fun testR23_06_multiOwnerSafetyAndAlerts() = kotlinx.coroutines.test.runTest {
+        val owner1 = User(id = 1L, name = "Owner 1", pinHash = hashSha256("1111"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val owner2 = User(id = 2L, name = "Owner 2", pinHash = hashSha256("2222"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val inactiveOwner = User(id = 3L, name = "Inactive Owner", pinHash = hashSha256("3333"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = false)
+        val (repo, _) = createRepositoryWithUsers(listOf(owner1, owner2, inactiveOwner))
+
+        // 1. Device credential reset with multiple active owners requires valid targetOwnerId
+        val failNoTarget = repo.resetOwnerPinAfterDeviceCredential("4444", null)
+        assertTrue("Must fail when targetOwnerId is null and multiple active owners exist", !failNoTarget)
+
+        val failInactiveTarget = repo.resetOwnerPinAfterDeviceCredential("4444", inactiveOwner.id)
+        assertTrue("Must fail on inactive owner id", !failInactiveTarget)
+
+        val failInvalidTarget = repo.resetOwnerPinAfterDeviceCredential("4444", 9999L)
+        assertTrue("Must fail on non-existent owner id", !failInvalidTarget)
+
+        // 2. Valid target succeeds and sets audit metadata
+        val successReset = repo.resetOwnerPinAfterDeviceCredential("5555", owner1.id)
+        assertTrue(successReset)
+
+        val audit = repo.getOwnerPinResetAudit()
+        assertNotNull(audit)
+        assertEquals(owner1.id, audit?.resetOwnerId)
+        assertEquals("Owner 1", audit?.resetOwnerName)
+        assertTrue(audit?.pinChangedAfterReset == true)
+        assertTrue(audit?.acknowledged == false)
+
+        // 3. Alert is targeted to Owner 1, not Owner 2
+        assertEquals(0L, repo.getUnacknowledgedOwnerPinResetTimestamp(owner2.id))
+        val owner1AlertTs = repo.getUnacknowledgedOwnerPinResetTimestamp(owner1.id)
+        assertTrue(owner1AlertTs > 0L)
+
+        // Owner 1 acknowledges
+        repo.setSessionUser(owner1)
+        repo.acknowledgeOwnerPinReset(owner1.id)
+        assertEquals(0L, repo.getUnacknowledgedOwnerPinResetTimestamp(owner1.id))
+        assertEquals(owner1.id, repo.getOwnerPinResetAudit()?.acknowledgedBy)
+
+        // 4. Inactive owner can be edited when only one owner is active
+        // Demote owner2 so only owner1 is active
+        repo.updateStaff(userId = owner2.id, newName = "Demoted Owner 2", newRole = AppRoles.MANAGER)
+        // Now only owner1 is active, inactiveOwner is inactive. Editing inactive owner must succeed.
+        repo.updateStaff(userId = inactiveOwner.id, newName = "Inactive Owner Renamed")
+        val updatedInactive = repo.allUsers.first().firstOrNull { it.id == inactiveOwner.id }
+        assertEquals("Inactive Owner Renamed", updatedInactive?.name)
     }
 
     @Test

@@ -491,7 +491,7 @@ fun MainNavigation() {
 
         LaunchedEffect(currentUser, isOwner) {
             if (isOwner) {
-                val resetTs = authViewModel.getUnacknowledgedOwnerPinResetTimestamp()
+                val resetTs = authViewModel.getUnacknowledgedOwnerPinResetTimestamp(currentUser?.id)
                 if (resetTs > 0L) {
                     unacknowledgedPinResetTime = resetTs
                 }
@@ -744,7 +744,7 @@ fun MainNavigation() {
                     confirmButton = {
                         Button(
                             onClick = {
-                                authViewModel.acknowledgeOwnerPinReset()
+                                authViewModel.acknowledgeOwnerPinReset(currentUser?.id)
                                 unacknowledgedPinResetTime = null
                             }
                         ) {

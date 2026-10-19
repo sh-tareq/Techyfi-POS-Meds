@@ -2842,7 +2842,7 @@
     <string name="error_cannot_delete_sale_has_returns">এই বিক্রয়ে সক্রিয় ফেরত থাকায় এটি মুছে ফেলা যাবে না</string>
     <string name="error_customer_has_dues">বকেয়া থাকা অবস্থায় গ্রাহক মুছে ফেলা যাবে না</string>
     <string name="error_supplier_has_dues">বকেয়া থাকা অবস্থায় সাপ্লায়ার মুছে ফেলা যাবে না</string>
-    <string name="error_owner_exists">ইতিমধ্যে একজন মালিকের অ্যাকাউন্ট রয়েছে</string>
+    <string name="error_owner_exists">অ-মালিকরা মালিক অ্যাকাউন্ট তৈরি করতে পারবেন না</string>
     <string name="error_pin_in_use">পিনটি সঠিক নয় অথবা ব্যবহারযোগ্য নয়</string>
     <string name="error_cannot_delete_last_owner">সর্বশেষ মালিকের অ্যাকাউন্ট মুছে ফেলা যাবে না</string>
     <string name="error_cannot_change_role_last_owner">একমাত্র মালিকের অ্যাকাউন্টের ভূমিকা পরিবর্তন করা যাবে না</string>
@@ -3123,8 +3123,9 @@
     <string name="settings_test_receipt_failed">টেস্ট রসিদ প্রিন্ট করতে ব্যর্থ হয়েছে</string>
 
     <!-- Owner Decision Implementations (R20-29, R20-30, R21-01) -->
-    <string name="users_cannot_promote_to_owner">কর্মীকে মালিক পদে উন্নীত করা যাবে না; শুধুমাত্র একজন মালিক অ্যাকাউন্ট অনুমোদিত</string>
-    <string name="users_owner_role_fixed_note">মালিক পদটি স্থায়ীভাবে দোকানের স্বত্বাধিকারীর জন্য সংরক্ষিত</string>
+    <string name="users_cannot_promote_to_owner">শুধুমাত্র মালিক কর্মীকে মালিক পদে উন্নীত করতে পারেন</string>
+    <string name="users_owner_role_fixed_note">মালিক অ্যাকাউন্ট শুধুমাত্র একজন মালিক পরিবর্তন করতে পারেন</string>
+    <string name="owner_account_label">মালিকের অ্যাকাউন্ট</string>
     <string name="owner_pin_reset_alert_title">নিরাপত্তা সতর্কতা: পিন রিসেট</string>
     <string name="owner_pin_reset_alert_message">ডিভাইস স্ক্রিন লক ব্যবহার করে %1$s তারিখে ওনার পিন রিসেট করা হয়েছে। আপনি এই কাজটি না করে থাকলে এখনই পিন পরিবর্তন করুন।</string>
     <string name="owner_pin_reset_alert_dismiss">আমি বুঝতে পেরেছি</string>

@@ -4015,8 +4015,8 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         return false
     }
 
-    fun getUnacknowledgedOwnerPinResetTimestamp(): Long = repository.getUnacknowledgedOwnerPinResetTimestamp()
-    fun acknowledgeOwnerPinReset() = repository.acknowledgeOwnerPinReset()
+    fun getUnacknowledgedOwnerPinResetTimestamp(targetOwnerId: Long? = null): Long = repository.getUnacknowledgedOwnerPinResetTimestamp(targetOwnerId)
+    fun acknowledgeOwnerPinReset(acknowledgedByUserId: Long? = null) = repository.acknowledgeOwnerPinReset(acknowledgedByUserId)
     fun getOwnerPinResetAudit(): com.example.techyfipos.data.OwnerPinResetAudit? = repository.getOwnerPinResetAudit()
 
     val isOwner: StateFlow<Boolean> = _currentUser
@@ -4321,9 +4321,9 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun resetOwnerPinAfterDeviceCredential(pin: String, onResult: (Boolean) -> Unit) {
+    fun resetOwnerPinAfterDeviceCredential(pin: String, targetOwnerId: Long? = null, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            onResult(repository.resetOwnerPinAfterDeviceCredential(pin))
+            onResult(repository.resetOwnerPinAfterDeviceCredential(pin, targetOwnerId))
         }
     }
 
