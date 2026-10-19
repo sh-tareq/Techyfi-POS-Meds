@@ -262,6 +262,27 @@ class P0AuditFixesTest {
     }
 
     @Test
+    fun testR23_01_lockScreenBruteForcePrevention_cannotBypassWithOwnPin() = kotlinx.coroutines.test.runTest {
+        val cashier = User(id = 1L, name = "Cashier", pinHash = hashSha256("1111"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, isActive = true)
+        val owner = User(id = 2L, name = "Owner", pinHash = hashSha256("9999"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val (repo, _) = createRepositoryWithUsers(listOf(cashier, owner))
+
+        // 4 wrong attempts guessing owner PIN at lock screen
+        for (i in 1..4) {
+            val res = repo.verifyPinDetailed("0000", clearOnSuccess = true)
+            assertTrue("Expected Invalid on attempt $i", res is PinVerifyResult.Invalid)
+        }
+
+        // Cashier logs in with own PIN (success), but failed_attempts is not wiped
+        val successRes = repo.verifyPinDetailed("1111", clearOnSuccess = true)
+        assertTrue("Expected Success on own PIN", successRes is PinVerifyResult.Success)
+
+        // Next failure (5th failure) must trigger lockout immediately
+        val res5th = repo.verifyPinDetailed("0000", clearOnSuccess = true)
+        assertTrue("5th failure must trigger lock even after successful login", res5th is PinVerifyResult.Locked)
+    }
+
+    @Test
     fun testR22_02_ownerPinResetAlertSurvivesLoginsUntilAcknowledgedAndChanged() = kotlinx.coroutines.test.runTest {
         val cashier = User(id = 1L, name = "Cashier", pinHash = hashSha256("1111"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, isActive = true)
         val owner = User(id = 2L, name = "Owner", pinHash = hashSha256("9999"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)

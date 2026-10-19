@@ -354,7 +354,10 @@ class DataRepository(
         when (val res = verifyPinDetailed(pin, clearOnSuccess = false)) {
             is PinVerifyResult.Success -> {
                 if (AppPermissions.isSupervisor(res.user)) {
-                    context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit().clear().apply()
+                    context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit()
+                        .remove("lock_until_elapsed")
+                        .remove("lock_until")
+                        .apply()
                     SupervisorVerifyResult.Success(res.user)
                 } else {
                     val newLockMs = recordFailedPinAttempt()
@@ -4477,11 +4480,17 @@ class DataRepository(
         val securityPrefs = context.getSharedPreferences("auth_security", Context.MODE_PRIVATE)
         val nowElapsed = android.os.SystemClock.elapsedRealtime()
         val nowWall = System.currentTimeMillis()
+        val lastFailureElapsed = securityPrefs.getLong("last_failure_elapsed", 0L)
+        val windowExpired = (lastFailureElapsed > 0L) &&
+            ((nowElapsed - lastFailureElapsed > 5 * 60 * 1000L) || (nowElapsed < lastFailureElapsed))
+
         val totalFailures = securityPrefs.getInt("total_failures", 0) + 1
-        val failuresInWindow = securityPrefs.getInt("failed_attempts", 0) + 1
+        val failuresInWindow = if (windowExpired) 1 else (securityPrefs.getInt("failed_attempts", 0) + 1)
         val editor = securityPrefs.edit()
             .putInt("total_failures", totalFailures)
             .putInt("failed_attempts", failuresInWindow)
+            .putLong("last_failure_elapsed", nowElapsed)
+            .putLong("last_failure_wall", nowWall)
 
         var newLockMs = 0L
         if (failuresInWindow >= 5) {
@@ -4514,7 +4523,10 @@ class DataRepository(
                 userDao.updatePinHash(matchingUser.id, hashPin(pin))
             }
             if (clearOnSuccess) {
-                context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit().clear().apply()
+                context.getSharedPreferences("auth_security", Context.MODE_PRIVATE).edit()
+                    .remove("lock_until_elapsed")
+                    .remove("lock_until")
+                    .apply()
             }
             return@withContext PinVerifyResult.Success(matchingUser)
         }
