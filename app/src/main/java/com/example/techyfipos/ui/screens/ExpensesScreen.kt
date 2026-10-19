@@ -77,6 +77,7 @@ fun ExpensesScreen(
     var showAddExpenseDialog by remember { mutableStateOf(false) }
     var showAddCashInDialog by remember { mutableStateOf(false) }
     var expenseToEdit by remember { mutableStateOf<Expense?>(null) }
+    var isSavingExpense by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf("All") }
     var selectedTypeFilter by remember { mutableStateOf("All") }
@@ -494,9 +495,14 @@ fun ExpensesScreen(
     if (showAddExpenseDialog) {
         AddExpenseDialog(
             isCashIn = false,
-            onDismiss = { showAddExpenseDialog = false },
+            isSaving = isSavingExpense,
+            onDismiss = {
+                if (!isSavingExpense) showAddExpenseDialog = false
+            },
             onSave = { title, cat, amt, src, note ->
+                isSavingExpense = true
                 expenseViewModel.recordExpense(title, cat, amt, src, note) { res ->
+                    isSavingExpense = false
                     res.onSuccess {
                         showAddExpenseDialog = false
                         Toast.makeText(context, context.getString(R.string.expense_add_success), Toast.LENGTH_SHORT).show()
@@ -511,9 +517,14 @@ fun ExpensesScreen(
     if (showAddCashInDialog) {
         AddExpenseDialog(
             isCashIn = true,
-            onDismiss = { showAddCashInDialog = false },
+            isSaving = isSavingExpense,
+            onDismiss = {
+                if (!isSavingExpense) showAddCashInDialog = false
+            },
             onSave = { title, cat, amt, src, note ->
+                isSavingExpense = true
                 expenseViewModel.recordCashIn(title, amt, src, note) { res ->
+                    isSavingExpense = false
                     res.onSuccess {
                         showAddCashInDialog = false
                         Toast.makeText(context, context.getString(R.string.expense_cash_in_success), Toast.LENGTH_SHORT).show()
@@ -529,8 +540,12 @@ fun ExpensesScreen(
         AddExpenseDialog(
             initialExpense = expense,
             isCashIn = expense.type == "CASH_IN",
-            onDismiss = { expenseToEdit = null },
+            isSaving = isSavingExpense,
+            onDismiss = {
+                if (!isSavingExpense) expenseToEdit = null
+            },
             onSave = { title, cat, amt, src, note ->
+                isSavingExpense = true
                 expenseViewModel.updateExpense(
                     expense.copy(
                         title = title,
@@ -540,6 +555,7 @@ fun ExpensesScreen(
                         note = note
                     )
                 ) { result ->
+                    isSavingExpense = false
                     result.onSuccess {
                         Toast.makeText(context, expenseUpdatedMessage, Toast.LENGTH_SHORT).show()
                         expenseToEdit = null

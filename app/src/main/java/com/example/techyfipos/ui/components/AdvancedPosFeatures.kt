@@ -1200,6 +1200,7 @@ fun ExpenseSummaryCard(
 fun AddExpenseDialog(
     initialExpense: Expense? = null,
     isCashIn: Boolean = false,
+    isSaving: Boolean = false,
     onDismiss: () -> Unit,
     onSave: (title: String, category: String, amount: Double, source: String, note: String?) -> Unit
 ) {
@@ -1218,6 +1219,11 @@ fun AddExpenseDialog(
     }
     var selectedSource by remember(initialExpense) { mutableStateOf(initialExpense?.paymentSource ?: "Cash") }
     var note by remember(initialExpense) { mutableStateOf(initialExpense?.note ?: "") }
+    var localSaving by remember { mutableStateOf(false) }
+    LaunchedEffect(isSaving) {
+        if (!isSaving) localSaving = false
+    }
+    val savingGuard = isSaving || localSaving
 
     val categories = if (isCashIn) {
         listOf("Float In", "Owner Capital", "Change Exchange", "Other")
@@ -1320,8 +1326,10 @@ fun AddExpenseDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    if (savingGuard) return@Button
                     val amt = com.example.techyfipos.utils.sanitizeNumericInput(amountText).toDoubleOrNull() ?: 0.0
                     if (amt > 0) {
+                        localSaving = true
                         onSave(
                             if (title.isNotBlank()) title else selectedCategory,
                             selectedCategory,
@@ -1331,21 +1339,33 @@ fun AddExpenseDialog(
                         )
                     }
                 },
+                enabled = !savingGuard,
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isCashIn) Color(0xFF059669) else Color(0xFFE11D48)
                 )
             ) {
-                Text(
-                    if (initialExpense != null) stringResource(R.string.save)
-                    else if (isCashIn) stringResource(R.string.expense_save_cash_in)
-                    else stringResource(R.string.expense_save_expense),
-                    fontWeight = FontWeight.Bold
-                )
+                if (savingGuard) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        if (initialExpense != null) stringResource(R.string.save)
+                        else if (isCashIn) stringResource(R.string.expense_save_cash_in)
+                        else stringResource(R.string.expense_save_expense),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !savingGuard
+            ) {
                 Text(stringResource(R.string.cancel))
             }
         }
