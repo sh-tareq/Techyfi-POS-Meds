@@ -4382,10 +4382,12 @@ class DataRepository(
         }
         if (!isSessionOwner() && users.isNotEmpty()) {
             val callerRole = sessionUser?.role ?: AppRoles.CASHIER
-            if (callerRole == AppRoles.CASHIER && role != AppRoles.CASHIER) {
+            val callerLevel = AppRoles.roleLevel(callerRole)
+            val targetLevel = AppRoles.roleLevel(role)
+            if (targetLevel > callerLevel) {
                 throw UnauthorizedException("Non-owners cannot create accounts with higher role than their own")
             }
-            if (callerRole == AppRoles.MANAGER && role == AppRoles.OWNER) {
+            if (role == AppRoles.OWNER) {
                 throw UnauthorizedException("Non-owners cannot create owner accounts")
             }
             val callerMaxDiscount = sessionUser?.maxDiscountPercent ?: 10.0
@@ -4401,7 +4403,7 @@ class DataRepository(
                 if (customPermissions.any { !hasPermission(it) }) {
                     throw UnauthorizedException("Cannot grant permissions that you do not hold")
                 }
-                if (customPermissions.any { it.startsWith("SYSTEM_") }) {
+                if (customPermissions.any { AppPermissions.isSystemPermission(it) }) {
                     throw UnauthorizedException("Only the owner may grant system administrative permissions")
                 }
             }
@@ -4410,7 +4412,13 @@ class DataRepository(
             recordFailedPinAttempt()
             throw IllegalStateException("Invalid or unavailable PIN")
         }
-        val permissionsJson = AppPermissions.serializePermissions(customPermissions)
+        val effectivePermissions: Set<String>? = if (!isSessionOwner() && users.isNotEmpty()) {
+            val base = customPermissions ?: AppPermissions.getDefaultPermissions(role)
+            base.filter { hasPermission(it) && !AppPermissions.isSystemPermission(it) }.toSet()
+        } else {
+            customPermissions
+        }
+        val permissionsJson = AppPermissions.serializePermissions(effectivePermissions)
         try {
             userDao.insertUser(
                 User(
@@ -4574,6 +4582,12 @@ class DataRepository(
         if (target.role == AppRoles.OWNER && !isSessionOwner()) {
             throw UnauthorizedException("Non-owners cannot delete owner accounts")
         }
+        val callerRole = sessionUser?.role ?: AppRoles.CASHIER
+        val callerLevel = AppRoles.roleLevel(callerRole)
+        val targetLevel = AppRoles.roleLevel(target.role)
+        if (!isSessionOwner() && callerLevel < targetLevel) {
+            throw UnauthorizedException("Non-owners cannot delete accounts with a higher role")
+        }
         if (sessionUser?.id == target.id) {
             throw IllegalStateException("Cannot delete your own account")
         }
@@ -4610,6 +4624,13 @@ class DataRepository(
             throw UnauthorizedException("Non-owners cannot modify owner accounts")
         }
 
+        val callerRole = sessionUser?.role ?: AppRoles.CASHIER
+        val callerLevel = AppRoles.roleLevel(callerRole)
+        val existingLevel = AppRoles.roleLevel(existing.role)
+        if (!isSessionOwner() && callerLevel < existingLevel) {
+            throw UnauthorizedException("Non-owners cannot modify accounts with a higher role")
+        }
+
         val targetRole = newRole ?: existing.role
         require(targetRole == AppRoles.OWNER || targetRole == AppRoles.MANAGER || targetRole == AppRoles.CASHIER) {
             "Unsupported user role: $targetRole"
@@ -4619,22 +4640,21 @@ class DataRepository(
             throw UnauthorizedException("Users cannot change their own role")
         }
 
+        val newTargetLevel = AppRoles.roleLevel(targetRole)
         if (targetRole != existing.role) {
             if (!hasPermission(AppPermissions.SYSTEM_PERMISSIONS) && !isSessionOwner()) {
                 throw UnauthorizedException("Permission SYSTEM_PERMISSIONS required to change user roles")
             }
             if (!isSessionOwner()) {
-                val callerRole = sessionUser?.role ?: AppRoles.CASHIER
-                if (callerRole == AppRoles.CASHIER && targetRole != AppRoles.CASHIER) {
+                if (callerLevel < newTargetLevel) {
                     throw UnauthorizedException("Non-owners cannot assign roles higher than their own")
                 }
-                if (callerRole == AppRoles.MANAGER && targetRole == AppRoles.OWNER) {
+                if (targetRole == AppRoles.OWNER) {
                     throw UnauthorizedException("Non-owners cannot assign owner role")
                 }
             }
         }
 
-        val callerRole = sessionUser?.role ?: AppRoles.CASHIER
         if (!AppRoles.canPromoteToOwner(callerRole, targetRole)) {
             throw UnauthorizedException("Non-owners cannot assign owner role")
         }
@@ -4692,16 +4712,27 @@ class DataRepository(
                 if (customPermissions.any { !hasPermission(it) }) {
                     throw UnauthorizedException("Cannot grant permissions that you do not hold")
                 }
-                if (customPermissions.any { it.startsWith("SYSTEM_") }) {
+                if (customPermissions.any { AppPermissions.isSystemPermission(it) }) {
                     throw UnauthorizedException("Only the owner may grant system administrative permissions")
                 }
             }
         }
 
         val updatedPermissionsJson = if (customPermissions != null) {
-            AppPermissions.serializePermissions(customPermissions)
+            val effective = if (!isSessionOwner()) {
+                customPermissions.filter { hasPermission(it) && !AppPermissions.isSystemPermission(it) }.toSet()
+            } else {
+                customPermissions
+            }
+            AppPermissions.serializePermissions(effective)
         } else if (targetRole != existing.role) {
-            null
+            if (!isSessionOwner()) {
+                val roleDefaults = AppPermissions.getDefaultPermissions(targetRole)
+                val effective = roleDefaults.filter { hasPermission(it) && !AppPermissions.isSystemPermission(it) }.toSet()
+                AppPermissions.serializePermissions(effective)
+            } else {
+                null
+            }
         } else {
             existing.customPermissions
         }
@@ -4740,10 +4771,16 @@ class DataRepository(
         if (existing.role == AppRoles.OWNER && !isSessionOwner()) {
             throw UnauthorizedException("Non-owners cannot modify owner accounts")
         }
+        val callerRole = sessionUser?.role ?: AppRoles.CASHIER
+        val callerLevel = AppRoles.roleLevel(callerRole)
+        val targetLevel = AppRoles.roleLevel(existing.role)
+        if (!isSessionOwner() && callerLevel < targetLevel) {
+            throw UnauthorizedException("Non-owners cannot modify status of accounts with a higher role")
+        }
         if (sessionUser?.id == userId && !isActive) {
             throw IllegalStateException("Cannot deactivate your own account")
         }
-        if (existing.role == AppRoles.OWNER && !isActive && userDao.getActiveOwnerCount() <= 1) {
+        if (existing.role == AppRoles.OWNER && !isActive && existing.isActive && userDao.getActiveOwnerCount() <= 1) {
             throw IllegalStateException("The only owner account cannot be deactivated")
         }
         userDao.updateActiveStatus(userId, isActive)
@@ -4757,6 +4794,12 @@ class DataRepository(
         val existing = all.firstOrNull { it.id == userId } ?: error("User not found")
         if (existing.role == AppRoles.OWNER && !isSessionOwner()) {
             throw UnauthorizedException("Non-owners cannot modify owner permissions")
+        }
+        val callerRole = sessionUser?.role ?: AppRoles.CASHIER
+        val callerLevel = AppRoles.roleLevel(callerRole)
+        val targetLevel = AppRoles.roleLevel(existing.role)
+        if (!isSessionOwner() && callerLevel < targetLevel) {
+            throw UnauthorizedException("Non-owners cannot modify permissions of accounts with a higher role")
         }
         if (sessionUser?.id == userId) {
             throw UnauthorizedException("Users cannot edit their own permissions")

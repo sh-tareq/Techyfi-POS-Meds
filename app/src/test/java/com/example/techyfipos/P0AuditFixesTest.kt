@@ -363,6 +363,85 @@ class P0AuditFixesTest {
     }
 
     @Test
+    fun testR23_04_staffDelegateCannotExceedRights() = kotlinx.coroutines.test.runTest {
+        val owner = User(id = 1L, name = "Owner", pinHash = hashSha256("9999"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val manager = User(
+            id = 2L,
+            name = "Manager",
+            pinHash = hashSha256("2222"),
+            role = AppRoles.MANAGER,
+            customPermissions = AppPermissions.serializePermissions(setOf(AppPermissions.SYSTEM_MANAGE_STAFF, AppPermissions.SYSTEM_PERMISSIONS)),
+            maxDiscountPercent = 50.0,
+            isActive = true
+        )
+        val cashierDelegate = User(
+            id = 3L,
+            name = "Cashier Delegate",
+            pinHash = hashSha256("3333"),
+            role = AppRoles.CASHIER,
+            customPermissions = AppPermissions.serializePermissions(setOf(AppPermissions.SYSTEM_MANAGE_STAFF, AppPermissions.SYSTEM_PERMISSIONS)),
+            maxDiscountPercent = 10.0,
+            isActive = true
+        )
+        val targetCashier = User(
+            id = 4L,
+            name = "Target Cashier",
+            pinHash = hashSha256("4444"),
+            role = AppRoles.CASHIER,
+            maxDiscountPercent = 10.0,
+            isActive = true
+        )
+        val (repo, _) = createRepositoryWithUsers(listOf(owner, manager, cashierDelegate, targetCashier))
+
+        // 1. Cashier delegate cannot delete or deactivate a Manager (higher role)
+        repo.setSessionUser(cashierDelegate)
+        assertThrows(DataRepository.UnauthorizedException::class.java) {
+            kotlinx.coroutines.runBlocking {
+                repo.deleteUser(manager)
+            }
+        }
+        assertThrows(DataRepository.UnauthorizedException::class.java) {
+            kotlinx.coroutines.runBlocking {
+                repo.setStaffActive(manager.id, false)
+            }
+        }
+        assertThrows(DataRepository.UnauthorizedException::class.java) {
+            kotlinx.coroutines.runBlocking {
+                repo.updateStaff(userId = manager.id, newName = "Manager Renamed")
+            }
+        }
+        assertThrows(DataRepository.UnauthorizedException::class.java) {
+            kotlinx.coroutines.runBlocking {
+                repo.updateStaffPermissions(userId = manager.id, permissions = setOf(AppPermissions.SALES_SELL))
+            }
+        }
+
+        // 2. Cashier delegate cannot create a Manager
+        assertThrows(DataRepository.UnauthorizedException::class.java) {
+            kotlinx.coroutines.runBlocking {
+                repo.createUser("New Manager", "5555", AppRoles.MANAGER)
+            }
+        }
+
+        // 3. Cashier delegate creates a Cashier with customPermissions = null
+        // Defaults must be intersected with caller's held permissions and exclude system permissions
+        val newCashierId = repo.createUser("New Cashier", "5555", AppRoles.CASHIER, customPermissions = null)
+        val createdCashier = repo.allUsers.first().firstOrNull { it.id == newCashierId }
+        assertNotNull(createdCashier)
+        val grantedPermissions = AppPermissions.deserializePermissions(createdCashier?.customPermissions)
+        // Cashier delegate only holds SYSTEM_MANAGE_STAFF and SYSTEM_PERMISSIONS, neither of which can be granted to new cashier
+        assertTrue("Granted permissions must be empty or subset of non-system caller permissions", grantedPermissions?.isEmpty() == true)
+
+        // 4. When manager changes a user's role, permissions are intersected with caller rights
+        repo.setSessionUser(manager)
+        repo.updateStaff(userId = targetCashier.id, newName = "Updated Target", newRole = AppRoles.MANAGER, customPermissions = null)
+        val updatedTarget = repo.allUsers.first().firstOrNull { it.id == targetCashier.id }
+        val updatedPermissions = AppPermissions.deserializePermissions(updatedTarget?.customPermissions)
+        assertTrue("Permissions after role change by non-owner must be explicit set", updatedPermissions != null)
+        assertTrue("Permissions after role change by non-owner must be intersected with caller rights", updatedPermissions!!.all { repo.hasPermission(it) && !AppPermissions.isSystemPermission(it) })
+    }
+
+    @Test
     fun testR22_02_ownerPinResetAlertSurvivesLoginsUntilAcknowledgedAndChanged() = kotlinx.coroutines.test.runTest {
         val cashier = User(id = 1L, name = "Cashier", pinHash = hashSha256("1111"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, isActive = true)
         val owner = User(id = 2L, name = "Owner", pinHash = hashSha256("9999"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
