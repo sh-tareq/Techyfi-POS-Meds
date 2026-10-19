@@ -1307,8 +1307,8 @@ fun RegisterCloseScreen(
         )
     }
 
-    // 7. Z-Report Dialog (Closing)
-    val zTarget = closedShiftZReport
+    // 7. Z-Report Dialog (Closing / Preview)
+    val zTarget = closedShiftZReport ?: report?.let { it to rangeLabel }
     if (showPnlZReportDialog && zTarget != null) {
         val (r, label) = zTarget
         ZReportDialog(
