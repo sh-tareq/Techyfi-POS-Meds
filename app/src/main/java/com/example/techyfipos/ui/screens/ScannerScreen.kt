@@ -721,17 +721,14 @@ fun ScannerScreen(
                 SupervisorAuthDialog(
                     authViewModel = authViewModel,
                     actionDescription = pendingSupervisorDesc,
-                    onAuthorized = {
-                        showSupervisorAuthDialog = false
-                        pendingSupervisorAction?.invoke()
-                        pendingSupervisorAction = null
-                        pendingSupervisorActionPin = null
-                    },
                     onAuthorizedWithPin = { _, pin ->
                         showSupervisorAuthDialog = false
-                        pendingSupervisorActionPin?.invoke(pin)
+                        val actionPin = pendingSupervisorActionPin
+                        val action = pendingSupervisorAction
                         pendingSupervisorActionPin = null
                         pendingSupervisorAction = null
+                        actionPin?.invoke(pin)
+                        action?.invoke()
                     },
                     onDismiss = {
                         showSupervisorAuthDialog = false
