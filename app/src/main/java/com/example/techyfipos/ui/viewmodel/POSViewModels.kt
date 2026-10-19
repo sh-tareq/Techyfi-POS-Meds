@@ -2253,7 +2253,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
             sale.subtotal
         }
         val netRevBeforeRefund = if (sale.isTaxInclusive) {
-            (sale.grandTotal + loyaltyDiscount - sale.taxAmount).coerceAtLeast(0.0)
+            (sale.grandTotal - sale.taxAmount).coerceAtLeast(0.0)
         } else {
             (grossRevenue - totalDiscounts).coerceAtLeast(0.0)
         }
@@ -2664,15 +2664,14 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         val totalExTaxDiscount = list.sumOf { swi ->
             val sale = swi.sale
             val d = calculateDiscountValue(sale.subtotal, sale.discountAmount, sale.isPercentageDiscount)
-            if (sale.isTaxInclusive && sale.taxRate > 0.0) {
-                val r = sale.taxRate / 100.0
-                val taxableSum = swi.items.filter { it.taxable }.sumOf { it.price * it.quantity }
-                val taxWithoutDiscount = taxableSum * r / (1.0 + r)
-                val taxShare = (taxWithoutDiscount - sale.taxAmount).coerceAtLeast(0.0)
-                (d - taxShare).coerceAtLeast(0.0)
-            } else {
-                d
-            }
+            val taxableSum = swi.items.filter { it.taxable }.sumOf { it.price * it.quantity }
+            com.example.techyfipos.utils.PaymentMath.calculateExTaxDiscount(
+                discount = d,
+                isTaxInclusive = sale.isTaxInclusive,
+                taxRate = sale.taxRate,
+                taxableSubtotal = taxableSum,
+                actualTaxAmount = sale.taxAmount
+            )
         }
         SalesReportData(
             transactionCount = list.size,

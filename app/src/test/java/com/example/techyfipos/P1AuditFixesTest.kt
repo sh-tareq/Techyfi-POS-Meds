@@ -7,6 +7,7 @@ import com.example.techyfipos.data.db.User
 import com.example.techyfipos.printer.computeBluetoothWatchdogBudgetMs
 import com.example.techyfipos.ui.viewmodel.SalesReportData
 import com.example.techyfipos.utils.ExcelHelper
+import com.example.techyfipos.utils.PaymentMath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -222,5 +223,33 @@ class P1AuditFixesTest {
         // It must now provide sufficient budget (> 90s and > 300s of headroom) without being capped at 60s.
         assertTrue("Budget must be greater than 90s for a 1.2 MB job", budget1_2Mb > 90_000L)
         assertTrue("Budget must comfortably accommodate 1.2 MB without 60s cap", budget1_2Mb >= 300_000L)
+    }
+
+    @Test
+    fun testR23_14_inclusiveTaxProfitWithLoyaltyDiscount() {
+        // Sale specification from audit R23-14 / R22-32:
+        // One taxable line: price 1150, 15% inclusive, cost 600
+        // Discount: 115, Loyalty: 50
+        // Grand total: 1035 - 50 = 985
+        // Tax: 135
+        // Correct net revenue: grandTotal - taxAmount = 985 - 135 = 850
+        // Cost: 600
+        // Net profit: 850 - 600 = 250 (not 300)
+
+        val profitSummary = PaymentMath.calculateInvoiceProfitSummary(
+            subtotal = 1150.0,
+            grossCogs = 600.0,
+            taxAmount = 135.0,
+            discount = 115.0,
+            loyaltyDiscount = 50.0,
+            grandTotal = 985.0,
+            refundAmount = 0.0,
+            returnedCost = 0.0,
+            isTaxInclusive = true
+        )
+
+        assertEquals(850.0, profitSummary.netRevenue, 0.001)
+        assertEquals(600.0, profitSummary.netCogs, 0.001)
+        assertEquals(250.0, profitSummary.netProfit, 0.001)
     }
 }

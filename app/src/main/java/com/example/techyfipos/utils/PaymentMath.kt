@@ -630,7 +630,7 @@ object PaymentMath {
         } else 0.0
         val effectiveRefundRevenue = (refundAmount - retTaxPortion).coerceAtLeast(0.0)
         val netRevBeforeRefund = if (isTaxInclusive) {
-            (grandTotal + loyaltyDiscount - taxAmount).coerceAtLeast(0.0)
+            (grandTotal - taxAmount).coerceAtLeast(0.0)
         } else {
             (subtotal - totalDiscounts).coerceAtLeast(0.0)
         }
