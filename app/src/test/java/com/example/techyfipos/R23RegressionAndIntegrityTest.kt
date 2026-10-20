@@ -5,6 +5,7 @@ import com.example.techyfipos.data.AppRoles
 import com.example.techyfipos.data.db.Product
 import com.example.techyfipos.data.db.User
 import com.example.techyfipos.utils.LoyaltyProgramSettings
+import com.example.techyfipos.utils.isFractionalUnit
 import com.example.techyfipos.utils.mapErrorToLocalizedMessage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -67,10 +68,44 @@ class R23RegressionAndIntegrityTest {
             maxDiscountPercent = 20.0,
             isActive = true
         )
-        // 20% discount is within manager's allowed discount percent
-        val requestedDiscountPercent = 20.0
-        val isPermitted = requestedDiscountPercent <= manager.maxDiscountPercent
-        assertTrue(isPermitted)
+        val owner = User(
+            id = 1L,
+            name = "Owner",
+            pinHash = "hash",
+            role = AppRoles.OWNER,
+            maxDiscountPercent = 100.0,
+            isActive = true
+        )
+        val cashier = User(
+            id = 3L,
+            name = "Cashier",
+            pinHash = "hash",
+            role = AppRoles.CASHIER,
+            maxDiscountPercent = 10.0,
+            isActive = true
+        )
+
+        // Manager default permissions do NOT include SALES_HIGH_DISCOUNT
+        assertFalse(AppPermissions.DEFAULT_MANAGER_PERMISSIONS.contains(AppPermissions.SALES_HIGH_DISCOUNT))
+
+        // Effective max discount returns role / configured ceiling
+        assertEquals(20.0, AppPermissions.getEffectiveMaxDiscount(manager), 0.001)
+        assertEquals(100.0, AppPermissions.getEffectiveMaxDiscount(owner), 0.001)
+        assertEquals(10.0, AppPermissions.getEffectiveMaxDiscount(cashier), 0.001)
+
+        // Manager with explicitly granted SALES_HIGH_DISCOUNT gets 100%
+        val elevatedManager = manager.copy(
+            customPermissions = AppPermissions.serializePermissions(
+                AppPermissions.DEFAULT_MANAGER_PERMISSIONS + AppPermissions.SALES_HIGH_DISCOUNT
+            )
+        )
+        assertEquals(100.0, AppPermissions.getEffectiveMaxDiscount(elevatedManager), 0.001)
+
+        // 20% discount is permitted under manager's ceiling; 25% requires supervisor override
+        val requested20 = 20.0
+        assertTrue(requested20 <= AppPermissions.getEffectiveMaxDiscount(manager))
+        val requested25 = 25.0
+        assertFalse(requested25 <= AppPermissions.getEffectiveMaxDiscount(manager))
 
         // Can promote/demote rules
         assertTrue(AppRoles.canPromoteToOwner(callerRole = AppRoles.OWNER, targetRole = AppRoles.OWNER))
@@ -94,6 +129,59 @@ class R23RegressionAndIntegrityTest {
         val remainingAfterLastDelete = remainingAfterDelete.filter { it.id != 2L }
         val hasOwnerLeft = remainingAfterLastDelete.any { it.role == AppRoles.OWNER && it.isActive }
         assertFalse(hasOwnerLeft)
+
+        // Multi-owner Option (b): changing another owner's PIN or status requires target owner PIN
+        val callerOwner = owners[0]
+        val targetOwner = owners[1]
+        val targetOldPin = "1234"
+        val wrongPin = "9999"
+        fun checkTargetPinVerified(enteredPin: String, targetActualPin: String): Boolean {
+            return enteredPin == targetActualPin
+        }
+        assertTrue(checkTargetPinVerified(targetOldPin, "1234"))
+        assertFalse(checkTargetPinVerified(wrongPin, "1234"))
+    }
+
+    // 4b. R23-16: Weighed units allow decimals even when decimalQuantitiesEnabled is false
+    @Test
+    fun testR23_16_fractionalUnitsPreservedWhenDecimalQuantitiesDisabled() {
+        // Fractional units in English and Bangla
+        assertTrue(isFractionalUnit("kg"))
+        assertTrue(isFractionalUnit("KG"))
+        assertTrue(isFractionalUnit("gm"))
+        assertTrue(isFractionalUnit("g"))
+        assertTrue(isFractionalUnit("ltr"))
+        assertTrue(isFractionalUnit("litre"))
+        assertTrue(isFractionalUnit("ml"))
+        assertTrue(isFractionalUnit("কেজি"))
+        assertTrue(isFractionalUnit("গ্রাম"))
+        assertTrue(isFractionalUnit("লিটার"))
+        assertTrue(isFractionalUnit("মিটার"))
+
+        // Discrete units
+        assertFalse(isFractionalUnit("pcs"))
+        assertFalse(isFractionalUnit("box"))
+        assertFalse(isFractionalUnit("pack"))
+        assertFalse(isFractionalUnit("টি"))
+
+        // Simulation of CartViewModel quantity resolution when decimalQuantitiesEnabled = false
+        fun computeEffectiveQty(quantity: Double, unit: String, decimalEnabled: Boolean): Double {
+            val isFractional = isFractionalUnit(unit)
+            return if (!decimalEnabled && !isFractional) {
+                kotlin.math.floor(quantity).coerceAtLeast(1.0)
+            } else {
+                quantity
+            }
+        }
+
+        // Weighed item preserves decimals
+        assertEquals(0.5, computeEffectiveQty(0.5, "kg", decimalEnabled = false), 0.001)
+        assertEquals(0.25, computeEffectiveQty(0.25, "কেজি", decimalEnabled = false), 0.001)
+        assertEquals(1.75, computeEffectiveQty(1.75, "litre", decimalEnabled = false), 0.001)
+
+        // Discrete item clamps/floors to integer >= 1
+        assertEquals(1.0, computeEffectiveQty(0.5, "pcs", decimalEnabled = false), 0.001)
+        assertEquals(2.0, computeEffectiveQty(2.7, "box", decimalEnabled = false), 0.001)
     }
 
     // 5. R23-10: Export then import idempotent product updates

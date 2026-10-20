@@ -4439,7 +4439,7 @@ class DataRepository(
         pin: String,
         role: String = AppRoles.CASHIER,
         customPermissions: Set<String>? = null,
-        maxDiscount: Double = 10.0
+        maxDiscount: Double? = null
     ): Long = withContext(Dispatchers.IO) {
         val remainingLock = loginLockRemainingMillis()
         if (remainingLock > 0L) {
@@ -4448,6 +4448,11 @@ class DataRepository(
         require(name.isNotBlank()) { "User name cannot be blank" }
         require(pin.length == 4 && pin.all(Char::isDigit)) { "PIN must be 4 digits" }
         require(role == AppRoles.OWNER || role == AppRoles.MANAGER || role == AppRoles.CASHIER) { "Unsupported user role: $role" }
+        val resolvedDiscount = maxDiscount ?: when (role) {
+            AppRoles.OWNER -> 100.0
+            AppRoles.MANAGER -> 20.0
+            else -> 10.0
+        }
         val users = userDao.getAllUsersOnce()
         if (users.isEmpty()) {
             require(role == AppRoles.OWNER) { "The first account must be an owner" }
@@ -4467,7 +4472,7 @@ class DataRepository(
                 throw UnauthorizedException("Non-owners cannot create owner accounts")
             }
             val callerMaxDiscount = sessionUser?.maxDiscountPercent ?: 10.0
-            if (maxDiscount > callerMaxDiscount) {
+            if (resolvedDiscount > callerMaxDiscount) {
                 throw UnauthorizedException("Cannot grant maximum discount higher than your own")
             }
         }
@@ -4503,7 +4508,7 @@ class DataRepository(
                     role = role,
                     customPermissions = permissionsJson,
                     isActive = true,
-                    maxDiscountPercent = maxDiscount
+                    maxDiscountPercent = resolvedDiscount
                 )
             )
         } catch (e: android.database.sqlite.SQLiteConstraintException) {
@@ -4688,6 +4693,9 @@ class DataRepository(
         if (target.role == AppRoles.OWNER && userDao.getOwnerCount() <= 1) {
             throw IllegalStateException("The last owner account cannot be deleted")
         }
+        if (target.role == AppRoles.OWNER && sessionUser?.id != target.id) {
+            throw UnauthorizedException("Owner accounts cannot be deleted directly; demote the account first")
+        }
         userDao.deleteUser(target)
     }
 
@@ -4770,6 +4778,16 @@ class DataRepository(
             throw IllegalStateException("The only owner account cannot be deactivated")
         }
 
+        if (existing.role == AppRoles.OWNER && !isSelf) {
+            val isStatusChanged = targetActive != existing.isActive
+            val isRoleChanged = targetRole != existing.role
+            if (isStatusChanged || isRoleChanged) {
+                require(!oldPin.isNullOrBlank() && pinMatches(oldPin, existing.pinHash)) {
+                    "Current PIN of the target owner is required to change owner role or status"
+                }
+            }
+        }
+
         if (isSelf && maxDiscount != null && kotlin.math.abs(maxDiscount - existing.maxDiscountPercent) > 0.001) {
             throw UnauthorizedException("Users cannot change their own maximum discount")
         }
@@ -4787,9 +4805,16 @@ class DataRepository(
             val currentOwner = sessionUser
             val matchesTarget = pinMatches(oldPin, existing.pinHash)
             val matchesSessionOwner = isSessionOwner() && currentOwner != null && pinMatches(oldPin, currentOwner.pinHash)
-            if (!matchesTarget && !matchesSessionOwner) {
-                recordFailedPinAttempt()
-                throw IllegalStateException("Invalid or unavailable PIN")
+            if (existing.role == AppRoles.OWNER && !isSelf) {
+                if (!matchesTarget) {
+                    recordFailedPinAttempt()
+                    throw IllegalStateException("Current PIN of the target owner is required to change owner PIN")
+                }
+            } else {
+                if (!matchesTarget && !matchesSessionOwner) {
+                    recordFailedPinAttempt()
+                    throw IllegalStateException("Invalid or unavailable PIN")
+                }
             }
             if (all.any { it.id != userId && pinMatches(newPin, it.pinHash) }) {
                 recordFailedPinAttempt()
@@ -4849,7 +4874,21 @@ class DataRepository(
             )
         )
 
-        if (existing.role == AppRoles.OWNER && !newPin.isNullOrBlank()) {
+        if (existing.role == AppRoles.OWNER && !isSelf) {
+            val now = System.currentTimeMillis()
+            val callerName = sessionUser?.name ?: "Co-Owner"
+            val prefs = context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE)
+            prefs.edit()
+                .putLong("owner_device_pin_reset_timestamp", now)
+                .putLong("reset_owner_id", existing.id)
+                .putString("reset_owner_name", existing.name)
+                .putBoolean("owner_device_pin_reset_acknowledged", false)
+                .putBoolean("owner_pin_changed_after_reset", true)
+                .putString("owner_device_pin_reset_device", "Modified by $callerName")
+                .apply()
+        }
+
+        if (existing.role == AppRoles.OWNER && isSelf && !newPin.isNullOrBlank()) {
             context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE).edit()
                 .putBoolean("owner_pin_changed_after_reset", true)
                 .apply()
@@ -4883,6 +4922,9 @@ class DataRepository(
         }
         if (existing.role == AppRoles.OWNER && !isActive && existing.isActive && userDao.getActiveOwnerCount() <= 1) {
             throw IllegalStateException("The only owner account cannot be deactivated")
+        }
+        if (existing.role == AppRoles.OWNER && sessionUser?.id != userId && !isActive) {
+            throw UnauthorizedException("Deactivating another owner account requires credential verification in staff management")
         }
         userDao.updateActiveStatus(userId, isActive)
     }

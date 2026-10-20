@@ -182,11 +182,11 @@ fun isFractionalUnit(unit: String?): Boolean {
     if (unit == null) return false
     val normalized = unit.trim().lowercase()
     return normalized in listOf(
-        "kg", "kgs", "kilogram", "kilograms",
-        "gm", "g", "gram", "grams",
-        "ltr", "liter", "litre", "liters", "litres",
-        "mtr", "meter", "metre", "meters", "metres",
-        "ml"
+        "kg", "kgs", "kilogram", "kilograms", "কেজি",
+        "gm", "g", "gram", "grams", "গ্রাম",
+        "ltr", "liter", "litre", "liters", "litres", "লিটার",
+        "mtr", "meter", "metre", "meters", "metres", "মিটার",
+        "ml", "মিলি"
     )
 }
 

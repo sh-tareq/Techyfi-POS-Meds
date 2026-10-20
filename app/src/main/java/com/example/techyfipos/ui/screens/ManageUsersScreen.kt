@@ -132,9 +132,9 @@ fun ManageUsersScreen(
                         val isTargetOwner = user.role == AppRoles.OWNER
                         val isSelf = currentUser?.id == user.id
                         val canEditUser = isOwner || !isTargetOwner
-                        val canDeleteUser = (isOwner || !isTargetOwner) && !isSelf
-                        val canToggleUserActive = (isOwner || !isTargetOwner) && !isSelf
-                        val canManageUserPermissions = canEditPermissions && (isOwner || !isTargetOwner) && !isSelf
+                        val canDeleteUser = !isTargetOwner && !isSelf
+                        val canToggleUserActive = !isTargetOwner && !isSelf
+                        val canManageUserPermissions = canEditPermissions && !isTargetOwner && !isSelf
 
                         StaffUserCard(
                             user = user,
@@ -333,7 +333,7 @@ private fun StaffUserCard(
                                 )
                             }
 
-                            if (user.role == AppRoles.CASHIER) {
+                            if (user.role == AppRoles.CASHIER || user.role == AppRoles.MANAGER) {
                                 val discFormatted = if (user.maxDiscountPercent % 1.0 == 0.0) {
                                     user.maxDiscountPercent.toInt().toString()
                                 } else {
@@ -443,7 +443,7 @@ private fun AddStaffDialog(
     val invalidUserMessage = stringResource(R.string.users_invalid_input)
     val addFailedMessage = stringResource(R.string.users_add_failed)
     val invalidDiscountMessage = stringResource(R.string.users_max_discount_invalid_error)
-    val isDiscountValid = if (selectedRole == AppRoles.CASHIER) {
+    val isDiscountValid = if (selectedRole == AppRoles.CASHIER || selectedRole == AppRoles.MANAGER) {
         val d = maxDiscount.toDoubleOrNull()
         d != null && d in 0.0..100.0
     } else true
@@ -489,13 +489,13 @@ private fun AddStaffDialog(
                         selectedRole = role
                         maxDiscount = when (role) {
                             AppRoles.OWNER -> "100"
-                            AppRoles.MANAGER -> "50"
+                            AppRoles.MANAGER -> "20"
                             else -> "10"
                         }
                     }
                 )
 
-                if (selectedRole == AppRoles.CASHIER) {
+                if (selectedRole == AppRoles.CASHIER || selectedRole == AppRoles.MANAGER) {
                     OutlinedTextField(
                         value = maxDiscount,
                         onValueChange = { maxDiscount = it },
@@ -531,7 +531,7 @@ private fun AddStaffDialog(
                         errorMessage = invalidDiscountMessage
                         return@Button
                     }
-                    val disc = if (selectedRole == AppRoles.CASHIER) (maxDiscount.toDoubleOrNull() ?: 10.0) else 10.0
+                    val disc = if (selectedRole == AppRoles.OWNER) 100.0 else (maxDiscount.toDoubleOrNull() ?: if (selectedRole == AppRoles.MANAGER) 20.0 else 10.0)
                     authViewModel.addStaff(
                         name = name.trim(),
                         pin = pin,
@@ -590,7 +590,7 @@ private fun EditStaffDialog(
     val addFailedMessage = stringResource(R.string.users_add_failed)
     val currentPinRequiredMessage = stringResource(R.string.users_current_pin_required)
     val invalidDiscountMessage = stringResource(R.string.users_max_discount_invalid_error)
-    val isDiscountValid = if (editRole == AppRoles.CASHIER) {
+    val isDiscountValid = if (editRole == AppRoles.CASHIER || editRole == AppRoles.MANAGER) {
         val d = editDiscount.toDoubleOrNull()
         d != null && d in 0.0..100.0
     } else true
@@ -657,7 +657,7 @@ private fun EditStaffDialog(
                     )
                 }
 
-                if (editRole == AppRoles.CASHIER) {
+                if (editRole == AppRoles.CASHIER || editRole == AppRoles.MANAGER) {
                     OutlinedTextField(
                         value = editDiscount,
                         onValueChange = { editDiscount = it },
@@ -721,7 +721,7 @@ private fun EditStaffDialog(
                         return@Button
                     }
                     val parsedDisc = editDiscount.toDoubleOrNull()
-                    val disc = if (editRole == AppRoles.CASHIER) parsedDisc else null
+                    val disc = if (editRole == AppRoles.CASHIER || editRole == AppRoles.MANAGER) parsedDisc else null
                     val finalDisc = if (disc != null && kotlin.math.abs(disc - user.maxDiscountPercent) < 0.001) null else disc
                     authViewModel.updateStaff(
                         userId = user.id,

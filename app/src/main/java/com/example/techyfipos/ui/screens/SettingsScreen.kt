@@ -1580,6 +1580,27 @@ private fun OptimizedSettingsHome(
                 onCheckedChange = onAllowNegativeInventoryChanged
             )
         }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                Text(stringResource(R.string.settings_decimal_quantities_title), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(
+                    stringResource(R.string.settings_decimal_quantities_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = currentSettings.decimalQuantitiesEnabled,
+                onCheckedChange = { onUpdateSettings(currentSettings.copy(decimalQuantitiesEnabled = it)) }
+            )
+        }
     }
 
     SettingsSectionLabel(stringResource(R.string.settings_section_printers))
@@ -4208,17 +4229,6 @@ private fun ReceiptLayoutSettings(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.settings_show_customer_details), fontSize = 13.sp)
                 Switch(checked = currentSettings.showCustomerDetails, onCheckedChange = { onSettingsChanged(currentSettings.copy(showCustomerDetails = it)) })
-            }
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                    Text(stringResource(R.string.settings_decimal_quantities_title), fontSize = 13.sp)
-                    Text(stringResource(R.string.settings_decimal_quantities_desc), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(
-                    checked = currentSettings.decimalQuantitiesEnabled,
-                    onCheckedChange = { onSettingsChanged(currentSettings.copy(decimalQuantitiesEnabled = it)) }
-                )
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

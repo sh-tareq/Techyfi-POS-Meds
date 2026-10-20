@@ -371,9 +371,9 @@ class P0AuditFixesTest {
         )
         val (repo, _) = createRepositoryWithUsers(listOf(manager, owner))
 
-        // Manager has SALES_HIGH_DISCOUNT by default, so effective max discount is 100%
+        // Manager has editable ceiling (default 20.0, or configured 10.0), NOT automatic 100%
         val managerEffectiveMaxDiscount = AppPermissions.getEffectiveMaxDiscount(manager)
-        assertEquals(100.0, managerEffectiveMaxDiscount, 0.001)
+        assertEquals(10.0, managerEffectiveMaxDiscount, 0.001)
 
         // Owner can edit their own account (name and PIN) without being blocked by maxDiscount check
         repo.setSessionUser(owner)
@@ -596,8 +596,8 @@ class P0AuditFixesTest {
         assertEquals(owner1.id, repo.getOwnerPinResetAudit()?.acknowledgedBy)
 
         // 4. Inactive owner can be edited when only one owner is active
-        // Demote owner2 so only owner1 is active
-        repo.updateStaff(userId = owner2.id, newName = "Demoted Owner 2", newRole = AppRoles.MANAGER)
+        // Demote owner2 with owner2's PIN so only owner1 is active
+        repo.updateStaff(userId = owner2.id, newName = "Demoted Owner 2", newRole = AppRoles.MANAGER, oldPin = "2222")
         // Now only owner1 is active, inactiveOwner is inactive. Editing inactive owner must succeed.
         repo.updateStaff(userId = inactiveOwner.id, newName = "Inactive Owner Renamed")
         val updatedInactive = repo.allUsers.first().firstOrNull { it.id == inactiveOwner.id }
@@ -777,8 +777,8 @@ class P0AuditFixesTest {
         val promotedCashier = repo.allUsers.first().find { it.id == cashier.id }
         assertEquals(AppRoles.OWNER, promotedCashier?.role)
 
-        // 3. With 3 owners, Owner 1 CAN demote Owner 2 to Manager
-        repo.updateStaff(userId = owner2Id, newName = "Owner 2", newRole = AppRoles.MANAGER)
+        // 3. With 3 owners, Owner 1 CAN demote Owner 2 to Manager using Owner 2's PIN
+        repo.updateStaff(userId = owner2Id, newName = "Owner 2", newRole = AppRoles.MANAGER, oldPin = "3333")
         val demotedOwner2 = repo.allUsers.first().find { it.id == owner2Id }
         assertEquals(AppRoles.MANAGER, demotedOwner2?.role)
 

@@ -29,6 +29,7 @@ import com.example.techyfipos.utils.normalizePhone
 import com.example.techyfipos.utils.toBanglaDigits
 import com.example.techyfipos.utils.formatTaka
 import com.example.techyfipos.utils.getLocalizedContext
+import com.example.techyfipos.utils.isFractionalUnit
 
 inline fun <T> runCatchingNonCancellation(block: () -> T): Result<T> {
     return try {
@@ -1470,7 +1471,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun addToCart(product: Product, quantity: Double = 1.0): Boolean {
-        val effectiveQty = if (!taxSettings.value.decimalQuantitiesEnabled) {
+        val isFractional = isFractionalUnit(product.unit)
+        val effectiveQty = if (!taxSettings.value.decimalQuantitiesEnabled && !isFractional) {
             kotlin.math.floor(quantity).coerceAtLeast(1.0)
         } else {
             quantity
@@ -1519,7 +1521,8 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     fun setQuantity(product: Product, newQty: Double, allowNegative: Boolean = false) {
-        val effectiveQty = if (!taxSettings.value.decimalQuantitiesEnabled) {
+        val isFractional = isFractionalUnit(product.unit)
+        val effectiveQty = if (!taxSettings.value.decimalQuantitiesEnabled && !isFractional) {
             kotlin.math.floor(newQty).coerceAtLeast(0.0)
         } else {
             newQty
@@ -4124,7 +4127,7 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         pin: String,
         role: String = AppRoles.CASHIER,
         customPermissions: Set<String>? = null,
-        maxDiscount: Double = 10.0,
+        maxDiscount: Double? = null,
         onComplete: (Boolean, String?) -> Unit
     ) {
         viewModelScope.launch {
