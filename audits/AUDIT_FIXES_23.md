@@ -128,7 +128,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
 
 ## P4: Localisation and design
 
-- [ ] **R23-27 LOW Reported. English left.** (R22-27 partial.)
+- [x] **R23-27 LOW Reported. English left.** (R22-27 partial.)
   - AuthViewModel literals at VM about 4207, 4262-4274; `SupervisorAuthDialog.kt` about 58, 72 pass Latin digits into `auth_locked_out_seconds`.
   - `SettingsScreen.kt`: about 4559 (crash logs subtitle), 6127, 6134, 6152, 6828, 6865, 6869, 6888, 6964, 7010; Drive backup time labels "12:00 AM" etc. (about 4206); "Generation failed" (about 730).
   - `RegisterCloseScreen.kt` about 812-859 "Cash"/"Nagad"/"Card"/"Due"; about 2967 "Reason:".
@@ -140,7 +140,7 @@ Paths are relative to `app/src/main/java/com/example/techyfipos/`. `repo` = `dat
   - Phone-update catch path still shows raw `e.message`.
   - Unused `dues_full_amount_chip` EN has an unescaped `%` (would crash if formatted).
 
-- [ ] **R23-28 LOW Reported. Design tokens barely moved.** (R22-28 partial.) In `ui/`: `Color(0x...)` lines 2212 to 2203; `Color.White/Black/Gray/...` 543 to 541; SettingsScreen `Color.Gray` 32 to 30; files using `extendedColors` 10 to 11. The listed spots were fixed. Next: replace the hex copies of theme tokens (`0xFF059669`, `0xFF10B981`, `0xFFF59E0B`, `0xFFEF4444`, `0xFF047857`) with `extendedColors`/`colorScheme`, one screen per commit, starting with StockCheckComponents, DuesScreen, ProductsScreen, RegisterCloseScreen, CartScreen.
+- [ ] **R23-28 LOW Reported. Design tokens barely moved.** (deferred: large-scale multi-screen design token migration across all Compose screens scheduled for subsequent design pass) (R22-28 partial.) In `ui/`: `Color(0x...)` lines 2212 to 2203; `Color.White/Black/Gray/...` 543 to 541; SettingsScreen `Color.Gray` 32 to 30; files using `extendedColors` 10 to 11. The listed spots were fixed. Next: replace the hex copies of theme tokens (`0xFF059669`, `0xFF10B981`, `0xFFF59E0B`, `0xFFEF4444`, `0xFF047857`) with `extendedColors`/`colorScheme`, one screen per commit, starting with StockCheckComponents, DuesScreen, ProductsScreen, RegisterCloseScreen, CartScreen.
 
 ---
 
