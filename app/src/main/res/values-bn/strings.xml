@@ -1763,6 +1763,7 @@
     <string name="customer_export_excel_option">এক্সেল স্প্রেডশিট (.xlsx)</string>
     <string name="customer_export_csv_option">সিএসভি ডকুমেন্ট (.csv)</string>
     <string name="customer_export_excel_success">কাস্টমার তালিকা এক্সেলে সফলভাবে এক্সপোর্ট হয়েছে!</string>
+    <string name="customer_export_csv_success">কাস্টমার তালিকা সিএসভিতে সফলভাবে এক্সপোর্ট হয়েছে!</string>
     <string name="customer_export_csv_chooser_title">কাস্টমার সিএসভি এক্সপোর্ট</string>
     <string name="customer_export_failed">এক্সপোর্ট ব্যর্থ হয়েছে: %1$s</string>
     <string name="customer_view_table">টেবিল ভিউ</string>
@@ -3262,4 +3263,35 @@
     <string name="settings_search_filter_by_category">ক্যাটাগরি অনুযায়ী ফিল্টারকৃত</string>
     <string name="settings_search_open_action">খুলুন</string>
     <string name="batch_print_reprint_last">পূর্ববর্তী ব্যাচ পুনরায় প্রিন্ট করুন</string>
+
+    <!-- R23-24 & R23-25 Localized Error Messages -->
+    <string name="error_supplier_no_longer_exists">সরবরাহকারী আর বিদ্যমান নেই</string>
+    <string name="error_due_ledger_no_longer_exists">বাকি খতিয়ান আর বিদ্যমান নেই</string>
+    <string name="error_insufficient_store_credit">অপর্যাপ্ত স্টোর ক্রেডিট ব্যালেন্স</string>
+    <string name="error_store_credit_phone_required">স্টোর ক্রেডিট ব্যবহারের জন্য গ্রাহকের ফোন নম্বর আবশ্যক</string>
+    <string name="error_voucher_inactive_or_exhausted">স্টোর ক্রেডিট ভাউচারটি নিষ্ক্রিয় অথবা এর কোনো ব্যালেন্স অবশিষ্ট নেই</string>
+    <string name="error_customer_has_store_credit">স্টোর ক্রেডিট ব্যালেন্স থাকা অবস্থায় গ্রাহক মুছা বা আর্কাইভ করা যাবে না</string>
+    <string name="error_customer_has_active_vouchers">সক্রিয় ভাউচার থাকা অবস্থায় গ্রাহক মুছা বা আর্কাইভ করা যাবে না</string>
+    <string name="error_user_not_found">ব্যবহারকারী পাওয়া যায়নি</string>
+    <string name="error_cannot_delete_own_account">নিজের অ্যাকাউন্ট মুছে ফেলা যাবে না</string>
+    <string name="error_cannot_change_own_role">ব্যবহারকারীরা তাদের নিজস্ব ভূমিকা পরিবর্তন করতে পারেন না</string>
+    <string name="error_cannot_change_own_status">ব্যবহারকারীরা তাদের নিজস্ব সক্রিয় অবস্থা পরিবর্তন করতে পারেন না</string>
+    <string name="error_cannot_change_own_discount">ব্যবহারকারীরা তাদের নিজস্ব সর্বোচ্চ ডিসকাউন্ট পরিবর্তন করতে পারেন না</string>
+    <string name="error_non_owners_privilege_escalation">মালিক ব্যতীত অন্য কেউ তাদের চেয়ে উচ্চতর ভূমিকা সংশোধন বা অর্পণ করতে পারেন না</string>
+    <string name="error_cannot_grant_higher_discount">আপনার নিজের চেয়ে বেশি সর্বোচ্চ ডিসকাউন্ট প্রদান করতে পারবেন না</string>
+    <string name="error_supplier_expense_auto_locked">সরবরাহকারী পরিশোধের খরচ স্বয়ংক্রিয়ভাবে তৈরি এবং সরাসরি সংশোধন করা যায় না</string>
+    <string name="error_supplier_payment_exceeds_due">পরিশোধের পরিমাণ সরবরাহকারীর অবশিষ্ট বকেয়ার চেয়ে বেশি</string>
+    <string name="error_return_quantity_exceeds_sold">ফেরতের পরিমাণ বিক্রিত পরিমাণের চেয়ে বেশি</string>
+    <string name="error_product_not_in_sale">পণ্যটি এই বিক্রয়ের অন্তর্ভুক্ত ছিল না</string>
+    <string name="error_product_in_saved_carts">পণ্যটি মুছার বা বারকোড পরিবর্তনের আগে সক্রিয় ও স্থগিত কার্ট থেকে সরিয়ে ফেলুন</string>
+    <string name="error_backup_password_min_length">পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে</string>
+    <string name="error_backup_passwords_do_not_match">পাসওয়ার্ড মেলেনি</string>
+    <string name="error_sale_amounts_invalid">বিক্রয়ের পরিমাণ বৈধ এবং ধনাত্মক হতে হবে</string>
+    <string name="error_sale_empty_cart">বিক্রয়ে কমপক্ষে একটি পণ্য থাকতে হবে</string>
+    <string name="error_payment_details_required">এই পেমেন্ট পদ্ধতির জন্য গ্রাহক ও পেমেন্টের বিবরণ আবশ্যক</string>
+    <string name="error_split_total_mismatch">বিভক্ত পেমেন্টের মোট পরিমাণ সর্বমোটের সমান নয়</string>
+    <string name="settings_backup_password_instruction">AES-256-GCM দিয়ে এই ব্যাকআপ এনক্রিপ্ট করতে একটি পাসওয়ার্ড লিখুন। ফাইলটি পুনরুদ্ধার করতে আপনার এই পাসওয়ার্ডটির প্রয়োজন হবে।</string>
+    <string name="supplier_void_payment_reason_prompt">অনুগ্রহ করে একটি কারণ নির্বাচন বা লিখুন</string>
+    <string name="timeline_due_payment_received">বকেয়া পরিশোধ গ্রহণ করা হয়েছে</string>
+    <string name="timeline_crm_note">গ্রাহক নোট</string>
 </resources>

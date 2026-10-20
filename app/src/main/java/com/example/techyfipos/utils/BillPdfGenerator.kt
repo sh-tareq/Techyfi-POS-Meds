@@ -2023,7 +2023,7 @@ fun generateDueRepaymentJpeg(
     boldPaint.textAlign = Paint.Align.CENTER
     boldPaint.textSize = if (is58) 14.5f else 19f
     val statusText = if (isReprint) {
-        if (isBangla) "রেকর্ডকৃত জমা (পুনর্মুদ্রণ)" else "RECORDED PAYMENT (REPRINT)"
+        if (isBangla) "পরিশোধের রসিদ (পুনঃমুদ্রণ)" else "RECORDED PAYMENT (REPRINT)"
     } else if (isSettled) {
         if (isBangla) "✔ বাকি সম্পূর্ণ পরিশোধ হয়েছে" else "✔ PAID IN FULL & SETTLED"
     } else {

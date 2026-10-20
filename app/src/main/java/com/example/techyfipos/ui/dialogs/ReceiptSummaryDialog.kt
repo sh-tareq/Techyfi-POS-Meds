@@ -772,6 +772,12 @@ fun ReceiptSummaryDialog(
                                             context.getString(R.string.print_system_dialog_opened),
                                             android.widget.Toast.LENGTH_SHORT
                                         ).show()
+                                    } else if (outcome == com.example.techyfipos.utils.ReceiptPrintOutcome.FAILED) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            context.getString(R.string.print_could_not_decode_receipt_image),
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 } catch (e: Exception) {
                                     if (e is kotlinx.coroutines.CancellationException) throw e

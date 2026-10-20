@@ -1767,6 +1767,7 @@
     <string name="customer_export_excel_option">Excel Spreadsheet (.xlsx)</string>
     <string name="customer_export_csv_option">CSV Document (.csv)</string>
     <string name="customer_export_excel_success">Customers exported to Excel successfully!</string>
+    <string name="customer_export_csv_success">Customers exported to CSV successfully!</string>
     <string name="customer_export_csv_chooser_title">Export Customers CSV</string>
     <string name="customer_export_failed">Export failed: %1$s</string>
     <string name="customer_view_table">Table View</string>
@@ -3260,6 +3261,37 @@
     <string name="settings_search_filter_by_category">Filtered by category</string>
     <string name="settings_search_open_action">Open</string>
     <string name="batch_print_reprint_last">Reprint Last Batch</string>
+
+    <!-- R23-24 & R23-25 Localized Error Messages -->
+    <string name="error_supplier_no_longer_exists">Supplier no longer exists</string>
+    <string name="error_due_ledger_no_longer_exists">Due ledger no longer exists</string>
+    <string name="error_insufficient_store_credit">Insufficient store credit balance</string>
+    <string name="error_store_credit_phone_required">Customer phone number is required for store credit payment</string>
+    <string name="error_voucher_inactive_or_exhausted">Store credit voucher is inactive or has no remaining balance</string>
+    <string name="error_customer_has_store_credit">Cannot delete or archive customer with store credit balance</string>
+    <string name="error_customer_has_active_vouchers">Cannot delete or archive customer with active voucher balance</string>
+    <string name="error_user_not_found">User not found</string>
+    <string name="error_cannot_delete_own_account">Cannot delete your own account</string>
+    <string name="error_cannot_change_own_role">Users cannot change their own role</string>
+    <string name="error_cannot_change_own_status">Users cannot change their own active status</string>
+    <string name="error_cannot_change_own_discount">Users cannot change their own maximum discount</string>
+    <string name="error_non_owners_privilege_escalation">Non-owners cannot modify or assign roles higher than their own</string>
+    <string name="error_cannot_grant_higher_discount">Cannot grant maximum discount higher than your own</string>
+    <string name="error_supplier_expense_auto_locked">Supplier payment expenses are auto-generated and cannot be modified directly</string>
+    <string name="error_supplier_payment_exceeds_due">Payment exceeds the outstanding supplier balance</string>
+    <string name="error_return_quantity_exceeds_sold">Return quantity exceeds quantity sold</string>
+    <string name="error_product_not_in_sale">Product was not part of this sale</string>
+    <string name="error_product_in_saved_carts">Remove this product from active and held carts before deleting or changing its barcode</string>
+    <string name="error_backup_password_min_length">Password must be at least 4 characters</string>
+    <string name="error_backup_passwords_do_not_match">Passwords do not match</string>
+    <string name="error_sale_amounts_invalid">Sale amounts must be positive and finite</string>
+    <string name="error_sale_empty_cart">A sale must contain at least one product</string>
+    <string name="error_payment_details_required">Customer and payment details required for this payment method</string>
+    <string name="error_split_total_mismatch">Split payment rows do not add up to the grand total</string>
+    <string name="settings_backup_password_instruction">Enter a password to encrypt this backup with AES-256-GCM. You will need this exact password to restore this file.</string>
+    <string name="supplier_void_payment_reason_prompt">Please select or enter a reason</string>
+    <string name="timeline_due_payment_received">Due payment received</string>
+    <string name="timeline_crm_note">CRM Note</string>
 </resources>
 
 

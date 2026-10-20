@@ -174,6 +174,7 @@ fun DuesScreen(
     val selectedCustomer by duesViewModel.selectedCustomer.collectAsStateWithLifecycle()
     val selectedPayments by duesViewModel.selectedCustomerPayments.collectAsStateWithLifecycle()
     val selectedCharges by duesViewModel.selectedCustomerCharges.collectAsStateWithLifecycle()
+    val selectedReturns by duesViewModel.selectedCustomerReturns.collectAsStateWithLifecycle()
     val dossierData by (customerViewModel?.selectedCustomerDossier?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) })
     val debtAgeMap by duesViewModel.customerDebtOriginTimestamps.collectAsStateWithLifecycle()
 
@@ -452,7 +453,7 @@ fun DuesScreen(
                         IconButton(
                             onClick = {
                                 selectedCustomer?.let { c ->
-                                    shareCustomerStatement(context, c, selectedPayments, selectedCharges, storeName)
+                                    shareCustomerStatement(context, c, selectedPayments, selectedCharges, selectedReturns, storeName)
                                 }
                             },
                             modifier = Modifier.size(48.dp)
@@ -503,7 +504,7 @@ fun DuesScreen(
                 onDeleteChargeClick = { c -> chargeToDelete = c },
                 onShareStatement = {
                     selectedCustomer?.let { c ->
-                        shareCustomerStatement(context, c, selectedPayments, selectedCharges, storeName)
+                        shareCustomerStatement(context, c, selectedPayments, selectedCharges, selectedReturns, storeName)
                     }
                 },
                 onSetCreditLimit = { limit ->
@@ -1110,8 +1111,6 @@ fun DuesScreen(
                         if (success) {
                             showAddDueDialog = false
                             android.widget.Toast.makeText(context, addDueSuccessToast, android.widget.Toast.LENGTH_SHORT).show()
-                        } else {
-                            android.widget.Toast.makeText(context, addDueFailureToast, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }
                 )
@@ -1142,8 +1141,6 @@ fun DuesScreen(
                         if (success) {
                             showAddDueForCustomer = null
                             android.widget.Toast.makeText(context, addDueToCustomerSuccessToast, android.widget.Toast.LENGTH_SHORT).show()
-                        } else {
-                            android.widget.Toast.makeText(context, addDueGenericFailureToast, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }
                 )
@@ -1599,6 +1596,7 @@ private fun shareCustomerStatement(
     customer: CustomerDue,
     payments: List<DuePayment>,
     charges: List<DueCharge> = emptyList(),
+    returns: List<com.example.techyfipos.data.db.Return> = emptyList(),
     storeName: String = ""
 ) {
     val isBangla = com.example.techyfipos.utils.isAppBangla()
@@ -1626,17 +1624,21 @@ private fun shareCustomerStatement(
         val desc = "${if (isBangla) "পরিশোধ" else "Payment"} [${p.paymentMethod}]$noteSuffix"
         ledger.add(StatementLedgerEntry(p.timestamp, desc, debit = 0.0, credit = p.amountPaid))
     }
+    returns.forEach { r ->
+        val desc = "${if (isBangla) "পণ্য ফেরত" else "Return"} #${r.saleId}"
+        ledger.add(StatementLedgerEntry(r.timestamp, desc, debit = 0.0, credit = r.dueAdjustmentAmount))
+    }
     ledger.sortBy { it.timestamp }
 
     // Reconcile opening balance / return adjustments so running balance matches outstandingAmount exactly
-    val netLedger = charges.sumOf { it.amount } - payments.sumOf { it.amountPaid }
+    val netLedger = charges.sumOf { it.amount } - payments.sumOf { it.amountPaid } - returns.sumOf { it.dueAdjustmentAmount }
     val openingBalance = customer.outstandingAmount - netLedger
     if (kotlin.math.abs(openingBalance) > 0.001) {
-        val earliestTime = (charges.map { it.timestamp } + payments.map { it.timestamp }).minOrNull() ?: customer.createdAt
+        val earliestTime = (charges.map { it.timestamp } + payments.map { it.timestamp } + returns.map { it.timestamp }).minOrNull() ?: customer.createdAt
         val desc = if (openingBalance > 0.0) {
             if (isBangla) "পূর্ববর্তী জের / প্রারম্ভিক বকেয়া" else "Opening / Previous Due"
         } else {
-            if (isBangla) "ফেরত সমন্বয় / ক্রেডিট" else "Return Adjustment / Credit"
+            if (isBangla) "সমন্বয় / ক্রেডিট" else "Adjustment / Credit"
         }
         val debit = if (openingBalance > 0.0) openingBalance else 0.0
         val credit = if (openingBalance < 0.0) -openingBalance else 0.0

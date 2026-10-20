@@ -291,8 +291,6 @@ fun LoyaltyScreen(
                 loyaltyViewModel.redeemPoints(member.phone, pts, reason) { result ->
                     if (result.isSuccess && result.getOrDefault(false)) {
                         Toast.makeText(context, context.getString(R.string.loyalty_points_redeemed_toast), Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.loyalty_points_redeem_failed_toast), Toast.LENGTH_SHORT).show()
                     }
                 }
                 memberToAdjust = null

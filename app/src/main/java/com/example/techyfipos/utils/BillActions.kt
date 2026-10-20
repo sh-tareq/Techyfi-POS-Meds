@@ -306,7 +306,8 @@ fun printPdfDocument(
                             callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
                         }
                     } catch (error: Exception) {
-                        callback?.onWriteFailed(context.getString(R.string.print_error_message, error.localizedMessage ?: ""))
+                        val msg = error.localizedMessage?.takeIf { it.isNotBlank() } ?: context.getString(R.string.print_unable_to_write_document)
+                        callback?.onWriteFailed(context.getString(R.string.print_error_message, msg))
                     }
                 }.start()
             }

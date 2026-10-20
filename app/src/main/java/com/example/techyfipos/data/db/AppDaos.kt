@@ -388,6 +388,9 @@ interface HeldCartDao {
     @Query("DELETE FROM held_carts")
     suspend fun clearAllHeldCarts()
 
+    @Query("DELETE FROM held_carts WHERE timestamp < :cutoffTimestamp")
+    suspend fun deleteHeldCartsOlderThan(cutoffTimestamp: Long): Int
+
     @Query("SELECT COUNT(*) FROM held_carts")
     fun getHeldCartCount(): Flow<Int>
 

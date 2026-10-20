@@ -1695,6 +1695,7 @@ suspend fun exportCustomerCsv(context: Context, customers: List<Customer>) = wit
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         withContext(Dispatchers.Main) {
+            Toast.makeText(context, context.getString(R.string.customer_export_csv_success), Toast.LENGTH_SHORT).show()
             context.startActivity(Intent.createChooser(intent, context.getString(R.string.customer_export_csv_chooser_title)))
         }
     } catch (e: Exception) {

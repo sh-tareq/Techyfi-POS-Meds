@@ -352,6 +352,12 @@ object ExcelHelper {
                 }
                 if (isRowEmpty) continue
 
+                val isBn = isAppBangla()
+                fun rowErr(msg: String): String {
+                    val prefix = if (isBn) "সারি ${toBanglaDigits((rowIdx + 1).toString())}:" else "Row ${rowIdx + 1}:"
+                    return "$prefix $msg"
+                }
+
                 try {
                     val rawBarcode = colMap["barcode"]?.let { getCellStringValue(row.getCell(it), isBarcode = true, padNumericBarcodes = padNumericBarcodes) } ?: ""
                     val barcode = toEnglishDigits(rawBarcode).trim().lowercase()
@@ -359,7 +365,7 @@ object ExcelHelper {
                     
                     if (barcode.isBlank() || name.isBlank()) {
                         failCount++
-                        failures.add("Row ${rowIdx + 1}: Barcode and Name cannot be blank.")
+                        failures.add(rowErr(if (isBn) "বারকোড এবং পণ্যের নাম খালি রাখা যাবে না।" else "Barcode and Name cannot be blank."))
                         continue
                     }
 
@@ -370,7 +376,7 @@ object ExcelHelper {
                     val parsedPPrice = if (pPriceStr.isBlank()) null else parseDouble(pPriceStr)
                     if (pPriceStr.isNotBlank() && (parsedPPrice == null || parsedPPrice < 0.0)) {
                         failCount++
-                        failures.add("Row ${rowIdx + 1}: Invalid purchase price '$pPriceStr'.")
+                        failures.add(rowErr(if (isBn) "অকার্যকর ক্রয় মূল্য '$pPriceStr'।" else "Invalid purchase price '$pPriceStr'."))
                         continue
                     }
                     val purchasePrice = if (pPriceStr.isBlank()) -1.0 else (parsedPPrice ?: 0.0).coerceAtLeast(0.0)
@@ -379,7 +385,7 @@ object ExcelHelper {
                     val sellingPrice = parseDouble(sPriceStr)
                     if (sellingPrice == null || sellingPrice < 0.0) {
                         failCount++
-                        failures.add("Row ${rowIdx + 1}: Invalid selling price '$sPriceStr'. Must be zero or greater.")
+                        failures.add(rowErr(if (isBn) "অকার্যকর বিক্রয় মূল্য '$sPriceStr'।" else "Invalid selling price '$sPriceStr'. Must be zero or greater."))
                         continue
                     }
 
@@ -387,7 +393,7 @@ object ExcelHelper {
                     val parsedStock = if (stockStr.isBlank()) null else parseDouble(stockStr)
                     if (stockStr.isNotBlank() && (parsedStock == null || parsedStock < 0.0)) {
                         failCount++
-                        failures.add("Row ${rowIdx + 1}: Invalid stock quantity '$stockStr'.")
+                        failures.add(rowErr(if (isBn) "অকার্যকর মজুত পরিমাণ '$stockStr'।" else "Invalid stock quantity '$stockStr'."))
                         continue
                     }
                     val stockQty = if (stockStr.isBlank()) -1.0 else (parsedStock ?: 0.0).coerceAtLeast(0.0)
@@ -406,7 +412,7 @@ object ExcelHelper {
                     val expiryVal = optionalText("expiryDate")
                     if (expiryVal != null && parseExpiryDateToMillis(toEnglishDigits(expiryVal)) == null) {
                         failCount++
-                        failures.add("Row ${rowIdx + 1}: Invalid expiry date '$expiryVal'. Expected dd/MM/yyyy.")
+                        failures.add(rowErr(if (isBn) "অকার্যকর মেয়াদ উত্তীর্ণের তারিখ '$expiryVal'। প্রত্যাশিত: দিন/মাস/বছর (dd/MM/yyyy)।" else "Invalid expiry date '$expiryVal'. Expected dd/MM/yyyy."))
                         continue
                     }
 
@@ -423,10 +429,10 @@ object ExcelHelper {
                             stockQty = stockQty,
                             reorderLevel = reorderLevel,
                             imageUri = optionalText("imageUri"),
-                            mfgOrPkgType = optionalText("mfgOrPkgType") ?: "Mfg",
+                            mfgOrPkgType = optionalText("mfgOrPkgType"),
                             mfgOrPkgDate = optionalText("mfgOrPkgDate"),
                             expiryDate = expiryVal,
-                            unit = optionalText("unit") ?: "Pcs",
+                            unit = optionalText("unit") ?: "",
                             wholesalePrice = optionalDouble("wholesalePrice"),
                             mrpPrice = mrpVal,
                             discountedPrice = optionalDouble("discountedPrice")
@@ -435,7 +441,7 @@ object ExcelHelper {
                     successCount++
                 } catch (e: Exception) {
                     failCount++
-                    failures.add("Row ${rowIdx + 1}: ${e.message}")
+                    failures.add(rowErr(e.message ?: if (isBn) "ত্রুটিপূর্ণ ডাটা" else "Invalid data"))
                 }
             }
             workbook.close()

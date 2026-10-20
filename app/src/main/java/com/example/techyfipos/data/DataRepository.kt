@@ -116,6 +116,10 @@ class DataRepository(
                 normalizeLegacyStockAdjustmentReasons()
             } catch (ignored: Exception) {
             }
+            try {
+                sweepStaleHeldCarts(24L)
+            } catch (ignored: Exception) {
+            }
         }
     }
 
@@ -465,6 +469,19 @@ class DataRepository(
         heldCartDao.clearAllHeldCarts()
     }
 
+    suspend fun sweepStaleHeldCarts(maxAgeHours: Long = 24L): Int = withContext(Dispatchers.IO) {
+        val cutoff = System.currentTimeMillis() - (maxAgeHours * 60 * 60 * 1000L)
+        val deleted = heldCartDao.deleteHeldCartsOlderThan(cutoff)
+        try {
+            val file = File(context.filesDir, "cart_snapshot.json")
+            if (file.exists() && file.lastModified() < cutoff) {
+                file.delete()
+                settingsDataStore.saveCartSnapshot("")
+            }
+        } catch (_: Exception) {}
+        deleted
+    }
+
     // Products
     val allProducts: Flow<List<Product>> = productDao.getAllProducts()
     
@@ -535,9 +552,21 @@ class DataRepository(
                 normalized
             }
             productDao.updateProduct(toSave)
-            if (adjustment != null) {
-                val cashier = adjustment.cashierName.ifBlank { sessionUser?.name ?: "Admin" }
-                inventoryAdjustmentDao.insertAdjustment(adjustment.copy(cashierName = cashier))
+            val finalAdjustment = adjustment ?: if (kotlin.math.abs(toSave.stockQty - existing.stockQty) > 0.0001) {
+                InventoryAdjustment(
+                    productBarcode = normalized.barcode,
+                    productName = existing.name,
+                    previousStock = existing.stockQty,
+                    newStock = toSave.stockQty,
+                    difference = toSave.stockQty - existing.stockQty,
+                    reason = "Manual Adjustment",
+                    timestamp = System.currentTimeMillis(),
+                    cashierName = sessionUser?.name ?: "Admin"
+                )
+            } else null
+            if (finalAdjustment != null) {
+                val cashier = finalAdjustment.cashierName.ifBlank { sessionUser?.name ?: "Admin" }
+                inventoryAdjustmentDao.insertAdjustment(finalAdjustment.copy(cashierName = cashier))
             }
         }
     }
@@ -1660,7 +1689,11 @@ class DataRepository(
     suspend fun searchCustomerSuggestions(query: String): List<CustomerLookupResult> = withContext(Dispatchers.IO) {
         val clean = query.trim()
         if (clean.isBlank()) return@withContext emptyList()
-        val customers = customerDao.searchCustomerSuggestions(clean)
+        val digitsOnly = clean.filter { it.isDigit() }
+        val normPhone = if (digitsOnly.length >= 3) normalizePhone(clean) else null
+        val customers = (customerDao.searchCustomerSuggestions(clean) +
+            (if (!normPhone.isNullOrBlank() && normPhone != clean) customerDao.searchCustomerSuggestions(normPhone) else emptyList())
+        ).distinctBy { it.phone }
         if (customers.isNotEmpty()) {
             val phones = customers.map { it.phone }
             val duesByPhone = customerDueDao.getCustomerDuesByPhones(phones).associateBy { it.customerPhone }
@@ -1685,7 +1718,11 @@ class DataRepository(
                 )
             }
         }
-        val salesContacts = saleDao.searchPastCustomerContacts("%$clean%")
+        val searchPattern = "%$clean%"
+        val phonePattern = normPhone?.let { "%$it%" }
+        val salesContacts = (saleDao.searchPastCustomerContacts(searchPattern) +
+            (if (phonePattern != null && phonePattern != searchPattern) saleDao.searchPastCustomerContacts(phonePattern) else emptyList())
+        ).distinctBy { it.customerPhone }
         val scPhones = salesContacts.map { it.customerPhone }
         val duesByPhone = customerDueDao.getCustomerDuesByPhones(scPhones).associateBy { it.customerPhone }
         val loyaltyByPhone = customerLoyaltyDao.getLoyaltyByPhones(scPhones).associateBy { it.phone }
@@ -1967,11 +2004,13 @@ class DataRepository(
 
         // Check if newPhone already belongs to an existing active customer
         val collisionCustomer = customerDao.getCustomerByPhone(newNorm)
+            ?: customerDao.getAllCustomersOnce().firstOrNull { !it.isArchived && normalizePhone(it.phone) == newNorm }
         if (collisionCustomer != null && !collisionCustomer.isArchived) {
             return@withContext CustomerPhoneUpdateResult.Collision(collisionCustomer)
         }
 
         val collisionDue = customerDueDao.getActiveCustomerDueByPhone(newNorm)
+            ?: customerDueDao.getAllDuesIncludingArchived().firstOrNull { !it.isArchived && normalizePhone(it.customerPhone) == newNorm }
         if (collisionDue != null) {
             val dummy = Customer(phone = collisionDue.customerPhone, name = collisionDue.customerName, totalDue = collisionDue.outstandingAmount)
             return@withContext CustomerPhoneUpdateResult.Collision(dummy)
@@ -4159,7 +4198,7 @@ class DataRepository(
                             stockQty = updatedStock,
                             reorderLevel = if ("reorderLevel" in presentFields && p.reorderLevel >= 0) p.reorderLevel else existing.reorderLevel,
                             imageUri = if ("imageUri" in presentFields && !p.imageUri.isNullOrBlank()) p.imageUri else existing.imageUri,
-                            mfgOrPkgType = if ("mfgOrPkgType" in presentFields) p.mfgOrPkgType else existing.mfgOrPkgType,
+                            mfgOrPkgType = if ("mfgOrPkgType" in presentFields && !p.mfgOrPkgType.isNullOrBlank()) p.mfgOrPkgType else existing.mfgOrPkgType,
                             mfgOrPkgDate = if ("mfgOrPkgDate" in presentFields && !p.mfgOrPkgDate.isNullOrBlank()) p.mfgOrPkgDate else existing.mfgOrPkgDate,
                             expiryDate = if ("expiryDate" in presentFields && !p.expiryDate.isNullOrBlank()) p.expiryDate else existing.expiryDate,
                             unit = if ("unit" in presentFields && p.unit.isNotBlank()) p.unit else existing.unit,
@@ -4176,6 +4215,8 @@ class DataRepository(
                         category = p.category.ifBlank { "General" },
                         stockQty = finalStock,
                         purchasePrice = finalPurchase,
+                        unit = p.unit.ifBlank { "Pcs" },
+                        mfgOrPkgType = p.mfgOrPkgType?.takeIf { it.isNotBlank() } ?: "Mfg",
                         reorderLevel = p.reorderLevel.coerceAtLeast(0),
                         wholesalePrice = p.wholesalePrice.coerceAtLeast(0.0),
                         mrpPrice = p.mrpPrice.coerceAtLeast(0.0),
@@ -4282,11 +4323,11 @@ class DataRepository(
         }
     }
 
-    suspend fun importEncryptedLocalBackup(
+    suspend fun importEncryptedLocalBackupDetailed(
         inputFile: File,
         passphrase: String,
         mode: BackupImportMode = BackupImportMode.REPLACE
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         requireOwnerSession()
         try {
             val fileBytes = inputFile.readBytes()
@@ -4305,18 +4346,33 @@ class DataRepository(
 
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
-            val plainBytes = cipher.doFinal(ciphertext)
+            val plainBytes = try {
+                cipher.doFinal(ciphertext)
+            } catch (authEx: javax.crypto.AEADBadTagException) {
+                throw IllegalArgumentException("Incorrect backup password", authEx)
+            } catch (badPadding: javax.crypto.BadPaddingException) {
+                throw IllegalArgumentException("Incorrect backup password", badPadding)
+            }
 
             val tempJsonFile = File(context.cacheDir, "backup_dec_${System.currentTimeMillis()}.json")
             tempJsonFile.writeBytes(plainBytes)
-            val res = importBackup(tempJsonFile, mode)
-            tempJsonFile.delete()
-            res
+            val res = try {
+                importBackup(tempJsonFile, mode)
+            } finally {
+                tempJsonFile.delete()
+            }
+            if (res) Result.success(Unit) else Result.failure(IllegalStateException("Failed to import database from decrypted backup"))
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            Result.failure(e)
         }
     }
+
+    suspend fun importEncryptedLocalBackup(
+        inputFile: File,
+        passphrase: String,
+        mode: BackupImportMode = BackupImportMode.REPLACE
+    ): Boolean = importEncryptedLocalBackupDetailed(inputFile, passphrase, mode).isSuccess
 
     // Users & PIN authentication
     val allUsers: Flow<List<User>> = userDao.getAllUsers()
@@ -5337,8 +5393,8 @@ class DataRepository(
         expenseDao.getExpensesBetween(startTime, endTime)
 
     suspend fun insertExpense(expense: Expense): Long = withContext(Dispatchers.IO) {
-        val isRegisterCashAction = expense.category.equals("Cash In", ignoreCase = true) ||
-            expense.category.equals("Safe Drop", ignoreCase = true)
+        val isRegisterCashAction = (expense.category.equals("Cash In", ignoreCase = true) && expense.type == "CASH_IN") ||
+            (expense.category.equals("Safe Drop", ignoreCase = true) && expense.type == "EXPENSE")
         if (isRegisterCashAction) {
             requireAnyPermission(AppPermissions.EXPENSES_MANAGE, AppPermissions.REPORTS_CLOSE_REGISTER)
         } else {
@@ -5351,8 +5407,7 @@ class DataRepository(
         requirePermission(AppPermissions.EXPENSES_MANAGE)
         val existing = expenseDao.getExpenseById(expense.id)
         val isAutoSupplierPayment = existing != null &&
-            existing.category.equals("Supplier Payment", ignoreCase = true) &&
-            (existing.title.startsWith("Supplier Invoice #") || existing.title.startsWith("Supplier Payment: "))
+            existing.category.equals("Supplier Payment", ignoreCase = true)
         if (isAutoSupplierPayment) {
             throw IllegalStateException("Supplier payment expenses are auto-generated and cannot be edited directly.")
         }
@@ -5377,8 +5432,7 @@ class DataRepository(
         requirePermission(AppPermissions.EXPENSES_MANAGE)
         val expense = expenseDao.getExpenseById(id)
         val isAutoSupplierPayment = expense != null &&
-            expense.category.equals("Supplier Payment", ignoreCase = true) &&
-            (expense.title.startsWith("Supplier Invoice #") || expense.title.startsWith("Supplier Payment: "))
+            expense.category.equals("Supplier Payment", ignoreCase = true)
         if (isAutoSupplierPayment) {
             throw IllegalStateException("Supplier payment expenses are auto-generated and cannot be deleted directly. Manage them from Suppliers.")
         }

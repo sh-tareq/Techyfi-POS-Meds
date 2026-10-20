@@ -69,6 +69,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -246,9 +247,11 @@ fun ScannerScreen(
         )
     }
     
+    var hasRequestedCameraPermissionOnce by rememberSaveable { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
+        hasRequestedCameraPermissionOnce = true
         hasCameraPermission = granted
     }
 
@@ -435,7 +438,7 @@ fun ScannerScreen(
                                     )
                                     Spacer(modifier = Modifier.height(12.dp))
                                     val activity = context.findActivity()
-                                    val permanentlyDenied = activity != null &&
+                                    val permanentlyDenied = hasRequestedCameraPermissionOnce && activity != null &&
                                         !androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)
                                     Button(onClick = {
                                         if (permanentlyDenied) {
@@ -2177,9 +2180,16 @@ private fun TabletProductGridCard(
     val isLowStock = !isOutOfStock && product.stockQty <= product.reorderLevel
     val isInCart = inCartQuantity > 0.0
 
+    val context = LocalContext.current
     Card(
-        onClick = onClick,
-        enabled = if (isStockCheckMode) true else (!isOutOfStock || allowNegativeInventory),
+        onClick = {
+            if (!isStockCheckMode && isOutOfStock && !allowNegativeInventory) {
+                Toast.makeText(context, context.getString(R.string.error_insufficient_stock), Toast.LENGTH_SHORT).show()
+            } else {
+                onClick()
+            }
+        },
+        enabled = true,
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = TabletTerminalColors.CardBg,

@@ -697,7 +697,8 @@ fun CartScreen(
                 duration = SnackbarDuration.Short
             )
             if (result == SnackbarResult.ActionPerformed) {
-                cartViewModel.restoreCartItem(item, removedIndex)
+                val allowNegative = invoiceSettingsData.allowNegativeInventory || isOwner || isSupervisor
+                cartViewModel.restoreCartItem(item, removedIndex, allowNegative = allowNegative)
             }
         }
     }
@@ -2784,7 +2785,9 @@ fun CartScreen(
             onEdit = if (isOwner && completedSale != null) {
                 { showEditConfirmForCompletedSale = true }
             } else null,
-            profitSummary = completedSale?.let { if (isOwner) salesViewModel.calculateInvoiceProfit(it) else null },
+            profitSummary = remember(completedSale, isOwner) {
+                completedSale?.let { if (isOwner) salesViewModel.calculateInvoiceProfit(it) else null }
+            },
             isOwner = isOwner
         )
     }

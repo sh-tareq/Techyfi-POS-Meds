@@ -443,62 +443,151 @@ fun sanitizeNumericInput(rawValue: String): String {
 fun mapErrorToLocalizedMessageResId(msg: String?): Int? {
     if (msg.isNullOrBlank()) return null
     return when {
+        // Specific credit limit supervisor authorization MUST precede generic supervisor check
+        msg.contains("Supervisor authorization required to exceed customer credit limit", ignoreCase = true) ||
+            (msg.contains("credit limit", ignoreCase = true) && msg.contains("authorization", ignoreCase = true)) ->
+            R.string.error_credit_limit_exceeded_auth
+
         msg.contains("Supervisor authorization is required to apply discount", ignoreCase = true) ->
             R.string.error_supervisor_auth_required_discount
         msg.contains("Owner privileges required", ignoreCase = true) ->
             R.string.error_unauthorized_owner
         msg.contains("Supervisor", ignoreCase = true) ->
             R.string.error_unauthorized_supervisor
-        msg.contains("Permission", ignoreCase = true) ->
+        msg.contains("Staff management permission required", ignoreCase = true) ||
+            msg.contains("Permission", ignoreCase = true) ->
             R.string.error_unauthorized_permission
         msg.contains("Insufficient stock", ignoreCase = true) ->
             R.string.error_insufficient_stock
+
+        // Voucher errors
         msg.contains("not found", ignoreCase = true) && msg.contains("Voucher", ignoreCase = true) ->
+            R.string.error_voucher_not_found
+        msg.contains("Invalid store credit voucher", ignoreCase = true) ->
             R.string.error_voucher_not_found
         msg.contains("expired", ignoreCase = true) && msg.contains("Voucher", ignoreCase = true) ->
             R.string.error_voucher_expired
+        msg.contains("Voucher has no remaining balance", ignoreCase = true) ||
+            msg.contains("is exhausted", ignoreCase = true) ||
+            (msg.contains("voucher", ignoreCase = true) && (msg.contains("not active", ignoreCase = true) || msg.contains("cancelled", ignoreCase = true))) ->
+            R.string.error_voucher_inactive_or_exhausted
+
+        // Store credit errors
+        msg.contains("Insufficient store credit balance", ignoreCase = true) ->
+            R.string.error_insufficient_store_credit
+        msg.contains("Customer phone number is required for store credit", ignoreCase = true) ||
+            msg.contains("Customer phone number is required for Store Credit", ignoreCase = true) ->
+            R.string.error_store_credit_phone_required
+
+        // Customer deletion blocks
         msg.contains("Cannot delete sale", ignoreCase = true) && msg.contains("return", ignoreCase = true) ->
             R.string.error_cannot_delete_sale_has_returns
         msg.contains("Cannot delete or archive customer with outstanding dues", ignoreCase = true) ||
             msg.contains("Cannot permanently delete customer with outstanding dues", ignoreCase = true) ||
             msg.contains("Cannot delete due ledger with outstanding dues", ignoreCase = true) ->
             R.string.error_customer_has_dues
+        msg.contains("store credit balance", ignoreCase = true) && (msg.contains("Cannot delete", ignoreCase = true) || msg.contains("archive", ignoreCase = true)) ->
+            R.string.error_customer_has_store_credit
+        msg.contains("voucher balance", ignoreCase = true) && (msg.contains("Cannot delete", ignoreCase = true) || msg.contains("archive", ignoreCase = true)) ->
+            R.string.error_customer_has_active_vouchers
+
         msg.contains("Cannot delete supplier with active due balance", ignoreCase = true) ->
             R.string.error_supplier_has_dues
-        msg.contains("An owner account already exists", ignoreCase = true) ->
-            R.string.error_owner_exists
-        msg.contains("PIN already in use", ignoreCase = true) ||
-            msg.contains("Invalid or unavailable PIN", ignoreCase = true) ||
-            msg.contains("Current PIN is incorrect", ignoreCase = true) ->
-            R.string.error_pin_in_use
-        msg.contains("Cannot promote staff to owner", ignoreCase = true) ->
-            R.string.users_cannot_promote_to_owner
+
+        // Lockout
+        msg.contains("Authentication locked out for", ignoreCase = true) ||
+            msg.contains("Terminal locked for", ignoreCase = true) ->
+            R.string.auth_locked_out_seconds
+
+        // User management
+        msg.contains("User not found", ignoreCase = true) ->
+            R.string.error_user_not_found
+        msg.contains("Cannot delete your own account", ignoreCase = true) ->
+            R.string.error_cannot_delete_own_account
+        msg.contains("Users cannot change their own role", ignoreCase = true) ->
+            R.string.error_cannot_change_own_role
+        msg.contains("Users cannot change their own active status", ignoreCase = true) ->
+            R.string.error_cannot_change_own_status
+        msg.contains("Users cannot change their own maximum discount", ignoreCase = true) ->
+            R.string.error_cannot_change_own_discount
         msg.contains("The only owner account cannot be changed", ignoreCase = true) ||
             msg.contains("cannot be changed to another role", ignoreCase = true) ->
             R.string.error_cannot_change_role_last_owner
-        msg.contains("The last owner account cannot be deleted", ignoreCase = true) ->
+        msg.contains("The last owner account cannot be deleted", ignoreCase = true) ||
+            msg.contains("last remaining Owner account cannot be removed", ignoreCase = true) ->
             R.string.error_cannot_delete_last_owner
         msg.contains("cannot be deactivated", ignoreCase = true) ->
             R.string.error_cannot_deactivate_last_owner
-        msg.contains("Product no longer exists", ignoreCase = true) || msg.contains("no longer exists", ignoreCase = true) ->
+        msg.contains("Non-owners cannot", ignoreCase = true) ->
+            R.string.error_non_owners_privilege_escalation
+        msg.contains("Cannot promote staff to owner", ignoreCase = true) ->
+            R.string.users_cannot_promote_to_owner
+        msg.contains("Cannot grant maximum discount higher than your own", ignoreCase = true) ->
+            R.string.error_cannot_grant_higher_discount
+
+        // Supplier expense
+        msg.contains("Supplier payment expenses are auto-generated", ignoreCase = true) ->
+            R.string.error_supplier_expense_auto_locked
+
+        // Supplier overpayment
+        msg.contains("Payment exceeds the outstanding supplier balance", ignoreCase = true) ->
+            R.string.error_supplier_payment_exceeds_due
+
+        // Returns
+        msg.contains("Product was not part of this sale", ignoreCase = true) ->
+            R.string.error_product_not_in_sale
+        msg.contains("Return quantity exceeds quantity sold", ignoreCase = true) ->
+            R.string.error_return_quantity_exceeds_sold
+
+        // Cart & Barcode
+        msg.contains("Product barcode already exists", ignoreCase = true) ->
+            R.string.products_barcode_already_exists
+        msg.contains("Remove this product from the active and held carts", ignoreCase = true) ||
+            msg.contains("active and held carts", ignoreCase = true) ->
+            R.string.error_product_in_saved_carts
+
+        // Passwords
+        msg.contains("Password must be at least 4 characters", ignoreCase = true) ->
+            R.string.error_backup_password_min_length
+        msg.contains("Passwords do not match", ignoreCase = true) ->
+            R.string.error_backup_passwords_do_not_match
+
+        // Sale validation
+        msg.contains("Sale amounts must be finite", ignoreCase = true) ||
+            msg.contains("Sale amounts cannot be negative", ignoreCase = true) ||
+            msg.contains("Sale quantity must be finite", ignoreCase = true) ||
+            msg.contains("Sale price must be finite", ignoreCase = true) ->
+            R.string.error_sale_amounts_invalid
+        msg.contains("A sale must contain at least one product", ignoreCase = true) ->
+            R.string.error_sale_empty_cart
+        msg.contains("Customer name and phone are required", ignoreCase = true) ||
+            msg.contains("A wallet number is required", ignoreCase = true) ||
+            msg.contains("The card's last 4 digits are required", ignoreCase = true) ->
+            R.string.error_payment_details_required
+        msg.contains("Split payment rows do not add up", ignoreCase = true) ->
+            R.string.error_split_total_mismatch
+
+        // Existing entities - ONLY match "Product ... no longer exists" so Supplier and Due ledger don't match!
+        msg.contains("Product no longer exists", ignoreCase = true) ||
+            (msg.contains("Product", ignoreCase = true) && msg.contains("no longer exists", ignoreCase = true)) ->
             R.string.error_product_not_found
+        msg.contains("Supplier no longer exists", ignoreCase = true) || msg.contains("Supplier not found", ignoreCase = true) ->
+            R.string.error_supplier_not_found
+        msg.contains("Due ledger no longer exists", ignoreCase = true) ->
+            R.string.error_due_ledger_no_longer_exists
         msg.contains("Sale not found", ignoreCase = true) ->
             R.string.error_sale_not_found
-        msg.contains("Supplier not found", ignoreCase = true) ->
-            R.string.error_supplier_not_found
         msg.contains("Invoice not found", ignoreCase = true) ->
             R.string.error_invoice_not_found
         msg.contains("Supplier payment not found", ignoreCase = true) ->
             R.string.error_supplier_payment_not_found
-        msg.contains("Cannot void invoice payments directly", ignoreCase = true) ||
-            msg.contains("Cannot void payment created automatically with purchase invoice", ignoreCase = true) ->
+
+        msg.contains("Cannot void invoice payments directly", ignoreCase = true) ->
             R.string.supplier_cannot_void_invoice_payment
         msg.contains("constraint conflict", ignoreCase = true) ||
             msg.contains("duplicate record", ignoreCase = true) ||
             msg.contains("UNIQUE constraint failed", ignoreCase = true) ->
             R.string.error_duplicate_record
-        msg.contains("Void failed", ignoreCase = true) ->
-            R.string.supplier_void_failed
         else -> null
     }
 }

@@ -25,6 +25,10 @@ import com.example.techyfipos.utils.toEnglishDigits
 import com.example.techyfipos.utils.BillData
 import com.example.techyfipos.utils.LoyaltySettingsHelper
 import com.example.techyfipos.utils.LoyaltyProgramSettings
+import com.example.techyfipos.utils.normalizePhone
+import com.example.techyfipos.utils.toBanglaDigits
+import com.example.techyfipos.utils.formatTaka
+import com.example.techyfipos.utils.getLocalizedContext
 
 inline fun <T> runCatchingNonCancellation(block: () -> T): Result<T> {
     return try {
@@ -900,7 +904,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
             curCustomerName
         } else {
             val num = System.currentTimeMillis() % 10000
-            val ctx = context ?: repository.appContext
+            val ctx = context ?: getLocalizedContext(repository.appContext)
             ctx.getString(R.string.held_cart_fallback_title, num)
         }
 
@@ -1001,7 +1005,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (_cartItems.value.isNotEmpty()) {
-                    val ctx = repository.appContext
+                    val ctx = getLocalizedContext(repository.appContext)
                     val autoSavedTitle = ctx.getString(R.string.held_cart_auto_saved_title)
                     val autoSavedNote = ctx.getString(R.string.held_cart_auto_saved_note)
                     val currentItems = _cartItems.value
@@ -1145,7 +1149,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
                         customerName = authoritativeCustName,
                         customerPhone = authoritativeCustPhone
                     )
-                    val suffix = repository.appContext.getString(R.string.held_cart_unavailable_suffix)
+                    val suffix = getLocalizedContext(repository.appContext).getString(R.string.held_cart_unavailable_suffix)
                     repository.insertHeldCart(heldCart.copy(
                         title = "${heldCart.title}$suffix",
                         customerName = authoritativeCustName.takeIf { it.isNotBlank() },
@@ -1548,15 +1552,22 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
         persistCartSnapshot(currentList)
     }
 
-    fun restoreCartItem(item: CartItem, index: Int = -1): Boolean {
+    fun restoreCartItem(item: CartItem, index: Int = -1, allowNegative: Boolean = false): Boolean {
         if (!item.quantity.isFinite() || item.quantity <= 0.0) return false
         val currentList = _cartItems.value.toMutableList()
         val existingIndex = currentList.indexOfFirst { it.product.barcode == item.product.barcode }
         if (existingIndex != -1) {
             val existing = currentList[existingIndex]
             val mergedQty = existing.quantity + item.quantity
+            val maxStock = existing.product.stockQty
+            if (!allowNegative && mergedQty > maxStock) {
+                return false
+            }
             currentList[existingIndex] = existing.copy(quantity = mergedQty)
         } else {
+            if (!allowNegative && item.quantity > item.product.stockQty) {
+                return false
+            }
             val targetIndex = if (index in 0..currentList.size) index else currentList.size
             currentList.add(targetIndex, item)
         }
@@ -2211,17 +2222,21 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
+    val productMap: StateFlow<Map<String, Product>> = allProductsForProfit
+        .map { list -> list.associateBy { it.barcode } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
     fun calculateInvoiceProfit(saleWithItems: SaleWithItems, returnSummary: SaleReturnSummary? = null): InvoiceProfitSummary {
         val sale = saleWithItems.sale
         val discount = calculateDiscountValue(sale.subtotal, sale.discountAmount, sale.isPercentageDiscount)
-        val ptCashVal = repository.getLoyaltySettings().pointCashValue.takeIf { it > 0.0 } ?: 1.0
+        val ptCashVal = repository.loyaltySettingsFlow.value.pointCashValue.takeIf { it > 0.0 } ?: 1.0
         val loyaltyDiscount = (sale.loyaltyPointsRedeemed * ptCashVal).coerceAtLeast(0.0)
         val totalDiscounts = discount + loyaltyDiscount
 
-        val productMap = allProductsForProfit.value.associateBy { it.barcode }
+        val pMap = productMap.value
         var totalGrossCogs = 0.0
         val itemsProfitList = saleWithItems.items.map { item ->
-            val liveCost = productMap[item.productBarcode]?.purchasePrice
+            val liveCost = pMap[item.productBarcode]?.purchasePrice
             val cost = item.purchasePriceAtSale ?: liveCost ?: getFallbackCost(item.productBarcode, item.price)
             val effectivePrice = com.example.techyfipos.utils.PaymentMath.calculateItemEffectivePrice(
                 price = item.price,
@@ -2268,7 +2283,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         var returnCogsReversal = 0.0
         for (retItem in returnedItems) {
             val originalSaleItem = saleWithItems.items.find { it.productBarcode == retItem.productBarcode }
-            val liveCost = productMap[retItem.productBarcode]?.purchasePrice
+            val liveCost = pMap[retItem.productBarcode]?.purchasePrice
             val unitCost = originalSaleItem?.purchasePriceAtSale ?: liveCost ?: getFallbackCost(retItem.productBarcode, retItem.price)
             returnCogsReversal += unitCost * retItem.quantity
         }
@@ -2376,7 +2391,7 @@ class SalesViewModel(private val repository: DataRepository) : ViewModel() {
         val list = rawList.filter { it.sale.timestamp in startMillis until endMillis }
         val expensesList = repository.getExpensesBetween(startMillis, endMillis).first()
         val totalExpenses = expensesList
-            .filter { it.type == "EXPENSE" && !it.category.equals("Supplier Payment", ignoreCase = true) && !it.category.equals("Safe Drop", ignoreCase = true) }
+            .filter { it.type == "EXPENSE" && !it.category.equals("Supplier Payment", ignoreCase = true) && !it.category.equals("Safe Drop", ignoreCase = true) && !it.category.equals("Cash In", ignoreCase = true) }
             .sumOf { it.amount }
         val duePaymentsInPeriod = repository.allDuePayments.first().filter { it.timestamp in startMillis until endMillis }
         val supplierPaymentsInPeriod = expensesList.filter { it.category == "Supplier Payment" }
@@ -3107,6 +3122,18 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val selectedCustomerReturns: StateFlow<List<com.example.techyfipos.data.db.Return>> = combine(
+        _selectedCustomer,
+        repository.allSales,
+        repository.allReturns
+    ) { customer, sales, returns ->
+        if (customer == null) emptyList()
+        else {
+            val customerSaleIds = sales.filter { it.customerPhone == customer.customerPhone }.map { it.id }.toSet()
+            returns.filter { it.saleId in customerSaleIds && it.dueAdjustmentAmount > 0.0 }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     fun selectCustomer(customer: CustomerDue?) {
         _selectedCustomer.value = customer
     }
@@ -3307,7 +3334,7 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun deleteCustomerDue(phone: String, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            val result = runCatching {
+            val result = runCatchingNonCancellation {
                 repository.deleteCustomerDue(phone)
                 Unit
             }
@@ -3932,28 +3959,34 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    suspend fun importEncryptedLocalBackup(
+    suspend fun importEncryptedLocalBackupDetailed(
         inputStream: java.io.InputStream,
         passphrase: String,
         mode: com.example.techyfipos.data.BackupImportMode = com.example.techyfipos.data.BackupImportMode.REPLACE
-    ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    ): Result<Unit> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val tempFile = java.io.File.createTempFile("temp_import_", ".posenc")
         try {
             tempFile.outputStream().use { output ->
                 inputStream.copyTo(output)
             }
-            val ok = repository.importEncryptedLocalBackup(tempFile, passphrase, mode)
-            if (ok) {
+            val res = repository.importEncryptedLocalBackupDetailed(tempFile, passphrase, mode)
+            if (res.isSuccess) {
                 com.example.techyfipos.utils.AutoBackupScheduler.scheduleAllAutoBackups(repository.appContext, forceUpdate = true)
             }
-            ok
+            res
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            Result.failure(e)
         } finally {
             tempFile.delete()
         }
     }
+
+    suspend fun importEncryptedLocalBackup(
+        inputStream: java.io.InputStream,
+        passphrase: String,
+        mode: com.example.techyfipos.data.BackupImportMode = com.example.techyfipos.data.BackupImportMode.REPLACE
+    ): Boolean = importEncryptedLocalBackupDetailed(inputStream, passphrase, mode).isSuccess
 }
 
 /** Role-based access: "OWNER" (master), "MANAGER" (store operations), "CASHIER" (frontline sales) */
@@ -4728,7 +4761,7 @@ class SupplierViewModel(private val repository: DataRepository) : ViewModel() {
         onResult: (Result<Long>) -> Unit = {}
     ) {
         viewModelScope.launch {
-            val result = runCatching {
+            val result = runCatchingNonCancellation {
                 kotlinx.coroutines.withContext(Dispatchers.IO) {
                     repository.upsertSupplier(
                         Supplier(
@@ -4748,7 +4781,7 @@ class SupplierViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun updateSupplier(supplier: Supplier, onResult: (Result<Long>) -> Unit = {}) {
         viewModelScope.launch {
-            val result = runCatching {
+            val result = runCatchingNonCancellation {
                 kotlinx.coroutines.withContext(Dispatchers.IO) {
                     repository.upsertSupplier(supplier)
                 }
@@ -4759,7 +4792,7 @@ class SupplierViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun deleteSupplier(supplier: Supplier, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
-            val result = runCatching {
+            val result = runCatchingNonCancellation {
                 repository.deleteSupplier(supplier)
             }
             onResult(result)
@@ -4778,7 +4811,7 @@ class SupplierViewModel(private val repository: DataRepository) : ViewModel() {
         onResult: (Result<Long>) -> Unit = {}
     ) {
         viewModelScope.launch {
-            val result = runCatching {
+            val result = runCatchingNonCancellation {
                 kotlinx.coroutines.withContext(Dispatchers.IO) {
                     repository.recordPurchaseInvoice(
                         supplierId = supplierId,
@@ -4804,7 +4837,7 @@ class SupplierViewModel(private val repository: DataRepository) : ViewModel() {
         onResult: (Result<Long>) -> Unit = {}
     ) {
         viewModelScope.launch {
-            val result = runCatching {
+            val result = runCatchingNonCancellation {
                 kotlinx.coroutines.withContext(Dispatchers.IO) {
                     repository.recordSupplierPayment(supplierId, amountPaid, paymentMethod, referenceNote)
                 }
@@ -4824,7 +4857,7 @@ class SupplierViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun voidSupplierPayment(paymentId: Long, reason: String = "Voided by Owner", onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
-            val result = runCatching {
+            val result = runCatchingNonCancellation {
                 repository.voidSupplierPayment(paymentId, reason)
             }
             onResult(result)
@@ -4833,7 +4866,7 @@ class SupplierViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun voidPurchaseInvoice(invoiceId: Long, reason: String = "Voided by Owner", onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
-            val result = runCatching {
+            val result = runCatchingNonCancellation {
                 repository.voidPurchaseInvoice(invoiceId, reason)
             }
             onResult(result)
@@ -4874,7 +4907,7 @@ class RegisterClosingViewModel(private val repository: DataRepository) : ViewMod
         val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
         val variance = actualCountedCash - expectedCash
         viewModelScope.launch {
-            val result = runCatching {
+            val result = runCatchingNonCancellation {
                 kotlinx.coroutines.withContext(Dispatchers.IO) {
                     repository.insertRegisterClosing(RegisterClosing(
                     date = dateStr,
@@ -5470,7 +5503,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
         val nameGroups = mutableMapOf<String, MutableList<Customer>>()
 
         for (c in active) {
-            val cleanDigits = c.phone.filter { it.isDigit() }.takeLast(10)
+            val cleanDigits = normalizePhone(c.phone).filter { it.isDigit() }.takeLast(10)
             if (cleanDigits.length >= 10) {
                 phoneGroups.getOrPut(cleanDigits) { mutableListOf() }.add(c)
             }
@@ -5488,11 +5521,12 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
             }
         }
 
+        val isBn = com.example.techyfipos.utils.isAppBangla()
         for ((phoneDigits, list) in phoneGroups) {
             if (list.size > 1) {
                 for (i in 0 until list.size) {
                     for (j in i + 1 until list.size) {
-                        addPair(list[i], list[j], "Matching phone digits ($phoneDigits)")
+                        addPair(list[i], list[j], if (isBn) "একই ফোন নম্বর (${toBanglaDigits(phoneDigits)})" else "Matching phone digits ($phoneDigits)")
                     }
                 }
             }
@@ -5502,7 +5536,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
             if (list.size > 1) {
                 for (i in 0 until list.size) {
                     for (j in i + 1 until list.size) {
-                        addPair(list[i], list[j], "Identical name ('${list[i].name.trim()}')")
+                        addPair(list[i], list[j], if (isBn) "একই নাম ('${list[i].name.trim()}')" else "Identical name ('${list[i].name.trim()}')")
                     }
                 }
             }
@@ -5526,6 +5560,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                     val events = mutableListOf<CustomerTimelineEvent>()
 
                     val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                    val isBn = com.example.techyfipos.utils.isAppBangla()
                     // Account created
                     events.add(
                         CustomerTimelineEvent(
@@ -5540,12 +5575,13 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                     // Sales and Dues
                     sales.forEach { saleWithItems ->
                         val s = saleWithItems.sale
+                        val itemsCountStr = if (isBn) "${toBanglaDigits(saleWithItems.items.size.toString())}টি পণ্য" else "${saleWithItems.items.size} items"
                         events.add(
                             CustomerTimelineEvent(
                                 id = "sale_${s.id}",
                                 type = CustomerTimelineEventType.SALE,
                                 title = locCtx.getString(R.string.timeline_invoice_num_fmt, s.id),
-                                description = "${s.paymentMethod} • ${saleWithItems.items.size} items",
+                                description = "${s.paymentMethod} • $itemsCountStr",
                                 amount = s.grandTotal,
                                 timestamp = s.timestamp,
                                 referenceId = s.id.toString()
@@ -5573,7 +5609,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                                 id = "payment_${p.id}",
                                 type = CustomerTimelineEventType.PAYMENT_RECEIVED,
                                 title = locCtx.getString(R.string.timeline_repayment_fmt, p.paymentMethod),
-                                description = p.referenceNote?.takeIf { it.isNotBlank() } ?: "Due payment received",
+                                description = p.referenceNote?.takeIf { it.isNotBlank() } ?: locCtx.getString(R.string.timeline_due_payment_received),
                                 amount = p.amountPaid,
                                 timestamp = p.timestamp,
                                 referenceId = p.id.toString()
@@ -5601,7 +5637,7 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                             CustomerTimelineEvent(
                                 id = "note_${customer.phone}_$idx",
                                 type = CustomerTimelineEventType.NOTE,
-                                title = "CRM Note",
+                                title = locCtx.getString(R.string.timeline_crm_note),
                                 description = noteBlock.trim(),
                                 timestamp = customer.updatedAt - (idx * 60000L)
                             )
@@ -5612,11 +5648,17 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
 
                     // Credit ledger events
                     storeCreditLedger.forEach { c ->
+                        val creditAmt = formatTaka(kotlin.math.abs(c.deltaAmount), isBangla = isBn)
+                        val creditTitle = if (c.deltaAmount >= 0) {
+                            if (isBn) "স্টোর ক্রেডিট: +$creditAmt" else "Store Credit: +$creditAmt"
+                        } else {
+                            if (isBn) "ক্রেডিট ব্যবহৃত: -$creditAmt" else "Credit Redeemed: -$creditAmt"
+                        }
                         events.add(
                             CustomerTimelineEvent(
                                 id = "credit_${c.id}",
                                 type = CustomerTimelineEventType.NOTE,
-                                title = if (c.deltaAmount >= 0) "Store Credit: +৳${c.deltaAmount}" else "Credit Redeemed: -৳${-c.deltaAmount}",
+                                title = creditTitle,
                                 description = c.note ?: c.type,
                                 amount = c.deltaAmount,
                                 timestamp = c.timestamp,

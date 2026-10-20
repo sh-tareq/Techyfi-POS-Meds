@@ -49,6 +49,7 @@ import com.example.techyfipos.utils.executeReceiptCutTest
 import com.example.techyfipos.utils.showDirectPrintToast
 import com.example.techyfipos.utils.toEnglishDigits
 import com.example.techyfipos.utils.DateFormatters
+import com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage
 import com.example.techyfipos.ui.components.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -6121,7 +6122,7 @@ fun SettingsScreen(
     LaunchedEffect(settingsPage, canBackup) {
         if (settingsPage == SettingsPage.BACKUP && !canBackup) {
             settingsPage = SettingsPage.HOME
-            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.error_unauthorized_permission), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -6968,7 +6969,7 @@ fun SettingsScreen(
                             val dateStr = DateFormatters.formatISO()
                             exportSalesLauncher.launch("sales-report-$dateStr.xlsx")
                         } else {
-                            Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.error_unauthorized_permission), Toast.LENGTH_SHORT).show()
                         }
                     },
                     onExportDues = {
@@ -7949,7 +7950,7 @@ fun SettingsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Enter a password to encrypt this backup with AES-256-GCM. You will need this exact password to restore this file.",
+                        stringResource(R.string.settings_backup_password_instruction),
                         fontSize = 12.5.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -7986,11 +7987,11 @@ fun SettingsScreen(
                 Button(
                     onClick = {
                         if (password.length < 4) {
-                            errorMessage = "Password must be at least 4 characters"
+                            errorMessage = context.getString(R.string.error_backup_password_min_length)
                             return@Button
                         }
                         if (password != confirmPassword) {
-                            errorMessage = "Passwords do not match"
+                            errorMessage = context.getString(R.string.error_backup_passwords_do_not_match)
                             return@Button
                         }
                         isExporting = true
@@ -8050,12 +8051,16 @@ fun SettingsScreen(
         val startImportAction: (BackupImportMode) -> Unit = { mode ->
             isImporting = true
             scope.launch(Dispatchers.IO) {
+                var detailedError: Throwable? = null
                 val ok = try {
                     context.contentResolver.openInputStream(targetUri)?.use { input ->
-                        settingsViewModel.importEncryptedLocalBackup(input, password, mode)
+                        val res = settingsViewModel.importEncryptedLocalBackupDetailed(input, password, mode)
+                        detailedError = res.exceptionOrNull()
+                        res.isSuccess
                     } ?: false
                 } catch (e: Exception) {
                     e.printStackTrace()
+                    detailedError = e
                     false
                 }
                 withContext(Dispatchers.Main) {
@@ -8066,7 +8071,8 @@ fun SettingsScreen(
                         Toast.makeText(context, context.getString(R.string.settings_encrypted_backup_restored_toast), Toast.LENGTH_LONG).show()
                         restartApp(context)
                     } else {
-                        errorMessage = context.getString(R.string.settings_encrypted_backup_decrypt_failed)
+                        errorMessage = detailedError?.let { getLocalizedRepositoryErrorMessage(context, it) }
+                            ?: context.getString(R.string.settings_encrypted_backup_decrypt_failed)
                     }
                 }
             }

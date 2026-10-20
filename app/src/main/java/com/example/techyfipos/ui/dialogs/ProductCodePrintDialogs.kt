@@ -1828,6 +1828,7 @@ fun BatchProductCodePrintDialog(
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.primary
                     )
+                    val isBn = isAppBangla()
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         SegmentedButton(
                             selected = scopeMode == BatchPrintScope.ALL,
@@ -1847,8 +1848,9 @@ fun BatchProductCodePrintDialog(
                                 maxLines = 1,
                                 textAlign = TextAlign.Center
                             )
+                            val allCount = products.count { it.barcode.isNotBlank() }
                             Text(
-                                "(${products.count { it.barcode.isNotBlank() }})",
+                                "(${if (isBn) toBanglaDigits(allCount.toString()) else allCount})",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
@@ -1875,8 +1877,9 @@ fun BatchProductCodePrintDialog(
                                 maxLines = 1,
                                 textAlign = TextAlign.Center
                             )
+                            val inStockCount = products.count { it.barcode.isNotBlank() && it.stockQty > 0 }
                             Text(
-                                "(${products.count { it.barcode.isNotBlank() && it.stockQty > 0 }})",
+                                "(${if (isBn) toBanglaDigits(inStockCount.toString()) else inStockCount})",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
@@ -1908,8 +1911,9 @@ fun BatchProductCodePrintDialog(
                                 maxLines = 1,
                                 textAlign = TextAlign.Center
                             )
+                            val customCount = customSelectedBarcodes.size
                             Text(
-                                "(${customSelectedBarcodes.size})",
+                                "(${if (isBn) toBanglaDigits(customCount.toString()) else customCount})",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
