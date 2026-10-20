@@ -2,6 +2,7 @@ package com.example.techyfipos
 
 import com.example.techyfipos.data.AppRoles
 import com.example.techyfipos.data.DataRepository
+import com.example.techyfipos.data.InvoiceSettingsData
 import com.example.techyfipos.data.db.Product
 import com.example.techyfipos.data.db.PurchaseInvoice
 import com.example.techyfipos.data.db.SupplierPayment
@@ -412,5 +413,34 @@ class P1AuditFixesTest {
         updatedReasons.clear()
         repo.normalizeLegacyStockAdjustmentReasons(force = false)
         assertTrue(updatedReasons.isEmpty())
+    }
+
+    @Test
+    fun testR23_20_idleLockDurationClamping() {
+        // Valid options: 0 (Never), 5, 15, 30, 60
+        listOf(0, 5, 15, 30, 60).forEach { validMinutes ->
+            val json = "{\"idleLockDurationMinutes\":$validMinutes}"
+            val parsed = InvoiceSettingsData.fromJson(json)
+            assertEquals(validMinutes, parsed.idleLockDurationMinutes)
+        }
+
+        // Invalid options should clamp to nearest option
+        val testCases = mapOf(
+            1 to 0,
+            4 to 5,
+            13 to 15,
+            25 to 30,
+            50 to 60,
+            120 to 60,
+            -10 to 0
+        )
+
+        testCases.forEach { (raw, expectedClamped) ->
+            val json = "{\"idleLockDurationMinutes\":$raw}"
+            val parsed = InvoiceSettingsData.fromJson(json)
+            val validOptions = listOf(0, 5, 15, 30, 60)
+            assertTrue("Clamped value must be one of the valid options", parsed.idleLockDurationMinutes in validOptions)
+            assertEquals("Raw $raw should clamp to $expectedClamped", expectedClamped, parsed.idleLockDurationMinutes)
+        }
     }
 }

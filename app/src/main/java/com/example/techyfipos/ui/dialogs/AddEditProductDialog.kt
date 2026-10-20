@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import com.example.techyfipos.theme.extendedColors
+import com.example.techyfipos.ui.components.trackUserActivity
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -325,6 +326,7 @@ fun AddEditProductDialog(
                 .fillMaxWidth(0.96f)
                 .fillMaxHeight(0.92f)
                 .padding(vertical = 12.dp)
+                .trackUserActivity()
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Surface(

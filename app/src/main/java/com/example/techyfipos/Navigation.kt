@@ -1694,6 +1694,7 @@ fun MoreOperationsHubSheet(
                     modifier = Modifier
                         .widthIn(max = 760.dp)
                         .fillMaxWidth(0.94f)
+                        .trackUserActivity()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -1724,6 +1725,7 @@ fun MoreOperationsHubSheet(
         }
     } else {
         ModalBottomSheet(
+            modifier = Modifier.trackUserActivity(),
             onDismissRequest = onDismiss,
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = MaterialTheme.colorScheme.surface,

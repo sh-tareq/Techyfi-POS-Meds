@@ -14,10 +14,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
-import com.example.techyfipos.ui.viewmodel.AuthViewModel
 
 object DateFormatters {
     fun getAppLocale(): Locale =
@@ -530,18 +526,4 @@ fun getLocalizedRepositoryErrorMessage(context: Context, rawMessage: String?): S
     if (rawMessage.isNullOrBlank()) return context.getString(R.string.error_generic)
     return getLocalizedRepositoryErrorMessage(context, Exception(rawMessage))
 }
-
-/**
- * Shared modifier to record user interaction in dialogs and bottom sheets so that long form entries
- * in separate window hierarchies do not get prematurely locked by the idle-lock timer.
- */
-fun Modifier.trackUserActivity(): Modifier =
-    this.pointerInput(Unit) {
-        awaitPointerEventScope {
-            while (true) {
-                awaitPointerEvent(PointerEventPass.Initial)
-                AuthViewModel.recordUserActivity()
-            }
-        }
-    }
 

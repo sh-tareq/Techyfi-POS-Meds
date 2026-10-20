@@ -94,6 +94,7 @@ fun SupervisorAuthDialog(
                 .widthIn(max = 440.dp)
                 .wrapContentHeight()
                 .padding(16.dp)
+                .trackUserActivity()
         ) {
             Column(
                 modifier = Modifier

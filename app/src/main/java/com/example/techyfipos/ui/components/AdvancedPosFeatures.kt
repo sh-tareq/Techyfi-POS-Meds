@@ -260,6 +260,7 @@ fun HeldCartsBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .trackUserActivity()
                 .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             Row(
@@ -775,6 +776,7 @@ fun InventoryAlertsCenterBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .trackUserActivity()
                 .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             Row(
@@ -1234,6 +1236,7 @@ fun AddExpenseDialog(
     val sources = listOf("Cash", "bKash", "Nagad", "Bank")
 
     AlertDialog(
+        modifier = Modifier.trackUserActivity(),
         onDismissRequest = onDismiss,
         properties = DialogProperties(dismissOnClickOutside = false),
         title = {
@@ -1761,6 +1764,7 @@ fun InwardStockDialog(
     }
 
     AlertDialog(
+        modifier = Modifier.trackUserActivity(),
         onDismissRequest = onDismiss,
         properties = DialogProperties(dismissOnClickOutside = false),
         title = {
@@ -2059,6 +2063,7 @@ fun ZReportDialog(
     val variance = actualCash - expectedCash
 
     AlertDialog(
+        modifier = Modifier.trackUserActivity(),
         onDismissRequest = onDismiss,
         title = {
             Text(stringResource(R.string.zreport_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)

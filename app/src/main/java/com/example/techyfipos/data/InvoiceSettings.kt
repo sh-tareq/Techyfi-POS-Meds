@@ -392,7 +392,11 @@ data class InvoiceSettingsData(
                     showDueReceiptCustomNotes = json.optBoolean("showDueReceiptCustomNotes", false),
                     dueReceiptCustomTitle = json.optString("dueReceiptCustomTitle", fallback.dueReceiptCustomTitle),
                     dueReceiptCustomNotes = json.optString("dueReceiptCustomNotes", fallback.dueReceiptCustomNotes),
-                    idleLockDurationMinutes = json.optInt("idleLockDurationMinutes", fallback.idleLockDurationMinutes),
+                    idleLockDurationMinutes = run {
+                        val raw = json.optInt("idleLockDurationMinutes", fallback.idleLockDurationMinutes)
+                        val options = listOf(0, 5, 15, 30, 60)
+                        if (raw in options) raw else (options.minByOrNull { kotlin.math.abs(it - raw) } ?: 15)
+                    },
                     customInfoBlocks = if (blocksList.isNotEmpty()) blocksList else InvoiceSettingsData().customInfoBlocks
                 )
             } catch (e: Exception) {

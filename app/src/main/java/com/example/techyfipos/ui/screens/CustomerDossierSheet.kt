@@ -22,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.techyfipos.ui.components.trackUserActivity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -143,6 +144,7 @@ fun CustomerDossierSheet(
         Column(
             modifier = modifier
                 .fillMaxWidth()
+                .trackUserActivity()
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 6.dp)
         ) {
