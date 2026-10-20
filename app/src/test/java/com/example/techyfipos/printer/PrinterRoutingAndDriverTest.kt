@@ -1290,26 +1290,32 @@ class PrinterRoutingAndDriverTest {
         assertEquals(RoutingDecision.SHOW_ERROR, autoPartialFail)
     }
 
-    // 20. Tests for R22-09 USB Permission Timeout
+    // 20. Tests for R22-09 USB Permission Handling
     @Test
     fun `testR22_09_usbPermissionTimeout handles timeout without deadlock`() = kotlinx.coroutines.runBlocking {
-        // verify withTimeoutOrNull returns null when timed out
-        val timeoutResult = kotlinx.coroutines.withTimeoutOrNull(50L) {
-            kotlinx.coroutines.delay(200L)
-            true
-        }
-        assertNull(timeoutResult)
+        val mockContext = org.mockito.Mockito.mock(android.content.Context::class.java)
+        val mockUsbManager = org.mockito.Mockito.mock(android.hardware.usb.UsbManager::class.java)
+        val mockDevice = org.mockito.Mockito.mock(android.hardware.usb.UsbDevice::class.java)
+
+        // When permission is already granted, returns true immediately without suspension or timeout
+        org.mockito.Mockito.`when`(mockUsbManager.hasPermission(mockDevice)).thenReturn(true)
+        val alreadyGranted = com.example.techyfipos.printer.requestUsbPermission(mockContext, mockUsbManager, mockDevice)
+        assertTrue(alreadyGranted)
     }
 
     // 21. Tests for R22-15 Wrapped Height Accounting
     @Test
     fun `testR22_15_wrappedHeightAccounting accounts for multiple wrapped lines`() {
-        val line1 = "Techyfi Store Main Branch"
-        val line2 = "Super Shop & Departmental Store"
-        val wrappedLines = listOf(line1, line2)
-        val totalLineHeight = wrappedLines.size * 34f + 11f
-        assertEquals(79f, totalLineHeight, 0.01f)
-        assertTrue("Two lines must take more height than single line", totalLineHeight > 45f)
+        val paint = org.mockito.Mockito.mock(android.graphics.Paint::class.java)
+        org.mockito.Mockito.`when`(paint.measureText(org.mockito.Mockito.anyString())).thenAnswer { invocation ->
+            (invocation.arguments[0] as String).length * 10f
+        }
+        val text = "Techyfi Store Main Branch Super Shop Departmental Store"
+        val wrappedLines = com.example.techyfipos.utils.wrapItemNameByPixelWidth(text, maxWidthPx = 150f, paint = paint)
+        assertTrue("Text must wrap into multiple lines", wrappedLines.size > 1)
+        val singleLineHeight = 34f + 11f
+        val multiLineHeight = wrappedLines.size * 34f + 11f
+        assertTrue("Multiple wrapped lines must occupy proportionally more vertical height", multiLineHeight > singleLineHeight)
     }
 
     // 22. Tests for LBL-03 LabelPrintOutcome properties

@@ -24,6 +24,19 @@ class StockAlertWorker(
         const val CHANNEL_ID = "techyfi_stock_alerts"
         const val CHANNEL_NAME = "Inventory & Expiry Alerts"
         const val NOTIFICATION_ID = 20260902
+
+        fun filterAlertItems(
+            products: List<com.example.techyfipos.data.db.Product>,
+            nowMillis: Long,
+            thirtyDaysMillis: Long = 30L * 24 * 60 * 60 * 1000L
+        ): Pair<List<com.example.techyfipos.data.db.Product>, List<com.example.techyfipos.data.db.Product>> {
+            val lowStockItems = products.filter { it.stockQty <= it.reorderLevel }
+            val expiringItems = products.filter { p ->
+                val exp = parseExpiryDateToMillis(p.expiryDate)
+                exp != null && exp <= (nowMillis + thirtyDaysMillis)
+            }
+            return Pair(lowStockItems, expiringItems)
+        }
     }
 
     override suspend fun doWork(): Result {
@@ -43,13 +56,7 @@ class StockAlertWorker(
             val products = db.productDao().getAllProductsList()
 
             val now = System.currentTimeMillis()
-            val thirtyDaysMillis = 30L * 24 * 60 * 60 * 1000
-
-            val lowStockItems = products.filter { it.stockQty <= it.reorderLevel }
-            val expiringItems = products.filter { p ->
-                val exp = parseExpiryDateToMillis(p.expiryDate)
-                exp != null && exp <= (now + thirtyDaysMillis)
-            }
+            val (lowStockItems, expiringItems) = filterAlertItems(products, now)
 
             if (lowStockItems.isNotEmpty() || expiringItems.isNotEmpty()) {
                 val alertSignature = "${lowStockItems.map { it.barcode }.sorted()}_${expiringItems.map { it.barcode }.sorted()}"

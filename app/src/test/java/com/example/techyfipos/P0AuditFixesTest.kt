@@ -126,15 +126,19 @@ class P0AuditFixesTest {
 
     @Test
     fun testR21_01_idleActivityTracking() {
-        val initialTime = 100_000L
-        AuthViewModel.setLastUserActivityElapsedForTesting(initialTime)
-        assertEquals(initialTime, AuthViewModel.getLastUserActivityElapsed())
+        val originalClock = AuthViewModel.clockProvider
+        try {
+            var simulatedTime = 100_000L
+            AuthViewModel.clockProvider = { simulatedTime }
+            AuthViewModel.recordUserActivity()
+            assertEquals(100_000L, AuthViewModel.getLastUserActivityElapsed())
 
-        val before = android.os.SystemClock.elapsedRealtime()
-        AuthViewModel.recordUserActivity()
-        val after = android.os.SystemClock.elapsedRealtime()
-        val recorded = AuthViewModel.getLastUserActivityElapsed()
-        assertTrue("Recorded time $recorded should be within $before..$after", recorded in before..after)
+            simulatedTime = 250_000L
+            AuthViewModel.recordUserActivity()
+            assertEquals(250_000L, AuthViewModel.getLastUserActivityElapsed())
+        } finally {
+            AuthViewModel.clockProvider = originalClock
+        }
     }
 
     @Test
@@ -149,11 +153,13 @@ class P0AuditFixesTest {
         val bnWhole = formatUnitsSold(wholeUnits, isBangla = true)
         assertEquals("১৫", bnWhole)
 
-        val enFormatString = "Invoices: %1\$d | Units: %2\$s"
+        val enXml = java.io.File("src/main/res/values/strings.xml").readText()
+        val enFormatString = """<string name="z_report_invoices_units_fmt">(.*?)</string>""".toRegex().find(enXml)!!.groupValues[1]
         val formattedEn = String.format(java.util.Locale.US, enFormatString, 5, enWhole)
         assertEquals("Invoices: 5 | Units: 15", formattedEn)
 
-        val bnFormatString = "চালান: %1\$d | পণ্য বিক্রয়: %2\$s"
+        val bnXml = java.io.File("src/main/res/values-bn/strings.xml").readText()
+        val bnFormatString = """<string name="z_report_invoices_units_fmt">(.*?)</string>""".toRegex().find(bnXml)!!.groupValues[1]
         val formattedBn = String.format(java.util.Locale.US, bnFormatString, 5, bnWhole)
         assertEquals("চালান: 5 | পণ্য বিক্রয়: ১৫", formattedBn)
     }
@@ -240,6 +246,26 @@ class P0AuditFixesTest {
         // Changing price mode modifies hash
         val modifiedModeHash = CartViewModel.computeCartHash(initialCart, PriceMode.MRP)
         assertNotEquals(initialHash, modifiedModeHash)
+
+        // Test real DataRepository discount override validation
+        val cashier = User(id = 1L, name = "Cashier", pinHash = hashSha256("1111"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, isActive = true)
+        val owner = User(id = 2L, name = "Owner", pinHash = hashSha256("9999"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val (repo, _) = createRepositoryWithUsers(listOf(cashier, owner))
+        repo.setSessionUser(cashier)
+
+        // Set approved discount override on repository for initialCart hash
+        repo.grantDiscountOverride(maxDiscountAmount = 50.0, cartHash = initialHash)
+
+        // Override is valid for initial hash
+        assertTrue(repo.hasValidDiscountOverride(50.0, initialHash))
+
+        // Override is INVALID when cart items, quantity, or price mode change (hash mismatch)
+        assertFalse(repo.hasValidDiscountOverride(50.0, modifiedHash))
+        assertFalse(repo.hasValidDiscountOverride(50.0, modifiedQtyHash))
+        assertFalse(repo.hasValidDiscountOverride(50.0, modifiedModeHash))
+
+        // Override is INVALID when requested discount exceeds approved discount
+        assertFalse(repo.hasValidDiscountOverride(60.0, initialHash))
     }
 
     @Test

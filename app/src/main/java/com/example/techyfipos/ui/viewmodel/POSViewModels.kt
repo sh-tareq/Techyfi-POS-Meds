@@ -4007,11 +4007,13 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     companion object {
+        var clockProvider: () -> Long = { android.os.SystemClock.elapsedRealtime() }
+
         @Volatile
-        private var lastUserActivityElapsed: Long = android.os.SystemClock.elapsedRealtime()
+        private var lastUserActivityElapsed: Long = clockProvider()
 
         fun recordUserActivity() {
-            lastUserActivityElapsed = android.os.SystemClock.elapsedRealtime()
+            lastUserActivityElapsed = clockProvider()
         }
 
         fun getLastUserActivityElapsed(): Long = lastUserActivityElapsed
