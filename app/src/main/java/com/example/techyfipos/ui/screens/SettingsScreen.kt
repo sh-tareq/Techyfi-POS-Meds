@@ -86,6 +86,7 @@ import com.example.techyfipos.utils.generateBillJpeg
 import com.example.techyfipos.utils.generateDueRepaymentJpeg
 import com.example.techyfipos.utils.printBillJpeg
 import com.example.techyfipos.utils.printReceiptImage
+import com.example.techyfipos.utils.ReceiptPrintOutcome
 import com.example.techyfipos.utils.printLabelImages
 import com.example.techyfipos.utils.ProductCodeLabelSize
 import com.example.techyfipos.utils.findActivity
@@ -2038,7 +2039,7 @@ private fun OptimizedSettingsHome(
                 onClick = {
                     scope.launch(Dispatchers.IO) {
                         isTestingReceipt = true
-                        val ok = try {
+                        val outcome = try {
                             val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
                             printReceiptImage(
                                 context = context,
@@ -2051,14 +2052,20 @@ private fun OptimizedSettingsHome(
                         } catch (e: Exception) {
                             if (e is kotlinx.coroutines.CancellationException) throw e
                             android.util.Log.e("SettingsScreen", "Test receipt failed", e)
-                            false
+                            ReceiptPrintOutcome.FAILED
                         }
                         withContext(Dispatchers.Main) {
                             isTestingReceipt = false
-                            if (ok) {
-                                Toast.makeText(context, context.getString(R.string.settings_test_receipt_success), Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, context.getString(R.string.settings_test_receipt_failed), Toast.LENGTH_SHORT).show()
+                            when (outcome) {
+                                ReceiptPrintOutcome.DIRECT_SENT -> {
+                                    Toast.makeText(context, context.getString(R.string.settings_test_receipt_success), Toast.LENGTH_SHORT).show()
+                                }
+                                ReceiptPrintOutcome.DIALOG_OPENED -> {
+                                    Toast.makeText(context, context.getString(R.string.print_system_dialog_opened), Toast.LENGTH_SHORT).show()
+                                }
+                                ReceiptPrintOutcome.FAILED -> {
+                                    Toast.makeText(context, context.getString(R.string.settings_test_receipt_failed), Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     }

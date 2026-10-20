@@ -932,6 +932,19 @@ suspend fun printReceiptDirectBluetooth(
     )
 }
 
+enum class ReceiptPrintOutcome {
+    DIRECT_SENT,
+    DIALOG_OPENED,
+    FAILED;
+
+    val isSuccess: Boolean get() = this != FAILED
+
+    companion object {
+        val SENT_DIRECT get() = DIRECT_SENT
+        val OPENED_SYSTEM_DIALOG get() = DIALOG_OPENED
+    }
+}
+
 /**
  * Unified entry point for printing receipt images.
  * Respects receiptPrintMode (BLUETOOTH, SYSTEM, AUTO) and provides graceful fallback.
@@ -947,7 +960,7 @@ suspend fun printReceiptImage(
     cachedBitmap: Bitmap? = null,
     billForFallback: BillData? = null,
     receiptLanguage: String = "EN"
-): Boolean {
+): ReceiptPrintOutcome {
     val effectiveTiming = timing ?: PrintTiming()
     val mode = settings.receiptPrintMode.trim().uppercase()
     val target = settings.resolvedReceiptPrinterTarget()
@@ -976,11 +989,12 @@ suspend fun printReceiptImage(
         )
         val fileToPrint = resolveFallbackFile()
         if (fileToPrint != null) {
-            withContext(Dispatchers.Main) {
+            val opened = withContext(Dispatchers.Main) {
                 printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
             }
+            return if (opened) ReceiptPrintOutcome.DIALOG_OPENED else ReceiptPrintOutcome.FAILED
         }
-        return false
+        return ReceiptPrintOutcome.FAILED
     }
 
     Log.d(
@@ -994,19 +1008,21 @@ suspend fun printReceiptImage(
         return when (decision) {
             RoutingDecision.SHOW_ERROR -> {
                 showDirectPrintToast(context, DirectPrintResult.NoAddress)
-                false
+                ReceiptPrintOutcome.FAILED
             }
             RoutingDecision.SYSTEM_DIALOG,
             RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
                 val fileToPrint = resolveFallbackFile()
                 if (fileToPrint != null) {
-                    withContext(Dispatchers.Main) {
+                    val opened = withContext(Dispatchers.Main) {
                         printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
                     }
+                    if (opened) ReceiptPrintOutcome.DIALOG_OPENED else ReceiptPrintOutcome.FAILED
+                } else {
+                    ReceiptPrintOutcome.FAILED
                 }
-                false
             }
-            RoutingDecision.DIRECT_OK -> true
+            RoutingDecision.DIRECT_OK -> ReceiptPrintOutcome.DIRECT_SENT
         }
     }
 
@@ -1056,29 +1072,33 @@ suspend fun printReceiptImage(
     val decision = decidePrintRouting(mode, target.identifier, directResult, partialSuccessCount = partialSuccess)
     Log.d("BillActions", "printReceiptImage: directResult=$directResult, decision=$decision")
     return when (decision) {
-        RoutingDecision.DIRECT_OK -> true
+        RoutingDecision.DIRECT_OK -> ReceiptPrintOutcome.DIRECT_SENT
         RoutingDecision.SHOW_ERROR -> {
             showDirectPrintToast(context, directResult)
-            false
+            ReceiptPrintOutcome.FAILED
         }
         RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
             showDirectPrintToast(context, directResult)
             val fileToPrint = resolveFallbackFile()
             if (fileToPrint != null) {
-                withContext(Dispatchers.Main) {
+                val opened = withContext(Dispatchers.Main) {
                     printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
                 }
+                if (opened) ReceiptPrintOutcome.DIALOG_OPENED else ReceiptPrintOutcome.FAILED
+            } else {
+                ReceiptPrintOutcome.FAILED
             }
-            false
         }
         RoutingDecision.SYSTEM_DIALOG -> {
             val fileToPrint = resolveFallbackFile()
             if (fileToPrint != null) {
-                withContext(Dispatchers.Main) {
+                val opened = withContext(Dispatchers.Main) {
                     printBillJpeg(activity ?: context, fileToPrint, jobName, settings.paperRollWidthMm)
                 }
+                if (opened) ReceiptPrintOutcome.DIALOG_OPENED else ReceiptPrintOutcome.FAILED
+            } else {
+                ReceiptPrintOutcome.FAILED
             }
-            false
         }
     }
 }
@@ -1159,6 +1179,11 @@ enum class LabelPrintOutcome {
     FAILED;
 
     val isSuccess: Boolean get() = this != FAILED
+
+    companion object {
+        val DIRECT_SENT get() = SENT_DIRECT
+        val DIALOG_OPENED get() = OPENED_SYSTEM_DIALOG
+    }
 }
 
 /**
@@ -1310,7 +1335,7 @@ suspend fun printReceiptWithBluetoothFallback(
     receiptLanguage: String = "EN",
     kickDrawer: Boolean = false,
     timing: PrintTiming? = null
-): Boolean {
+): ReceiptPrintOutcome {
     val effectiveTiming = timing ?: PrintTiming()
 
     // The in-memory bitmap is only useful for direct ESC/POS printing. With the system print dialog or no
@@ -1347,7 +1372,7 @@ suspend fun printReceiptWithBluetoothFallback(
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             android.util.Log.e("BillActions", "Failed to generate bill bitmap", e)
-            return false
+            return ReceiptPrintOutcome.FAILED
         }
         ReceiptBitmapCache.put(bill.saleId, receiptLanguage, paperWidth, bmp, bill.hashCode())
         effectiveTiming.recordGenerateDone()
@@ -1377,7 +1402,7 @@ suspend fun printStoreCreditVoucherSlip(
     voucherFile: File,
     voucherCode: String,
     settings: InvoiceSettingsData
-): Boolean {
+): ReceiptPrintOutcome {
     return printReceiptImage(
         context = context,
         activity = context.findActivity(),

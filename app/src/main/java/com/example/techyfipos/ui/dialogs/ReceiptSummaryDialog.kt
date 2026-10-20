@@ -751,7 +751,7 @@ fun ReceiptSummaryDialog(
                                         delay(100)
                                         printPressed = false
                                     }
-                                    val ok = com.example.techyfipos.utils.printReceiptWithBluetoothFallback(
+                                    val outcome = com.example.techyfipos.utils.printReceiptWithBluetoothFallback(
                                         context = context,
                                         activity = activity,
                                         bill = activeBill,
@@ -760,10 +760,16 @@ fun ReceiptSummaryDialog(
                                         kickDrawer = false,
                                         timing = timing
                                     )
-                                    if (ok) {
+                                    if (outcome == com.example.techyfipos.utils.ReceiptPrintOutcome.DIRECT_SENT) {
                                         android.widget.Toast.makeText(
                                             context,
                                             context.getString(R.string.print_sent_to_printer),
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else if (outcome == com.example.techyfipos.utils.ReceiptPrintOutcome.DIALOG_OPENED) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            context.getString(R.string.print_system_dialog_opened),
                                             android.widget.Toast.LENGTH_SHORT
                                         ).show()
                                     }

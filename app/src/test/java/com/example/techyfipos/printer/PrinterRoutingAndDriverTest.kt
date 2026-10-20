@@ -1319,4 +1319,15 @@ class PrinterRoutingAndDriverTest {
         assertTrue(com.example.techyfipos.utils.LabelPrintOutcome.OPENED_SYSTEM_DIALOG.isSuccess)
         assertFalse(com.example.techyfipos.utils.LabelPrintOutcome.FAILED.isSuccess)
     }
+
+    @Test
+    fun testR23_21_receiptPrintOutcomeProperties() {
+        assertTrue(com.example.techyfipos.utils.ReceiptPrintOutcome.DIRECT_SENT.isSuccess)
+        assertTrue(com.example.techyfipos.utils.ReceiptPrintOutcome.DIALOG_OPENED.isSuccess)
+        assertFalse(com.example.techyfipos.utils.ReceiptPrintOutcome.FAILED.isSuccess)
+
+        // Compatibility aliases
+        assertEquals(com.example.techyfipos.utils.ReceiptPrintOutcome.DIRECT_SENT, com.example.techyfipos.utils.ReceiptPrintOutcome.SENT_DIRECT)
+        assertEquals(com.example.techyfipos.utils.ReceiptPrintOutcome.DIALOG_OPENED, com.example.techyfipos.utils.ReceiptPrintOutcome.OPENED_SYSTEM_DIALOG)
+    }
 }

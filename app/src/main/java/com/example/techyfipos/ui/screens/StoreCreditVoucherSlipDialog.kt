@@ -674,14 +674,16 @@ fun StoreCreditVoucherSlipDialog(
                                 isPrinting = true
                                 scope.launch {
                                     try {
-                                        val ok = printStoreCreditVoucherSlip(
+                                        val outcome = printStoreCreditVoucherSlip(
                                             context = context,
                                             voucherFile = file,
                                             voucherCode = voucher.code,
                                             settings = invoiceSettingsData.copy(paperRollWidthMm = selectedRollWidth)
                                         )
-                                        if (ok) {
+                                        if (outcome == com.example.techyfipos.utils.ReceiptPrintOutcome.DIRECT_SENT) {
                                             Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                                        } else if (outcome == com.example.techyfipos.utils.ReceiptPrintOutcome.DIALOG_OPENED) {
+                                            Toast.makeText(context, context.getString(R.string.print_system_dialog_opened), Toast.LENGTH_SHORT).show()
                                         }
                                     } catch (e: Exception) {
                                         android.util.Log.e("StoreCreditVoucher", "Print voucher failed", e)

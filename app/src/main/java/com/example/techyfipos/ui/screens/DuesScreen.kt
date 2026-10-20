@@ -6803,7 +6803,7 @@ fun DueRepaymentReceiptDialog(
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         coroutineScope.launch {
                                             try {
-                                                val ok = printReceiptImage(
+                                                val outcome = printReceiptImage(
                                                     context = context,
                                                     activity = context.findActivity(),
                                                     imageFile = fileToPrint,
@@ -6811,8 +6811,10 @@ fun DueRepaymentReceiptDialog(
                                                     settings = settings.copy(paperRollWidthMm = selectedRollWidth),
                                                     kickDrawer = false
                                                 )
-                                                if (ok) {
+                                                if (outcome == ReceiptPrintOutcome.DIRECT_SENT) {
                                                     Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                                                } else if (outcome == ReceiptPrintOutcome.DIALOG_OPENED) {
+                                                    Toast.makeText(context, context.getString(R.string.print_system_dialog_opened), Toast.LENGTH_SHORT).show()
                                                 }
                                             } catch (e: Exception) {
                                                 if (e is kotlinx.coroutines.CancellationException) throw e

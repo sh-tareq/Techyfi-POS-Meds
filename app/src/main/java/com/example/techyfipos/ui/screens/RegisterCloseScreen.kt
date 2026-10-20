@@ -86,6 +86,7 @@ import com.example.techyfipos.utils.generateZReportJpeg
 import com.example.techyfipos.utils.generateZReportPdf
 import com.example.techyfipos.utils.printBillJpeg
 import com.example.techyfipos.utils.printReceiptImage
+import com.example.techyfipos.utils.ReceiptPrintOutcome
 import com.example.techyfipos.utils.findActivity
 import com.example.techyfipos.utils.saveBillJpegToDownloads
 import com.example.techyfipos.utils.FileSaveResult
@@ -1247,7 +1248,7 @@ fun RegisterCloseScreen(
                             val jpegFile = withContext(Dispatchers.IO) {
                                 generateXReportJpeg(context, r, rangeLabel, canViewPnl = canViewPnl, settings = invoiceSettings)
                             }
-                            val ok = printReceiptImage(
+                            val outcome = printReceiptImage(
                                 context = context,
                                 activity = context.findActivity(),
                                 imageFile = jpegFile,
@@ -1255,8 +1256,10 @@ fun RegisterCloseScreen(
                                 settings = invoiceSettings,
                                 kickDrawer = false
                             )
-                            if (ok) {
+                            if (outcome == ReceiptPrintOutcome.DIRECT_SENT) {
                                 Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                            } else if (outcome == ReceiptPrintOutcome.DIALOG_OPENED) {
+                                Toast.makeText(context, context.getString(R.string.print_system_dialog_opened), Toast.LENGTH_SHORT).show()
                             }
                         } catch (e: Exception) {
                             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -1331,7 +1334,7 @@ fun RegisterCloseScreen(
                             val jpegFile = withContext(Dispatchers.IO) {
                                 generateZReportJpeg(context, r, label, canViewPnl = canViewPnl, settings = invoiceSettings)
                             }
-                            val ok = printReceiptImage(
+                            val outcome = printReceiptImage(
                                 context = context,
                                 activity = context.findActivity(),
                                 imageFile = jpegFile,
@@ -1339,8 +1342,10 @@ fun RegisterCloseScreen(
                                 settings = invoiceSettings,
                                 kickDrawer = false
                             )
-                            if (ok) {
+                            if (outcome == ReceiptPrintOutcome.DIRECT_SENT) {
                                 Toast.makeText(context, context.getString(R.string.print_sent_to_printer), Toast.LENGTH_SHORT).show()
+                            } else if (outcome == ReceiptPrintOutcome.DIALOG_OPENED) {
+                                Toast.makeText(context, context.getString(R.string.print_system_dialog_opened), Toast.LENGTH_SHORT).show()
                             }
                         } catch (e: Exception) {
                             if (e is kotlinx.coroutines.CancellationException) throw e
