@@ -3172,7 +3172,7 @@
     <string name="settings_drive_test_failed">গুগল ড্রাইভ পরীক্ষা ব্যর্থ হয়েছে। অনুগ্রহ করে পুনরায় প্রমাণীকরণ করুন।</string>
     <string name="error_credit_limit_exceeded_auth">ক্রেডিট সীমা অতিক্রম করেছে: সুপারভাইজার বা মালিকের অনুমোদন প্রয়োজন</string>
     <string name="store_credit_voucher_disabled_msg">এই ভাউচারটি %1$s এবং এটি প্রিন্ট, শেয়ার বা ব্যবহার করা যাবে না।</string>
-    <string name="audit_by_cashier_fmt"> - দ্বারা: %1$s</string>
+    <string name="audit_by_cashier_fmt">\ - দ্বারা: %1$s</string>
     <string name="print_unable_to_write_document">প্রিন্ট ডকুমেন্ট লেখা সম্ভব হয়নি</string>
     <string name="scanner_banner_cart_total">• মোট কার্ট: %1$s</string>
     <string name="scanner_banner_added_to_cart">✓ পণ্য কার্টে যোগ করা হয়েছে</string>
@@ -3294,4 +3294,16 @@
     <string name="supplier_void_payment_reason_prompt">অনুগ্রহ করে একটি কারণ নির্বাচন বা লিখুন</string>
     <string name="timeline_due_payment_received">বকেয়া পরিশোধ গ্রহণ করা হয়েছে</string>
     <string name="timeline_crm_note">গ্রাহক নোট</string>
+    <string name="settings_crash_logs_empty">কোনো ক্র্যাশ রেকর্ড নেই</string>
+    <string name="settings_crash_logs_recorded">%1$sটি রেকর্ড হয়েছে - দেখতে এবং শেয়ার করতে ট্যাপ করুন</string>
+    <string name="print_job_x_report_fmt">এক্স-রিপোর্ট - %1$s</string>
+    <string name="print_job_z_report_fmt">জেড-রিপোর্ট - %1$s</string>
+    <string name="print_job_test_receipt">টেস্ট_রসিদ</string>
+    <string name="print_job_test_label">টেস্ট_লেবেল</string>
+    <string name="print_job_test_receipt_sample">টেস্ট_রসিদ_#১২</string>
+    <string name="print_job_test_repayment_sample">টেস্ট_পরিশোধ_#১</string>
+    <string name="print_job_due_voucher_fmt">বকেয়া_ভাউচার_%1$s</string>
+    <string name="settings_enter_decrypt_password_instruction">এই .posenc ব্যাকআপ ফাইলটি তৈরি করার সময় ব্যবহৃত পাসওয়ার্ডটি লিখুন।</string>
+    <string name="settings_encrypted_backup_exported_toast">এনক্রিপ্ট করা ব্যাকআপ সফলভাবে সংরক্ষিত হয়েছে (.posenc)!</string>
+    <string name="settings_encrypted_backup_export_failed">এনক্রিপ্ট করা ব্যাকআপ সংরক্ষণ করতে ব্যর্থ হয়েছে</string>
 </resources>

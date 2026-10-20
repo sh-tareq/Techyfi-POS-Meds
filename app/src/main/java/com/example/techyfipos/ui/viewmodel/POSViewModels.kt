@@ -3267,8 +3267,9 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 com.example.techyfipos.utils.RepositoryErrorBus.report(e)
-                val msg = if (com.example.techyfipos.utils.isAppBangla()) "মোবাইল নম্বর আপডেট করতে ব্যর্থ হয়েছে" else "Failed to update phone number"
-                onError(e.message ?: msg)
+                val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                val msg = com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(locCtx, e)
+                onError(msg)
             }
         }
     }
@@ -4209,7 +4210,8 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
                 onComplete(true, null)
             } catch (error: Exception) {
                 android.util.Log.e("AuthViewModel", "Unable to update staff", error)
-                onComplete(false, error.message ?: "Could not update staff")
+                val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                onComplete(false, com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(locCtx, error))
             }
         }
     }
@@ -4234,14 +4236,16 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
         viewModelScope.launch {
             try {
                 if (!repository.isSessionOwner() && !hasPermission(AppPermissions.SYSTEM_MANAGE_STAFF)) {
-                    onComplete(false, "Staff management permission required")
+                    val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                    onComplete(false, locCtx.getString(R.string.user_management_permission_required))
                     return@launch
                 }
                 repository.setStaffActive(userId, isActive)
                 onComplete(true, null)
             } catch (error: Exception) {
                 android.util.Log.e("AuthViewModel", "Unable to toggle staff status", error)
-                onComplete(false, error.message)
+                val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                onComplete(false, com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(locCtx, error))
             }
         }
     }
@@ -5452,8 +5456,10 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                val msg = if (com.example.techyfipos.utils.isAppBangla()) "গ্রাহকের মোবাইল নম্বর স্থানান্তর করতে ব্যর্থ হয়েছে" else "Failed to migrate customer phone"
-                onError(e.message ?: msg)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
+                val msg = com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(locCtx, e)
+                onError(msg)
             }
         }
     }
@@ -5503,9 +5509,10 @@ class CustomerViewModel(private val repository: DataRepository) : ViewModel() {
         val nameGroups = mutableMapOf<String, MutableList<Customer>>()
 
         for (c in active) {
-            val cleanDigits = normalizePhone(c.phone).filter { it.isDigit() }.takeLast(10)
-            if (cleanDigits.length >= 10) {
-                phoneGroups.getOrPut(cleanDigits) { mutableListOf() }.add(c)
+            val cleanDigits = normalizePhone(c.phone).filter { it.isDigit() }
+            if (cleanDigits.length >= 5) {
+                val phoneKey = if (cleanDigits.length >= 10) cleanDigits.takeLast(10) else cleanDigits
+                phoneGroups.getOrPut(phoneKey) { mutableListOf() }.add(c)
             }
             val cleanName = c.name.trim().lowercase()
             if (cleanName.length >= 3) {

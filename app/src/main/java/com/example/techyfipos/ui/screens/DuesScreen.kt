@@ -5967,7 +5967,7 @@ fun RecordPaymentDialog(
                                     ) {
                                         Image(
                                             painter = painterResource(R.drawable.logo_bkash),
-                                            contentDescription = "bKash",
+                                            contentDescription = stringResource(R.string.dues_channel_bkash),
                                             contentScale = ContentScale.Fit,
                                             modifier = Modifier.padding(horizontal = 1.dp, vertical = 0.5.dp)
                                         )
@@ -5982,7 +5982,7 @@ fun RecordPaymentDialog(
                                     ) {
                                         Image(
                                             painter = painterResource(R.drawable.logo_nagad),
-                                            contentDescription = "Nagad",
+                                            contentDescription = stringResource(R.string.dues_channel_nagad),
                                             contentScale = ContentScale.Fit,
                                             modifier = Modifier.padding(horizontal = 1.dp, vertical = 0.5.dp)
                                         )
@@ -5997,7 +5997,7 @@ fun RecordPaymentDialog(
                                     ) {
                                         Image(
                                             painter = painterResource(R.drawable.logo_rocket),
-                                            contentDescription = "Rocket",
+                                            contentDescription = stringResource(R.string.dues_channel_rocket),
                                             contentScale = ContentScale.Fit,
                                             modifier = Modifier.padding(horizontal = 1.dp, vertical = 0.5.dp)
                                         )
@@ -6809,7 +6809,7 @@ fun DueRepaymentReceiptDialog(
                                                     context = context,
                                                     activity = context.findActivity(),
                                                     imageFile = fileToPrint,
-                                                    jobName = if (com.example.techyfipos.utils.isAppBangla()) "বকেয়া_ভাউচার_${data.customerName}" else "Due_Voucher_${data.customerName}",
+                                                    jobName = context.getString(R.string.print_job_due_voucher_fmt, data.customerName),
                                                     settings = settings.copy(paperRollWidthMm = selectedRollWidth),
                                                     kickDrawer = false
                                                 )

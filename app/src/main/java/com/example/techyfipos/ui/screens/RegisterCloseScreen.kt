@@ -811,7 +811,7 @@ fun RegisterCloseScreen(
                             // Cash
                             PaymentMethodBreakdownTile(
                                 method = "Cash",
-                                label = "Cash",
+                                label = stringResource(R.string.cash),
                                 amount = providerSales.cash,
                                 themeColor = Color(0xFF059669),
                                 isTablet = isTablet,
@@ -820,7 +820,7 @@ fun RegisterCloseScreen(
                             // bKash
                             PaymentMethodBreakdownTile(
                                 method = "bKash",
-                                label = "bKash",
+                                label = stringResource(R.string.bkash),
                                 amount = providerSales.bkash,
                                 themeColor = Color(0xFFE11D48),
                                 isTablet = isTablet,
@@ -829,7 +829,7 @@ fun RegisterCloseScreen(
                             // Nagad
                             PaymentMethodBreakdownTile(
                                 method = "Nagad",
-                                label = "Nagad",
+                                label = stringResource(R.string.nagad),
                                 amount = providerSales.nagad,
                                 themeColor = Color(0xFFEA580C),
                                 isTablet = isTablet,
@@ -840,7 +840,7 @@ fun RegisterCloseScreen(
                             // Rocket
                             PaymentMethodBreakdownTile(
                                 method = "Rocket",
-                                label = "Rocket",
+                                label = stringResource(R.string.rocket),
                                 amount = providerSales.rocket,
                                 themeColor = Color(0xFF7C3AED),
                                 isTablet = isTablet,
@@ -849,7 +849,7 @@ fun RegisterCloseScreen(
                             // Card
                             PaymentMethodBreakdownTile(
                                 method = "Card",
-                                label = "Card",
+                                label = stringResource(R.string.card),
                                 amount = providerSales.card,
                                 themeColor = Color(0xFF0284C7),
                                 isTablet = isTablet,
@@ -858,7 +858,7 @@ fun RegisterCloseScreen(
                             // Due
                             PaymentMethodBreakdownTile(
                                 method = "Due",
-                                label = "Due",
+                                label = stringResource(R.string.due),
                                 amount = providerSales.due,
                                 themeColor = Color(0xFFD97706),
                                 isTablet = isTablet,
@@ -1252,7 +1252,7 @@ fun RegisterCloseScreen(
                                 context = context,
                                 activity = context.findActivity(),
                                 imageFile = jpegFile,
-                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "এক্স-রিপোর্ট - $rangeLabel" else "X-Report - $rangeLabel",
+                                jobName = context.getString(R.string.print_job_x_report_fmt, rangeLabel),
                                 settings = invoiceSettings,
                                 kickDrawer = false
                             )
@@ -1338,7 +1338,7 @@ fun RegisterCloseScreen(
                                 context = context,
                                 activity = context.findActivity(),
                                 imageFile = jpegFile,
-                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "জেড-রিপোর্ট - $label" else "Z-Report - $label",
+                                jobName = context.getString(R.string.print_job_z_report_fmt, label),
                                 settings = invoiceSettings,
                                 kickDrawer = false
                             )
@@ -2977,7 +2977,7 @@ fun ZReportDialog(
                             "$expectedCashLabel: ${formatTaka(data.expectedCash)}" +
                             (if (data.countedCash != null) "\n$countedCashLabel ${formatTaka(data.countedCash)}" else "") +
                             (if (data.cashVariance != null) "\n$varianceLabel ${if (data.cashVariance >= 0) "+" else ""}${formatTaka(data.cashVariance)}" else "") +
-                            (if (!data.varianceReason.isNullOrBlank()) "\nReason: ${data.varianceReason}" else "")
+                            (if (!data.varianceReason.isNullOrBlank()) "\n" + stringResource(R.string.register_close_discrepancy_reason_fmt, data.varianceReason) else "")
                         } else ""
 
                         val formattedUnits = com.example.techyfipos.utils.formatUnitsSold(data.itemsSold)

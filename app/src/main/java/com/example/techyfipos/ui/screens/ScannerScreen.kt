@@ -2897,13 +2897,17 @@ private fun SellCheckoutBar(
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                val countInt = kotlin.math.round(itemCount).toInt().coerceAtLeast(1)
+                val countInt = kotlin.math.round(itemCount).toInt().coerceAtLeast(0)
                 val itemCountDisp = if (itemCount % 1.0 == 0.0) {
-                    pluralStringResource(R.plurals.items_count, countInt, countInt)
+                    if (com.example.techyfipos.utils.isAppBangla()) {
+                        "${com.example.techyfipos.utils.toBanglaDigits(countInt.toString())}টি পণ্য"
+                    } else {
+                        pluralStringResource(R.plurals.items_count, countInt, countInt)
+                    }
                 } else {
                     val rawFrac = String.format(Locale.US, "%.2f", itemCount).trimEnd('0').trimEnd('.')
                     val fracDisp = if (com.example.techyfipos.utils.isAppBangla()) com.example.techyfipos.utils.toBanglaDigits(rawFrac) else rawFrac
-                    if (com.example.techyfipos.utils.isAppBangla()) "${fracDisp}টি আইটেম" else "$fracDisp items"
+                    if (com.example.techyfipos.utils.isAppBangla()) "${fracDisp}টি পণ্য" else "$fracDisp items"
                 }
                 Text(itemCountDisp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                 Text(formatTaka(total), fontWeight = FontWeight.Bold, fontSize = 20.sp)

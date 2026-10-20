@@ -3170,7 +3170,7 @@
     <string name="settings_drive_test_failed">Google Drive test failed. Please re-authenticate.</string>
     <string name="error_credit_limit_exceeded_auth">Credit limit exceeded: Supervisor or Owner authorization required</string>
     <string name="store_credit_voucher_disabled_msg">This voucher is %1$s and cannot be printed, shared, or redeemed.</string>
-    <string name="audit_by_cashier_fmt"> - By: %1$s</string>
+    <string name="audit_by_cashier_fmt">\ - By: %1$s</string>
     <string name="print_unable_to_write_document">Unable to write print document</string>
     <string name="scanner_banner_cart_total">• Cart Total: %1$s</string>
     <string name="scanner_banner_added_to_cart">✓ PRODUCT ADDED TO CART</string>
@@ -3292,6 +3292,18 @@
     <string name="supplier_void_payment_reason_prompt">Please select or enter a reason</string>
     <string name="timeline_due_payment_received">Due payment received</string>
     <string name="timeline_crm_note">CRM Note</string>
+    <string name="settings_crash_logs_empty">No crashes recorded</string>
+    <string name="settings_crash_logs_recorded">%1$s recorded - tap to view &amp; share</string>
+    <string name="print_job_x_report_fmt">X-Report - %1$s</string>
+    <string name="print_job_z_report_fmt">Z-Report - %1$s</string>
+    <string name="print_job_test_receipt">Test_Receipt</string>
+    <string name="print_job_test_label">Test_Label</string>
+    <string name="print_job_test_receipt_sample">Test_Receipt_#12</string>
+    <string name="print_job_test_repayment_sample">Test_Repayment_#1</string>
+    <string name="print_job_due_voucher_fmt">Due_Voucher_%1$s</string>
+    <string name="settings_enter_decrypt_password_instruction">Enter the password used when creating this .posenc backup file.</string>
+    <string name="settings_encrypted_backup_exported_toast">Encrypted backup saved successfully (.posenc)!</string>
+    <string name="settings_encrypted_backup_export_failed">Failed to export encrypted backup</string>
 </resources>
 
 

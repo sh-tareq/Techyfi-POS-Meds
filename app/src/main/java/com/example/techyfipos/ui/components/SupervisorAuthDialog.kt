@@ -55,7 +55,8 @@ fun SupervisorAuthDialog(
                 is SupervisorVerifyResult.Locked -> {
                     pin = ""
                     val s = ((result.remainingMillis + 999L) / 1000L).toInt()
-                    errorMessage = context.getString(R.string.auth_locked_out_seconds, s)
+                    val sStr = if (com.example.techyfipos.utils.isAppBangla()) com.example.techyfipos.utils.toBanglaDigits(s.toString()) else s.toString()
+                    errorMessage = context.getString(R.string.auth_locked_out_seconds, sStr)
                 }
                 is SupervisorVerifyResult.Deactivated -> {
                     pin = ""
@@ -68,8 +69,9 @@ fun SupervisorAuthDialog(
                 is SupervisorVerifyResult.Invalid -> {
                     pin = ""
                     val s = ((result.remainingMillis + 999L) / 1000L).toInt()
+                    val sStr = if (com.example.techyfipos.utils.isAppBangla()) com.example.techyfipos.utils.toBanglaDigits(s.toString()) else s.toString()
                     errorMessage = if (s > 0) {
-                        context.getString(R.string.auth_locked_out_seconds, s)
+                        context.getString(R.string.auth_locked_out_seconds, sStr)
                     } else {
                         context.getString(R.string.users_supervisor_auth_failed)
                     }

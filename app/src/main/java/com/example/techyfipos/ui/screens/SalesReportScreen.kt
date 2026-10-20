@@ -604,7 +604,8 @@ private fun generateStructuredReportText(
         report.paymentBreakdown.forEach { p ->
             val bCount = if (isBangla) com.example.techyfipos.utils.toBanglaDigits(p.transactionCount.toString()) else p.transactionCount.toString()
             val billsSuffix = if (isBangla) "$bCount টি বিল" else "$bCount bills"
-            sb.appendLine("  ${p.method}: ${formatTaka(p.amount, isBangla = isBangla)} ($billsSuffix)")
+            val methodLabel = if (isBangla) com.example.techyfipos.utils.formatPaymentMethodBangla(p.method) else p.method
+            sb.appendLine("  $methodLabel: ${formatTaka(p.amount, isBangla = isBangla)} ($billsSuffix)")
         }
     }
     if (report.topProducts.isNotEmpty()) {

@@ -2047,7 +2047,7 @@ private fun OptimizedSettingsHome(
                                 context = context,
                                 activity = context.findActivity(),
                                 imageFile = testFile,
-                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ" else "Test_Receipt",
+                                jobName = context.getString(R.string.print_job_test_receipt),
                                 settings = currentSettings,
                                 kickDrawer = false
                             )
@@ -2528,7 +2528,7 @@ private fun OptimizedSettingsHome(
                                 widthMm = labelW,
                                 heightMm = labelH,
                                 copies = 1,
-                                jobName = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_লেবেল" else "Test_Label",
+                                jobName = context.getString(R.string.print_job_test_label),
                                 settings = currentSettings
                             )
                         } catch (e: Exception) {
@@ -5307,6 +5307,11 @@ private fun OptimizedBackupSettings(
                         ) {
                             listOf("00:00" to "12:00 AM", "02:00" to "02:00 AM", "04:00" to "04:00 AM", "23:00" to "11:00 PM").forEach { (timeVal, label) ->
                                 val isSelected = driveBackupTime == timeVal
+                                val labelDisp = if (com.example.techyfipos.utils.isAppBangla()) {
+                                    com.example.techyfipos.utils.toBanglaDigits(label).replace("AM", "এএম").replace("PM", "পিএম")
+                                } else {
+                                    label
+                                }
                                 Surface(
                                     modifier = Modifier
                                         .weight(1f)
@@ -5316,7 +5321,7 @@ private fun OptimizedBackupSettings(
                                     border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                                 ) {
                                     Text(
-                                        text = label,
+                                        text = labelDisp,
                                         fontSize = 11.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -5658,7 +5663,12 @@ private fun OptimizedAboutSettings() {
         SettingsNavigationRow3D(
             icon = { Icon(Icons.Default.BugReport, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = stringResource(R.string.settings_crash_logs_title),
-            subtitle = if (crashLogFiles.isEmpty()) "No crashes recorded" else "${crashLogFiles.size} recorded - tap to view & share",
+            subtitle = if (crashLogFiles.isEmpty()) {
+                stringResource(R.string.settings_crash_logs_empty)
+            } else {
+                val countStr = if (com.example.techyfipos.utils.isAppBangla()) com.example.techyfipos.utils.toBanglaDigits(crashLogFiles.size.toString()) else crashLogFiles.size.toString()
+                stringResource(R.string.settings_crash_logs_recorded, countStr)
+            },
             onClick = {
                 crashLogFiles = com.example.techyfipos.utils.CrashLogger.listLogs(context)
                 showCrashLogs = true
@@ -6716,7 +6726,7 @@ fun SettingsScreen(
                         }
                     },
                     onTestPrint = {
-                        val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_পরিশোধ_#১" else "Test_Repayment_#1"
+                        val job = context.getString(R.string.print_job_test_repayment_sample)
                         launchTestReceiptPrint(job) {
                             generateDueRepaymentJpeg(
                                 context = context,
@@ -6751,7 +6761,7 @@ fun SettingsScreen(
                         }
                     },
                     onTestPrint = {
-                        val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12"
+                        val job = context.getString(R.string.print_job_test_receipt_sample)
                         launchTestReceiptPrint(job) {
                             generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
                         }
@@ -6771,7 +6781,7 @@ fun SettingsScreen(
                         }
                     },
                     onTestPrint = {
-                        val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12"
+                        val job = context.getString(R.string.print_job_test_receipt_sample)
                         launchTestReceiptPrint(job) {
                             generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
                         }
@@ -6789,7 +6799,7 @@ fun SettingsScreen(
                         }
                     },
                     onTestPrint = {
-                        val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12"
+                        val job = context.getString(R.string.print_job_test_receipt_sample)
                         launchTestReceiptPrint(job) {
                             generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
                         }
@@ -6823,7 +6833,7 @@ fun SettingsScreen(
                         }
                     },
                     onTestPrint = {
-                        val job = if (com.example.techyfipos.utils.isAppBangla()) "টেস্ট_রসিদ_#১২" else "Test_Receipt_#12"
+                        val job = context.getString(R.string.print_job_test_receipt_sample)
                         launchTestReceiptPrint(job) {
                             generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
                         }
@@ -8010,7 +8020,7 @@ fun SettingsScreen(
                                 pendingEncryptedExportUri = null
                                 Toast.makeText(
                                     context,
-                                    if (ok) "Encrypted backup saved successfully (.posenc)!" else "Failed to export encrypted backup",
+                                    if (ok) context.getString(R.string.settings_encrypted_backup_exported_toast) else context.getString(R.string.settings_encrypted_backup_export_failed),
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
@@ -8091,7 +8101,7 @@ fun SettingsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        "Enter the password used when creating this .posenc backup file.",
+                        stringResource(R.string.settings_enter_decrypt_password_instruction),
                         fontSize = 12.5.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
