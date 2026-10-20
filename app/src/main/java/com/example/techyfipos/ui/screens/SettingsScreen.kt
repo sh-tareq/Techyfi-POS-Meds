@@ -1691,9 +1691,7 @@ private fun OptimizedSettingsHome(
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold
                                 )
-                                val receiptDisplay = remember(receiptTarget) {
-                                    formatPrinterTargetDisplay(context, receiptTarget)
-                                }
+                                val receiptDisplay = formatPrinterTargetDisplay(context, receiptTarget)
                                 Text(
                                     if (receiptDisplay.isNotBlank()) receiptDisplay
                                     else if (receiptTarget is PrinterTarget.Usb) stringResource(R.string.settings_usb_not_connected)
@@ -2039,8 +2037,9 @@ private fun OptimizedSettingsHome(
             // Test receipt button
             OutlinedButton(
                 onClick = {
+                    if (isTestingReceipt) return@OutlinedButton
+                    isTestingReceipt = true
                     scope.launch(Dispatchers.IO) {
-                        isTestingReceipt = true
                         val outcome = try {
                             val testFile = generateBillJpeg(context, buildSettingsPreviewBill(currentSettings))
                             printReceiptImage(
@@ -2193,7 +2192,7 @@ private fun OptimizedSettingsHome(
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold
                                 )
-                                val labelDisplay = remember(labelTarget) { formatPrinterTargetDisplay(context, labelTarget) }
+                                val labelDisplay = formatPrinterTargetDisplay(context, labelTarget)
                                 Text(
                                     if (labelDisplay.isNotBlank()) labelDisplay else stringResource(R.string.settings_bluetooth_not_paired),
                                     style = MaterialTheme.typography.bodySmall,
@@ -2511,8 +2510,9 @@ private fun OptimizedSettingsHome(
             // Test label button
             OutlinedButton(
                 onClick = {
+                    if (isTestingLabel) return@OutlinedButton
+                    isTestingLabel = true
                     scope.launch(Dispatchers.IO) {
-                        isTestingLabel = true
                         val outcome = try {
                             val (labelW, labelH) = getConfiguredLabelDimensions(context)
                             val testStoreName = currentSettings.storeName.takeIf { it.isNotBlank() && it != "My Shop" }
@@ -3149,7 +3149,7 @@ private fun CombinedPrinterPickerDialog(
                                                 fontSize = 14.sp
                                             )
                                             Text(
-                                                stringResource(R.string.settings_bluetooth_not_paired),
+                                                stringResource(R.string.settings_printer_none_option),
                                                 fontSize = 11.sp,
                                                 color = Color.Gray
                                             )
@@ -3285,7 +3285,7 @@ private fun CombinedPrinterPickerDialog(
                                                 fontSize = 14.sp
                                             )
                                             Text(
-                                                stringResource(R.string.settings_usb_not_connected),
+                                                stringResource(R.string.settings_printer_none_option),
                                                 fontSize = 11.sp,
                                                 color = Color.Gray
                                             )
@@ -3630,7 +3630,8 @@ private fun ShopIdentitySettings(
     currentSettings: InvoiceSettingsData,
     onSettingsChanged: (InvoiceSettingsData) -> Unit,
     onSave: () -> Unit,
-    onTestPrint: () -> Unit
+    onTestPrint: () -> Unit,
+    isTestingPrint: Boolean = false
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -3772,8 +3773,17 @@ private fun ShopIdentitySettings(
             Spacer(modifier = Modifier.width(6.dp))
             Text(stringResource(R.string.settings_button_save_changes))
         }
-        OutlinedButton(onClick = onTestPrint, modifier = Modifier.weight(1f), shape = RoundedCornerShape(11.dp)) {
-            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+        OutlinedButton(
+            onClick = onTestPrint,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(11.dp),
+            enabled = !isTestingPrint
+        ) {
+            if (isTestingPrint) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            } else {
+                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
             Spacer(modifier = Modifier.width(6.dp))
             Text(stringResource(R.string.settings_button_test_print))
         }
@@ -3787,7 +3797,8 @@ private fun ShopLogoSettings(
     onSettingsChanged: (InvoiceSettingsData) -> Unit,
     onPickLogo: () -> Unit,
     onSave: () -> Unit,
-    onTestPrint: () -> Unit
+    onTestPrint: () -> Unit,
+    isTestingPrint: Boolean = false
 ) {
     val context = LocalContext.current
     Card(
@@ -3918,8 +3929,17 @@ private fun ShopLogoSettings(
             Spacer(modifier = Modifier.width(6.dp))
             Text(stringResource(R.string.settings_button_save_changes))
         }
-        OutlinedButton(onClick = onTestPrint, modifier = Modifier.weight(1f), shape = RoundedCornerShape(11.dp)) {
-            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+        OutlinedButton(
+            onClick = onTestPrint,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(11.dp),
+            enabled = !isTestingPrint
+        ) {
+            if (isTestingPrint) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            } else {
+                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
             Spacer(modifier = Modifier.width(6.dp))
             Text(stringResource(R.string.settings_button_test_print))
         }
@@ -3931,7 +3951,8 @@ private fun QrCodeLinksSettings(
     currentSettings: InvoiceSettingsData,
     onSettingsChanged: (InvoiceSettingsData) -> Unit,
     onSave: () -> Unit,
-    onTestPrint: () -> Unit
+    onTestPrint: () -> Unit,
+    isTestingPrint: Boolean = false
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -4079,8 +4100,17 @@ private fun QrCodeLinksSettings(
             Spacer(modifier = Modifier.width(6.dp))
             Text(stringResource(R.string.settings_button_save_changes))
         }
-        OutlinedButton(onClick = onTestPrint, modifier = Modifier.weight(1f), shape = RoundedCornerShape(11.dp)) {
-            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+        OutlinedButton(
+            onClick = onTestPrint,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(11.dp),
+            enabled = !isTestingPrint
+        ) {
+            if (isTestingPrint) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            } else {
+                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
             Spacer(modifier = Modifier.width(6.dp))
             Text(stringResource(R.string.settings_button_test_print))
         }
@@ -4096,7 +4126,8 @@ private fun ReceiptLayoutSettings(
     onDeleteInfoBlock: (String) -> Unit,
     onSave: () -> Unit,
     onTestPrint: () -> Unit,
-    onResetForm: () -> Unit
+    onResetForm: () -> Unit,
+    isTestingPrint: Boolean = false
 ) {
     val context = LocalContext.current
     Card(
@@ -4338,8 +4369,17 @@ private fun ReceiptLayoutSettings(
             Spacer(modifier = Modifier.width(6.dp))
             Text(stringResource(R.string.settings_button_save_changes))
         }
-        OutlinedButton(onClick = onTestPrint, modifier = Modifier.weight(1f), shape = RoundedCornerShape(11.dp)) {
-            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+        OutlinedButton(
+            onClick = onTestPrint,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(11.dp),
+            enabled = !isTestingPrint
+        ) {
+            if (isTestingPrint) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            } else {
+                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
             Spacer(modifier = Modifier.width(6.dp))
             Text(stringResource(R.string.settings_button_test_print))
         }
@@ -4354,7 +4394,8 @@ private fun MoneyReceiptVoucherSettings(
     currentSettings: InvoiceSettingsData,
     onSettingsChanged: (InvoiceSettingsData) -> Unit,
     onSave: () -> Unit,
-    onTestPrint: () -> Unit
+    onTestPrint: () -> Unit,
+    isTestingPrint: Boolean = false
 ) {
     val context = LocalContext.current
     var previewIsBangla by remember { mutableStateOf(false) }
@@ -4754,9 +4795,14 @@ private fun MoneyReceiptVoucherSettings(
         OutlinedButton(
             onClick = onTestPrint,
             modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(11.dp)
+            shape = RoundedCornerShape(11.dp),
+            enabled = !isTestingPrint
         ) {
-            Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+            if (isTestingPrint) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            } else {
+                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
             Spacer(modifier = Modifier.width(6.dp))
             Text(stringResource(R.string.settings_button_test_print))
         }
@@ -6218,13 +6264,13 @@ fun SettingsScreen(
                 val testFile = generateFile()
                 if (testFile == null) {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, context.getString(R.string.direct_print_error_connection_failed, "Generation failed"), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.settings_test_receipt_failed), Toast.LENGTH_SHORT).show()
                     }
                     return@launch
                 }
                 val act = activity ?: context.findActivity()
                 if (act != null) {
-                    printReceiptImage(
+                    val outcome = printReceiptImage(
                         context = context,
                         activity = act,
                         imageFile = testFile,
@@ -6232,11 +6278,24 @@ fun SettingsScreen(
                         settings = currentSettings,
                         kickDrawer = false
                     )
+                    withContext(Dispatchers.Main) {
+                        when (outcome) {
+                            ReceiptPrintOutcome.DIRECT_SENT -> {
+                                Toast.makeText(context, context.getString(R.string.settings_test_receipt_success), Toast.LENGTH_SHORT).show()
+                            }
+                            ReceiptPrintOutcome.DIALOG_OPENED -> {
+                                Toast.makeText(context, context.getString(R.string.print_system_dialog_opened), Toast.LENGTH_SHORT).show()
+                            }
+                            ReceiptPrintOutcome.FAILED -> {
+                                Toast.makeText(context, context.getString(R.string.settings_test_receipt_failed), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, context.getString(R.string.direct_print_error_connection_failed, e.localizedMessage ?: "Unknown error"), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.settings_test_receipt_failed), Toast.LENGTH_SHORT).show()
                 }
             } finally {
                 withContext(Dispatchers.Main) {
@@ -6647,6 +6706,7 @@ fun SettingsScreen(
                 SettingsPage.DUE_RECEIPT -> MoneyReceiptVoucherSettings(
                     currentSettings = currentSettings,
                     onSettingsChanged = { currentSettings = it },
+                    isTestingPrint = isPrintingTestReceipt,
                     onSave = {
                         settingsViewModel.saveInvoiceSettingsData(currentSettings) { ok ->
                             if (ok) {
@@ -6677,6 +6737,7 @@ fun SettingsScreen(
                 SettingsPage.SHOP_IDENTITY -> ShopIdentitySettings(
                     currentSettings = currentSettings,
                     onSettingsChanged = { currentSettings = it },
+                    isTestingPrint = isPrintingTestReceipt,
                     onSave = {
                         settingsViewModel.saveInvoiceSettingsData(currentSettings) { ok1 ->
                             settingsViewModel.saveShopInfo(currentSettings.storeName, currentSettings.address, currentSettings.phonePrimary) { ok2 ->
@@ -6700,6 +6761,7 @@ fun SettingsScreen(
                     logoVersion = logoVersion,
                     onSettingsChanged = { currentSettings = it },
                     onPickLogo = { logoPickerLauncher.launch("image/*") },
+                    isTestingPrint = isPrintingTestReceipt,
                     onSave = {
                         settingsViewModel.saveInvoiceSettingsData(currentSettings) { ok ->
                             if (ok) {
@@ -6717,6 +6779,7 @@ fun SettingsScreen(
                 SettingsPage.QR_CODE_LINKS -> QrCodeLinksSettings(
                     currentSettings = currentSettings,
                     onSettingsChanged = { currentSettings = it },
+                    isTestingPrint = isPrintingTestReceipt,
                     onSave = {
                         settingsViewModel.saveInvoiceSettingsData(currentSettings) { ok ->
                             if (ok) {
@@ -6734,6 +6797,7 @@ fun SettingsScreen(
                 SettingsPage.RECEIPT_LAYOUT -> ReceiptLayoutSettings(
                     currentSettings = currentSettings,
                     onSettingsChanged = { currentSettings = it },
+                    isTestingPrint = isPrintingTestReceipt,
                     onAddInfoBlock = {
                         editingBlockId = null
                         blockTitleInput = ""

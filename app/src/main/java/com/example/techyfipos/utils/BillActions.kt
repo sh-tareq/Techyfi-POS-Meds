@@ -1372,6 +1372,9 @@ suspend fun printReceiptWithBluetoothFallback(
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             android.util.Log.e("BillActions", "Failed to generate bill bitmap", e)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, context.getString(R.string.print_could_not_decode_receipt_image), Toast.LENGTH_SHORT).show()
+            }
             return ReceiptPrintOutcome.FAILED
         }
         ReceiptBitmapCache.put(bill.saleId, receiptLanguage, paperWidth, bmp, bill.hashCode())

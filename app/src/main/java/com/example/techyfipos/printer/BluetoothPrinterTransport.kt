@@ -226,6 +226,7 @@ val insecureSocketPreferred: MutableSet<String> =
     java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
 
 private const val SOCKET_CONNECT_TIMEOUT_MS = 4500L
+private const val FIRST_ATTEMPT_SOCKET_CONNECT_TIMEOUT_MS = 8500L
 
 private suspend fun tryConnectSocket(
     createSocket: () -> BluetoothSocket,
@@ -257,6 +258,7 @@ private suspend fun tryConnectSocket(
             null
         }
     } catch (e: Exception) {
+        if (e is kotlinx.coroutines.CancellationException) throw e
         try { rawSocket?.close() } catch (_: Exception) {}
         null
     }
@@ -335,6 +337,7 @@ suspend fun sendToBluetoothPrinter(
         try {
             for (attempt in 1..2) {
                 finalAttempt = attempt
+                val connectTimeout = if (attempt == 1) FIRST_ATTEMPT_SOCKET_CONNECT_TIMEOUT_MS else SOCKET_CONNECT_TIMEOUT_MS
                 if (attempt > 1) {
                     delay(300L)
                     try { adapter.cancelDiscovery() } catch (_: Exception) {}
@@ -342,13 +345,13 @@ suspend fun sendToBluetoothPrinter(
 
                 if (preferInsecure) {
                     // Try insecure first based on prior successful connection
-                    socket = tryConnectSocket({ device.createInsecureRfcommSocketToServiceRecord(uuid) }, SOCKET_CONNECT_TIMEOUT_MS)
+                    socket = tryConnectSocket({ device.createInsecureRfcommSocketToServiceRecord(uuid) }, connectTimeout)
                     if (socket != null) {
                         usedInsecure = true
                         insecureSocketPreferred.add(statusKey)
                     } else {
                         Log.w(TAG, "Insecure RFCOMM failed (attempt $attempt), trying secure fallback")
-                        socket = tryConnectSocket({ device.createRfcommSocketToServiceRecord(uuid) }, SOCKET_CONNECT_TIMEOUT_MS)
+                        socket = tryConnectSocket({ device.createRfcommSocketToServiceRecord(uuid) }, connectTimeout)
                         if (socket != null) {
                             usedInsecure = false
                             insecureSocketPreferred.remove(statusKey)
@@ -356,13 +359,13 @@ suspend fun sendToBluetoothPrinter(
                     }
                 } else {
                     // Standard: try secure first
-                    socket = tryConnectSocket({ device.createRfcommSocketToServiceRecord(uuid) }, SOCKET_CONNECT_TIMEOUT_MS)
+                    socket = tryConnectSocket({ device.createRfcommSocketToServiceRecord(uuid) }, connectTimeout)
                     if (socket != null) {
                         usedInsecure = false
                         insecureSocketPreferred.remove(statusKey)
                     } else {
                         Log.w(TAG, "Standard RFCOMM socket failed (attempt $attempt), retrying insecure RFCOMM socket")
-                        socket = tryConnectSocket({ device.createInsecureRfcommSocketToServiceRecord(uuid) }, SOCKET_CONNECT_TIMEOUT_MS)
+                        socket = tryConnectSocket({ device.createInsecureRfcommSocketToServiceRecord(uuid) }, connectTimeout)
                         if (socket != null) {
                             usedInsecure = true
                             insecureSocketPreferred.add(statusKey)
@@ -453,6 +456,7 @@ suspend fun sendToBluetoothPrinter(
 
                     val deadline = System.currentTimeMillis() + timeoutMs
                     while (System.currentTimeMillis() < deadline) {
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
                         if (inputStream.available() > 0) {
                             val b = inputStream.read()
                             if (b != -1) {
@@ -463,6 +467,7 @@ suspend fun sendToBluetoothPrinter(
                         delay(50L)
                     }
                 } catch (queryEx: Exception) {
+                    if (queryEx is kotlinx.coroutines.CancellationException) throw queryEx
                     Log.w(TAG, "Status query check skipped or errored: ${queryEx.message}")
                 }
                 if (queryStatus) {

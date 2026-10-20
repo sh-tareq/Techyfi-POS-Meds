@@ -1227,263 +1227,304 @@ fun BatchProductCodePrintDialog(
     }
 
     suspend fun executeBatchDirectPrint(items: List<ProductLabelItem>) {
-        val mode = invoiceSettings.labelPrintMode.trim().uppercase()
-        val labelTarget = invoiceSettings.resolvedLabelPrinterTarget()
-        val receiptTarget = invoiceSettings.resolvedReceiptPrinterTarget()
+        try {
+            val mode = invoiceSettings.labelPrintMode.trim().uppercase()
+            val labelTarget = invoiceSettings.resolvedLabelPrinterTarget()
+            val receiptTarget = invoiceSettings.resolvedReceiptPrinterTarget()
 
-        if (isSamePrinterTarget(labelTarget, receiptTarget)) {
-            withContext(Dispatchers.Main) {
-                isPrinting = false
-                printingProgressText = ""
-                Toast.makeText(context, context.getString(R.string.direct_print_error_label_same_as_receipt), Toast.LENGTH_LONG).show()
+            val goDirect = mode != "SYSTEM" && labelTarget !is PrinterTarget.None && labelTarget.identifier.isNotBlank()
+
+            if (goDirect && isPrinterConflict(labelTarget, receiptTarget)) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, context.getString(R.string.direct_print_error_label_same_as_receipt), Toast.LENGTH_LONG).show()
+                }
+                return
             }
-            return
-        }
 
-        val goDirect = mode != "SYSTEM" && labelTarget !is PrinterTarget.None && labelTarget.identifier.isNotBlank()
-        if (goDirect) {
-            var totalSent = 0
-            var failure: DirectPrintResult? = null
-            try {
-                val bitmapsWithCopies = mutableListOf<Pair<Bitmap, Int>>()
-                for ((idx, item) in items.withIndex()) {
-                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                    withContext(Dispatchers.Main) {
-                        printingProgressText = context.getString(R.string.batch_print_printing, idx + 1, items.size)
-                    }
-                    val itemMfgType = item.mfgOrPkgType.ifBlank { "Mfg" }
-                    val itemMfgDate = item.mfgOrPkgDate
-                    val itemExpDate = item.expDate
-                    val itemExtraLabel = item.extraFieldLabel.ifBlank { extraFieldTitle }
-                    val itemExtraVal = item.extraFieldValue.ifBlank { extraFieldValue }
-                    val bitmap = generateProductCodeLabelBitmap(
-                        productName = item.productName,
-                        barcode = item.barcode,
-                        formattedPrice = item.formattedPrice,
-                        codeType = codeType,
-                        labelSize = labelSize,
-                        showPrice = showPrice,
-                        showCodeNumber = showCodeNumber,
-                        customWidthMm = customWidthMm,
-                        customHeightMm = customHeightMm,
-                        productNameTextScale = productNameTextScale,
-                        priceTextScale = priceTextScale,
-                        codeNumberTextScale = codeNumberTextScale,
-                        showStoreName = showStoreName,
-                        storeName = effectiveStoreName,
-                        storeNameTextScale = storeNameTextScale,
-                        showDateTracking = showDateTracking,
-                        mfgOrPkgType = itemMfgType,
-                        mfgOrPkgDate = itemMfgDate,
-                        expDate = itemExpDate,
-                        dateTrackingTextScale = dateTrackingTextScale,
-                        barcodeGraphicScale = barcodeGraphicScale,
-                        showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
-                        extraFieldLabel = itemExtraLabel,
-                        extraFieldValue = itemExtraVal
-                    )
-                    if (bitmap != null) {
-                        bitmapsWithCopies.add(bitmap to item.quantity)
-                    }
-                }
-
-                val safeAcross = invoiceSettings.labelLabelsAcross.coerceIn(1, 3)
-                val (payloads, payloadCopies) = if (safeAcross > 1) {
-                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                    val multiUpPayloads = buildMultiUpTsplPayloads(
-                        bitmapsWithCopies = bitmapsWithCopies,
-                        labelWidthMm = effectiveWidthMm,
-                        labelHeightMm = effectiveHeightMm,
-                        labelsAcross = safeAcross,
-                        columnGapMm = invoiceSettings.labelColumnGapMm,
-                        gapMm = invoiceSettings.labelGapMm,
-                        darkness = invoiceSettings.labelDarkness,
-                        dpi = invoiceSettings.labelDpi,
-                        speed = invoiceSettings.labelPrintSpeed,
-                        xOffsetDots = invoiceSettings.labelXOffsetDots,
-                        yOffsetDots = invoiceSettings.labelYOffsetDots,
-                        direction = invoiceSettings.labelDirection,
-                        paperType = invoiceSettings.labelPaperType
-                    )
-                    multiUpPayloads to List(multiUpPayloads.size) { 1 }
-                } else {
-                    val singlePayloads = bitmapsWithCopies.map { (bmp, qty) ->
-                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                        buildTsplPayload(
-                            labelBitmap = bmp,
-                            widthMm = effectiveWidthMm,
-                            heightMm = effectiveHeightMm,
-                            gapMm = invoiceSettings.labelGapMm,
-                            copies = qty,
-                            darkness = invoiceSettings.labelDarkness,
-                            dpi = invoiceSettings.labelDpi,
-                            speed = invoiceSettings.labelPrintSpeed,
-                            xOffsetDots = invoiceSettings.labelXOffsetDots,
-                            yOffsetDots = invoiceSettings.labelYOffsetDots,
-                            direction = invoiceSettings.labelDirection,
-                            paperType = invoiceSettings.labelPaperType
-                        )
-                    }
-                    singlePayloads to bitmapsWithCopies.map { it.second }
-                }
-                bitmapsWithCopies.forEach { it.first.recycle() }
-
-                if (payloads.isNotEmpty()) {
-                    val batchRes = com.example.techyfipos.printer.printLabelPayloadsBatch(
-                        context = context,
-                        target = labelTarget,
-                        payloads = payloads,
-                        copiesPerPayload = payloadCopies,
-                        onProgress = { sent, total ->
-                            totalSentSoFar = sent
-                            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                printingProgressText = context.getString(R.string.batch_print_printing, sent, total)
+            if (goDirect) {
+                var totalSent = 0
+                var failure: DirectPrintResult? = null
+                try {
+                    val safeAcross = invoiceSettings.labelLabelsAcross.coerceIn(1, 3)
+                    val (payloads, payloadCopies) = if (safeAcross > 1) {
+                        val bitmapsWithCopies = mutableListOf<Pair<Bitmap, Int>>()
+                        try {
+                            for ((idx, item) in items.withIndex()) {
+                                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                                withContext(Dispatchers.Main) {
+                                    printingProgressText = context.getString(R.string.batch_print_printing, idx + 1, items.size)
+                                }
+                                val itemMfgType = item.mfgOrPkgType.ifBlank { "Mfg" }
+                                val itemMfgDate = item.mfgOrPkgDate
+                                val itemExpDate = item.expDate
+                                val itemExtraLabel = item.extraFieldLabel.ifBlank { extraFieldTitle }
+                                val itemExtraVal = item.extraFieldValue.ifBlank { extraFieldValue }
+                                val bitmap = generateProductCodeLabelBitmap(
+                                    productName = item.productName,
+                                    barcode = item.barcode,
+                                    formattedPrice = item.formattedPrice,
+                                    codeType = codeType,
+                                    labelSize = labelSize,
+                                    showPrice = showPrice,
+                                    showCodeNumber = showCodeNumber,
+                                    customWidthMm = customWidthMm,
+                                    customHeightMm = customHeightMm,
+                                    productNameTextScale = productNameTextScale,
+                                    priceTextScale = priceTextScale,
+                                    codeNumberTextScale = codeNumberTextScale,
+                                    showStoreName = showStoreName,
+                                    storeName = effectiveStoreName,
+                                    storeNameTextScale = storeNameTextScale,
+                                    showDateTracking = showDateTracking,
+                                    mfgOrPkgType = itemMfgType,
+                                    mfgOrPkgDate = itemMfgDate,
+                                    expDate = itemExpDate,
+                                    dateTrackingTextScale = dateTrackingTextScale,
+                                    barcodeGraphicScale = barcodeGraphicScale,
+                                    showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
+                                    extraFieldLabel = itemExtraLabel,
+                                    extraFieldValue = itemExtraVal
+                                )
+                                if (bitmap != null) {
+                                    bitmapsWithCopies.add(bitmap to item.quantity)
+                                }
+                            }
+                            val multiUpPayloads = buildMultiUpTsplPayloads(
+                                bitmapsWithCopies = bitmapsWithCopies,
+                                labelWidthMm = effectiveWidthMm,
+                                labelHeightMm = effectiveHeightMm,
+                                labelsAcross = safeAcross,
+                                columnGapMm = invoiceSettings.labelColumnGapMm,
+                                gapMm = invoiceSettings.labelGapMm,
+                                darkness = invoiceSettings.labelDarkness,
+                                dpi = invoiceSettings.labelDpi,
+                                speed = invoiceSettings.labelPrintSpeed,
+                                xOffsetDots = invoiceSettings.labelXOffsetDots,
+                                yOffsetDots = invoiceSettings.labelYOffsetDots,
+                                direction = invoiceSettings.labelDirection,
+                                paperType = invoiceSettings.labelPaperType
+                            )
+                            multiUpPayloads to List(multiUpPayloads.size) { 1 }
+                        } finally {
+                            bitmapsWithCopies.forEach { it.first.recycle() }
+                        }
+                    } else {
+                        val singlePayloads = mutableListOf<ByteArray>()
+                        val singleCopies = mutableListOf<Int>()
+                        for ((idx, item) in items.withIndex()) {
+                            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                            withContext(Dispatchers.Main) {
+                                printingProgressText = context.getString(R.string.batch_print_printing, idx + 1, items.size)
+                            }
+                            val itemMfgType = item.mfgOrPkgType.ifBlank { "Mfg" }
+                            val itemMfgDate = item.mfgOrPkgDate
+                            val itemExpDate = item.expDate
+                            val itemExtraLabel = item.extraFieldLabel.ifBlank { extraFieldTitle }
+                            val itemExtraVal = item.extraFieldValue.ifBlank { extraFieldValue }
+                            val bitmap = generateProductCodeLabelBitmap(
+                                productName = item.productName,
+                                barcode = item.barcode,
+                                formattedPrice = item.formattedPrice,
+                                codeType = codeType,
+                                labelSize = labelSize,
+                                showPrice = showPrice,
+                                showCodeNumber = showCodeNumber,
+                                customWidthMm = customWidthMm,
+                                customHeightMm = customHeightMm,
+                                productNameTextScale = productNameTextScale,
+                                priceTextScale = priceTextScale,
+                                codeNumberTextScale = codeNumberTextScale,
+                                showStoreName = showStoreName,
+                                storeName = effectiveStoreName,
+                                storeNameTextScale = storeNameTextScale,
+                                showDateTracking = showDateTracking,
+                                mfgOrPkgType = itemMfgType,
+                                mfgOrPkgDate = itemMfgDate,
+                                expDate = itemExpDate,
+                                dateTrackingTextScale = dateTrackingTextScale,
+                                barcodeGraphicScale = barcodeGraphicScale,
+                                showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
+                                extraFieldLabel = itemExtraLabel,
+                                extraFieldValue = itemExtraVal
+                            )
+                            if (bitmap != null) {
+                                try {
+                                    val payload = buildTsplPayload(
+                                        labelBitmap = bitmap,
+                                        widthMm = effectiveWidthMm,
+                                        heightMm = effectiveHeightMm,
+                                        gapMm = invoiceSettings.labelGapMm,
+                                        copies = item.quantity,
+                                        darkness = invoiceSettings.labelDarkness,
+                                        dpi = invoiceSettings.labelDpi,
+                                        speed = invoiceSettings.labelPrintSpeed,
+                                        xOffsetDots = invoiceSettings.labelXOffsetDots,
+                                        yOffsetDots = invoiceSettings.labelYOffsetDots,
+                                        direction = invoiceSettings.labelDirection,
+                                        paperType = invoiceSettings.labelPaperType
+                                    )
+                                    singlePayloads.add(payload)
+                                    singleCopies.add(item.quantity)
+                                } finally {
+                                    bitmap.recycle()
+                                }
                             }
                         }
-                    )
-                    totalSent = batchRes.successfulCount
-                    if (batchRes.result !is DirectPrintResult.Success) {
-                        failure = batchRes.result
+                        singlePayloads to singleCopies
                     }
-                }
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                android.util.Log.e("ProductCodePrintDialogs", "Batch label print failed", e)
-                failure = DirectPrintResult.Failed(e.localizedMessage ?: "Unknown error")
-            } finally {
-                withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
-                    isPrinting = false
-                    printingProgressText = ""
-                }
-            }
 
-            if (failure != null) {
-                var sentCounter = totalSent
-                val remaining = mutableListOf<ProductLabelItem>()
-                for (item in items) {
-                    if (sentCounter >= item.quantity) {
-                        sentCounter -= item.quantity
-                    } else if (sentCounter > 0) {
-                        val remQty = item.quantity - sentCounter
-                        sentCounter = 0
-                        remaining.add(item.copy(quantity = remQty))
+                    if (payloads.isNotEmpty()) {
+                        val batchRes = com.example.techyfipos.printer.printLabelPayloadsBatch(
+                            context = context,
+                            target = labelTarget,
+                            payloads = payloads,
+                            copiesPerPayload = payloadCopies,
+                            onProgress = { sent, total ->
+                                totalSentSoFar = sent
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    printingProgressText = context.getString(R.string.batch_print_printing, sent, total)
+                                }
+                            }
+                        )
+                        totalSent = batchRes.successfulCount
+                        if (batchRes.result !is DirectPrintResult.Success) {
+                            failure = batchRes.result
+                        }
                     } else {
-                        remaining.add(item)
+                        failure = DirectPrintResult.Failed(context.getString(R.string.print_could_not_decode_receipt_image))
                     }
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    android.util.Log.e("ProductCodePrintDialogs", "Batch label print failed", e)
+                    failure = DirectPrintResult.Failed(e.localizedMessage ?: "Unknown error")
                 }
-                failedRemainingItems = if (remaining.isNotEmpty()) remaining else null
-            } else {
-                failedRemainingItems = null
-                lastPrintedItems = items
-            }
 
-            val decision = decidePrintRouting(mode, labelTarget.identifier, failure, totalSent)
-            when (decision) {
-                RoutingDecision.DIRECT_OK -> {
-                    withContext(Dispatchers.Main) {
-                        val msg = context.getString(R.string.batch_print_success_fmt, totalSent)
-                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                        onDismiss()
+                if (failure != null) {
+                    var sentCounter = totalSent
+                    val remaining = mutableListOf<ProductLabelItem>()
+                    for (item in items) {
+                        if (sentCounter >= item.quantity) {
+                            sentCounter -= item.quantity
+                        } else if (sentCounter > 0) {
+                            val remQty = item.quantity - sentCounter
+                            sentCounter = 0
+                            remaining.add(item.copy(quantity = remQty))
+                        } else {
+                            remaining.add(item)
+                        }
                     }
+                    failedRemainingItems = if (remaining.isNotEmpty()) remaining else null
+                } else {
+                    failedRemainingItems = null
+                    lastPrintedItems = items
                 }
-                RoutingDecision.SHOW_ERROR -> {
-                    if (totalSent > 0) {
+
+                val decision = decidePrintRouting(mode, labelTarget.identifier, failure, totalSent)
+                when (decision) {
+                    RoutingDecision.DIRECT_OK -> {
                         withContext(Dispatchers.Main) {
-                            val partialMsg = context.getString(R.string.batch_print_partial_failure, totalSent)
-                            Toast.makeText(context, partialMsg, Toast.LENGTH_LONG).show()
+                            val msg = context.getString(R.string.batch_print_success_fmt, totalSent)
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            onDismiss()
                         }
                     }
-                    failure?.let { showDirectPrintToast(context, it) }
-                }
-                RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
-                    if (totalSent > 0) {
+                    RoutingDecision.SHOW_ERROR -> {
+                        if (totalSent > 0) {
+                            withContext(Dispatchers.Main) {
+                                val partialMsg = context.getString(R.string.batch_print_partial_failure, totalSent)
+                                Toast.makeText(context, partialMsg, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                        failure?.let { showDirectPrintToast(context, it) }
+                    }
+                    RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
+                        if (totalSent > 0) {
+                            withContext(Dispatchers.Main) {
+                                val partialMsg = context.getString(R.string.batch_print_partial_failure, totalSent)
+                                Toast.makeText(context, partialMsg, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                        failure?.let { showDirectPrintToast(context, it) }
+                        val pdfResult = cacheBatchProductCodeLabelsPdf(
+                            context = context,
+                            items = items,
+                            codeType = codeType,
+                            style = currentStyle
+                        )
                         withContext(Dispatchers.Main) {
-                            val partialMsg = context.getString(R.string.batch_print_partial_failure, totalSent)
-                            Toast.makeText(context, partialMsg, Toast.LENGTH_LONG).show()
+                            if (pdfResult != null) {
+                                val opened = printPdfDocument(
+                                    context = activity ?: context,
+                                    pdfFile = pdfResult.first,
+                                    jobName = context.getString(R.string.print_job_batch_labels),
+                                    widthMm = effectiveWidthMm,
+                                    heightMm = effectiveHeightMm
+                                )
+                                if (opened) onDismiss()
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.toast_failed_batch_labels_pdf), Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
-                    failure?.let { showDirectPrintToast(context, it) }
-                    val pdfResult = cacheBatchProductCodeLabelsPdf(
-                        context = context,
-                        items = items,
-                        codeType = codeType,
-                        style = currentStyle
-                    )
-                    withContext(Dispatchers.Main) {
-                        if (pdfResult != null) {
-                            val opened = printPdfDocument(
-                                context = activity ?: context,
-                                pdfFile = pdfResult.first,
-                                jobName = context.getString(R.string.print_job_batch_labels),
-                                widthMm = effectiveWidthMm,
-                                heightMm = effectiveHeightMm
-                            )
-                            if (opened) onDismiss()
+                    RoutingDecision.SYSTEM_DIALOG -> {
+                        val pdfResult = cacheBatchProductCodeLabelsPdf(
+                            context = context,
+                            items = items,
+                            codeType = codeType,
+                            style = currentStyle
+                        )
+                        withContext(Dispatchers.Main) {
+                            if (pdfResult != null) {
+                                val opened = printPdfDocument(
+                                    context = activity ?: context,
+                                    pdfFile = pdfResult.first,
+                                    jobName = context.getString(R.string.print_job_batch_labels),
+                                    widthMm = effectiveWidthMm,
+                                    heightMm = effectiveHeightMm
+                                )
+                                if (opened) onDismiss()
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.toast_failed_batch_labels_pdf), Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 }
-                RoutingDecision.SYSTEM_DIALOG -> {
-                    val pdfResult = cacheBatchProductCodeLabelsPdf(
-                        context = context,
-                        items = items,
-                        codeType = codeType,
-                        style = currentStyle
-                    )
-                    withContext(Dispatchers.Main) {
-                        if (pdfResult != null) {
-                            val opened = printPdfDocument(
-                                context = activity ?: context,
-                                pdfFile = pdfResult.first,
-                                jobName = context.getString(R.string.print_job_batch_labels),
-                                widthMm = effectiveWidthMm,
-                                heightMm = effectiveHeightMm
-                            )
-                            if (opened) onDismiss()
+            } else {
+                val decision = decidePrintRouting(mode, "", DirectPrintResult.NoAddress)
+                when (decision) {
+                    RoutingDecision.SHOW_ERROR -> {
+                        showDirectPrintToast(context, DirectPrintResult.NoAddress)
+                    }
+                    RoutingDecision.SYSTEM_DIALOG,
+                    RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
+                        val pdfResult = cacheBatchProductCodeLabelsPdf(
+                            context = context,
+                            items = items,
+                            codeType = codeType,
+                            style = currentStyle
+                        )
+                        withContext(Dispatchers.Main) {
+                            if (pdfResult != null) {
+                                val opened = printPdfDocument(
+                                    context = activity ?: context,
+                                    pdfFile = pdfResult.first,
+                                    jobName = context.getString(R.string.print_job_batch_labels),
+                                    widthMm = effectiveWidthMm,
+                                    heightMm = effectiveHeightMm
+                                )
+                                if (opened) onDismiss()
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.toast_failed_batch_labels_pdf), Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
+                    RoutingDecision.DIRECT_OK -> {}
                 }
             }
-        } else {
-            val decision = decidePrintRouting(mode, "", DirectPrintResult.NoAddress)
-            when (decision) {
-                RoutingDecision.SHOW_ERROR -> {
-                    withContext(Dispatchers.Main) {
-                        isPrinting = false
-                        printingProgressText = ""
-                    }
-                    showDirectPrintToast(context, DirectPrintResult.NoAddress)
-                }
-                RoutingDecision.SYSTEM_DIALOG,
-                RoutingDecision.SHOW_ERROR_THEN_SYSTEM_DIALOG -> {
-                    val pdfResult = cacheBatchProductCodeLabelsPdf(
-                        context = context,
-                        items = items,
-                        codeType = codeType,
-                        style = currentStyle
-                    )
-                    withContext(Dispatchers.Main) {
-                        isPrinting = false
-                        printingProgressText = ""
-                        if (pdfResult != null) {
-                            val opened = printPdfDocument(
-                                context = activity ?: context,
-                                pdfFile = pdfResult.first,
-                                jobName = context.getString(R.string.print_job_batch_labels),
-                                widthMm = effectiveWidthMm,
-                                heightMm = effectiveHeightMm
-                            )
-                            if (opened) onDismiss()
-                        } else {
-                            Toast.makeText(context, context.getString(R.string.toast_failed_batch_labels_pdf), Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-                RoutingDecision.DIRECT_OK -> {
-                    withContext(Dispatchers.Main) {
-                        isPrinting = false
-                        printingProgressText = ""
-                    }
-                }
+        } finally {
+            withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
+                isPrinting = false
+                printingProgressText = ""
             }
         }
     }
