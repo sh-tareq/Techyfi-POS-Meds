@@ -112,6 +112,13 @@ fun findPrinterInterfaceAndEndpoint(device: UsbDevice): Pair<UsbInterface, UsbEn
  * Checks if a USB device is likely a thermal receipt or label printer.
  */
 fun isLikelyUsbPrinter(device: UsbDevice): Boolean {
+    // Return true if device class or any interface is printer-class (class 7) first
+    if (device.deviceClass == UsbConstants.USB_CLASS_PRINTER) return true
+    for (i in 0 until device.interfaceCount) {
+        val iface = device.getInterface(i)
+        if (iface.interfaceClass == UsbConstants.USB_CLASS_PRINTER) return true
+    }
+
     val excludedClasses = setOf(
         UsbConstants.USB_CLASS_HID, // 3
         UsbConstants.USB_CLASS_MASS_STORAGE, // 8
@@ -119,13 +126,6 @@ fun isLikelyUsbPrinter(device: UsbDevice): Boolean {
         UsbConstants.USB_CLASS_WIRELESS_CONTROLLER // 224
     )
     if (device.deviceClass in excludedClasses) return false
-
-    for (i in 0 until device.interfaceCount) {
-        val iface = device.getInterface(i)
-        if (iface.interfaceClass in excludedClasses) return false
-        if (iface.interfaceClass == UsbConstants.USB_CLASS_PRINTER) return true
-    }
-    if (device.deviceClass == UsbConstants.USB_CLASS_PRINTER) return true
 
     // Check for bulk OUT endpoint as fallback for vendor-specific class 255
     for (i in 0 until device.interfaceCount) {
@@ -287,15 +287,68 @@ suspend fun sendToUsbPrinter(
             val usbManager = context.getSystemService(Context.USB_SERVICE) as? UsbManager
                 ?: return@withContext DirectPrintResult.UsbNotSupported
 
-            val device = findUsbDeviceByKey(usbManager, deviceKey)
-                ?: return@withContext DirectPrintResult.UsbDeviceNotFound
+            val id = parseUsbDeviceKey(deviceKey)
+            var targetDevice: UsbDevice? = null
 
-            if (!usbManager.hasPermission(device)) {
-                val granted = requestUsbPermission(context, usbManager, device)
-                if (!granted) {
-                    return@withContext DirectPrintResult.UsbNoPermission
+            if (id != null && id.serialNumber.isNotBlank()) {
+                val matchingDevices = usbManager.deviceList.values.filter {
+                    it.vendorId == id.vendorId && it.productId == id.productId
+                }
+                // Check if any device already has permission and matches the requested serial
+                val alreadyGrantedMatch = matchingDevices.firstOrNull { dev ->
+                    if (!usbManager.hasPermission(dev)) return@firstOrNull false
+                    val s = try { dev.serialNumber } catch (_: Exception) { null }
+                    s?.equals(id.serialNumber, ignoreCase = true) == true
+                }
+                if (alreadyGrantedMatch != null) {
+                    targetDevice = alreadyGrantedMatch
+                } else {
+                    // Try candidates whose serial is not already known to differ
+                    for (candidate in matchingDevices) {
+                        val knownSerial = try { candidate.serialNumber } catch (_: Exception) { null }
+                        if (knownSerial != null && !knownSerial.equals(id.serialNumber, ignoreCase = true)) {
+                            continue
+                        }
+                        if (!usbManager.hasPermission(candidate)) {
+                            val granted = requestUsbPermission(context, usbManager, candidate)
+                            if (!granted) continue
+                        }
+                        // After permission grant, re-read serial and check for match
+                        val reReadSerial = try { candidate.serialNumber } catch (_: Exception) { null }
+                        if (reReadSerial != null) {
+                            if (reReadSerial.equals(id.serialNumber, ignoreCase = true)) {
+                                targetDevice = candidate
+                                break
+                            } else {
+                                // Mismatch: try next candidate
+                                continue
+                            }
+                        } else {
+                            if (matchingDevices.size == 1) {
+                                targetDevice = candidate
+                                break
+                            }
+                        }
+                    }
+                }
+            } else {
+                val dev = findUsbDeviceByKey(usbManager, deviceKey)
+                if (dev != null) {
+                    if (!usbManager.hasPermission(dev)) {
+                        val granted = requestUsbPermission(context, usbManager, dev)
+                        if (granted) {
+                            targetDevice = dev
+                        } else {
+                            return@withContext DirectPrintResult.UsbNoPermission
+                        }
+                    } else {
+                        targetDevice = dev
+                    }
                 }
             }
+
+            val device = targetDevice
+                ?: return@withContext DirectPrintResult.UsbDeviceNotFound
 
             val pair = findPrinterInterfaceAndEndpoint(device)
                 ?: return@withContext DirectPrintResult.UsbNoPrinterInterface

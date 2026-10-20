@@ -38,6 +38,8 @@ import com.example.techyfipos.printer.ReceiptCutMode
 import com.example.techyfipos.printer.DirectPrintResult
 import com.example.techyfipos.printer.PrinterTarget
 import com.example.techyfipos.printer.isSamePrinterTarget
+import com.example.techyfipos.printer.isPrinterConflict
+import com.example.techyfipos.printer.parseUsbDeviceKey
 import com.example.techyfipos.printer.formatPrinterTargetDisplay
 import com.example.techyfipos.printer.formatUsbDeviceDisplay
 import com.example.techyfipos.printer.buildUsbDeviceKey
@@ -2207,7 +2209,7 @@ private fun OptimizedSettingsHome(
                     }
                 }
 
-                if (isSamePrinterTarget(labelTarget, currentSettings.resolvedReceiptPrinterTarget())) {
+                if (isPrinterConflict(labelTarget, currentSettings.resolvedReceiptPrinterTarget())) {
                     Text(
                         text = stringResource(R.string.settings_label_printer_same_as_receipt_warning),
                         style = MaterialTheme.typography.bodySmall,
@@ -2875,7 +2877,7 @@ private fun OptimizedSettingsHome(
             currentTarget = currentSettings.resolvedReceiptPrinterTarget(),
             disabledPrinterTarget = currentSettings.resolvedLabelPrinterTarget(),
             onSelected = { target ->
-                if (isSamePrinterTarget(target, currentSettings.resolvedLabelPrinterTarget())) {
+                if (isPrinterConflict(target, currentSettings.resolvedLabelPrinterTarget())) {
                     printerConflictDialogMessage = context.getString(R.string.settings_receipt_picker_same_as_label_dialog)
                 } else {
                     val updated = when (target) {
@@ -2908,7 +2910,7 @@ private fun OptimizedSettingsHome(
             currentTarget = currentSettings.resolvedLabelPrinterTarget(),
             disabledPrinterTarget = currentSettings.resolvedReceiptPrinterTarget(),
             onSelected = { target ->
-                if (isSamePrinterTarget(target, currentSettings.resolvedReceiptPrinterTarget())) {
+                if (isPrinterConflict(target, currentSettings.resolvedReceiptPrinterTarget())) {
                     printerConflictDialogMessage = context.getString(R.string.settings_label_picker_same_as_receipt_dialog)
                 } else {
                     val updated = when (target) {
@@ -3307,8 +3309,26 @@ private fun CombinedPrinterPickerDialog(
                                 usbDevices.forEach { dev ->
                                     val deviceKey = buildUsbDeviceKey(dev)
                                     val target = PrinterTarget.Usb(deviceKey)
-                                    val isConflict = disabledPrinterTarget !is PrinterTarget.None && isSamePrinterTarget(target, disabledPrinterTarget)
-                                    val isSelected = currentTarget is PrinterTarget.Usb && isSamePrinterTarget(currentTarget, target)
+                                    val isConflict = disabledPrinterTarget !is PrinterTarget.None && isPrinterConflict(target, disabledPrinterTarget)
+                                    val isSelected = if (currentTarget is PrinterTarget.Usb) {
+                                        val curId = parseUsbDeviceKey(currentTarget.deviceKey)
+                                        val devId = parseUsbDeviceKey(target.deviceKey)
+                                        if (curId != null && devId != null) {
+                                            if (curId.vendorId != devId.vendorId || curId.productId != devId.productId) {
+                                                false
+                                            } else if (curId.serialNumber.isNotBlank() && devId.serialNumber.isNotBlank()) {
+                                                curId.serialNumber.equals(devId.serialNumber, ignoreCase = true)
+                                            } else if (curId.serialNumber.isBlank() && devId.serialNumber.isBlank()) {
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        } else {
+                                            currentTarget.deviceKey.equals(target.deviceKey, ignoreCase = true)
+                                        }
+                                    } else {
+                                        false
+                                    }
                                     val prodName = try { dev.productName } catch (_: Exception) { null }
                                     val mfgName = try { dev.manufacturerName } catch (_: Exception) { null }
                                     val displayName = formatUsbDeviceDisplay(prodName, mfgName, dev.vendorId, dev.productId)

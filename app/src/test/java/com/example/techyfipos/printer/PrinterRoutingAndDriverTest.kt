@@ -1330,4 +1330,40 @@ class PrinterRoutingAndDriverTest {
         assertEquals(com.example.techyfipos.utils.ReceiptPrintOutcome.DIRECT_SENT, com.example.techyfipos.utils.ReceiptPrintOutcome.SENT_DIRECT)
         assertEquals(com.example.techyfipos.utils.ReceiptPrintOutcome.DIALOG_OPENED, com.example.techyfipos.utils.ReceiptPrintOutcome.OPENED_SYSTEM_DIALOG)
     }
+
+    @Test
+    fun testR23_22_isPrinterConflictTwinPrinters() {
+        val twin1WithSerial = PrinterTarget.Usb("usb:0416:5011:SER1")
+        val twin2WithSerial = PrinterTarget.Usb("usb:0416:5011:SER2")
+        val twin1SameSerial = PrinterTarget.Usb("usb:0416:5011:ser1")
+        val twinNoSerial1 = PrinterTarget.Usb("usb:0416:5011")
+        val twinNoSerial2 = PrinterTarget.Usb("usb:0416:5011")
+        val differentVid = PrinterTarget.Usb("usb:0417:5011:SER1")
+
+        // Twin printers with distinct serials do NOT conflict
+        assertFalse(isPrinterConflict(twin1WithSerial, twin2WithSerial))
+
+        // Twin printers with matching serials DO conflict
+        assertTrue(isPrinterConflict(twin1WithSerial, twin1SameSerial))
+
+        // When one or both serials are unknown, no conflict is reported
+        // so un-permissioned twin printers are not blocked in the picker
+        assertFalse(isPrinterConflict(twin1WithSerial, twinNoSerial1))
+        assertFalse(isPrinterConflict(twinNoSerial1, twin1WithSerial))
+        assertFalse(isPrinterConflict(twinNoSerial1, twinNoSerial2))
+
+        // Different VID/PID do not conflict
+        assertFalse(isPrinterConflict(twin1WithSerial, differentVid))
+
+        // Bluetooth checks work as expected
+        val bt1 = PrinterTarget.Bluetooth("00:11:22:33:44:55")
+        val bt1Same = PrinterTarget.Bluetooth("00:11:22:33:44:55")
+        val bt2 = PrinterTarget.Bluetooth("AA:BB:CC:DD:EE:FF")
+        assertTrue(isPrinterConflict(bt1, bt1Same))
+        assertFalse(isPrinterConflict(bt1, bt2))
+
+        // None target never conflicts
+        assertFalse(isPrinterConflict(PrinterTarget.None, twin1WithSerial))
+        assertFalse(isPrinterConflict(twin1WithSerial, PrinterTarget.None))
+    }
 }

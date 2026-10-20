@@ -144,3 +144,26 @@ fun isSamePrinterTarget(a: PrinterTarget, b: PrinterTarget): Boolean {
         else -> false
     }
 }
+
+/**
+ * Checks whether two printer targets represent a conflicting hardware assignment.
+ * For USB printers with identical VID:PID, a conflict is detected only when BOTH serial numbers
+ * are known and match, preventing twin printers awaiting permission from being blocked.
+ */
+fun isPrinterConflict(a: PrinterTarget, b: PrinterTarget): Boolean {
+    if (!a.isConfigured || !b.isConfigured) return false
+    if (a is PrinterTarget.Usb && b is PrinterTarget.Usb) {
+        val idA = parseUsbDeviceKey(a.deviceKey)
+        val idB = parseUsbDeviceKey(b.deviceKey)
+        if (idA != null && idB != null) {
+            if (idA.vendorId != idB.vendorId || idA.productId != idB.productId) return false
+            return if (idA.serialNumber.isNotBlank() && idB.serialNumber.isNotBlank()) {
+                idA.serialNumber.equals(idB.serialNumber, ignoreCase = true)
+            } else {
+                false
+            }
+        }
+        return false
+    }
+    return isSamePrinterTarget(a, b)
+}
