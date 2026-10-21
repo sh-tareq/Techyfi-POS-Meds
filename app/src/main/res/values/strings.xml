@@ -1242,6 +1242,15 @@
     <string name="products_deleting_owner_only">Deleting products is owner-only</string>
     <string name="products_barcode_scanner_activated">Barcode Scanner activated</string>
     <string name="products_inventory_valuation_health">INVENTORY VALUATION &amp; HEALTH</string>
+    <string name="products_valuation_short">Valuation</string>
+    <string name="products_quick_actions">Quick Actions</string>
+    <string name="products_quick_actions_sub">POS Tools</string>
+    <string name="products_excel_tools_sub">Import or Export Inventory</string>
+    <string name="products_stock_audit_sub">Counts &amp; adjustment logs</string>
+    <string name="products_print_labels_sub">Barcode thermal sticker roll</string>
+    <string name="products_health_ok_badge">%1$d OK</string>
+    <string name="products_health_low_badge">%1$d Low</string>
+    <string name="products_health_out_badge">%1$d Out</string>
     <string name="products_collapse_arrow">Collapse ▴</string>
     <string name="products_details_arrow">Details ▾</string>
     <string name="products_total_selling_value_skus">Total Selling Value (%1$d SKUs)</string>

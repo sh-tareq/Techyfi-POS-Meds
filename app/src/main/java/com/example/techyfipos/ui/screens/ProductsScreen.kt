@@ -749,6 +749,118 @@ fun ProductsScreen(
                         }
                     },
                     actions = {
+                        // ⚡ 3D Realistic Quick Action Button beside Bell Icon (Matching Preview)
+                        var showQuickActionsMenu by remember { mutableStateOf(false) }
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 2.dp)
+                                .size(48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IconButton(
+                                onClick = { showQuickActionsMenu = true },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFFFEF3C7).copy(alpha = 0.85f),
+                                    border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.5f)),
+                                    modifier = Modifier.size(34.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Realistic3DMoreZapIcon(size = 18.dp)
+                                    }
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = showQuickActionsMenu,
+                                onDismissRequest = { showQuickActionsMenu = false },
+                                modifier = Modifier.width(280.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.products_quick_actions),
+                                            fontSize = 13.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.products_quick_actions_sub),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                                // 1. Excel Tools (Import / Export)
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(stringResource(R.string.products_excel_tools), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                            Text(stringResource(R.string.products_excel_tools_sub), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Description, null, tint = Color(0xFF059669), modifier = Modifier.size(20.dp))
+                                    },
+                                    onClick = {
+                                        showQuickActionsMenu = false
+                                        showExcelMenu = true
+                                    }
+                                )
+
+                                // 2. Stock Audit History
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(stringResource(R.string.products_stock_audit), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                            Text(stringResource(R.string.products_stock_audit_sub), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    },
+                                    leadingIcon = {
+                                        Realistic3DClipboardDuesIcon(size = 18.dp)
+                                    },
+                                    onClick = {
+                                        showQuickActionsMenu = false
+                                        showStockAuditHistoryModal = true
+                                    }
+                                )
+
+                                // 3. Batch Print Labels
+                                if (canPrintLabels) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(stringResource(R.string.products_print_labels), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                                Text(stringResource(R.string.products_print_labels_sub), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Print, null, tint = Color(0xFF4F46E5), modifier = Modifier.size(20.dp))
+                                        },
+                                        onClick = {
+                                            showQuickActionsMenu = false
+                                            showBatchPrintDialog = true
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
                         // 3D Ringing Brass Bell for Inventory Alerts with Non-Clipping Badge (Present on both phone and tablet)
                         Box(
                             modifier = Modifier
@@ -866,152 +978,47 @@ fun ProductsScreen(
                     }
                 )
 
-                // Integrated Horizontal Quick-Tool Ribbon (Consistent across Phone and Tablet)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = if (isTablet) 14.dp else 12.dp, vertical = 4.dp)
-                        .padding(bottom = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Excel Import/Export Dropdown Menu
+                DropdownMenu(
+                    expanded = showExcelMenu,
+                    onDismissRequest = { showExcelMenu = false }
                 ) {
-                        // 1. Excel Tools Chip
-                        Box {
-                            Surface(
-                                onClick = { showExcelMenu = true },
-                                shape = RoundedCornerShape(20.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                                modifier = Modifier.height(48.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Description,
-                                        contentDescription = stringResource(R.string.products_excel_tools),
-                                        tint = Color(0xFF059669),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        text = stringResource(R.string.products_excel_tools),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Spacer(Modifier.width(2.dp))
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.products_import_excel), fontWeight = FontWeight.SemiBold) },
+                        leadingIcon = { Icon(Icons.Default.FileUpload, null, tint = if (canEdit) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                        enabled = !isImporting,
+                        onClick = {
+                            showExcelMenu = false
+                            if (!canEdit) {
+                                Toast.makeText(context, context.getString(R.string.products_editing_owner_only), Toast.LENGTH_SHORT).show()
+                                return@DropdownMenuItem
                             }
-                            DropdownMenu(
-                                expanded = showExcelMenu,
-                                onDismissRequest = { showExcelMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.products_import_excel), fontWeight = FontWeight.SemiBold) },
-                                    leadingIcon = { Icon(Icons.Default.FileUpload, null, tint = if (canEdit) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
-                                    enabled = !isImporting,
-                                    onClick = {
-                                        showExcelMenu = false
-                                        if (!canEdit) {
-                                            Toast.makeText(context, context.getString(R.string.products_editing_owner_only), Toast.LENGTH_SHORT).show()
-                                            return@DropdownMenuItem
-                                        }
-                                        importExcelLauncher.launch(
-                                            arrayOf(
-                                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                                "application/vnd.ms-excel",
-                                                "application/octet-stream"
-                                            )
-                                        )
-                                    }
+                            importExcelLauncher.launch(
+                                arrayOf(
+                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                    "application/vnd.ms-excel",
+                                    "application/octet-stream"
                                 )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.products_export_excel), fontWeight = FontWeight.SemiBold) },
-                                    leadingIcon = { Icon(Icons.Default.FileDownload, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = {
-                                        showExcelMenu = false
-                                        val cleanDate = DateFormatters.formatExportDate()
-                                        exportExcelLauncher.launch("products-$cleanDate.xlsx")
-                                    }
-                                )
-                            }
+                            )
                         }
-
-
-                        // 3. Stock Audit History Chip
-                        Surface(
-                            onClick = { showStockAuditHistoryModal = true },
-                            shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                            modifier = Modifier.height(48.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            ) {
-                                Realistic3DClipboardDuesIcon(size = 16.dp)
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = stringResource(R.string.products_stock_audit),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.products_export_excel), fontWeight = FontWeight.SemiBold) },
+                        leadingIcon = { Icon(Icons.Default.FileDownload, null, tint = MaterialTheme.colorScheme.primary) },
+                        onClick = {
+                            showExcelMenu = false
+                            val cleanDate = DateFormatters.formatExportDate()
+                            exportExcelLauncher.launch("products-$cleanDate.xlsx")
                         }
+                    )
+                }
 
-                        // 4. Batch Print Labels Chip
-                        if (canPrintLabels) {
-                            Surface(
-                                onClick = {
-                                    if (canPrintLabels) {
-                                        showBatchPrintDialog = true
-                                    } else {
-                                        android.widget.Toast.makeText(context, context.getString(R.string.perm_inventory_print_labels_desc), android.widget.Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                shape = RoundedCornerShape(20.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                                modifier = Modifier.height(48.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Print,
-                                        contentDescription = stringResource(R.string.products_print_labels),
-                                        tint = Color(0xFF4F46E5),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        text = stringResource(R.string.products_print_labels),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    if (isImporting) {
-                        LinearProgressIndicator(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                if (isImporting) {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         },
         floatingActionButton = {
@@ -1042,166 +1049,203 @@ fun ProductsScreen(
                 .padding(paddingValues),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // 📊 Executive Inventory Valuation & Stock Health Gauge Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 2.dp)
-                    .clickable { isInventoryCardExpanded = !isInventoryCardExpanded },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1B4B))
+            // 📊 Sleek Compact 36dp Stat Bar with Expandable Detail Drawer (Matching Preview)
+            Surface(
+                onClick = { isInventoryCardExpanded = !isInventoryCardExpanded },
+                color = if (isSystemInDarkTheme()) Color(0xFF161D31) else Color(0xFFEEF2FF),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("📊", fontSize = 13.sp)
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                stringResource(R.string.products_inventory_valuation_health),
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFFA5B4FC),
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color.White.copy(alpha = 0.15f)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            ) {
-                                Text(
-                                    if (isInventoryCardExpanded) stringResource(R.string.products_collapse_arrow) else stringResource(R.string.products_details_arrow),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        Column {
-                            Text(
-                                stringResource(R.string.products_total_selling_value_skus, totalSKUCount),
-                                fontSize = 10.5.sp,
-                                color = Color(0xFFCBD5E1),
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                formatTaka(totalSellingValue),
-                                fontSize = 21.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color.White
-                            )
-                        }
-
-                        if (canViewCosts) {
-                            val marginPct = if (totalPurchaseValue > 0) {
-                                ((totalSellingValue - totalPurchaseValue) / totalPurchaseValue * 100.0)
-                            } else 0.0
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFF10B981).copy(alpha = 0.25f),
-                                border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.45f))
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                    horizontalAlignment = Alignment.End
-                                ) {
-                                    Text(stringResource(R.string.products_margin_label), fontSize = 11.sp, color = Color(0xFF6EE7B7), fontWeight = FontWeight.Bold)
-                                    Text(
-                                        String.format(Locale.US, "+%.1f%%", marginPct),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color(0xFF6EE7B7)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    // Live Segmented Health Progress Bar
-                    val inStockRatio = if (totalSKUCount > 0) (inStockCount.toFloat() / totalSKUCount.toFloat()) else 1f
-                    val lowStockRatio = if (totalSKUCount > 0) (lowStockCount.toFloat() / totalSKUCount.toFloat()) else 0f
-                    val outStockRatio = if (totalSKUCount > 0) (outOfStockCount.toFloat() / totalSKUCount.toFloat()) else 0f
-
+                Column {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.White.copy(alpha = 0.15f))
+                            .padding(horizontal = 14.dp, vertical = 7.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (inStockRatio > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .weight(inStockRatio.coerceAtLeast(0.01f))
-                                    .background(Color(0xFF10B981))
+                        // Left: 📊 Icon + Valuation Amount + "Valuation" Label
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("📊", fontSize = 13.sp)
+                            Text(
+                                text = formatTaka(totalSellingValue),
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (isSystemInDarkTheme()) Color.White else Color(0xFF1E1B4B)
+                            )
+                            Text(
+                                text = stringResource(R.string.products_valuation_short),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isSystemInDarkTheme()) Color(0xFFA5B4FC) else Color(0xFF4F46E5)
                             )
                         }
-                        if (lowStockRatio > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .weight(lowStockRatio.coerceAtLeast(0.01f))
-                                    .background(Color(0xFFF59E0B))
-                            )
-                        }
-                        if (outStockRatio > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .weight(outStockRatio.coerceAtLeast(0.01f))
-                                    .background(Color(0xFFEF4444))
+
+                        // Right: Health Pills (OK, Low, Out) + Chevron
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // In-Stock (Emerald)
+                            Surface(
+                                shape = RoundedCornerShape(999.dp),
+                                color = Color(0xFF10B981).copy(alpha = 0.18f),
+                                border = BorderStroke(0.8.dp, Color(0xFF10B981).copy(alpha = 0.35f))
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.products_health_ok_badge, inStockCount),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFF059669),
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                )
+                            }
+
+                            // Low Stock (Amber)
+                            if (lowStockCount > 0) {
+                                Surface(
+                                    shape = RoundedCornerShape(999.dp),
+                                    color = Color(0xFFF59E0B).copy(alpha = 0.18f),
+                                    border = BorderStroke(0.8.dp, Color(0xFFF59E0B).copy(alpha = 0.35f))
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.products_health_low_badge, lowStockCount),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFFD97706),
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            // Out of Stock (Rose)
+                            if (outOfStockCount > 0) {
+                                Surface(
+                                    shape = RoundedCornerShape(999.dp),
+                                    color = Color(0xFFEF4444).copy(alpha = 0.18f),
+                                    border = BorderStroke(0.8.dp, Color(0xFFEF4444).copy(alpha = 0.35f))
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.products_health_out_badge, outOfStockCount),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFFDC2626),
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            // Chevron indicating expansion
+                            Icon(
+                                imageVector = if (isInventoryCardExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (isInventoryCardExpanded) stringResource(R.string.products_collapse_arrow) else stringResource(R.string.products_details_arrow),
+                                tint = if (isSystemInDarkTheme()) Color(0xFFA5B4FC) else Color(0xFF4F46E5),
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
 
+                    // Expandable Detail Drawer
                     AnimatedVisibility(
                         visible = isInventoryCardExpanded,
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically()
                     ) {
-                        Column {
-                            Spacer(Modifier.height(10.dp))
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
-                            Spacer(Modifier.height(8.dp))
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(if (isSystemInDarkTheme()) Color(0xFF111827) else Color(0xFFF8FAFC))
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Column {
-                                    Text(stringResource(R.string.products_purchase_cost_label), fontSize = 11.sp, color = Color(0xFFA5B4FC), fontWeight = FontWeight.Bold)
-                                    Text(if (canViewCosts) formatTaka(totalPurchaseValue) else "••••••", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                // Drawer Card 1: Purchase Cost
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp)) {
+                                        Text(
+                                            text = stringResource(R.string.products_purchase_cost_label),
+                                            fontSize = 9.5.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = if (canViewCosts) formatTaka(totalPurchaseValue) else "••••••",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
-                                Column {
-                                    Text(stringResource(R.string.products_in_stock_units_label), fontSize = 11.sp, color = Color(0xFFA5B4FC), fontWeight = FontWeight.Bold)
-                                    val uStr = if (totalStockUnits % 1.0 == 0.0) totalStockUnits.toLong().toString() else String.format(Locale.US, "%.1f", totalStockUnits)
-                                    Text(stringResource(R.string.products_units_pcs, uStr), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6EE7B7))
+
+                                // Drawer Card 2: Gross Margin
+                                if (canViewCosts) {
+                                    val marginPct = if (totalPurchaseValue > 0) {
+                                        ((totalSellingValue - totalPurchaseValue) / totalPurchaseValue * 100.0)
+                                    } else 0.0
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Column(modifier = Modifier.padding(8.dp)) {
+                                            Text(
+                                                text = stringResource(R.string.products_margin_label),
+                                                fontSize = 9.5.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = String.format(Locale.US, "+%.1f%%", marginPct),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color(0xFF059669),
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
                                 }
-                                Column {
-                                    Text(stringResource(R.string.products_stock_alerts_label), fontSize = 11.sp, color = Color(0xFFA5B4FC), fontWeight = FontWeight.Bold)
-                                    Text(stringResource(R.string.products_low_out_summary, lowStockCount, outOfStockCount), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCD34D))
+
+                                // Drawer Card 3: Total Units
+                                val uStr = if (totalStockUnits % 1.0 == 0.0) totalStockUnits.toLong().toString() else String.format(Locale.US, "%.1f", totalStockUnits)
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp)) {
+                                        Text(
+                                            text = stringResource(R.string.products_in_stock_units_label),
+                                            fontSize = 9.5.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.products_units_pcs, uStr),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f), thickness = 0.8.dp)
                 }
             }
 
@@ -1387,50 +1431,26 @@ fun ProductsScreen(
                     }
                 }
 
-                // Native View Mode Switcher (Grid Default on Tablet / List)
+                // Native View Mode Switcher: Single Toggle Button (matching Preview)
                 Surface(
-                    color = MaterialTheme.colorScheme.surface,
+                    onClick = {
+                        viewModeName = if (viewMode == ProductViewMode.GRID) ProductViewMode.LIST.name else ProductViewMode.GRID.name
+                    },
                     shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
                     shadowElevation = 0.5.dp,
-                    modifier = Modifier.height(48.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            onClick = { viewModeName = ProductViewMode.GRID.name },
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (viewMode == ProductViewMode.GRID) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                            border = if (viewMode == ProductViewMode.GRID) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)) else null,
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.GridView,
-                                    contentDescription = stringResource(R.string.products_grid_view_cd),
-                                    modifier = Modifier.size(19.dp),
-                                    tint = if (viewMode == ProductViewMode.GRID) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Surface(
-                            onClick = { viewModeName = ProductViewMode.LIST.name },
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (viewMode == ProductViewMode.LIST) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                            border = if (viewMode == ProductViewMode.LIST) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)) else null,
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ViewList,
-                                    contentDescription = stringResource(R.string.products_list_view_cd),
-                                    modifier = Modifier.size(20.dp),
-                                    tint = if (viewMode == ProductViewMode.LIST) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = if (viewMode == ProductViewMode.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                            contentDescription = stringResource(
+                                if (viewMode == ProductViewMode.GRID) R.string.products_list_view_cd else R.string.products_grid_view_cd
+                            ),
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
 

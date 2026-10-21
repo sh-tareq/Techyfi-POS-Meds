@@ -3199,8 +3199,17 @@ mindmap
 - **Comprehensive Unit Testing Suite (R24-T1)**:
   - Executed full test suite: **302 passing unit tests** across all modules with zero failures and zero skipped tests.
   - Added targeted test cases verifying lockout seconds parsing, negative supplier error mapping, and query normalization.
+- **Products Screen Visual Parity & Real Device Alignment (V21-10-2026 / V2)**:
+  - **Dynamic Product Image Visibility**: Product thumbnail box stays completely hidden when no product image is available, eliminating empty placeholders and reclaiming horizontal space for product titles and tags.
+  - **Full-View Image Inspection**: When a product image is present, tapping on the thumbnail launches the dedicated full-screen `EnlargedImageDialog` with high-resolution rendering and dismiss animation.
+  - **Unified Single-Row Card Layout (`ProductItemRow`)**: Harmonized list cards across phone and tablet into a sleek single-row card matching the interactive preview (2-line title, laser barcode chip, category tag, bold price, stock pill, 36dp quick add button, and 3-dot overflow menu).
+  - **Compact Grid Card Layout (`ProductGridCard`)**: Removed 80dp placeholder space and harmonized grid cards into a compact 3-row architecture (top: thumbnail & stock pill; middle: title, laser barcode chip, category; bottom: price, quick add, and overflow menu).
+  - **TopAppBar Quick Actions Hub (`btnQuickActions`)**: Integrated 3D extruded lightning zap button (`Realistic3DMoreZapIcon`) in the top bar actions group with a dropdown menu housing Excel Tools (.xlsx), Stock Audit History, and Batch Print Labels, replacing the wide 3-button ribbon.
+  - **Compact 36dp Valuation Stat Bar**: Replaced the large navy valuation card with a sleek 36dp stat bar displaying total selling valuation, stock health badges (In-Stock, Low, Out), and an expandable drawer revealing purchase cost, gross profit margin, and total in-stock units.
+  - **Single View Toggle Control**: Replaced the dual segmented switcher with a single 48dp toggle button alternating smoothly between List and Grid layouts.
+  - **Connected Device Verification**: Tested, verified, and captured screenshots directly on connected Xiaomi device (`cb5fdfb5`), confirming 100% visual parity with the interactive HTML preview.
 - **Release Deliverable**:
-  - `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220969, versionName "2.6.93-Final-V21-10-2026"), R8 minified and resource-shrunk, signed with the debug keystore and prepared as an in-place update for existing installations in the project root directory.
+  - `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220970, versionName "2.6.94-Final-V21-10-2026"), built with R8 minification and resource shrinking, signed with the debug keystore and prepared as an in-place update for existing installations in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
 
 ## Maintenance note
 

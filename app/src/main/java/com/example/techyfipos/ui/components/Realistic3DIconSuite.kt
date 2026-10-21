@@ -1236,7 +1236,7 @@ fun Realistic3DChromePearlsIcon(
             val centers = listOf(
                 Offset(w * 0.5f, h * 0.25f),
                 Offset(w * 0.5f, h * 0.50f),
-                Offset(w * 0.75f, h * 0.75f)
+                Offset(w * 0.5f, h * 0.75f)
             )
 
             centers.forEach { center ->

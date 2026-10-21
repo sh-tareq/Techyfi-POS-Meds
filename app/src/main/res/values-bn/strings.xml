@@ -1238,6 +1238,15 @@
     <string name="products_deleting_owner_only">পণ্য মুছে ফেলা শুধুমাত্র মালিকের জন্য</string>
     <string name="products_barcode_scanner_activated">বারকোড স্ক্যানার চালু হয়েছে</string>
     <string name="products_inventory_valuation_health">মজুদের মূল্যায়ন ও স্বাস্থ্য</string>
+    <string name="products_valuation_short">মূল্যায়ন</string>
+    <string name="products_quick_actions">কুইক অ্যাকশন</string>
+    <string name="products_quick_actions_sub">পিওএস টুলস</string>
+    <string name="products_excel_tools_sub">ইনভেন্টরি ইমপোর্ট ও এক্সপোর্ট</string>
+    <string name="products_stock_audit_sub">গণনা ও সমন্বয় লগ</string>
+    <string name="products_print_labels_sub">বারকোড থার্মাল স্টিকার রোল</string>
+    <string name="products_health_ok_badge">%1$d ঠিক আছে</string>
+    <string name="products_health_low_badge">%1$d কম</string>
+    <string name="products_health_out_badge">%1$d শেষ</string>
     <string name="products_collapse_arrow">সংক্ষিপ্ত করুন ▴</string>
     <string name="products_details_arrow">বিস্তারিত ▾</string>
     <string name="products_total_selling_value_skus">মোট বিক্রয় মূল্য (%1$d এসকেইউ)</string>

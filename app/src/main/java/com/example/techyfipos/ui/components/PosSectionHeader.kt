@@ -109,8 +109,8 @@ fun PosTopAppBarTitle(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Metric Pill Tag: Rendered in title row on Tablet where horizontal space is ample
-                if (isTablet && !metricBadge.isNullOrBlank()) {
+                // Metric Pill Tag: Rendered in title row
+                if (!metricBadge.isNullOrBlank()) {
                     Surface(
                         color = badgeColor.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(50),
@@ -118,8 +118,8 @@ fun PosTopAppBarTitle(
                     ) {
                         Text(
                             text = metricBadge,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = if (isTablet) 8.dp else 6.dp, vertical = if (isTablet) 2.dp else 1.5.dp),
+                            fontSize = if (isTablet) 11.sp else 9.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = badgeColor,
                             maxLines = 1
