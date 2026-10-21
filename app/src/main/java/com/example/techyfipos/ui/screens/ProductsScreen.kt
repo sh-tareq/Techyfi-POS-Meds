@@ -30,6 +30,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -729,6 +730,7 @@ fun ProductsScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             var showExcelMenu by remember { mutableStateOf(false) }
             Column(
@@ -740,7 +742,7 @@ fun ProductsScreen(
                     title = {
                         PosTopAppBarTitle(
                             title = stringResource(R.string.products),
-                            metricBadge = if (allProductsList.isNotEmpty()) pluralStringResource(R.plurals.products_sku_count, allProductsList.size, allProductsList.size) else null,
+                            metricBadge = null,
                             badgeColor = PosSectionColors.Products,
                             isTablet = isTablet,
                             icon = { size -> Realistic3DProductsBoxIcon(size = size) }
@@ -1051,7 +1053,12 @@ fun ProductsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(
+                    top = paddingValues.calculateTopPadding(),
+                    start = paddingValues.calculateStartPadding(LocalLayoutDirection.current),
+                    end = paddingValues.calculateEndPadding(LocalLayoutDirection.current),
+                    bottom = 0.dp
+                ),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // 📊 Sleek Compact 36dp Stat Bar with Expandable Detail Drawer (Matching Preview)
@@ -1218,8 +1225,8 @@ fun ProductsScreen(
                                     }
                                 }
 
-                                // Drawer Card 3: Total Units
-                                val uStr = if (totalStockUnits % 1.0 == 0.0) totalStockUnits.toLong().toString() else String.format(Locale.US, "%.1f", totalStockUnits)
+                                // Drawer Card 3: Total SKUs (Moved here per user request)
+                                val skuCount = allProductsList.size
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = MaterialTheme.colorScheme.surface,
@@ -1228,13 +1235,13 @@ fun ProductsScreen(
                                 ) {
                                     Column(modifier = Modifier.padding(8.dp)) {
                                         Text(
-                                            text = stringResource(R.string.products_in_stock_units_label),
+                                            text = stringResource(R.string.products_total_skus_label),
                                             fontSize = 9.5.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Text(
-                                            text = stringResource(R.string.products_units_pcs, uStr),
+                                            text = pluralStringResource(R.plurals.products_sku_count, skuCount, skuCount),
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = MaterialTheme.colorScheme.primary,
@@ -1924,7 +1931,7 @@ fun ProductsScreen(
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 140.dp),
+                            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = if (isTablet) 16.dp else 72.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(visibleProducts, key = { it.barcode }) { product ->
@@ -1983,7 +1990,7 @@ fun ProductsScreen(
                             state = gridState,
                             columns = if (isTablet) GridCells.Adaptive(minSize = 300.dp) else GridCells.Adaptive(minSize = 160.dp),
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 140.dp),
+                            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = if (isTablet) 16.dp else 72.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {

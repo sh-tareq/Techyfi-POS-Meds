@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-21 (app version 2.6.94-Final-V21-10-2026, build `Techyfi-POS-Final-V21-10-2026.apk`; versionCode 220970; DB schema version 38)
+Last updated: 2026-10-21 (app version 2.6.94-Final-V21-10-2026, build `Techyfi-POS-Final-V21-10-2026.apk`; versionCode 220972; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3205,15 +3205,17 @@ mindmap
   - **Unified Single-Row Card Layout (`ProductItemRow`)**: Harmonized list cards across phone and tablet into a sleek single-row card matching the interactive preview (2-line title, laser barcode chip, category tag, bold price, stock pill, 36dp quick add button, and 3-dot overflow menu).
   - **Compact Grid Card Layout (`ProductGridCard`)**: Removed 80dp placeholder space and harmonized grid cards into a compact 3-row architecture (top: thumbnail & stock pill; middle: title, laser barcode chip, category; bottom: price, quick add, and overflow menu).
   - **TopAppBar Quick Actions Hub (`btnQuickActions`)**: Integrated 3D extruded lightning zap button (`Realistic3DMoreZapIcon`) in the top bar actions group with a dropdown menu housing Excel Tools (.xlsx), Stock Audit History, and Batch Print Labels, replacing the wide 3-button ribbon.
-  - **Compact 36dp Valuation Stat Bar**: Replaced the large navy valuation card with a sleek 36dp stat bar displaying total selling valuation, stock health badges (In-Stock, Low, Out), and an expandable drawer revealing purchase cost, gross profit margin, and total in-stock units.
-  - **Single View Toggle Control**: Replaced the dual segmented switcher with a single 48dp toggle button alternating smoothly between List and Grid layouts.
-  - **Connected Device Verification**: Tested, verified, and captured screenshots directly on connected Xiaomi device (`cb5fdfb5`), confirming 100% visual parity with the interactive HTML preview.
+  - **Compact 36dp Valuation Stat Bar & Relocated SKU Count**: Replaced the large navy valuation card with a sleek 36dp stat bar displaying total selling valuation, stock health badges (In-Stock, Low, Out), and an expandable drawer revealing purchase cost, gross profit margin, and total SKU count ("621 SKUs" moved to Drawer Card 3 per user request). Removed redundant SKU metric badge from TopAppBar title for an uncluttered header.
+  - **Bottom Blank Space Elimination**: Zeroed Scaffold bottom insets (`contentWindowInsets = WindowInsets(0, 0, 0, 0)`) and optimized list content padding (`bottom = 72.dp` on phone) to ensure product cards flow naturally behind the FAB directly to the bottom navigation bar without unnecessary blank space.
+  - **Single View Toggle Control**: Replaced the dual segmented switcher with a single 40dp toggle button alternating smoothly between List and Grid layouts.
+  - **Connected Device Verification**: Tested, verified, and captured screenshots directly on connected Xiaomi device (`cb5fdfb5`), confirming 100% visual parity with the interactive HTML preview across both List and Grid views.
 - **Release Deliverable**:
-  - `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220970, versionName "2.6.94-Final-V21-10-2026"), built with R8 minification and resource shrinking, signed with the debug keystore and prepared as an in-place update for existing installations in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+  - `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220972, versionName "2.6.94-Final-V21-10-2026"), built with R8 minification and resource shrinking, signed with the debug keystore and installed as an in-place update on the connected device in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
 
 ## Maintenance note
 
 Update this file whenever a screen, navigation route, persistent entity, payment workflow, or critical business rule changes. It is intended to remain the concise source of truth for future development work in this workspace. All updated APKs and mind maps must always be stored in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+
 
 
 

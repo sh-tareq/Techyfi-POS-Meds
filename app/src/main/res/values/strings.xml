@@ -1257,6 +1257,7 @@
     <string name="products_margin_label">MARGIN</string>
     <string name="products_purchase_cost_label">PURCHASE COST</string>
     <string name="products_in_stock_units_label">IN-STOCK UNITS</string>
+    <string name="products_total_skus_label">TOTAL SKUs</string>
     <string name="products_units_pcs">%1$s Pcs</string>
     <string name="products_stock_alerts_label">STOCK ALERTS</string>
     <string name="products_low_out_summary">%1$d Low · %2$d Out</string>
