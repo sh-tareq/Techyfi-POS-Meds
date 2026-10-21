@@ -188,7 +188,7 @@ mindmap
         Product Not Found dialog on unrecognized barcode
           Add Product Now opens Products screen with barcode prefilled
           Keep Scanning dismisses and resumes
-          Same dialog (`StockCheckNotFoundDialog`) used by Sell and Products screens too — one shared design, no more per-screen bottom sheets
+          Same dialog (`StockCheckNotFoundDialog`) used by Sell and Products screens too  -  one shared design, no more per-screen bottom sheets
         No success snackbar when scanning/adding real products (only the inline scan-update banner); adding a Quick Sale custom item does show a confirmation Toast
         Increase or decrease quantity
           Fractional/decimal quantities for weight or volume units (Kg, Gm, Ltr, ml, Mtr and variants)
@@ -231,7 +231,7 @@ mindmap
           Live Subtotal Preview Card
             Real-time subtotal calculation with emerald glow indicator for free items
           One-tap Quick Sale Presets (editable, with reset-to-defaults)
-          Adds an ephemeral synthetic Product (barcode `CUSTOM-<timestamp>`, stockQty 999999) — never written to the products table, does not affect real inventory, and never matches a prior quick-sale line by barcode
+          Adds an ephemeral synthetic Product (barcode `CUSTOM-<timestamp>`, stockQty 999999)  -  never written to the products table, does not affect real inventory, and never matches a prior quick-sale line by barcode
         Per-line item note (warranty/serial/instructions)
           Editable per cart line, printed on thermal receipts and PDF invoices
           Manageable Note Presets chip picker (add/edit/delete), also embedded in the Quick Sale dialog's note field
@@ -351,7 +351,7 @@ mindmap
           Tertiary overflow row: Edit (void & reload), Return Items, Delete, Done
         Add to Cart Again and Edit
           Add to Cart Again reloads the just-completed sale's line items into the cart without navigating away
-          Edit (owner only) voids the just-completed sale — restoring stock, due balance, and loyalty points — then reloads its items into the cart for changes and re-checkout
+          Edit (owner only) voids the just-completed sale  -  restoring stock, due balance, and loyalty points  -  then reloads its items into the cart for changes and re-checkout
           Both resolve the completed sale via SalesViewModel.salesWithItems by the sale ID captured on BillData at checkout time
         Receipt State Retention & Direct ESC/POS Driver
           Receipt dialog state and completedBillSnapshot hoisted into CartViewModel surviving screen rotation
@@ -362,11 +362,11 @@ mindmap
         Live Gross Margin Percentage (+28.4%)
         3-Color Segmented Stock Health Progress Bar (🟢 In Stock, 🟠 Low, 🔴 Out)
         Collapsible Details Drawer (In-Stock Units & Low/Out Stock Alerts)
-        Inventory Alerts Center (InventoryAlertsCenterBottomSheet) — modal bottom sheet with 3 tabs (Expired / Expiring Soon / Low Stock); each item card has Edit and, for Low Stock, a one-tap +10 Quick Restock button
+        Inventory Alerts Center (InventoryAlertsCenterBottomSheet)  -  modal bottom sheet with 3 tabs (Expired / Expiring Soon / Low Stock); each item card has Edit and, for Low Stock, a one-tap +10 Quick Restock button
       Fast-Action Toolbar
         Integrated search input with clear button
         1-Tap 📷 Barcode Scanner toggle
-        Single "Tune" filter icon opening a Filter & Sort bottom sheet (categories, 2×2 stock-health grid, date/expiry filters, 6 sort options, price range) — the toolbar row itself does not contain filter chips or category pills
+        Single "Tune" filter icon opening a Filter & Sort bottom sheet (categories, 2×2 stock-health grid, date/expiry filters, 6 sort options, price range)  -  the toolbar row itself does not contain filter chips or category pills
         Dual View Switcher (☰ List vs ⊞ 2-Column Grid)
         Add Product is a separate floating action button, not part of the toolbar row
       High-Density Product Cards & Workflows
@@ -415,7 +415,7 @@ mindmap
           Direct selection for Selling, MRP, Wholesale, and Dual Display price tiers with Unit & Bangla Digits support
           Bulk PDF multi-page label generation applying active price tier formatting across all items
         Mfg/Pkg & Expiry Date pickers
-        Physical label dimensions (25×15, 30×20, 40×25, 45×35, 50×30, 60×40, 100×150mm, plus custom — 7 presets)
+        Physical label dimensions (25×15, 30×20, 40×25, 45×35, 50×30, 60×40, 100×150mm, plus custom  -  7 presets)
         Thermal label direct printing & high-resolution PNG/PDF image export
       Quick Stock Check & Audit Adjustments
         ±1 stepper buttons plus a chip row of +1/+5/+10/Set-to-0/Reset-to-original (no -5/-10 decrement chips), direct keyboard entry
@@ -488,7 +488,7 @@ mindmap
         Refund method
           Cash
           Original method
-          (Store credit option was removed — no ledger ever backed it)
+          (Store credit option was removed  -  no ledger ever backed it)
           Only Cash Refunds cash-drawer accounting differs between methods; return/stock/due handling is otherwise identical
         Restocks returned quantity
         Refund total computed live
@@ -522,21 +522,21 @@ mindmap
       CSV share and export
     Customer dues
       Owner-controlled mutations
-        Owner can add due, collect payment, change credit limit, or delete ledger — "deleting" archives the due (isArchived) rather than cascading away its DuePayment history
+        Owner can add due, collect payment, change credit limit, or delete ledger  -  "deleting" archives the due (isArchived) rather than cascading away its DuePayment history
         Cashier can search, inspect, call, remind, and share statements but cannot mutate balances
         Repository authorization protects every balance mutation even if called outside the screen UI
         Every write path normalizes the customer's phone (normalizePhone) before touching customer_dues/due_payments/due_charges/customers/customer_loyalty, so the same customer always resolves to one canonical ledger row regardless of how the phone was typed, autofilled, or imported
-      Digital Khata Ledger — unified Transaction History (DuePayment + DueCharge)
+      Digital Khata Ledger  -  unified Transaction History (DuePayment + DueCharge)
         Two-sided ledger: DuePayment is the credit side (collections), DueCharge is the debit side (amounts that increased the balance)
-          DueCharge reason "Sale" — auto-logged when a Due (or Split-Due) sale completes, linked to the sale via saleId
-          DueCharge reason "Manual" — logged when the Add Due dialog is used to add a standalone charge; the dialog's Note field is saved onto the charge instead of being discarded
+          DueCharge reason "Sale"  -  auto-logged when a Due (or Split-Due) sale completes, linked to the sale via saleId
+          DueCharge reason "Manual"  -  logged when the Add Due dialog is used to add a standalone charge; the dialog's Note field is saved onto the charge instead of being discarded
         Transaction History merges both sides by timestamp: collections shown in green (+৳), charges shown in red (−৳), each labeled "Due Sale" or "Due Added"
-        Delete Payment (Owner only) — reverses a mistaken collection: removes the DuePayment row and adds the amount back to the outstanding balance
-        Delete Charge (Owner only) — reverses a charge: removes the DueCharge row and subtracts the amount from the outstanding balance
+        Delete Payment (Owner only)  -  reverses a mistaken collection: removes the DuePayment row and adds the amount back to the outstanding balance
+        Delete Charge (Owner only)  -  reverses a charge: removes the DueCharge row and subtracts the amount from the outstanding balance
           Deleting a "Due Added" (manual) charge is a full undo
-          Deleting a "Due Sale" charge only undoes the ledger entry and its share of the balance — the underlying sale itself is untouched; the confirmation dialog points to Delete Sale (History screen) for a full undo (which also restocks items and reverses loyalty)
+          Deleting a "Due Sale" charge only undoes the ledger entry and its share of the balance  -  the underlying sale itself is untouched; the confirmation dialog points to Delete Sale (History screen) for a full undo (which also restocks items and reverses loyalty)
           Delete Sale (History screen) already reverses the due amount on its own; it also deletes any DueCharge row linked to that sale by saleId so history doesn't keep showing a charge for a sale that no longer exists
-        due_charges table added in DB schema version 23; existing straight-Due sales were backfilled with charge rows on upgrade (Split-Due portions are not backfilled — JSON-encoded, not practical in plain SQL — but are logged for every Due/Split sale going forward)
+        due_charges table added in DB schema version 23; existing straight-Due sales were backfilled with charge rows on upgrade (Split-Due portions are not backfilled  -  JSON-encoded, not practical in plain SQL  -  but are logged for every Due/Split sale going forward)
       Due Aging Analysis Breakdown Header
         < 7 Days bucket (recent credit)
         7–30 Days bucket (intermediate credit)
@@ -572,7 +572,7 @@ mindmap
           Schedule presets: Tomorrow 10 AM, In 3 Days, Weekly, Custom (Custom uses an in-dialog +/- hour stepper, 1–720 hrs, default 12, that sets the real delay)
           Weekly reminders recur indefinitely via WorkManager PeriodicWork until the due is settled or deleted, at which point the worker cancels itself; each firing re-checks the live due amount and updates the message accordingly
           Delivery channel: WhatsApp, SMS, or Both
-          WorkManager-based scheduling; only one pending scheduled reminder per customer phone number — scheduling a new one silently replaces the prior one
+          WorkManager-based scheduling; only one pending scheduled reminder per customer phone number  -  scheduling a new one silently replaces the prior one
           Scheduling requests Android notification permission and, for SMS/Both, SMS permission at runtime
           SMS/Both auto-sends via SmsManager when SMS permission is granted; WhatsApp/Both posts a tap-through notification when notification permission is granted
           The worker safely skips a notification when permission was revoked after scheduling
@@ -597,7 +597,7 @@ mindmap
         Alphabetical Sorting (Name A to Z & Name Z to A)
         Minimum Due Presets (All Amounts, ≥ ৳500, ≥ ৳1,000, ≥ ৳2,000, ≥ ৳5,000)
         Custom Minimum Due Amount Input & Active Filter Badges
-      Views (Outstanding, Overdue, Settled, Payments) — Overdue = outstanding balance untouched 14+ days or at/above 80% of credit limit
+      Views (Outstanding, Overdue, Settled, Payments)  -  Overdue = outstanding balance untouched 14+ days or at/above 80% of credit limit
       Customer-Centric Search (Name or Phone only)
       Period Filter Chips (All Dates, Today, This Week, This Month, Custom Range)
       Itemized Digital Khata Statement Export & Share
@@ -744,7 +744,7 @@ mindmap
           Encrypted Standalone Vault (.posenc)
             Password-protected AES-256-GCM + PBKDF2WithHmacSHA256 standalone local backup export and import
             Secure binary envelope format ('POSENC1') with 128-bit tag and 12-byte IV
-          Portable JSON restore normalizes every phone-keyed row on import (dues, duePayments, dueCharges, customerLoyalty, loyaltyTransactions, scheduledDueReminders, dueReminderLogs, customers) so re-importing an older backup can't reintroduce a split (raw-phone vs. normalized-phone) ledger — see Repair Duplicate Customer Ledgers in Data management for cleaning up ledgers already split before this fix
+          Portable JSON restore normalizes every phone-keyed row on import (dues, duePayments, dueCharges, customerLoyalty, loyaltyTransactions, scheduledDueReminders, dueReminderLogs, customers) so re-importing an older backup can't reintroduce a split (raw-phone vs. normalized-phone) ledger  -  see Repair Duplicate Customer Ledgers in Data management for cleaning up ledgers already split before this fix
           Encrypted SQLite restore includes all 19 Room tables
             Products
             Sales and line items
@@ -760,7 +760,7 @@ mindmap
             VACUUM INTO creates a consistent database snapshot
             Does not depend on the device manufacturer's SQLite version
           Local restore with backward-compatibility and rollback
-          Local JSON Restore File (Replace/Merge) writes through Room DAOs on the same live database connection — no close/reopen, no ViewModelStore/recreate() involvement, so it isn't subject to the encrypted-restore staleness issue above
+          Local JSON Restore File (Replace/Merge) writes through Room DAOs on the same live database connection  -  no close/reopen, no ViewModelStore/recreate() involvement, so it isn't subject to the encrypted-restore staleness issue above
       Import and export
         Products Excel
           Re-importing an existing barcode preserves its image, wholesale price, unit, and mfg/expiry dates
@@ -773,10 +773,10 @@ mindmap
         Acknowledgment required before factory reset
         Factory reset restores generic placeholder shop identity (not real seeded data) and revokes any connected Google Drive authorization
         Repair Duplicate Customer Ledgers (Owner only, Danger Zone)
-          Preview-then-confirm tool: finds customer_dues/due_payments/due_charges/customers rows split across a raw (un-normalized) vs. normalized phone key for the same customer — a legacy data-corruption class fixed going forward by normalizing every write path, but pre-existing on upgrade
+          Preview-then-confirm tool: finds customer_dues/due_payments/due_charges/customers rows split across a raw (un-normalized) vs. normalized phone key for the same customer  -  a legacy data-corruption class fixed going forward by normalizing every write path, but pre-existing on upgrade
           Preview lists each affected customer, how many rows, and the resulting merged balance before anything is touched
           Merge sums outstanding balances into the canonical (normalized) phone, re-keys due_payments/due_charges onto it (re-keyed before the stale row is deleted, to satisfy the ON DELETE CASCADE foreign key), then deletes the stale row
-          Idempotent — re-running after a clean merge reports "No Duplicate Ledgers Found"
+          Idempotent  -  re-running after a clean merge reports "No Duplicate Ledgers Found"
       App help and setup information
       Diagnostics
         Keeps up to 10 local uncaught-crash reports
@@ -825,22 +825,22 @@ mindmap
         Backup import and export
       Room database
         Product
-          stockQty is REAL (Double), not Int — supports fractional quantities
-          mrpPrice, discountedPrice — back the Price Mode selector (Sale/MRP/Bulk)
+          stockQty is REAL (Double), not Int  -  supports fractional quantities
+          mrpPrice, discountedPrice  -  back the Price Mode selector (Sale/MRP/Bulk)
         Sale
           Tax rate and tax amount applied at sale time
         SaleItem
           quantity is REAL (Double)
-          note — per-line item note (warranty/serial/instructions), printed on receipts
+          note  -  per-line item note (warranty/serial/instructions), printed on receipts
         CustomerDue
           creditLimit
-          isArchived — "deleting" a due now archives it (soft-delete) rather than cascading away its DuePayment history
+          isArchived  -  "deleting" a due now archives it (soft-delete) rather than cascading away its DuePayment history
         DuePayment
           Payment method
           Reference note
         DueCharge
           The debit side of the due ledger, paired with DuePayment (credit side) for a full Transaction History statement
-          reason — "Sale" (linked via saleId, auto-logged on Due/Split-Due sale completion) or "Manual" (from the Add Due dialog, note field included)
+          reason  -  "Sale" (linked via saleId, auto-logged on Due/Split-Due sale completion) or "Manual" (from the Add Due dialog, note field included)
           FK to CustomerDue.customerPhone, ON DELETE CASCADE
         User
           Name
@@ -871,12 +871,12 @@ mindmap
           Stores customer, amount, channel, scheduled time, and fire time for list/cancel UI
         RegisterClosing
           Wired into the Register Close screen (More hub)
-          cashRefunds — cash refunded during the shift
-          shiftStartedAt — start time of the shift this closing settles, from RegisterShiftState
-          discrepancyReason — dedicated audit trail reason for counted-vs-expected physical drawer cash variance (distinct from closing notes; DB schema v28)
+          cashRefunds  -  cash refunded during the shift
+          shiftStartedAt  -  start time of the shift this closing settles, from RegisterShiftState
+          discrepancyReason  -  dedicated audit trail reason for counted-vs-expected physical drawer cash variance (distinct from closing notes; DB schema v28)
           Closing the register resets RegisterShiftState to start a fresh shift with float 0
         CustomerLoyalty
-          isActive — soft-deactivation flag filtering the active-members list
+          isActive  -  soft-deactivation flag filtering the active-members list
         SplitPaymentEntry
         LoyaltyTransaction
           Append-only audit ledger of every point earn/redeem/void/manual-adjust event
@@ -909,8 +909,8 @@ mindmap
         Database migrations
           Current schema version 27
           Migration 11→12: adds sale_items.note, customer_dues.creditLimit; creates inventory_adjustments table
-          Migration 12→13: converts products.stockQty, sale_items.quantity, return_items.quantity from INTEGER to REAL (full table rebuild) — the DB-level enabler of fractional quantities
-          Migration 13→14: adds products.mrpPrice and products.discountedPrice (default 0.0) — backs the Price Mode selector
+          Migration 12→13: converts products.stockQty, sale_items.quantity, return_items.quantity from INTEGER to REAL (full table rebuild)  -  the DB-level enabler of fractional quantities
+          Migration 13→14: adds products.mrpPrice and products.discountedPrice (default 0.0)  -  backs the Price Mode selector
           Migration 14→15: creates purchase_invoice_items and supplier_payments with supplier/invoice cascade relationships
           Migration 15→16: creates scheduled_due_reminders for persistent persistent-reminder tracking and cancellation
           Migration 17→18: adds returns.externalRefundAmount/dueAdjustmentAmount, backfilling legacy proportional due-reduction so upgrades from ≤17 don't double-apply it; new returns use due-first settlement instead
@@ -930,7 +930,7 @@ mindmap
         Invoice settings (58mm / 80mm roll width, directBluetoothPrintEnabled, directBluetoothPrinterAddress, allowNegativeInventory, showDueReceiptVerificationQr, shop identity, logo, QR links, footer notes, showDueReceiptLogo, showDueReceiptCustomNotes, dueReceiptCustomTitle, dueReceiptCustomNotes)
         Shop settings
         CategoryItem list, QuickSalePreset list, DueTemplate list, Note presets list
-          Plain Kotlin data classes with hand-rolled JSON (de)serialization, persisted as JSON strings inside Preferences DataStore — not Room tables
+          Plain Kotlin data classes with hand-rolled JSON (de)serialization, persisted as JSON strings inside Preferences DataStore  -  not Room tables
           Each has a seeded default list restored when the stored value is blank or corrupt
       Cart persistence
         Restore unfinished cart
@@ -989,7 +989,7 @@ mindmap
 16. **Loyalty management and redemption:** More hub → Customer Loyalty (gated by `loyalty.manage`) → search/add members or adjust points. At checkout, view the customer's points balance → redeem some or all against the sale total. Purchases earn one point per ৳100; partial returns and sale deletion reverse the earned points and lifetime spend that no longer apply, while previously redeemed points are restored when a sale is deleted. Every point change (sale-time earn/redeem, sale-deletion reversal, manual owner adjustment) is recorded as an immutable `LoyaltyTransaction` audit row in the same DB transaction as the balance update.
 17. **Register close (shift cash reconciliation):** More hub → Register Close (Manager / Owner) → review cash sales, digital sales, cash in/out, and cash refunds since today's latest close → enter starting float → Count Drawer & Close Register → enter physical denomination notes counted → app computes expected system cash and counted-vs-expected variance → complete closing → a `RegisterClosing` record is saved with the authenticated operator's name and appears in history. A later close begins immediately after the previous close instead of recounting the entire day. Closing resets the persisted `RegisterShiftState` singleton to start a fresh shift with float 0.
 18. **Z-Report (daily closing P&L):** Register Close screen → tap Z-Report → view today's read-only gross sales, gross margin, discounts, expenses, net profit, and payment breakdown as a simulated thermal receipt → Print, Save as JPEG, or Share → Share opens a format picker (JPEG, PDF, or CSV) and hands off to the system share sheet.
-19. **Mid-Shift X-Report:** Register Close screen → tap X-Report → same interim summary/print/save/share flow as Z-Report, but non-final and does not close the register — useful for a shift-in-progress checkpoint.
+19. **Mid-Shift X-Report:** Register Close screen → tap X-Report → same interim summary/print/save/share flow as Z-Report, but non-final and does not close the register  -  useful for a shift-in-progress checkpoint.
 20. **Supervisor PIN Elevation:** When a frontline cashier attempts a privileged action (discount exceeding personal limit, cart void, returns/refunds, deleting items, credit limit override, holding cart without permission), a `SupervisorAuthDialog` modal is triggered with localized Bengali & English descriptions. Any active Store Manager or Admin/Owner can enter their 4-digit PIN to authorize the single transaction without logging out the cashier or interrupting checkout.
 
 ## Critical business rules
@@ -1004,10 +1004,10 @@ mindmap
   - **Active / Suspended Flag:** Accounts can be suspended immediately without deletion, revoking login access while preserving transaction audit history.
 - **Authenticated Encryption:** Cloud backups must be encrypted with AES-256-GCM using keys derived via PBKDF2 (100,000 iterations) from the stable Google account subject ID and a random per-backup salt to ensure cross-device restoration on replacement devices.
 - **Database Consistency:** Database files must be flushed with `PRAGMA wal_checkpoint(FULL)` prior to packaging.
-- **Rollback Guarantee:** An automated pre-restore backup snapshot must be taken prior to restoring; if restore validation fails, the database is rolled back automatically. These local safety-rollback snapshots (`app/files/safety_rollback/pre_restore_*.sqlite`) are bounded to the 3 most recent and 7 days old (`BackupPackageManager.MAX_ROLLBACK_SNAPSHOTS`/`MAX_ROLLBACK_AGE_MS`), pruned both before and after each restore — this is distinct from the cloud Drive retention policy below.
+- **Rollback Guarantee:** An automated pre-restore backup snapshot must be taken prior to restoring; if restore validation fails, the database is rolled back automatically. These local safety-rollback snapshots (`app/files/safety_rollback/pre_restore_*.sqlite`) are bounded to the 3 most recent and 7 days old (`BackupPackageManager.MAX_ROLLBACK_SNAPSHOTS`/`MAX_ROLLBACK_AGE_MS`), pruned both before and after each restore  -  this is distinct from the cloud Drive retention policy below.
 - **Storage Sandbox & Retention:** Backups are stored in Google Drive's hidden `appDataFolder` (`drive.appdata` scope) and automatically pruned to the selected retention limit (7, 14, or 30).
-- **No Seeded Business Data in Defaults:** `InvoiceSettingsData()`'s default values (and every fallback that reads shop identity) must remain generic placeholders (e.g. "My Shop", blank address/phone/Facebook URL) — never a real shop's name, address, phone number, or social link. A previous version hardcoded one customer's actual business details as the class defaults and DataStore fallbacks, which meant every fresh install and every factory reset silently re-populated that customer's real data instead of a blank slate.
-- **Factory Reset Must Revoke Cloud Auth:** `DataRepository.resetFactoryDefaults()` must call `GoogleDriveHelper.revoke()` for any connected Drive account before completing, in addition to clearing local preferences — otherwise Google's silent re-authorization (`authorizeWithoutUi`, run on every Settings screen load) reconnects the same account and re-persists its identity immediately after reset.
+- **No Seeded Business Data in Defaults:** `InvoiceSettingsData()`'s default values (and every fallback that reads shop identity) must remain generic placeholders (e.g. "My Shop", blank address/phone/Facebook URL)  -  never a real shop's name, address, phone number, or social link. A previous version hardcoded one customer's actual business details as the class defaults and DataStore fallbacks, which meant every fresh install and every factory reset silently re-populated that customer's real data instead of a blank slate.
+- **Factory Reset Must Revoke Cloud Auth:** `DataRepository.resetFactoryDefaults()` must call `GoogleDriveHelper.revoke()` for any connected Drive account before completing, in addition to clearing local preferences  -  otherwise Google's silent re-authorization (`authorizeWithoutUi`, run on every Settings screen load) reconnects the same account and re-persists its identity immediately after reset.
 - Product stock is reserved with a conditional database update inside the sale transaction; checkout is rejected atomically if any real product lacks sufficient stock, so concurrent sales cannot oversell or clamp stock to zero.
 - Deleting a completed sale restores its product stock.
 - A Due payment method requires both customer name and phone number.
@@ -1039,14 +1039,14 @@ mindmap
 - Sale completion, loyalty redemption, supplier stock intake, and related balance changes must run inside Room transactions so partial business mutations are rolled back on failure.
 - Re-importing Products Excel for an existing barcode only overwrites name/category/prices/stock/reorder fields; image, wholesale price, unit, and mfg/expiry dates are preserved from the existing record.
 - Every Excel export (Products, Sales, Dues, the import template) must build the full workbook into an in-memory `ByteArrayOutputStream` first, then copy the finished bytes to the destination stream in a single write + flush. Writing Apache POI's multi-step zip/XML output directly into the SAF-provided `OutputStream` from `CreateDocument` was observed intermittently producing a 0-byte file (roughly 3 of 4 attempts, reproduced on-device); building in memory first means the destination is only ever touched with the complete file.
-- There is exactly one "Product Not Found" UI in the app: `StockCheckNotFoundDialog` (defined in `ProductsScreen.kt`, non-private so other screens can use it). It is used by Products (both stock-check-mode and normal add-to-cart-mode scanning), the Sell/Scanner screen (camera, hardware scanner, and manual "Enter Code" all route through it), and Cart. Previously each screen had its own bespoke not-found UI (an AlertDialog in Products, a separate `ProductNotFoundBottomSheet` in ScannerScreen, and Products' normal-mode scan silently auto-opened the add form with only a snackbar) — do not reintroduce a screen-specific variant; extend the shared dialog instead.
-- Two distinct composables are both named `ZReportDialog`, both now defined in `RegisterCloseScreen.kt`: one overload (`data: SalesReportData, ...`) is the read-only printable P&L summary; the other (`expectedCash: Double, ...`, imported from `AdvancedPosFeatures.kt`) is the cash-count/denomination reconciliation dialog. They are unrelated despite the shared name — resolved by Kotlin overload matching, not by which file declares them — do not assume one calls the other.
+- There is exactly one "Product Not Found" UI in the app: `StockCheckNotFoundDialog` (defined in `ProductsScreen.kt`, non-private so other screens can use it). It is used by Products (both stock-check-mode and normal add-to-cart-mode scanning), the Sell/Scanner screen (camera, hardware scanner, and manual "Enter Code" all route through it), and Cart. Previously each screen had its own bespoke not-found UI (an AlertDialog in Products, a separate `ProductNotFoundBottomSheet` in ScannerScreen, and Products' normal-mode scan silently auto-opened the add form with only a snackbar)  -  do not reintroduce a screen-specific variant; extend the shared dialog instead.
+- Two distinct composables are both named `ZReportDialog`, both now defined in `RegisterCloseScreen.kt`: one overload (`data: SalesReportData, ...`) is the read-only printable P&L summary; the other (`expectedCash: Double, ...`, imported from `AdvancedPosFeatures.kt`) is the cash-count/denomination reconciliation dialog. They are unrelated despite the shared name  -  resolved by Kotlin overload matching, not by which file declares them  -  do not assume one calls the other.
 - The P&L Z-Report in Register Close is always scoped to today only (no period picker); it is a different scope than the Sales Report screen's selectable date range.
 - A day can have multiple `RegisterClosing` records for multiple shifts; each closing only includes activity after today's previous closing timestamp. There is no lock preventing further sales after a close.
 - Expense and register-closing audit names are overwritten at repository entry with the authenticated owner's session name; UI/default `"Admin"` values cannot spoof the stored operator.
 - A Quick Sale line item creates an ephemeral, non-persisted `Product` (barcode `CUSTOM-<timestamp>`, `stockQty = 999999`) that is never written to the `products` table; it never decrements real inventory, and two quick-sales with the same title are still distinct barcodes (different timestamps), so they will never match a prior sale's line item by barcode.
 - Cash Drawer Kick uses Bluetooth SPP or USB bulk transfer to write the ESC/POS pulse bytes to a paired or connected thermal printer. Bluetooth pairing remains in Android Bluetooth settings while USB printers are detected via Android USB Host with runtime permission prompts.
-- Fractional/decimal quantity support (`Product.stockQty`, `SaleItem.quantity`, `ReturnItem.quantity`, `CartItem.quantity` are all `Double`) is inferred purely from the product's `unit` string matching a fixed list (kg, gm/g, ltr/liter/litre, ml, mtr/meter/metre) everywhere it's used — there is no explicit `isFractional` flag on `Product`.
+- Fractional/decimal quantity support (`Product.stockQty`, `SaleItem.quantity`, `ReturnItem.quantity`, `CartItem.quantity` are all `Double`) is inferred purely from the product's `unit` string matching a fixed list (kg, gm/g, ltr/liter/litre, ml, mtr/meter/metre) everywhere it's used  -  there is no explicit `isFractional` flag on `Product`.
 - Price Mode (Sale/MRP/Bulk) reads `Product.sellingPrice` / `mrpPrice` / `wholesalePrice` respectively, each falling back to `sellingPrice` when the tier-specific field is 0/unset.
 - A Due Reminder can only have one pending scheduled instance per customer phone number at a time (WorkManager unique work keyed by normalized phone digits); scheduling a new one replaces the previous one. Pending reminders are mirrored in Room and can be listed/cancelled from Dues; the worker removes its tracking row after completion.
 - The product grid and list card layouts have been fully redesigned and verified on a physical connected device to match the interactive preview (product_screen_redesign_preview.html) with 100% fidelity: unified single-row ProductItemRow, compact 3-row ProductGridCard, hidden image placeholders when images are unavailable, and animated 5-bar cyan laser holographic code stamps.
@@ -1054,7 +1054,7 @@ mindmap
 ## Current Android package
 
 - Application ID: `com.techyfi.pos`
-- Version code: `220970`
+- Version code: `220971`
 - Version name: `2.6.94-Final-V21-10-2026`
 - Upgrade rule: retain the same application ID and signing identity, and always increase the version code.
 - Signing SHA-1:
@@ -1062,7 +1062,7 @@ mindmap
   - Legacy key (prior to Sep 29, 2026): `D6:7B:BD:1C:48:92:D4:FC:7F:D5:1F:D1:CB:22:79:B5:6F:C8:AD:9C`.
   - Both must be registered as Android OAuth 2.0 Client IDs in Google Cloud Console under `com.techyfi.pos` for Google Drive backup/restore.
 - Database version: `38` (v15→16 reminder tracking, v16→17 purchasePriceAtSale snapshot, v17→18 return refund-splitting, v18→19 register shift states, v19→20 due reminders, v20→21 unified customers CRM, v21→22 users RBAC, v24→25 sale audit logs, v33→34, v34→35, v35→36, v36→37, and v37→38 cleaning legacy voucher phone fallback with nullable customerPhone support).
-- Current build: `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220970) - R8 minified and resource-shrunk, streamlined single-row list card and compact 3-row grid card layout matching interactive preview with 100% fidelity, complete image placeholder hiding when null, 5-bar cyan laser holographic code stamps, and real device verified.
+- Current build: `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220971) - R8 minified and resource-shrunk, streamlined single-row list card and compact 3-row grid card layout matching interactive preview with 100% visual fidelity, complete image placeholder hiding when null, 5-bar cyan laser holographic code stamps, 40dp command hub with camera viewfinder scanner, funnel filter, and hollow grid/list switchers, and real device verified on Xiaomi MI 8 (`cb5fdfb5`).
 - This is the project's only mind map and the single source of truth for architecture, workflows, limitations, business rules, release metadata, and verification history.
 
 ## Primary code map
@@ -1104,7 +1104,7 @@ mindmap
 - Quick Sale preset data model: `app/src/main/java/com/example/techyfipos/data/QuickSalePreset.kt`; custom item dialog (`AddCustomItemDialog`), symmetrical 52dp layout, and preset manager (`ManageQuickSalePresetsDialog`) are in `CartScreen.kt`
 - Photorealistic 3D animated canvas icons & Category Dispatcher: `Realistic3DProductPackageIcon`, `Realistic3DServiceWrenchIcon`, `Realistic3DDeliveryTruckIcon`, `Realistic3DSparkleGiftIcon`, `Realistic3DWarrantyShieldIcon`, `Realistic3DCategoryIcon`, `Realistic3DInventoryBoxIcon`, `Realistic3DBarcodeScannerIcon`, `Realistic3DAddProductIcon` in `app/src/main/java/com/example/techyfipos/ui/components/StockCheckComponents.kt`
 - Due reminder template data model: `app/src/main/java/com/example/techyfipos/data/DueTemplate.kt`; manager (`ManageDueTemplatesDialog`) and the reworked `SendDueReminderDialog` are in `DuesScreen.kt`
-- Scheduled due reminders: `app/src/main/java/com/example/techyfipos/utils/DueReminderScheduler.kt` (WorkManager scheduling, `SchedulePreset` enum), `app/src/main/java/com/example/techyfipos/utils/DueReminderWorker.kt` (`CoroutineWorker` — SMS send / WhatsApp-deeplink notification)
+- Scheduled due reminders: `app/src/main/java/com/example/techyfipos/utils/DueReminderScheduler.kt` (WorkManager scheduling, `SchedulePreset` enum), `app/src/main/java/com/example/techyfipos/utils/DueReminderWorker.kt` (`CoroutineWorker`  -  SMS send / WhatsApp-deeplink notification)
 - Price Mode selector: `PriceModeSelector` composable in `app/src/main/java/com/example/techyfipos/ui/components/AdvancedPosFeatures.kt`; `PriceMode` enum and cart pricing logic in `POSViewModels.kt`'s `CartViewModel`
 
 ## V8 verification baseline
@@ -1154,8 +1154,8 @@ mindmap
   - `CartScreen.kt`'s post-checkout receipt dialog now wires `onAddToCartAgain`/`onEdit` (previously only the History sale-detail dialog had these); resolves the completed sale via `SalesViewModel.salesWithItems` by the `BillData.saleId` captured at checkout.
   - `SettingsScreen.kt`'s Google Drive encrypted-restore UI reload now clears the Activity's `ViewModelStore` before calling `activity.recreate()`, so ViewModels are rebuilt against the freshly restored `DataRepository` instead of continuing to reference the closed pre-restore one.
 - Verified live on emulator: completed a fresh sale → both buttons appeared on the post-checkout receipt; tapped Edit → "Void & Edit" correctly reversed the sale and reloaded it into the cart. Opened the same invoice later from History → both buttons also present there, confirming that code path's existing wiring is intact.
-- Restored a real 521-invoice local JSON backup (`techyfi-pos-backup-2026-08-28.json`) via Settings → Backup & Restore → Restore File (Replace all data) — this path uses the same live database connection (no close/reopen, no `activity.recreate()`), so it is not subject to the ViewModelStore staleness bug; the restore completed and the resulting History list, revenue summary, and margin figures reflected the imported data correctly.
-- The Google Drive encrypted-restore path itself (the one the ViewModelStore fix targets) was not exercised end-to-end in this session — it requires a connected Google account not available in the test environment. The fix is a direct correction of a verified root cause (config-change-style `recreate()` retaining the ViewModelStore across a database swap), but has not been confirmed against the field report that prompted it.
+- Restored a real 521-invoice local JSON backup (`techyfi-pos-backup-2026-08-28.json`) via Settings → Backup & Restore → Restore File (Replace all data)  -  this path uses the same live database connection (no close/reopen, no `activity.recreate()`), so it is not subject to the ViewModelStore staleness bug; the restore completed and the resulting History list, revenue summary, and margin figures reflected the imported data correctly.
+- The Google Drive encrypted-restore path itself (the one the ViewModelStore fix targets) was not exercised end-to-end in this session  -  it requires a connected Google account not available in the test environment. The fix is a direct correction of a verified root cause (config-change-style `recreate()` retaining the ViewModelStore across a database swap), but has not been confirmed against the field report that prompted it.
 
 ## V01-09-2026 update APK verification (2026-09-01)
 
@@ -1782,7 +1782,7 @@ mindmap
     - Counter Stealth Mode: Integrated top-bar shield toggle with mechanical 3D shutters that masks all profit numbers into `•••• (•••%)` during customer interactions.
     - Added "Highest profit" and "Lowest profit" sort options to the Sales History menu.
   - **[V32-5] Non-Breaking Integration**:
-    - Preserved 100% of existing features, buttons, icons, and receipt layouts — strictly augmented.
+    - Preserved 100% of existing features, buttons, icons, and receipt layouts  -  strictly augmented.
 ## V33 - Barcode & QR Label Price Tier Switching (Selling, MRP, Wholesale) (V33 / V12-09-2026)
 
 - **Architecture & Feature Implementations**:
@@ -2092,7 +2092,7 @@ mindmap
       - Cold-start login via PIN `1234`.
       - Landscape mode verified: 58/42 side-by-side terminal, 4-column product grid, stock check mode toggle banner, item stepper counter, and instant total recomputation.
       - Portrait mode verified: 54/46 top/bottom vertical split terminal, 5-column product grid, customer pill bar, and full-width checkout CTA.
-      - Live product addition tested on "Angelic Air Freshener 300 ml" — cart badge incremented from 7 to 8 items, total updated from ৳975 to ৳1,305.
+      - Live product addition tested on "Angelic Air Freshener 300 ml"  -  cart badge incremented from 7 to 8 items, total updated from ৳975 to ৳1,305.
       - Checkout navigation verified: tapping "Proceed to Cart (৳1,305) ->" seamlessly loads `CartScreen`, and tapping Sell on the `NavigationRail` smoothly returns to `TabletSplitTerminal`.
   - **[V48-3] Deliverables & Production Verification**:
     - Built via `./gradlew assembleRelease`:
@@ -2126,10 +2126,10 @@ mindmap
       - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V49.apk` (37MB)
       - `/Users/shahidulhaque/App Dev/Techyfi POS/Techyfi-POS-Final-V13-09-2026.apk` (37MB)
   - **[V50-1] Stock Check Localization & Language Parity**:
-    - Fixed hardcoded Bengali banner text leak (`"স্টক অনুসন্ধান মোড সক্রিয় — যেকোনো পণ্যের স্টক ও মূল্য দেখতে ট্যাপ করুন"`) across tablet Portrait and Landscape top toolbars.
+    - Fixed hardcoded Bengali banner text leak (`"স্টক অনুসন্ধান মোড সক্রিয়  -  যেকোনো পণ্যের স্টক ও মূল্য দেখতে ট্যাপ করুন"`) across tablet Portrait and Landscape top toolbars.
     - Introduced localized string resource `R.string.tablet_stock_check_banner`:
-      - English: `"Stock Check Mode Active — Tap any product to view & adjust stock"`
-      - Bangla: `"স্টক অনুসন্ধান মোড সক্রিয় — স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ করুন"`
+      - English: `"Stock Check Mode Active  -  Tap any product to view & adjust stock"`
+      - Bangla: `"স্টক অনুসন্ধান মোড সক্রিয়  -  স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ করুন"`
   - **[V50-2] Full Stock Check Phone-Mode Behavioral Parity on Tablet**:
     - Enabled opening `StockCheckBottomSheet` on tablet product card click whenever Stock Check mode is active (`!isSellMode`).
     - Added `selectProductForStockCheck(product: Product)` to `ScannerViewModel` in `POSViewModels.kt`.
@@ -2324,8 +2324,8 @@ mindmap
 - **Stock Check Mode Banner Phrasing (`strings.xml`, `values-bn/strings.xml`, `ScannerScreen.kt`)**:
   - **[V59-1] Dual Interaction Phrasing ("Tap or Scan")**:
     - Updated `R.string.tablet_stock_check_banner` to explicitly reflect both tap interaction on tablet touch screens and barcode scanning (via camera viewfinder or hardware USB/Bluetooth barcode gun):
-      - **English**: `"Stock Check Mode Active — Tap or Scan any product to view & adjust stock"`
-      - **Bangla (`values-bn`)**: `"স্টক অনুসন্ধান মোড সক্রিয় — স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ বা স্ক্যান করুন"`
+      - **English**: `"Stock Check Mode Active  -  Tap or Scan any product to view & adjust stock"`
+      - **Bangla (`values-bn`)**: `"স্টক অনুসন্ধান মোড সক্রিয়  -  স্টক ও তথ্য দেখতে যেকোনো পণ্যে ট্যাপ বা স্ক্যান করুন"`
     - Synchronized HTML interactive preview dictionary and markup (`interactive_preview/tablet_sell_screen_redesign_preview.html`).
   - **[V59-2] Production Deliverables & Tablet Live Verification**:
     - Built via `./gradlew assembleRelease` (versionCode 220935, versionName "2.6.59-V14-09-2026"):
@@ -2581,7 +2581,7 @@ mindmap
   - `Techyfi-POS-Final-V14-09-2026.apk` (37.4 MB)
   - Unit tests: 48/48 tests passing (`./gradlew testDebugUnitTest`).
 
-- **Version 2.6.66-V15-09-2026 (Build V66 — User-Configurable Default Cost Percentage & Profit Margin Estimation)**:
+- **Version 2.6.66-V15-09-2026 (Build V66  -  User-Configurable Default Cost Percentage & Profit Margin Estimation)**:
   - **Dynamic Default Cost Margin Estimation Engine**:
     - Replaced the hardcoded break-even 100% assumption for items without recorded purchase prices with a user-configurable default cost percentage stored in `SettingsDataStore` (`keyDefaultCostPercentage`).
     - Added reactive state management in `POSViewModels.kt` (`SettingsViewModel.defaultCostPercentage` and `saveDefaultCostPercentage(Double)`).
@@ -2599,7 +2599,7 @@ mindmap
     - `Techyfi-POS-Final-V15-09-2026.apk` (36.0 MB)
     - Unit tests: 48/48 tests passing (`./gradlew testDebugUnitTest`).
 
-- **Version 2.6.65-V15-09-2026 (Build V65 — Comprehensive App Polish & Modernization)**:
+- **Version 2.6.65-V15-09-2026 (Build V65  -  Comprehensive App Polish & Modernization)**:
   - **Layout Mode Unification & Responsive Top App Bars**:
     - Propagated user-selected layout mode (`isTablet: Boolean` computed from `uiLayoutMode`: AUTO, TABLET, PHONE) across all 11 screen destinations in `Navigation.kt` (`ManageUsersScreen`, `CartScreen`, `ProductsScreen`, `SalesHistoryScreen`, `ExpensesScreen`, `SuppliersScreen`, `DuesScreen`, `SettingsScreen`, `RegisterCloseScreen`, `LoyaltyScreen`, `CustomersScreen`).
     - Stripped hardcoded screen-level width calculations (`LocalConfiguration.current.screenWidthDp >= 600`), establishing centralized layout control.
@@ -2640,7 +2640,7 @@ mindmap
       - Added Room `@Query("SELECT * FROM sales WHERE customerPhone = :phone ORDER BY timestamp DESC")` in `SaleDao` to fetch customer-specific sales directly by indexed phone number, replacing full in-memory table filtering.
     - Unit tests: 48/48 tests passing (`./gradlew testDebugUnitTest`).
 
-- **Version 2.6.68-V15-09-2026 (Build V71 — Audit Round 19 Complete Remediation, WCAG AA Accessibility, Single App-Language Engine & R8 Minification)**:
+- **Version 2.6.68-V15-09-2026 (Build V71  -  Audit Round 19 Complete Remediation, WCAG AA Accessibility, Single App-Language Engine & R8 Minification)**:
   - **Financial Math & Partial Store Credit Integrity (R19-1, M-1/R-4, M-5/R-5)**:
     - Fixed partial store credit + Cash two-step flow (`PaymentMath.calculatePaymentBreakdown`): cashier underpayment rejected, change computed strictly on cash tendered without inflating receipt snapshot.
     - Due confirmation and credit limits evaluated directly from authoritative split payment due rows.

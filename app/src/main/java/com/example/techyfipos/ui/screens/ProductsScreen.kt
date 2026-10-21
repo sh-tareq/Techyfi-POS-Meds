@@ -90,9 +90,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -116,6 +120,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -1103,38 +1108,34 @@ fun ProductsScreen(
                                 )
                             }
 
-                            // Low Stock (Amber)
-                            if (lowStockCount > 0) {
-                                Surface(
-                                    shape = RoundedCornerShape(999.dp),
-                                    color = Color(0xFFF59E0B).copy(alpha = 0.18f),
-                                    border = BorderStroke(0.8.dp, Color(0xFFF59E0B).copy(alpha = 0.35f))
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.products_health_low_badge, lowStockCount),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color(0xFFD97706),
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                                    )
-                                }
+                            // Low Stock (Amber) - Always visible matching preview
+                            Surface(
+                                shape = RoundedCornerShape(999.dp),
+                                color = Color(0xFFF59E0B).copy(alpha = 0.18f),
+                                border = BorderStroke(0.8.dp, Color(0xFFF59E0B).copy(alpha = 0.35f))
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.products_health_low_badge, lowStockCount),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFFD97706),
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                )
                             }
 
-                            // Out of Stock (Rose)
-                            if (outOfStockCount > 0) {
-                                Surface(
-                                    shape = RoundedCornerShape(999.dp),
-                                    color = Color(0xFFEF4444).copy(alpha = 0.18f),
-                                    border = BorderStroke(0.8.dp, Color(0xFFEF4444).copy(alpha = 0.35f))
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.products_health_out_badge, outOfStockCount),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color(0xFFDC2626),
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                                    )
-                                }
+                            // Out of Stock (Rose) - Always visible matching preview
+                            Surface(
+                                shape = RoundedCornerShape(999.dp),
+                                color = Color(0xFFEF4444).copy(alpha = 0.18f),
+                                border = BorderStroke(0.8.dp, Color(0xFFEF4444).copy(alpha = 0.35f))
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.products_health_out_badge, outOfStockCount),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFFDC2626),
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                )
                             }
 
                             // Chevron indicating expansion
@@ -1359,23 +1360,25 @@ fun ProductsScreen(
                 }
             }
 
-            // 🔎 Single Fast-Action Command Row: Search + Scanner + 3D Filter + View Switcher
+            // 🔎 Single Fast-Action Command Row: Search + Scanner + Filter + View Switcher (Matching Preview .command-hub)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Full-width Search Box with 3D Optical Magnifier & Embedded Laser Scanner
+                // Search Box with Embedded Viewfinder Barcode Scanner Button (Matching Preview .search-input-field)
                 PosSearchBox(
                     query = searchQuery,
                     onQueryChange = { productsViewModel.setSearchQuery(it) },
                     placeholderText = stringResource(R.string.products_search_placeholder),
                     accentColor = PosSectionColors.Products,
+                    height = 40.dp,
+                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.weight(1f),
                     trailingContent = {
-                        // Embedded 3D Hardware Barcode Scanner Button
+                        // Camera Barcode Scanner Viewfinder Button (Matching Preview .scan-btn-right)
                         Surface(
                             onClick = {
                                 stockScannerEnabled = !stockScannerEnabled
@@ -1384,17 +1387,22 @@ fun ProductsScreen(
                                 }
                             },
                             shape = RoundedCornerShape(8.dp),
-                            color = if (stockScannerEnabled) Color(0xFF4F46E5) else Color(0xFFEEF2FF),
-                            modifier = Modifier.size(36.dp)
+                            color = if (stockScannerEnabled) Color(0xFF4F46E5) else Color(0xFF4F46E5).copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, Color(0xFF6366F1).copy(alpha = if (stockScannerEnabled) 0.8f else 0.35f)),
+                            modifier = Modifier.size(30.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Realistic3DHardwareBarcodeScannerIcon(size = 20.dp, animate = true)
+                                PreviewScannerViewfinderIcon(
+                                    size = 15.dp,
+                                    bracketColor = if (stockScannerEnabled) Color.White else Color(0xFF6366F1),
+                                    laserColor = Color(0xFFEF4444)
+                                )
                             }
                         }
                     }
                 )
 
-                // Native Tune/Filter Button (Opens Filter Bottom Sheet)
+                // Native Funnel Filter Button (Matching Preview .hub-action-btn #btnHubFilter)
                 val hasActiveFilters = selectedCategory != null ||
                         stockFilter != ProductStockFilter.ALL ||
                         highMarginOnly ||
@@ -1406,51 +1414,52 @@ fun ProductsScreen(
                 Surface(
                     onClick = { showFilters = true },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (hasActiveFilters) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, if (hasActiveFilters) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
+                    color = if (hasActiveFilters) Color(0xFF4F46E5).copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (hasActiveFilters) Color(0xFF6366F1).copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                     shadowElevation = 0.5.dp,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Tune,
-                            contentDescription = stringResource(R.string.products_filter_cd),
-                            modifier = Modifier.size(20.dp),
-                            tint = if (hasActiveFilters) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                        PreviewFunnelFilterIcon(
+                            size = 18.dp,
+                            tint = if (hasActiveFilters) Color(0xFF6366F1) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (hasActiveFilters) {
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(4.dp)
-                                    .size(8.dp)
+                                    .size(7.dp)
                                     .background(Color(0xFFEF4444), CircleShape)
-                                    .border(1.5.dp, Color.White, CircleShape)
+                                    .border(1.2.dp, Color.White, CircleShape)
                             )
                         }
                     }
                 }
 
-                // Native View Mode Switcher: Single Toggle Button (matching Preview)
+                // Native View Mode Switcher Button (Matching Preview .hub-action-btn #btnToggleHubView)
                 Surface(
                     onClick = {
                         viewModeName = if (viewMode == ProductViewMode.GRID) ProductViewMode.LIST.name else ProductViewMode.GRID.name
                     },
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                     shadowElevation = 0.5.dp,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = if (viewMode == ProductViewMode.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
-                            contentDescription = stringResource(
-                                if (viewMode == ProductViewMode.GRID) R.string.products_list_view_cd else R.string.products_grid_view_cd
-                            ),
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        if (viewMode == ProductViewMode.GRID) {
+                            PreviewListHollowIcon(
+                                size = 18.dp,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            PreviewGridHollowIcon(
+                                size = 18.dp,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
@@ -4307,6 +4316,102 @@ private fun ProductStockPillChip(
                 maxLines = 1
             )
         }
+    }
+}
+
+@Composable
+private fun PreviewScannerViewfinderIcon(
+    modifier: Modifier = Modifier,
+    size: Dp = 15.dp,
+    bracketColor: Color = Color(0xFF6366F1),
+    laserColor: Color = Color(0xFFEF4444)
+) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val stroke = w * 0.12f
+        val cornerLen = w * 0.28f
+
+        // Top-left
+        drawLine(bracketColor, Offset(0f, cornerLen), Offset(0f, 0f), strokeWidth = stroke, cap = StrokeCap.Round)
+        drawLine(bracketColor, Offset(0f, 0f), Offset(cornerLen, 0f), strokeWidth = stroke, cap = StrokeCap.Round)
+
+        // Top-right
+        drawLine(bracketColor, Offset(w - cornerLen, 0f), Offset(w, 0f), strokeWidth = stroke, cap = StrokeCap.Round)
+        drawLine(bracketColor, Offset(w, 0f), Offset(w, cornerLen), strokeWidth = stroke, cap = StrokeCap.Round)
+
+        // Bottom-left
+        drawLine(bracketColor, Offset(0f, h - cornerLen), Offset(0f, h), strokeWidth = stroke, cap = StrokeCap.Round)
+        drawLine(bracketColor, Offset(0f, h), Offset(cornerLen, h), strokeWidth = stroke, cap = StrokeCap.Round)
+
+        // Bottom-right
+        drawLine(bracketColor, Offset(w - cornerLen, h), Offset(w, h), strokeWidth = stroke, cap = StrokeCap.Round)
+        drawLine(bracketColor, Offset(w, h), Offset(w, h - cornerLen), strokeWidth = stroke, cap = StrokeCap.Round)
+
+        // Red laser beam
+        drawLine(laserColor, Offset(w * 0.18f, h * 0.5f), Offset(w * 0.82f, h * 0.5f), strokeWidth = stroke * 1.3f, cap = StrokeCap.Round)
+    }
+}
+
+@Composable
+private fun PreviewFunnelFilterIcon(
+    modifier: Modifier = Modifier,
+    size: Dp = 18.dp,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val stroke = w * 0.11f
+
+        val path = Path().apply {
+            moveTo(w * 0.92f, h * 0.12f)
+            lineTo(w * 0.08f, h * 0.12f)
+            lineTo(w * 0.42f, h * 0.52f)
+            lineTo(w * 0.42f, h * 0.88f)
+            lineTo(w * 0.58f, h * 0.78f)
+            lineTo(w * 0.58f, h * 0.52f)
+            close()
+        }
+        drawPath(path, tint, style = Stroke(stroke, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
+}
+
+@Composable
+private fun PreviewGridHollowIcon(
+    modifier: Modifier = Modifier,
+    size: Dp = 18.dp,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val rectSize = w * 0.38f
+        val stroke = w * 0.11f
+        val radius = CornerRadius(w * 0.08f, w * 0.08f)
+
+        // 4 hollow squares matching SVG rect elements
+        drawRoundRect(tint, topLeft = Offset(0f, 0f), size = Size(rectSize, rectSize), cornerRadius = radius, style = Stroke(stroke))
+        drawRoundRect(tint, topLeft = Offset(w - rectSize, 0f), size = Size(rectSize, rectSize), cornerRadius = radius, style = Stroke(stroke))
+        drawRoundRect(tint, topLeft = Offset(0f, h - rectSize), size = Size(rectSize, rectSize), cornerRadius = radius, style = Stroke(stroke))
+        drawRoundRect(tint, topLeft = Offset(w - rectSize, h - rectSize), size = Size(rectSize, rectSize), cornerRadius = radius, style = Stroke(stroke))
+    }
+}
+
+@Composable
+private fun PreviewListHollowIcon(
+    modifier: Modifier = Modifier,
+    size: Dp = 18.dp,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val stroke = w * 0.11f
+
+        drawLine(tint, Offset(0f, h * 0.22f), Offset(w, h * 0.22f), strokeWidth = stroke, cap = StrokeCap.Round)
+        drawLine(tint, Offset(0f, h * 0.50f), Offset(w, h * 0.50f), strokeWidth = stroke, cap = StrokeCap.Round)
+        drawLine(tint, Offset(0f, h * 0.78f), Offset(w, h * 0.78f), strokeWidth = stroke, cap = StrokeCap.Round)
     }
 }
 
