@@ -117,9 +117,17 @@ class DataRepository(
             } catch (ignored: Exception) {
             }
             try {
-                sweepStaleHeldCarts(24L)
+                migrateLegacyManagerDiscounts()
             } catch (ignored: Exception) {
             }
+        }
+    }
+
+    suspend fun migrateLegacyManagerDiscounts() = withContext(Dispatchers.IO) {
+        val prefs = context.getSharedPreferences("app_migrations", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("migrated_manager_discount_20", false)) {
+            userDao.updateManagerDefaultDiscount(10.0, 20.0)
+            prefs.edit().putBoolean("migrated_manager_discount_20", true).apply()
         }
     }
 
@@ -260,9 +268,19 @@ class DataRepository(
     suspend fun authorizeDiscountOverride(
         pin: String,
         maxDiscountAmount: Double,
-        cartHash: String? = null
+        cartHash: String? = null,
+        requestedPercent: Double = 0.0
     ): Boolean = withContext(Dispatchers.IO) {
         val supervisor = verifySupervisorPin(pin) ?: return@withContext false
+        val current = sessionUser
+        if (supervisor.role != AppRoles.OWNER) {
+            if (current != null && supervisor.id == current.id) {
+                return@withContext false
+            }
+            if (AppPermissions.getEffectiveMaxDiscount(supervisor) < requestedPercent) {
+                return@withContext false
+            }
+        }
         grantDiscountOverride(maxDiscountAmount, cartHash)
         true
     }
@@ -409,7 +427,7 @@ class DataRepository(
             grant.phone == phone &&
             grant.expiresAt >= System.currentTimeMillis() &&
             (grant.maxAmount >= requestedAmount - 0.01) &&
-            (grant.cartHash == null || cartHash == null || grant.cartHash == cartHash)
+            (if (cartHash == null) grant.cartHash == null else (grant.cartHash == null || grant.cartHash == cartHash))
     }
 
     private fun consumeCreditLimitOverride(
@@ -3098,7 +3116,9 @@ class DataRepository(
         inputFile: File,
         mode: BackupImportMode = BackupImportMode.REPLACE
     ): Boolean = withContext(Dispatchers.IO) {
-        requireOwnerSession()
+        if (!hasPermission(AppPermissions.SYSTEM_BACKUP_RESTORE)) {
+            requireOwnerSession()
+        }
         try {
             val jsonText = inputFile.readText()
             val backupJson = JSONObject(jsonText)
@@ -4471,7 +4491,7 @@ class DataRepository(
             if (role == AppRoles.OWNER) {
                 throw UnauthorizedException("Non-owners cannot create owner accounts")
             }
-            val callerMaxDiscount = sessionUser?.maxDiscountPercent ?: 10.0
+            val callerMaxDiscount = AppPermissions.getEffectiveMaxDiscount(sessionUser)
             if (resolvedDiscount > callerMaxDiscount) {
                 throw UnauthorizedException("Cannot grant maximum discount higher than your own")
             }
@@ -4542,7 +4562,112 @@ class DataRepository(
             .putBoolean("owner_pin_changed_after_reset", true)
             .putString("owner_device_pin_reset_device", device)
             .apply()
+        recordOwnerAuditEvent(owner, "PIN_RESET_DEVICE", null)
         true
+    }
+
+    private fun getOwnerAuditEvents(): List<OwnerAuditEvent> {
+        val prefs = context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE)
+        val json = prefs.getString("owner_audit_events_list", null) ?: return emptyList()
+        return try {
+            val arr = org.json.JSONArray(json)
+            val list = mutableListOf<OwnerAuditEvent>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                val ackArr = obj.optJSONArray("acknowledgedByIds")
+                val acks = mutableListOf<Long>()
+                if (ackArr != null) {
+                    for (j in 0 until ackArr.length()) {
+                        acks.add(ackArr.getLong(j))
+                    }
+                }
+                list.add(
+                    OwnerAuditEvent(
+                        id = obj.optString("id", java.util.UUID.randomUUID().toString()),
+                        targetId = obj.getLong("targetId"),
+                        targetName = obj.optString("targetName", ""),
+                        actorId = if (obj.has("actorId") && !obj.isNull("actorId")) obj.getLong("actorId") else null,
+                        actorName = obj.optString("actorName", ""),
+                        action = obj.getString("action"),
+                        timestamp = obj.getLong("timestamp"),
+                        acknowledgedByIds = acks
+                    )
+                )
+            }
+            list
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun saveOwnerAuditEvents(events: List<OwnerAuditEvent>) {
+        val arr = org.json.JSONArray()
+        for (e in events) {
+            val obj = org.json.JSONObject()
+            obj.put("id", e.id)
+            obj.put("targetId", e.targetId)
+            obj.put("targetName", e.targetName)
+            if (e.actorId != null) obj.put("actorId", e.actorId) else obj.put("actorId", org.json.JSONObject.NULL)
+            obj.put("actorName", e.actorName)
+            obj.put("action", e.action)
+            obj.put("timestamp", e.timestamp)
+            val acks = org.json.JSONArray()
+            e.acknowledgedByIds.forEach { acks.put(it) }
+            obj.put("acknowledgedByIds", acks)
+            arr.put(obj)
+        }
+        context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE).edit()
+            .putString("owner_audit_events_list", arr.toString())
+            .apply()
+    }
+
+    fun recordOwnerAuditEvent(target: User, action: String, actor: User? = sessionUser) {
+        val now = System.currentTimeMillis()
+        val actorName = actor?.name ?: "Co-Owner"
+        val event = OwnerAuditEvent(
+            targetId = target.id,
+            targetName = target.name,
+            actorId = actor?.id,
+            actorName = actorName,
+            action = action,
+            timestamp = now
+        )
+        val currentList = getOwnerAuditEvents().toMutableList()
+        currentList.add(event)
+        saveOwnerAuditEvents(currentList)
+
+        val prefs = context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putLong("owner_device_pin_reset_timestamp", now)
+            .putLong("reset_owner_id", target.id)
+            .putString("reset_owner_name", target.name)
+            .putBoolean("owner_device_pin_reset_acknowledged", false)
+            .putBoolean("owner_pin_changed_after_reset", true)
+            .putString("owner_device_pin_reset_device", "Modified by $actorName")
+            .apply()
+    }
+
+    fun getUnacknowledgedOwnerAlert(user: User?): OwnerAuditEvent? {
+        if (user == null) return null
+        val events = getOwnerAuditEvents()
+        return events.lastOrNull { event ->
+            !event.acknowledgedByIds.contains(user.id) && (
+                event.targetId == user.id ||
+                (event.action == "PIN_RESET_DEVICE" && user.role == AppRoles.OWNER)
+            )
+        }
+    }
+
+    fun acknowledgeOwnerAlert(eventId: String, userId: Long) {
+        val events = getOwnerAuditEvents().map {
+            if (it.id == eventId) {
+                if (!it.acknowledgedByIds.contains(userId)) {
+                    it.copy(acknowledgedByIds = it.acknowledgedByIds + userId)
+                } else it
+            } else it
+        }
+        saveOwnerAuditEvents(events)
+        acknowledgeOwnerPinReset(userId)
     }
 
     fun getUnacknowledgedOwnerPinResetTimestamp(targetOwnerId: Long? = null): Long {
@@ -4583,29 +4708,68 @@ class DataRepository(
         )
     }
 
+    private fun checkPinChangeRateLimit(userId: Long) {
+        val prefs = context.getSharedPreferences("pin_rate_limit", Context.MODE_PRIVATE)
+        val key = "pin_changes_$userId"
+        val raw = prefs.getString(key, "") ?: ""
+        val now = System.currentTimeMillis()
+        val windowMs = 60 * 60 * 1000L
+        val timestamps = raw.split(",").mapNotNull { it.toLongOrNull() }.filter { now - it < windowMs }
+        if (timestamps.size >= 3) {
+            throw IllegalStateException("PIN change rate limit exceeded (maximum 3 changes per hour)")
+        }
+    }
+
+    private fun recordPinChange(userId: Long) {
+        val prefs = context.getSharedPreferences("pin_rate_limit", Context.MODE_PRIVATE)
+        val key = "pin_changes_$userId"
+        val raw = prefs.getString(key, "") ?: ""
+        val now = System.currentTimeMillis()
+        val windowMs = 60 * 60 * 1000L
+        val timestamps = (raw.split(",").mapNotNull { it.toLongOrNull() }.filter { now - it < windowMs } + now)
+        prefs.edit().putString(key, timestamps.joinToString(",")).apply()
+    }
+
     private fun recordFailedPinAttempt(): Long {
         val securityPrefs = context.getSharedPreferences("auth_security", Context.MODE_PRIVATE)
         val nowElapsed = android.os.SystemClock.elapsedRealtime()
         val nowWall = System.currentTimeMillis()
         val lastFailureElapsed = securityPrefs.getLong("last_failure_elapsed", 0L)
+        val lastFailureWall = securityPrefs.getLong("last_failure_wall", 0L)
+
+        var totalFailures = securityPrefs.getInt("total_failures", 0)
+        if (lastFailureWall > 0L && nowWall - lastFailureWall > 24 * 60 * 60 * 1000L) {
+            totalFailures = 0
+        }
+        totalFailures += 1
+
+        val dailyWindowStart = securityPrefs.getLong("daily_window_start", 0L)
+        val dailyFailures = if (dailyWindowStart == 0L || nowWall - dailyWindowStart > 24 * 60 * 60 * 1000L) {
+            1
+        } else {
+            securityPrefs.getInt("daily_failures", 0) + 1
+        }
+
         val windowExpired = (lastFailureElapsed > 0L) &&
             ((nowElapsed - lastFailureElapsed > 5 * 60 * 1000L) || (nowElapsed < lastFailureElapsed))
-
-        val totalFailures = securityPrefs.getInt("total_failures", 0) + 1
         val failuresInWindow = if (windowExpired) 1 else (securityPrefs.getInt("failed_attempts", 0) + 1)
+
         val editor = securityPrefs.edit()
             .putInt("total_failures", totalFailures)
             .putInt("failed_attempts", failuresInWindow)
+            .putInt("daily_failures", dailyFailures)
+            .putLong("daily_window_start", if (dailyWindowStart == 0L || nowWall - dailyWindowStart > 24 * 60 * 60 * 1000L) nowWall else dailyWindowStart)
             .putLong("last_failure_elapsed", nowElapsed)
             .putLong("last_failure_wall", nowWall)
 
         var newLockMs = 0L
-        if (failuresInWindow >= 5) {
+        if (dailyFailures >= 10 || failuresInWindow >= 5) {
             newLockMs = when {
-                totalFailures >= 20 -> 15 * 60 * 1000L // 15 mins
-                totalFailures >= 15 -> 5 * 60 * 1000L  // 5 mins
-                totalFailures >= 10 -> 2 * 60 * 1000L  // 2 mins
-                else -> 30 * 1000L                      // 30 secs
+                dailyFailures >= 10 -> 15 * 60 * 1000L
+                totalFailures >= 20 -> 15 * 60 * 1000L
+                totalFailures >= 15 -> 5 * 60 * 1000L
+                totalFailures >= 10 -> 2 * 60 * 1000L
+                else -> 30 * 1000L
             }.coerceAtMost(15 * 60 * 1000L)
             editor.putLong("lock_until_elapsed", nowElapsed + newLockMs)
                 .putLong("lock_until", nowWall + newLockMs)
@@ -4658,19 +4822,24 @@ class DataRepository(
 
         val nowElapsed = android.os.SystemClock.elapsedRealtime()
         val nowWall = System.currentTimeMillis()
-
-        val remainingElapsed = lockUntilElapsed - nowElapsed
-        val remainingWall = lockUntilWall - nowWall
         val maxLockMs = 15 * 60 * 1000L
 
-        // If either deadline has passed, or if reboot occurred (remainingElapsed > maxLockMs): treat as expired
-        if (remainingElapsed <= 0L || remainingWall <= 0L || remainingElapsed > maxLockMs) {
+        val remainingWall = lockUntilWall - nowWall
+        if (remainingWall <= 0L) {
             securityPrefs.edit().remove("lock_until_elapsed").remove("lock_until").apply()
             return 0L
         }
 
-        val remaining = minOf(remainingElapsed, remainingWall).coerceAtMost(maxLockMs)
-        return maxOf(0L, remaining)
+        val remainingElapsed = lockUntilElapsed - nowElapsed
+        val isReboot = remainingElapsed <= 0L || remainingElapsed > maxLockMs || nowElapsed < 0L
+        val remaining = if (isReboot) {
+            val validRemaining = remainingWall.coerceIn(0L, maxLockMs)
+            securityPrefs.edit().putLong("lock_until_elapsed", nowElapsed + validRemaining).apply()
+            validRemaining
+        } else {
+            minOf(remainingElapsed, remainingWall).coerceIn(0L, maxLockMs)
+        }
+        return remaining
     }
 
     suspend fun deleteUser(user: User) = withContext(Dispatchers.IO) {
@@ -4782,8 +4951,14 @@ class DataRepository(
             val isStatusChanged = targetActive != existing.isActive
             val isRoleChanged = targetRole != existing.role
             if (isStatusChanged || isRoleChanged) {
-                require(!oldPin.isNullOrBlank() && pinMatches(oldPin, existing.pinHash)) {
-                    "Current PIN of the target owner is required to change owner role or status"
+                val remaining = loginLockRemainingMillis()
+                if (remaining > 0L) {
+                    throw IllegalStateException("Authentication locked out for ${remaining / 1000} seconds due to repeated failed attempts")
+                }
+                val matches = !oldPin.isNullOrBlank() && pinMatches(oldPin, existing.pinHash)
+                if (!matches) {
+                    recordFailedPinAttempt()
+                    throw IllegalStateException("Current PIN of the target owner is required to change owner role or status")
                 }
             }
         }
@@ -4791,7 +4966,7 @@ class DataRepository(
         if (isSelf && maxDiscount != null && kotlin.math.abs(maxDiscount - existing.maxDiscountPercent) > 0.001) {
             throw UnauthorizedException("Users cannot change their own maximum discount")
         }
-        if (!isSessionOwner() && maxDiscount != null && maxDiscount > (sessionUser?.maxDiscountPercent ?: 10.0)) {
+        if (!isSessionOwner() && maxDiscount != null && maxDiscount > AppPermissions.getEffectiveMaxDiscount(sessionUser)) {
             throw UnauthorizedException("Cannot grant maximum discount higher than your own")
         }
 
@@ -4800,6 +4975,7 @@ class DataRepository(
             if (remaining > 0L) {
                 throw IllegalStateException("Authentication locked out for ${remaining / 1000} seconds due to repeated failed attempts")
             }
+            checkPinChangeRateLimit(userId)
             require(newPin.length == 4 && newPin.all(Char::isDigit)) { "PIN must be 4 digits" }
             require(!oldPin.isNullOrBlank()) { "Current PIN is required to change PIN" }
             val currentOwner = sessionUser
@@ -4835,10 +5011,12 @@ class DataRepository(
                 throw UnauthorizedException("Users cannot edit their own permissions")
             }
             if (!isSessionOwner() && customPermissions != null) {
-                if (customPermissions.any { !hasPermission(it) }) {
+                val existingPerms = AppPermissions.deserializePermissions(existing.customPermissions) ?: AppPermissions.getDefaultPermissions(existing.role)
+                val newlyGranted = customPermissions - existingPerms
+                if (newlyGranted.any { !hasPermission(it) }) {
                     throw UnauthorizedException("Cannot grant permissions that you do not hold")
                 }
-                if (customPermissions.any { AppPermissions.isSystemPermission(it) }) {
+                if (newlyGranted.any { AppPermissions.isSystemPermission(it) }) {
                     throw UnauthorizedException("Only the owner may grant system administrative permissions")
                 }
             }
@@ -4874,18 +5052,20 @@ class DataRepository(
             )
         )
 
+        if (!newPin.isNullOrBlank()) {
+            recordPinChange(userId)
+        }
+
         if (existing.role == AppRoles.OWNER && !isSelf) {
-            val now = System.currentTimeMillis()
-            val callerName = sessionUser?.name ?: "Co-Owner"
-            val prefs = context.getSharedPreferences("owner_pin_reset_audit", Context.MODE_PRIVATE)
-            prefs.edit()
-                .putLong("owner_device_pin_reset_timestamp", now)
-                .putLong("reset_owner_id", existing.id)
-                .putString("reset_owner_name", existing.name)
-                .putBoolean("owner_device_pin_reset_acknowledged", false)
-                .putBoolean("owner_pin_changed_after_reset", true)
-                .putString("owner_device_pin_reset_device", "Modified by $callerName")
-                .apply()
+            if (targetActive != existing.isActive) {
+                recordOwnerAuditEvent(existing, "STATUS_CHANGED")
+            }
+            if (targetRole != existing.role) {
+                recordOwnerAuditEvent(existing, "ROLE_CHANGED")
+            }
+            if (!newPin.isNullOrBlank()) {
+                recordOwnerAuditEvent(existing, "PIN_CHANGED")
+            }
         }
 
         if (existing.role == AppRoles.OWNER && isSelf && !newPin.isNullOrBlank()) {
@@ -4923,8 +5103,8 @@ class DataRepository(
         if (existing.role == AppRoles.OWNER && !isActive && existing.isActive && userDao.getActiveOwnerCount() <= 1) {
             throw IllegalStateException("The only owner account cannot be deactivated")
         }
-        if (existing.role == AppRoles.OWNER && sessionUser?.id != userId && !isActive) {
-            throw UnauthorizedException("Deactivating another owner account requires credential verification in staff management")
+        if (existing.role == AppRoles.OWNER && sessionUser?.id != userId) {
+            throw UnauthorizedException("Modifying status of another owner account requires credential verification in staff management")
         }
         userDao.updateActiveStatus(userId, isActive)
     }
@@ -4948,11 +5128,13 @@ class DataRepository(
             throw UnauthorizedException("Users cannot edit their own permissions")
         }
         if (!isSessionOwner()) {
-            val granted = permissions ?: AppPermissions.getDefaultPermissions(existing.role)
-            if (granted.any { !hasPermission(it) }) {
+            val existingPerms = AppPermissions.deserializePermissions(existing.customPermissions) ?: AppPermissions.getDefaultPermissions(existing.role)
+            val requestedPerms = permissions ?: AppPermissions.getDefaultPermissions(existing.role)
+            val newlyGranted = requestedPerms - existingPerms
+            if (newlyGranted.any { !hasPermission(it) }) {
                 throw UnauthorizedException("Cannot grant permissions that you do not hold")
             }
-            if (granted.any { AppPermissions.isSystemPermission(it) }) {
+            if (newlyGranted.any { AppPermissions.isSystemPermission(it) }) {
                 throw UnauthorizedException("Only the owner may grant system administrative permissions")
             }
         }
@@ -6127,5 +6309,16 @@ data class OwnerPinResetAudit(
     val resetOwnerId: Long = 0L,
     val resetOwnerName: String = "",
     val acknowledgedBy: Long? = null
+)
+
+data class OwnerAuditEvent(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val targetId: Long,
+    val targetName: String,
+    val actorId: Long?,
+    val actorName: String,
+    val action: String,
+    val timestamp: Long,
+    val acknowledgedByIds: List<Long> = emptyList()
 )
 

@@ -473,9 +473,7 @@ fun CartScreen(
     var discountInput by rememberSaveable { mutableStateOf(editableAmount(discountAmount)) }
     val isSupervisorApprovedDiscount by cartViewModel.supervisorApprovedDiscount.collectAsStateWithLifecycle()
     val discountTaka = if (isPercentageDiscount) (subtotal * discountAmount / 100.0) else discountAmount
-    val isOverrideValid = remember(discountTaka, isSupervisorApprovedDiscount, cartItems) {
-        cartViewModel.hasValidDiscountOverride(discountTaka)
-    }
+    val isOverrideValid = cartViewModel.hasValidDiscountOverride(discountTaka)
     val hasApprovedDiscount = isSupervisorApprovedDiscount || isOverrideValid
     var scanUpdate by remember { mutableStateOf<CartScanUpdate?>(null) }
     var notFoundBarcode by remember { mutableStateOf<String?>(null) }
@@ -534,13 +532,18 @@ fun CartScreen(
             } else if (discountAmount > subtotal && !isPercentageDiscount) {
                 cartViewModel.setDiscountAmount(subtotal)
                 discountInput = editableAmount(subtotal)
-            } else if (!isPercentageDiscount && !hasApprovedDiscount) {
-                val pctEquiv = (discountAmount / subtotal) * 100.0
+            } else if (!hasApprovedDiscount) {
+                val pctEquiv = if (isPercentageDiscount) discountAmount else (discountAmount / subtotal) * 100.0
                 if (pctEquiv > maxDiscountAllowed) {
-                    val clamped = (subtotal * (maxDiscountAllowed / 100.0)).coerceAtLeast(0.0)
-                    val clampedRounded = (kotlin.math.round(clamped * 100.0)) / 100.0
-                    cartViewModel.setDiscountAmount(clampedRounded)
-                    discountInput = editableAmount(clampedRounded)
+                    if (isPercentageDiscount) {
+                        cartViewModel.setDiscountAmount(maxDiscountAllowed)
+                        discountInput = editableAmount(maxDiscountAllowed)
+                    } else {
+                        val clamped = (subtotal * (maxDiscountAllowed / 100.0)).coerceAtLeast(0.0)
+                        val clampedRounded = (kotlin.math.round(clamped * 100.0)) / 100.0
+                        cartViewModel.setDiscountAmount(clampedRounded)
+                        discountInput = editableAmount(clampedRounded)
+                    }
                 }
             }
         }
@@ -557,6 +560,27 @@ fun CartScreen(
         (!isSplitPayment && paymentMethod == "Due")
 
     suspend fun doCompleteSale(snapshotAmountPaid: Double, snapshotChange: Double) {
+        val currentPctEquiv = if (isPercentageDiscount) discountAmount else if (subtotal > 0.0) (discountAmount / subtotal) * 100.0 else 0.0
+        val requiresSupervisorDiscount = currentPctEquiv > maxDiscountAllowed
+        if (requiresSupervisorDiscount && !cartViewModel.hasValidDiscountOverride(discountTaka)) {
+            val discountFormatted = if (isPercentageDiscount) "$discountAmount%" else formatTaka(discountAmount)
+            val maxLimitStr = if (maxDiscountAllowed % 1.0 == 0.0) "${maxDiscountAllowed.toInt()}" else "$maxDiscountAllowed"
+            pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_discount, discountFormatted, maxLimitStr)
+            pendingSupervisorActionPin = { pin ->
+                val maxDiscountTaka = if (isPercentageDiscount) (subtotal * discountAmount / 100.0) else discountAmount
+                scope.launch {
+                    val ok = cartViewModel.authorizeDiscountOverride(pin, maxDiscountTaka, cartViewModel.computeCartHash(), currentPctEquiv)
+                    if (ok) {
+                        cartViewModel.setSupervisorApprovedDiscount(true)
+                        doCompleteSale(snapshotAmountPaid, snapshotChange)
+                    } else {
+                        Toast.makeText(context, context.getString(R.string.users_supervisor_auth_failed), Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            showSupervisorAuthDialog = true
+            return
+        }
         val lineItems = cartItems.map { item ->
             val chargedUnitPrice = cartViewModel.effectivePriceFor(item)
             BillLineItem(
@@ -1360,11 +1384,12 @@ fun CartScreen(
                                     if (parsed > 0.0 && (!canApplyDiscount || pctEquiv > maxDiscountAllowed)) {
                                         if (authViewModel != null) {
                                             val discountFormatted = if (isPercentageDiscount) "$sanitized%" else formatTaka(parsed)
-                                            pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_discount, discountFormatted, maxDiscountAllowed.toInt())
+                                            val maxLimitStr = if (maxDiscountAllowed % 1.0 == 0.0) "${maxDiscountAllowed.toInt()}" else "$maxDiscountAllowed"
+                                            pendingSupervisorDesc = context.getString(R.string.supervisor_auth_desc_discount, discountFormatted, maxLimitStr)
                                             pendingSupervisorActionPin = { pin ->
                                                 val maxDiscountTaka = if (isPercentageDiscount) (subtotal * parsed / 100.0) else parsed
                                                 scope.launch {
-                                                    val ok = cartViewModel.authorizeDiscountOverride(pin, maxDiscountTaka, cartViewModel.computeCartHash())
+                                                    val ok = cartViewModel.authorizeDiscountOverride(pin, maxDiscountTaka, cartViewModel.computeCartHash(), pctEquiv)
                                                     if (ok) {
                                                         discountInput = sanitized
                                                         cartViewModel.setDiscountAmount(parsed)

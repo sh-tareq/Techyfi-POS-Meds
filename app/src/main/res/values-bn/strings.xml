@@ -2112,7 +2112,7 @@
     <!-- Supervisor Authorization Descriptions & Permission Toasts -->
     <string name="supervisor_auth_desc_void_cart">চলতি কার্ট বাতিল করার অনুমোদন দিন</string>
     <string name="supervisor_auth_desc_remove_item">পণ্য সরানোর অনুমোদন দিন: %1$s</string>
-    <string name="supervisor_auth_desc_discount">%1$s ছাড়ের অনুমোদন দিন (সর্বোচ্চ সীমা: %2$d%%)</string>
+    <string name="supervisor_auth_desc_discount">%1$s ছাড়ের অনুমোদন দিন (সর্বোচ্চ সীমা: %2$s%%)</string>
     <string name="supervisor_auth_desc_negative_stock">অপর্যাপ্ত স্টক / নেগেটিভ ইনভেন্টরিতে বিক্রয়ের অনুমোদন দিন</string>
     <string name="supervisor_auth_desc_hold_cart">চলতি কার্ট হোল্ড করার অনুমোদন দিন</string>
     <string name="supervisor_auth_desc_price_tier">মূল্য টিয়ার %1$s-এ পরিবর্তনের অনুমোদন দিন</string>
@@ -3306,4 +3306,8 @@
     <string name="settings_enter_decrypt_password_instruction">এই .posenc ব্যাকআপ ফাইলটি তৈরি করার সময় ব্যবহৃত পাসওয়ার্ডটি লিখুন।</string>
     <string name="settings_encrypted_backup_exported_toast">এনক্রিপ্ট করা ব্যাকআপ সফলভাবে সংরক্ষিত হয়েছে (.posenc)!</string>
     <string name="settings_encrypted_backup_export_failed">এনক্রিপ্ট করা ব্যাকআপ সংরক্ষণ করতে ব্যর্থ হয়েছে</string>
+    <string name="users_target_owner_pin_label">টার্গেট মালিকের পিন (আবশ্যক)</string>
+    <string name="owner_role_change_alert_message">%1$s কর্তৃক %2$s তারিখে আপনার ভূমিকা পরিবর্তন করা হয়েছে।</string>
+    <string name="owner_status_change_alert_message">%1$s কর্তৃক %2$s তারিখে আপনার অ্যাকাউন্টের স্ট্যাটাস পরিবর্তন করা হয়েছে।</string>
+    <string name="owner_pin_change_alert_message">%1$s কর্তৃক %2$s তারিখে আপনার পিন পরিবর্তন করা হয়েছে।</string>
 </resources>

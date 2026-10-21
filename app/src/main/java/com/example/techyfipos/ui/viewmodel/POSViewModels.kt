@@ -702,10 +702,11 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     suspend fun authorizeDiscountOverride(
         pin: String,
         maxDiscountAmount: Double,
-        cartHash: String? = null
+        cartHash: String? = null,
+        requestedPercent: Double = 0.0
     ): Boolean {
         val targetHash = cartHash ?: computeCartHash()
-        val ok = repository.authorizeDiscountOverride(pin, maxDiscountAmount, targetHash)
+        val ok = repository.authorizeDiscountOverride(pin, maxDiscountAmount, targetHash, requestedPercent)
         if (ok) {
             _approvedForHash.value = targetHash
             _approvedMaxTaka.value = maxDiscountAmount
@@ -2071,9 +2072,10 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
 
     suspend fun exportProductsToExcel(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val products = repository.allProducts.first()
+        val canViewCosts = repository.hasPermission(com.example.techyfipos.data.AppPermissions.INVENTORY_VIEW_COSTS)
         return@withContext try {
             val buffer = java.io.ByteArrayOutputStream()
-            com.example.techyfipos.utils.ExcelHelper.exportProducts(products, buffer)
+            com.example.techyfipos.utils.ExcelHelper.exportProducts(products, buffer, canViewCosts = canViewCosts)
             outputStream.write(buffer.toByteArray())
             outputStream.flush()
             true
@@ -3718,9 +3720,10 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     // in memory first means the destination is only ever touched with the finished, complete file.
     suspend fun exportProductsToExcel(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val products = repository.allProducts.first()
+        val canViewCosts = repository.hasPermission(com.example.techyfipos.data.AppPermissions.INVENTORY_VIEW_COSTS)
         return@withContext try {
             val buffer = java.io.ByteArrayOutputStream()
-            com.example.techyfipos.utils.ExcelHelper.exportProducts(products, buffer)
+            com.example.techyfipos.utils.ExcelHelper.exportProducts(products, buffer, canViewCosts = canViewCosts)
             outputStream.write(buffer.toByteArray())
             outputStream.flush()
             true
@@ -3772,8 +3775,9 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
     }
 
     suspend fun exportDuesReport(outputStream: java.io.OutputStream): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        val dues = repository.allOutstandingDues.first()
         return@withContext try {
+            repository.requirePermission(com.example.techyfipos.data.AppPermissions.DUES_VIEW)
+            val dues = repository.allOutstandingDues.first()
             val buffer = java.io.ByteArrayOutputStream()
             com.example.techyfipos.utils.ExcelHelper.exportDues(dues, buffer)
             outputStream.write(buffer.toByteArray())
@@ -4054,6 +4058,8 @@ class AuthViewModel(private val repository: DataRepository) : ViewModel() {
     fun getUnacknowledgedOwnerPinResetTimestamp(targetOwnerId: Long? = null): Long = repository.getUnacknowledgedOwnerPinResetTimestamp(targetOwnerId)
     fun acknowledgeOwnerPinReset(acknowledgedByUserId: Long? = null) = repository.acknowledgeOwnerPinReset(acknowledgedByUserId)
     fun getOwnerPinResetAudit(): com.example.techyfipos.data.OwnerPinResetAudit? = repository.getOwnerPinResetAudit()
+    fun getUnacknowledgedOwnerAlert(user: User?): com.example.techyfipos.data.OwnerAuditEvent? = repository.getUnacknowledgedOwnerAlert(user)
+    fun acknowledgeOwnerAlert(eventId: String, userId: Long) = repository.acknowledgeOwnerAlert(eventId, userId)
 
     val isOwner: StateFlow<Boolean> = _currentUser
         .map { it?.role == AppRoles.OWNER }

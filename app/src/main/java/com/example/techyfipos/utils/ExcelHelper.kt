@@ -241,7 +241,7 @@ object ExcelHelper {
         workbook.close()
     }
 
-    fun exportProducts(products: List<Product>, outputStream: OutputStream) {
+    fun exportProducts(products: List<Product>, outputStream: OutputStream, canViewCosts: Boolean = true) {
         val workbook = XSSFWorkbook()
         try {
             val sheet = workbook.createSheet("Products")
@@ -276,7 +276,7 @@ object ExcelHelper {
                 row.createCell(0).setCellValue(p.barcode)
                 row.createCell(1).setCellValue(p.name)
                 row.createCell(2).setCellValue(p.category)
-                row.createCell(3).setCellValue(p.purchasePrice)
+                row.createCell(3).setCellValue(if (canViewCosts) p.purchasePrice else 0.0)
                 row.createCell(4).setCellValue(p.sellingPrice)
                 row.createCell(5).setCellValue(p.stockQty.toDouble())
                 row.createCell(6).setCellValue(p.reorderLevel.toDouble())

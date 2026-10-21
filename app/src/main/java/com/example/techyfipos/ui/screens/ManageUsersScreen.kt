@@ -577,6 +577,8 @@ private fun EditStaffDialog(
     val currentUser by authViewModel.currentUser.collectAsState()
     val isSelf = user.id == currentUser?.id
     val isEditingOwner = user.role == AppRoles.OWNER
+    val isTargetAnotherOwner = isEditingOwner && !isSelf
+    val needsTargetOwnerPin = isTargetAnotherOwner && (editRole != user.role || editActive != user.isActive || editPin.isNotBlank())
     val callerRole = currentUser?.role ?: if (isOwner) AppRoles.OWNER else AppRoles.CASHIER
     val hasPermissionsCapability = isOwner || (currentUser != null && AppPermissions.hasPermission(currentUser!!, AppPermissions.SYSTEM_PERMISSIONS))
     val canChangeRole = !isSelf && (callerRole == AppRoles.OWNER || (!isEditingOwner && hasPermissionsCapability))
@@ -623,11 +625,13 @@ private fun EditStaffDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                if (editPin.isNotBlank()) {
+                val showOldPinField = editPin.isNotBlank() || needsTargetOwnerPin
+
+                if (showOldPinField) {
                     OutlinedTextField(
                         value = editOldPin,
                         onValueChange = { if (it.length <= 4 && it.all(Char::isDigit)) editOldPin = it },
-                        label = { Text(stringResource(R.string.users_current_pin_label)) },
+                        label = { Text(if (isTargetAnotherOwner) stringResource(R.string.users_target_owner_pin_label) else stringResource(R.string.users_current_pin_label)) },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -646,7 +650,16 @@ private fun EditStaffDialog(
                     allowOwnerRole = callerRole == AppRoles.OWNER || isEditingOwner,
                     allowedRoles = if (callerRole == AppRoles.OWNER) listOf(AppRoles.CASHIER, AppRoles.MANAGER, AppRoles.OWNER) else (if (isEditingOwner) listOf(AppRoles.OWNER) else allowedRoles),
                     enabled = canChangeRole,
-                    onRoleSelected = { if (canChangeRole) editRole = it }
+                    onRoleSelected = { newRole ->
+                        if (canChangeRole) {
+                            editRole = newRole
+                            editDiscount = when (newRole) {
+                                AppRoles.MANAGER -> "20"
+                                AppRoles.CASHIER -> "10"
+                                else -> ""
+                            }
+                        }
+                    }
                 )
                 if (isEditingOwner && callerRole != AppRoles.OWNER) {
                     Spacer(Modifier.height(4.dp))
@@ -706,15 +719,13 @@ private fun EditStaffDialog(
                         editError = invalidUserMessage
                         return@Button
                     }
-                    if (editPin.isNotBlank()) {
-                        if (editPin.length != 4) {
-                            editError = invalidUserMessage
-                            return@Button
-                        }
-                        if (editOldPin.length != 4) {
-                            editError = currentPinRequiredMessage
-                            return@Button
-                        }
+                    if (editPin.isNotBlank() && editPin.length != 4) {
+                        editError = invalidUserMessage
+                        return@Button
+                    }
+                    if ((editPin.isNotBlank() || needsTargetOwnerPin) && editOldPin.length != 4) {
+                        editError = currentPinRequiredMessage
+                        return@Button
                     }
                     if (!isDiscountValid) {
                         editError = invalidDiscountMessage

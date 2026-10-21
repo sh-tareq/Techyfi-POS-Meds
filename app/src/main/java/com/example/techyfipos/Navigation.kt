@@ -487,15 +487,11 @@ fun MainNavigation() {
         var showMoreHubSheet by remember { mutableStateOf(false) }
         var showUserDropdown by remember { mutableStateOf(false) }
         var showLogoutConfirmDialog by remember { mutableStateOf(false) }
-        var unacknowledgedPinResetTime by remember { mutableStateOf<Long?>(null) }
+        var unacknowledgedOwnerAlert by remember { mutableStateOf<com.example.techyfipos.data.OwnerAuditEvent?>(null) }
 
-        LaunchedEffect(currentUser, isOwner) {
-            if (isOwner) {
-                val resetTs = authViewModel.getUnacknowledgedOwnerPinResetTimestamp(currentUser?.id)
-                if (resetTs > 0L) {
-                    unacknowledgedPinResetTime = resetTs
-                }
-            }
+        LaunchedEffect(currentUser) {
+            val alert = authViewModel.getUnacknowledgedOwnerAlert(currentUser)
+            unacknowledgedOwnerAlert = alert
         }
 
         BackHandler(enabled = showMoreHubSheet || (backStack.size > 1 && currentKey != Splash && currentKey != Lock)) {
@@ -715,10 +711,16 @@ fun MainNavigation() {
                 )
             }
 
-            if (unacknowledgedPinResetTime != null) {
-                val ts = unacknowledgedPinResetTime ?: 0L
-                val dateStr = remember(ts) {
-                    com.example.techyfipos.utils.DateFormatters.formatDateTime(ts)
+            val pendingAlert = unacknowledgedOwnerAlert
+            if (pendingAlert != null) {
+                val dateStr = remember(pendingAlert.timestamp) {
+                    com.example.techyfipos.utils.DateFormatters.formatDateTime(pendingAlert.timestamp)
+                }
+                val alertMsg = when (pendingAlert.action) {
+                    "ROLE_CHANGED" -> stringResource(R.string.owner_role_change_alert_message, pendingAlert.actorName, dateStr)
+                    "STATUS_CHANGED" -> stringResource(R.string.owner_status_change_alert_message, pendingAlert.actorName, dateStr)
+                    "PIN_CHANGED" -> stringResource(R.string.owner_pin_change_alert_message, pendingAlert.actorName, dateStr)
+                    else -> stringResource(R.string.owner_pin_reset_alert_message, dateStr)
                 }
                 AlertDialog(
                     onDismissRequest = { /* Force explicit user acknowledgment */ },
@@ -737,15 +739,16 @@ fun MainNavigation() {
                     },
                     text = {
                         Text(
-                            stringResource(R.string.owner_pin_reset_alert_message, dateStr),
+                            alertMsg,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     },
                     confirmButton = {
                         Button(
                             onClick = {
-                                authViewModel.acknowledgeOwnerPinReset(currentUser?.id)
-                                unacknowledgedPinResetTime = null
+                                val uid = currentUser?.id ?: 0L
+                                authViewModel.acknowledgeOwnerAlert(pendingAlert.id, uid)
+                                unacknowledgedOwnerAlert = null
                             }
                         ) {
                             Text(stringResource(R.string.owner_pin_reset_alert_dismiss))

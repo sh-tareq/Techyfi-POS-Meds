@@ -333,6 +333,9 @@ interface UserDao {
 
     @Delete
     suspend fun deleteUser(user: User)
+
+    @Query("UPDATE users SET maxDiscountPercent = :newPercent WHERE role = 'MANAGER' AND customPermissions IS NULL AND maxDiscountPercent = :oldPercent")
+    suspend fun updateManagerDefaultDiscount(oldPercent: Double = 10.0, newPercent: Double = 20.0): Int
 }
 
 @Dao

@@ -6119,6 +6119,7 @@ fun SettingsScreen(
     val canBackup = isOwner || activePermissions.contains(com.example.techyfipos.data.AppPermissions.SYSTEM_BACKUP_RESTORE)
     val canEditSettings = isOwner || activePermissions.contains(com.example.techyfipos.data.AppPermissions.SYSTEM_SHOP_SETTINGS)
     val canExportSalesExcel = isOwner || activePermissions.contains(com.example.techyfipos.data.AppPermissions.REPORTS_EXPORT_EXCEL)
+    val canExportDues = isOwner || activePermissions.contains(com.example.techyfipos.data.AppPermissions.DUES_VIEW)
 
     val currentLang by settingsViewModel.language.collectAsStateWithLifecycle()
     val currentThemeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
@@ -6993,8 +6994,12 @@ fun SettingsScreen(
                         }
                     },
                     onExportDues = {
-                        val dateStr = DateFormatters.formatISO()
-                        exportDuesLauncher.launch("dues-list-$dateStr.xlsx")
+                        if (canExportDues) {
+                            val dateStr = DateFormatters.formatISO()
+                            exportDuesLauncher.launch("dues-list-$dateStr.xlsx")
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.error_unauthorized_permission), Toast.LENGTH_SHORT).show()
+                        }
                     },
                     onDownloadTemplate = {
                         val dateStr = DateFormatters.formatISO()

@@ -100,6 +100,17 @@ class P0AuditFixesTest {
         override suspend fun deleteUser(user: User) {
             users.removeAll { it.id == user.id }
         }
+        override suspend fun updateManagerDefaultDiscount(oldPercent: Double, newPercent: Double): Int {
+            var count = 0
+            for (i in users.indices) {
+                val u = users[i]
+                if (u.role == AppRoles.MANAGER && u.customPermissions == null && u.maxDiscountPercent == oldPercent) {
+                    users[i] = u.copy(maxDiscountPercent = newPercent)
+                    count++
+                }
+            }
+            return count
+        }
     }
 
     private fun hashSha256(str: String): String {
@@ -107,7 +118,7 @@ class P0AuditFixesTest {
         return bytes.joinToString("") { "%02x".format(it) }
     }
 
-    private fun createRepositoryWithUsers(initialUsers: List<User>): Pair<DataRepository, Map<String, FakeSharedPreferences>> {
+    private fun createRepositoryWithUsers(initialUsers: List<User>): Triple<DataRepository, Map<String, FakeSharedPreferences>, FakeUserDao> {
         val prefsMap = mutableMapOf<String, FakeSharedPreferences>()
         val mockContext = org.mockito.Mockito.mock(android.content.Context::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
         org.mockito.Mockito.`when`(mockContext.getSharedPreferences(org.mockito.Mockito.anyString(), org.mockito.Mockito.anyInt())).thenAnswer { invocation ->
@@ -121,7 +132,7 @@ class P0AuditFixesTest {
 
         val mockSettingsDataStore = org.mockito.Mockito.mock(com.example.techyfipos.data.SettingsDataStore::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
         val repo = DataRepository(mockContext, mockDatabase, mockSettingsDataStore)
-        return Pair(repo, prefsMap)
+        return Triple(repo, prefsMap, fakeUserDao)
     }
 
     @Test
@@ -820,5 +831,165 @@ class P0AuditFixesTest {
         assertTrue(repo.authorizeHoldCartOverride("1111")) // valid supervisor PIN
         assertTrue(repo.consumeHoldCartOverride())
         assertFalse(repo.consumeHoldCartOverride()) // consumed
+    }
+
+    @Test
+    fun testR24_01_managerSelfApprovalAndLimitRejected() = kotlinx.coroutines.test.runTest {
+        val owner = User(id = 1L, name = "Owner", pinHash = hashSha256("1111"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val manager = User(id = 2L, name = "Manager", pinHash = hashSha256("2222"), role = AppRoles.MANAGER, maxDiscountPercent = 20.0, isActive = true)
+        val cashier = User(id = 3L, name = "Cashier", pinHash = hashSha256("3333"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, isActive = true)
+        val (repo, _) = createRepositoryWithUsers(listOf(owner, manager, cashier))
+
+        // 1. Manager cannot approve their own discount
+        repo.setSessionUser(manager)
+        val selfApproval = repo.authorizeDiscountOverride("2222", 50.0, "cart-hash-1", requestedPercent = 15.0)
+        assertFalse("Manager self-approval must be rejected", selfApproval)
+
+        // 2. Manager approving for cashier beyond manager's 20% limit is rejected
+        repo.setSessionUser(cashier)
+        val overLimitApproval = repo.authorizeDiscountOverride("2222", 100.0, "cart-hash-1", requestedPercent = 30.0)
+        assertFalse("20% manager approving 30% discount must be rejected", overLimitApproval)
+
+        // 3. Manager approving within their 20% limit succeeds
+        val withinLimitApproval = repo.authorizeDiscountOverride("2222", 60.0, "cart-hash-1", requestedPercent = 15.0)
+        assertTrue("Manager approving within 20% limit should succeed", withinLimitApproval)
+
+        // 4. Owner can approve up to 100% and can self-approve
+        repo.setSessionUser(cashier)
+        val ownerHighDiscount = repo.authorizeDiscountOverride("1111", 200.0, "cart-hash-1", requestedPercent = 60.0)
+        assertTrue("Owner approving high discount should succeed", ownerHighDiscount)
+
+        repo.setSessionUser(owner)
+        val ownerSelfApproval = repo.authorizeDiscountOverride("1111", 100.0, "cart-hash-1", requestedPercent = 50.0)
+        assertTrue("Owner self-approval is permitted", ownerSelfApproval)
+    }
+
+    @Test
+    fun testR24_02_ownerPinThrottleOnDemoteOrStatusChange() = kotlinx.coroutines.test.runTest {
+        val ownerA = User(id = 1L, name = "OwnerA", pinHash = hashSha256("1111"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val ownerB = User(id = 2L, name = "OwnerB", pinHash = hashSha256("2222"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val (repo, _) = createRepositoryWithUsers(listOf(ownerA, ownerB))
+        repo.setSessionUser(ownerA)
+
+        // Repeated wrong PIN attempts when trying to change owner B status
+        for (i in 1..4) {
+            assertThrows(IllegalStateException::class.java) {
+                kotlinx.coroutines.test.runTest {
+                    repo.updateStaff(userId = 2L, newName = "OwnerB", oldPin = "9999", isActive = false)
+                }
+            }
+        }
+        assertEquals(0L, repo.loginLockRemainingMillis())
+
+        // 5th failed attempt triggers lockout
+        assertThrows(IllegalStateException::class.java) {
+            kotlinx.coroutines.test.runTest {
+                repo.updateStaff(userId = 2L, newName = "OwnerB", oldPin = "9999", isActive = false)
+            }
+        }
+        assertTrue("Lockout should be active after 5 failed attempts", repo.loginLockRemainingMillis() > 0)
+
+        // Subsequent attempt is blocked by lockout
+        val exc = assertThrows(IllegalStateException::class.java) {
+            kotlinx.coroutines.test.runTest {
+                repo.updateStaff(userId = 2L, newName = "OwnerB", oldPin = "2222", isActive = false)
+            }
+        }
+        assertTrue(exc.message?.contains("locked out") == true)
+    }
+
+    @Test
+    fun testR24_06_managerDiscountMigration() = kotlinx.coroutines.test.runTest {
+        val managerDefault = User(id = 1L, name = "Mgr1", pinHash = hashSha256("1111"), role = AppRoles.MANAGER, maxDiscountPercent = 10.0, customPermissions = null, isActive = true)
+        val managerCustom = User(id = 2L, name = "Mgr2", pinHash = hashSha256("2222"), role = AppRoles.MANAGER, maxDiscountPercent = 10.0, customPermissions = "[\"some.perm\"]", isActive = true)
+        val cashier = User(id = 3L, name = "Cashier", pinHash = hashSha256("3333"), role = AppRoles.CASHIER, maxDiscountPercent = 10.0, customPermissions = null, isActive = true)
+        val (repo, _, fakeUserDao) = createRepositoryWithUsers(listOf(managerDefault, managerCustom, cashier))
+
+        repo.migrateLegacyManagerDiscounts()
+        val allUsers = fakeUserDao.getAllUsersOnce()
+        val migratedMgr = allUsers.first { it.id == 1L }
+        val customMgr = allUsers.first { it.id == 2L }
+        val cUser = allUsers.first { it.id == 3L }
+
+        assertEquals(20.0, migratedMgr.maxDiscountPercent, 0.001)
+        assertEquals(10.0, customMgr.maxDiscountPercent, 0.001)
+        assertEquals(10.0, cUser.maxDiscountPercent, 0.001)
+    }
+
+    @Test
+    fun testR24_07_cartScopedCreditTokenEnforcement() = kotlinx.coroutines.test.runTest {
+        val owner = User(id = 1L, name = "Owner", pinHash = hashSha256("1111"), role = AppRoles.OWNER, maxDiscountPercent = 100.0, isActive = true)
+        val (repo, _) = createRepositoryWithUsers(listOf(owner))
+
+        // Authorize credit limit override specifically for a cart
+        repo.authorizeCreditLimitOverride("1111", "01711111111", 500.0, "cart-hash-scoped")
+
+        // Valid for the designated cart
+        assertTrue(repo.hasValidCreditLimitOverride("01711111111", 500.0, cartHash = "cart-hash-scoped"))
+
+        // Manual Add Due (cartHash == null) must reject cart-scoped token!
+        assertFalse("Manual Add Due must reject cart-scoped credit token", repo.hasValidCreditLimitOverride("01711111111", 500.0, cartHash = null))
+    }
+
+    @Test
+    fun testR24_05_heldCartsSurviveRepositoryInit() = kotlinx.coroutines.test.runTest {
+        val mockContext = org.mockito.Mockito.mock(android.content.Context::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
+        val mockDatabase = org.mockito.Mockito.mock(com.example.techyfipos.data.db.AppDatabase::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
+        val mockSettingsDataStore = org.mockito.Mockito.mock(com.example.techyfipos.data.SettingsDataStore::class.java, org.mockito.Mockito.RETURNS_DEEP_STUBS)
+        val heldCartDao = mockDatabase.heldCartDao()
+
+        DataRepository(mockContext, mockDatabase, mockSettingsDataStore)
+        org.mockito.Mockito.verify(heldCartDao, org.mockito.Mockito.never()).deleteHeldCartsOlderThan(org.mockito.Mockito.anyLong())
+    }
+
+    @Test
+    fun testR24_06_managerEffectiveDiscountSaleAndValidation() = kotlinx.coroutines.test.runTest {
+        val manager = User(
+            id = 2L,
+            name = "Manager",
+            pinHash = hashSha256("2222"),
+            role = AppRoles.MANAGER,
+            maxDiscountPercent = 20.0,
+            isActive = true
+        )
+        val cashier = User(
+            id = 3L,
+            name = "Cashier",
+            pinHash = hashSha256("3333"),
+            role = AppRoles.CASHIER,
+            maxDiscountPercent = 10.0,
+            isActive = true
+        )
+
+        assertEquals(20.0, AppPermissions.getEffectiveMaxDiscount(manager), 0.001)
+        assertEquals(10.0, AppPermissions.getEffectiveMaxDiscount(cashier), 0.001)
+
+        val product = Product(
+            barcode = "ITEM-100",
+            name = "Test Item",
+            category = "General",
+            purchasePrice = 50.0,
+            sellingPrice = 100.0,
+            stockQty = 10.0,
+            reorderLevel = 1,
+            unit = "pcs"
+        )
+        val cartItems = listOf(Triple(product, 1.0, null))
+
+        val (repo, _) = createRepositoryWithUsers(listOf(manager, cashier))
+
+        repo.setSessionUser(manager)
+        val mgrSubtotal = 100.0
+        val mgrDiscount = 20.0
+        val computedHash = com.example.techyfipos.ui.viewmodel.CartViewModel.computeCartHashFromTriples(cartItems)
+
+        assertFalse(repo.hasValidDiscountOverride(mgrDiscount, computedHash))
+        val maxAllowed = AppPermissions.getEffectiveMaxDiscount(manager)
+        val discountPercent = (mgrDiscount / mgrSubtotal) * 100.0
+        assertTrue("20% discount is within manager's effective limit", discountPercent <= maxAllowed + 0.01)
+
+        repo.setSessionUser(cashier)
+        val cashierMaxAllowed = AppPermissions.getEffectiveMaxDiscount(cashier)
+        assertTrue("20% discount exceeds cashier's 10% limit", discountPercent > cashierMaxAllowed + 0.01)
     }
 }

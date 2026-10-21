@@ -2116,7 +2116,7 @@
     <!-- Supervisor Authorization Descriptions & Permission Toasts -->
     <string name="supervisor_auth_desc_void_cart">Authorize voiding active cart</string>
     <string name="supervisor_auth_desc_remove_item">Authorize removing item: %1$s</string>
-    <string name="supervisor_auth_desc_discount">Authorize discount of %1$s (Max limit: %2$d%%)</string>
+    <string name="supervisor_auth_desc_discount">Authorize discount of %1$s (Max limit: %2$s%%)</string>
     <string name="supervisor_auth_desc_negative_stock">Authorize sale with negative inventory / insufficient stock</string>
     <string name="supervisor_auth_desc_hold_cart">Authorize holding active cart</string>
     <string name="supervisor_auth_desc_price_tier">Authorize changing price tier to %1$s</string>
@@ -3304,6 +3304,10 @@
     <string name="settings_enter_decrypt_password_instruction">Enter the password used when creating this .posenc backup file.</string>
     <string name="settings_encrypted_backup_exported_toast">Encrypted backup saved successfully (.posenc)!</string>
     <string name="settings_encrypted_backup_export_failed">Failed to export encrypted backup</string>
+    <string name="users_target_owner_pin_label">Target owner PIN (Required)</string>
+    <string name="owner_role_change_alert_message">Your role was changed by %1$s on %2$s.</string>
+    <string name="owner_status_change_alert_message">Your account status was changed by %1$s on %2$s.</string>
+    <string name="owner_pin_change_alert_message">Your PIN was changed by %1$s on %2$s.</string>
 </resources>
 
 
