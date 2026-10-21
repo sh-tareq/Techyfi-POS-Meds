@@ -302,6 +302,8 @@ fun DuesScreen(
 
     val customerRows = remember(allDues, selectedTab, searchQuery, sort, minimumDue, overdueThresholdMillis, dueStartRange, dueEndRange) {
         val query = searchQuery.trim().lowercase()
+        val englishQuery = toEnglishDigits(query)
+        val normPhoneQuery = normalizePhone(query)
         val minimum = minimumDue.toDoubleOrNull()
         allDues.filter { customer ->
             val matchesTab = when (selectedTab) {
@@ -310,9 +312,12 @@ fun DuesScreen(
                 DuesTab.SETTLED -> customer.outstandingAmount <= 0.0
                 DuesTab.PAYMENTS -> false
             }
-            val matchesSearch = query.isBlank() ||
-                customer.customerName.lowercase().contains(query) ||
-                customer.customerPhone.lowercase().contains(query)
+            val matchesPhone = customer.customerPhone.lowercase().contains(query) ||
+                customer.customerPhone.lowercase().contains(englishQuery) ||
+                (normPhoneQuery.isNotBlank() && normalizePhone(customer.customerPhone).contains(normPhoneQuery))
+            val matchesName = customer.customerName.lowercase().contains(query) ||
+                customer.customerName.lowercase().contains(englishQuery)
+            val matchesSearch = query.isBlank() || matchesName || matchesPhone
             val matchesMin = minimum == null || customer.outstandingAmount >= minimum
             val matchesDate = if (dueStartRange != null && dueEndRange != null) {
                 val dueCreated = if (customer.createdAt > 0L) customer.createdAt else customer.updatedAt
@@ -331,15 +336,28 @@ fun DuesScreen(
 
     val filteredPayments = remember(allPayments, paymentStart, paymentEnd, searchQuery, customerByPhone) {
         val query = searchQuery.trim().lowercase()
+        val englishQuery = toEnglishDigits(query)
+        val normPhoneQuery = normalizePhone(query)
         allPayments.filter { payment ->
             val inDate = payment.timestamp in startOfDay(paymentStart)..endOfDay(paymentEnd)
             if (!inDate) return@filter false
             if (query.isBlank()) return@filter true
             val customerName = customerByPhone[payment.customerPhone]?.customerName?.lowercase() ?: ""
-            payment.customerPhone.lowercase().contains(query) ||
-                customerName.contains(query) ||
-                (payment.referenceNote?.lowercase()?.contains(query) == true) ||
-                payment.paymentMethod.lowercase().contains(query)
+            val matchesPhone = payment.customerPhone.lowercase().contains(query) ||
+                payment.customerPhone.lowercase().contains(englishQuery) ||
+                (normPhoneQuery.isNotBlank() && normalizePhone(payment.customerPhone).contains(normPhoneQuery))
+            val matchesCustomerName = customerName.contains(query) || customerName.contains(englishQuery)
+            val matchesNote = payment.referenceNote?.lowercase()?.let { it.contains(query) || it.contains(englishQuery) } == true
+            val matchesMethod = payment.paymentMethod.lowercase().contains(query) ||
+                payment.paymentMethod.lowercase().contains(englishQuery) ||
+                (query.contains("বিকাশ") && payment.paymentMethod.contains("BKASH", ignoreCase = true)) ||
+                ((query.contains("নগদ") || query.contains("ক্যাশ")) && (payment.paymentMethod.contains("CASH", ignoreCase = true) || payment.paymentMethod.contains("NAGAD", ignoreCase = true))) ||
+                (query.contains("রকেট") && payment.paymentMethod.contains("ROCKET", ignoreCase = true)) ||
+                (query.contains("কার্ড") && payment.paymentMethod.contains("CARD", ignoreCase = true)) ||
+                (query.contains("ভাউচার") && payment.paymentMethod.contains("VOUCHER", ignoreCase = true)) ||
+                (query.contains("বাকি") && payment.paymentMethod.contains("DUE", ignoreCase = true))
+
+            matchesPhone || matchesCustomerName || matchesNote || matchesMethod
         }.sortedByDescending { it.timestamp }
     }
     val dateRangeLabel = remember(paymentStart, paymentEnd) {
@@ -790,6 +808,8 @@ fun DuesScreen(
                     PaymentHistoryList(
                         payments = filteredPayments,
                         customerByPhone = customerByPhone,
+                        searchQuery = searchQuery,
+                        onClearSearch = { searchQuery = "" },
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = 16.dp)
@@ -2888,12 +2908,18 @@ fun DuesAuditHistorySheet(
 
     val filteredEntries = remember(entries, searchQuery, selectedTypeFilter, startTime, endTime) {
         val query = searchQuery.trim().lowercase()
+        val englishQuery = toEnglishDigits(query)
+        val normPhoneQuery = normalizePhone(query)
         entries.filter { entry ->
-            val matchQuery = query.isBlank() ||
-                entry.customerName.lowercase().contains(query) ||
-                entry.customerPhone.lowercase().contains(query) ||
-                (entry.referenceId?.lowercase()?.contains(query) == true) ||
-                (entry.note?.lowercase()?.contains(query) == true)
+            val matchesPhone = entry.customerPhone.lowercase().contains(query) ||
+                entry.customerPhone.lowercase().contains(englishQuery) ||
+                (normPhoneQuery.isNotBlank() && normalizePhone(entry.customerPhone).contains(normPhoneQuery))
+            val matchesName = entry.customerName.lowercase().contains(query) ||
+                entry.customerName.lowercase().contains(englishQuery)
+            val matchesRef = entry.referenceId?.lowercase()?.let { it.contains(query) || it.contains(englishQuery) } == true
+            val matchesNote = entry.note?.lowercase()?.let { it.contains(query) || it.contains(englishQuery) } == true
+
+            val matchQuery = query.isBlank() || matchesName || matchesPhone || matchesRef || matchesNote
 
             val matchType = when (selectedTypeFilter) {
                 "ALL" -> true
@@ -4850,11 +4876,35 @@ fun AddDueDialog(
 private fun PaymentHistoryList(
     payments: List<DuePayment>,
     customerByPhone: Map<String, CustomerDue>,
+    searchQuery: String = "",
+    onClearSearch: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     if (payments.isEmpty()) {
-        Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.dues_no_payments_in_range), color = MaterialTheme.colorScheme.outline)
+        Box(modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = if (searchQuery.isNotBlank()) {
+                        stringResource(R.string.dues_no_payments_match, searchQuery)
+                    } else {
+                        stringResource(R.string.dues_no_payments_in_range)
+                    },
+                    color = MaterialTheme.colorScheme.outline,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                if (searchQuery.isNotBlank() && onClearSearch != null) {
+                    OutlinedButton(
+                        onClick = onClearSearch,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text(stringResource(R.string.clear_search))
+                    }
+                }
+            }
         }
     } else {
         LazyColumn(

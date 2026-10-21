@@ -4,6 +4,8 @@ import com.example.techyfipos.ui.dialogs.*
 import com.example.techyfipos.data.AppPermissions
 import com.example.techyfipos.ui.viewmodel.AuthViewModel
 import com.example.techyfipos.utils.PaymentMath
+import com.example.techyfipos.utils.toEnglishDigits
+import com.example.techyfipos.utils.normalizePhone
 import com.example.techyfipos.data.db.getFormattedPaymentMethod
 import com.example.techyfipos.ui.viewmodel.calculateDiscountValue
 import android.widget.Toast
@@ -274,17 +276,30 @@ fun SalesHistoryScreen(
         minimumTotal, maximumTotal, sortOrder, onlyReturnsFilter, returnsBySaleId
     ) {
         val query = searchQuery.trim().lowercase()
+        val englishQuery = toEnglishDigits(query)
+        val normPhoneQuery = normalizePhone(query)
         val minimum = minimumTotal.toDoubleOrNull()
         val maximum = maximumTotal.toDoubleOrNull()
         dateFilteredSales.filter { saleWithItems ->
             val sale = saleWithItems.sale
+            val matchesPhone = sale.customerPhone?.let { phone ->
+                phone.lowercase().contains(query) ||
+                phone.lowercase().contains(englishQuery) ||
+                (normPhoneQuery.isNotBlank() && normalizePhone(phone).contains(normPhoneQuery))
+            } ?: false
             val matchesSearch = query.isBlank() ||
-                sale.id.toString().contains(query) ||
-                sale.customerName?.lowercase()?.contains(query) == true ||
-                sale.customerPhone?.lowercase()?.contains(query) == true ||
+                sale.id.toString().contains(englishQuery) ||
+                sale.customerName?.lowercase()?.let { it.contains(query) || it.contains(englishQuery) } == true ||
+                matchesPhone ||
                 sale.paymentMethod.lowercase().contains(query) ||
+                sale.paymentMethod.lowercase().contains(englishQuery) ||
+                (query.contains("বিকাশ") && sale.paymentMethod.contains("BKASH", ignoreCase = true)) ||
+                ((query.contains("নগদ") || query.contains("ক্যাশ")) && (sale.paymentMethod.contains("CASH", ignoreCase = true) || sale.paymentMethod.contains("NAGAD", ignoreCase = true))) ||
+                (query.contains("রকেট") && sale.paymentMethod.contains("ROCKET", ignoreCase = true)) ||
+                (query.contains("কার্ড") && sale.paymentMethod.contains("CARD", ignoreCase = true)) ||
                 saleWithItems.items.any {
-                    it.productName.lowercase().contains(query) || it.productBarcode.lowercase().contains(query)
+                    it.productName.lowercase().let { name -> name.contains(query) || name.contains(englishQuery) } ||
+                    it.productBarcode.lowercase().let { barcode -> barcode.contains(query) || barcode.contains(englishQuery) }
                 }
             val matchesPayment = selectedPayments.isEmpty() ||
                 sale.paymentMethod in selectedPayments ||

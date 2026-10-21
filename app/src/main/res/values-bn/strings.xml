@@ -3317,4 +3317,52 @@
     <string name="receipt_print_failed">রশিদ প্রিন্ট ব্যর্থ হয়েছে</string>
     <string name="batch_print_bitmaps_failed">লেবেল ইমেজ প্রস্তুত করা যায়নি</string>
     <string name="error_supplier_void_exceeds_dues">ইনভয়েসটি বাতিল করা যাচ্ছে না কারণ রেকর্ডকৃত পেমেন্ট বাকি দেনার চেয়ে বেশি হয়ে যাবে। অনুগ্রহ করে প্রথমে পেমেন্ট সমন্বয় করুন।</string>
+
+    <!-- P3 Settings Search Breadcrumbs (R24-18) -->
+    <string name="settings_search_bc_receipt_printer">প্রিন্টার &gt; থার্মাল প্রিন্টার</string>
+    <string name="settings_search_bc_paper_roll">প্রিন্টার &gt; কাগজের রোল</string>
+    <string name="settings_search_bc_label_printer">প্রিন্টার &gt; লেবেল প্রিন্টার</string>
+    <string name="settings_search_bc_cash_drawer">হার্ডওয়্যার &gt; ক্যাশ ড্রয়ার</string>
+    <string name="settings_search_bc_receipt_layout">রশিদ &gt; লেআউট</string>
+    <string name="settings_search_bc_shop_identity">রশিদ &gt; দোকানের পরিচিতি</string>
+    <string name="settings_search_bc_shop_logo">রশিদ &gt; দোকানের লোগো</string>
+    <string name="settings_search_bc_qr_links">রশিদ &gt; পেমেন্ট কিউআর</string>
+    <string name="settings_search_bc_due_receipt">রশিদ &gt; বকেয়া ভাউচার</string>
+    <string name="settings_search_bc_staff_access">নিরাপত্তা &gt; কর্মী ও অনুমতি</string>
+    <string name="settings_search_bc_negative_stock">ব্যবসায়িক নিয়ম &gt; ঘাটতি স্টক</string>
+    <string name="settings_search_bc_tax">ব্যবসায়িক নিয়ম &gt; ভ্যাট ও ট্যাক্স</string>
+    <string name="settings_search_bc_idle_lock">নিরাপত্তা &gt; অটো-লক</string>
+    <string name="settings_search_bc_google_drive">ডাটা ও ক্লাউড &gt; গুগল ড্রাইভ</string>
+    <string name="settings_search_bc_excel_export">ডাটা ও ক্লাউড &gt; এক্সেল এক্সপোর্ট</string>
+    <string name="settings_search_bc_khata_repair">ডাটা ও ক্লাউড &gt; খাতা মেরামত</string>
+    <string name="settings_search_bc_language">পছন্দসমূহ &gt; ভাষা</string>
+    <string name="settings_search_bc_theme">পছন্দসমূহ &gt; থিম</string>
+    <string name="settings_search_bc_layout">পছন্দসমূহ &gt; লেআউট</string>
+    <string name="settings_search_bc_margin">পছন্দসমূহ &gt; মুনাফা মার্জিন</string>
+    <string name="settings_search_bc_about">সিস্টেম &gt; বিবরণ</string>
+    <string name="settings_search_bc_reset">সতর্কতা অঞ্চল &gt; ফ্যাক্টরি রিসেট</string>
+
+    <!-- P3 Settings Search Statuses (R24-18) -->
+    <string name="settings_search_status_configured">সেটআপ করা</string>
+    <string name="settings_search_status_setup">সেটআপ নেই</string>
+    <string name="settings_search_status_system">সিস্টেম</string>
+    <string name="settings_search_status_kick_on">ড্রয়ার চালু</string>
+    <string name="settings_search_status_kick_off">ড্রয়ার বন্ধ</string>
+    <string name="settings_search_status_not_set">সেট করা নেই</string>
+    <string name="settings_search_status_active">সক্রিয়</string>
+    <string name="settings_search_status_off">বন্ধ</string>
+    <string name="settings_search_status_ready">প্রস্তুত</string>
+    <string name="settings_search_status_owner_only">শুধু মালিক</string>
+    <string name="settings_search_status_permitted">অনুমোদিত</string>
+    <string name="settings_search_status_blocked_safe">সুরক্ষিত (বন্ধ)</string>
+    <string name="settings_search_status_never">কখনও না</string>
+    <string name="settings_search_status_connected">সংযুক্ত</string>
+    <string name="settings_search_status_local_ready">লোকাল প্রস্তুত</string>
+    <string name="settings_search_status_audit">অডিট</string>
+    <string name="settings_search_status_protected">সুরক্ষিত</string>
+    <string name="settings_search_status_cost_fmt">%1$d%% খরচ</string>
+    <string name="settings_search_status_minutes_fmt">%1$d মি.</string>
+
+    <!-- P3 Dues Payments Search (R24-19) -->
+    <string name="dues_no_payments_match">\'%1$s\'-এর সাথে মিলে এমন কোনো পেমেন্ট নেই</string>
 </resources>

@@ -105,7 +105,7 @@ Short names: `Dlg` = `ui/dialogs/ProductCodePrintDialogs.kt`, `Img` = `utils/Pro
 
 ## P3: Settings search and UI polish (new code, first review)
 
-- [ ] **R24-18 MED Reported. Settings search results land in the wrong place or do nothing.** (`cfb911e`; `ui/screens/SettingsScreen.kt`.) No permission bypass was found: every result reuses the gated home-page callbacks.
+- [x] **R24-18 MED Reported. Settings search results land in the wrong place or do nothing.** (`cfb911e`; `ui/screens/SettingsScreen.kt`.) No permission bypass was found: every result reuses the gated home-page callbacks.
   - "Idle auto-lock" opens the **Tax** page (about 854-863, `onClick = onTaxClick`); the control is a home-page card (about 1296-1370).
   - Language, Theme, Layout and Default cost do nothing when tapped (about 927, 943, 959, 975, `/* already in preferences */`).
   - Cash drawer kick (about 719) and Allow negative inventory (about 831) flip the setting on one tap from a navigation-looking card; show a real Switch or navigate.
@@ -114,7 +114,7 @@ Short names: `Dlg` = `ui/dialogs/ProductCodePrintDialogs.kt`, `Img` = `utils/Pro
   - A long store name in the status pill squeezes the title to nothing (about 590-610, 749); cap width and ellipsize.
   - All breadcrumbs and statuses are English literals ("Connected", "Setup", "Owner Only", "Kick ON/OFF", "Blocked (Safe)", "Not Set", "Local Ready", "Ready", "Audit", "Protected", "N% Cost"; raw "SYSTEM"/"AUTO"); about 20 hex status colours.
 
-- [ ] **R24-19 LOW Reported. Search consistency.** (`be93c99`, `b81f891`.) The Dues Payments tab now filters by the shared search query, so a query from Outstanding hides payments and says "No payments in this range"; method match is on raw values, so "বিকাশ" finds nothing (`DuesScreen.kt` about 331-342, 4849-4851). Dues list, Dues payments, Dues audit and Sales History don't normalise Bangla digits or +880/01 phone formats (Products does); run `toEnglishDigits` and `normalizePhone` on queries. `PosSearchBox` clears focus on IME Search/Enter (`ui/components/PosSearchBox.kt` about 128-135), which may break keyboard-wedge scanners on Products/batch print/stock audit (verify on a device); clear/filter touch targets shrank to 36dp.
+- [x] **R24-19 LOW Reported. Search consistency.** (`be93c99`, `b81f891`.) The Dues Payments tab now filters by the shared search query, so a query from Outstanding hides payments and says "No payments in this range"; method match is on raw values, so "বিকাশ" finds nothing (`DuesScreen.kt` about 331-342, 4849-4851). Dues list, Dues payments, Dues audit and Sales History don't normalise Bangla digits or +880/01 phone formats (Products does); run `toEnglishDigits` and `normalizePhone` on queries. `PosSearchBox` clears focus on IME Search/Enter (`ui/components/PosSearchBox.kt` about 128-135), which may break keyboard-wedge scanners on Products/batch print/stock audit (verify on a device); clear/filter touch targets shrank to 36dp.
 
 ---
 

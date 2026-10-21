@@ -3315,6 +3315,54 @@
     <string name="receipt_print_failed">Receipt printing failed</string>
     <string name="batch_print_bitmaps_failed">Could not prepare label bitmaps for printing</string>
     <string name="error_supplier_void_exceeds_dues">Cannot void this invoice because recorded payments would exceed remaining dues. Please adjust payments first.</string>
+
+    <!-- P3 Settings Search Breadcrumbs (R24-18) -->
+    <string name="settings_search_bc_receipt_printer">PRINTERS &gt; THERMAL PRINTER</string>
+    <string name="settings_search_bc_paper_roll">PRINTERS &gt; PAPER ROLL</string>
+    <string name="settings_search_bc_label_printer">PRINTERS &gt; LABEL PRINTER</string>
+    <string name="settings_search_bc_cash_drawer">HARDWARE &gt; CASH DRAWER</string>
+    <string name="settings_search_bc_receipt_layout">RECEIPT &gt; LAYOUT</string>
+    <string name="settings_search_bc_shop_identity">RECEIPT &gt; SHOP IDENTITY</string>
+    <string name="settings_search_bc_shop_logo">RECEIPT &gt; SHOP LOGO</string>
+    <string name="settings_search_bc_qr_links">RECEIPT &gt; PAYMENT QR</string>
+    <string name="settings_search_bc_due_receipt">RECEIPT &gt; DUE VOUCHER</string>
+    <string name="settings_search_bc_staff_access">SECURITY &gt; STAFF &amp; ACCESS</string>
+    <string name="settings_search_bc_negative_stock">BUSINESS RULES &gt; STOCK OVERAGE</string>
+    <string name="settings_search_bc_tax">BUSINESS RULES &gt; VAT &amp; TAX</string>
+    <string name="settings_search_bc_idle_lock">SECURITY &gt; AUTO-LOCK</string>
+    <string name="settings_search_bc_google_drive">DATA &amp; CLOUD &gt; GOOGLE DRIVE</string>
+    <string name="settings_search_bc_excel_export">DATA &amp; CLOUD &gt; EXCEL EXPORT</string>
+    <string name="settings_search_bc_khata_repair">DATA &amp; CLOUD &gt; KHATA REPAIR</string>
+    <string name="settings_search_bc_language">PREFERENCES &gt; LANGUAGE</string>
+    <string name="settings_search_bc_theme">PREFERENCES &gt; THEME</string>
+    <string name="settings_search_bc_layout">PREFERENCES &gt; LAYOUT</string>
+    <string name="settings_search_bc_margin">PREFERENCES &gt; PROFIT MARGIN</string>
+    <string name="settings_search_bc_about">SYSTEM &gt; ABOUT</string>
+    <string name="settings_search_bc_reset">DANGER ZONE &gt; FACTORY RESET</string>
+
+    <!-- P3 Settings Search Statuses (R24-18) -->
+    <string name="settings_search_status_configured">Configured</string>
+    <string name="settings_search_status_setup">Setup</string>
+    <string name="settings_search_status_system">System</string>
+    <string name="settings_search_status_kick_on">Kick ON</string>
+    <string name="settings_search_status_kick_off">Kick OFF</string>
+    <string name="settings_search_status_not_set">Not Set</string>
+    <string name="settings_search_status_active">Active</string>
+    <string name="settings_search_status_off">Off</string>
+    <string name="settings_search_status_ready">Ready</string>
+    <string name="settings_search_status_owner_only">Owner Only</string>
+    <string name="settings_search_status_permitted">Permitted</string>
+    <string name="settings_search_status_blocked_safe">Blocked (Safe)</string>
+    <string name="settings_search_status_never">Never</string>
+    <string name="settings_search_status_connected">Connected</string>
+    <string name="settings_search_status_local_ready">Local Ready</string>
+    <string name="settings_search_status_audit">Audit</string>
+    <string name="settings_search_status_protected">Protected</string>
+    <string name="settings_search_status_cost_fmt">%1$d%% Cost</string>
+    <string name="settings_search_status_minutes_fmt">%1$dm</string>
+
+    <!-- P3 Dues Payments Search (R24-19) -->
+    <string name="dues_no_payments_match">No payments match \'%1$s\'</string>
 </resources>
 
 

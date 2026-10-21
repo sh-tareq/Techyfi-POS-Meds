@@ -130,7 +130,6 @@ fun PosSearchBox(
                     keyboardActions = KeyboardActions(
                         onSearch = {
                             keyboardController?.hide()
-                            focusManager.clearFocus()
                             onSearch?.invoke()
                         }
                     ),
@@ -148,7 +147,7 @@ fun PosSearchBox(
                         onQueryChange("")
                         onClear?.invoke()
                     },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,

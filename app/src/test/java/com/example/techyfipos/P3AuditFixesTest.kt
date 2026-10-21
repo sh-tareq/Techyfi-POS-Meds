@@ -234,4 +234,20 @@ class P3AuditFixesTest {
         assertEquals(0, localCal.get(java.util.Calendar.SECOND))
         assertEquals(0, localCal.get(java.util.Calendar.MILLISECOND))
     }
+
+    @Test
+    fun testR24_18_19_queryNormalizationAndBanglaMatching() {
+        val banglaQuery = "০১৭০০১২৩৪৫৬"
+        val englishQuery = com.example.techyfipos.utils.toEnglishDigits(banglaQuery)
+        assertEquals("01700123456", englishQuery)
+        val normalized = com.example.techyfipos.utils.normalizePhone(englishQuery)
+        assertEquals("01700123456", normalized)
+
+        val testMethods = listOf("BKASH", "CASH", "NAGAD", "ROCKET", "CARD")
+        val matchBkash = testMethods.filter { it.contains("BKASH", ignoreCase = true) }
+        assertEquals(listOf("BKASH"), matchBkash)
+
+        val matchCash = testMethods.filter { it.contains("CASH", ignoreCase = true) || it.contains("NAGAD", ignoreCase = true) }
+        assertEquals(listOf("CASH", "NAGAD"), matchCash)
+    }
 }

@@ -345,10 +345,13 @@ private data class SettingsSearchItem(
     val subtitleRes: Int,
     val category: SettingsSearchCategory,
     val keywords: List<String>,
-    val breadcrumb: String,
+    val breadcrumbRes: Int,
     val icon: @Composable (Dp) -> Unit,
     val status: String? = null,
     val statusColor: Color = Color(0xFF10B981),
+    val isToggle: Boolean = false,
+    val toggleChecked: Boolean = false,
+    val onToggle: ((Boolean) -> Unit)? = null,
     val onClick: () -> Unit
 )
 
@@ -536,7 +539,13 @@ private fun SettingsSearchResultCard(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        onClick = item.onClick,
+        onClick = {
+            if (item.isToggle) {
+                item.onToggle?.invoke(!item.toggleChecked)
+            } else {
+                item.onClick()
+            }
+        },
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
@@ -564,7 +573,7 @@ private fun SettingsSearchResultCard(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
                     Text(
-                        text = item.breadcrumb,
+                        text = stringResource(item.breadcrumbRes),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -610,22 +619,34 @@ private fun SettingsSearchResultCard(
                             fontWeight = FontWeight.Bold,
                             color = item.statusColor,
                             maxLines = 1,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .widthIn(max = 96.dp)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = stringResource(R.string.settings_search_open_action),
-                    tint = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(16.dp)
-                )
+                if (item.isToggle) {
+                    Switch(
+                        checked = item.toggleChecked,
+                        onCheckedChange = item.onToggle,
+                        modifier = Modifier.height(28.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = stringResource(R.string.settings_search_open_action),
+                        tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
     }
 }
 
 private fun buildSettingsSearchItems(
+    context: Context,
     currentSettings: InvoiceSettingsData,
     paperRollWidthMm: Int,
     driveConnected: Boolean,
@@ -652,11 +673,26 @@ private fun buildSettingsSearchItems(
     onOpenReceiptPrinterPicker: () -> Unit,
     onOpenLabelPrinterPicker: () -> Unit,
     onToggleNegativeStock: () -> Unit,
-    onToggleCashDrawer: () -> Unit
+    onToggleCashDrawer: () -> Unit,
+    onOpenLanguagePicker: () -> Unit,
+    onOpenThemePicker: () -> Unit,
+    onOpenLayoutPicker: () -> Unit,
+    onOpenIdleLockPicker: () -> Unit,
+    onOpenDefaultCostPicker: () -> Unit
 ): List<SettingsSearchItem> {
     val items = mutableListOf<SettingsSearchItem>()
 
     // 1. Receipt Thermal Printer
+    val receiptStatus = when {
+        currentSettings.receiptPrintMode == "SYSTEM" -> context.getString(R.string.settings_search_status_system)
+        currentSettings.resolvedReceiptPrinterTarget() !is PrinterTarget.None -> context.getString(R.string.settings_search_status_configured)
+        else -> context.getString(R.string.settings_search_status_setup)
+    }
+    val receiptStatusColor = when {
+        currentSettings.receiptPrintMode == "SYSTEM" -> Color(0xFF3B82F6)
+        currentSettings.resolvedReceiptPrinterTarget() !is PrinterTarget.None -> Color(0xFF10B981)
+        else -> Color(0xFF6B7280)
+    }
     items.add(
         SettingsSearchItem(
             id = "receipt_printer",
@@ -664,10 +700,10 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_receipt_printer_subtitle,
             category = SettingsSearchCategory.PRINTERS,
             keywords = listOf("printer", "receipt", "bluetooth", "usb", "esc", "pos", "thermal", "print", "roll", "58mm", "80mm", "প্রিন্টার", "রশিদ", "ব্লুটুথ", "থার্মাল", "ছাপানো", "কাউন্টার", "রোল"),
-            breadcrumb = "PRINTERS > THERMAL PRINTER",
+            breadcrumbRes = R.string.settings_search_bc_receipt_printer,
             icon = { size -> Realistic3DPrinterIcon(size = size) },
-            status = if (currentSettings.resolvedReceiptPrinterTarget() !is PrinterTarget.None) "Connected" else "Setup",
-            statusColor = if (currentSettings.resolvedReceiptPrinterTarget() !is PrinterTarget.None) Color(0xFF10B981) else Color(0xFF6B7280),
+            status = receiptStatus,
+            statusColor = receiptStatusColor,
             onClick = onOpenReceiptPrinterPicker
         )
     )
@@ -680,7 +716,7 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_paper_roll_width_desc,
             category = SettingsSearchCategory.PRINTERS,
             keywords = listOf("paper", "roll", "width", "58mm", "80mm", "size", "receipt", "কাগজ", "রোল", "সাইজ", "৫৮মিমি", "৮০মিমি"),
-            breadcrumb = "PRINTERS > PAPER ROLL",
+            breadcrumbRes = R.string.settings_search_bc_paper_roll,
             icon = { size -> Realistic3DReceiptPaperIcon(size = size) },
             status = "${paperRollWidthMm}mm",
             statusColor = Color(0xFF4F46E5),
@@ -689,6 +725,16 @@ private fun buildSettingsSearchItems(
     )
 
     // 3. Product Label & Barcode Printer
+    val labelStatus = when {
+        currentSettings.labelPrintMode == "SYSTEM" -> context.getString(R.string.settings_search_status_system)
+        currentSettings.resolvedLabelPrinterTarget() !is PrinterTarget.None -> context.getString(R.string.settings_search_status_configured)
+        else -> context.getString(R.string.settings_search_status_setup)
+    }
+    val labelStatusColor = when {
+        currentSettings.labelPrintMode == "SYSTEM" -> Color(0xFF3B82F6)
+        currentSettings.resolvedLabelPrinterTarget() !is PrinterTarget.None -> Color(0xFF8B5CF6)
+        else -> Color(0xFF6B7280)
+    }
     items.add(
         SettingsSearchItem(
             id = "label_printer",
@@ -696,10 +742,10 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_label_printer_subtitle,
             category = SettingsSearchCategory.PRINTERS,
             keywords = listOf("label", "barcode", "sticker", "price tag", "tspl", "print", "বারকোড", "লেবেল", "স্টিকার", "ট্যাগ"),
-            breadcrumb = "PRINTERS > LABEL PRINTER",
+            breadcrumbRes = R.string.settings_search_bc_label_printer,
             icon = { size -> Realistic3DPrinterIcon(size = size) },
-            status = if (currentSettings.resolvedLabelPrinterTarget() !is PrinterTarget.None) "Configured" else "Setup",
-            statusColor = Color(0xFF8B5CF6),
+            status = labelStatus,
+            statusColor = labelStatusColor,
             onClick = onOpenLabelPrinterPicker
         )
     )
@@ -712,10 +758,13 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_cash_drawer_kick_subtitle,
             category = SettingsSearchCategory.PRINTERS,
             keywords = listOf("drawer", "cash drawer", "kick", "pulse", "rj11", "ক্যাশ ড্রয়ার", "ড্রয়ার", "টাকার বাক্স"),
-            breadcrumb = "HARDWARE > CASH DRAWER",
+            breadcrumbRes = R.string.settings_search_bc_cash_drawer,
             icon = { size -> Realistic3DCashDrawerKickIcon(size = size) },
-            status = if (cashDrawerKickEnabled) "Kick ON" else "Kick OFF",
+            status = if (cashDrawerKickEnabled) context.getString(R.string.settings_search_status_kick_on) else context.getString(R.string.settings_search_status_kick_off),
             statusColor = if (cashDrawerKickEnabled) Color(0xFF10B981) else Color(0xFF6B7280),
+            isToggle = true,
+            toggleChecked = cashDrawerKickEnabled,
+            onToggle = { onToggleCashDrawer() },
             onClick = onToggleCashDrawer
         )
     )
@@ -728,9 +777,9 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_row_receipt_layout_subtitle,
             category = SettingsSearchCategory.RECEIPT,
             keywords = listOf("receipt", "layout", "invoice", "memo", "header", "footer", "note", "format", "রশিদ", "চালান", "মেমো", "নাম", "ঠিকানা", "দোকান"),
-            breadcrumb = "RECEIPT > LAYOUT",
+            breadcrumbRes = R.string.settings_search_bc_receipt_layout,
             icon = { size -> Realistic3DPrinterIcon(size = size) },
-            status = if (currentSettings.storeName.isNotBlank()) "Configured" else "Setup",
+            status = if (currentSettings.storeName.isNotBlank()) context.getString(R.string.settings_search_status_configured) else context.getString(R.string.settings_search_status_setup),
             statusColor = Color(0xFF10B981),
             onClick = onReceiptClick
         )
@@ -744,9 +793,9 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_row_shop_identity_subtitle,
             category = SettingsSearchCategory.RECEIPT,
             keywords = listOf("identity", "shop", "name", "address", "phone", "email", "outlet", "নাম", "ঠিকানা", "মোবাইল", "পরিচিতি", "দোকান"),
-            breadcrumb = "RECEIPT > SHOP IDENTITY",
+            breadcrumbRes = R.string.settings_search_bc_shop_identity,
             icon = { size -> Realistic3DStoreIcon(size = size) },
-            status = currentSettings.storeName.ifBlank { "Not Set" },
+            status = currentSettings.storeName.ifBlank { context.getString(R.string.settings_search_status_not_set) },
             statusColor = Color(0xFF4F46E5),
             onClick = onOpenShopIdentity
         )
@@ -760,10 +809,10 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_row_shop_logo_subtitle,
             category = SettingsSearchCategory.RECEIPT,
             keywords = listOf("logo", "brand", "monogram", "image", "photo", "dither", "thermal", "লোগো", "ছবি", "ব্র্যান্ড", "মনোগ্রাম"),
-            breadcrumb = "RECEIPT > SHOP LOGO",
+            breadcrumbRes = R.string.settings_search_bc_shop_logo,
             icon = { size -> Realistic3DStoreIcon(size = size) },
-            status = if (currentSettings.showLogo) "Active" else "Off",
-            statusColor = Color(0xFF10B981),
+            status = if (currentSettings.showLogo) context.getString(R.string.settings_search_status_active) else context.getString(R.string.settings_search_status_off),
+            statusColor = if (currentSettings.showLogo) Color(0xFF10B981) else Color(0xFF6B7280),
             onClick = onOpenShopLogo
         )
     )
@@ -776,9 +825,9 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_row_qr_links_subtitle,
             category = SettingsSearchCategory.RECEIPT,
             keywords = listOf("qr", "bkash", "nagad", "rocket", "bank", "payment", "বিকাশ", "নগদ", "রকেট", "কিউআর", "পেমেন্ট"),
-            breadcrumb = "RECEIPT > PAYMENT QR",
+            breadcrumbRes = R.string.settings_search_bc_qr_links,
             icon = { size -> Realistic3DQrCodeIcon(size = size) },
-            status = if (currentSettings.showQr) "Active" else "Off",
+            status = if (currentSettings.showQr) context.getString(R.string.settings_search_status_active) else context.getString(R.string.settings_search_status_off),
             statusColor = if (currentSettings.showQr) Color(0xFF10B981) else Color(0xFF6B7280),
             onClick = onOpenQrCodeLinks
         )
@@ -792,9 +841,9 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_row_due_receipt_subtitle,
             category = SettingsSearchCategory.RECEIPT,
             keywords = listOf("due", "money receipt", "voucher", "khata", "repayment", "collection", "বকেয়া", "মানি রিসিট", "ভাউচার", "খাতা", "আদায়"),
-            breadcrumb = "RECEIPT > DUE VOUCHER",
+            breadcrumbRes = R.string.settings_search_bc_due_receipt,
             icon = { size -> Realistic3DRepaymentSealIcon(size = size) },
-            status = "Ready",
+            status = context.getString(R.string.settings_search_status_ready),
             statusColor = Color(0xFF4F46E5),
             onClick = onOpenDueReceipt
         )
@@ -808,9 +857,9 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_row_staff_pins_subtitle,
             category = SettingsSearchCategory.SECURITY,
             keywords = listOf("staff", "pin", "manager", "cashier", "permission", "rbac", "security", "access", "স্টাফ", "পিন", "ক্যাশিয়ার", "অনুমতি", "নিরাপত্তা", "ম্যানেজার"),
-            breadcrumb = "SECURITY > STAFF & ACCESS",
+            breadcrumbRes = R.string.settings_search_bc_staff_access,
             icon = { size -> Realistic3DStaffShieldLockIcon(size = size) },
-            status = "Owner Only",
+            status = context.getString(R.string.settings_search_status_owner_only),
             statusColor = Color(0xFF8B5CF6),
             onClick = onManageUsersClick
         )
@@ -824,10 +873,13 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_allow_negative_inventory_desc,
             category = SettingsSearchCategory.SECURITY,
             keywords = listOf("negative", "stock", "inventory", "overage", "zero stock", "স্টক", "নেগেটিভ", "ইনভেন্টরি", "ঘাটতি"),
-            breadcrumb = "BUSINESS RULES > STOCK OVERAGE",
+            breadcrumbRes = R.string.settings_search_bc_negative_stock,
             icon = { size -> Realistic3DNegativeStockWarningIcon(size = size) },
-            status = if (allowNegativeInventory) "Permitted" else "Blocked (Safe)",
+            status = if (allowNegativeInventory) context.getString(R.string.settings_search_status_permitted) else context.getString(R.string.settings_search_status_blocked_safe),
             statusColor = if (allowNegativeInventory) Color(0xFFF59E0B) else Color(0xFF10B981),
+            isToggle = true,
+            toggleChecked = allowNegativeInventory,
+            onToggle = { onToggleNegativeStock() },
             onClick = onToggleNegativeStock
         )
     )
@@ -840,9 +892,9 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_row_tax_subtitle,
             category = SettingsSearchCategory.SECURITY,
             keywords = listOf("tax", "vat", "mushak", "percentage", "invoice", "ট্যাক্স", "ভ্যাট", "মূসক", "শতাংশ"),
-            breadcrumb = "BUSINESS RULES > VAT & TAX",
+            breadcrumbRes = R.string.settings_search_bc_tax,
             icon = { size -> Realistic3DTaxCalculatorIcon(size = size) },
-            status = if (taxEnabled) "Active" else "Off",
+            status = if (taxEnabled) context.getString(R.string.settings_search_status_active) else context.getString(R.string.settings_search_status_off),
             statusColor = if (taxEnabled) Color(0xFF10B981) else Color(0xFF6B7280),
             onClick = onTaxClick
         )
@@ -856,11 +908,11 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_idle_lock_subtitle,
             category = SettingsSearchCategory.SECURITY,
             keywords = listOf("lock", "idle", "timeout", "auto lock", "screen lock", "লক", "অটো লক", "স্ক্রিন লক", "নিষ্ক্রিয়"),
-            breadcrumb = "SECURITY > AUTO-LOCK",
+            breadcrumbRes = R.string.settings_search_bc_idle_lock,
             icon = { size -> Realistic3DGearIcon(size = size) },
-            status = if (currentSettings.idleLockDurationMinutes == 0) "Never" else "${currentSettings.idleLockDurationMinutes}m",
+            status = if (currentSettings.idleLockDurationMinutes == 0) context.getString(R.string.settings_search_status_never) else context.getString(R.string.settings_search_status_minutes_fmt, currentSettings.idleLockDurationMinutes),
             statusColor = Color(0xFF4F46E5),
-            onClick = onTaxClick
+            onClick = onOpenIdleLockPicker
         )
     )
 
@@ -872,9 +924,9 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_row_backup_restore_subtitle,
             category = SettingsSearchCategory.CLOUD,
             keywords = listOf("cloud", "drive", "google", "backup", "sync", "গুগল", "ড্রাইভ", "ক্লাউড", "ব্যাকআপ", "সিঙ্ক"),
-            breadcrumb = "DATA & CLOUD > GOOGLE DRIVE",
+            breadcrumbRes = R.string.settings_search_bc_google_drive,
             icon = { size -> Realistic3DCloudBackupIcon(size = size) },
-            status = if (driveConnected) "Connected" else "Local Ready",
+            status = if (driveConnected) context.getString(R.string.settings_search_status_connected) else context.getString(R.string.settings_search_status_local_ready),
             statusColor = if (driveConnected) Color(0xFF10B981) else Color(0xFF2563EB),
             onClick = onBackupClick
         )
@@ -888,7 +940,7 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_row_import_export_subtitle,
             category = SettingsSearchCategory.CLOUD,
             keywords = listOf("transfer", "export", "excel", "csv", "data", "স্থানান্তর", "এক্সপোর্ট", "এক্সেল"),
-            breadcrumb = "DATA & CLOUD > EXCEL EXPORT",
+            breadcrumbRes = R.string.settings_search_bc_excel_export,
             icon = { size -> Realistic3DSpreadsheetTransferIcon(size = size) },
             status = "Excel/CSV",
             statusColor = Color(0xFF059669),
@@ -904,9 +956,9 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_repair_dues_subtitle,
             category = SettingsSearchCategory.CLOUD,
             keywords = listOf("repair", "audit", "due", "khata", "merge", "duplicate", "clean", "বকেয়া", "খাতা", "মেরামত", "অডিট"),
-            breadcrumb = "DATA & CLOUD > KHATA REPAIR",
+            breadcrumbRes = R.string.settings_search_bc_khata_repair,
             icon = { size -> Realistic3DResetWarningIcon(size = size) },
-            status = "Audit",
+            status = context.getString(R.string.settings_search_status_audit),
             statusColor = Color(0xFFF59E0B),
             onClick = onRepairDuesClick
         )
@@ -920,15 +972,20 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_app_language_subtitle,
             category = SettingsSearchCategory.PREFERENCES,
             keywords = listOf("language", "bangla", "english", "locale", "text", "ভাষা", "বাংলা", "ইংরেজি"),
-            breadcrumb = "PREFERENCES > LANGUAGE",
+            breadcrumbRes = R.string.settings_search_bc_language,
             icon = { size -> Realistic3DLangGlobeIcon(size = size) },
             status = "English / বাংলা",
             statusColor = Color(0xFF4F46E5),
-            onClick = { /* already in preferences */ }
+            onClick = onOpenLanguagePicker
         )
     )
 
     // 18. Theme Mode (System / Light / Dark)
+    val themeStatus = when (currentThemeMode) {
+        "LIGHT" -> context.getString(R.string.settings_theme_light)
+        "DARK" -> context.getString(R.string.settings_theme_dark)
+        else -> context.getString(R.string.settings_theme_system)
+    }
     items.add(
         SettingsSearchItem(
             id = "theme_mode",
@@ -936,15 +993,20 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_theme_mode_subtitle,
             category = SettingsSearchCategory.PREFERENCES,
             keywords = listOf("theme", "dark", "light", "mode", "color", "system", "amoled", "থিম", "ডার্ক", "লাইট", "কালার"),
-            breadcrumb = "PREFERENCES > THEME",
+            breadcrumbRes = R.string.settings_search_bc_theme,
             icon = { size -> Realistic3DThemeEclipseIcon(size = size) },
-            status = currentThemeMode,
+            status = themeStatus,
             statusColor = Color(0xFF8B5CF6),
-            onClick = { /* already in preferences */ }
+            onClick = onOpenThemePicker
         )
     )
 
     // 19. UI Layout Mode (Auto / Tablet / Phone)
+    val layoutStatus = when (currentLayoutMode) {
+        "TABLET" -> context.getString(R.string.settings_ui_layout_tablet)
+        "PHONE" -> context.getString(R.string.settings_ui_layout_phone)
+        else -> context.getString(R.string.settings_ui_layout_auto)
+    }
     items.add(
         SettingsSearchItem(
             id = "ui_layout",
@@ -952,11 +1014,11 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_ui_layout_subtitle,
             category = SettingsSearchCategory.PREFERENCES,
             keywords = listOf("layout", "tablet", "phone", "split", "screen", "auto", "responsive", "লেআউট", "ট্যাবলেট", "ফোন", "স্ক্রিন"),
-            breadcrumb = "PREFERENCES > LAYOUT",
+            breadcrumbRes = R.string.settings_search_bc_layout,
             icon = { size -> Realistic3DDeviceLayoutIcon(size = size) },
-            status = currentLayoutMode,
+            status = layoutStatus,
             statusColor = Color(0xFF4F46E5),
-            onClick = { /* already in preferences */ }
+            onClick = onOpenLayoutPicker
         )
     )
 
@@ -968,11 +1030,11 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_default_cost_subtitle,
             category = SettingsSearchCategory.PREFERENCES,
             keywords = listOf("cost", "margin", "profit", "percentage", "estimation", "লাভ", "মার্জিন", "ক্রয়মূল্য", "শতাংশ"),
-            breadcrumb = "PREFERENCES > PROFIT MARGIN",
+            breadcrumbRes = R.string.settings_search_bc_margin,
             icon = { size -> Realistic3DGearIcon(size = size) },
-            status = "${defaultCostPercentage.toInt()}% Cost",
+            status = context.getString(R.string.settings_search_status_cost_fmt, defaultCostPercentage.toInt()),
             statusColor = Color(0xFF10B981),
-            onClick = { /* already in preferences */ }
+            onClick = onOpenDefaultCostPicker
         )
     )
 
@@ -984,7 +1046,7 @@ private fun buildSettingsSearchItems(
             subtitleRes = R.string.settings_row_about_subtitle,
             category = SettingsSearchCategory.PREFERENCES,
             keywords = listOf("about", "version", "system", "diagnostics", "build", "সংস্করণ", "বিবরণ", "তথ্য"),
-            breadcrumb = "SYSTEM > ABOUT",
+            breadcrumbRes = R.string.settings_search_bc_about,
             icon = { size -> Realistic3DInfoBadgeIcon(size = size) },
             status = "v${com.example.techyfipos.BuildConfig.VERSION_NAME}",
             statusColor = Color(0xFF7C3AED),
@@ -1001,9 +1063,9 @@ private fun buildSettingsSearchItems(
                 subtitleRes = R.string.settings_factory_reset_subtitle,
                 category = SettingsSearchCategory.SECURITY,
                 keywords = listOf("reset", "wipe", "delete", "danger", "factory", "database", "রিসেট", "মুছে ফেলা", "বিপদ", "ডাটাবেজ"),
-                breadcrumb = "DANGER ZONE > FACTORY RESET",
+                breadcrumbRes = R.string.settings_search_bc_reset,
                 icon = { size -> Realistic3DResetWarningIcon(size = size) },
-                status = "Protected",
+                status = context.getString(R.string.settings_search_status_protected),
                 statusColor = Color(0xFFEF4444),
                 onClick = onResetClick
             )
@@ -1052,7 +1114,11 @@ private fun OptimizedSettingsHome(
     onOpenDueReceipt: () -> Unit = {},
     onOpenReceiptLayout: () -> Unit = {},
     isOwner: Boolean = false,
-    ownerPinResetAudit: com.example.techyfipos.data.OwnerPinResetAudit? = null
+    ownerPinResetAudit: com.example.techyfipos.data.OwnerPinResetAudit? = null,
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
+    selectedCategory: SettingsSearchCategory = SettingsSearchCategory.ALL,
+    onCategorySelected: (SettingsSearchCategory) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1061,18 +1127,21 @@ private fun OptimizedSettingsHome(
     var showLabelPrinterPicker by remember { mutableStateOf(false) }
     var printerConflictDialogMessage by remember { mutableStateOf<String?>(null) }
 
-    var searchQuery by rememberSaveable { mutableStateOf("") }
-    var selectedCategory by rememberSaveable { mutableStateOf(SettingsSearchCategory.ALL) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showLayoutDialog by remember { mutableStateOf(false) }
+    var showIdleLockDialog by remember { mutableStateOf(false) }
+    var showDefaultCostDialog by remember { mutableStateOf(false) }
 
     // 🔍 Global Settings Search Bar & Category Filter Chips
     SettingsGlobalSearchBar(
         query = searchQuery,
-        onQueryChange = { searchQuery = it },
+        onQueryChange = onSearchQueryChange,
         selectedCategory = selectedCategory,
-        onCategorySelected = { selectedCategory = it },
+        onCategorySelected = onCategorySelected,
         onClear = {
-            searchQuery = ""
-            selectedCategory = SettingsSearchCategory.ALL
+            onSearchQueryChange("")
+            onCategorySelected(SettingsSearchCategory.ALL)
         }
     )
 
@@ -1080,11 +1149,12 @@ private fun OptimizedSettingsHome(
 
     if (isSearching) {
         val searchItems = remember(
-            currentSettings, paperRollWidthMm, driveConnected, allowNegativeInventory,
+            context, currentSettings, paperRollWidthMm, driveConnected, allowNegativeInventory,
             taxEnabled, cashDrawerKickEnabled, currentThemeMode, currentLayoutMode,
             defaultCostPercentage, isOwner
         ) {
             buildSettingsSearchItems(
+                context = context,
                 currentSettings = currentSettings,
                 paperRollWidthMm = paperRollWidthMm,
                 driveConnected = driveConnected,
@@ -1111,20 +1181,26 @@ private fun OptimizedSettingsHome(
                 onOpenReceiptPrinterPicker = { showReceiptPrinterPicker = true },
                 onOpenLabelPrinterPicker = { showLabelPrinterPicker = true },
                 onToggleNegativeStock = { onAllowNegativeInventoryChanged(!allowNegativeInventory) },
-                onToggleCashDrawer = { onCashDrawerKickChanged(!cashDrawerKickEnabled) }
+                onToggleCashDrawer = { onCashDrawerKickChanged(!cashDrawerKickEnabled) },
+                onOpenLanguagePicker = { showLanguageDialog = true },
+                onOpenThemePicker = { showThemeDialog = true },
+                onOpenLayoutPicker = { showLayoutDialog = true },
+                onOpenIdleLockPicker = { showIdleLockDialog = true },
+                onOpenDefaultCostPicker = { showDefaultCostDialog = true }
             )
         }
 
         val filteredItems = remember(searchQuery, selectedCategory, searchItems) {
             val q = searchQuery.trim().lowercase(Locale.getDefault())
+            val eq = toEnglishDigits(q)
             searchItems.filter { item ->
                 val matchesCategory = selectedCategory == SettingsSearchCategory.ALL || item.category == selectedCategory
                 if (!matchesCategory) return@filter false
                 if (q.isEmpty()) return@filter true
-                item.keywords.any { it.contains(q, ignoreCase = true) } ||
+                item.keywords.any { it.contains(q, ignoreCase = true) || it.contains(eq, ignoreCase = true) } ||
                     context.getString(item.titleRes).contains(q, ignoreCase = true) ||
                     context.getString(item.subtitleRes).contains(q, ignoreCase = true) ||
-                    item.breadcrumb.contains(q, ignoreCase = true)
+                    context.getString(item.breadcrumbRes).contains(q, ignoreCase = true)
             }
         }
 
@@ -1132,10 +1208,10 @@ private fun OptimizedSettingsHome(
             items = filteredItems,
             query = searchQuery,
             onClearQuery = {
-                searchQuery = ""
-                selectedCategory = SettingsSearchCategory.ALL
+                onSearchQueryChange("")
+                onCategorySelected(SettingsSearchCategory.ALL)
             },
-            onPresetClick = { searchQuery = it }
+            onPresetClick = onSearchQueryChange
         )
     } else {
         // 💎 Settings Master Executive Card
@@ -2917,11 +2993,13 @@ private fun OptimizedSettingsHome(
                 } else {
                     val updated = when (target) {
                         is PrinterTarget.Usb -> currentSettings.copy(
+                            receiptPrintMode = if (currentSettings.receiptPrintMode == "SYSTEM") "AUTO" else currentSettings.receiptPrintMode,
                             receiptPrinterConnection = "USB",
                             receiptUsbDeviceKey = target.deviceKey,
                             directBluetoothPrinterAddress = ""
                         )
                         is PrinterTarget.Bluetooth -> currentSettings.copy(
+                            receiptPrintMode = if (currentSettings.receiptPrintMode == "SYSTEM") "AUTO" else currentSettings.receiptPrintMode,
                             receiptPrinterConnection = "BLUETOOTH",
                             directBluetoothPrinterAddress = target.address,
                             receiptUsbDeviceKey = ""
@@ -2950,11 +3028,13 @@ private fun OptimizedSettingsHome(
                 } else {
                     val updated = when (target) {
                         is PrinterTarget.Usb -> currentSettings.copy(
+                            labelPrintMode = if (currentSettings.labelPrintMode == "SYSTEM") "AUTO" else currentSettings.labelPrintMode,
                             labelPrinterConnection = "USB",
                             labelUsbDeviceKey = target.deviceKey,
                             labelPrinterAddress = ""
                         )
                         is PrinterTarget.Bluetooth -> currentSettings.copy(
+                            labelPrintMode = if (currentSettings.labelPrintMode == "SYSTEM") "AUTO" else currentSettings.labelPrintMode,
                             labelPrinterConnection = "BLUETOOTH",
                             labelPrinterAddress = target.address,
                             labelUsbDeviceKey = ""
@@ -2986,6 +3066,321 @@ private fun OptimizedSettingsHome(
             confirmButton = {
                 TextButton(onClick = { printerConflictDialogMessage = null }) {
                     Text(stringResource(R.string.ok), fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = {
+                Text(
+                    stringResource(R.string.settings_app_language_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.settings_app_language_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Surface(
+                        onClick = {
+                            onLanguageSelected("en")
+                            showLanguageDialog = false
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (currentLanguage == "en") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                stringResource(R.string.settings_language_english),
+                                fontWeight = if (currentLanguage == "en") FontWeight.Bold else FontWeight.Normal,
+                                color = if (currentLanguage == "en") MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                    Surface(
+                        onClick = {
+                            onLanguageSelected("bn")
+                            showLanguageDialog = false
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (currentLanguage == "bn") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "বাংলা",
+                                fontWeight = if (currentLanguage == "bn") FontWeight.Bold else FontWeight.Normal,
+                                color = if (currentLanguage == "bn") MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showLanguageDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            title = {
+                Text(
+                    stringResource(R.string.settings_theme_mode_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.settings_theme_mode_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    listOf(
+                        "SYSTEM" to stringResource(R.string.settings_theme_system),
+                        "LIGHT" to stringResource(R.string.settings_theme_light),
+                        "DARK" to stringResource(R.string.settings_theme_dark)
+                    ).forEach { (mode, label) ->
+                        val isSelected = currentThemeMode == mode
+                        Surface(
+                            onClick = {
+                                onThemeModeSelected(mode)
+                                showThemeDialog = false
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    label,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showThemeDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showLayoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLayoutDialog = false },
+            title = {
+                Text(
+                    stringResource(R.string.settings_ui_layout_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.settings_ui_layout_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    listOf(
+                        "AUTO" to stringResource(R.string.settings_ui_layout_auto),
+                        "TABLET" to stringResource(R.string.settings_ui_layout_tablet),
+                        "PHONE" to stringResource(R.string.settings_ui_layout_phone)
+                    ).forEach { (mode, label) ->
+                        val isSelected = currentLayoutMode == mode
+                        Surface(
+                            onClick = {
+                                onLayoutModeSelected(mode)
+                                showLayoutDialog = false
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    label,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showLayoutDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showIdleLockDialog) {
+        AlertDialog(
+            onDismissRequest = { showIdleLockDialog = false },
+            title = {
+                Text(
+                    stringResource(R.string.settings_idle_lock_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.settings_idle_lock_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    listOf(
+                        0 to stringResource(R.string.settings_idle_lock_never),
+                        5 to stringResource(R.string.settings_idle_lock_5m),
+                        15 to stringResource(R.string.settings_idle_lock_15m),
+                        30 to stringResource(R.string.settings_idle_lock_30m),
+                        60 to stringResource(R.string.settings_idle_lock_60m)
+                    ).forEach { (mins, label) ->
+                        val isSelected = currentSettings.idleLockDurationMinutes == mins
+                        Surface(
+                            onClick = {
+                                onUpdateSettings(currentSettings.copy(idleLockDurationMinutes = mins))
+                                showIdleLockDialog = false
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    label,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showIdleLockDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showDefaultCostDialog) {
+        var tempPctText by remember(defaultCostPercentage) {
+            mutableStateOf(if (defaultCostPercentage % 1.0 == 0.0) defaultCostPercentage.toInt().toString() else defaultCostPercentage.toString())
+        }
+        AlertDialog(
+            onDismissRequest = { showDefaultCostDialog = false },
+            title = {
+                Text(
+                    stringResource(R.string.settings_default_cost_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        stringResource(R.string.settings_default_cost_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(50.0, 70.0, 85.0, 100.0).forEach { pct ->
+                            val isSel = kotlin.math.abs(defaultCostPercentage - pct) < 0.5
+                            Surface(
+                                onClick = {
+                                    onDefaultCostPercentageChanged(pct)
+                                    showDefaultCostDialog = false
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "${pct.toInt()}%",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = tempPctText,
+                        onValueChange = { input ->
+                            tempPctText = toEnglishDigits(input).filter { ch -> ch.isDigit() || ch == '.' }
+                        },
+                        label = { Text(stringResource(R.string.settings_default_cost_title)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val parsed = tempPctText.toDoubleOrNull()
+                        if (parsed != null && parsed in 0.0..100.0) {
+                            onDefaultCostPercentageChanged(parsed)
+                        }
+                        showDefaultCostDialog = false
+                    }
+                ) {
+                    Text(stringResource(R.string.save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDefaultCostDialog = false }) {
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -6151,11 +6546,39 @@ fun SettingsScreen(
     var duplicateLedgerGroups by remember { mutableStateOf<List<DataRepository.DuplicateDueLedgerGroup>?>(null) }
     var isCheckingDuplicateLedgers by remember { mutableStateOf(false) }
     var importFailureDetails by remember { mutableStateOf<List<String>?>(null) }
-    var settingsPage by remember { mutableStateOf(SettingsPage.HOME) }
+    var settingsPage by rememberSaveable { mutableStateOf(SettingsPage.HOME) }
+    var pageBackStack by rememberSaveable { mutableStateOf(listOf<SettingsPage>()) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedCategory by rememberSaveable { mutableStateOf(SettingsSearchCategory.ALL) }
+
+    val navigateToPage: (SettingsPage) -> Unit = { target ->
+        if (target != settingsPage) {
+            pageBackStack = pageBackStack + settingsPage
+            settingsPage = target
+        }
+    }
+
+    val handleBack: () -> Unit = {
+        if (settingsPage != SettingsPage.HOME) {
+            currentSettings = invoiceSettingsData
+        }
+        if (pageBackStack.isNotEmpty()) {
+            val prev = pageBackStack.last()
+            pageBackStack = pageBackStack.dropLast(1)
+            settingsPage = prev
+        } else {
+            if (settingsPage != SettingsPage.HOME) {
+                settingsPage = SettingsPage.HOME
+            } else {
+                onBack()
+            }
+        }
+    }
 
     LaunchedEffect(settingsPage, canBackup) {
         if (settingsPage == SettingsPage.BACKUP && !canBackup) {
             settingsPage = SettingsPage.HOME
+            pageBackStack = emptyList()
             Toast.makeText(context, context.getString(R.string.error_unauthorized_permission), Toast.LENGTH_SHORT).show()
         }
     }
@@ -6549,15 +6972,7 @@ fun SettingsScreen(
     }
 
     BackHandler(enabled = settingsPage != SettingsPage.HOME) {
-        currentSettings = invoiceSettingsData
-        settingsPage = when (settingsPage) {
-            SettingsPage.SHOP_IDENTITY,
-            SettingsPage.SHOP_LOGO,
-            SettingsPage.QR_CODE_LINKS,
-            SettingsPage.RECEIPT_LAYOUT,
-            SettingsPage.DUE_RECEIPT -> SettingsPage.RECEIPT
-            else -> SettingsPage.HOME
-        }
+        handleBack()
     }
 
     val configuration = LocalConfiguration.current
@@ -6579,21 +6994,7 @@ fun SettingsScreen(
                     if (settingsPage != SettingsPage.HOME || !isTablet) {
                         IconButton(
                             onClick = {
-                                if (settingsPage != SettingsPage.HOME) {
-                                    currentSettings = invoiceSettingsData
-                                }
-                                settingsPage = when (settingsPage) {
-                                    SettingsPage.HOME -> {
-                                        onBack()
-                                        SettingsPage.HOME
-                                    }
-                                    SettingsPage.SHOP_IDENTITY,
-                                    SettingsPage.SHOP_LOGO,
-                                    SettingsPage.QR_CODE_LINKS,
-                                    SettingsPage.RECEIPT_LAYOUT,
-                                    SettingsPage.DUE_RECEIPT -> SettingsPage.RECEIPT
-                                    else -> SettingsPage.HOME
-                                }
+                                handleBack()
                             }
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
@@ -6688,21 +7089,25 @@ fun SettingsScreen(
                     onLayoutModeSelected = settingsViewModel::saveUiLayoutMode,
                     defaultCostPercentage = currentDefaultCostPercentage,
                     onDefaultCostPercentageChanged = settingsViewModel::saveDefaultCostPercentage,
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
+                    selectedCategory = selectedCategory,
+                    onCategorySelected = { selectedCategory = it },
                     onExpensesClick = onExpensesClick,
                     onSuppliersClick = onSuppliersClick,
-                    onReceiptClick = { settingsPage = SettingsPage.RECEIPT },
-                    onTaxClick = { settingsPage = SettingsPage.TAX },
+                    onReceiptClick = { navigateToPage(SettingsPage.RECEIPT) },
+                    onTaxClick = { navigateToPage(SettingsPage.TAX) },
                     onManageUsersClick = onManageUsersClick,
                     onLogoutClick = onLogout,
                     onBackupClick = {
                         if (canBackup) {
-                            settingsPage = SettingsPage.BACKUP
+                            navigateToPage(SettingsPage.BACKUP)
                         } else {
                             Toast.makeText(context, context.getString(R.string.error_unauthorized_permission), Toast.LENGTH_SHORT).show()
                         }
                     },
-                    onTransferClick = { settingsPage = SettingsPage.TRANSFER },
-                    onAboutClick = { settingsPage = SettingsPage.ABOUT },
+                    onTransferClick = { navigateToPage(SettingsPage.TRANSFER) },
+                    onAboutClick = { navigateToPage(SettingsPage.ABOUT) },
                     onResetClick = {
                         if (isOwner) {
                             resetAcknowledged = false
@@ -6722,21 +7127,21 @@ fun SettingsScreen(
                             Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()
                         }
                     },
-                    onOpenShopIdentity = { settingsPage = SettingsPage.SHOP_IDENTITY },
-                    onOpenShopLogo = { settingsPage = SettingsPage.SHOP_LOGO },
-                    onOpenQrCodeLinks = { settingsPage = SettingsPage.QR_CODE_LINKS },
-                    onOpenDueReceipt = { settingsPage = SettingsPage.DUE_RECEIPT },
-                    onOpenReceiptLayout = { settingsPage = SettingsPage.RECEIPT_LAYOUT },
+                    onOpenShopIdentity = { navigateToPage(SettingsPage.SHOP_IDENTITY) },
+                    onOpenShopLogo = { navigateToPage(SettingsPage.SHOP_LOGO) },
+                    onOpenQrCodeLinks = { navigateToPage(SettingsPage.QR_CODE_LINKS) },
+                    onOpenDueReceipt = { navigateToPage(SettingsPage.DUE_RECEIPT) },
+                    onOpenReceiptLayout = { navigateToPage(SettingsPage.RECEIPT_LAYOUT) },
                     isOwner = isOwner,
                     ownerPinResetAudit = remember { settingsViewModel.getOwnerPinResetAudit() }
                 )
                 SettingsPage.RECEIPT -> OptimizedReceiptOverview(
                     settings = currentSettings,
-                    onOpenShopIdentity = { settingsPage = SettingsPage.SHOP_IDENTITY },
-                    onOpenShopLogo = { settingsPage = SettingsPage.SHOP_LOGO },
-                    onOpenQrCodeLinks = { settingsPage = SettingsPage.QR_CODE_LINKS },
-                    onOpenReceiptLayout = { settingsPage = SettingsPage.RECEIPT_LAYOUT },
-                    onOpenDueReceipt = { settingsPage = SettingsPage.DUE_RECEIPT }
+                    onOpenShopIdentity = { navigateToPage(SettingsPage.SHOP_IDENTITY) },
+                    onOpenShopLogo = { navigateToPage(SettingsPage.SHOP_LOGO) },
+                    onOpenQrCodeLinks = { navigateToPage(SettingsPage.QR_CODE_LINKS) },
+                    onOpenReceiptLayout = { navigateToPage(SettingsPage.RECEIPT_LAYOUT) },
+                    onOpenDueReceipt = { navigateToPage(SettingsPage.DUE_RECEIPT) }
                 )
                 SettingsPage.DUE_RECEIPT -> MoneyReceiptVoucherSettings(
                     currentSettings = currentSettings,
