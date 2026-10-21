@@ -395,7 +395,13 @@ data class InvoiceSettingsData(
                     idleLockDurationMinutes = run {
                         val raw = json.optInt("idleLockDurationMinutes", fallback.idleLockDurationMinutes)
                         val options = listOf(0, 5, 15, 30, 60)
-                        if (raw in options) raw else (options.minByOrNull { kotlin.math.abs(it - raw) } ?: 15)
+                        if (raw in options) raw
+                        else if (raw > 0) {
+                            val nonZeroOptions = listOf(5, 15, 30, 60)
+                            nonZeroOptions.minByOrNull { kotlin.math.abs(it - raw) } ?: 5
+                        } else {
+                            0
+                        }
                     },
                     customInfoBlocks = if (blocksList.isNotEmpty()) blocksList else InvoiceSettingsData().customInfoBlocks
                 )

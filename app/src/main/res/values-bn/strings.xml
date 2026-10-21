@@ -3314,4 +3314,7 @@
     <string name="product_label_cut_count_fmt">(%1$dটি বাদ)</string>
     <string name="batch_print_reset_defaults">ডিফল্টে রিসেট করুন</string>
     <string name="batch_print_reprint_last_success">প্রিন্ট সম্পন্ন (%1$dটি লেবেল)। আপনি পুনরায় প্রিন্ট করতে বা বন্ধ করতে পারেন।</string>
+    <string name="receipt_print_failed">রশিদ প্রিন্ট ব্যর্থ হয়েছে</string>
+    <string name="batch_print_bitmaps_failed">লেবেল ইমেজ প্রস্তুত করা যায়নি</string>
+    <string name="error_supplier_void_exceeds_dues">ইনভয়েসটি বাতিল করা যাচ্ছে না কারণ রেকর্ডকৃত পেমেন্ট বাকি দেনার চেয়ে বেশি হয়ে যাবে। অনুগ্রহ করে প্রথমে পেমেন্ট সমন্বয় করুন।</string>
 </resources>

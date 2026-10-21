@@ -1352,11 +1352,13 @@ class PrinterRoutingAndDriverTest {
         // Twin printers with matching serials DO conflict
         assertTrue(isPrinterConflict(twin1WithSerial, twin1SameSerial))
 
-        // When one or both serials are unknown, no conflict is reported
+        // When one has a serial and the other does not, no conflict is reported
         // so un-permissioned twin printers are not blocked in the picker
         assertFalse(isPrinterConflict(twin1WithSerial, twinNoSerial1))
         assertFalse(isPrinterConflict(twinNoSerial1, twin1WithSerial))
-        assertFalse(isPrinterConflict(twinNoSerial1, twinNoSerial2))
+
+        // Identical serial-less USB device keys DO conflict (R24-14)
+        assertTrue(isPrinterConflict(twinNoSerial1, twinNoSerial2))
 
         // Different VID/PID do not conflict
         assertFalse(isPrinterConflict(twin1WithSerial, differentVid))

@@ -1483,7 +1483,7 @@ fun BatchProductCodePrintDialog(
                             failure = batchRes.result
                         }
                     } else {
-                        failure = DirectPrintResult.Failed(context.getString(R.string.print_could_not_decode_receipt_image))
+                        failure = DirectPrintResult.Failed(context.getString(R.string.batch_print_bitmaps_failed))
                     }
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e

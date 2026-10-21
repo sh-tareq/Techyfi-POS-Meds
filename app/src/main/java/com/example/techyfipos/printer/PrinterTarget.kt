@@ -160,10 +160,10 @@ fun isPrinterConflict(a: PrinterTarget, b: PrinterTarget): Boolean {
             return if (idA.serialNumber.isNotBlank() && idB.serialNumber.isNotBlank()) {
                 idA.serialNumber.equals(idB.serialNumber, ignoreCase = true)
             } else {
-                false
+                a.deviceKey.trim().equals(b.deviceKey.trim(), ignoreCase = true)
             }
         }
-        return false
+        return a.deviceKey.trim().equals(b.deviceKey.trim(), ignoreCase = true)
     }
     return isSamePrinterTarget(a, b)
 }

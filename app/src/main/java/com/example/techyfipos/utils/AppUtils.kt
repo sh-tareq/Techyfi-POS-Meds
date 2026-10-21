@@ -584,6 +584,8 @@ fun mapErrorToLocalizedMessageResId(msg: String?): Int? {
 
         msg.contains("Cannot void invoice payments directly", ignoreCase = true) ->
             R.string.supplier_cannot_void_invoice_payment
+        msg.contains("standalone payments", ignoreCase = true) && msg.contains("exceed", ignoreCase = true) ->
+            R.string.error_supplier_void_exceeds_dues
         msg.contains("constraint conflict", ignoreCase = true) ||
             msg.contains("duplicate record", ignoreCase = true) ||
             msg.contains("UNIQUE constraint failed", ignoreCase = true) ->

@@ -87,11 +87,11 @@ Short names: `Dlg` = `ui/dialogs/ProductCodePrintDialogs.kt`, `Img` = `utils/Pro
 
 ## P2: Printing and selling leftovers from R23
 
-- [ ] **R24-14 MED Verified. USB: one printer without a serial can be both receipt and label printer.** (R23-22 regression.) `isPrinterConflict` (`printer/PrinterTarget.kt` about 153-169) returns false when both serials are blank, even for identical keys, so TSPL can go to the ESC/POS printer with no warning; `testR23_22` asserts this wrong behaviour. Return true when the keys are equal ignoring case; use the same check on the single-label path (`BillActions.kt` about 1229 still uses `isSamePrinterTarget`).
+- [x] **R24-14 MED Verified. USB: one printer without a serial can be both receipt and label printer.** (R23-22 regression.) `isPrinterConflict` (`printer/PrinterTarget.kt` about 153-169) returns false when both serials are blank, even for identical keys, so TSPL can go to the ESC/POS printer with no warning; `testR23_22` asserts this wrong behaviour. Return true when the keys are equal ignoring case; use the same check on the single-label path (`BillActions.kt` about 1229 still uses `isSamePrinterTarget`).
 
-- [ ] **R24-15 MED Verified. Idle lock values 1 or 2 minutes are clamped to "Never".** `data/InvoiceSettings.kt` about 395-399 picks the nearest of 0/5/15/30/60, so 1 or 2 becomes 0 and turns the lock off; the test asserts 1 to 0. Clamp positive values to the nearest non-zero option.
+- [x] **R24-15 MED Verified. Idle lock values 1 or 2 minutes are clamped to "Never".** `data/InvoiceSettings.kt` about 395-399 picks the nearest of 0/5/15/30/60, so 1 or 2 becomes 0 and turns the lock off; the test asserts 1 to 0. Clamp positive values to the nearest non-zero option.
 
-- [ ] **R24-16 MED Reported. Small selling bugs.**
+- [x] **R24-16 MED Reported. Small selling bugs.**
   - `setQuantity` (VM about 1524-1532) floors a discrete-unit 0.5 to 0 and removes the line; clamp to 1 when `newQty > 0`.
   - Expense dialog: `localSaving` (`ui/components/AdvancedPosFeatures.kt` about 1222-1226) stays true after a fast failure, so Save and Cancel stay disabled. Drop `localSaving` or reset it in the result callback.
   - Due reminder "Send now" looks up the due by exact phone in `duesList` (`DuesScreen.kt` about 1172); a format mismatch or unloaded list now **cancels** a valid reminder. Use `getCustomerDueByPhone(normalizePhone(...))`.
@@ -99,7 +99,7 @@ Short names: `Dlg` = `ui/dialogs/ProductCodePrintDialogs.kt`, `Img` = `utils/Pro
   - Bluetooth: if the watchdog fires during the status query the result is still Success (`BluetoothPrinterTransport.kt` about 477-480). "Not connected" hint doesn't react to plug/unplug. Batch "all bitmaps failed" message says "receipt image" (Dlg about 1397). Batch payloads still all in memory (not marked deferred).
   - Preview Z prints and shares as a normal Z with no "preview" marker (`isInterimX = false`).
 
-- [ ] **R24-17 MED Reported. Supplier ledger leftovers.** (R23-18 partial.) `[SYS_INVOICE_PAYMENT]` is note text shown raw in `SuppliersScreen.kt` about 782, 1669; use a real flag. Legacy match depends on `invoice.paidAmount == payment amount`. Installs that voided an invoice before this round still under-report due; add a one-time recalculation. The void-guard error is unmapped English with raw doubles (repo about 5783). Expense matched by timestamp, weighted purchase price not restored, no id-link: still neither done nor marked deferred. `importBackup` doesn't re-run the Bangla stock-reason migration with `force = true` (R23-19).
+- [x] **R24-17 MED Reported. Supplier ledger leftovers.** (R23-18 partial.) `[SYS_INVOICE_PAYMENT]` is note text shown raw in `SuppliersScreen.kt` about 782, 1669; use a real flag. Legacy match depends on `invoice.paidAmount == payment amount`. Installs that voided an invoice before this round still under-report due; add a one-time recalculation. The void-guard error is unmapped English with raw doubles (repo about 5783). Expense matched by timestamp, weighted purchase price not restored, no id-link: (deferred: linking expense by foreign key ID and restoring pre-invoice weighted purchase price require schema changes and DB migration, deferred to next schema revision). `importBackup` doesn't re-run the Bangla stock-reason migration with `force = true` (R23-19).
 
 ---
 

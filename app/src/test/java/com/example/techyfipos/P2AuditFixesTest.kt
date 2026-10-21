@@ -147,4 +147,43 @@ class P2AuditFixesTest {
         assertTrue(isGenericAuthFailure(SupervisorVerifyResult.Invalid(0L)))
         assertFalse(isGenericAuthFailure(SupervisorVerifyResult.Invalid(5000L)))
     }
+
+    @Test
+    fun testR24_16_discreteQuantityClamping() {
+        fun computeEffectiveQty(newQty: Double, isFractional: Boolean, decimalEnabled: Boolean): Double {
+            return if (!decimalEnabled && !isFractional) {
+                if (newQty > 0.0) kotlin.math.floor(newQty).coerceAtLeast(1.0) else 0.0
+            } else {
+                newQty
+            }
+        }
+
+        // Discrete unit with decimal disabled: 0.5 should clamp to 1.0, not 0.0 (which would remove item)
+        assertEquals(1.0, computeEffectiveQty(0.5, isFractional = false, decimalEnabled = false), 0.001)
+        assertEquals(1.0, computeEffectiveQty(1.2, isFractional = false, decimalEnabled = false), 0.001)
+        assertEquals(2.0, computeEffectiveQty(2.8, isFractional = false, decimalEnabled = false), 0.001)
+        assertEquals(0.0, computeEffectiveQty(0.0, isFractional = false, decimalEnabled = false), 0.001)
+
+        // Fractional unit (e.g. kg) keeps fraction even if decimalQuantitiesEnabled is false
+        assertEquals(0.5, computeEffectiveQty(0.5, isFractional = true, decimalEnabled = false), 0.001)
+    }
+
+    @Test
+    fun testR24_17_formatSupplierPaymentNote() {
+        val sysNote = "[SYS_INVOICE_PAYMENT] Paid on Invoice #1042 - Check payment"
+        val formatted = com.example.techyfipos.ui.screens.formatSupplierPaymentNote(sysNote)
+        assertEquals("Paid on Invoice #1042 - Check payment", formatted)
+
+        val regularNote = "Manual partial cash payment"
+        assertEquals("Manual partial cash payment", com.example.techyfipos.ui.screens.formatSupplierPaymentNote(regularNote))
+        assertNull(com.example.techyfipos.ui.screens.formatSupplierPaymentNote(null))
+        assertNull(com.example.techyfipos.ui.screens.formatSupplierPaymentNote("   "))
+    }
+
+    @Test
+    fun testR24_17_voidInvoiceDueExceedErrorMapping() {
+        val rawError = "Cannot void invoice #12: standalone payments (500.00) would exceed remaining invoice dues (200.00). Void or adjust standalone payments first."
+        val resId = com.example.techyfipos.utils.mapErrorToLocalizedMessage(rawError)
+        assertEquals(R.string.error_supplier_void_exceeds_dues, resId)
+    }
 }

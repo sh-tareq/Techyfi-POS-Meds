@@ -1312,12 +1312,14 @@ fun RegisterCloseScreen(
 
     // 7. Z-Report Dialog (Closing / Preview)
     val zTarget = closedShiftZReport ?: report?.let { it to rangeLabel }
+    val isPreviewZ = closedShiftZReport == null
     if (showPnlZReportDialog && zTarget != null) {
         val (r, label) = zTarget
+        val effectiveLabel = if (isPreviewZ) "$label (Preview)" else label
         ZReportDialog(
             data = r,
-            rangeLabel = label,
-            isInterimX = false,
+            rangeLabel = effectiveLabel,
+            isInterimX = isPreviewZ,
             canViewPnl = canViewPnl,
             canExport = canExport,
             onDismiss = {
@@ -1332,13 +1334,17 @@ fun RegisterCloseScreen(
                     coroutineScope.launch {
                         try {
                             val jpegFile = withContext(Dispatchers.IO) {
-                                generateZReportJpeg(context, r, label, canViewPnl = canViewPnl, settings = invoiceSettings)
+                                if (isPreviewZ) {
+                                    generateXReportJpeg(context, r, effectiveLabel, canViewPnl = canViewPnl, settings = invoiceSettings)
+                                } else {
+                                    generateZReportJpeg(context, r, label, canViewPnl = canViewPnl, settings = invoiceSettings)
+                                }
                             }
                             val outcome = printReceiptImage(
                                 context = context,
                                 activity = context.findActivity(),
                                 imageFile = jpegFile,
-                                jobName = context.getString(R.string.print_job_z_report_fmt, label),
+                                jobName = context.getString(if (isPreviewZ) R.string.print_job_x_report_fmt else R.string.print_job_z_report_fmt, effectiveLabel),
                                 settings = invoiceSettings,
                                 kickDrawer = false
                             )
@@ -1360,7 +1366,11 @@ fun RegisterCloseScreen(
                 coroutineScope.launch {
                     try {
                         val jpegFile = withContext(Dispatchers.IO) {
-                            generateZReportJpeg(context, r, label, canViewPnl = canViewPnl, settings = invoiceSettings)
+                            if (isPreviewZ) {
+                                generateXReportJpeg(context, r, effectiveLabel, canViewPnl = canViewPnl, settings = invoiceSettings)
+                            } else {
+                                generateZReportJpeg(context, r, label, canViewPnl = canViewPnl, settings = invoiceSettings)
+                            }
                         }
                         when (val res = withContext(Dispatchers.IO) { saveBillJpegToDownloads(context, jpegFile) }) {
                             is FileSaveResult.PublicSaved -> {
@@ -1387,6 +1397,7 @@ fun RegisterCloseScreen(
 
     if (showShareFormatDialog && zTarget != null) {
         val (r, label) = zTarget
+        val effectiveLabel = if (isPreviewZ) "$label (Preview)" else label
         ShareZReportFormatDialog(
             onDismiss = {
                 showShareFormatDialog = false
@@ -1399,7 +1410,7 @@ fun RegisterCloseScreen(
                 if (!showPnlZReportDialog) {
                     closedShiftZReport = null
                 }
-                shareReport(context, r, label, isInterimX = false, format = format, canViewPnl = canViewPnl, settings = invoiceSettings)
+                shareReport(context, r, effectiveLabel, isInterimX = isPreviewZ, format = format, canViewPnl = canViewPnl, settings = invoiceSettings)
             }
         )
     }

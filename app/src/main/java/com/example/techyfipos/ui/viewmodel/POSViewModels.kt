@@ -1524,7 +1524,7 @@ class CartViewModel(private val repository: DataRepository) : ViewModel() {
     fun setQuantity(product: Product, newQty: Double, allowNegative: Boolean = false) {
         val isFractional = isFractionalUnit(product.unit)
         val effectiveQty = if (!taxSettings.value.decimalQuantitiesEnabled && !isFractional) {
-            kotlin.math.floor(newQty).coerceAtLeast(0.0)
+            if (newQty > 0.0) kotlin.math.floor(newQty).coerceAtLeast(1.0) else 0.0
         } else {
             newQty
         }
@@ -2903,6 +2903,8 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
 
     val allReturns: StateFlow<List<com.example.techyfipos.data.db.Return>> = repository.allReturns
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    suspend fun getCustomerDue(phone: String): CustomerDue? = repository.getCustomerDueByPhone(phone)
 
     fun logReminder(
         customerPhone: String,

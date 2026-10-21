@@ -11,6 +11,7 @@ import com.example.techyfipos.printer.PrinterTarget
 import com.example.techyfipos.printer.ReceiptBitmapCache
 import com.example.techyfipos.printer.ReceiptCutMode
 import com.example.techyfipos.printer.TsplLabelPrinterDriver
+import com.example.techyfipos.printer.isPrinterConflict
 import com.example.techyfipos.printer.isSamePrinter
 import com.example.techyfipos.printer.isSamePrinterTarget
 import com.example.techyfipos.printer.sendToBluetoothPrinter
@@ -1230,7 +1231,7 @@ suspend fun printLabelImages(
         }
     }
 
-    if (isSamePrinterTarget(labelTarget, receiptTarget)) {
+    if (isPrinterConflict(labelTarget, receiptTarget)) {
         try {
             withContext(Dispatchers.Main) {
                 Toast.makeText(

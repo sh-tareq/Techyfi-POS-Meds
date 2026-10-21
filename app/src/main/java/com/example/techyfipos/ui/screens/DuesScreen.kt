@@ -98,6 +98,7 @@ import com.example.techyfipos.utils.generateQrBitmap
 import com.example.techyfipos.utils.openPaymentReminder
 import com.example.techyfipos.utils.openPhoneDialer
 import com.example.techyfipos.utils.openWhatsAppReminder
+import com.example.techyfipos.utils.normalizePhone
 import com.example.techyfipos.utils.printBillJpeg
 import com.example.techyfipos.utils.saveBillJpegToDownloads
 import com.example.techyfipos.utils.FileSaveResult
@@ -1166,35 +1167,40 @@ fun DuesScreen(
             logs = reminderLogs,
             onCancelReminder = { phone -> duesViewModel.cancelScheduledReminder(context, phone) },
             onSendReminderNow = { reminder ->
-                val currentDue = duesViewModel.duesList.value.firstOrNull { it.customerPhone == reminder.customerPhone }?.outstandingAmount ?: 0.0
-                if (currentDue <= 0.001) {
-                    android.widget.Toast.makeText(context, context.getString(R.string.dues_settled_no_reminder_toast), android.widget.Toast.LENGTH_SHORT).show()
-                    duesViewModel.cancelScheduledReminder(context, reminder.customerPhone)
-                    return@DuesReminderHubSheet
-                }
-                val message = if (currentDue != reminder.dueAmount) {
-                    reminder.messageText
-                        .replace(formatTaka(reminder.dueAmount, isBangla = false), formatTaka(currentDue, isBangla = false))
-                        .replace(formatTaka(reminder.dueAmount, isBangla = true), formatTaka(currentDue, isBangla = true))
-                } else reminder.messageText
+                scope.launch {
+                    val normPhone = normalizePhone(reminder.customerPhone)
+                    val freshDue = duesViewModel.getCustomerDue(normPhone)
+                        ?: duesViewModel.duesList.value.firstOrNull { normalizePhone(it.customerPhone) == normPhone }
+                    val currentDue = freshDue?.outstandingAmount ?: 0.0
+                    if (currentDue <= 0.001) {
+                        android.widget.Toast.makeText(context, context.getString(R.string.dues_settled_no_reminder_toast), android.widget.Toast.LENGTH_SHORT).show()
+                        duesViewModel.cancelScheduledReminder(context, reminder.customerPhone)
+                        return@launch
+                    }
+                    val message = if (currentDue != reminder.dueAmount) {
+                        reminder.messageText
+                            .replace(formatTaka(reminder.dueAmount, isBangla = false), formatTaka(currentDue, isBangla = false))
+                            .replace(formatTaka(reminder.dueAmount, isBangla = true), formatTaka(currentDue, isBangla = true))
+                    } else reminder.messageText
 
-                val channelName = when (reminder.channel.lowercase(Locale.ROOT)) {
-                    "sms" -> {
-                        openPaymentReminder(context, reminder.customerPhone, message)
-                        "SMS"
+                    val channelName = when (reminder.channel.lowercase(Locale.ROOT)) {
+                        "sms" -> {
+                            openPaymentReminder(context, reminder.customerPhone, message)
+                            "SMS"
+                        }
+                        "wa" -> {
+                            openWhatsAppReminder(context, reminder.customerPhone, message)
+                            "WHATSAPP"
+                        }
+                        else -> {
+                            shareReceiptAsText(context, message)
+                            "BOTH"
+                        }
                     }
-                    "wa" -> {
-                        openWhatsAppReminder(context, reminder.customerPhone, message)
-                        "WHATSAPP"
+                    duesViewModel.logReminder(reminder.customerPhone, reminder.customerName, currentDue, channelName, message, "SENT")
+                    if (!reminder.isRecurring) {
+                        duesViewModel.cancelScheduledReminder(context, reminder.customerPhone)
                     }
-                    else -> {
-                        shareReceiptAsText(context, message)
-                        "BOTH"
-                    }
-                }
-                duesViewModel.logReminder(reminder.customerPhone, reminder.customerName, currentDue, channelName, message, "SENT")
-                if (!reminder.isRecurring) {
-                    duesViewModel.cancelScheduledReminder(context, reminder.customerPhone)
                 }
             },
             onDeleteLog = { id -> duesViewModel.deleteReminderLog(id) },

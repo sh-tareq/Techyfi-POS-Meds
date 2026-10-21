@@ -424,9 +424,10 @@ class P1AuditFixesTest {
             assertEquals(validMinutes, parsed.idleLockDurationMinutes)
         }
 
-        // Invalid options should clamp to nearest option
+        // Invalid options should clamp to nearest option (positive values clamp to non-zero option)
         val testCases = mapOf(
-            1 to 0,
+            1 to 5,
+            2 to 5,
             4 to 5,
             13 to 15,
             25 to 30,

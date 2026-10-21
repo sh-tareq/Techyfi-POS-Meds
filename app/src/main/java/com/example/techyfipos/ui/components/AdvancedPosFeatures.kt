@@ -1221,11 +1221,7 @@ fun AddExpenseDialog(
     }
     var selectedSource by remember(initialExpense) { mutableStateOf(initialExpense?.paymentSource ?: "Cash") }
     var note by remember(initialExpense) { mutableStateOf(initialExpense?.note ?: "") }
-    var localSaving by remember { mutableStateOf(false) }
-    LaunchedEffect(isSaving) {
-        if (!isSaving) localSaving = false
-    }
-    val savingGuard = isSaving || localSaving
+    val savingGuard = isSaving
 
     val categories = if (isCashIn) {
         listOf("Float In", "Owner Capital", "Change Exchange", "Other")
@@ -1332,7 +1328,6 @@ fun AddExpenseDialog(
                     if (savingGuard) return@Button
                     val amt = com.example.techyfipos.utils.sanitizeNumericInput(amountText).toDoubleOrNull() ?: 0.0
                     if (amt > 0) {
-                        localSaving = true
                         onSave(
                             if (title.isNotBlank()) title else selectedCategory,
                             selectedCategory,

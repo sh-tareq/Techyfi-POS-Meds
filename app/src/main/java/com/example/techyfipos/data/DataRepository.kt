@@ -120,6 +120,21 @@ class DataRepository(
                 migrateLegacyManagerDiscounts()
             } catch (ignored: Exception) {
             }
+            try {
+                recalculateAllSupplierBalancesOnce()
+            } catch (ignored: Exception) {
+            }
+        }
+    }
+
+    suspend fun recalculateAllSupplierBalancesOnce() = withContext(Dispatchers.IO) {
+        val prefs = context.getSharedPreferences("app_migrations", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("migrated_supplier_due_recalc_r24", false)) {
+            val suppliers = supplierDao.getAllSuppliersOnce()
+            suppliers.forEach { supplier ->
+                recalculateSupplierBalancesFromLedger(supplier.id)
+            }
+            prefs.edit().putBoolean("migrated_supplier_due_recalc_r24", true).apply()
         }
     }
 
@@ -4160,6 +4175,12 @@ class DataRepository(
                 }
             }
 
+            try {
+                normalizeLegacyStockAdjustmentReasons(force = true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             com.example.techyfipos.utils.AutoBackupScheduler.scheduleAllAutoBackups(context.applicationContext, forceUpdate = true)
             true
         } catch (e: Exception) {
@@ -5962,7 +5983,9 @@ class DataRepository(
             val standalonePayments = payments.filter { !isAutoInvoicePayment(it, invoices) }.sumOf { it.amountPaid }
 
             if (standalonePayments > remainingInvoiceDue + 0.001) {
-                throw IllegalStateException("Cannot void invoice #${invoice.invoiceNumber}: standalone payments ($standalonePayments) would exceed remaining invoice dues ($remainingInvoiceDue). Void or adjust standalone payments first.")
+                val formattedStandalone = "%.2f".format(standalonePayments)
+                val formattedRemaining = "%.2f".format(remainingInvoiceDue)
+                throw IllegalStateException("Cannot void invoice #${invoice.invoiceNumber}: standalone payments ($formattedStandalone) would exceed remaining invoice dues ($formattedRemaining). Void or adjust standalone payments first.")
             }
 
             val items = purchaseInvoiceDao.getItemsForInvoiceOnce(invoiceId)

@@ -779,7 +779,7 @@ fun SuppliersScreen(
                                 Text(supplierName, fontWeight = FontWeight.Bold)
                                 Text(payment.paymentMethod, fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Text(DateFormatters.formatDateTime(payment.timestamp), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
-                                payment.referenceNote?.takeIf { it.isNotBlank() }?.let { Text(it, fontSize = 11.sp) }
+                                formatSupplierPaymentNote(payment.referenceNote)?.let { Text(it, fontSize = 11.sp) }
                             }
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(formatTaka(payment.amountPaid), fontWeight = FontWeight.ExtraBold, color = MaterialTheme.extendedColors.success)
@@ -1666,7 +1666,7 @@ fun SupplierDetailSheet(
                                     Column(Modifier.weight(1f)) {
                                         Text(payment.paymentMethod, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                                         Text(DateFormatters.formatDateTime(payment.timestamp), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
-                                        payment.referenceNote?.takeIf { it.isNotBlank() }?.let {
+                                        formatSupplierPaymentNote(payment.referenceNote)?.let {
                                             Text(it, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     }
@@ -1711,5 +1711,14 @@ fun SupplierDetailSheet(
                 }
             }
         }
+    }
+}
+
+internal fun formatSupplierPaymentNote(note: String?): String? {
+    if (note.isNullOrBlank()) return null
+    return if (note.startsWith("[SYS_INVOICE_PAYMENT]")) {
+        note.removePrefix("[SYS_INVOICE_PAYMENT]").trim()
+    } else {
+        note
     }
 }

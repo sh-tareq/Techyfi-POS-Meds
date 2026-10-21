@@ -775,7 +775,7 @@ fun ReceiptSummaryDialog(
                                     } else if (outcome == com.example.techyfipos.utils.ReceiptPrintOutcome.FAILED) {
                                         android.widget.Toast.makeText(
                                             context,
-                                            context.getString(R.string.print_could_not_decode_receipt_image),
+                                            context.getString(R.string.receipt_print_failed),
                                             android.widget.Toast.LENGTH_SHORT
                                         ).show()
                                     }
