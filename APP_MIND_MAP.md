@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-21 (app version 2.6.91-Final-V21-10-2026, build `Techyfi-POS-Final-V21-10-2026.apk`; versionCode 220967; DB schema version 38)
+Last updated: 2026-10-21 (app version 2.6.92-Final-V21-10-2026, build `Techyfi-POS-Final-V21-10-2026.apk`; versionCode 220968; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3158,6 +3158,41 @@ mindmap
   - Expanded test coverage across R23 security, manager ceilings, multi-owner Option B, and weighed decimal quantities (286 passing unit tests, 0 failures).
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220967, versionName "2.6.91-Final-V21-10-2026"), R8 minified and resource-shrunk, prepared as an in-place update for existing installations in project root directory.
+
+### Release Final-V21-10-2026: Round 24 Security Governance, Streaming Label Pipeline & Comprehensive Localisation (Version 2.6.92-Final-V21-10-2026, Build Final-V21-10-2026)
+- **Security & Authorization Hardening (R24-01 to R24-07)**:
+  - **Manager Discount Self-Approval Loophole Closed (R24-01)**: `authorizeDiscountOverride` in `DataRepository.kt` now validates that `supervisor.id != sessionUser?.id` (unless the approver is an Owner) and verifies that the supervisor's effective limit meets or exceeds the requested discount percentage.
+  - **Co-Owner Brute-Force Defense (R24-02)**: Invokes `recordFailedPinAttempt()` on failed PIN attempts during owner role/status updates and requires credential verification for co-owner reactivations.
+  - **Owner Step-Up Audit Trail (R24-03)**: `ManageUsersScreen.kt` displays a dedicated target owner PIN field for role/status modifications and logs all owner-level changes to an append-only JSON audit trail.
+  - **Daily Failure Cap & Reboot Persistence (R24-04)**: Added a 24-hour sliding window daily cap (10 maximum failures per 24 hours) and persists `lock_until` across terminal reboots.
+  - **Held Cart Preservation (R24-05)**: Removed unconditional startup deletion of held carts and crash snapshots.
+  - **Manager Ceiling Migration (R24-06)**: One-time migration initializes existing manager accounts to the new 20% discount ceiling; user edit dialogs dynamically reset discount limits when roles toggle.
+  - **Permission Matrix Boundaries (R24-07)**: Validates delegated permissions against newly granted permissions rather than the full set; restricts due credit overrides to cart scope; adds supervisor elevation prompts for percentage discounts; gates product and dues exports in Settings.
+- **Streaming Label Printing & Memory Optimization (R24-08 to R24-13)**:
+  - **Streaming Row-by-Row Recycling (R24-08)**: Batch label generator renders, transmits, and recycles bitmaps row-by-row, eliminating multi-hundred-megabyte heap spikes and OOM crashes.
+  - **Vector Barcode Scaling (R24-09)**: Generates high-density Code128 barcodes with native module dot alignment, avoiding scan degradation on compact 25x15 mm labels.
+  - **True Label Unit Tracking (R24-10)**: Harmonized label progress, retry remaining, and failure banner counts to track physical label units instead of batch rows or product items.
+  - **Atomic Transport Writes (R24-11)**: Wrapped socket transmissions in `NonCancellable` blocks to prevent socket closure mid-bitmap and protected active print jobs from accidental dialog dismissal.
+  - **Print-Head Constraint Enforcement (R24-12)**: Enforced a 104 mm print-head width limit to prevent lateral layout clipping and synchronized custom label height bounds.
+  - **Unified Label Configuration (R24-13)**: Shared label styling preferences, eliminated preview re-renders, and prevented zero-stock items from printing phantom labels.
+- **Hardware, Selling & Ledger Resilience (R24-14 to R24-17)**:
+  - **USB Twin Conflict Detection (R24-14)**: `isPrinterConflict` detects USB ESC/POS and TSPL conflicts based on port keys regardless of blank USB serial numbers.
+  - **Non-Zero Idle Lock Clamping (R24-15)**: Rounds non-zero idle auto-lock durations up to the nearest valid non-zero option (5 minutes minimum).
+  - **Selling Safeguards & Preview Z-Report (R24-16)**: Discrete items clamp to >= 1.0; removed lingering saving flags in expenses; due reminders resolve customer phone formats safely; interim Z previews are clearly watermarked.
+  - **Supplier Ledger Recalculation (R24-17)**: Sanitized invoice payment notes from display; added one-time ledger balance recalculation; mapped void-guard errors to localized strings; forced normalization of legacy stock adjustment reasons.
+- **Settings Search & Navigation Consistency (R24-18, R24-19)**:
+  - **Settings Search Actions (R24-18)**: Idle auto-lock navigates directly to the security card; language, theme, layout, and default cost search entries launch their respective configuration dialogs; action switches render in search items; status pills width-capped with ellipsis; search tags fully localized.
+  - **Query Normalization (R24-19)**: Standardized phone and digit normalization (`toEnglishDigits`, `normalizePhone`) across Dues list, payments, audit history, and Sales history; supported Bengali payment method search queries ("বিকাশ", "নগদ"); preserved hardware barcode scanner focus.
+- **Localized Exceptions, Feedback & System Polish (R24-20 to R24-23)**:
+  - **Precise Lockout Seconds (R24-20)**: Extracted `parseLockoutSeconds` to format remaining lockout seconds with localized digits; mapped customer deletion, user management, and ledger errors into bilingual string resources; updated UI screens to use `getLocalizedRepositoryErrorMessage`.
+  - **Unified Feedback Channels (R24-21)**: `previewDuplicateDueLedgers` notifies on failure cleanly; eliminated duplicate toasts in expenses and register close; hardened ViewModels with `runCatchingNonCancellation`.
+  - **Bilingual Currency & Method Disambiguation (R24-22)**: Disambiguated cash payments ("নগদ টাকা" / "ক্যাশ") from the Nagad mobile financial service ("নগদ"); localized scanner and print dialog labels; cleaned up obsolete string resources and unused state flows.
+  - **Design Tokens (R24-23)**: Retained intentional semantic status colors and deferred comprehensive screen-by-screen token refactoring.
+- **Comprehensive Unit Testing Suite (R24-T1)**:
+  - Executed full test suite: **302 passing unit tests** across all modules with zero failures and zero skipped tests.
+  - Added targeted test cases verifying lockout seconds parsing, negative supplier error mapping, and query normalization.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220968, versionName "2.6.92-Final-V21-10-2026"), R8 minified and resource-shrunk, signed with the debug keystore and prepared as an in-place update for existing installations in the project root directory.
 
 ## Maintenance note
 
