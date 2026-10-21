@@ -3310,4 +3310,8 @@
     <string name="owner_role_change_alert_message">%1$s কর্তৃক %2$s তারিখে আপনার ভূমিকা পরিবর্তন করা হয়েছে।</string>
     <string name="owner_status_change_alert_message">%1$s কর্তৃক %2$s তারিখে আপনার অ্যাকাউন্টের স্ট্যাটাস পরিবর্তন করা হয়েছে।</string>
     <string name="owner_pin_change_alert_message">%1$s কর্তৃক %2$s তারিখে আপনার পিন পরিবর্তন করা হয়েছে।</string>
+    <string name="batch_print_head_width_exceeded_warning">মাল্টি-আপের মোট প্রস্থ (%1$d মিমি) স্ট্যান্ডার্ড ১০৪ মিমি প্রিন্ট হেড প্রস্থ অতিক্রম করেছে। লেবেলের প্রস্থ অথবা কলাম সংখ্যা কমান।</string>
+    <string name="product_label_cut_count_fmt">(%1$dটি বাদ)</string>
+    <string name="batch_print_reset_defaults">ডিফল্টে রিসেট করুন</string>
+    <string name="batch_print_reprint_last_success">প্রিন্ট সম্পন্ন (%1$dটি লেবেল)। আপনি পুনরায় প্রিন্ট করতে বা বন্ধ করতে পারেন।</string>
 </resources>

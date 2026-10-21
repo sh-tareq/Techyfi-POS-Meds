@@ -20,6 +20,9 @@ import com.example.techyfipos.utils.isValidEan8
 import com.example.techyfipos.utils.printLabelImages
 import com.example.techyfipos.utils.resolveLabelDimensionsMm
 import com.example.techyfipos.utils.stockToPrintCopies
+import com.example.techyfipos.utils.isBarcodeTooDenseForLabel
+import com.example.techyfipos.printer.calculateMultiUpRowWidthMm
+import com.example.techyfipos.utils.ProductLabelItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
@@ -625,6 +628,132 @@ class LabelPrintingAuditUnitTest {
         val jsonOther = """{"storeName":"Other DPI Store","labelDpi":600}"""
         val settingsOther = InvoiceSettingsData.fromJson(jsonOther)
         assertEquals(203, settingsOther.labelDpi)
+    }
+
+    // 11. Tests for Code 128 Numeric Compression in Barcode Density Warning (R24-09)
+    @Test
+    fun testBarcodeTooDenseForLabelCode128NumericCompression() {
+        // Standard 13-digit numeric barcode on 50x30 mm label at 203 DPI
+        // In numeric compression mode (Mode C), 13 digits pack into ~7 symbol pairs (112 modules).
+        // On 50 mm (44 mm printable = ~352 dots), module width is ~3.14 dots (>= 2 dots), so not too dense!
+        val is50mmDense = isBarcodeTooDenseForLabel("1234567890123", ProductCodeType.BARCODE, 50f, 203)
+        assertFalse(is50mmDense)
+
+        // On very small 25 mm label (22 mm printable = ~176 dots), module width is ~1.57 dots (< 2 dots), so too dense!
+        val is25mmDense = isBarcodeTooDenseForLabel("1234567890123", ProductCodeType.BARCODE, 25f, 203)
+        assertTrue(is25mmDense)
+
+        // QR Code is 2D matrix, never flagged by 1D density check
+        assertFalse(isBarcodeTooDenseForLabel("1234567890123", ProductCodeType.QR_CODE, 25f, 203))
+    }
+
+    // 12. Tests for Multi-Up Print Head Width Limit (R24-12)
+    @Test
+    fun testMultiUpRowWidthCalculations() {
+        // 1-across 40 mm is 40 mm
+        assertEquals(40f, calculateMultiUpRowWidthMm(1, 2f, 40f), 0.01f)
+
+        // 2-across 40 mm with 2 mm gap: 40 * 2 + 2 = 82 mm
+        assertEquals(82f, calculateMultiUpRowWidthMm(2, 2f, 40f), 0.01f)
+
+        // 3-across 40 mm with 2 mm gap: 40 * 3 + 2 * 2 = 124 mm (> 108 mm print head)
+        val threeAcrossWidth = calculateMultiUpRowWidthMm(3, 2f, 40f)
+        assertEquals(124f, threeAcrossWidth, 0.01f)
+        assertTrue(threeAcrossWidth > 108f)
+    }
+
+    // 13. Tests for Batch Label Items in Custom Per-Product and Stock Modes (R24-10, R24-13)
+    @Test
+    fun testBuildBatchLabelItemsCustomPerProductAndStock() {
+        val p1 = createDummyProduct("BAR01", "Product One", stockQty = 5.0)
+        val p2 = createDummyProduct("BAR02", "Product Two (Zero Stock)", stockQty = 0.0)
+        val p3 = createDummyProduct("BAR03", "Product Three", stockQty = 10.0)
+        val products = listOf(p1, p2, p3)
+
+        // In PER_PRODUCT mode with custom quantities map:
+        // p1 entered as 4, p2 and p3 omitted. Omitted products default to 1 copy!
+        val customRes = buildBatchLabelItemsResult(
+            candidateProducts = products,
+            copiesModeByStock = false,
+            batchCopies = 2,
+            priceTier = ProductCodePriceTier.SELLING,
+            showUnit = false,
+            showBanglaDigits = false,
+            useProductDates = false,
+            mfgOrPkgType = "Mfg",
+            mfgOrPkgDate = "",
+            expDate = "",
+            customQuantities = mapOf("BAR01" to 4),
+            isCustomPerProduct = true
+        )
+        assertEquals(3, customRes.items.size)
+        assertEquals(4, customRes.items.first { it.barcode == "BAR01" }.quantity)
+        assertEquals(1, customRes.items.first { it.barcode == "BAR02" }.quantity)
+        assertEquals(1, customRes.items.first { it.barcode == "BAR03" }.quantity)
+        assertEquals(6, customRes.totalIncludedLabels)
+
+        // In STOCK mode: zero stock product yields 0 copies and is skipped
+        val stockRes = buildBatchLabelItemsResult(
+            candidateProducts = products,
+            copiesModeByStock = true,
+            batchCopies = 1,
+            priceTier = ProductCodePriceTier.SELLING,
+            showUnit = false,
+            showBanglaDigits = false,
+            useProductDates = false,
+            mfgOrPkgType = "Mfg",
+            mfgOrPkgDate = "",
+            expDate = "",
+            isCustomPerProduct = false
+        )
+        assertEquals(2, stockRes.items.size)
+        assertEquals(5, stockRes.items.first { it.barcode == "BAR01" }.quantity)
+        assertEquals(10, stockRes.items.first { it.barcode == "BAR03" }.quantity)
+        assertEquals(15, stockRes.totalIncludedLabels)
+    }
+
+    // 14. Tests for Retry Remaining Arithmetic (R24-10)
+    @Test
+    fun testRetryRemainingItemCounts() {
+        val item1 = ProductLabelItem("Prod1", "B1", "100", 5)
+        val item2 = ProductLabelItem("Prod2", "B2", "200", 3)
+        val items = listOf(item1, item2) // total 8 labels
+
+        // Case A: 5 labels sent (item1 completely printed, item2 not printed)
+        var sentCounter = 5
+        val remA = mutableListOf<ProductLabelItem>()
+        for (item in items) {
+            if (sentCounter >= item.quantity) {
+                sentCounter -= item.quantity
+            } else if (sentCounter > 0) {
+                val remQty = item.quantity - sentCounter
+                sentCounter = 0
+                remA.add(item.copy(quantity = remQty))
+            } else {
+                remA.add(item)
+            }
+        }
+        assertEquals(1, remA.size)
+        assertEquals("B2", remA[0].barcode)
+        assertEquals(3, remA[0].quantity)
+
+        // Case B: 6 labels sent (item1 printed + 1 of item2, 2 of item2 remain)
+        sentCounter = 6
+        val remB = mutableListOf<ProductLabelItem>()
+        for (item in items) {
+            if (sentCounter >= item.quantity) {
+                sentCounter -= item.quantity
+            } else if (sentCounter > 0) {
+                val remQty = item.quantity - sentCounter
+                sentCounter = 0
+                remB.add(item.copy(quantity = remQty))
+            } else {
+                remB.add(item)
+            }
+        }
+        assertEquals(1, remB.size)
+        assertEquals("B2", remB[0].barcode)
+        assertEquals(2, remB[0].quantity)
     }
 }
 

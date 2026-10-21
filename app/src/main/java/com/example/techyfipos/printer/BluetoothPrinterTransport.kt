@@ -390,6 +390,7 @@ suspend fun sendToBluetoothPrinter(
             val totalSegmentDelay = perSegmentDelaysMs?.sum() ?: (segments.size * delayBetweenSegmentsMs)
             val maxJobTimeoutMs = computeBluetoothWatchdogBudgetMs(totalBytes, segments.size, totalSegmentDelay)
             val lastWriteActivityMs = java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis())
+            val watchdogFired = java.util.concurrent.atomic.AtomicBoolean(false)
             var watchdogJob: kotlinx.coroutines.Job? = null
 
             try {
@@ -398,12 +399,14 @@ suspend fun sendToBluetoothPrinter(
                     while (System.currentTimeMillis() < deadline) {
                         val now = System.currentTimeMillis()
                         if (now - lastWriteActivityMs.get() > 30_000L) {
+                            watchdogFired.set(true)
                             Log.w(TAG, "Bluetooth print job inactivity watchdog fired (no write for 30s); forcibly closing socket")
                             try { socket?.close() } catch (_: Exception) {}
                             return@launch
                         }
                         delay(1000L)
                     }
+                    watchdogFired.set(true)
                     Log.w(TAG, "Bluetooth print job watchdog budget expired after $maxJobTimeoutMs ms; forcibly closing socket")
                     try { socket?.close() } catch (_: Exception) {}
                 }
@@ -414,25 +417,30 @@ suspend fun sendToBluetoothPrinter(
                 var bytesWrittenSoFar = 0
                 for ((index, segment) in segments.withIndex()) {
                     kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                    var offset = 0
-                    while (offset < segment.size) {
-                        val length = minOf(CHUNK_SIZE, segment.size - offset)
-                        if (index == 0 && offset == 0) {
-                            timing?.recordFirstChunkWritten()
+                    withContext(kotlinx.coroutines.NonCancellable) {
+                        var offset = 0
+                        while (offset < segment.size) {
+                            val length = minOf(CHUNK_SIZE, segment.size - offset)
+                            if (index == 0 && offset == 0) {
+                                timing?.recordFirstChunkWritten()
+                            }
+                            os.write(segment, offset, length)
+                            lastWriteActivityMs.set(System.currentTimeMillis())
+                            offset += length
+                            bytesWrittenSoFar += length
+                            if (offset < segment.size) {
+                                val delayChunk = resolveBluetoothChunkDelayMs(bytesWrittenSoFar, totalBytes)
+                                if (delayChunk > 0L) {
+                                    Thread.sleep(delayChunk)
+                                }
+                            }
                         }
-                        os.write(segment, offset, length)
-                        lastWriteActivityMs.set(System.currentTimeMillis())
-                        offset += length
-                        bytesWrittenSoFar += length
-                        if (offset < segment.size) {
-                            delay(resolveBluetoothChunkDelayMs(bytesWrittenSoFar, totalBytes))
-                        }
+                        os.flush()
                     }
                     lastWriteActivityMs.set(System.currentTimeMillis())
                     onSegmentSent?.invoke(index)
                     val delayMs = perSegmentDelaysMs?.getOrNull(index) ?: delayBetweenSegmentsMs
                     if (delayMs > 0L) {
-                        os.flush()
                         delay(delayMs)
                     }
                 }
@@ -490,7 +498,11 @@ suspend fun sendToBluetoothPrinter(
                     TAG,
                     "sendToBluetoothPrinter: totalBytes=$totalBytes, chunkDelayMs=$chunkDelayMs, writeElapsedMs=$writeElapsedMs, queryStatus=$queryStatus, drainMs=$drainMs, replyReceived=$replyReceived"
                 )
-                DirectPrintResult.Success
+                if (watchdogFired.get()) {
+                    DirectPrintResult.Failed("Bluetooth printer timeout (inactivity watchdog fired)")
+                } else {
+                    DirectPrintResult.Success
+                }
             } finally {
                 watchdogJob?.cancel()
             }

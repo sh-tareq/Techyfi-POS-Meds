@@ -100,12 +100,19 @@ fun ProductCodeLabelSize.getLocalizedName(context: Context): String {
 fun productCodeLabelPixelSize(
     labelSize: ProductCodeLabelSize,
     customWidthMm: Float = 50f,
-    customHeightMm: Float = 30f
+    customHeightMm: Float = 30f,
+    dpi: Int? = null
 ): Pair<Int, Int> {
     val widthMm = if (labelSize == ProductCodeLabelSize.CUSTOM) customWidthMm else labelSize.widthMm
     val heightMm = if (labelSize == ProductCodeLabelSize.CUSTOM) customHeightMm else labelSize.heightMm
-    val rawWidth = (widthMm.coerceIn(15f, 150f) * 20f).roundToInt()
-    val rawHeight = (heightMm.coerceIn(10f, 200f) * 20f).roundToInt()
+    val safeWidth = widthMm.coerceIn(15f, 150f)
+    val safeHeight = heightMm.coerceIn(10f, 200f)
+    if (dpi != null && dpi > 0) {
+        val dpmm = dpi / 25.4f
+        return maxOf(1, (safeWidth * dpmm).roundToInt()) to maxOf(1, (safeHeight * dpmm).roundToInt())
+    }
+    val rawWidth = (safeWidth * 20f).roundToInt()
+    val rawHeight = (safeHeight * 20f).roundToInt()
     val longestEdge = max(rawWidth, rawHeight)
     val scale = if (longestEdge > 2000) 2000f / longestEdge else 1f
     return (rawWidth * scale).roundToInt().coerceAtLeast(200) to
@@ -142,13 +149,15 @@ fun generateProductCodeLabelBitmap(
     extraFieldLabel: String = "",
     extraFieldValue: String = "",
     extraFieldTextScale: Float = 1f,
-    showLogo: Boolean = false
+    showLogo: Boolean = false,
+    dpi: Int? = null,
+    showBanglaDigits: Boolean = false
 ): Bitmap? {
     val cleanBarcode = toEnglishDigits(barcode.trim())
     if (cleanBarcode.isBlank()) return null
 
     return try {
-        val (width, height) = productCodeLabelPixelSize(labelSize, customWidthMm, customHeightMm)
+        val (width, height) = productCodeLabelPixelSize(labelSize, customWidthMm, customHeightMm, dpi)
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         canvas.drawColor(Color.WHITE)
@@ -176,7 +185,7 @@ fun generateProductCodeLabelBitmap(
         val rightX = (width - horizontalPadding).toFloat()
 
         val effectiveStoreName = storeName.trim().uppercase()
-        val isBengali = isAppBangla() || storeName.hasBengali() || productName.hasBengali()
+        val isBengali = showBanglaDigits || isAppBangla() || storeName.hasBengali() || productName.hasBengali()
         val mfgLabel = if (isBengali) {
             if (mfgOrPkgType == "Pkg") "প্যাকেজিং:" else "উৎপাদন:"
         } else {
@@ -359,7 +368,7 @@ fun generateProductCodeLabelBitmap(
                 letterSpacing = 0.12f
             }
             val numberY = nextBaseline + numberPaint.textSize
-            val spacedDigits = cleanBarcode.toCharArray().joinToString(" ")
+            val spacedDigits = (if (showBanglaDigits) toBanglaDigits(cleanBarcode) else cleanBarcode).toCharArray().joinToString(" ")
             drawFittedCenteredText(
                 canvas = canvas,
                 text = spacedDigits,
@@ -828,10 +837,16 @@ fun loadLabelStyleSettings(
     } else {
         defaultStoreName
     }
+    val showUnit = if (preferences.contains("show_unit")) {
+        preferences.getBoolean("show_unit", false)
+    } else {
+        preferences.getBoolean("show_price_unit", false)
+    }
+    val extraFieldLabel = preferences.getString("extra_field_label", preferences.getString("extra_field_title", "") ?: "") ?: ""
     return LabelStyleSettings(
         labelSize = labelSize,
         customWidthMm = preferences.getFloat("custom_width_mm", 50f).coerceIn(15f, 150f),
-        customHeightMm = preferences.getFloat("custom_height_mm", 30f).coerceIn(10f, 150f),
+        customHeightMm = preferences.getFloat("custom_height_mm", 30f).coerceIn(10f, 200f),
         showPrice = preferences.getBoolean("show_price", true),
         priceTier = priceTier,
         showCodeNumber = preferences.getBoolean("show_code_number", true),
@@ -841,7 +856,7 @@ fun loadLabelStyleSettings(
         mfgOrPkgType = preferences.getString("mfg_or_pkg_type", "Mfg") ?: "Mfg",
         mfgOrPkgDate = preferences.getString("mfg_or_pkg_date", "") ?: "",
         expDate = preferences.getString("exp_date", "") ?: "",
-        showUnit = preferences.getBoolean("show_unit", false),
+        showUnit = showUnit,
         showBanglaDigits = preferences.getBoolean("show_bangla_digits", false),
         productNameTextScale = preferences.getFloat("product_name_text_scale", 1f).coerceIn(0.6f, 1.8f),
         priceTextScale = preferences.getFloat("price_text_scale", 1f).coerceIn(0.6f, 1.8f),
@@ -850,7 +865,7 @@ fun loadLabelStyleSettings(
         dateTrackingTextScale = preferences.getFloat("date_tracking_text_scale", 1f).coerceIn(0.6f, 1.8f),
         barcodeGraphicScale = preferences.getFloat("barcode_graphic_scale", 1f).coerceIn(0.5f, 2.0f),
         showExtraField = preferences.getBoolean("show_extra_field", false),
-        extraFieldLabel = preferences.getString("extra_field_label", "") ?: "",
+        extraFieldLabel = extraFieldLabel,
         extraFieldValue = preferences.getString("extra_field_value", "") ?: "",
         extraFieldTextScale = preferences.getFloat("extra_field_text_scale", 1f).coerceIn(0.6f, 1.8f),
         showLogo = preferences.getBoolean("show_logo", false)
@@ -873,6 +888,7 @@ fun saveLabelStyleSettings(
         .putString("mfg_or_pkg_date", settings.mfgOrPkgDate)
         .putString("exp_date", settings.expDate)
         .putBoolean("show_unit", settings.showUnit)
+        .putBoolean("show_price_unit", settings.showUnit)
         .putBoolean("show_bangla_digits", settings.showBanglaDigits)
         .putFloat("product_name_text_scale", settings.productNameTextScale)
         .putFloat("price_text_scale", settings.priceTextScale)
@@ -882,13 +898,14 @@ fun saveLabelStyleSettings(
         .putFloat("barcode_graphic_scale", settings.barcodeGraphicScale)
         .putBoolean("show_extra_field", settings.showExtraField)
         .putString("extra_field_label", settings.extraFieldLabel)
+        .putString("extra_field_title", settings.extraFieldLabel)
         .putString("extra_field_value", settings.extraFieldValue)
         .putFloat("extra_field_text_scale", settings.extraFieldTextScale)
         .putBoolean("show_logo", settings.showLogo)
     if (settings.customWidthMm in 15f..150f) {
         editor.putFloat("custom_width_mm", settings.customWidthMm)
     }
-    if (settings.customHeightMm in 10f..150f) {
+    if (settings.customHeightMm in 10f..200f) {
         editor.putFloat("custom_height_mm", settings.customHeightMm)
     }
 }
@@ -912,7 +929,9 @@ fun buildBatchLabelItemsResult(
     mfgOrPkgDate: String,
     expDate: String,
     customQuantities: Map<String, Int> = emptyMap(),
-    maxTotalLabels: Int = 500
+    maxTotalLabels: Int = 500,
+    isCustomPerProduct: Boolean = false,
+    cutFormat: String? = null
 ): BatchBuildResult {
     var remainingAllowed = maxTotalLabels
     val items = mutableListOf<ProductLabelItem>()
@@ -923,8 +942,9 @@ fun buildBatchLabelItemsResult(
 
     for (prod in candidateProducts) {
         val requestedQty = when {
+            isCustomPerProduct -> (customQuantities[prod.barcode] ?: 1).coerceIn(1, 500)
             customQuantities.containsKey(prod.barcode) -> customQuantities[prod.barcode]!!.coerceIn(1, 500)
-            copiesModeByStock -> stockToPrintCopies(prod.stockQty)
+            copiesModeByStock -> if (prod.stockQty <= 0.0) 0 else stockToPrintCopies(prod.stockQty)
             else -> effectiveCopies
         }
         totalRequested += requestedQty
@@ -934,7 +954,8 @@ fun buildBatchLabelItemsResult(
         }
         val qty = requestedQty.coerceAtMost(remainingAllowed)
         if (qty < requestedQty) {
-            cutProducts.add("${prod.name} (${requestedQty - qty} cut)")
+            val cutStr = if (cutFormat != null) String.format(cutFormat, requestedQty - qty) else "(${requestedQty - qty} cut)"
+            cutProducts.add("${prod.name} $cutStr")
         }
         if (qty <= 0) continue
         remainingAllowed -= qty
@@ -1174,7 +1195,15 @@ fun isBarcodeTooDenseForLabel(
         ProductCodeType.EAN_13 -> 115
         ProductCodeType.EAN_8 -> 87
         ProductCodeType.CODE_39 -> (clean.length + 2) * 16
-        else -> (clean.length + 2) * 11 + 25
+        else -> {
+            if (clean.all(Char::isDigit)) {
+                // Code 128 Mode C packs two digits per symbol character (11 modules each)
+                val pairs = (clean.length + 1) / 2
+                pairs * 11 + 35
+            } else {
+                (clean.length + 2) * 11 + 25
+            }
+        }
     }
     val moduleWidthDots = totalDots / estimatedModules
     return moduleWidthDots < 2.0f

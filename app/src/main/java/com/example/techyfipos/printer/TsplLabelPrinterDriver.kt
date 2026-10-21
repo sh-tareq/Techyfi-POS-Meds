@@ -262,7 +262,7 @@ fun composeMultiUpRowBitmap(
     return composite to totalRowWidthMm
 }
 
-fun buildMultiUpTsplPayloads(
+fun buildMultiUpTsplPayloadsWithCounts(
     bitmapsWithCopies: List<Pair<Bitmap, Int>>,
     labelWidthMm: Float,
     labelHeightMm: Float,
@@ -277,10 +277,10 @@ fun buildMultiUpTsplPayloads(
     yOffsetDots: Int = 0,
     direction: Int = 1,
     paperType: String = "GAP"
-): List<ByteArray> {
+): Pair<List<ByteArray>, List<Int>> {
     val safeAcross = labelsAcross.coerceIn(1, 3)
     if (safeAcross <= 1) {
-        return bitmapsWithCopies.map { (bitmap, copies) ->
+        val payloads = bitmapsWithCopies.map { (bitmap, copies) ->
             buildTsplPayload(
                 labelBitmap = bitmap,
                 widthMm = labelWidthMm,
@@ -297,6 +297,8 @@ fun buildMultiUpTsplPayloads(
                 paperType = paperType
             )
         }
+        val copies = bitmapsWithCopies.map { it.second }
+        return payloads to copies
     }
 
     val flatBitmaps = mutableListOf<Bitmap>()
@@ -308,6 +310,7 @@ fun buildMultiUpTsplPayloads(
     }
 
     val payloads = mutableListOf<ByteArray>()
+    val copiesPerPayload = mutableListOf<Int>()
     for (chunk in flatBitmaps.chunked(safeAcross)) {
         val (compositeBitmap, totalRowWidthMm) = composeMultiUpRowBitmap(
             rowBitmaps = chunk,
@@ -336,9 +339,42 @@ fun buildMultiUpTsplPayloads(
             compositeBitmap.recycle()
         }
         payloads.add(payload)
+        copiesPerPayload.add(chunk.size)
     }
-    return payloads
+    return payloads to copiesPerPayload
 }
+
+fun buildMultiUpTsplPayloads(
+    bitmapsWithCopies: List<Pair<Bitmap, Int>>,
+    labelWidthMm: Float,
+    labelHeightMm: Float,
+    labelsAcross: Int = 1,
+    columnGapMm: Float = 2f,
+    gapMm: Float = 2f,
+    darkness: Int = 8,
+    invertBits: Boolean = TSPL_INVERT_BITS,
+    dpi: Int = 203,
+    speed: Float = 4.0f,
+    xOffsetDots: Int = 0,
+    yOffsetDots: Int = 0,
+    direction: Int = 1,
+    paperType: String = "GAP"
+): List<ByteArray> = buildMultiUpTsplPayloadsWithCounts(
+    bitmapsWithCopies = bitmapsWithCopies,
+    labelWidthMm = labelWidthMm,
+    labelHeightMm = labelHeightMm,
+    labelsAcross = labelsAcross,
+    columnGapMm = columnGapMm,
+    gapMm = gapMm,
+    darkness = darkness,
+    invertBits = invertBits,
+    dpi = dpi,
+    speed = speed,
+    xOffsetDots = xOffsetDots,
+    yOffsetDots = yOffsetDots,
+    direction = direction,
+    paperType = paperType
+).first
 
 data class LabelJob(
     val bitmap: Bitmap,
@@ -517,7 +553,14 @@ suspend fun printLabelsBatch(
             )
         }
     }
-    val copiesPerPayload = if (safeAcross > 1) payloads.map { safeAcross } else jobs.map { it.copies }
+    val copiesPerPayload = if (safeAcross > 1) {
+        val flatCount = jobs.sumOf { it.copies.coerceIn(1, 500) }
+        val fullRows = flatCount / safeAcross
+        val rem = flatCount % safeAcross
+        val list = MutableList(fullRows) { safeAcross }
+        if (rem > 0) list.add(rem)
+        list
+    } else jobs.map { it.copies }
     printLabelPayloadsBatch(context, target, payloads, copiesPerPayload)
 }
 
@@ -582,6 +625,7 @@ suspend fun printLabelPayloadsBatch(
         return@withContext BatchLabelPrintResult(DirectPrintResult.Success, 0)
     }
     var totalSuccessfulCopies = 0
+    val totalLabelCount = copiesPerPayload.sum()
     val res = sendToPrinter(
         context = context,
         target = target,
@@ -589,7 +633,7 @@ suspend fun printLabelPayloadsBatch(
         perSegmentDelaysMs = List(payloads.size) { 100L },
         onSegmentSent = { index ->
             totalSuccessfulCopies += copiesPerPayload.getOrElse(index) { 1 }
-            onProgress?.invoke(index + 1, payloads.size)
+            onProgress?.invoke(totalSuccessfulCopies, totalLabelCount)
         }
     )
     BatchLabelPrintResult(res, totalSuccessfulCopies)

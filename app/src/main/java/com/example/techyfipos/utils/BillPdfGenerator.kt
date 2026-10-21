@@ -1,6 +1,7 @@
 package com.example.techyfipos.utils
 
 import android.content.Context
+import com.example.techyfipos.R
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -189,6 +190,9 @@ fun convertToMonochromeThresholdBitmap(src: Bitmap, targetWidthDots: Int = 380):
             val isDark = alpha > 50 && luminance < 160
             bwBitmap.setPixel(x, y, if (isDark) Color.BLACK else Color.WHITE)
         }
+    }
+    if (scaled != src) {
+        scaled.recycle()
     }
     return bwBitmap
 }
@@ -464,6 +468,7 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
                 if (decoded != null) {
                     val targetLogoWidth = if (is58) 260 else 380
                     logoBitmap = convertToMonochromeThresholdBitmap(decoded, targetLogoWidth)
+                    decoded.recycle()
                 }
             }
         } catch (e: Exception) {
@@ -480,10 +485,8 @@ fun generateBillBitmap(context: Context, bill: BillData, receiptLanguage: String
         textSize = textSizeTitle
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
-    val defaultShopName = "Techyfi POS"
-    val headerStoreName = bill.shopName.takeIf { it.isNotBlank() && it != defaultShopName }
-        ?: settings.storeName.takeIf { it.isNotBlank() && it != "My Shop" }
-        ?: bill.shopName.ifBlank { settings.storeName.ifBlank { defaultShopName } }
+    val defaultShopName = context.getString(R.string.app_name)
+    val headerStoreName = bill.shopName.ifBlank { settings.storeName.ifBlank { defaultShopName } }
     val headerNameLines = wrapItemNameByPixelWidth(headerStoreName, width - 40f, measurePaintTitle)
     totalHeight += headerNameLines.size * 34f + 11f
     val effectiveAddress = bill.shopAddress.ifBlank { settings.address }
@@ -1753,6 +1756,7 @@ fun generateDueRepaymentJpeg(
                 if (decoded != null) {
                     val targetLogoWidth = if (is58) 260 else 380
                     logoBitmap = convertToMonochromeThresholdBitmap(decoded, targetLogoWidth)
+                    decoded.recycle()
                 }
             }
         } catch (e: Exception) {
@@ -2229,6 +2233,7 @@ fun generateStoreCreditVoucherJpeg(
                 if (decoded != null) {
                     val targetLogoWidth = if (is58) 240 else 360
                     logoBitmap = convertToMonochromeThresholdBitmap(decoded, targetLogoWidth)
+                    decoded.recycle()
                 }
             }
         } catch (e: Exception) {

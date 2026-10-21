@@ -2490,6 +2490,19 @@ private fun OptimizedSettingsHome(
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
+                val across = currentSettings.labelLabelsAcross.coerceIn(1, 3)
+                val estimatedRowWidthMm = across * 40f + (across - 1) * currentSettings.labelColumnGapMm
+                if (estimatedRowWidthMm > 108f) {
+                    Text(
+                        text = stringResource(
+                            R.string.batch_print_head_width_exceeded_warning,
+                            String.format(java.util.Locale.US, "%.1f", estimatedRowWidthMm)
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
 
             // Darkness slider (0-15)

@@ -374,17 +374,19 @@ suspend fun sendToUsbPrinter(
             try {
                 for ((index, segment) in segments.withIndex()) {
                     kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                    var offset = 0
-                    while (offset < segment.size) {
-                        if (index == 0 && offset == 0) {
-                            timing?.recordFirstChunkWritten()
+                    withContext(kotlinx.coroutines.NonCancellable) {
+                        var offset = 0
+                        while (offset < segment.size) {
+                            if (index == 0 && offset == 0) {
+                                timing?.recordFirstChunkWritten()
+                            }
+                            val length = minOf(chunkSize, segment.size - offset)
+                            val transferred = connection.bulkTransfer(endpoint, segment, offset, length, USB_TRANSFER_TIMEOUT_MS)
+                            if (transferred <= 0) {
+                                return@withContext DirectPrintResult.UsbTransferFailed(transferred)
+                            }
+                            offset += transferred
                         }
-                        val length = minOf(chunkSize, segment.size - offset)
-                        val transferred = connection.bulkTransfer(endpoint, segment, offset, length, USB_TRANSFER_TIMEOUT_MS)
-                        if (transferred <= 0) {
-                            return@withContext DirectPrintResult.UsbTransferFailed(transferred)
-                        }
-                        offset += transferred
                     }
                     onSegmentSent?.invoke(index)
                     val delayMs = perSegmentDelaysMs?.getOrNull(index) ?: delayBetweenSegmentsMs

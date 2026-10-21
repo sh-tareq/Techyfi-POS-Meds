@@ -3308,6 +3308,10 @@
     <string name="owner_role_change_alert_message">Your role was changed by %1$s on %2$s.</string>
     <string name="owner_status_change_alert_message">Your account status was changed by %1$s on %2$s.</string>
     <string name="owner_pin_change_alert_message">Your PIN was changed by %1$s on %2$s.</string>
+    <string name="batch_print_head_width_exceeded_warning">Total multi-up width (%1$d mm) exceeds standard 104 mm print head width. Reduce label width or number of labels across.</string>
+    <string name="product_label_cut_count_fmt">(%1$d cut)</string>
+    <string name="batch_print_reset_defaults">Reset to Defaults</string>
+    <string name="batch_print_reprint_last_success">Printing complete (%1$d labels). You may reprint or close.</string>
 </resources>
 
 

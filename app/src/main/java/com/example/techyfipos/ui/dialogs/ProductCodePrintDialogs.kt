@@ -79,12 +79,16 @@ fun CopiesStepper(
     min: Int = 1,
     max: Int = 500,
     presets: List<Int> = listOf(1, 2, 3, 5, 10, 20, 50, 100),
-    stockQuantity: Double? = null
+    stockQuantity: Double? = null,
+    onErrorChange: ((Boolean) -> Unit)? = null
 ) {
     var text by remember(copies) { mutableStateOf(copies.toString()) }
     var isFocused by remember { mutableStateOf(false) }
     val parsed = text.toIntOrNull()
     val isError = parsed == null || parsed !in min..max
+    LaunchedEffect(isError) {
+        onErrorChange?.invoke(isError)
+    }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -977,7 +981,7 @@ fun BatchProductCodePrintDialog(
     var customQuantities by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var batchCopies by rememberSaveable { mutableIntStateOf(1) }
     var extraFieldTitle by rememberSaveable {
-        mutableStateOf(preferences.getString("extra_field_title", "") ?: "")
+        mutableStateOf(preferences.getString("extra_field_title", preferences.getString("extra_field_label", "") ?: "") ?: "")
     }
     var extraFieldValue by rememberSaveable {
         mutableStateOf(preferences.getString("extra_field_value", "") ?: "")
@@ -1010,7 +1014,7 @@ fun BatchProductCodePrintDialog(
         mutableStateOf(preferences.getString("price_tier", ProductCodePriceTier.SELLING.name) ?: ProductCodePriceTier.SELLING.name)
     }
     val priceTier = ProductCodePriceTier.entries.firstOrNull { it.name == priceTierName } ?: ProductCodePriceTier.SELLING
-    var showUnit by rememberSaveable { mutableStateOf(preferences.getBoolean("show_price_unit", false)) }
+    var showUnit by rememberSaveable { mutableStateOf(preferences.getBoolean("show_unit", preferences.getBoolean("show_price_unit", false))) }
     var showBanglaDigits by rememberSaveable { mutableStateOf(preferences.getBoolean("show_bangla_digits", false)) }
     var showCodeNumber by rememberSaveable { mutableStateOf(preferences.getBoolean("show_code_number", true)) }
     var showStoreName by rememberSaveable { mutableStateOf(preferences.getBoolean("show_store_name", true)) }
@@ -1046,6 +1050,7 @@ fun BatchProductCodePrintDialog(
     var labelSizeMenuExpanded by remember { mutableStateOf(false) }
     var isGenerating by remember { mutableStateOf(false) }
     var isPrinting by remember { mutableStateOf(false) }
+    var isBatchCopiesError by remember { mutableStateOf(false) }
     var printingProgressText by remember { mutableStateOf("") }
     var totalSentSoFar by remember { mutableIntStateOf(0) }
     var printJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
@@ -1062,10 +1067,10 @@ fun BatchProductCodePrintDialog(
     val parsedCustomWidth = customWidthInput.toFloatOrNull()
     val isCustomWidthError = labelSize == ProductCodeLabelSize.CUSTOM && (parsedCustomWidth == null || parsedCustomWidth !in 15f..150f)
     val parsedCustomHeight = customHeightInput.toFloatOrNull()
-    val isCustomHeightError = labelSize == ProductCodeLabelSize.CUSTOM && (parsedCustomHeight == null || parsedCustomHeight !in 10f..150f)
+    val isCustomHeightError = labelSize == ProductCodeLabelSize.CUSTOM && (parsedCustomHeight == null || parsedCustomHeight !in 10f..200f)
 
     val customWidthMm = parsedCustomWidth?.coerceIn(15f, 150f) ?: 50f
-    val customHeightMm = parsedCustomHeight?.coerceIn(10f, 150f) ?: 30f
+    val customHeightMm = parsedCustomHeight?.coerceIn(10f, 200f) ?: 30f
     val (effectiveWidthMm, effectiveHeightMm) = resolveLabelDimensionsMm(labelSize, customWidthMm, customHeightMm)
     val effectiveStoreName = storeNameInput.ifBlank { configuredStoreName }
 
@@ -1087,6 +1092,7 @@ fun BatchProductCodePrintDialog(
             .putBoolean("show_price", showPrice)
             .putString("price_tier", priceTierName)
             .putBoolean("show_price_unit", showUnit)
+            .putBoolean("show_unit", showUnit)
             .putBoolean("show_bangla_digits", showBanglaDigits)
             .putBoolean("show_code_number", showCodeNumber)
             .putBoolean("show_store_name", showStoreName)
@@ -1099,11 +1105,12 @@ fun BatchProductCodePrintDialog(
             .putFloat("date_tracking_text_scale", dateTrackingTextScale)
             .putFloat("barcode_graphic_scale", barcodeGraphicScale)
             .putString("extra_field_title", extraFieldTitle.trim())
+            .putString("extra_field_label", extraFieldTitle.trim())
             .putString("extra_field_value", extraFieldValue.trim())
         if (parsedCustomWidth != null && parsedCustomWidth in 15f..150f) {
             editor.putFloat("custom_width_mm", parsedCustomWidth)
         }
-        if (parsedCustomHeight != null && parsedCustomHeight in 10f..150f) {
+        if (parsedCustomHeight != null && parsedCustomHeight in 10f..200f) {
             editor.putFloat("custom_height_mm", parsedCustomHeight)
         }
         editor.apply()
@@ -1151,44 +1158,60 @@ fun BatchProductCodePrintDialog(
             )
         } else ""
     }
-    val sampleBitmap = remember(
+    var sampleBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(
         sampleProd, samplePriceString, codeType, labelSize, showPrice, showCodeNumber,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
         codeNumberTextScale, showStoreName, effectiveStoreName, storeNameTextScale,
         showDateTracking, useProductDates, mfgOrPkgType, mfgOrPkgDate, expDate, dateTrackingTextScale, barcodeGraphicScale,
         extraFieldTitle, extraFieldValue
     ) {
-        if (sampleProd != null) {
-            val sampleMfgType = if (useProductDates) (sampleProd.mfgOrPkgType ?: "Mfg") else mfgOrPkgType
-            val sampleMfgDate = if (useProductDates) sampleProd.mfgOrPkgDate.orEmpty() else mfgOrPkgDate
-            val sampleExpDate = if (useProductDates) sampleProd.expiryDate.orEmpty() else expDate
-            generateProductCodeLabelBitmap(
-                productName = sampleProd.name,
-                barcode = sampleProd.barcode,
-                formattedPrice = samplePriceString,
-                codeType = codeType,
-                labelSize = labelSize,
-                showPrice = showPrice,
-                showCodeNumber = showCodeNumber,
-                customWidthMm = customWidthMm,
-                customHeightMm = customHeightMm,
-                productNameTextScale = productNameTextScale,
-                priceTextScale = priceTextScale,
-                codeNumberTextScale = codeNumberTextScale,
-                showStoreName = showStoreName,
-                storeName = effectiveStoreName,
-                storeNameTextScale = storeNameTextScale,
-                showDateTracking = showDateTracking,
-                mfgOrPkgType = sampleMfgType,
-                mfgOrPkgDate = sampleMfgDate,
-                expDate = sampleExpDate,
-                dateTrackingTextScale = dateTrackingTextScale,
-                barcodeGraphicScale = barcodeGraphicScale,
-                showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
-                extraFieldLabel = extraFieldTitle,
-                extraFieldValue = extraFieldValue
-            )
-        } else null
+        val old = sampleBitmap
+        val newBmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            if (sampleProd != null) {
+                val sampleMfgType = if (useProductDates) (sampleProd.mfgOrPkgType ?: "Mfg") else mfgOrPkgType
+                val sampleMfgDate = if (useProductDates) sampleProd.mfgOrPkgDate.orEmpty() else mfgOrPkgDate
+                val sampleExpDate = if (useProductDates) sampleProd.expiryDate.orEmpty() else expDate
+                generateProductCodeLabelBitmap(
+                    productName = sampleProd.name,
+                    barcode = sampleProd.barcode,
+                    formattedPrice = samplePriceString,
+                    codeType = codeType,
+                    labelSize = labelSize,
+                    showPrice = showPrice,
+                    showCodeNumber = showCodeNumber,
+                    customWidthMm = customWidthMm,
+                    customHeightMm = customHeightMm,
+                    productNameTextScale = productNameTextScale,
+                    priceTextScale = priceTextScale,
+                    codeNumberTextScale = codeNumberTextScale,
+                    showStoreName = showStoreName,
+                    storeName = effectiveStoreName,
+                    storeNameTextScale = storeNameTextScale,
+                    showDateTracking = showDateTracking,
+                    mfgOrPkgType = sampleMfgType,
+                    mfgOrPkgDate = sampleMfgDate,
+                    expDate = sampleExpDate,
+                    dateTrackingTextScale = dateTrackingTextScale,
+                    barcodeGraphicScale = barcodeGraphicScale,
+                    showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
+                    extraFieldLabel = extraFieldTitle,
+                    extraFieldValue = extraFieldValue,
+                    dpi = invoiceSettings.labelDpi,
+                    showBanglaDigits = showBanglaDigits
+                )
+            } else null
+        }
+        sampleBitmap = newBmp
+        if (old != null && !old.isRecycled && old != newBmp) {
+            old.recycle()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            sampleBitmap?.recycle()
+        }
     }
 
     val isBatchSampleDense = remember(sampleProd?.barcode, codeType, effectiveWidthMm, invoiceSettings.labelDpi) {
@@ -1247,7 +1270,10 @@ fun BatchProductCodePrintDialog(
                 try {
                     val safeAcross = invoiceSettings.labelLabelsAcross.coerceIn(1, 3)
                     val (payloads, payloadCopies) = if (safeAcross > 1) {
-                        val bitmapsWithCopies = mutableListOf<Pair<Bitmap, Int>>()
+                        val payloadsList = mutableListOf<ByteArray>()
+                        val copiesList = mutableListOf<Int>()
+                        val currentRowBitmaps = mutableListOf<Bitmap>()
+                        val activeBitmaps = mutableSetOf<Bitmap>()
                         try {
                             for ((idx, item) in items.withIndex()) {
                                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
@@ -1283,30 +1309,94 @@ fun BatchProductCodePrintDialog(
                                     barcodeGraphicScale = barcodeGraphicScale,
                                     showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
                                     extraFieldLabel = itemExtraLabel,
-                                    extraFieldValue = itemExtraVal
+                                    extraFieldValue = itemExtraVal,
+                                    dpi = invoiceSettings.labelDpi,
+                                    showBanglaDigits = showBanglaDigits
                                 )
                                 if (bitmap != null) {
-                                    bitmapsWithCopies.add(bitmap to item.quantity)
+                                    activeBitmaps.add(bitmap)
+                                    var remainingCopies = item.quantity
+                                    while (remainingCopies > 0) {
+                                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                                        currentRowBitmaps.add(bitmap)
+                                        remainingCopies--
+                                        if (currentRowBitmaps.size == safeAcross) {
+                                            val (compositeBitmap, totalRowWidthMm) = composeMultiUpRowBitmap(
+                                                rowBitmaps = currentRowBitmaps,
+                                                labelsAcross = safeAcross,
+                                                columnGapMm = invoiceSettings.labelColumnGapMm,
+                                                labelWidthMm = effectiveWidthMm,
+                                                labelHeightMm = effectiveHeightMm,
+                                                dpi = invoiceSettings.labelDpi
+                                            )
+                                            val payload = buildTsplPayload(
+                                                labelBitmap = compositeBitmap,
+                                                widthMm = totalRowWidthMm,
+                                                heightMm = effectiveHeightMm,
+                                                gapMm = invoiceSettings.labelGapMm,
+                                                copies = 1,
+                                                darkness = invoiceSettings.labelDarkness,
+                                                dpi = invoiceSettings.labelDpi,
+                                                speed = invoiceSettings.labelPrintSpeed,
+                                                xOffsetDots = invoiceSettings.labelXOffsetDots,
+                                                yOffsetDots = invoiceSettings.labelYOffsetDots,
+                                                direction = invoiceSettings.labelDirection,
+                                                paperType = invoiceSettings.labelPaperType
+                                            )
+                                            if (compositeBitmap != currentRowBitmaps.firstOrNull()) {
+                                                compositeBitmap.recycle()
+                                            }
+                                            payloadsList.add(payload)
+                                            copiesList.add(currentRowBitmaps.size)
+                                            currentRowBitmaps.clear()
+                                            val iterator = activeBitmaps.iterator()
+                                            while (iterator.hasNext()) {
+                                                val b = iterator.next()
+                                                if (b != bitmap || remainingCopies == 0) {
+                                                    if (!currentRowBitmaps.contains(b)) {
+                                                        b.recycle()
+                                                        iterator.remove()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
-                            val multiUpPayloads = buildMultiUpTsplPayloads(
-                                bitmapsWithCopies = bitmapsWithCopies,
-                                labelWidthMm = effectiveWidthMm,
-                                labelHeightMm = effectiveHeightMm,
-                                labelsAcross = safeAcross,
-                                columnGapMm = invoiceSettings.labelColumnGapMm,
-                                gapMm = invoiceSettings.labelGapMm,
-                                darkness = invoiceSettings.labelDarkness,
-                                dpi = invoiceSettings.labelDpi,
-                                speed = invoiceSettings.labelPrintSpeed,
-                                xOffsetDots = invoiceSettings.labelXOffsetDots,
-                                yOffsetDots = invoiceSettings.labelYOffsetDots,
-                                direction = invoiceSettings.labelDirection,
-                                paperType = invoiceSettings.labelPaperType
-                            )
-                            multiUpPayloads to List(multiUpPayloads.size) { 1 }
+                            if (currentRowBitmaps.isNotEmpty()) {
+                                val (compositeBitmap, totalRowWidthMm) = composeMultiUpRowBitmap(
+                                    rowBitmaps = currentRowBitmaps,
+                                    labelsAcross = safeAcross,
+                                    columnGapMm = invoiceSettings.labelColumnGapMm,
+                                    labelWidthMm = effectiveWidthMm,
+                                    labelHeightMm = effectiveHeightMm,
+                                    dpi = invoiceSettings.labelDpi
+                                )
+                                val payload = buildTsplPayload(
+                                    labelBitmap = compositeBitmap,
+                                    widthMm = totalRowWidthMm,
+                                    heightMm = effectiveHeightMm,
+                                    gapMm = invoiceSettings.labelGapMm,
+                                    copies = 1,
+                                    darkness = invoiceSettings.labelDarkness,
+                                    dpi = invoiceSettings.labelDpi,
+                                    speed = invoiceSettings.labelPrintSpeed,
+                                    xOffsetDots = invoiceSettings.labelXOffsetDots,
+                                    yOffsetDots = invoiceSettings.labelYOffsetDots,
+                                    direction = invoiceSettings.labelDirection,
+                                    paperType = invoiceSettings.labelPaperType
+                                )
+                                if (compositeBitmap != currentRowBitmaps.firstOrNull()) {
+                                    compositeBitmap.recycle()
+                                }
+                                payloadsList.add(payload)
+                                copiesList.add(currentRowBitmaps.size)
+                                currentRowBitmaps.clear()
+                            }
+                            payloadsList to copiesList
                         } finally {
-                            bitmapsWithCopies.forEach { it.first.recycle() }
+                            activeBitmaps.forEach { if (!it.isRecycled) it.recycle() }
+                            activeBitmaps.clear()
                         }
                     } else {
                         val singlePayloads = mutableListOf<ByteArray>()
@@ -1345,7 +1435,9 @@ fun BatchProductCodePrintDialog(
                                 barcodeGraphicScale = barcodeGraphicScale,
                                 showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
                                 extraFieldLabel = itemExtraLabel,
-                                extraFieldValue = itemExtraVal
+                                extraFieldValue = itemExtraVal,
+                                dpi = invoiceSettings.labelDpi,
+                                showBanglaDigits = showBanglaDigits
                             )
                             if (bitmap != null) {
                                 try {
@@ -1425,7 +1517,6 @@ fun BatchProductCodePrintDialog(
                         withContext(Dispatchers.Main) {
                             val msg = context.getString(R.string.batch_print_success_fmt, totalSent)
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                            onDismiss()
                         }
                     }
                     RoutingDecision.SHOW_ERROR -> {
@@ -1522,9 +1613,12 @@ fun BatchProductCodePrintDialog(
                 }
             }
         } finally {
+            val executingJob = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
             withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
-                isPrinting = false
-                printingProgressText = ""
+                if (printJob == null || printJob === executingJob) {
+                    isPrinting = false
+                    printingProgressText = ""
+                }
             }
         }
     }
@@ -1593,7 +1687,7 @@ fun BatchProductCodePrintDialog(
                     }
                     IconButton(
                         onClick = onDismiss,
-                        enabled = !isGenerating,
+                        enabled = !isGenerating && !isPrinting,
                         modifier = Modifier.size(44.dp)
                     ) {
                         Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
@@ -1676,9 +1770,10 @@ fun BatchProductCodePrintDialog(
                                 .padding(2.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (sampleBitmap != null) {
+                            val currentSampleBmp = sampleBitmap
+                            if (currentSampleBmp != null) {
                                 Image(
-                                    bitmap = sampleBitmap.asImageBitmap(),
+                                    bitmap = currentSampleBmp.asImageBitmap(),
                                     contentDescription = stringResource(R.string.product_code_image_preview),
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1755,6 +1850,7 @@ fun BatchProductCodePrintDialog(
                                         executeBatchDirectPrint(remaining)
                                     }
                                 },
+                                enabled = !isPrinting,
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                                 modifier = Modifier.height(36.dp)
                             ) {
@@ -2024,7 +2120,8 @@ fun BatchProductCodePrintDialog(
                         ) {
                             CopiesStepper(
                                 copies = batchCopies,
-                                onCopiesChange = { batchCopies = it }
+                                onCopiesChange = { batchCopies = it },
+                                onErrorChange = { isBatchCopiesError = it }
                             )
                         }
                     }
@@ -2600,6 +2697,25 @@ fun BatchProductCodePrintDialog(
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
+                        val safeAcross = invoiceSettings.labelLabelsAcross.coerceIn(1, 3)
+                        val totalMultiUpWidthMm = com.example.techyfipos.printer.calculateMultiUpRowWidthMm(
+                            labelsAcross = safeAcross,
+                            columnGapMm = invoiceSettings.labelColumnGapMm,
+                            labelWidthMm = effectiveWidthMm
+                        )
+                        val isHeadWidthExceeded = safeAcross > 1 && totalMultiUpWidthMm > 108f
+                        if (isHeadWidthExceeded) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                stringResource(
+                                    R.string.batch_print_head_width_exceeded_warning,
+                                    String.format(java.util.Locale.US, "%.1f", totalMultiUpWidthMm)
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                         if (isBatchTruncated) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -2615,7 +2731,7 @@ fun BatchProductCodePrintDialog(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-            if (isPrinting && printingProgressText.isNotBlank()) {
+            if ((isPrinting || isGenerating) && (printingProgressText.isNotBlank() || isGenerating)) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
@@ -2632,7 +2748,7 @@ fun BatchProductCodePrintDialog(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = printingProgressText,
+                            text = if (printingProgressText.isNotBlank()) printingProgressText else stringResource(R.string.batch_print_generating),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -2642,22 +2758,42 @@ fun BatchProductCodePrintDialog(
             }
 
             if (!isPrinting && !isGenerating && lastPrintedItems != null) {
-                OutlinedButton(
-                    onClick = {
-                        lastPrintedItems?.let { lastItems ->
-                            isPrinting = true
-                            totalSentSoFar = 0
-                            printJob = scope.launch(Dispatchers.IO) {
-                                executeBatchDirectPrint(lastItems)
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(42.dp),
-                    shape = RoundedCornerShape(12.dp)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.batch_print_reprint_last), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.batch_print_reprint_last_success,
+                                lastPrintedItems?.sumOf { it.quantity } ?: 0
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                lastPrintedItems?.let { lastItems ->
+                                    isPrinting = true
+                                    totalSentSoFar = 0
+                                    printJob = scope.launch(Dispatchers.IO) {
+                                        executeBatchDirectPrint(lastItems)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(40.dp),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.batch_print_reprint_last), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -2695,7 +2831,9 @@ fun BatchProductCodePrintDialog(
                                     mfgOrPkgDate = mfgOrPkgDate,
                                     expDate = expDate,
                                     customQuantities = if (copiesMode == "PER_PRODUCT") customQuantities else emptyMap(),
-                                    maxTotalLabels = 500
+                                    maxTotalLabels = 500,
+                                    isCustomPerProduct = copiesMode == "PER_PRODUCT",
+                                    cutFormat = context.getString(R.string.product_label_cut_count_fmt)
                                 )
                                 if (batchBuild.cutProducts.isNotEmpty()) {
                                     withContext(Dispatchers.Main) {
@@ -2712,21 +2850,23 @@ fun BatchProductCodePrintDialog(
                         },
                         modifier = Modifier.weight(1.2f).height(48.dp),
                         shape = RoundedCornerShape(14.dp),
-                        enabled = !isGenerating && !isPrinting && candidateProducts.isNotEmpty()
+                        enabled = !isGenerating && !isPrinting && candidateProducts.isNotEmpty() && !isBatchCopiesError && !isCustomWidthError && !isCustomHeightError
                     ) {
                         Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.batch_print_direct_print_btn), fontWeight = FontWeight.Bold)
                     }
 
-                    if (isPrinting) {
+                    if (isPrinting || isGenerating) {
                         Button(
                             onClick = {
                                 val sent = totalSentSoFar
+                                val wasPrinting = isPrinting
                                 printJob?.cancel()
                                 isPrinting = false
+                                isGenerating = false
                                 printingProgressText = ""
-                                val msg = if (sent > 0) {
+                                val msg = if (wasPrinting && sent > 0) {
                                     context.getString(R.string.batch_print_cancelled_with_count, sent)
                                 } else {
                                     context.getString(R.string.batch_print_cancelled)
@@ -2779,7 +2919,9 @@ fun BatchProductCodePrintDialog(
                                             mfgOrPkgDate = mfgOrPkgDate,
                                             expDate = expDate,
                                             customQuantities = if (copiesMode == "PER_PRODUCT") customQuantities else emptyMap(),
-                                            maxTotalLabels = 500
+                                            maxTotalLabels = 500,
+                                            isCustomPerProduct = copiesMode == "PER_PRODUCT",
+                                            cutFormat = context.getString(R.string.product_label_cut_count_fmt)
                                         )
                                         if (batchBuild.cutProducts.isNotEmpty()) {
                                             withContext(Dispatchers.Main) {
@@ -2814,20 +2956,11 @@ fun BatchProductCodePrintDialog(
                             },
                             modifier = Modifier.weight(1f).height(48.dp),
                             shape = RoundedCornerShape(14.dp),
-                            enabled = !isGenerating && !isPrinting && candidateProducts.isNotEmpty()
+                            enabled = !isGenerating && !isPrinting && candidateProducts.isNotEmpty() && !isBatchCopiesError && !isCustomWidthError && !isCustomHeightError
                         ) {
-                            if (isGenerating) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.batch_print_generating), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            } else {
-                                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.batch_print_share_pdf_btn), fontWeight = FontWeight.Bold)
-                            }
+                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.batch_print_share_pdf_btn), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -2887,7 +3020,7 @@ fun ProductCodeImageDialog(
         mutableStateOf(preferences.getString("price_tier", ProductCodePriceTier.SELLING.name) ?: ProductCodePriceTier.SELLING.name)
     }
     val priceTier = ProductCodePriceTier.entries.firstOrNull { it.name == priceTierName } ?: ProductCodePriceTier.SELLING
-    var showUnit by rememberSaveable { mutableStateOf(preferences.getBoolean("show_price_unit", false)) }
+    var showUnit by rememberSaveable { mutableStateOf(preferences.getBoolean("show_unit", preferences.getBoolean("show_price_unit", false))) }
     var showBanglaDigits by rememberSaveable { mutableStateOf(preferences.getBoolean("show_bangla_digits", false)) }
     var showCodeNumber by rememberSaveable { mutableStateOf(preferences.getBoolean("show_code_number", true)) }
     var showStoreName by rememberSaveable { mutableStateOf(preferences.getBoolean("show_store_name", true)) }
@@ -2896,7 +3029,7 @@ fun ProductCodeImageDialog(
     var mfgOrPkgDate by rememberSaveable { mutableStateOf(product.mfgOrPkgDate ?: "") }
     var expDate by rememberSaveable { mutableStateOf(product.expiryDate ?: "") }
     var extraFieldTitle by rememberSaveable {
-        mutableStateOf(preferences.getString("extra_field_title", "") ?: "")
+        mutableStateOf(preferences.getString("extra_field_title", preferences.getString("extra_field_label", "") ?: "") ?: "")
     }
     var extraFieldValue by rememberSaveable {
         mutableStateOf(preferences.getString("extra_field_value", "") ?: "")
@@ -2943,6 +3076,10 @@ fun ProductCodeImageDialog(
     var actionStatus by remember { mutableStateOf<ActionStatus?>(null) }
     var isSaving by remember { mutableStateOf(false) }
     var isPrinting by remember { mutableStateOf(false) }
+    var isSingleCopiesError by remember { mutableStateOf(false) }
+    var singlePrintJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var isSharingPdf by remember { mutableStateOf(false) }
+    var sharePdfJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var printCopies by rememberSaveable { mutableIntStateOf(1) }
 
     val codeType = ProductCodeType.entries.firstOrNull { it.name == codeTypeName } ?: ProductCodeType.BARCODE
@@ -2951,10 +3088,10 @@ fun ProductCodeImageDialog(
     val parsedCustomWidth = customWidthInput.toFloatOrNull()
     val isCustomWidthError = labelSize == ProductCodeLabelSize.CUSTOM && (parsedCustomWidth == null || parsedCustomWidth !in 15f..150f)
     val parsedCustomHeight = customHeightInput.toFloatOrNull()
-    val isCustomHeightError = labelSize == ProductCodeLabelSize.CUSTOM && (parsedCustomHeight == null || parsedCustomHeight !in 10f..150f)
+    val isCustomHeightError = labelSize == ProductCodeLabelSize.CUSTOM && (parsedCustomHeight == null || parsedCustomHeight !in 10f..200f)
 
     val customWidthMm = parsedCustomWidth?.coerceIn(15f, 150f) ?: 50f
-    val customHeightMm = parsedCustomHeight?.coerceIn(10f, 150f) ?: 30f
+    val customHeightMm = parsedCustomHeight?.coerceIn(10f, 200f) ?: 30f
     val (selectedLabelWidthMm, selectedLabelHeightMm) = resolveLabelDimensionsMm(labelSize, customWidthMm, customHeightMm)
     val effectiveStoreName = storeNameInput.ifBlank { configuredStoreName }
 
@@ -2964,39 +3101,57 @@ fun ProductCodeImageDialog(
         }
     }
 
-    val bitmap = remember(
+    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(
         product, codeType, labelSize, showPrice, priceTierName, showUnit, showBanglaDigits, showCodeNumber, showStoreName, effectiveStoreName,
         showDateTracking, mfgOrPkgType, mfgOrPkgDate, expDate,
         customWidthMm, customHeightMm, productNameTextScale, priceTextScale,
         codeNumberTextScale, storeNameTextScale, dateTrackingTextScale, barcodeGraphicScale,
         extraFieldTitle, extraFieldValue
     ) {
-        generateProductCodeLabelBitmap(
-            productName = product.name,
-            barcode = product.barcode,
-            formattedPrice = formattedPriceString,
-            codeType = codeType,
-            labelSize = labelSize,
-            showPrice = showPrice,
-            showCodeNumber = showCodeNumber,
-            customWidthMm = customWidthMm,
-            customHeightMm = customHeightMm,
-            productNameTextScale = productNameTextScale,
-            priceTextScale = priceTextScale,
-            codeNumberTextScale = codeNumberTextScale,
-            showStoreName = showStoreName,
-            storeName = effectiveStoreName,
-            storeNameTextScale = storeNameTextScale,
-            showDateTracking = showDateTracking,
-            mfgOrPkgType = mfgOrPkgType,
-            mfgOrPkgDate = mfgOrPkgDate,
-            expDate = expDate,
-            dateTrackingTextScale = dateTrackingTextScale,
-            barcodeGraphicScale = barcodeGraphicScale,
-            showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
-            extraFieldLabel = extraFieldTitle,
-            extraFieldValue = extraFieldValue
-        )
+        val old = bitmap
+        val newBmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            generateProductCodeLabelBitmap(
+                productName = product.name,
+                barcode = product.barcode,
+                formattedPrice = formattedPriceString,
+                codeType = codeType,
+                labelSize = labelSize,
+                showPrice = showPrice,
+                showCodeNumber = showCodeNumber,
+                customWidthMm = customWidthMm,
+                customHeightMm = customHeightMm,
+                productNameTextScale = productNameTextScale,
+                priceTextScale = priceTextScale,
+                codeNumberTextScale = codeNumberTextScale,
+                showStoreName = showStoreName,
+                storeName = effectiveStoreName,
+                storeNameTextScale = storeNameTextScale,
+                showDateTracking = showDateTracking,
+                mfgOrPkgType = mfgOrPkgType,
+                mfgOrPkgDate = mfgOrPkgDate,
+                expDate = expDate,
+                dateTrackingTextScale = dateTrackingTextScale,
+                barcodeGraphicScale = barcodeGraphicScale,
+                showExtraField = extraFieldTitle.isNotBlank() || extraFieldValue.isNotBlank(),
+                extraFieldLabel = extraFieldTitle,
+                extraFieldValue = extraFieldValue,
+                dpi = invoiceSettings.labelDpi,
+                showBanglaDigits = showBanglaDigits
+            )
+        }
+        bitmap = newBmp
+        if (old != null && !old.isRecycled && old != newBmp) {
+            old.recycle()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            bitmap?.recycle()
+            singlePrintJob?.cancel()
+            sharePdfJob?.cancel()
+        }
     }
 
     LaunchedEffect(
@@ -3012,6 +3167,7 @@ fun ProductCodeImageDialog(
             .putBoolean("show_price", showPrice)
             .putString("price_tier", priceTierName)
             .putBoolean("show_price_unit", showUnit)
+            .putBoolean("show_unit", showUnit)
             .putBoolean("show_bangla_digits", showBanglaDigits)
             .putBoolean("show_code_number", showCodeNumber)
             .putBoolean("show_store_name", showStoreName)
@@ -3024,11 +3180,12 @@ fun ProductCodeImageDialog(
             .putFloat("date_tracking_text_scale", dateTrackingTextScale)
             .putFloat("barcode_graphic_scale", barcodeGraphicScale)
             .putString("extra_field_title", extraFieldTitle.trim())
+            .putString("extra_field_label", extraFieldTitle.trim())
             .putString("extra_field_value", extraFieldValue.trim())
         if (parsedCustomWidth != null && parsedCustomWidth in 15f..150f) {
             editor.putFloat("custom_width_mm", parsedCustomWidth)
         }
-        if (parsedCustomHeight != null && parsedCustomHeight in 10f..150f) {
+        if (parsedCustomHeight != null && parsedCustomHeight in 10f..200f) {
             editor.putFloat("custom_height_mm", parsedCustomHeight)
         }
         editor.apply()
@@ -3036,8 +3193,12 @@ fun ProductCodeImageDialog(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
+        onDismissRequest = { if (!isPrinting && !isSharingPdf) onDismiss() },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = false,
+            dismissOnBackPress = !isPrinting && !isSharingPdf
+        )
     ) {
         Surface(
             modifier = Modifier
@@ -3066,7 +3227,10 @@ fun ProductCodeImageDialog(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(onClick = onDismiss) {
+                    IconButton(
+                        onClick = onDismiss,
+                        enabled = !isPrinting && !isSharingPdf
+                    ) {
                         Icon(Icons.Default.Close, contentDescription = stringResource(R.string.dismiss))
                     }
                 }
@@ -3083,9 +3247,10 @@ fun ProductCodeImageDialog(
                             .padding(8.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (bitmap != null) {
+                        val currentBmp = bitmap
+                        if (currentBmp != null) {
                             Image(
-                                bitmap = bitmap.asImageBitmap(),
+                                bitmap = currentBmp.asImageBitmap(),
                                 contentDescription = stringResource(R.string.product_code_image_preview),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -3288,7 +3453,8 @@ fun ProductCodeImageDialog(
                             CopiesStepper(
                                 copies = printCopies,
                                 onCopiesChange = { printCopies = it },
-                                stockQuantity = product.stockQty
+                                stockQuantity = product.stockQty,
+                                onErrorChange = { isSingleCopiesError = it }
                             )
                         }
                     }
@@ -3663,67 +3829,81 @@ fun ProductCodeImageDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Button(
-                            onClick = {
-                                scope.launch {
-                                    if (bitmap != null) {
-                                        isPrinting = true
-                                        try {
-                                            val outcome = printLabelImages(
-                                                context = context,
-                                                activity = activity ?: context.findActivity(),
-                                                labels = listOf(bitmap),
-                                                pdfFallbackBuilder = {
-                                                    withContext(Dispatchers.IO) {
-                                                        cacheProductCodeLabelPdf(
-                                                            context = context,
-                                                            bitmap = bitmap,
-                                                            productName = product.name,
-                                                            codeType = codeType,
-                                                            widthMm = selectedLabelWidthMm,
-                                                            heightMm = selectedLabelHeightMm,
-                                                            copies = printCopies
-                                                        )?.first
-                                                    }
-                                                },
-                                                widthMm = selectedLabelWidthMm,
-                                                heightMm = selectedLabelHeightMm,
-                                                copies = printCopies,
-                                                jobName = context.getString(R.string.print_job_product_label_fmt, product.name),
-                                                settings = invoiceSettings
-                                            )
-                                            when (outcome) {
-                                                com.example.techyfipos.utils.LabelPrintOutcome.SENT_DIRECT -> {
-                                                    val msg = context.getString(R.string.labels_sent_to_printer_fmt, printCopies)
-                                                    actionStatus = ActionStatus(msg, isError = false)
-                                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                                }
-                                                com.example.techyfipos.utils.LabelPrintOutcome.OPENED_SYSTEM_DIALOG -> {
-                                                    val msg = context.getString(R.string.print_system_dialog_opened)
-                                                    actionStatus = ActionStatus(msg, isError = false)
-                                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                                }
-                                                com.example.techyfipos.utils.LabelPrintOutcome.FAILED -> {
-                                                    actionStatus = ActionStatus(context.getString(R.string.code_image_print_failed), isError = true)
-                                                }
-                                            }
-                                        } finally {
-                                            isPrinting = false
-                                        }
-                                    } else {
-                                        actionStatus = ActionStatus(context.getString(R.string.code_image_print_failed), isError = true)
-                                    }
-                                }
-                            },
-                            enabled = !isPrinting,
-                            modifier = Modifier.weight(1.3f).height(48.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            if (isPrinting) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                        if (isPrinting) {
+                            Button(
+                                onClick = {
+                                    singlePrintJob?.cancel()
+                                    isPrinting = false
+                                    val msg = context.getString(R.string.batch_print_cancelled)
+                                    actionStatus = ActionStatus(msg, isError = false)
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                modifier = Modifier.weight(1.3f).height(48.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onError)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(stringResource(R.string.print_label))
-                            } else {
+                                Text(stringResource(R.string.batch_print_cancel), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onError)
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    singlePrintJob = scope.launch {
+                                        val currentBmp = bitmap
+                                        if (currentBmp != null) {
+                                            isPrinting = true
+                                            try {
+                                                val outcome = printLabelImages(
+                                                    context = context,
+                                                    activity = activity ?: context.findActivity(),
+                                                    labels = listOf(currentBmp),
+                                                    pdfFallbackBuilder = {
+                                                        withContext(Dispatchers.IO) {
+                                                            cacheProductCodeLabelPdf(
+                                                                context = context,
+                                                                bitmap = currentBmp,
+                                                                productName = product.name,
+                                                                codeType = codeType,
+                                                                widthMm = selectedLabelWidthMm,
+                                                                heightMm = selectedLabelHeightMm,
+                                                                copies = printCopies
+                                                            )?.first
+                                                        }
+                                                    },
+                                                    widthMm = selectedLabelWidthMm,
+                                                    heightMm = selectedLabelHeightMm,
+                                                    copies = printCopies,
+                                                    jobName = context.getString(R.string.print_job_product_label_fmt, product.name),
+                                                    settings = invoiceSettings
+                                                )
+                                                when (outcome) {
+                                                    com.example.techyfipos.utils.LabelPrintOutcome.SENT_DIRECT -> {
+                                                        val msg = context.getString(R.string.labels_sent_to_printer_fmt, printCopies)
+                                                        actionStatus = ActionStatus(msg, isError = false)
+                                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                                    }
+                                                    com.example.techyfipos.utils.LabelPrintOutcome.OPENED_SYSTEM_DIALOG -> {
+                                                        val msg = context.getString(R.string.print_system_dialog_opened)
+                                                        actionStatus = ActionStatus(msg, isError = false)
+                                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                                    }
+                                                    com.example.techyfipos.utils.LabelPrintOutcome.FAILED -> {
+                                                        actionStatus = ActionStatus(context.getString(R.string.code_image_print_failed), isError = true)
+                                                    }
+                                                }
+                                            } finally {
+                                                isPrinting = false
+                                            }
+                                        } else {
+                                            actionStatus = ActionStatus(context.getString(R.string.code_image_print_failed), isError = true)
+                                        }
+                                    }
+                                },
+                                enabled = !isPrinting && !isSharingPdf && !isSingleCopiesError && !isCustomWidthError && !isCustomHeightError,
+                                modifier = Modifier.weight(1.3f).height(48.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
                                 Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(stringResource(R.string.print_copies_button_fmt, printCopies), fontWeight = FontWeight.Bold)
@@ -3732,44 +3912,61 @@ fun ProductCodeImageDialog(
 
                         OutlinedIconButton(
                             onClick = {
-                                scope.launch {
-                                    val cached = withContext(Dispatchers.IO) {
-                                        cacheProductCodeLabelPdf(
-                                            context = context,
-                                            bitmap = bitmap,
-                                            productName = product.name,
-                                            codeType = codeType,
-                                            widthMm = selectedLabelWidthMm,
-                                            heightMm = selectedLabelHeightMm,
-                                            copies = printCopies
-                                        )
-                                    }
-                                    if (cached != null) {
-                                        val shared = shareProductCodeLabelPdf(
-                                            activity ?: context,
-                                            cached.second,
-                                            product.name
-                                        )
-                                        if (!shared) {
+                                if (isSharingPdf) {
+                                    sharePdfJob?.cancel()
+                                    isSharingPdf = false
+                                    return@OutlinedIconButton
+                                }
+                                val currentBmp = bitmap ?: return@OutlinedIconButton
+                                sharePdfJob = scope.launch {
+                                    isSharingPdf = true
+                                    try {
+                                        val cached = withContext(Dispatchers.IO) {
+                                            cacheProductCodeLabelPdf(
+                                                context = context,
+                                                bitmap = currentBmp,
+                                                productName = product.name,
+                                                codeType = codeType,
+                                                widthMm = selectedLabelWidthMm,
+                                                heightMm = selectedLabelHeightMm,
+                                                copies = printCopies
+                                            )
+                                        }
+                                        if (cached != null) {
+                                            val shared = shareProductCodeLabelPdf(
+                                                activity ?: context,
+                                                cached.second,
+                                                product.name
+                                            )
+                                            if (!shared) {
+                                                actionStatus = ActionStatus(context.getString(R.string.code_image_share_failed), isError = true)
+                                            }
+                                        } else {
                                             actionStatus = ActionStatus(context.getString(R.string.code_image_share_failed), isError = true)
                                         }
-                                    } else {
-                                        actionStatus = ActionStatus(context.getString(R.string.code_image_share_failed), isError = true)
+                                    } finally {
+                                        isSharingPdf = false
                                     }
                                 }
                             },
+                            enabled = !isPrinting && !isSingleCopiesError && !isCustomWidthError && !isCustomHeightError,
                             modifier = Modifier.size(48.dp),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share_label_pdf))
+                            if (isSharingPdf) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share_code_image))
+                            }
                         }
 
                         OutlinedIconButton(
                             onClick = {
+                                val currentBmp = bitmap ?: return@OutlinedIconButton
                                 scope.launch {
                                     isSaving = true
                                     val savedUri = withContext(Dispatchers.IO) {
-                                        saveProductCodeLabelToPictures(context, bitmap, product.name, codeType)
+                                        saveProductCodeLabelToPictures(context, currentBmp, product.name, codeType)
                                     }
                                     isSaving = false
                                     actionStatus = if (savedUri != null) {
