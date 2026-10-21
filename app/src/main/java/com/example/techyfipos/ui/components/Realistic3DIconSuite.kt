@@ -1180,29 +1180,36 @@ fun Realistic3DHologramLaserCodeIcon(
                     start = Offset(0f, 0f),
                     end = Offset(w, h)
                 ),
-                topLeft = Offset(w * 0.08f, h * 0.08f),
-                size = Size(w * 0.84f, h * 0.84f),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.16f, w * 0.16f)
+                topLeft = Offset(w * 0.06f, h * 0.06f),
+                size = Size(w * 0.88f, h * 0.88f),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.18f, w * 0.18f)
             )
 
-            // Barcode Matrix Grid Lines
-            drawLine(Color(0xFFFFFFFF), start = Offset(w * 0.25f, h * 0.25f), end = Offset(w * 0.25f, h * 0.75f), strokeWidth = w * 0.08f)
-            drawLine(Color(0xFF93C5FD), start = Offset(w * 0.42f, h * 0.25f), end = Offset(w * 0.42f, h * 0.75f), strokeWidth = w * 0.05f)
-            drawLine(Color(0xFFFFFFFF), start = Offset(w * 0.58f, h * 0.25f), end = Offset(w * 0.58f, h * 0.75f), strokeWidth = w * 0.08f)
-            drawLine(Color(0xFF93C5FD), start = Offset(w * 0.75f, h * 0.25f), end = Offset(w * 0.75f, h * 0.75f), strokeWidth = w * 0.05f)
+            // Barcode 5-Line Matrix (Thick, Thin, Med, Thin, Thick)
+            drawLine(Color(0xFFFFFFFF), start = Offset(w * 0.22f, h * 0.20f), end = Offset(w * 0.22f, h * 0.80f), strokeWidth = w * 0.09f)
+            drawLine(Color(0xFF93C5FD), start = Offset(w * 0.36f, h * 0.20f), end = Offset(w * 0.36f, h * 0.80f), strokeWidth = w * 0.05f)
+            drawLine(Color(0xFFFFFFFF), start = Offset(w * 0.50f, h * 0.20f), end = Offset(w * 0.50f, h * 0.80f), strokeWidth = w * 0.07f)
+            drawLine(Color(0xFF93C5FD), start = Offset(w * 0.64f, h * 0.20f), end = Offset(w * 0.64f, h * 0.80f), strokeWidth = w * 0.05f)
+            drawLine(Color(0xFFFFFFFF), start = Offset(w * 0.78f, h * 0.20f), end = Offset(w * 0.78f, h * 0.80f), strokeWidth = w * 0.09f)
 
-            // Animated Laser Sweep Line
+            // Animated Cyan-White Laser Sweep Beam
             val laserX = w * laserOffset
             if (laserX in 0f..w) {
                 drawLine(
                     brush = Brush.horizontalGradient(
-                        colors = listOf(Color.Transparent, Color(0xFF67E8F9), Color(0xFFFFFFFF), Color(0xFF67E8F9), Color.Transparent),
-                        startX = laserX - w * 0.25f,
-                        endX = laserX + w * 0.25f
+                        colors = listOf(
+                            Color.Transparent,
+                            Color(0x9967E8F9),
+                            Color(0xFFFFFFFF),
+                            Color(0x9967E8F9),
+                            Color.Transparent
+                        ),
+                        startX = laserX - w * 0.22f,
+                        endX = laserX + w * 0.22f
                     ),
-                    start = Offset(laserX, h * 0.08f),
-                    end = Offset(laserX, h * 0.92f),
-                    strokeWidth = w * 0.10f
+                    start = Offset(laserX, h * 0.06f),
+                    end = Offset(laserX, h * 0.94f),
+                    strokeWidth = w * 0.14f
                 )
             }
         }

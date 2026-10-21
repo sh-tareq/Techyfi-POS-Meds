@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-21 (app version 2.6.93-Final-V21-10-2026, build `Techyfi-POS-Final-V21-10-2026.apk`; versionCode 220969; DB schema version 38)
+Last updated: 2026-10-21 (app version 2.6.94-Final-V21-10-2026, build `Techyfi-POS-Final-V21-10-2026.apk`; versionCode 220970; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -380,15 +380,17 @@ mindmap
           Tapping available thumbnail opens full-view high-resolution image modal with title, barcode, and price
           Thumbnail box stays completely hidden when no image is uploaded (maximizing horizontal title room)
         Compact List View (ProductItemRow)
-          Row 1: Image Thumbnail (or Checkbox in batch mode) + Full-Width Title (tap to adjust stock) + Monospace Barcode chip (tap to generate label) + Category tag
-          Row 2: Selling Price/Unit + 3D Stock Status Pill (tap to adjust stock) + 1-Tap 🛒 Cart button + ⋮ Overflow Menu (Edit, Stock Adjust, Code, Delete)
-          Native Long-Press card activation for batch selection (redundant toolbar chip removed)
-        Responsive 2-Column Grid View (ProductGridCard)
-          Thumbnail (hidden when null, tap opens full-view modal)
-          Row 1: Bold 2-Line Title (tap opens stock adjustment) + 3D Stock Status Pill
-          Row 2: Monospace Barcode chip with laser code icon (tap opens label generator) + Category tag
-          Row 3: Zero-wrapping Selling Price / Unit
-          Row 4: 🛒 Cart button + 📦 ± Stock + 🏷️ Code + ⋮ Overflow Menu
+          Sleek unified single-row layout across phone and tablet matching interactive preview
+          Leading visual: Image Thumbnail (44dp, tap to enlarge) or Checkbox in batch mode; completely hidden if no image
+          Main Info Column: 2-Line Title (tap to adjust stock) + Monospace Barcode chip with 3D Holographic Laser Stamp (tap to generate label) + Category tag
+          Price & Stock Column: Bold Selling Price on top + 3D Stock Status Pill on bottom (tap to adjust stock)
+          Action Group: 1-Tap [+] Quick Add button (36dp) + [⋮] Overflow Menu (Edit, Stock Adjust, Code, Delete)
+          Native Long-Press card activation for batch selection mode
+        Responsive Grid View (ProductGridCard)
+          Compact 3-row layout matching interactive preview
+          Row 1: 38dp Thumbnail on left (tap to enlarge; completely hidden if null) + 3D Stock Status Pill on right
+          Row 2: Bold 2-Line Title (tap to adjust stock) + Barcode chip with laser code stamp + Category tag
+          Row 3: Bold Selling Price on left, 1-Tap [+] Quick Add button (30dp) + [⋮] Overflow Menu on right
       Custom Category Manager (inside Add/Edit Product form)
         User-defined, icon + bilingual (English/Bengali) categories, editable and resettable to defaults
         Only shapes the dropdown offered when creating/editing a product
@@ -1047,20 +1049,20 @@ mindmap
 - Fractional/decimal quantity support (`Product.stockQty`, `SaleItem.quantity`, `ReturnItem.quantity`, `CartItem.quantity` are all `Double`) is inferred purely from the product's `unit` string matching a fixed list (kg, gm/g, ltr/liter/litre, ml, mtr/meter/metre) everywhere it's used — there is no explicit `isFractional` flag on `Product`.
 - Price Mode (Sale/MRP/Bulk) reads `Product.sellingPrice` / `mrpPrice` / `wholesalePrice` respectively, each falling back to `sellingPrice` when the tier-specific field is 0/unset.
 - A Due Reminder can only have one pending scheduled instance per customer phone number at a time (WorkManager unique work keyed by normalized phone digits); scheduling a new one replaces the previous one. Pending reminders are mirrored in Room and can be listed/cancelled from Dues; the worker removes its tracking row after completion.
-- The product grid/list card layouts have not been redesigned despite a `product_card_redesign_preview.html` mockup existing in the project root — treat that file as a design reference only, not as shipped UI, unless the actual `ProductGridCard`/`ProductItemRow` composables are verified to have changed.
+- The product grid and list card layouts have been fully redesigned and verified on a physical connected device to match the interactive preview (product_screen_redesign_preview.html) with 100% fidelity: unified single-row ProductItemRow, compact 3-row ProductGridCard, hidden image placeholders when images are unavailable, and animated 5-bar cyan laser holographic code stamps.
 
 ## Current Android package
 
 - Application ID: `com.techyfi.pos`
-- Version code: `220956`
-- Version name: `2.6.80-V15-10-2026`
+- Version code: `220970`
+- Version name: `2.6.94-Final-V21-10-2026`
 - Upgrade rule: retain the same application ID and signing identity, and always increase the version code.
 - Signing SHA-1:
   - Active key (from Sep 29, 2026 onwards): `08:4A:15:4B:BB:A4:61:B7:98:C7:E2:62:F8:CE:C3:BA:8B:52:3A:FA` (keystore at `~/.android/debug.keystore`).
   - Legacy key (prior to Sep 29, 2026): `D6:7B:BD:1C:48:92:D4:FC:7F:D5:1F:D1:CB:22:79:B5:6F:C8:AD:9C`.
   - Both must be registered as Android OAuth 2.0 Client IDs in Google Cloud Console under `com.techyfi.pos` for Google Drive backup/restore.
 - Database version: `38` (v15→16 reminder tracking, v16→17 purchasePriceAtSale snapshot, v17→18 return refund-splitting, v18→19 register shift states, v19→20 due reminders, v20→21 unified customers CRM, v21→22 users RBAC, v24→25 sale audit logs, v33→34, v34→35, v35→36, v36→37, and v37→38 cleaning legacy voucher phone fallback with nullable customerPhone support).
-- Current build: `Techyfi-POS-Final-V16-10-2026.apk` (versionCode 220957) - R8 minified and resource-shrunk, comprehensive Label Printing Audit hardening (LBL-01 to LBL-30), high-resolution hardware printhead rasterization (203 DPI and 300 DPI), EAN-13 / EAN-8 validation and auto-recommendation, multi-up roll printing (2 and 3 across), 5 industry preset templates, per-product batch quantity steppers with 500-label cap, sticky preview headers, full Bengali and English localization, and 100% test suite pass (249/249 unit tests).
+- Current build: `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220970) - R8 minified and resource-shrunk, streamlined single-row list card and compact 3-row grid card layout matching interactive preview with 100% fidelity, complete image placeholder hiding when null, 5-bar cyan laser holographic code stamps, and real device verified.
 - This is the project's only mind map and the single source of truth for architecture, workflows, limitations, business rules, release metadata, and verification history.
 
 ## Primary code map
