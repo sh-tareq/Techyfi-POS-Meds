@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-21 (app version 2.6.92-Final-V21-10-2026, build `Techyfi-POS-Final-V21-10-2026.apk`; versionCode 220968; DB schema version 38)
+Last updated: 2026-10-21 (app version 2.6.93-Final-V21-10-2026, build `Techyfi-POS-Final-V21-10-2026.apk`; versionCode 220969; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -370,19 +370,25 @@ mindmap
         Dual View Switcher (☰ List vs ⊞ 2-Column Grid)
         Add Product is a separate floating action button, not part of the toolbar row
       High-Density Product Cards & Workflows
+        Full-Width Product Title & Direct Stock Check
+          Tapping product name directly opens HardwareStockCheckDialog (Stock Adjustment & Audit)
+          Title wraps cleanly up to 2 lines across full card width (zero premature clipping or truncation)
+        Monospace Barcode Hologram & Code Generator
+          Monospace #SKU/Barcode chip with animated Realistic3DHologramLaserCodeIcon (12dp)
+          Tapping barcode chip directly opens ProductCodeImageDialog (Thermal Label & Barcode/QR Generator)
+        Adaptive Product Image Full-View Modal (EnlargedImageDialog)
+          Tapping available thumbnail opens full-view high-resolution image modal with title, barcode, and price
+          Thumbnail box stays completely hidden when no image is uploaded (maximizing horizontal title room)
         Compact List View (ProductItemRow)
-          3D Animated Thumbnail with real-time stock status indicator dot
-          Bilingual Product Name, #SKU/Barcode monospace tag, Category tag
-          Selling Price, Stock Status Pill (no purchase cost or margin tag shown)
-          4 In-Row 1-Tap Action Buttons
-            ➕ Cart (Immediate add to cart with badge increment)
-            📦 ± Stock (Immediate quick stock adjustment modal)
-            ⊞ Code (1-tap direct barcode/QR label generator)
-            ⋮ More (Menu: Adjust Stock, Edit Product, Generate Code Image, Delete)
+          Row 1: Image Thumbnail (or Checkbox in batch mode) + Full-Width Title (tap to adjust stock) + Monospace Barcode chip (tap to generate label) + Category tag
+          Row 2: Selling Price/Unit + 3D Stock Status Pill (tap to adjust stock) + 1-Tap 🛒 Cart button + ⋮ Overflow Menu (Edit, Stock Adjust, Code, Delete)
+          Native Long-Press card activation for batch selection (redundant toolbar chip removed)
         Responsive 2-Column Grid View (ProductGridCard)
-          Thumbnail with floating stock badge (🟢 In Stock, ⚠️ Low, 🚨 Out)
-          Dual-line Title, Selling Price (no margin tag shown)
-          3 Action Buttons (➕ Cart, 📦 ±, ⋮ More) — Code/label generation is accessed by tapping the SKU capsule, not a 4th action button
+          Thumbnail (hidden when null, tap opens full-view modal)
+          Row 1: Bold 2-Line Title (tap opens stock adjustment) + 3D Stock Status Pill
+          Row 2: Monospace Barcode chip with laser code icon (tap opens label generator) + Category tag
+          Row 3: Zero-wrapping Selling Price / Unit
+          Row 4: 🛒 Cart button + 📦 ± Stock + 🏷️ Code + ⋮ Overflow Menu
       Custom Category Manager (inside Add/Edit Product form)
         User-defined, icon + bilingual (English/Bengali) categories, editable and resettable to defaults
         Only shapes the dropdown offered when creating/editing a product
@@ -3192,7 +3198,7 @@ mindmap
   - Executed full test suite: **302 passing unit tests** across all modules with zero failures and zero skipped tests.
   - Added targeted test cases verifying lockout seconds parsing, negative supplier error mapping, and query normalization.
 - **Release Deliverable**:
-  - `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220968, versionName "2.6.92-Final-V21-10-2026"), R8 minified and resource-shrunk, signed with the debug keystore and prepared as an in-place update for existing installations in the project root directory.
+  - `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220969, versionName "2.6.93-Final-V21-10-2026"), R8 minified and resource-shrunk, signed with the debug keystore and prepared as an in-place update for existing installations in the project root directory.
 
 ## Maintenance note
 

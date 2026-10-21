@@ -946,38 +946,6 @@ fun ProductsScreen(
                             }
                         }
 
-                        // 2. Batch Select Mode Chip
-                        if (canEdit || canDelete) {
-                            Surface(
-                                onClick = {
-                                    batchSelectMode = !batchSelectMode
-                                    if (!batchSelectMode) selectedBarcodes.clear()
-                                },
-                                shape = RoundedCornerShape(20.dp),
-                                color = if (batchSelectMode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                border = BorderStroke(1.dp, if (batchSelectMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                                modifier = Modifier.height(48.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (batchSelectMode) Icons.Default.CheckCircle else Icons.Default.Checklist,
-                                        contentDescription = stringResource(R.string.products_batch_operations_cd),
-                                        tint = if (batchSelectMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        text = if (batchSelectMode) stringResource(R.string.products_exit_batch) else stringResource(R.string.products_batch_select),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (batchSelectMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                        }
 
                         // 3. Stock Audit History Chip
                         Surface(
@@ -4417,7 +4385,8 @@ fun ProductItemRow(
                                 alignment = LineHeightStyle.Alignment.Center,
                                 trim = LineHeightStyle.Trim.None
                             )
-                        )
+                        ),
+                        modifier = Modifier.clickable { onAdjustStock() }
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -4596,16 +4565,11 @@ fun ProductItemRow(
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-            // Row 1: Left (Thumbnail + Bangla Title + SKU Capsule) | Right (3D Stock Pill)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+                // Row 1: Left (Thumbnail + Title + SKU Capsule + Category)
                 Row(
-                    modifier = Modifier.weight(1f, fill = false),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (isSelectionMode) {
                         Checkbox(
@@ -4617,7 +4581,7 @@ fun ProductItemRow(
                     if (productImage != null) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(44.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
@@ -4633,7 +4597,10 @@ fun ProductItemRow(
                         }
                     }
 
-                    Column(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
                         Text(
                             text = product.name,
                             fontWeight = FontWeight.Bold,
@@ -4642,18 +4609,21 @@ fun ProductItemRow(
                             overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurface,
                             style = TextStyle(
-                                lineHeight = 20.sp,
+                                lineHeight = 19.sp,
                                 platformStyle = PlatformTextStyle(includeFontPadding = false),
                                 lineHeightStyle = LineHeightStyle(
                                     alignment = LineHeightStyle.Alignment.Center,
                                     trim = LineHeightStyle.Trim.None
                                 )
-                            )
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onAdjustStock() }
                         )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(top = 3.dp)
+                            modifier = Modifier.padding(top = 2.dp)
                         ) {
                             Surface(
                                 onClick = onGenerateCode,
@@ -4666,7 +4636,7 @@ fun ProductItemRow(
                                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                 ) {
-                                    Realistic3DHologramLaserCodeIcon(size = 11.dp)
+                                    Realistic3DHologramLaserCodeIcon(size = 12.dp)
                                     Text(
                                         text = "#${product.barcode}",
                                         fontSize = 10.sp,
@@ -4692,147 +4662,112 @@ fun ProductItemRow(
                     }
                 }
 
-                // 3D Stock Status Pill
-                Surface(
-                    onClick = onAdjustStock,
-                    shape = RoundedCornerShape(999.dp),
-                    color = when {
-                        isOut -> Color(0xFFFEE2E2)
-                        isLow -> Color(0xFFFEF3C7)
-                        else -> Color(0xFFDCFCE7)
-                    },
-                    border = BorderStroke(1.dp, when {
-                        isOut -> Color(0xFFFECACA)
-                        isLow -> Color(0xFFFDE68A)
-                        else -> Color(0xFFA7F3D0)
-                    }),
-                    modifier = Modifier.padding(start = 6.dp)
+                // Row 2: Left (Price/Unit) | Right (Stock Status Pill + 🛒 Cart + ⋮ Menu)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.5.dp),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        when {
-                            isOut -> Realistic3DRubyPulsingAlertOrb(size = 7.dp)
-                            isLow -> Realistic3DAmberHazardDiamond(size = 7.dp)
-                            else -> Realistic3DGlowingEmeraldSphere(size = 7.dp)
-                        }
                         Text(
-                            text = when {
-                                isOut -> stringResource(R.string.products_stock_pill_out)
-                                isLow -> stringResource(R.string.products_stock_pill_low, sStr)
-                                else -> stringResource(R.string.products_stock_pill_qty_unit, sStr, product.unit)
-                            },
-                            fontSize = 10.sp,
+                            text = formatTaka(product.sellingPrice),
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF047857),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            softWrap = false
+                        )
+                        Text(
+                            text = "/ ${product.unit.ifBlank { stringResource(R.string.unit_pcs_default) }}",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            softWrap = false
+                        )
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Stock Status Pill
+                        Surface(
+                            onClick = onAdjustStock,
+                            shape = RoundedCornerShape(999.dp),
                             color = when {
-                                isOut -> Color(0xFFB91C1C)
-                                isLow -> Color(0xFFB45309)
-                                else -> Color(0xFF047857)
+                                isOut -> Color(0xFFFEE2E2)
+                                isLow -> Color(0xFFFEF3C7)
+                                else -> Color(0xFFDCFCE7)
+                            },
+                            border = BorderStroke(1.dp, when {
+                                isOut -> Color(0xFFFECACA)
+                                isLow -> Color(0xFFFDE68A)
+                                else -> Color(0xFFA7F3D0)
+                            })
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                when {
+                                    isOut -> Realistic3DRubyPulsingAlertOrb(size = 7.dp)
+                                    isLow -> Realistic3DAmberHazardDiamond(size = 7.dp)
+                                    else -> Realistic3DGlowingEmeraldSphere(size = 7.dp)
+                                }
+                                Text(
+                                    text = when {
+                                        isOut -> stringResource(R.string.products_stock_pill_out)
+                                        isLow -> stringResource(R.string.products_stock_pill_low, sStr)
+                                        else -> stringResource(R.string.products_stock_pill_qty_unit, sStr, product.unit)
+                                    },
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = when {
+                                        isOut -> Color(0xFFB91C1C)
+                                        isLow -> Color(0xFFB45309)
+                                        else -> Color(0xFF047857)
+                                    }
+                                )
                             }
+                        }
+
+                        // 3D Cart Button
+                        Button(
+                            onClick = onAddToCart,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Realistic3DSupermarketCartIcon(size = 14.dp)
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.cart), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        // Menu Button
+                        ProductOverflowMenu(
+                            productName = product.name,
+                            onEdit = onEdit,
+                            onAdjustStock = onAdjustStock,
+                            onGenerateCode = onGenerateCode,
+                            onDelete = onDelete,
+                            modifier = Modifier.size(36.dp)
                         )
                     }
                 }
             }
-
-            // Row 2: Left (Price/Unit) | Right (Action Dock: [🛒 Cart], [📦 ± Stock], [🏷️ Code], [⋮])
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = formatTaka(product.sellingPrice),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF047857),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        softWrap = false
-                    )
-                    Text(
-                        text = "/ ${product.unit.ifBlank { stringResource(R.string.unit_pcs_default) }}",
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        softWrap = false
-                    )
-                }
-
-                // Micro-Action Dock
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // 1. 3D Cart Button
-                    Button(
-                        onClick = onAddToCart,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = Color.White
-                        ),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                        modifier = Modifier.height(48.dp)
-                    ) {
-                        Realistic3DSupermarketCartIcon(size = 15.dp)
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.cart), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    // 2. 3D ± Stock Button
-                    Surface(
-                        onClick = onAdjustStock,
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFEEF2FF),
-                        border = BorderStroke(1.dp, Color(0xFFC7D2FE)),
-                        modifier = Modifier.height(48.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        ) {
-                            Realistic3DKraftStockBoxIcon(size = 14.dp)
-                            Spacer(Modifier.width(3.dp))
-                            Text(stringResource(R.string.products_adjust_stock_pm), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4F46E5))
-                        }
-                    }
-
-                    // 3. 3D Holographic Code Button
-                    Surface(
-                        onClick = onGenerateCode,
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Realistic3DHologramLaserCodeIcon(size = 15.dp)
-                        }
-                    }
-
-                    // 4. Menu Button
-                    ProductOverflowMenu(
-                        productName = product.name,
-                        onEdit = onEdit,
-                        onAdjustStock = onAdjustStock,
-                        onGenerateCode = onGenerateCode,
-                        onDelete = onDelete,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-            }
         }
     }
-}
 }
 
 fun getLocalizedCategoryName(category: String, isBn: Boolean = com.example.techyfipos.utils.isAppBangla()): String {
@@ -4962,7 +4897,7 @@ private fun ProductGridCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                // Product Title (Left, Bold, 2 lines max with Bangla support)
+                // Product Title (Left, Bold, 2 lines max with Bangla support, clickable for stock adjustment)
                 Text(
                     text = product.name,
                     fontWeight = FontWeight.Bold,
@@ -4974,6 +4909,7 @@ private fun ProductGridCard(
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 6.dp)
+                        .clickable { onAdjustStock() }
                 )
 
                 // Stock Badge Pill (Right, clickable for stock adjustment)

@@ -1,0 +1,4647 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techyfi POS - Products Screen Redesign Interactive UI/UX Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-light: #6366F1;
+      --primary-glow: rgba(99, 102, 241, 0.4);
+      --primary-subtle: rgba(79, 70, 229, 0.12);
+      
+      --emerald: #10B981;
+      --emerald-dark: #059669;
+      --emerald-glow: rgba(16, 185, 129, 0.35);
+      --emerald-subtle: rgba(16, 185, 129, 0.12);
+      
+      --amber: #F59E0B;
+      --amber-dark: #D97706;
+      --amber-glow: rgba(245, 158, 11, 0.35);
+      --amber-subtle: rgba(245, 158, 11, 0.12);
+      
+      --rose: #EF4444;
+      --rose-dark: #DC2626;
+      --rose-glow: rgba(239, 68, 68, 0.35);
+      --rose-subtle: rgba(239, 68, 68, 0.12);
+      
+      --sky: #0284C7;
+      --violet: #8B5CF6;
+      --indigo-dark: #1E1B4B;
+      
+      --bg-base: #0B0F19;
+      --bg-surface: #111827;
+      --bg-card: #182234;
+      --bg-card-hover: #1F2E45;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(99, 102, 241, 0.35);
+      
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-dim: #64748B;
+      
+      --radius-xs: 6px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --radius-full: 9999px;
+      
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.25);
+      --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.35);
+      --shadow-lg: 0 14px 36px rgba(0, 0, 0, 0.5);
+      --shadow-3d: 0 12px 24px -6px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      
+      --font-latin: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-bangla: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-base: #F1F5F9;
+      --bg-surface: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F8FAFC;
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --border-highlight: rgba(79, 70, 229, 0.35);
+      
+      --text-main: #0F172A;
+      --text-muted: #475569;
+      --text-dim: #94A3B8;
+      
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.12);
+      --shadow-3d: 0 8px 20px -4px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      --indigo-dark: #2E2870;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: var(--font-latin);
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding: 24px 16px 60px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    [data-lang="bn"] body,
+    [data-lang="bn"] .bn-font {
+      font-family: var(--font-bangla);
+    }
+
+    .container {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Top Control Hub */
+    .preview-header {
+      text-align: center;
+      margin-bottom: 24px;
+      width: 100%;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-subtle);
+      border: 1px solid var(--border-highlight);
+      color: var(--primary-light);
+      padding: 5px 14px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1.title {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #CBD5E1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    [data-theme="light"] h1.title {
+      background: linear-gradient(135deg, #0F172A 0%, #334155 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 14.5px;
+      max-width: 780px;
+      margin: 0 auto 20px;
+      line-height: 1.6;
+    }
+
+    /* Interactive Toolbar */
+    .toolbar-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 14px 20px;
+      margin-bottom: 28px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(16px);
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .control-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .segmented-control {
+      display: inline-flex;
+      background: rgba(0, 0, 0, 0.15);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 3px;
+      gap: 3px;
+    }
+
+    [data-theme="light"] .segmented-control {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .segment-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .segment-btn:hover {
+      color: var(--text-main);
+    }
+
+    .segment-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px var(--primary-glow);
+    }
+
+    .pill-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .pill-btn:hover {
+      border-color: var(--primary-light);
+      transform: translateY(-1px);
+    }
+
+    /* Comparison Area */
+    .preview-stage {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 32px;
+      justify-items: center;
+      width: 100%;
+    }
+
+    @media (min-width: 1080px) {
+      .preview-stage.side-by-side {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+    }
+
+    /* Device Mockup Frames */
+    .device-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 440px;
+    }
+
+    .device-wrapper.tablet-view {
+      max-width: 920px;
+    }
+
+    .device-header-tag {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 0 8px;
+    }
+
+    .tag-title {
+      font-size: 14px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tag-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+    }
+
+    .tag-badge.old {
+      background: rgba(239, 68, 68, 0.15);
+      color: #F87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .tag-badge.new {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34D399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    /* Phone Shell */
+    .phone-frame {
+      width: 100%;
+      background: var(--bg-surface);
+      border-radius: 36px;
+      border: 8px solid #1E293B;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 820px;
+      position: relative;
+    }
+
+    [data-theme="light"] .phone-frame {
+      border-color: #CBD5E1;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Status Bar */
+    .phone-status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 24px 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* App Top Bar */
+    .app-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .app-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title-text-wrap h2 {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sku-badge {
+      background: var(--primary-subtle);
+      color: var(--primary-light);
+      border: 1px solid var(--border-highlight);
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+    }
+
+    .top-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-action-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .icon-action-btn:hover {
+      transform: scale(1.05);
+      border-color: var(--primary-light);
+    }
+
+    .icon-action-btn:active {
+      transform: scale(0.94);
+    }
+
+    .alert-dot {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 16px;
+      height: 16px;
+      background: var(--rose);
+      color: #FFFFFF;
+      font-size: 9.5px;
+      font-weight: 900;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--bg-surface);
+      box-shadow: 0 2px 6px var(--rose-glow);
+    }
+
+    .cart-pill-btn {
+      height: 40px;
+      padding: 0 12px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+      color: #FFFFFF;
+      border: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 12px var(--primary-glow);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .cart-pill-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px var(--primary-glow);
+    }
+
+    .cart-pill-btn:active {
+      transform: scale(0.95);
+    }
+
+    .cart-badge-count {
+      background: var(--rose);
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: var(--radius-full);
+      min-width: 18px;
+      text-align: center;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .cart-badge-bounce {
+      animation: cartPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes cartPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.4) rotate(-8deg); }
+      100% { transform: scale(1); }
+    }
+
+    /* ===================================================
+       NEW REDESIGNED COMPACT SUB-HEADER & STAT STRIP
+       =================================================== */
+    .mini-stat-bar {
+      background: linear-gradient(135deg, #161D31 0%, #1E1B4B 100%);
+      border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    [data-theme="light"] .mini-stat-bar {
+      background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+      border-bottom-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .mini-stat-bar:hover {
+      background: linear-gradient(135deg, #1C243D 0%, #262261 100%);
+    }
+
+    .stat-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stat-taka-val {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #FFFFFF;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    [data-theme="light"] .stat-taka-val {
+      color: #1E1B4B;
+    }
+
+    .stat-taka-label {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #A5B4FC;
+    }
+
+    [data-theme="light"] .stat-taka-label {
+      color: #4F46E5;
+    }
+
+    .stat-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mini-health-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      font-size: 10.5px;
+      font-weight: 800;
+    }
+
+    .mini-health-pill.emerald {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34D399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .mini-health-pill.amber {
+      background: rgba(245, 158, 11, 0.2);
+      color: #FBBF24;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .mini-health-pill.rose {
+      background: rgba(239, 68, 68, 0.2);
+      color: #F87171;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+
+    .expand-chevron {
+      color: #A5B4FC;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .expand-chevron.open {
+      transform: rotate(180deg);
+    }
+
+    /* Expandable Executive Breakdown Drawer */
+    .stat-drawer-detail {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      background: #111827;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    [data-theme="light"] .stat-drawer-detail {
+      background: #F8FAFC;
+    }
+
+    .stat-drawer-detail.open {
+      max-height: 220px;
+    }
+
+    .drawer-grid {
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .drawer-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+    }
+
+    .drawer-card-title {
+      font-size: 10.5px;
+      color: var(--text-dim);
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    .drawer-card-val {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    /* Command & Search Bar */
+    .command-hub {
+      padding: 8px 12px;
+      background: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .search-input-wrap {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-icon-left {
+      position: absolute;
+      left: 12px;
+      pointer-events: none;
+      color: var(--text-dim);
+    }
+
+    .search-input-field {
+      width: 100%;
+      height: 40px;
+      padding: 0 42px 0 38px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .search-input-field:focus {
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px var(--primary-subtle);
+      background: var(--bg-surface);
+    }
+
+    .scan-btn-right {
+      position: absolute;
+      right: 6px;
+      width: 30px;
+      height: 30px;
+      border-radius: var(--radius-sm);
+      background: var(--primary-subtle);
+      border: 1px solid var(--border-highlight);
+      color: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .scan-btn-right:hover {
+      transform: scale(1.1);
+    }
+
+    .hub-action-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .hub-action-btn:hover {
+      border-color: var(--primary-light);
+      color: var(--text-main);
+    }
+
+    .hub-action-btn.active {
+      background: var(--primary-subtle);
+      border-color: var(--primary-light);
+      color: var(--primary-light);
+    }
+
+    /* Category & Filter Strip */
+    .filter-scroll-strip {
+      padding: 6px 12px;
+      background: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .filter-scroll-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-chip-btn {
+      white-space: nowrap;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      font-size: 11.5px;
+      font-weight: 700;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .filter-chip-btn:hover {
+      border-color: var(--primary-light);
+      color: var(--text-main);
+    }
+
+    .filter-chip-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px var(--primary-glow);
+    }
+
+    .chip-count-tag {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 1px 6px;
+      border-radius: var(--radius-full);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .filter-chip-btn:not(.active) .chip-count-tag {
+      background: rgba(0, 0, 0, 0.15);
+      color: var(--text-dim);
+    }
+
+    [data-theme="light"] .filter-chip-btn:not(.active) .chip-count-tag {
+      background: rgba(0, 0, 0, 0.08);
+      color: var(--text-muted);
+    }
+
+    /* Product Scroll Body */
+    .products-container {
+      flex: 1;
+      padding: 8px 12px 70px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* Grid Layout Mode */
+    .products-container.grid-layout {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    /* ===================================================
+       COMPACT PRODUCT ROW (LIST VIEW)
+       =================================================== */
+    .product-row-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .product-row-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-highlight);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .product-thumb-box {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      background: rgba(79, 70, 229, 0.08);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .product-thumb-box:hover {
+      transform: scale(1.06);
+      border-color: var(--primary-light);
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    .product-info-col {
+      flex: 1;
+      min-width: 0;
+      padding-right: 6px;
+    }
+
+    .product-name-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.38;
+      margin-bottom: 3px;
+      word-break: break-word;
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+
+    .product-name-title:hover {
+      color: var(--primary-light);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    [data-lang="bn"] .product-name-title {
+      font-size: 13.5px;
+      line-height: 1.45;
+    }
+
+    .product-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .barcode-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-code);
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      border: 0.5px solid var(--border-subtle);
+      padding: 1.5px 6px 1.5px 4px;
+      border-radius: var(--radius-xs);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .barcode-chip:hover {
+      background: var(--primary-subtle);
+      border-color: var(--primary-light);
+      color: var(--primary-light);
+      transform: translateY(-0.5px);
+      box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
+    }
+
+    [data-theme="light"] .barcode-chip {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.08);
+      color: var(--text-muted);
+    }
+
+    [data-theme="light"] .barcode-chip:hover {
+      background: var(--primary-subtle);
+      border-color: var(--primary-light);
+      color: var(--primary);
+      box-shadow: 0 2px 6px rgba(79, 70, 229, 0.15);
+    }
+
+    /* Photorealistic 3D Holographic Barcode Laser Stamp (Realistic3DHologramLaserCodeIcon) */
+    .barcode-laser-icon {
+      position: relative;
+      width: 13px;
+      height: 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border-radius: 2.5px;
+      background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+      box-shadow: 0 1px 3px rgba(37, 99, 235, 0.4), inset 0 0.5px 0.5px rgba(255, 255, 255, 0.6);
+      overflow: hidden;
+    }
+
+    .barcode-laser-bars {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      height: 7.5px;
+      width: 9.5px;
+    }
+
+    .barcode-laser-bar {
+      height: 100%;
+      background: #FFFFFF;
+      border-radius: 0.3px;
+    }
+
+    .barcode-laser-bar.b-thin { width: 0.9px; background: #93C5FD; }
+    .barcode-laser-bar.b-med { width: 1.2px; background: #FFFFFF; }
+    .barcode-laser-bar.b-thick { width: 1.6px; background: #FFFFFF; }
+
+    .barcode-laser-beam {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 3.5px;
+      background: linear-gradient(90deg, transparent 0%, rgba(103, 232, 249, 0.5) 30%, #FFFFFF 50%, rgba(103, 232, 249, 0.5) 70%, transparent 100%);
+      box-shadow: 0 0 3px #67E8F9, 0 0 5px rgba(103, 232, 249, 0.8);
+      animation: laserSweep 1.8s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes laserSweep {
+      0% {
+        transform: translateX(-5px);
+        opacity: 0;
+      }
+      15% {
+        opacity: 1;
+      }
+      85% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateX(15px);
+        opacity: 0;
+      }
+    }
+
+    .category-tag {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--primary-light);
+    }
+
+    /* Price & Stock Column */
+    .product-data-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .product-price-val {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--emerald-dark);
+      letter-spacing: -0.2px;
+    }
+
+    [data-theme="dark"] .product-price-val {
+      color: #34D399;
+    }
+
+    .stock-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+    }
+
+    .stock-badge-pill.in-stock {
+      background: var(--emerald-subtle);
+      color: #059669;
+      border: 0.5px solid rgba(16, 185, 129, 0.3);
+    }
+
+    [data-theme="dark"] .stock-badge-pill.in-stock {
+      color: #34D399;
+    }
+
+    .stock-badge-pill.low-stock {
+      background: var(--amber-subtle);
+      color: #D97706;
+      border: 0.5px solid rgba(245, 158, 11, 0.3);
+    }
+
+    [data-theme="dark"] .stock-badge-pill.low-stock {
+      color: #FBBF24;
+    }
+
+    .stock-badge-pill.out-stock {
+      background: var(--rose-subtle);
+      color: #DC2626;
+      border: 0.5px solid rgba(239, 68, 68, 0.3);
+    }
+
+    [data-theme="dark"] .stock-badge-pill.out-stock {
+      color: #F87171;
+    }
+
+    /* Quick Action Button on Row */
+    .quick-add-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      background: var(--primary);
+      border: none;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 2px 6px var(--primary-glow);
+    }
+
+    .quick-add-btn:hover {
+      transform: scale(1.08);
+      background: var(--primary-light);
+    }
+
+    .quick-add-btn:active {
+      transform: scale(0.9);
+    }
+
+    /* ===================================================
+       COMPACT PRODUCT GRID CARD
+       =================================================== */
+    .product-grid-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .product-grid-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-highlight);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .grid-top-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .grid-icon-wrap {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-sm);
+      background: rgba(79, 70, 229, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .grid-icon-wrap:hover {
+      transform: scale(1.08);
+      box-shadow: 0 4px 10px var(--primary-glow);
+    }
+
+    .grid-card-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.35;
+      min-height: 34px;
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+
+    .grid-card-title:hover {
+      color: var(--primary-light);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .grid-card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10.5px;
+    }
+
+    .grid-card-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 2px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .grid-price-text {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--emerald-dark);
+    }
+
+    [data-theme="dark"] .grid-price-text {
+      color: #34D399;
+    }
+
+    /* Floating Action Button (+ New Product) */
+    .fab-add-product {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-full);
+      background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+      color: #FFFFFF;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 24px var(--emerald-glow);
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 30;
+    }
+
+    .fab-add-product:hover {
+      transform: scale(1.08) rotate(90deg);
+      box-shadow: 0 12px 28px var(--emerald-glow);
+    }
+
+    .fab-add-product:active {
+      transform: scale(0.92);
+    }
+
+    /* Modal / Bottom Sheet Preview */
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 50;
+      display: none;
+      align-items: flex-end;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .bottom-sheet {
+      width: 100%;
+      max-height: 84vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-surface);
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      border-top: 1px solid var(--border-highlight);
+      padding: 14px 16px 16px;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+    }
+
+    .modal-overlay.active .bottom-sheet {
+      transform: translateY(0);
+    }
+
+    .sheet-handle {
+      width: 38px;
+      height: 4px;
+      background: var(--text-dim);
+      border-radius: var(--radius-full);
+      margin: 0 auto 12px;
+      opacity: 0.4;
+      flex-shrink: 0;
+    }
+
+    .sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .sheet-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sheet-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .matching-tag {
+      background: var(--primary-subtle);
+      border: 1px solid var(--border-highlight);
+      color: var(--primary-light);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+    }
+
+    .sheet-clear-btn {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #EF4444;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .sheet-clear-btn:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    .sheet-scroll-body {
+      overflow-y: auto;
+      flex: 1;
+      padding-right: 4px;
+      margin-right: -4px;
+      overscroll-behavior: contain;
+    }
+
+    .filter-section-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      margin-top: 12px;
+    }
+
+    .filter-pills-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .filter-pills-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-pill-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 5px 11px;
+      border-radius: var(--radius-md);
+      font-size: 11.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+
+    .filter-pill-chip:hover {
+      border-color: var(--primary-light);
+    }
+
+    .filter-pill-chip.active {
+      background: var(--primary);
+      border-color: var(--primary-light);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px var(--primary-glow);
+    }
+
+    .stock-grid-2x2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stock-filter-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 42px;
+    }
+
+    .stock-filter-card:hover {
+      border-color: var(--primary-light);
+    }
+
+    .stock-filter-card.active {
+      border-color: var(--primary);
+      background: var(--primary-subtle);
+    }
+
+    .stock-filter-card.active.emerald {
+      border-color: var(--emerald);
+      background: var(--emerald-subtle);
+    }
+
+    .stock-filter-card.active.amber {
+      border-color: var(--amber);
+      background: var(--amber-subtle);
+    }
+
+    .stock-filter-card.active.rose {
+      border-color: var(--rose);
+      background: var(--rose-subtle);
+    }
+
+    .stock-card-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .stock-card-count {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    .sort-grid-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .sort-grid-row-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .sort-tile {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 7px 4px;
+      text-align: center;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+    }
+
+    .sort-tile:hover {
+      border-color: var(--primary-light);
+      color: var(--text-main);
+    }
+
+    .sort-tile.active {
+      background: var(--primary-subtle);
+      border-color: var(--primary);
+      color: var(--primary-light);
+      font-weight: 800;
+    }
+
+    .price-range-inputs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .price-input-box {
+      flex: 1;
+      height: 42px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 0 12px;
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 700;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .price-input-box:focus {
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .price-range-separator {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-dim);
+    }
+
+    .toggle-row-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 9px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+
+    .toggle-switch {
+      width: 42px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-full);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.25s ease;
+      flex-shrink: 0;
+    }
+
+    [data-theme="light"] .toggle-switch {
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .toggle-switch.active {
+      background: var(--emerald);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .toggle-switch.active::after {
+      transform: translateX(18px);
+    }
+
+    .sheet-sticky-footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .btn-sheet-reset {
+      flex: 0.9;
+      height: 44px;
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      border-radius: var(--radius-md);
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-sheet-reset:hover {
+      border-color: var(--rose);
+      color: var(--rose);
+    }
+
+    .btn-sheet-apply {
+      flex: 1.5;
+      height: 44px;
+      background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+      border: none;
+      color: #FFFFFF;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px var(--emerald-glow);
+      transition: all 0.2s ease;
+    }
+
+    .btn-sheet-apply:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px var(--emerald-glow);
+    }
+
+    .hub-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: var(--primary);
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 900;
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--bg-surface);
+      box-shadow: 0 2px 6px var(--primary-glow);
+    }
+
+    /* Quick Action Dropdown in Top Bar */
+    .quick-action-anchor {
+      position: relative;
+    }
+
+    .quick-actions-dropdown {
+      position: absolute;
+      top: 46px;
+      right: -30px;
+      width: 275px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-highlight);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(24px);
+      padding: 8px;
+      z-index: 100;
+      display: none;
+      opacity: 0;
+      transform: translateY(-6px) scale(0.97);
+      transition: all 0.2s cubic-bezier(0.34, 1.4, 0.64, 1);
+    }
+
+    .quick-actions-dropdown.open {
+      display: block;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .dropdown-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px 8px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 6px;
+    }
+
+    .dropdown-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .dropdown-badge {
+      font-size: 9.5px;
+      font-weight: 800;
+      background: var(--primary-subtle);
+      color: var(--primary-light);
+      padding: 2px 6px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-highlight);
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      min-height: 44px;
+    }
+
+    .dropdown-item:hover {
+      background: var(--primary-subtle);
+    }
+
+    .dropdown-item-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .dropdown-item-icon.excel {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #10B981;
+    }
+
+    .batch-mode-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%);
+      border: 1px solid var(--border-highlight);
+      border-radius: var(--radius-md);
+      padding: 7px 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
+
+    .batch-banner-text {
+      font-size: 12px;
+      font-weight: 800;
+      color: #A5B4FC;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .batch-banner-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .batch-banner-btn {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: var(--radius-xs);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .batch-banner-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .batch-banner-btn.exit {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #FCA5A5;
+    }
+
+    .batch-select-checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--border-highlight);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+      color: #FFFFFF;
+      background: rgba(0, 0, 0, 0.3);
+      flex-shrink: 0;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .batch-select-checkbox.checked {
+      background: var(--primary);
+      border-color: var(--primary-light);
+      box-shadow: 0 0 8px var(--primary-glow);
+    }
+
+    .dropdown-item-icon.audit {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: #F59E0B;
+    }
+
+    .dropdown-item-icon.print {
+      background: rgba(2, 132, 199, 0.15);
+      border-color: rgba(2, 132, 199, 0.3);
+      color: #38BDF8;
+    }
+
+    .dropdown-item-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .dropdown-item-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.3;
+    }
+
+    .dropdown-item-subtitle {
+      font-size: 10px;
+      color: var(--text-muted);
+      line-height: 1.2;
+    }
+
+    .item-arrow {
+      color: var(--text-dim);
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    /* 3D Visual Rendering Keyframes */
+    @keyframes float3D {
+      0% { transform: translateY(0px) rotateY(0deg); }
+      50% { transform: translateY(-3px) rotateY(4deg); }
+      100% { transform: translateY(0px) rotateY(0deg); }
+    }
+
+    @keyframes pulseGlow {
+      0% { transform: scale(0.96); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(0.96); opacity: 0.8; }
+    }
+
+    .animate-3d-box {
+      animation: float3D 4s ease-in-out infinite;
+    }
+
+    .animate-3d-pulse {
+      animation: pulseGlow 2s ease-in-out infinite;
+    }
+
+    /* Toast Notification */
+    .toast-popup {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: var(--emerald-dark);
+      color: #FFFFFF;
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 6px 20px var(--emerald-glow);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 60;
+    }
+
+    .toast-popup.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Comparison side-by-side note cards */
+    .feature-comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      width: 100%;
+      margin-top: 36px;
+    }
+
+    .feature-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .feature-icon-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .feature-card h3 {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .feature-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Centered Material 3 Dialog Architecture */
+    .modal-overlay.dialog-center {
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .center-dialog {
+      width: 100%;
+      max-width: 380px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-highlight);
+      border-radius: 20px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border-subtle);
+      transform: scale(0.92);
+      opacity: 0;
+      transition: all 0.25s cubic-bezier(0.34, 1.25, 0.64, 1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 86vh;
+    }
+
+    .modal-overlay.active .center-dialog {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .dialog-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dialog-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .dialog-close-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all 0.15s ease;
+    }
+
+    .dialog-close-btn:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #EF4444;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .dialog-scroll-body {
+      padding: 14px 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overscroll-behavior: contain;
+    }
+
+    .dialog-footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px 14px;
+      border-top: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      background: var(--bg-surface);
+    }
+
+    .dialog-btn-cancel {
+      flex: 1;
+      padding: 10px;
+      border-radius: var(--radius-md);
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      color: #F87171;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .dialog-btn-cancel:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .dialog-btn-save {
+      flex: 1.5;
+      padding: 10px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      color: #FFFFFF;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px var(--emerald-glow);
+      transition: all 0.2s ease;
+    }
+
+    .dialog-btn-save:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    /* Product Overview inside dialog */
+    .dialog-prod-overview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+    }
+
+    .prod-3d-box {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4F46E5 0%, #312E81 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+    }
+
+    .dialog-prod-name {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .dialog-section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px;
+    }
+
+    .dialog-section-card.highlight {
+      background: var(--primary-subtle);
+      border-color: var(--border-highlight);
+    }
+
+    .dialog-sublabel {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 2px;
+    }
+
+    .dialog-huge-qty {
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--text-main);
+      letter-spacing: -0.3px;
+    }
+
+    /* Financial card 3 columns */
+    .dialog-financial-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+    }
+
+    .fin-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+    }
+
+    .fin-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .fin-val {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .fin-val.margin {
+      color: #10B981;
+    }
+
+    .fin-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border-subtle);
+    }
+
+    .dialog-date-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+    }
+
+    .dialog-text-input {
+      width: 100%;
+      height: 36px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0 10px;
+      color: var(--text-main);
+      font-size: 11.5px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .dialog-text-input:focus {
+      border-color: var(--primary-light);
+    }
+
+    /* Delta pill */
+    .delta-pill {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+    .delta-pill.positive {
+      background: var(--emerald-subtle);
+      color: #10B981;
+      border: 0.5px solid rgba(16, 185, 129, 0.3);
+    }
+    .delta-pill.negative {
+      background: var(--rose-subtle);
+      color: #EF4444;
+      border: 0.5px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* Stepper row */
+    .stepper-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stepper-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      color: var(--text-main);
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .stepper-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--primary-light);
+    }
+
+    .stepper-btn.plus {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #FFFFFF;
+      border: none;
+      box-shadow: 0 2px 8px var(--emerald-glow);
+    }
+
+    .stepper-btn.plus:hover {
+      filter: brightness(1.1);
+    }
+
+    .stepper-input {
+      flex: 1;
+      height: 44px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-highlight);
+      border-radius: var(--radius-md);
+      color: var(--text-main);
+      font-size: 20px;
+      font-weight: 800;
+      text-align: center;
+      font-family: var(--font-latin);
+    }
+
+    .stepper-chips-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .stepper-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .stepper-chip:hover {
+      background: var(--primary-subtle);
+      border-color: var(--primary-light);
+      color: var(--primary-light);
+    }
+
+    .stepper-chip.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      border-color: var(--primary);
+    }
+
+    /* Thermal Label Sticker Preview */
+    .thermal-label-container {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px dashed var(--border-highlight);
+      border-radius: var(--radius-md);
+      padding: 14px 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    [data-theme="light"] .thermal-label-container {
+      background: #F8FAFC;
+    }
+
+    .thermal-label-preview {
+      background: #FFFFFF;
+      color: #000000;
+      width: 100%;
+      max-width: 270px;
+      border-radius: 8px;
+      padding: 10px 14px 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .thermal-store-name {
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #1E293B;
+      margin-bottom: 2px;
+    }
+
+    .thermal-prod-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 4px;
+      line-height: 1.3;
+      max-height: 32px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .thermal-barcode-graphic {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 4px 0;
+      min-height: 48px;
+    }
+
+    .thermal-code-number {
+      font-family: var(--font-code);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #334155;
+      margin-top: 2px;
+    }
+
+    .thermal-bottom-meta {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 0.5px dashed #CBD5E1;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #1E293B;
+    }
+
+    /* Enlarged Product Image Full View */
+    .enlarged-image-container {
+      width: 100%;
+      min-height: 220px;
+      max-height: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    [data-theme="light"] .enlarged-image-container {
+      background: #F1F5F9;
+      border-color: rgba(0, 0, 0, 0.1);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header & Description -->
+  <header class="preview-header">
+    <div class="badge-pill">
+      <span>✨ Techyfi POS 2.6.92 Design System</span>
+    </div>
+    <h1 class="title">Product Screen Redesign: Compact, Intuitive & 3D Animated</h1>
+    <p class="subtitle">
+      Explore the redesigned interactive preview for the Product screen. Compare the space-optimized layout, realistic 3D animated domain icons, expandable executive micro-stat strip, and seamless Bangla localization.
+    </p>
+  </header>
+
+  <!-- Interactive Control Panel -->
+  <div class="toolbar-card">
+    <!-- View Switcher -->
+    <div class="control-group">
+      <span class="control-label">Layout Mode:</span>
+      <div class="segmented-control">
+        <button class="segment-btn active" id="btnModeRedesign" onclick="setScreenView('redesign')">
+          <span>✨ Redesigned</span>
+        </button>
+        <button class="segment-btn" id="btnModeCurrent" onclick="setScreenView('current')">
+          <span>📐 Current UI</span>
+        </button>
+        <button class="segment-btn" id="btnModeCompare" onclick="setScreenView('compare')">
+          <span>⚖️ Side-by-Side</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Product Card View: List vs Grid -->
+    <div class="control-group">
+      <span class="control-label">Items View:</span>
+      <div class="segmented-control">
+        <button class="segment-btn active" id="btnViewList" onclick="setItemLayout('list')">
+          <span>☰ Compact List</span>
+        </button>
+        <button class="segment-btn" id="btnViewGrid" onclick="setItemLayout('grid')">
+          <span>⊞ Grid Cards</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Language Toggle -->
+    <div class="control-group">
+      <span class="control-label">Language:</span>
+      <div class="segmented-control">
+        <button class="segment-btn active" id="btnLangEn" onclick="setLanguage('en')">English</button>
+        <button class="segment-btn bn-font" id="btnLangBn" onclick="setLanguage('bn')">বাংলা</button>
+      </div>
+    </div>
+
+    <!-- Theme Toggle -->
+    <div class="control-group">
+      <span class="control-label">Theme:</span>
+      <button class="pill-btn" onclick="toggleTheme()" id="btnTheme">
+        <span id="themeIcon">🌙</span> <span id="themeText">Dark Mode</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Preview Stage -->
+  <main class="preview-stage" id="previewStage">
+
+    <!-- Redesigned Mockup Frame -->
+    <div class="device-wrapper" id="redesignWrapper">
+      <div class="device-header-tag">
+        <div class="tag-title">
+          <span>✨ Proposed Redesign</span>
+        </div>
+        <span class="tag-badge new">Space-Optimized (68dp Row / Expandable Stats)</span>
+      </div>
+
+      <div class="phone-frame">
+        <!-- Status Bar -->
+        <div class="phone-status-bar">
+          <span>19:15</span>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <span>5G</span>
+            <span>98%</span>
+          </div>
+        </div>
+
+        <!-- Top App Bar -->
+        <div class="app-top-bar">
+          <div class="app-title-group">
+            <!-- 3D Realistic Indigo Product Box Icon -->
+            <div class="animate-3d-box" style="width:36px; height:36px; display:flex; align-items:center; justify-content:center;">
+              <svg width="34" height="34" viewBox="0 0 48 48" fill="none">
+                <!-- Drop shadow -->
+                <ellipse cx="24" cy="44" rx="16" ry="3.5" fill="rgba(0,0,0,0.35)" filter="blur(2px)"/>
+                <!-- 3D Box Base -->
+                <path d="M24 6L40 14V34L24 42L8 34V14L24 6Z" fill="url(#boxFrontGrad)"/>
+                <!-- Top Face -->
+                <path d="M24 6L40 14L24 22L8 14L24 6Z" fill="url(#boxTopGrad)"/>
+                <!-- Left Face -->
+                <path d="M8 14L24 22V42L8 34V14Z" fill="url(#boxLeftGrad)"/>
+                <!-- Right Face -->
+                <path d="M24 22L40 14V34L24 42V22Z" fill="url(#boxRightGrad)"/>
+                <!-- Specular Tape / Accent -->
+                <path d="M22 6.5L30 10.5L18 16.5L10 12.5L22 6.5Z" fill="#818CF8" opacity="0.85"/>
+                <!-- Holographic Highlight -->
+                <line x1="24" y1="22" x2="24" y2="42" stroke="rgba(255,255,255,0.25)" stroke-width="1.2"/>
+                <defs>
+                  <linearGradient id="boxTopGrad" x1="8" y1="6" x2="40" y2="22" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#818CF8"/>
+                    <stop offset="1" stop-color="#4F46E5"/>
+                  </linearGradient>
+                  <linearGradient id="boxLeftGrad" x1="8" y1="14" x2="24" y2="42" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#4338CA"/>
+                    <stop offset="1" stop-color="#312E81"/>
+                  </linearGradient>
+                  <linearGradient id="boxRightGrad" x1="24" y1="14" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#4F46E5"/>
+                    <stop offset="1" stop-color="#3730A3"/>
+                  </linearGradient>
+                  <linearGradient id="boxFrontGrad" x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#6366F1"/>
+                    <stop offset="1" stop-color="#312E81"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <div class="title-text-wrap">
+              <h2>
+                <span data-i18n="products_title">Products</span>
+                <span class="sku-badge" id="skuCountBadge">18 SKUs</span>
+              </h2>
+            </div>
+          </div>
+
+          <div class="top-actions-group">
+            <!-- 3D Realistic Quick Action Button beside Bell Icon -->
+            <div class="quick-action-anchor">
+              <button class="icon-action-btn quick-action-btn" id="btnQuickActions" onclick="toggleQuickActionsMenu(event)" title="Quick Actions">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="url(#boltGrad3d)" stroke="#4338CA" stroke-width="1.2" stroke-linejoin="round"/>
+                  <path d="M13 3L5 13H12L11.5 17L19 11H12.5L13 3Z" fill="url(#boltSheen)" opacity="0.6"/>
+                  <defs>
+                    <linearGradient id="boltGrad3d" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#FDE047"/>
+                      <stop offset="0.5" stop-color="#F59E0B"/>
+                      <stop offset="1" stop-color="#D97706"/>
+                    </linearGradient>
+                    <linearGradient id="boltSheen" x1="5" y1="3" x2="19" y2="17" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#FFFFFF"/>
+                      <stop offset="1" stop-color="transparent"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </button>
+
+              <!-- Sleek Floating Glassmorphism Quick Actions Dropdown Menu -->
+              <div class="quick-actions-dropdown" id="quickActionsDropdown" onclick="event.stopPropagation()">
+                <div class="dropdown-header">
+                  <span class="dropdown-title" data-i18n="quick_actions_title">Quick Actions</span>
+                  <span class="dropdown-badge">⚡ POS Tools</span>
+                </div>
+                
+                <div class="dropdown-item" onclick="handleQuickAction('excel')">
+                  <div class="dropdown-item-icon excel">📊</div>
+                  <div class="dropdown-item-text">
+                    <div class="dropdown-item-title" data-i18n="qa_excel_tools">Excel Tools (.xlsx)</div>
+                    <div class="dropdown-item-subtitle" data-i18n="qa_excel_sub">Import or Export Inventory</div>
+                  </div>
+                  <span class="item-arrow">›</span>
+                </div>
+
+
+                <div class="dropdown-item" onclick="handleQuickAction('audit')">
+                  <div class="dropdown-item-icon audit">📋</div>
+                  <div class="dropdown-item-text">
+                    <div class="dropdown-item-title" data-i18n="qa_stock_audit">Stock Audit History</div>
+                    <div class="dropdown-item-subtitle" data-i18n="qa_stock_sub">Counts & adjustment logs</div>
+                  </div>
+                  <span class="item-arrow">›</span>
+                </div>
+
+                <div class="dropdown-item" onclick="handleQuickAction('print')">
+                  <div class="dropdown-item-icon print">🏷️</div>
+                  <div class="dropdown-item-text">
+                    <div class="dropdown-item-title" data-i18n="qa_print_labels">Batch Print Labels</div>
+                    <div class="dropdown-item-subtitle" data-i18n="qa_print_sub">Barcode thermal sticker roll</div>
+                  </div>
+                  <span class="item-arrow">›</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3D Realistic Brass Alert Bell -->
+            <div class="icon-action-btn" onclick="showToast('Inventory Alerts: 2 items low on stock')">
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+                <path d="M16 4C14.8954 4 14 4.89543 14 6C14 6.32623 14.0783 6.63412 14.2173 6.90606C10.6698 8.04631 8 11.2335 8 15V22L5 25V26H27V25L24 22V15C24 11.2335 21.3302 8.04631 17.7827 6.90606C17.9217 6.63412 18 6.32623 18 6C18 4.89543 17.1046 4 16 4Z" fill="url(#bellGrad)"/>
+                <path d="M13 27C13 28.6569 14.3431 30 16 30C17.6569 30 19 28.6569 19 27H13Z" fill="#D97706"/>
+                <circle cx="16" cy="10" r="1.5" fill="#FEF3C7" opacity="0.8"/>
+                <defs>
+                  <linearGradient id="bellGrad" x1="5" y1="4" x2="27" y2="26" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#FDE68A"/>
+                    <stop offset="0.4" stop-color="#F59E0B"/>
+                    <stop offset="1" stop-color="#B45309"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="alert-dot">2</div>
+            </div>
+
+            <!-- 3D Cart Capsule -->
+            <button class="cart-pill-btn" onclick="animateCartAdd()">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+              </svg>
+              <span data-i18n="cart_label">Cart</span>
+              <span class="cart-badge-count" id="cartCountTag">3</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- NEW: Sleek Compact 36dp Stat Bar with Expandable Drawer -->
+        <div class="mini-stat-bar" onclick="toggleStatDrawer()">
+          <div class="stat-bar-left">
+            <span style="font-size:13px;">📊</span>
+            <div class="stat-taka-val">
+              <span id="statTakaAmount">৳ 84,250</span>
+              <span class="stat-taka-label" data-i18n="valuation_short">Valuation</span>
+            </div>
+          </div>
+          <div class="stat-bar-right">
+            <span class="mini-health-pill emerald">14 OK</span>
+            <span class="mini-health-pill amber">2 Low</span>
+            <span class="mini-health-pill rose">2 Out</span>
+            <svg class="expand-chevron" id="statChevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Expandable Detail Drawer -->
+        <div class="stat-drawer-detail" id="statDrawerDetail">
+          <div class="drawer-grid">
+            <div class="drawer-card">
+              <div class="drawer-card-title" data-i18n="purchase_cost">Purchase Cost</div>
+              <div class="drawer-card-val" id="drawerCost">৳ 62,400</div>
+            </div>
+            <div class="drawer-card">
+              <div class="drawer-card-title" data-i18n="gross_profit">Gross Margin</div>
+              <div class="drawer-card-val" style="color:#10B981;">+35.0%</div>
+            </div>
+            <div class="drawer-card">
+              <div class="drawer-card-title" data-i18n="total_units">Total Units</div>
+              <div class="drawer-card-val" id="drawerUnits">642 pcs</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Single Command Hub: Search + 3D Scanner + Tools + Filter -->
+        <div class="command-hub">
+          <div class="search-input-wrap">
+            <svg class="search-icon-left" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" class="search-input-field" id="productSearchInput" placeholder="Search name or barcode..." oninput="handleSearch(this.value)">
+            <!-- 3D Optical Scanner Icon -->
+            <button class="scan-btn-right" onclick="showToast('Camera Barcode Scanner Launched')" title="Scan Barcode">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+                <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+                <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+                <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                <line x1="7" y1="12" x2="17" y2="12" stroke="#EF4444" stroke-width="2.5"></line>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Filter Sheet Opener with active badge -->
+          <div style="position: relative;">
+            <button class="hub-action-btn" id="btnHubFilter" onclick="openFilterSheet()" title="Filter & Sort">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              </svg>
+            </button>
+            <span class="hub-badge" id="hubFilterBadge" style="display:none;">0</span>
+          </div>
+
+          <!-- List/Grid Switcher -->
+          <button class="hub-action-btn" id="btnToggleHubView" onclick="toggleItemViewFromHub()" title="Switch View Mode">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" id="hubViewIcon">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Quick Filter Category Chips Strip -->
+        <div class="filter-scroll-strip" id="categoryChipStrip">
+          <button class="filter-chip-btn active" onclick="filterCategory('all', this)">
+            <span data-i18n="all_items">All SKUs</span>
+            <span class="chip-count-tag" id="countAllChip">18</span>
+          </button>
+          <button class="filter-chip-btn" onclick="filterCategory('low', this)">
+            <span>⚠️ <span data-i18n="low_stock">Low Stock</span></span>
+            <span class="chip-count-tag">2</span>
+          </button>
+          <button class="filter-chip-btn" onclick="filterCategory('out', this)">
+            <span>🚫 <span data-i18n="out_of_stock">Out of Stock</span></span>
+            <span class="chip-count-tag">2</span>
+          </button>
+          <button class="filter-chip-btn" onclick="filterCategory('Beverages', this)">
+            <span>🥤 Beverages</span>
+            <span class="chip-count-tag">5</span>
+          </button>
+          <button class="filter-chip-btn" onclick="filterCategory('Snacks', this)">
+            <span>🍪 Snacks</span>
+            <span class="chip-count-tag">5</span>
+          </button>
+          <button class="filter-chip-btn" onclick="filterCategory('Groceries', this)">
+            <span>🌾 Groceries</span>
+            <span class="chip-count-tag">5</span>
+          </button>
+          <button class="filter-chip-btn" onclick="filterCategory('Bakery', this)">
+            <span>🍞 Bakery</span>
+            <span class="chip-count-tag">3</span>
+          </button>
+        </div>
+
+        <!-- Product Scroll List -->
+        <div class="products-container" id="productsListContainer">
+          <!-- Dynamically Rendered Products -->
+        </div>
+
+        <!-- Compact Emerald Floating Add Button -->
+        <button class="fab-add-product" onclick="showToast('Add New Product Dialog')">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+
+        <!-- Toast Alert Popup -->
+        <div class="toast-popup" id="toastPopup">
+          <span>✓</span>
+          <span id="toastMsg">Added to cart!</span>
+        </div>
+
+        <!-- Bottom Sheet Modal Preview (Complete Filter & Sort matching ProductsScreen.kt) -->
+        <div class="modal-overlay" id="filterModalOverlay" onclick="closeFilterSheet(event)">
+          <div class="bottom-sheet" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+
+            <!-- Header with 3D dials icon, title, live matching badge, clear all, and close -->
+            <div class="sheet-header">
+              <div class="sheet-title-group">
+                <span style="font-size: 16px;">🎛️</span>
+                <span class="sheet-title" data-i18n="filter_sort_title">Filter & Sort</span>
+                <span class="matching-tag" id="filterMatchingTag">18 SKUs matching</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="sheet-clear-btn" id="filterClearBtn" onclick="resetFilters()" style="display:none;" data-i18n="clear_all">Clear All</button>
+                <button class="icon-action-btn" style="width:30px; height:30px; font-size:12px;" onclick="closeFilterSheetDirect()">✕</button>
+              </div>
+            </div>
+            
+            <!-- Scrollable Body with All Sections -->
+            <div class="sheet-scroll-body">
+              <!-- Section 1: Categories -->
+              <div class="filter-section-title" data-i18n="filter_sec_category">Categories</div>
+              <div class="filter-pills-row" id="filterCatPills">
+                <button class="filter-pill-chip active" onclick="setFilterCategory('ALL', this)">
+                  <span data-i18n="filter_cat_all">All (18)</span>
+                </button>
+                <button class="filter-pill-chip" onclick="setFilterCategory('Beverages', this)">
+                  <span data-i18n="filter_cat_bev">Beverages (5)</span>
+                </button>
+                <button class="filter-pill-chip" onclick="setFilterCategory('Groceries', this)">
+                  <span data-i18n="filter_cat_groc">Groceries (5)</span>
+                </button>
+                <button class="filter-pill-chip" onclick="setFilterCategory('Snacks', this)">
+                  <span data-i18n="filter_cat_snack">Snacks (5)</span>
+                </button>
+                <button class="filter-pill-chip" onclick="setFilterCategory('Bakery', this)">
+                  <span data-i18n="filter_cat_bake">Bakery (3)</span>
+                </button>
+              </div>
+
+              <!-- Section 2: Stock Health Status (2x2 Grid with 3D Jewels) -->
+              <div class="filter-section-title" data-i18n="filter_sec_stock">Stock Health Status</div>
+              <div class="stock-grid-2x2">
+                <!-- All SKUs -->
+                <div class="stock-filter-card active" id="stockCardALL" onclick="setFilterStock('ALL', this)">
+                  <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#818CF8;"></span>
+                  <span class="stock-card-label" data-i18n="stock_all_skus">All SKUs</span>
+                  <span class="stock-card-count">18</span>
+                </div>
+                <!-- In Stock with 3D Emerald Sphere -->
+                <div class="stock-filter-card emerald" id="stockCardAVAILABLE" onclick="setFilterStock('AVAILABLE', this)">
+                  <span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #6EE7B7, #059669); box-shadow:0 0 6px rgba(16,185,129,0.8);"></span>
+                  <span class="stock-card-label" data-i18n="stock_in_stock">In Stock</span>
+                  <span class="stock-card-count" style="color:#10B981;">14</span>
+                </div>
+                <!-- Low Stock with 3D Amber Hazard Diamond -->
+                <div class="stock-filter-card amber" id="stockCardLOW" onclick="setFilterStock('LOW', this)">
+                  <span style="display:inline-block; width:8px; height:8px; transform:rotate(45deg); background:radial-gradient(circle at 30% 30%, #FDE68A, #D97706); box-shadow:0 0 6px rgba(245,158,11,0.8);"></span>
+                  <span class="stock-card-label" data-i18n="stock_low_stock">Low Stock</span>
+                  <span class="stock-card-count" style="color:#F59E0B;">2</span>
+                </div>
+                <!-- Out of Stock with 3D Ruby Alert Orb -->
+                <div class="stock-filter-card rose" id="stockCardOUT" onclick="setFilterStock('OUT', this)">
+                  <span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #FCA5A5, #DC2626); box-shadow:0 0 6px rgba(239,68,68,0.8);"></span>
+                  <span class="stock-card-label" data-i18n="stock_out_of_stock">Out of Stock</span>
+                  <span class="stock-card-count" style="color:#EF4444;">2</span>
+                </div>
+              </div>
+
+              <!-- Section 3: Date & Expiry Tracking -->
+              <div class="filter-section-title" data-i18n="filter_sec_date">Date & Expiry Tracking</div>
+              <div class="filter-pills-row" id="filterDatePills">
+                <button class="filter-pill-chip active" onclick="setFilterDate('ALL', this)">
+                  <span data-i18n="date_all">All Dates (18)</span>
+                </button>
+                <button class="filter-pill-chip" onclick="setFilterDate('EXPIRING_SOON', this)">
+                  <span>⚠️ <span data-i18n="date_expiring_soon">Expiring Soon (4)</span></span>
+                </button>
+                <button class="filter-pill-chip" onclick="setFilterDate('EXPIRED', this)">
+                  <span>🚨 <span data-i18n="date_expired">Expired (0)</span></span>
+                </button>
+                <button class="filter-pill-chip" onclick="setFilterDate('TRACKED', this)">
+                  <span>📅 <span data-i18n="date_tracked">Tracked (14)</span></span>
+                </button>
+                <button class="filter-pill-chip" onclick="setFilterDate('NO_DATE', this)">
+                  <span>⚪ <span data-i18n="date_untracked">Untracked (4)</span></span>
+                </button>
+              </div>
+
+              <!-- Section 4: Sort Order (2-Row Segmented Grid) -->
+              <div class="filter-section-title" data-i18n="filter_sec_sort">Sort Order</div>
+              <div class="sort-grid-row">
+                <div class="sort-tile active" id="sortNAME_ASC" onclick="setFilterSort('NAME_ASC', this)">
+                  <span>✓</span> <span data-i18n="sort_name_az">Name A-Z</span>
+                </div>
+                <div class="sort-tile" id="sortNAME_DESC" onclick="setFilterSort('NAME_DESC', this)">
+                  <span data-i18n="sort_name_za">Name Z-A</span>
+                </div>
+                <div class="sort-tile" id="sortEXPIRY_SOONEST" onclick="setFilterSort('EXPIRY_SOONEST', this)">
+                  <span data-i18n="sort_expiry_soon">Expiry Soon</span>
+                </div>
+              </div>
+              <div class="sort-grid-row-4">
+                <div class="sort-tile" id="sortSTOCK_LOW" onclick="setFilterSort('STOCK_LOW', this)">
+                  <span data-i18n="sort_stock_low">Stock Low</span>
+                </div>
+                <div class="sort-tile" id="sortSTOCK_HIGH" onclick="setFilterSort('STOCK_HIGH', this)">
+                  <span data-i18n="sort_stock_high">Stock High</span>
+                </div>
+                <div class="sort-tile" id="sortPRICE_LOW" onclick="setFilterSort('PRICE_LOW', this)">
+                  <span data-i18n="sort_price_low">Price Low</span>
+                </div>
+                <div class="sort-tile" id="sortPRICE_HIGH" onclick="setFilterSort('PRICE_HIGH', this)">
+                  <span data-i18n="sort_price_high">Price High</span>
+                </div>
+              </div>
+
+              <!-- Section 5: Selling Price Range -->
+              <div class="filter-section-title" data-i18n="filter_sec_price">Selling Price Range</div>
+              <div class="price-range-inputs">
+                <input type="number" class="price-input-box" id="inputMinPrice" placeholder="Min ৳" min="0" oninput="handlePriceInputChange()">
+                <span class="price-range-separator" data-i18n="price_range_to">to</span>
+                <input type="number" class="price-input-box" id="inputMaxPrice" placeholder="Max ৳" min="0" oninput="handlePriceInputChange()">
+              </div>
+
+              <!-- Section 6: High Profit Margin Toggle -->
+              <div class="filter-section-title" data-i18n="filter_sec_margin">Profit Margin</div>
+              <div class="toggle-row-card" onclick="toggleHighMarginFilter()">
+                <div>
+                  <div style="font-size:12px; font-weight:700; color:var(--text-main);" data-i18n="high_margin_label">High Profit Margin Only</div>
+                  <div style="font-size:10.5px; color:var(--text-muted);" data-i18n="high_margin_sub">Items with &ge; 30% gross profit margin</div>
+                </div>
+                <div class="toggle-switch" id="highMarginSwitch"></div>
+              </div>
+            </div>
+
+            <!-- Sticky Bottom Actions: Reset & Apply -->
+            <div class="sheet-sticky-footer">
+              <button class="btn-sheet-reset" onclick="resetFilters()" data-i18n="btn_reset">Reset</button>
+              <button class="btn-sheet-apply" onclick="applyFilters()">
+                <span data-i18n="btn_apply_prefix">Apply Filters</span>
+                <span id="btnApplyCountTag">(18 Products)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stock Adjustment Dialog (HardwareStockCheckDialog) -->
+        <div class="modal-overlay dialog-center" id="stockAdjustModalOverlay" onclick="closeStockAdjustModal(event)">
+          <div class="center-dialog" onclick="event.stopPropagation()">
+            <!-- Dialog Header -->
+            <div class="dialog-header">
+              <div class="dialog-title-group">
+                <span style="font-size: 16px;">📦</span>
+                <span class="dialog-title" data-i18n="dialog_stock_title">Stock Adjustment</span>
+              </div>
+              <button class="dialog-close-btn" onclick="closeStockAdjustModalDirect()">✕</button>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="dialog-scroll-body">
+              <!-- Product Overview Card -->
+              <div class="dialog-prod-overview">
+                <div class="prod-3d-box">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#A5B4FC"/>
+                    <path d="M2 17L12 22L22 17" stroke="#818CF8" stroke-width="2"/>
+                    <path d="M2 12L12 17L22 12" stroke="#6366F1" stroke-width="2"/>
+                  </svg>
+                </div>
+                <div style="flex:1; min-width:0;">
+                  <div class="dialog-prod-name" id="stockAdjustProdName">Pran Frooto Mango Juice 250ml</div>
+                  <div style="display:flex; align-items:center; gap:6px; margin-top:3px;">
+                    <span class="barcode-chip" id="stockAdjustBarcode">#8901030</span>
+                    <span class="category-tag" id="stockAdjustCategory">Beverages</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Inventory Level Card -->
+              <div class="dialog-section-card highlight">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <div class="dialog-sublabel" data-i18n="dialog_inventory_level">INVENTORY LEVEL</div>
+                    <div class="dialog-huge-qty" id="stockAdjustCurrentQtyVal">48 Units</div>
+                  </div>
+                  <span class="stock-badge-pill in-stock" id="stockAdjustStatusPill">In Stock</span>
+                </div>
+              </div>
+
+              <!-- Financial Intelligence Card -->
+              <div class="dialog-financial-card">
+                <div class="fin-col">
+                  <div class="fin-label" data-i18n="dialog_purchase">Purchase</div>
+                  <div class="fin-val" id="stockAdjustCost">৳ 20.00</div>
+                </div>
+                <div class="fin-divider"></div>
+                <div class="fin-col">
+                  <div class="fin-label" data-i18n="dialog_selling">Selling</div>
+                  <div class="fin-val" id="stockAdjustPrice">৳ 25.00</div>
+                </div>
+                <div class="fin-divider"></div>
+                <div class="fin-col">
+                  <div class="fin-label" data-i18n="dialog_margin">Margin</div>
+                  <div class="fin-val margin" id="stockAdjustMargin">20.0%</div>
+                </div>
+              </div>
+
+              <!-- Date Tracking Card -->
+              <div class="dialog-date-row">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span>📅</span>
+                  <span style="font-size:11.5px; font-weight:700; color:var(--text-muted);" data-i18n="dialog_date_tracking">Date Tracking</span>
+                </div>
+                <div style="font-size:11px; font-weight:700; color:#F59E0B;" id="stockAdjustExp">30d left</div>
+              </div>
+
+              <!-- Adjust Quantity Stepper Card -->
+              <div class="dialog-section-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                  <span class="dialog-sublabel" data-i18n="dialog_adjust_qty">ADJUST QUANTITY</span>
+                  <span class="delta-pill" id="stockAdjustDeltaPill">±0</span>
+                </div>
+
+                <div class="stepper-row">
+                  <button class="stepper-btn" onclick="stockAdjustStep(-1)" title="Decrease Stock">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                  </button>
+                  <input type="number" class="stepper-input" id="stockAdjustInput" value="48" min="0" oninput="updateStockDeltaDisplay()">
+                  <button class="stepper-btn plus" onclick="stockAdjustStep(1)" title="Increase Stock">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Quick Increment Chips -->
+                <div class="stepper-chips-row" style="margin-top:8px;">
+                  <button class="stepper-chip" onclick="setStockAdjustQuick('plus1')">+1</button>
+                  <button class="stepper-chip" onclick="setStockAdjustQuick('plus5')">+5</button>
+                  <button class="stepper-chip" onclick="setStockAdjustQuick('plus10')">+10</button>
+                  <button class="stepper-chip" onclick="setStockAdjustQuick('zero')">0 (Zero)</button>
+                  <button class="stepper-chip" onclick="setStockAdjustQuick('reset')">Reset</button>
+                </div>
+
+                <!-- Dynamic Reason & Notes Section -->
+                <div id="stockAdjustReasonSection" style="display:none; margin-top:10px; border-top:1px dashed var(--border-subtle); padding-top:8px;">
+                  <div style="font-size:11px; font-weight:700; color:var(--primary-light); margin-bottom:6px;" data-i18n="dialog_reason_label">Reason for Adjustment</div>
+                  <div class="stepper-chips-row" id="stockReasonChips" style="margin-bottom:8px;">
+                    <button class="stepper-chip active" onclick="selectStockReason('Restock', this)" data-i18n="dialog_reason_restock">Restock</button>
+                    <button class="stepper-chip" onclick="selectStockReason('Damage', this)" data-i18n="dialog_reason_damage">Damage</button>
+                    <button class="stepper-chip" onclick="selectStockReason('Expired', this)" data-i18n="dialog_reason_expired">Expired</button>
+                    <button class="stepper-chip" onclick="selectStockReason('Discrepancy', this)" data-i18n="dialog_reason_discrepancy">Discrepancy</button>
+                    <button class="stepper-chip" onclick="selectStockReason('Sample', this)" data-i18n="dialog_reason_sample">Sample</button>
+                    <button class="stepper-chip" onclick="selectStockReason('Store Use', this)" data-i18n="dialog_reason_store">Store Use</button>
+                    <button class="stepper-chip" onclick="selectStockReason('Other', this)" data-i18n="dialog_reason_other">Other</button>
+                  </div>
+                  <input type="text" class="dialog-text-input" id="stockAdjustNoteInput" placeholder="Adjustment or audit note (optional)" data-i18n-ph="dialog_audit_note_ph">
+                </div>
+              </div>
+            </div>
+
+            <!-- Dialog Sticky Footer -->
+            <div class="dialog-footer">
+              <button class="dialog-btn-cancel" onclick="closeStockAdjustModalDirect()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span data-i18n="dialog_btn_cancel">Cancel</span>
+              </button>
+              <button class="dialog-btn-save" onclick="saveStockAdjustment()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span data-i18n="dialog_btn_save_stock">Save Adjustment</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Generate Code Image Dialog (ProductCodeImageDialog) -->
+        <div class="modal-overlay dialog-center" id="barcodeImageModalOverlay" onclick="closeBarcodeImageModal(event)">
+          <div class="center-dialog" onclick="event.stopPropagation()">
+            <!-- Dialog Header -->
+            <div class="dialog-header">
+              <div class="dialog-title-group">
+                <span style="font-size: 16px;">🏷️</span>
+                <span class="dialog-title" data-i18n="dialog_code_title">Generate Code Image</span>
+              </div>
+              <button class="dialog-close-btn" onclick="closeBarcodeImageModalDirect()">✕</button>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="dialog-scroll-body">
+              <!-- Thermal Label Sticker Card Preview -->
+              <div class="thermal-label-container">
+                <div class="thermal-label-preview" id="thermalLabelPreview">
+                  <div class="thermal-store-name" id="labelStoreName">TECHYFI SUPER STORE</div>
+                  <div class="thermal-prod-name" id="labelProdName">Pran Frooto Mango Juice 250ml</div>
+                  <div class="thermal-barcode-graphic" id="labelBarcodeGraphic">
+                    <!-- Dynamic SVG barcode bars or QR matrix -->
+                  </div>
+                  <div class="thermal-code-number" id="labelCodeNumber">#8901030</div>
+                  <div class="thermal-bottom-meta">
+                    <span class="thermal-price" id="labelPriceTag">Price: ৳ 25.00</span>
+                    <span class="thermal-date" id="labelDateTag">Exp: 2024-07-10</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Code Format Selector -->
+              <div>
+                <div class="dialog-sublabel" style="margin-bottom:6px;" data-i18n="dialog_code_type">Code Format</div>
+                <div class="segmented-control" id="codeFormatGroup" style="width:100%; display:flex;">
+                  <button class="segment-btn active" style="flex:1; justify-content:center;" onclick="setLabelFormat('CODE128', this)">Code 128</button>
+                  <button class="segment-btn" style="flex:1; justify-content:center;" onclick="setLabelFormat('EAN13', this)">EAN-13</button>
+                  <button class="segment-btn" style="flex:1; justify-content:center;" onclick="setLabelFormat('QR', this)">QR Code</button>
+                </div>
+              </div>
+
+              <!-- Label Size Selector -->
+              <div>
+                <div class="dialog-sublabel" style="margin-bottom:6px;" data-i18n="dialog_label_size">Label Size</div>
+                <div class="filter-pills-row" id="labelSizeGroup">
+                  <button class="filter-pill-chip active" onclick="setLabelSize('50x30', this)" data-i18n="dialog_size_std">50 x 30 mm</button>
+                  <button class="filter-pill-chip" onclick="setLabelSize('40x25', this)" data-i18n="dialog_size_compact">40 x 25 mm</button>
+                  <button class="filter-pill-chip" onclick="setLabelSize('45x35', this)" data-i18n="dialog_size_square">45 x 35 mm</button>
+                </div>
+              </div>
+
+              <!-- Display Option Toggles -->
+              <div class="dialog-section-card" style="padding:10px 12px; gap:8px; display:flex; flex-direction:column;">
+                <label style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+                  <span style="font-size:12px; font-weight:700; color:var(--text-main);" data-i18n="dialog_toggle_price">Show Price</span>
+                  <input type="checkbox" checked onchange="toggleLabelOption('price')" style="accent-color:var(--primary); width:16px; height:16px; cursor:pointer;">
+                </label>
+                <label style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+                  <span style="font-size:12px; font-weight:700; color:var(--text-main);" data-i18n="dialog_toggle_store">Show Store Name</span>
+                  <input type="checkbox" checked onchange="toggleLabelOption('store')" style="accent-color:var(--primary); width:16px; height:16px; cursor:pointer;">
+                </label>
+              </div>
+            </div>
+
+            <!-- Dialog Sticky Footer -->
+            <div class="dialog-footer">
+              <button class="dialog-btn-cancel" style="background:var(--bg-card); color:var(--text-main); border-color:var(--border-subtle);" onclick="shareThermalLabel()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                <span data-i18n="dialog_btn_share">Share / Save</span>
+              </button>
+              <button class="dialog-btn-save" style="background:linear-gradient(135deg, #4F46E5 0%, #3730A3 100%); border-color:rgba(99,102,241,0.5); box-shadow:0 4px 12px var(--primary-glow);" onclick="printThermalLabel()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                  <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                <span data-i18n="dialog_btn_print">Print Label</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enlarged Product Image Dialog (EnlargedImageDialog) -->
+        <div class="modal-overlay dialog-center" id="enlargedImageModalOverlay" onclick="closeEnlargedImageModal(event)">
+          <div class="center-dialog" style="max-width: 350px;" onclick="event.stopPropagation()">
+            <!-- Dialog Header -->
+            <div class="dialog-header">
+              <div class="dialog-title-group" style="flex:1; min-width:0; padding-right:8px;">
+                <span style="font-size: 16px;">🔍</span>
+                <span class="dialog-title" id="enlargedImageTitle" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Product Image</span>
+              </div>
+              <button class="dialog-close-btn" onclick="closeEnlargedImageModalDirect()">✕</button>
+            </div>
+
+            <!-- Image View Body -->
+            <div style="padding: 14px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+              <div class="enlarged-image-container">
+                <img id="enlargedImageTag" src="" alt="Product Full View" style="max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 12px; display: block; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3));">
+              </div>
+
+              <!-- Quick Meta Pill -->
+              <div style="display:flex; justify-content:space-between; align-items:center; width:100%; background:var(--bg-card); border:1px solid var(--border-subtle); padding:8px 12px; border-radius:var(--radius-md);">
+                <span style="font-size:11px; font-weight:700; color:var(--text-muted);" id="enlargedImageMeta">HD Product Photo</span>
+                <span style="font-size:12px; font-weight:800; color:var(--emerald-dark);" id="enlargedImagePrice">৳ 40.00</span>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="dialog-footer">
+              <button class="dialog-btn-save" style="width:100%; background:var(--bg-card); color:var(--text-main); border-color:var(--border-subtle); box-shadow:none;" onclick="closeEnlargedImageModalDirect()">
+                <span data-i18n="dialog_btn_close">Close</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Current UI Mockup Frame (For Comparison) -->
+    <div class="device-wrapper" id="currentWrapper" style="display:none;">
+      <div class="device-header-tag">
+        <div class="tag-title">
+          <span>📐 Current UI Layout</span>
+        </div>
+        <span class="tag-badge old">Takes 45% Screen for Headers & Multi-Line Rows</span>
+      </div>
+
+      <div class="phone-frame" style="background:#0F172A;">
+        <!-- Status Bar -->
+        <div class="phone-status-bar">
+          <span>19:15</span>
+          <span>98%</span>
+        </div>
+
+        <!-- Top App Bar with back and cart -->
+        <div class="app-top-bar">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="color:#94A3B8;">←</span>
+            <h2>Products (18)</h2>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <div class="icon-action-btn" style="width:36px; height:36px;">🔔</div>
+            <button class="cart-pill-btn" style="height:36px;">Cart (3)</button>
+          </div>
+        </div>
+
+        <!-- Quick Tool Ribbon -->
+        <div style="padding:6px 12px; display:flex; gap:6px; overflow-x:auto; background:#1E293B; border-bottom:1px solid rgba(255,255,255,0.08);">
+          <span style="background:rgba(255,255,255,0.08); padding:4px 10px; border-radius:20px; font-size:11px;">📊 Excel Tools ▾</span>
+          <span style="background:rgba(255,255,255,0.08); padding:4px 10px; border-radius:20px; font-size:11px;">☑️ Batch Select</span>
+          <span style="background:rgba(255,255,255,0.08); padding:4px 10px; border-radius:20px; font-size:11px;">📋 Stock Audit</span>
+          <span style="background:rgba(255,255,255,0.08); padding:4px 10px; border-radius:20px; font-size:11px;">🏷️ Print Labels</span>
+        </div>
+
+        <!-- Massive 140dp Executive Valuation Box -->
+        <div style="margin:10px 12px; background:#1E1B4B; border-radius:14px; padding:14px; border:1px solid rgba(99,102,241,0.3);">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span style="font-size:11px; font-weight:800; color:#A5B4FC;">📊 INVENTORY VALUATION & HEALTH</span>
+            <span style="font-size:10px; background:rgba(255,255,255,0.15); padding:2px 8px; border-radius:8px;">Details ▾</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <div>
+              <div style="font-size:10px; color:#CBD5E1;">Selling Value (18 SKUs)</div>
+              <div style="font-size:22px; font-weight:900; color:#FFFFFF;">৳ 84,250</div>
+            </div>
+            <div style="background:rgba(16,185,129,0.25); border:1px solid rgba(16,185,129,0.45); padding:3px 8px; border-radius:8px; text-align:right;">
+              <div style="font-size:10px; color:#6EE7B7;">Margin</div>
+              <div style="font-size:12px; font-weight:800; color:#6EE7B7;">+35.0%</div>
+            </div>
+          </div>
+          <div style="height:6px; background:rgba(255,255,255,0.15); border-radius:6px; margin-top:10px; display:flex;">
+            <div style="width:75%; background:#10B981; border-radius:6px 0 0 6px;"></div>
+            <div style="width:15%; background:#F59E0B;"></div>
+            <div style="width:10%; background:#EF4444; border-radius:0 6px 6px 0;"></div>
+          </div>
+        </div>
+
+        <!-- Search Row with separate buttons -->
+        <div style="padding:6px 12px; display:flex; gap:8px;">
+          <input type="text" style="flex:1; height:44px; background:#1E293B; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:0 12px; color:#fff;" placeholder="Search products, barcode...">
+          <button style="width:44px; height:44px; border-radius:10px; background:#1E293B; border:1px solid rgba(255,255,255,0.1); color:#fff;">🔍</button>
+          <button style="width:44px; height:44px; border-radius:10px; background:#1E293B; border:1px solid rgba(255,255,255,0.1); color:#fff;">⚙️</button>
+        </div>
+
+        <!-- Old Category Chips -->
+        <div style="padding:6px 12px; display:flex; gap:6px; overflow-x:auto;">
+          <span style="background:#4F46E5; color:#fff; padding:6px 14px; border-radius:20px; font-size:11px; font-weight:700;">All SKUs (18)</span>
+          <span style="background:#1E293B; color:#F59E0B; padding:6px 14px; border-radius:20px; font-size:11px;">⚠️ Low Stock (2)</span>
+          <span style="background:#1E293B; color:#EF4444; padding:6px 14px; border-radius:20px; font-size:11px;">🚫 Out (2)</span>
+        </div>
+
+        <!-- Notice how only 1-2 product rows fit on screen in Current UI -->
+        <div style="padding:10px 12px; display:flex; flex-direction:column; gap:10px;">
+          <!-- Product Row 1 (Tall 115dp with 2 rows of buttons) -->
+          <div style="background:#1E293B; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+              <div>
+                <div style="font-weight:700; font-size:14px; color:#fff;">Coca-Cola 500ml Pet Bottle</div>
+                <div style="font-size:11px; color:#A5B4FC; margin-top:2px;">#8901030 · Beverages</div>
+              </div>
+              <span style="background:#DCFCE7; color:#047857; font-size:10px; font-weight:800; padding:3px 8px; border-radius:99px; height:fit-content;">● 48 pcs</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px;">
+              <div style="font-size:16px; font-weight:800; color:#10B981;">৳ 40.00 <span style="font-size:11px; color:#94A3B8;">/ pcs</span></div>
+              <div style="display:flex; gap:4px;">
+                <button style="background:#4F46E5; color:#fff; border:none; padding:6px 10px; border-radius:6px; font-size:11px; font-weight:700;">🛒 Cart</button>
+                <button style="background:#312E81; color:#A5B4FC; border:none; padding:6px 8px; border-radius:6px; font-size:11px;">± Stock</button>
+                <button style="background:#1E293B; color:#CBD5E1; border:1px solid rgba(255,255,255,0.1); padding:6px; border-radius:6px;">🏷️</button>
+                <button style="background:#1E293B; color:#CBD5E1; border:1px solid rgba(255,255,255,0.1); padding:6px 8px; border-radius:6px;">⋮</button>
+              </div>
+            </div>
+          </div>
+          <div style="text-align:center; padding:10px; color:#64748B; font-size:12px;">
+            ⬇️ (Viewport cut off - only 1.5 products visible before scrolling)
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Key Improvements Feature Grid -->
+  <section class="feature-comparison-grid">
+    <div class="feature-card">
+      <div class="feature-icon-badge" style="background:rgba(79, 70, 229, 0.15); color:#6366F1;">
+        <span>📐</span>
+      </div>
+      <h3>Compact Height & High Viewport Yield</h3>
+      <p>
+        The redesigned product row reduces vertical footprint from ~115dp down to 68dp, increasing visible products on screen by <strong>+120%</strong> without scrolling.
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon-badge" style="background:rgba(16, 185, 129, 0.15); color:#10B981;">
+        <span>✨</span>
+      </div>
+      <h3>Realistic 3D Animated Domain Badges</h3>
+      <p>
+        Isometric 3D product package box with lighting gradients, glowing emerald stock spheres, amber hazard diamonds, and ruby alert orbs provide instant glanceable clarity.
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon-badge" style="background:rgba(245, 158, 11, 0.15); color:#F59E0B;">
+        <span>⚡</span>
+      </div>
+      <h3>Micro 36dp Expandable Stat Strip</h3>
+      <p>
+        Replaces the massive 140dp valuation card with a sleek 36dp one-line summary bar (Total Valuation + OK/Low/Out pills) that expands into a rich profit breakdown on demand.
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon-badge" style="background:rgba(239, 68, 68, 0.15); color:#EF4444;">
+        <span>🇧🇩</span>
+      </div>
+      <h3>Natural Commercial Bangla Localization</h3>
+      <p>
+        Full support for authentic Bangladeshi retail terminology (পণ্য তালিকা, মজুদ, কেনা দাম, বিক্রয় মূল্য, ছাড়) with proper typography line-height to eliminate diacritic clipping.
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  // Sample Product Database
+  // Full 18 SKU Product Database
+  const sampleProducts = [
+    { id: 1, name: "Coca-Cola 500ml Pet Bottle", bnName: "কোকা-কোলা ৫০০ মি.লি. পেট বোতল", category: "Beverages", bnCat: "পানীয়", barcode: "8901030", price: 40.0, cost: 32.0, stock: 48, unit: "pcs", bnUnit: "টি", status: "ok", expiryDays: 180, dateTracked: true, image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='cocaGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23EF4444'/%3E%3Cstop offset='100%25' stop-color='%23991B1B'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='12' fill='url(%23cocaGrad)'/%3E%3Cpath d='M44 14h12v12h-12z' fill='%23FFF' opacity='0.9'/%3E%3Cpath d='M40 26h20l6 24H34z' fill='%23FFF'/%3E%3Cpath d='M35 50h30l-4 36H39z' fill='%23FFF' opacity='0.95'/%3E%3Crect x='41' y='58' width='18' height='16' rx='3' fill='%23DC2626'/%3E%3Ctext x='50' y='70' font-size='10' font-family='sans-serif' font-weight='bold' fill='%23FFF' text-anchor='middle'%3ECoke%3C/text%3E%3C/svg%3E" },
+    { id: 2, name: "Aarong Dairy Pure Ghee 400g", bnName: "আড়ং ডেইরি খাঁটি ঘি ৪০০ গ্রাম", category: "Groceries", bnCat: "মুদি পণ্য", barcode: "8941100", price: 680.0, cost: 580.0, stock: 4, unit: "pcs", bnUnit: "টি", status: "low", expiryDays: 20, dateTracked: true, image: null },
+    { id: 3, name: "Lays Classic Salted Potato Chips 50g", bnName: "লেয়স ক্লাসিক পটেটো চিপস ৫০ গ্রাম", category: "Snacks", bnCat: "নাস্তা", barcode: "8901491", price: 50.0, cost: 38.0, stock: 0, unit: "pcs", bnUnit: "টি", status: "out", expiryDays: 60, dateTracked: true, image: null },
+    { id: 4, name: "Nestle KitKat 4-Finger Wafer Bar", bnName: "নেসলে কিটক্যাট ৪-ফিঙ্গার বার", category: "Snacks", bnCat: "নাস্তা", barcode: "7613035", price: 120.0, cost: 95.0, stock: 32, unit: "pcs", bnUnit: "টি", status: "ok", expiryDays: 90, dateTracked: true, image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='kitGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23DC2626'/%3E%3Cstop offset='100%25' stop-color='%237F1D1D'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='12' fill='url(%23kitGrad)'/%3E%3Cellipse cx='50' cy='50' rx='36' ry='24' fill='%23FFF'/%3E%3Ctext x='50' y='56' font-size='15' font-family='sans-serif' font-weight='900' fill='%23DC2626' text-anchor='middle' font-style='italic'%3EKitKat%3C/text%3E%3C/svg%3E" },
+    { id: 5, name: "Pran Frooto Mango Juice 250ml", bnName: "প্রাণ ফ্রুটো ম্যাঙ্গো জুস ২৫০ মি.লি.", category: "Beverages", bnCat: "পানীয়", barcode: "8942201", price: 25.0, cost: 19.5, stock: 2, unit: "pcs", bnUnit: "টি", status: "low", expiryDays: 14, dateTracked: true, image: null },
+    { id: 6, name: "Dano Daily Pushti Milk Powder 500g", bnName: "ড্যানো ডেইলি পুষ্টি গুঁড়ো দুধ ৫০০ গ্রাম", category: "Groceries", bnCat: "মুদি পণ্য", barcode: "5707196", price: 395.0, cost: 340.0, stock: 18, unit: "pcs", bnUnit: "টি", status: "ok", expiryDays: 150, dateTracked: true, image: null },
+    { id: 7, name: "Oreo Original Sandwich Cookies 133g", bnName: "ওরিও স্যান্ডউইচ কুকিজ ১৩৩ গ্রাম", category: "Snacks", bnCat: "নাস্তা", barcode: "7622210", price: 110.0, cost: 85.0, stock: 0, unit: "pcs", bnUnit: "টি", status: "out", expiryDays: 45, dateTracked: true, image: null },
+    { id: 8, name: "7UP Refreshing Lemon Soda 1L", bnName: "সেভেন আপ লেমন সোডা ১ লিটার", category: "Beverages", bnCat: "পানীয়", barcode: "8901032", price: 75.0, cost: 58.0, stock: 24, unit: "pcs", bnUnit: "টি", status: "ok", expiryDays: 210, dateTracked: true, image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='sevenGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2310B981'/%3E%3Cstop offset='100%25' stop-color='%23047857'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='12' fill='url(%23sevenGrad)'/%3E%3Ccircle cx='50' cy='50' r='28' fill='%23FFF'/%3E%3Ccircle cx='65' cy='38' r='10' fill='%23EF4444'/%3E%3Ctext x='46' y='59' font-size='22' font-family='sans-serif' font-weight='900' fill='%23047857' text-anchor='middle'%3E7%3C/text%3E%3Ctext x='65' y='42' font-size='8' font-family='sans-serif' font-weight='900' fill='%23FFF' text-anchor='middle'%3EUP%3C/text%3E%3C/svg%3E" },
+    { id: 9, name: "Ruchi Chanachur Hot & Spicy 350g", bnName: "রুচি চানাচুর হট অ্যান্ড স্পাইসি ৩৫০ গ্রাম", category: "Snacks", bnCat: "নাস্তা", barcode: "8941103", price: 90.0, cost: 72.0, stock: 15, unit: "pcs", bnUnit: "টি", status: "ok", expiryDays: 100, dateTracked: true, image: null },
+    { id: 10, name: "Teer Fortified Soybean Oil 1L", bnName: "তীর ফর্টিফাইড সয়াবিন তেল ১ লিটার", category: "Groceries", bnCat: "মুদি পণ্য", barcode: "8941005", price: 190.0, cost: 172.0, stock: 35, unit: "ltr", bnUnit: "লিটার", status: "ok", expiryDays: 300, dateTracked: true, image: null },
+    { id: 11, name: "Fresh Full Cream Liquid Milk 1L", bnName: "ফ্রেশ ফুল ক্রিম তরল দুধ ১ লিটার", category: "Beverages", bnCat: "পানীয়", barcode: "8941155", price: 95.0, cost: 80.0, stock: 22, unit: "ltr", bnUnit: "লিটার", status: "ok", expiryDays: 7, dateTracked: true, image: null },
+    { id: 12, name: "Pran Spicy Mango Pickles 400g", bnName: "প্রাণ স্পাইসি আমের আচার ৪০০ গ্রাম", category: "Groceries", bnCat: "মুদি পণ্য", barcode: "8942208", price: 160.0, cost: 125.0, stock: 14, unit: "pcs", bnUnit: "টি", status: "ok", expiryDays: 240, dateTracked: true, image: null },
+    { id: 13, name: "Dan Cake Chocolate Swiss Roll 60g", bnName: "ড্যান কেক চকোলেট সুইস রোল ৬০ গ্রাম", category: "Bakery", bnCat: "বেকারি", barcode: "8943310", price: 35.0, cost: 26.0, stock: 28, unit: "pcs", bnUnit: "টি", status: "ok", expiryDays: 25, dateTracked: true, image: null },
+    { id: 14, name: "Ispahani Mirzapore Tea Bags 50s", bnName: "ইস্পাহানি মির্জাপুর টি ব্যাগ ৫০টি", category: "Beverages", bnCat: "পানীয়", barcode: "8941088", price: 175.0, cost: 145.0, stock: 19, unit: "box", bnUnit: "বক্স", status: "ok", expiryDays: null, dateTracked: false, image: null },
+    { id: 15, name: "Radhuni Special Halim Mix 200g", bnName: "রাঁধুনী স্পেশাল হালিম মিক্স ২০০ গ্রাম", category: "Groceries", bnCat: "মুদি পণ্য", barcode: "8941092", price: 85.0, cost: 68.0, stock: 16, unit: "pcs", bnUnit: "টি", status: "ok", expiryDays: 180, dateTracked: true, image: null },
+    { id: 16, name: "Olympic Energy Plus Biscuits 100g", bnName: "অলিম্পিক এনার্জি প্লাস বিস্কুট ১০০ গ্রাম", category: "Snacks", bnCat: "নাস্তা", barcode: "8941011", price: 30.0, cost: 22.0, stock: 40, unit: "pcs", bnUnit: "টি", status: "ok", expiryDays: null, dateTracked: false, image: null },
+    { id: 17, name: "All Time Premium Butter Toast 250g", bnName: "অল টাইম প্রিমিয়াম বাটার টোস্ট ২৫০ গ্রাম", category: "Bakery", bnCat: "বেকারি", barcode: "8943322", price: 65.0, cost: 50.0, stock: 25, unit: "pcs", bnUnit: "টি", status: "ok", expiryDays: null, dateTracked: false, image: null },
+    { id: 18, name: "Well Food Special Sweet Toast 300g", bnName: "ওয়েল ফুড স্পেশাল মিষ্টি টোস্ট ৩০০ গ্রাম", category: "Bakery", bnCat: "বেকারি", barcode: "8943335", price: 95.0, cost: 70.0, stock: 18, unit: "pcs", bnUnit: "টি", status: "ok", expiryDays: null, dateTracked: false, image: null }
+  ];
+
+  // Localized dictionary for English and Bangla
+  const i18n = {
+    en: {
+      products_title: "Products",
+      cart_label: "Cart",
+      valuation_short: "Valuation",
+      purchase_cost: "Purchase Cost",
+      gross_profit: "Gross Margin",
+      total_units: "Total Units",
+      all_items: "All SKUs",
+      low_stock: "Low Stock",
+      out_of_stock: "Out of Stock",
+      quick_actions_title: "Quick Actions",
+      qa_excel_tools: "Excel Tools (.xlsx)",
+      qa_excel_sub: "Import or Export Inventory",
+      qa_batch_select: "Batch Select Mode",
+      qa_batch_sub: "Multi-item price, tags or delete",
+      qa_stock_audit: "Stock Audit History",
+      qa_stock_sub: "Counts & adjustment logs",
+      qa_print_labels: "Batch Print Labels",
+      qa_print_sub: "Barcode thermal sticker roll",
+      filter_sort_title: "Filter & Sort",
+      clear_all: "Clear All",
+      filter_sec_category: "Categories",
+      filter_cat_all: "All (18)",
+      filter_cat_bev: "Beverages (5)",
+      filter_cat_groc: "Groceries (5)",
+      filter_cat_snack: "Snacks (5)",
+      filter_cat_bake: "Bakery (3)",
+      filter_sec_stock: "Stock Health Status",
+      stock_all_skus: "All SKUs",
+      stock_in_stock: "In Stock",
+      stock_low_stock: "Low Stock",
+      stock_out_of_stock: "Out of Stock",
+      filter_sec_date: "Date & Expiry Tracking",
+      date_all: "All Dates (18)",
+      date_expiring_soon: "Expiring Soon (4)",
+      date_expired: "Expired (0)",
+      date_tracked: "Tracked (14)",
+      date_untracked: "Untracked (4)",
+      filter_sec_sort: "Sort Order",
+      sort_name_az: "Name A-Z",
+      sort_name_za: "Name Z-A",
+      sort_expiry_soon: "Expiry Soon",
+      sort_stock_low: "Stock Low",
+      sort_stock_high: "Stock High",
+      sort_price_low: "Price Low",
+      sort_price_high: "Price High",
+      filter_sec_price: "Selling Price Range",
+      price_range_to: "to",
+      filter_sec_margin: "Profit Margin",
+      high_margin_label: "High Profit Margin Only",
+      high_margin_sub: "Items with >= 30% gross profit margin",
+      btn_reset: "Reset",
+      btn_apply_prefix: "Apply Filters",
+      dialog_stock_title: "Stock Adjustment",
+      dialog_inventory_level: "INVENTORY LEVEL",
+      dialog_purchase: "Purchase",
+      dialog_selling: "Selling",
+      dialog_margin: "Margin",
+      dialog_date_tracking: "Date Tracking",
+      dialog_adjust_qty: "ADJUST QUANTITY",
+      dialog_reason_label: "Reason for Adjustment",
+      dialog_reason_restock: "Restock",
+      dialog_reason_damage: "Damage",
+      dialog_reason_expired: "Expired",
+      dialog_reason_discrepancy: "Discrepancy",
+      dialog_reason_sample: "Sample",
+      dialog_reason_store: "Store Use",
+      dialog_reason_other: "Other",
+      dialog_audit_note_ph: "Adjustment or audit note (optional)",
+      dialog_btn_cancel: "Cancel",
+      dialog_btn_save_stock: "Save Adjustment",
+      dialog_code_title: "Generate Code Image",
+      dialog_code_type: "Code Format",
+      dialog_label_size: "Label Size",
+      dialog_size_std: "50 x 30 mm",
+      dialog_size_compact: "40 x 25 mm",
+      dialog_size_square: "45 x 35 mm",
+      dialog_toggle_price: "Show Price",
+      dialog_toggle_store: "Show Store Name",
+      dialog_btn_print: "Print Label",
+      dialog_btn_share: "Share / Save",
+      dialog_btn_close: "Close"
+    },
+    bn: {
+      products_title: "পণ্য তালিকা",
+      cart_label: "কার্ট",
+      valuation_short: "মোট মূল্য",
+      purchase_cost: "কেনা দাম",
+      gross_profit: "লাভের হার",
+      total_units: "মোট সংখ্যা",
+      all_items: "সকল পণ্য",
+      low_stock: "কম মজুদ",
+      out_of_stock: "মজুদ শেষ",
+      quick_actions_title: "কুইক অ্যাকশন",
+      qa_excel_tools: "এক্সেল টুলস (.xlsx)",
+      qa_excel_sub: "ইনভেন্টরি ইমপোর্ট ও এক্সপোর্ট",
+      qa_batch_select: "একাধিক নির্বাচন মোড",
+      qa_batch_sub: "একসাথে দাম, ট্যাগ বা মুছে ফেলা",
+      qa_stock_audit: "স্টক অডিট ইতিহাস",
+      qa_stock_sub: "গণনা ও সমন্বয়ের লগ",
+      qa_print_labels: "লেবেল প্রিন্ট করুন",
+      qa_print_sub: "বারকোড স্টিকার রোল প্রিন্ট",
+      filter_sort_title: "ফিল্টার ও সাজানো",
+      clear_all: "সব মুছুন",
+      filter_sec_category: "পণ্যের ক্যাটাগরি",
+      filter_cat_all: "সকল (১৮)",
+      filter_cat_bev: "পানীয় (৫)",
+      filter_cat_groc: "মুদি পণ্য (৫)",
+      filter_cat_snack: "নাস্তা (৫)",
+      filter_cat_bake: "বেকারি (৩)",
+      filter_sec_stock: "মজুদ পরিস্থিতি",
+      stock_all_skus: "সকল মজুদ",
+      stock_in_stock: "পর্যাপ্ত মজুদ",
+      stock_low_stock: "কম মজুদ",
+      stock_out_of_stock: "মজুদ শেষ",
+      filter_sec_date: "মেয়াদ ও তারিখ ট্র্যাকিং",
+      date_all: "সব তারিখ (১৮)",
+      date_expiring_soon: "শীঘ্রই মেয়াদ শেষ (৪)",
+      date_expired: "মেয়াদ শেষ (০)",
+      date_tracked: "তারিখযুক্ত (১৪)",
+      date_untracked: "তারিখহীন (৪)",
+      filter_sec_sort: "সাজানোর ক্রম",
+      sort_name_az: "নাম (ক - য়)",
+      sort_name_za: "নাম (য় - ক)",
+      sort_expiry_soon: "দ্রুত মেয়াদ শেষ",
+      sort_stock_low: "কম মজুদ আগে",
+      sort_stock_high: "বেশি মজুদ আগে",
+      sort_price_low: "কম দাম আগে",
+      sort_price_high: "বেশি দাম আগে",
+      filter_sec_price: "বিক্রয় মূল্যের সীমা",
+      price_range_to: "থেকে",
+      filter_sec_margin: "লাভের মার্জিন",
+      high_margin_label: "শুধুমাত্র বেশি লাভের পণ্য",
+      high_margin_sub: "যেসব পণ্যে ৩০% বা তার বেশি লাভ রয়েছে",
+      btn_reset: "মুছুন",
+      btn_apply_prefix: "ফিল্টার প্রয়োগ করুন",
+      dialog_stock_title: "মজুদ সমন্বয়",
+      dialog_inventory_level: "বর্তমান মজুদ",
+      dialog_purchase: "কেনা দাম",
+      dialog_selling: "বিক্রয় মূল্য",
+      dialog_margin: "লাভের হার",
+      dialog_date_tracking: "মেয়াদ ও ট্র্যাকিং",
+      dialog_adjust_qty: "মজুদ সমন্বয় করুন",
+      dialog_reason_label: "সমন্বয়ের কারণ",
+      dialog_reason_restock: "নতুন মাল",
+      dialog_reason_damage: "নষ্ট / ক্ষতি",
+      dialog_reason_expired: "মেয়াদোত্তীর্ণ",
+      dialog_reason_discrepancy: "হিসাবে অমিল",
+      dialog_reason_sample: "স্যাম্পল",
+      dialog_reason_store: "দোকানে ব্যবহার",
+      dialog_reason_other: "অন্যান্য",
+      dialog_audit_note_ph: "অডিট বা সমন্বয়ের নোট (ঐচ্ছিক)",
+      dialog_btn_cancel: "বাতিল",
+      dialog_btn_save_stock: "মজুদ সংরক্ষণ করুন",
+      dialog_code_title: "কোড ইমেজ তৈরি করুন",
+      dialog_code_type: "কোডের ধরন",
+      dialog_label_size: "লেবেলের সাইজ",
+      dialog_size_std: "৫০ x ৩০ মিমি",
+      dialog_size_compact: "৪০ x ২৫ মিমি",
+      dialog_size_square: "৪৫ x ৩৫ মিমি",
+      dialog_toggle_price: "মূল্য দেখান",
+      dialog_toggle_store: "দোকানের নাম",
+      dialog_btn_print: "লেবেল প্রিন্ট",
+      dialog_btn_share: "শেয়ার / সেভ",
+      dialog_btn_close: "বন্ধ করুন"
+    }
+  };
+
+  // State Management
+  let currentLang = 'en';
+  let currentTheme = 'dark';
+  let currentViewMode = 'list';
+  let searchQuery = '';
+  let cartUnits = 3;
+  let isStatDrawerOpen = false;
+
+  // Filter & Sort State (Matching ProductsScreen.kt)
+  let fCategory = 'ALL';
+  let fStock = 'ALL';
+  let fDate = 'ALL';
+  let fSort = 'NAME_ASC';
+  let fMinPrice = '';
+  let fMaxPrice = '';
+  let fHighMargin = false;
+
+  // Batch Select State (Triggered natively by Long-Pressing any product card)
+  let isBatchSelectMode = false;
+  let selectedProductIds = new Set();
+
+  function toggleBatchSelectMode(initialId) {
+    isBatchSelectMode = true;
+    selectedProductIds.clear();
+    if (initialId) selectedProductIds.add(initialId);
+    renderProducts();
+    showToast(currentLang === 'bn' 
+      ? 'একাধিক নির্বাচন মোড সক্রিয় - কার্ড ট্যাপ করে নির্বাচন করুন' 
+      : 'Batch Select Mode Activated. Tap cards to select.');
+  }
+
+  function exitBatchMode() {
+    isBatchSelectMode = false;
+    selectedProductIds.clear();
+    renderProducts();
+  }
+
+  function toggleProductSelection(id) {
+    if (selectedProductIds.has(id)) {
+      selectedProductIds.delete(id);
+    } else {
+      selectedProductIds.add(id);
+    }
+    renderProducts();
+  }
+
+  function selectAllBatch() {
+    const list = getFilteredProductsList();
+    if (selectedProductIds.size === list.length) {
+      selectedProductIds.clear();
+    } else {
+      list.forEach(p => selectedProductIds.add(p.id));
+    }
+    renderProducts();
+  }
+
+  function toBnDigits(numStr) {
+    const bnNums = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+    return String(numStr).replace(/[0-9]/g, d => bnNums[d]);
+  }
+
+  // Quick Actions Menu Handlers (Management tools only)
+  function toggleQuickActionsMenu(e) {
+    if (e) e.stopPropagation();
+    const dropdown = document.getElementById('quickActionsDropdown');
+    if (dropdown) {
+      dropdown.classList.toggle('open');
+    }
+  }
+
+  function closeQuickActionsMenu() {
+    const dropdown = document.getElementById('quickActionsDropdown');
+    if (dropdown) dropdown.classList.remove('open');
+  }
+
+  function handleQuickAction(action) {
+    closeQuickActionsMenu();
+    if (action === 'excel') {
+      showToast(currentLang === 'bn' ? 'এক্সেল মেনু: ইমপোর্ট বা এক্সপোর্ট (.xlsx)' : 'Excel Tools: Import or Export (.xlsx)');
+    } else if (action === 'audit') {
+      showToast(currentLang === 'bn' ? 'স্টক অডিট ইতিহাস প্রদর্শিত হচ্ছে' : 'Stock Audit History Loaded');
+    } else if (action === 'print') {
+      showToast(currentLang === 'bn' ? 'বারকোড লেবেল প্রিন্ট ডায়ালগ প্রস্তুত' : 'Batch Barcode Label Dialog Ready');
+    }
+  }
+
+  // Filter Sheet Open / Close
+  function openFilterSheet() {
+    closeQuickActionsMenu();
+    document.getElementById('filterModalOverlay').classList.add('active');
+    updateFilterPreviewCount();
+  }
+
+  function closeFilterSheet(e) {
+    if (e.target.id === 'filterModalOverlay') {
+      document.getElementById('filterModalOverlay').classList.remove('active');
+    }
+  }
+
+  function closeFilterSheetDirect() {
+    document.getElementById('filterModalOverlay').classList.remove('active');
+  }
+
+  // Filter Selection Handlers
+  function setFilterCategory(cat, btn) {
+    fCategory = cat;
+    document.querySelectorAll('#filterCatPills .filter-pill-chip').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    updateFilterPreviewCount();
+  }
+
+  function setFilterStock(stock, card) {
+    fStock = stock;
+    document.querySelectorAll('.stock-grid-2x2 .stock-filter-card').forEach(c => c.classList.remove('active'));
+    if (card) card.classList.add('active');
+    updateFilterPreviewCount();
+  }
+
+  function setFilterDate(dateOpt, btn) {
+    fDate = dateOpt;
+    document.querySelectorAll('#filterDatePills .filter-pill-chip').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    updateFilterPreviewCount();
+  }
+
+  function setFilterSort(sortOpt, tile) {
+    fSort = sortOpt;
+    document.querySelectorAll('.sort-tile').forEach(t => {
+      t.classList.remove('active');
+      const check = t.querySelector('span:first-child');
+      if (check && check.textContent.includes('✓')) {
+        check.remove();
+      }
+    });
+    if (tile) {
+      tile.classList.add('active');
+      const checkSpan = document.createElement('span');
+      checkSpan.textContent = '✓ ';
+      tile.insertBefore(checkSpan, tile.firstChild);
+    }
+    updateFilterPreviewCount();
+  }
+
+  function handlePriceInputChange() {
+    fMinPrice = document.getElementById('inputMinPrice').value;
+    fMaxPrice = document.getElementById('inputMaxPrice').value;
+    updateFilterPreviewCount();
+  }
+
+  function toggleHighMarginFilter() {
+    fHighMargin = !fHighMargin;
+    const sw = document.getElementById('highMarginSwitch');
+    if (sw) sw.classList.toggle('active', fHighMargin);
+    updateFilterPreviewCount();
+  }
+
+  // Active Filters Count
+  function getActiveFiltersCount() {
+    let count = 0;
+    if (fCategory !== 'ALL') count++;
+    if (fStock !== 'ALL') count++;
+    if (fDate !== 'ALL') count++;
+    if (fSort !== 'NAME_ASC') count++;
+    if (fMinPrice !== '') count++;
+    if (fMaxPrice !== '') count++;
+    if (fHighMargin) count++;
+    return count;
+  }
+
+  // Compute Filtered & Sorted Products
+  function getFilteredProductsList() {
+    return sampleProducts.filter(p => {
+      // 1. Category
+      if (fCategory !== 'ALL' && p.category !== fCategory) return false;
+
+      // 2. Stock Health
+      if (fStock === 'AVAILABLE' && p.stock <= 0) return false;
+      if (fStock === 'LOW' && (p.stock <= 0 || p.stock > 5)) return false;
+      if (fStock === 'OUT' && p.stock > 0) return false;
+
+      // 3. Date & Expiry
+      if (fDate === 'EXPIRING_SOON' && (!p.expiryDays || p.expiryDays > 30 || p.expiryDays <= 0)) return false;
+      if (fDate === 'EXPIRED' && (!p.expiryDays || p.expiryDays > 0)) return false;
+      if (fDate === 'TRACKED' && !p.dateTracked) return false;
+      if (fDate === 'NO_DATE' && p.dateTracked) return false;
+
+      // 4. Selling Price Range
+      if (fMinPrice !== '' && !isNaN(Number(fMinPrice))) {
+        if (p.price < Number(fMinPrice)) return false;
+      }
+      if (fMaxPrice !== '' && !isNaN(Number(fMaxPrice))) {
+        if (p.price > Number(fMaxPrice)) return false;
+      }
+
+      // 5. High Margin
+      if (fHighMargin) {
+        const margin = ((p.price - p.cost) / p.price) * 100;
+        if (margin < 30) return false;
+      }
+
+      // 6. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = p.name.toLowerCase().includes(q) || p.bnName.toLowerCase().includes(q);
+        const matchesBarcode = p.barcode.includes(q);
+        if (!matchesName && !matchesBarcode) return false;
+      }
+
+      return true;
+    }).sort((a, b) => {
+      switch (fSort) {
+        case 'NAME_ASC':
+          return a.name.localeCompare(b.name);
+        case 'NAME_DESC':
+          return b.name.localeCompare(a.name);
+        case 'EXPIRY_SOONEST':
+          return (a.expiryDays ?? 9999) - (b.expiryDays ?? 9999);
+        case 'STOCK_LOW':
+          return a.stock - b.stock;
+        case 'STOCK_HIGH':
+          return b.stock - a.stock;
+        case 'PRICE_LOW':
+          return a.price - b.price;
+        case 'PRICE_HIGH':
+          return b.price - a.price;
+        default:
+          return 0;
+      }
+    });
+  }
+
+  // Update live preview matching counter inside bottom sheet
+  function updateFilterPreviewCount() {
+    const list = getFilteredProductsList();
+    const count = list.length;
+    const tag = document.getElementById('filterMatchingTag');
+    const applyCount = document.getElementById('btnApplyCountTag');
+    const clearBtn = document.getElementById('filterClearBtn');
+
+    if (tag) {
+      tag.textContent = currentLang === 'bn' 
+        ? `${toBnDigits(count)}টি মিলছে`
+        : `${count} SKUs matching`;
+    }
+
+    if (applyCount) {
+      applyCount.textContent = currentLang === 'bn'
+        ? `(${toBnDigits(count)}টি পণ্য)`
+        : `(${count} Products)`;
+    }
+
+    const activeCount = getActiveFiltersCount();
+    if (clearBtn) {
+      clearBtn.style.display = activeCount > 0 ? 'inline-block' : 'none';
+    }
+  }
+
+  // Reset Filters to Default
+  function resetFilters() {
+    fCategory = 'ALL';
+    fStock = 'ALL';
+    fDate = 'ALL';
+    fSort = 'NAME_ASC';
+    fMinPrice = '';
+    fMaxPrice = '';
+    fHighMargin = false;
+
+    // Reset UI in bottom sheet
+    document.querySelectorAll('#filterCatPills .filter-pill-chip').forEach((b, i) => b.classList.toggle('active', i === 0));
+    document.querySelectorAll('.stock-grid-2x2 .stock-filter-card').forEach((c, i) => c.classList.toggle('active', i === 0));
+    document.querySelectorAll('#filterDatePills .filter-pill-chip').forEach((b, i) => b.classList.toggle('active', i === 0));
+    document.querySelectorAll('.sort-tile').forEach((t, i) => {
+      t.classList.toggle('active', i === 0);
+      const check = t.querySelector('span:first-child');
+      if (check && check.textContent.includes('✓')) check.remove();
+      if (i === 0) {
+        const checkSpan = document.createElement('span');
+        checkSpan.textContent = '✓ ';
+        t.insertBefore(checkSpan, t.firstChild);
+      }
+    });
+
+    const minInput = document.getElementById('inputMinPrice');
+    const maxInput = document.getElementById('inputMaxPrice');
+    if (minInput) minInput.value = '';
+    if (maxInput) maxInput.value = '';
+
+    const sw = document.getElementById('highMarginSwitch');
+    if (sw) sw.classList.remove('active');
+
+    // Reset Command Hub chips
+    document.querySelectorAll('.filter-scroll-strip .filter-chip-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+
+    updateFilterPreviewCount();
+    applyFilters(false);
+  }
+
+  // Apply Filters to Main Screen
+  function applyFilters(closeSheet = true) {
+    if (closeSheet) closeFilterSheetDirect();
+
+    const activeCount = getActiveFiltersCount();
+    const hubBadge = document.getElementById('hubFilterBadge');
+    if (hubBadge) {
+      if (activeCount > 0) {
+        hubBadge.textContent = activeCount;
+        hubBadge.style.display = 'flex';
+      } else {
+        hubBadge.style.display = 'none';
+      }
+    }
+
+    renderProducts();
+
+    if (closeSheet) {
+      const filtered = getFilteredProductsList();
+      showToast(currentLang === 'bn' 
+        ? `ফিল্টার প্রয়োগ করা হয়েছে: ${toBnDigits(filtered.length)}টি পণ্য`
+        : `Filters Applied: ${filtered.length} products found`);
+    }
+  }
+
+  // Category filter from the main horizontal chip strip
+  function filterCategory(cat, btn) {
+    document.querySelectorAll('.filter-scroll-strip .filter-chip-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    if (cat === 'all') {
+      fCategory = 'ALL';
+      fStock = 'ALL';
+    } else if (cat === 'low') {
+      fCategory = 'ALL';
+      fStock = 'LOW';
+    } else if (cat === 'out') {
+      fCategory = 'ALL';
+      fStock = 'OUT';
+    } else {
+      fCategory = cat;
+      fStock = 'ALL';
+    }
+
+    // Sync Bottom Sheet UI state
+    document.querySelectorAll('#filterCatPills .filter-pill-chip').forEach(b => {
+      const txt = b.textContent;
+      if (cat === 'all' && txt.includes('All')) b.classList.add('active');
+      else if (txt.includes(cat)) b.classList.add('active');
+      else b.classList.remove('active');
+    });
+
+    const activeCount = getActiveFiltersCount();
+    const hubBadge = document.getElementById('hubFilterBadge');
+    if (hubBadge) {
+      if (activeCount > 0) {
+        hubBadge.textContent = activeCount;
+        hubBadge.style.display = 'flex';
+      } else {
+        hubBadge.style.display = 'none';
+      }
+    }
+
+    renderProducts();
+  }
+
+  // Search
+  function handleSearch(val) {
+    searchQuery = val;
+    renderProducts();
+  }
+
+  // List/Grid Toggle
+  function setItemLayout(mode) {
+    currentViewMode = mode;
+    document.getElementById('btnViewList').classList.toggle('active', mode === 'list');
+    document.getElementById('btnViewGrid').classList.toggle('active', mode === 'grid');
+    renderProducts();
+  }
+
+  function toggleItemViewFromHub() {
+    setItemLayout(currentViewMode === 'list' ? 'grid' : 'list');
+  }
+
+  // Render Product Items
+  function renderProducts() {
+    const container = document.getElementById('productsListContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const filtered = getFilteredProductsList();
+
+    // Update SKU Badge
+    const skuBadge = document.getElementById('skuCountBadge');
+    if (skuBadge) {
+      const activeCount = getActiveFiltersCount();
+      if (activeCount > 0) {
+        skuBadge.textContent = currentLang === 'bn' 
+          ? `${toBnDigits(filtered.length)}টি ফিল্টারড`
+          : `${filtered.length} Filtered`;
+      } else {
+        skuBadge.textContent = currentLang === 'bn' 
+          ? `${toBnDigits('18')}টি পণ্য`
+          : '18 SKUs';
+      }
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:40px 16px; color:var(--text-muted);">
+          <div style="font-size:32px; margin-bottom:8px;">🔍</div>
+          <div style="font-weight:700; font-size:14px;">${currentLang === 'bn' ? 'কোনো পণ্য খুঁজে পাওয়া যায়নি' : 'No matching products found'}</div>
+          <div style="font-size:12px; color:var(--text-dim); margin-top:4px;">${currentLang === 'bn' ? 'অন্য ফিল্টার বা নাম দিয়ে চেষ্টা করুন' : 'Try searching for another keyword or clear filters'}</div>
+          <button class="sheet-clear-btn" style="margin-top:12px;" onclick="resetFilters()">${currentLang === 'bn' ? 'ফিল্টার রিসেট করুন' : 'Reset All Filters'}</button>
+        </div>
+      `;
+      return;
+    }
+
+    if (isBatchSelectMode) {
+      const banner = document.createElement('div');
+      banner.className = 'batch-mode-banner';
+      banner.innerHTML = `
+        <div class="batch-banner-text">
+          <span>☑️</span>
+          <span>${currentLang === 'bn' ? `${toBnDigits(selectedProductIds.size)}টি নির্বাচিত` : `${selectedProductIds.size} Selected`}</span>
+        </div>
+        <div class="batch-banner-actions">
+          <button class="batch-banner-btn" onclick="selectAllBatch()">${currentLang === 'bn' ? 'সব নির্বাচন' : 'Select All'}</button>
+          <button class="batch-banner-btn" onclick="showToast('Printing selected labels...')">${currentLang === 'bn' ? 'লেবেল প্রিন্ট' : 'Print Labels'}</button>
+          <button class="batch-banner-btn exit" onclick="exitBatchMode()">${currentLang === 'bn' ? 'প্রস্থান' : 'Exit'}</button>
+        </div>
+      `;
+      container.appendChild(banner);
+    }
+
+    if (currentViewMode === 'list') {
+      container.className = 'products-container';
+      filtered.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'product-row-card';
+        if (isBatchSelectMode && selectedProductIds.has(p.id)) {
+          card.style.borderColor = 'var(--primary-light)';
+          card.style.background = 'var(--primary-subtle)';
+        }
+
+        const isSelected = selectedProductIds.has(p.id);
+        let pressTimer = null;
+
+        // Long-Press and Right-Click native trigger for Batch Mode
+        card.oncontextmenu = (e) => {
+          e.preventDefault();
+          if (!isBatchSelectMode) {
+            toggleBatchSelectMode(p.id);
+          }
+        };
+
+        card.onmousedown = (e) => {
+          if (e.button === 0 && !isBatchSelectMode) {
+            pressTimer = setTimeout(() => {
+              toggleBatchSelectMode(p.id);
+            }, 450);
+          }
+        };
+        card.onmouseup = () => { if (pressTimer) clearTimeout(pressTimer); };
+        card.onmouseleave = () => { if (pressTimer) clearTimeout(pressTimer); };
+
+        card.ontouchstart = () => {
+          if (!isBatchSelectMode) {
+            pressTimer = setTimeout(() => {
+              toggleBatchSelectMode(p.id);
+            }, 450);
+          }
+        };
+        card.ontouchend = () => { if (pressTimer) clearTimeout(pressTimer); };
+        card.ontouchmove = () => { if (pressTimer) clearTimeout(pressTimer); };
+
+        card.onclick = () => {
+          if (isBatchSelectMode) {
+            toggleProductSelection(p.id);
+          } else {
+            showToast(`Selected: ${p.name}`);
+          }
+        };
+
+        const displayName = currentLang === 'bn' ? p.bnName : p.name;
+        const displayCat = currentLang === 'bn' ? p.bnCat : p.category;
+        const displayUnit = currentLang === 'bn' ? p.bnUnit : p.unit;
+        const displayPrice = currentLang === 'bn' ? `৳ ${toBnDigits(p.price.toFixed(2))}` : `৳ ${p.price.toFixed(2)}`;
+        const displayStock = currentLang === 'bn' ? toBnDigits(p.stock) : p.stock;
+
+        // 3D orb depending on status
+        let statusOrb = '';
+        let statusClass = 'in-stock';
+        let statusText = `${displayStock} ${displayUnit}`;
+        if (p.status === 'out') {
+          statusClass = 'out-stock';
+          statusText = currentLang === 'bn' ? 'মজুদ শেষ' : 'Out';
+          statusOrb = `<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#EF4444; box-shadow:0 0 6px rgba(239,68,68,0.8);"></span>`;
+        } else if (p.status === 'low') {
+          statusClass = 'low-stock';
+          statusText = `${displayStock} ${displayUnit}`;
+          statusOrb = `<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#F59E0B; box-shadow:0 0 6px rgba(245,158,11,0.8);"></span>`;
+        } else {
+          statusOrb = `<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#10B981; box-shadow:0 0 6px rgba(16,185,129,0.8);"></span>`;
+        }
+
+        // Expiry alert pill if expiring soon
+        let expiryBadge = '';
+        if (p.expiryDays && p.expiryDays <= 30) {
+          expiryBadge = currentLang === 'bn' 
+            ? `<span style="background:rgba(245,158,11,0.15); color:#F59E0B; padding:1px 5px; border-radius:4px; font-size:9.5px; font-weight:700;">⚠️ ${toBnDigits(p.expiryDays)} দিন বাকি</span>`
+            : `<span style="background:rgba(245,158,11,0.15); color:#F59E0B; padding:1px 5px; border-radius:4px; font-size:9.5px; font-weight:700;">⚠️ ${p.expiryDays}d left</span>`;
+        }
+
+        // Visual leading item: Checkbox in batch mode, or real product image thumbnail if available, otherwise stay completely HIDDEN
+        let leadingVisual = '';
+        if (isBatchSelectMode) {
+          leadingVisual = `<div class="batch-select-checkbox ${isSelected ? 'checked' : ''}">${isSelected ? '✓' : ''}</div>`;
+        } else if (p.image) {
+          leadingVisual = `
+            <div class="product-thumb-box" onclick="event.stopPropagation(); openEnlargedImageModal(${p.id})" title="${currentLang === 'bn' ? 'পণ্যের ছবি বড় করে দেখুন' : 'Tap to enlarge image'}">
+              <img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;">
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          ${leadingVisual}
+
+          <!-- Product Main Info -->
+          <div class="product-info-col">
+            <div class="product-name-title" onclick="event.stopPropagation(); openStockAdjustModal(${p.id})" title="${currentLang === 'bn' ? 'স্টক সমন্বয় করতে ট্যাপ করুন' : 'Tap to adjust stock'}">${displayName}</div>
+            <div class="product-meta-row">
+              <span class="barcode-chip" onclick="event.stopPropagation(); openBarcodeImageModal(${p.id})" title="${currentLang === 'bn' ? 'বারকোড লেবেল তৈরি করুন' : 'Generate Barcode Label'}">
+                <span class="barcode-laser-icon">
+                  <span class="barcode-laser-bars">
+                    <span class="barcode-laser-bar b-thick"></span>
+                    <span class="barcode-laser-bar b-thin"></span>
+                    <span class="barcode-laser-bar b-med"></span>
+                    <span class="barcode-laser-bar b-thin"></span>
+                    <span class="barcode-laser-bar b-thick"></span>
+                  </span>
+                  <span class="barcode-laser-beam"></span>
+                </span>
+                <span>#${p.barcode}</span>
+              </span>
+              <span class="category-tag">${displayCat}</span>
+              ${expiryBadge}
+            </div>
+          </div>
+
+          <!-- Price & Stock Badge -->
+          <div class="product-data-col">
+            <div class="product-price-val">${displayPrice}</div>
+            <div class="stock-badge-pill ${statusClass}">
+              ${statusOrb}
+              <span>${statusText}</span>
+            </div>
+          </div>
+
+          <!-- Quick 1-Tap Add Action -->
+          ${!isBatchSelectMode ? `
+          <button class="quick-add-btn" onclick="event.stopPropagation(); quickAddToCart('${p.name}')" title="Add to Cart">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          ` : ''}
+        `;
+        container.appendChild(card);
+      });
+    } else {
+      // Grid Card Mode
+      container.className = 'products-container grid-layout';
+      filtered.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'product-grid-card';
+        if (isBatchSelectMode && selectedProductIds.has(p.id)) {
+          card.style.borderColor = 'var(--primary-light)';
+          card.style.background = 'var(--primary-subtle)';
+        }
+
+        const isSelected = selectedProductIds.has(p.id);
+        let pressTimer = null;
+
+        card.oncontextmenu = (e) => {
+          e.preventDefault();
+          if (!isBatchSelectMode) {
+            toggleBatchSelectMode(p.id);
+          }
+        };
+
+        card.onmousedown = (e) => {
+          if (e.button === 0 && !isBatchSelectMode) {
+            pressTimer = setTimeout(() => {
+              toggleBatchSelectMode(p.id);
+            }, 450);
+          }
+        };
+        card.onmouseup = () => { if (pressTimer) clearTimeout(pressTimer); };
+        card.onmouseleave = () => { if (pressTimer) clearTimeout(pressTimer); };
+
+        card.ontouchstart = () => {
+          if (!isBatchSelectMode) {
+            pressTimer = setTimeout(() => {
+              toggleBatchSelectMode(p.id);
+            }, 450);
+          }
+        };
+        card.ontouchend = () => { if (pressTimer) clearTimeout(pressTimer); };
+        card.ontouchmove = () => { if (pressTimer) clearTimeout(pressTimer); };
+
+        card.onclick = () => {
+          if (isBatchSelectMode) {
+            toggleProductSelection(p.id);
+          } else {
+            showToast(`Selected: ${p.name}`);
+          }
+        };
+
+        const displayName = currentLang === 'bn' ? p.bnName : p.name;
+        const displayCat = currentLang === 'bn' ? p.bnCat : p.category;
+        const displayUnit = currentLang === 'bn' ? p.bnUnit : p.unit;
+        const displayPrice = currentLang === 'bn' ? `৳ ${toBnDigits(p.price.toFixed(2))}` : `৳ ${p.price.toFixed(2)}`;
+        const displayStock = currentLang === 'bn' ? toBnDigits(p.stock) : p.stock;
+
+        let statusClass = 'in-stock';
+        let statusText = `${displayStock} ${displayUnit}`;
+        if (p.status === 'out') {
+          statusClass = 'out-stock';
+          statusText = currentLang === 'bn' ? 'মজুদ শেষ' : 'Out';
+        } else if (p.status === 'low') {
+          statusClass = 'low-stock';
+          statusText = `${displayStock} ${displayUnit}`;
+        }
+
+        // Visual leading item: Checkbox in batch mode, or real product image thumbnail if available, otherwise stay completely HIDDEN
+        let gridLeading = '';
+        if (isBatchSelectMode) {
+          gridLeading = `<div class="batch-select-checkbox ${isSelected ? 'checked' : ''}">${isSelected ? '✓' : ''}</div>`;
+        } else if (p.image) {
+          gridLeading = `
+            <div class="grid-icon-wrap" onclick="event.stopPropagation(); openEnlargedImageModal(${p.id})" title="${currentLang === 'bn' ? 'পণ্যের ছবি বড় করে দেখুন' : 'Tap to enlarge image'}">
+              <img src="${p.image}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;">
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="grid-top-row" style="${gridLeading ? '' : 'justify-content: flex-end;'}">
+            ${gridLeading}
+            <span class="stock-badge-pill ${statusClass}">${statusText}</span>
+          </div>
+
+          <div>
+            <div class="grid-card-title" onclick="event.stopPropagation(); openStockAdjustModal(${p.id})" title="${currentLang === 'bn' ? 'স্টক সমন্বয় করতে ট্যাপ করুন' : 'Tap to adjust stock'}">${displayName}</div>
+            <div class="grid-card-meta" style="margin-top:4px;">
+              <span class="barcode-chip" onclick="event.stopPropagation(); openBarcodeImageModal(${p.id})" title="${currentLang === 'bn' ? 'বারকোড লেবেল তৈরি করুন' : 'Generate Barcode Label'}">
+                <span class="barcode-laser-icon">
+                  <span class="barcode-laser-bars">
+                    <span class="barcode-laser-bar b-thick"></span>
+                    <span class="barcode-laser-bar b-thin"></span>
+                    <span class="barcode-laser-bar b-med"></span>
+                    <span class="barcode-laser-bar b-thin"></span>
+                    <span class="barcode-laser-bar b-thick"></span>
+                  </span>
+                  <span class="barcode-laser-beam"></span>
+                </span>
+                <span>#${p.barcode}</span>
+              </span>
+              <span class="category-tag">${displayCat}</span>
+            </div>
+          </div>
+
+          <div class="grid-card-bottom">
+            <div class="grid-price-text">${displayPrice}</div>
+            ${!isBatchSelectMode ? `
+            <button class="quick-add-btn" style="width:30px; height:30px;" onclick="event.stopPropagation(); quickAddToCart('${p.name}')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            ` : ''}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    updateStatBarValues();
+  }
+
+  // Update Valuation & Stat Drawer from Product Database
+  function updateStatBarValues() {
+    const totalValuation = sampleProducts.reduce((acc, p) => acc + (p.price * p.stock), 0);
+    const totalCost = sampleProducts.reduce((acc, p) => acc + (p.cost * p.stock), 0);
+    const totalUnits = sampleProducts.reduce((acc, p) => acc + p.stock, 0);
+    const marginPct = totalValuation > 0 ? (((totalValuation - totalCost) / totalValuation) * 100).toFixed(1) : 0;
+
+    const valEl = document.getElementById('statTakaAmount');
+    if (valEl) {
+      valEl.textContent = currentLang === 'bn' 
+        ? `৳ ${toBnDigits(Math.round(totalValuation).toLocaleString('en-US'))}` 
+        : `৳ ${Math.round(totalValuation).toLocaleString('en-US')}`;
+    }
+
+    const costEl = document.getElementById('drawerCost');
+    if (costEl) {
+      costEl.textContent = currentLang === 'bn' 
+        ? `৳ ${toBnDigits(Math.round(totalCost).toLocaleString('en-US'))}` 
+        : `৳ ${Math.round(totalCost).toLocaleString('en-US')}`;
+    }
+
+    const unitsEl = document.getElementById('drawerUnits');
+    if (unitsEl) {
+      unitsEl.textContent = currentLang === 'bn' 
+        ? `${toBnDigits(totalUnits)} টি` 
+        : `${totalUnits} pcs`;
+    }
+
+    const marginEl = document.getElementById('drawerMargin');
+    if (marginEl) {
+      marginEl.textContent = currentLang === 'bn' 
+        ? `+${toBnDigits(marginPct)}%` 
+        : `+${marginPct}%`;
+    }
+  }
+
+  // Interactive Toast
+  let toastTimer = null;
+  function showToast(msg) {
+    const toast = document.getElementById('toastPopup');
+    const msgEl = document.getElementById('toastMsg');
+    if (!toast || !msgEl) return;
+    msgEl.textContent = msg;
+    toast.classList.add('visible');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('visible');
+    }, 2200);
+  }
+
+  function quickAddToCart(name) {
+    cartUnits += 1;
+    const badge = document.getElementById('cartCountTag');
+    if (badge) {
+      badge.textContent = cartUnits;
+      badge.classList.remove('cart-badge-bounce');
+      void badge.offsetWidth;
+      badge.classList.add('cart-badge-bounce');
+    }
+    showToast(`Added: ${name}`);
+  }
+
+  function animateCartAdd() {
+    showToast(`Viewing Cart (${cartUnits} items)`);
+  }
+
+  // Stat Drawer Expand/Collapse
+  function toggleStatDrawer() {
+    isStatDrawerOpen = !isStatDrawerOpen;
+    const drawer = document.getElementById('statDrawerDetail');
+    const chevron = document.getElementById('statChevron');
+    if (drawer) drawer.classList.toggle('open', isStatDrawerOpen);
+    if (chevron) chevron.classList.toggle('open', isStatDrawerOpen);
+  }
+
+  // ========================================================
+  // Stock Adjustment Dialog Logic (HardwareStockCheckDialog)
+  // ========================================================
+  let activeStockAdjustProduct = null;
+  let activeStockAdjustInitialQty = 0;
+  let activeStockAdjustCurrentQty = 0;
+  let activeStockAdjustReason = "Restock";
+
+  function openStockAdjustModal(productId) {
+    const prod = sampleProducts.find(p => p.id === productId);
+    if (!prod) return;
+    activeStockAdjustProduct = prod;
+    activeStockAdjustInitialQty = prod.stock;
+    activeStockAdjustCurrentQty = prod.stock;
+    activeStockAdjustReason = "Restock";
+
+    const displayName = currentLang === 'bn' ? prod.bnName : prod.name;
+    const displayCat = currentLang === 'bn' ? prod.bnCat : prod.category;
+    const displayUnit = currentLang === 'bn' ? prod.bnUnit : prod.unit;
+
+    document.getElementById('stockAdjustProdName').textContent = displayName;
+    document.getElementById('stockAdjustBarcode').textContent = `#${prod.barcode}`;
+    document.getElementById('stockAdjustCategory').textContent = displayCat;
+
+    const currentQtyEl = document.getElementById('stockAdjustCurrentQtyVal');
+    currentQtyEl.textContent = currentLang === 'bn' ? `${toBnDigits(prod.stock)} ${displayUnit}` : `${prod.stock} ${prod.unit}`;
+
+    const pill = document.getElementById('stockAdjustStatusPill');
+    if (prod.status === 'out') {
+      pill.className = 'stock-badge-pill out-stock';
+      pill.textContent = currentLang === 'bn' ? 'মজুদ শেষ' : 'Out of Stock';
+    } else if (prod.status === 'low') {
+      pill.className = 'stock-badge-pill low-stock';
+      pill.textContent = currentLang === 'bn' ? 'কম মজুদ' : 'Low Stock';
+    } else {
+      pill.className = 'stock-badge-pill in-stock';
+      pill.textContent = currentLang === 'bn' ? 'পর্যাপ্ত মজুদ' : 'In Stock';
+    }
+
+    // Financials
+    document.getElementById('stockAdjustCost').textContent = currentLang === 'bn' ? `৳ ${toBnDigits(prod.cost.toFixed(2))}` : `৳ ${prod.cost.toFixed(2)}`;
+    document.getElementById('stockAdjustPrice').textContent = currentLang === 'bn' ? `৳ ${toBnDigits(prod.price.toFixed(2))}` : `৳ ${prod.price.toFixed(2)}`;
+    const margin = prod.price > 0 ? (((prod.price - prod.cost) / prod.price) * 100).toFixed(1) : 0;
+    document.getElementById('stockAdjustMargin').textContent = `${margin}%`;
+
+    // Date
+    const expText = prod.expiryDays 
+      ? (currentLang === 'bn' ? `${toBnDigits(prod.expiryDays)} দিন বাকি` : `${prod.expiryDays}d left`)
+      : (currentLang === 'bn' ? 'তারিখ ট্র্যাকিং নেই' : 'No date set');
+    document.getElementById('stockAdjustExp').textContent = expText;
+
+    // Stepper Input
+    const input = document.getElementById('stockAdjustInput');
+    input.value = prod.stock;
+
+    updateStockDeltaDisplay();
+    document.getElementById('stockAdjustNoteInput').value = '';
+
+    document.getElementById('stockAdjustModalOverlay').classList.add('active');
+  }
+
+  function updateStockDeltaDisplay() {
+    const input = document.getElementById('stockAdjustInput');
+    const val = parseFloat(input.value) || 0;
+    activeStockAdjustCurrentQty = val;
+    const diff = val - activeStockAdjustInitialQty;
+    const deltaEl = document.getElementById('stockAdjustDeltaPill');
+    const reasonSec = document.getElementById('stockAdjustReasonSection');
+
+    if (diff > 0) {
+      deltaEl.className = 'delta-pill positive';
+      deltaEl.textContent = currentLang === 'bn' ? `+${toBnDigits(diff)} যোগ` : `+${diff} added`;
+      reasonSec.style.display = 'block';
+    } else if (diff < 0) {
+      deltaEl.className = 'delta-pill negative';
+      deltaEl.textContent = currentLang === 'bn' ? `${toBnDigits(diff)} হ্রাস` : `${diff} deducted`;
+      reasonSec.style.display = 'block';
+    } else {
+      deltaEl.className = 'delta-pill';
+      deltaEl.textContent = '±0';
+      reasonSec.style.display = 'none';
+    }
+  }
+
+  function stockAdjustStep(delta) {
+    const input = document.getElementById('stockAdjustInput');
+    let val = (parseFloat(input.value) || 0) + delta;
+    if (val < 0) val = 0;
+    input.value = val;
+    updateStockDeltaDisplay();
+  }
+
+  function setStockAdjustQuick(type) {
+    const input = document.getElementById('stockAdjustInput');
+    let val = parseFloat(input.value) || 0;
+    if (type === 'plus1') val += 1;
+    else if (type === 'plus5') val += 5;
+    else if (type === 'plus10') val += 10;
+    else if (type === 'zero') val = 0;
+    else if (type === 'reset') val = activeStockAdjustInitialQty;
+    input.value = val;
+    updateStockDeltaDisplay();
+  }
+
+  function selectStockReason(reason, btn) {
+    activeStockAdjustReason = reason;
+    document.querySelectorAll('#stockReasonChips .stepper-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function closeStockAdjustModal(e) {
+    if (e && e.target !== document.getElementById('stockAdjustModalOverlay')) return;
+    document.getElementById('stockAdjustModalOverlay').classList.remove('active');
+  }
+
+  function closeStockAdjustModalDirect() {
+    document.getElementById('stockAdjustModalOverlay').classList.remove('active');
+  }
+
+  function saveStockAdjustment() {
+    if (!activeStockAdjustProduct) return;
+    const newQty = activeStockAdjustCurrentQty;
+    activeStockAdjustProduct.stock = newQty;
+    if (newQty <= 0) {
+      activeStockAdjustProduct.status = 'out';
+    } else if (newQty <= 5) {
+      activeStockAdjustProduct.status = 'low';
+    } else {
+      activeStockAdjustProduct.status = 'in';
+    }
+
+    const prodName = currentLang === 'bn' ? activeStockAdjustProduct.bnName : activeStockAdjustProduct.name;
+    const msg = currentLang === 'bn'
+      ? `${prodName}-এর নতুন মজুদ: ${toBnDigits(newQty)} সংরক্ষিত হয়েছে!`
+      : `Stock updated for ${prodName}: ${newQty} units!`;
+
+    closeStockAdjustModalDirect();
+    renderProducts();
+    showToast(msg);
+  }
+
+  // ========================================================
+  // Barcode / Code Image Dialog Logic (ProductCodeImageDialog)
+  // ========================================================
+  let activeBarcodeProduct = null;
+  let activeCodeFormat = 'CODE128';
+  let activeLabelSize = '50x30';
+  let labelOptions = {
+    price: true,
+    store: true
+  };
+
+  function openBarcodeImageModal(productId) {
+    const prod = sampleProducts.find(p => p.id === productId);
+    if (!prod) return;
+    activeBarcodeProduct = prod;
+
+    const displayName = currentLang === 'bn' ? prod.bnName : prod.name;
+    const displayPrice = currentLang === 'bn' ? `মূল্য: ৳ ${toBnDigits(prod.price.toFixed(2))}` : `Price: ৳ ${prod.price.toFixed(2)}`;
+    const displayDate = prod.expiryDays 
+      ? (currentLang === 'bn' ? `মেয়াদ: ২০২৪-১২-৩০` : `Exp: 2024-12-30`)
+      : (currentLang === 'bn' ? `তারিখ: ২০২৪-১০-২১` : `Date: 2024-10-21`);
+
+    document.getElementById('labelProdName').textContent = displayName;
+    document.getElementById('labelCodeNumber').textContent = `#${prod.barcode}`;
+    document.getElementById('labelPriceTag').textContent = displayPrice;
+    document.getElementById('labelDateTag').textContent = displayDate;
+    document.getElementById('labelStoreName').textContent = currentLang === 'bn' ? 'টেকিফাই সুপার স্টোর' : 'TECHYFI SUPER STORE';
+
+    renderBarcodeGraphic();
+    document.getElementById('barcodeImageModalOverlay').classList.add('active');
+  }
+
+  function renderBarcodeGraphic() {
+    const container = document.getElementById('labelBarcodeGraphic');
+    if (!container) return;
+    if (activeCodeFormat === 'QR') {
+      container.innerHTML = `
+        <svg width="84" height="84" viewBox="0 0 100 100" fill="#000000" style="margin:4px auto;">
+          <rect x="0" y="0" width="30" height="30" fill="none" stroke="#000000" stroke-width="6"/>
+          <rect x="9" y="9" width="12" height="12" fill="#000000"/>
+          <rect x="70" y="0" width="30" height="30" fill="none" stroke="#000000" stroke-width="6"/>
+          <rect x="79" y="9" width="12" height="12" fill="#000000"/>
+          <rect x="0" y="70" width="30" height="30" fill="none" stroke="#000000" stroke-width="6"/>
+          <rect x="9" y="79" width="12" height="12" fill="#000000"/>
+          <rect x="38" y="8" width="8" height="8" fill="#000000"/>
+          <rect x="52" y="8" width="6" height="6" fill="#000000"/>
+          <rect x="42" y="22" width="6" height="12" fill="#000000"/>
+          <rect x="15" y="38" width="8" height="6" fill="#000000"/>
+          <rect x="28" y="42" width="12" height="8" fill="#000000"/>
+          <rect x="48" y="40" width="14" height="14" fill="#000000"/>
+          <rect x="68" y="38" width="6" height="16" fill="#000000"/>
+          <rect x="80" y="44" width="14" height="8" fill="#000000"/>
+          <rect x="38" y="62" width="8" height="10" fill="#000000"/>
+          <rect x="54" y="60" width="10" height="6" fill="#000000"/>
+          <rect x="72" y="68" width="12" height="12" fill="#000000"/>
+          <rect x="42" y="78" width="16" height="6" fill="#000000"/>
+          <rect x="62" y="86" width="10" height="8" fill="#000000"/>
+          <rect x="80" y="82" width="12" height="12" fill="#000000"/>
+        </svg>
+      `;
+    } else {
+      container.innerHTML = `
+        <svg width="220" height="48" viewBox="0 0 220 48" fill="#000000">
+          <rect x="6" y="0" width="3" height="48"/>
+          <rect x="12" y="0" width="1.5" height="48"/>
+          <rect x="16" y="0" width="4" height="48"/>
+          <rect x="23" y="0" width="1.5" height="48"/>
+          <rect x="27" y="0" width="3" height="48"/>
+          <rect x="33" y="0" width="1.5" height="48"/>
+          <rect x="37" y="0" width="4.5" height="48"/>
+          <rect x="44" y="0" width="1.5" height="48"/>
+          <rect x="48" y="0" width="3" height="48"/>
+          <rect x="54" y="0" width="4" height="48"/>
+          <rect x="61" y="0" width="1.5" height="48"/>
+          <rect x="65" y="0" width="3" height="48"/>
+          <rect x="71" y="0" width="4.5" height="48"/>
+          <rect x="78" y="0" width="1.5" height="48"/>
+          <rect x="82" y="0" width="3" height="48"/>
+          <rect x="88" y="0" width="1.5" height="48"/>
+          <rect x="92" y="0" width="4" height="48"/>
+          <rect x="99" y="0" width="3" height="48"/>
+          <rect x="105" y="0" width="1.5" height="48"/>
+          <rect x="109" y="0" width="4.5" height="48"/>
+          <rect x="116" y="0" width="1.5" height="48"/>
+          <rect x="120" y="0" width="3" height="48"/>
+          <rect x="126" y="0" width="1.5" height="48"/>
+          <rect x="130" y="0" width="4" height="48"/>
+          <rect x="137" y="0" width="3" height="48"/>
+          <rect x="143" y="0" width="1.5" height="48"/>
+          <rect x="147" y="0" width="4.5" height="48"/>
+          <rect x="154" y="0" width="1.5" height="48"/>
+          <rect x="158" y="0" width="3" height="48"/>
+          <rect x="164" y="0" width="4" height="48"/>
+          <rect x="171" y="0" width="1.5" height="48"/>
+          <rect x="175" y="0" width="3" height="48"/>
+          <rect x="181" y="0" width="4.5" height="48"/>
+          <rect x="188" y="0" width="1.5" height="48"/>
+          <rect x="192" y="0" width="3" height="48"/>
+          <rect x="198" y="0" width="1.5" height="48"/>
+          <rect x="202" y="0" width="4" height="48"/>
+          <rect x="209" y="0" width="3" height="48"/>
+        </svg>
+      `;
+    }
+  }
+
+  function setLabelFormat(fmt, btn) {
+    activeCodeFormat = fmt;
+    document.querySelectorAll('#codeFormatGroup .segment-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderBarcodeGraphic();
+  }
+
+  function setLabelSize(sz, btn) {
+    activeLabelSize = sz;
+    document.querySelectorAll('#labelSizeGroup .filter-pill-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const preview = document.getElementById('thermalLabelPreview');
+    if (!preview) return;
+    if (sz === '40x25') {
+      preview.style.maxWidth = '230px';
+      preview.style.padding = '8px 10px';
+    } else if (sz === '45x35') {
+      preview.style.maxWidth = '250px';
+      preview.style.padding = '14px 12px';
+    } else {
+      preview.style.maxWidth = '270px';
+      preview.style.padding = '10px 14px';
+    }
+  }
+
+  function toggleLabelOption(opt) {
+    labelOptions[opt] = !labelOptions[opt];
+    if (opt === 'price') {
+      document.getElementById('labelPriceTag').style.display = labelOptions.price ? 'inline' : 'none';
+    } else if (opt === 'store') {
+      document.getElementById('labelStoreName').style.display = labelOptions.store ? 'block' : 'none';
+    }
+  }
+
+  function closeBarcodeImageModal(e) {
+    if (e && e.target !== document.getElementById('barcodeImageModalOverlay')) return;
+    document.getElementById('barcodeImageModalOverlay').classList.remove('active');
+  }
+
+  function closeBarcodeImageModalDirect() {
+    document.getElementById('barcodeImageModalOverlay').classList.remove('active');
+  }
+
+  function printThermalLabel() {
+    if (!activeBarcodeProduct) return;
+    const name = currentLang === 'bn' ? activeBarcodeProduct.bnName : activeBarcodeProduct.name;
+    const msg = currentLang === 'bn' 
+      ? `থার্মাল প্রিন্টারে "${name}"-এর বারকোড লেবেল পাঠানো হচ্ছে...` 
+      : `Sending barcode label for "${name}" to thermal printer...`;
+    showToast(msg);
+    setTimeout(() => {
+      closeBarcodeImageModalDirect();
+    }, 600);
+  }
+
+  function shareThermalLabel() {
+    if (!activeBarcodeProduct) return;
+    const msg = currentLang === 'bn' 
+      ? `বারকোড লেবেল ইমেজ সংরক্ষিত হয়েছে!` 
+      : `Barcode label image saved to downloads!`;
+    showToast(msg);
+  }
+
+  // ========================================================
+  // Enlarged Product Image Dialog Logic (EnlargedImageDialog)
+  // ========================================================
+  let activeEnlargedProduct = null;
+
+  function openEnlargedImageModal(productId) {
+    const prod = sampleProducts.find(p => p.id === productId);
+    if (!prod || !prod.image) return;
+    activeEnlargedProduct = prod;
+
+    const displayName = currentLang === 'bn' ? prod.bnName : prod.name;
+    const displayCat = currentLang === 'bn' ? prod.bnCat : prod.category;
+    const displayPrice = currentLang === 'bn' ? `৳ ${toBnDigits(prod.price.toFixed(2))}` : `৳ ${prod.price.toFixed(2)}`;
+
+    document.getElementById('enlargedImageTitle').textContent = displayName;
+    document.getElementById('enlargedImageTag').src = prod.image;
+    document.getElementById('enlargedImageTag').alt = displayName;
+    document.getElementById('enlargedImageMeta').textContent = `${displayCat} • #${prod.barcode}`;
+    document.getElementById('enlargedImagePrice').textContent = displayPrice;
+
+    document.getElementById('enlargedImageModalOverlay').classList.add('active');
+  }
+
+  function closeEnlargedImageModal(e) {
+    if (e && e.target !== document.getElementById('enlargedImageModalOverlay')) return;
+    document.getElementById('enlargedImageModalOverlay').classList.remove('active');
+  }
+
+  function closeEnlargedImageModalDirect() {
+    document.getElementById('enlargedImageModalOverlay').classList.remove('active');
+  }
+
+  // Screen View Switcher: Redesign, Current, Compare
+  function setScreenView(view) {
+    const stage = document.getElementById('previewStage');
+    const redesign = document.getElementById('redesignWrapper');
+    const current = document.getElementById('currentWrapper');
+
+    document.getElementById('btnModeRedesign').classList.toggle('active', view === 'redesign');
+    document.getElementById('btnModeCurrent').classList.toggle('active', view === 'current');
+    document.getElementById('btnModeCompare').classList.toggle('active', view === 'compare');
+
+    if (view === 'redesign') {
+      stage.classList.remove('side-by-side');
+      redesign.style.display = 'flex';
+      current.style.display = 'none';
+    } else if (view === 'current') {
+      stage.classList.remove('side-by-side');
+      redesign.style.display = 'none';
+      current.style.display = 'flex';
+    } else {
+      stage.classList.add('side-by-side');
+      redesign.style.display = 'flex';
+      current.style.display = 'flex';
+    }
+  }
+
+  // Language Switcher
+  function setLanguage(lang) {
+    currentLang = lang;
+    document.documentElement.setAttribute('data-lang', lang);
+    document.getElementById('btnLangEn').classList.toggle('active', lang === 'en');
+    document.getElementById('btnLangBn').classList.toggle('active', lang === 'bn');
+
+    // Update translations
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (i18n[lang] && i18n[lang][key]) {
+        el.textContent = i18n[lang][key];
+      }
+    });
+
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+      const key = el.getAttribute('data-i18n-ph');
+      if (i18n[lang] && i18n[lang][key]) {
+        el.setAttribute('placeholder', i18n[lang][key]);
+      }
+    });
+
+    updateFilterPreviewCount();
+    renderProducts();
+  }
+
+  // Theme Toggle
+  function toggleTheme() {
+    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    const icon = document.getElementById('themeIcon');
+    const text = document.getElementById('themeText');
+    if (currentTheme === 'dark') {
+      icon.textContent = '🌙';
+      text.textContent = 'Dark Mode';
+    } else {
+      icon.textContent = '☀️';
+      text.textContent = 'Light Mode';
+    }
+  }
+
+  // Close dropdowns on outside click
+  window.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('quickActionsDropdown');
+    const btn = document.getElementById('btnQuickActions');
+    if (dropdown && dropdown.classList.contains('open')) {
+      if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+        dropdown.classList.remove('open');
+      }
+    }
+  });
+
+  // Initialize
+  document.addEventListener('DOMContentLoaded', () => {
+    renderProducts();
+  });
+</script>
+
+</body>
+</html>
