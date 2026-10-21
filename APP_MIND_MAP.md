@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-17 (app version 2.6.90-Final-V7, build `Techyfi-POS-Final-V7.apk`; versionCode 220966; DB schema version 38)
+Last updated: 2026-10-21 (app version 2.6.91-Final-V21-10-2026, build `Techyfi-POS-Final-V21-10-2026.apk`; versionCode 220967; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -20,10 +20,11 @@ mindmap
             Full master access across all screens, ledgers, settings, and danger zone
             Can toggle on/off any of the 33 permissions per staff account
             Add, edit, deactivate, or delete staff members
-            Multi-owner architecture (can add multiple owners, demote extra owners, last active owner protected)
+            Multi-owner architecture (can add multiple owners, demote extra owners, last active owner protected, Option B credential protection against silent takeover)
           Store Manager
             Operational oversight: inventory, stock inwarding, suppliers, customer CRM, shift register closing, and P&L reports
             Acts as Supervisor for PIN-elevation authorization
+            Customizable discount ceiling (default 20%, requiring owner authorization if exceeded)
           Frontline Cashier
             Streamlined POS checkout with safety guardrails
             Max discount limit (default 10%, supervisor PIN required for higher)
@@ -43,7 +44,7 @@ mindmap
           Unauthenticated remote backup restore backdoor removed from MainActivity
           Strict PIN authentication enforced for database restore routines
           Low-stock notification deep-link route preserved across terminal lock and unlock
-          Multi-owner policy: owners can create multiple owners or demote extra owners while preserving at least one owner
+          Multi-owner policy: co-owner credential step-up auth (target PIN or biometric) prevents silent takeover; mutual audit alerts logged
           Device-credential PIN reset requires high-priority owner acknowledgment on next login
           Configurable idle auto-lock with off / 5m / 15m / 30m / 60m thresholds
           Unified background auto-lock strictly follows idle timeout
@@ -3126,6 +3127,37 @@ mindmap
   - Validated English and Bengali locale rendering (`বাংলা`) with complete vowel and conjunct diacritic clearance.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V7.apk` (versionCode 220966, versionName "2.6.90-Final-V7"), 37MB release build located in `/Users/shahidulhaque/App Dev/Techyfi POS/`.
+
+### Release Final-V21-10-2026: Round 23 Platform Hardening, Multi-Owner Security & Owner Decisions (Version 2.6.91-Final-V21-10-2026, Build Final-V21-10-2026)
+- **Role-Based Access Control, Discount Ceilings & Self-Edits (R23-03, R23-04)**:
+  - **Manager Customizable Discount Ceiling (R23-03)**: Removed `SALES_HIGH_DISCOUNT` from `DEFAULT_MANAGER_PERMISSIONS`. Managers now operate under an owner-customizable discount ceiling (default 20.0%), requiring supervisor authorization if exceeded, rather than receiving an unconstrained 100% discount.
+  - **Unified Checkout Limit Verification**: Unified discount limits across both UI (`CartScreen.kt`) and database repository (`DataRepository.kt`) via shared `AppPermissions.getEffectiveMaxDiscount()`.
+  - **Self-Account Editing Resilience**: Fixed bug where editing an owner's own name or PIN threw "Users cannot change their own maximum discount"; dialogs now safely send `null` when discount limits remain unchanged.
+  - **Staff Delegate Permission Boundaries (R23-04)**: Enforced strict subset intersection when non-owners create or update accounts. Non-owners cannot assign permissions they do not hold or assign higher roles.
+- **Multi-Owner Security & Mutual Protection Architecture (R23-06 - Option B)**:
+  - **Step-Up Co-Owner Authentication**: In multi-owner setups, one owner cannot silently take over, change the PIN of, demote, or deactivate another owner. Credential modification strictly requires the target owner's current PIN or device master biometric authentication.
+  - **Co-Owner Mutual Audit Alerts**: Any administrative modification to another owner's account writes a persistent audit record to `owner_pin_reset_audit` (`"Modified by <Caller Name>"`), alerting the target owner upon their next login.
+  - **Orphan & Direct Deletion Protection**: Direct one-tap deletion of owner accounts is disabled in user management; owners must be demoted with credential verification first. Deletion or deactivation of the last active owner remains strictly blocked.
+- **Weighed Fractional Units & Sales Decimal Quantities (R23-16)**:
+  - **Bilingual Weighed & Measured Units**: Extended `isFractionalUnit` in `AppUtils.kt` to cover both English and Bengali unit designations (`kg`, `g`, `gm`, `litre`, `ltr`, `ml`, `meter`, `কেজি`, `গ্রাম`, `লিটার`, `মিটার`, `মিলি`).
+  - **Fractional Preservation When Decimal Toggle is Off**: When general decimal quantities are turned off, weighed and liquid items preserve exact fractional quantities (e.g., 0.250 kg, 1.5 L) without truncation or stock-check refusal, while discrete units (`pcs`, `box`, `pack`, `টি`) cleanly round/clamp to positive integers (>= 1).
+  - **Settings Relocation**: Moved the Decimal Quantities configuration toggle from the Receipt Layout dialog into the core Shop & Selling Policy card in `SettingsScreen.kt`.
+- **Security & PIN Brute-Force Hardening (R23-01, R23-02, R23-05, R23-07)**:
+  - **Persistent Failure Counters (R23-01)**: Prevented PIN brute-forcing by ensuring `total_failures` does not clear when a different user logs in; failures decay gradually over a sliding window with escalating lockouts (30s, 2m, 5m, 15m).
+  - **Permission Matrix Subset Enforcement (R23-02)**: Prevented non-owners from elevating permissions beyond their active set via the permissions matrix dialog; restricted system administrative permissions to owners only.
+  - **PIN Oracle Mitigation (R23-05)**: Rate-limited PIN verification and sanitized conflict error messages to generic neutral responses to prevent username and PIN enumeration.
+  - **Override Token Lifecycle (R23-07)**: Automated purge of discount and credit limit override tokens upon user switch or logout, preventing token hijacking across cashier sessions.
+- **Subsystem & Ledger Reliability (R23-08 to R23-26)**:
+  - **Scanner Supervisor Hold (R23-08)**: Fixed race condition where supervisor hold authorization on the scanner screen discarded callbacks.
+  - **Z-Report Preview (R23-09)**: Enabled real-time preview of Register Close Z-Reports before shift closure confirmation.
+  - **Excel Barcode Preservation (R23-10)**: Prevented Apache POI from altering text barcode values with leading zeroes or EAN-13 padding on import.
+  - **Printer Watchdog & Batch Printing (R23-11, R23-12, R23-13, R23-21, R23-22)**: Fixed batch label dialog action buttons; dynamically computed Bluetooth timeout budgets for large batches (> 1.2 MB); keyed receipt cache on active bill hash to eliminate stale reprints; added tri-state print dialog status; and handled dual-USB identical VID:PID printer replug conflicts.
+  - **Financial Margin Reconciliation (R23-14, R23-18)**: Reconciled tax-inclusive gross margins with customer loyalty discounts and stabilized supplier ledger debt calculations across payment voids.
+- **Unit Test Suite & Verification (R23-T1)**:
+  - Restored deleted regression tests rewritten against production repository methods.
+  - Expanded test coverage across R23 security, manager ceilings, multi-owner Option B, and weighed decimal quantities (286 passing unit tests, 0 failures).
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V21-10-2026.apk` (versionCode 220967, versionName "2.6.91-Final-V21-10-2026"), R8 minified and resource-shrunk, prepared as an in-place update for existing installations in project root directory.
 
 ## Maintenance note
 
