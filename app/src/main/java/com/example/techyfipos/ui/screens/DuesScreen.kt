@@ -3755,7 +3755,7 @@ private fun DuesExecutiveSummaryCard(
                         if (isCollapsed) {
                             Text("•", fontSize = 11.sp, color = Color(0xFFFB7185))
                             Text(
-                                text = if (showRateMode) "${String.format(Locale.US, "%.1f", recoveryRate)}%" else formatTaka(outstanding),
+                                text = if (showRateMode) com.example.techyfipos.utils.formatPercent(recoveryRate) else formatTaka(outstanding),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -3830,7 +3830,7 @@ private fun DuesExecutiveSummaryCard(
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                text = if (showRateMode) "${String.format(Locale.US, "%.1f", recoveryRate)}%" else formatTaka(outstanding),
+                                text = if (showRateMode) com.example.techyfipos.utils.formatPercent(recoveryRate) else formatTaka(outstanding),
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = if (showRateMode) Color(0xFF34D399) else Color.White,
@@ -3915,7 +3915,7 @@ private fun DuesExecutiveSummaryCard(
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text(stringResource(R.string.dues_recovery_percent_label), fontSize = 11.sp, color = Color(0xFFFECDD3), fontWeight = FontWeight.Bold)
-                            Text("${String.format(Locale.US, "%.1f", recoveryRate)}%", fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF34D399))
+                            Text(com.example.techyfipos.utils.formatPercent(recoveryRate), fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF34D399))
                         }
                     }
                 }

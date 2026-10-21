@@ -481,7 +481,7 @@ fun ExpensesScreen(
                         onDelete = if (!isSupplierPayment) {
                             {
                                 expenseViewModel.deleteExpense(expense) { result ->
-                                    result.onFailure { Toast.makeText(context, it.localizedMessage ?: deleteFailedMessage, Toast.LENGTH_LONG).show() }
+                                    result.onFailure { Toast.makeText(context, getLocalizedRepositoryErrorMessage(context, it), Toast.LENGTH_LONG).show() }
                                 }
                             }
                         } else null

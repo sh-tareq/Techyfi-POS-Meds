@@ -253,7 +253,7 @@ fun formatPaymentMethodBangla(method: String): String {
         method.contains("WALLET", ignoreCase = true) || method.contains("Store Credit", ignoreCase = true) ->
             method.replace("WALLET", "স্টোর ক্রেডিট", ignoreCase = true).replace("Store Credit", "স্টোর ক্রেডিট", ignoreCase = true)
         method.contains("Voucher", ignoreCase = true) -> method.replace("Voucher", "ভাউচার", ignoreCase = true)
-        method.contains("Cash", ignoreCase = true) -> method.replace("Cash", "নগদ", ignoreCase = true)
+        method.contains("Cash", ignoreCase = true) -> method.replace("Cash", "ক্যাশ", ignoreCase = true)
         method.contains("bKash", ignoreCase = true) -> method.replace("bKash", "বিকাশ", ignoreCase = true)
         method.contains("Nagad", ignoreCase = true) -> method.replace("Nagad", "নগদ", ignoreCase = true)
         method.contains("Rocket", ignoreCase = true) -> method.replace("Rocket", "রকেট", ignoreCase = true)

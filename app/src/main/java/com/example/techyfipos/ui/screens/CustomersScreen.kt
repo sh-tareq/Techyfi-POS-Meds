@@ -117,7 +117,7 @@ fun CustomersScreen(
                 } catch (e: Exception) {
                     Toast.makeText(
                         context,
-                        "$exportFailedPrefix ${e.localizedMessage.orEmpty()}".trim(),
+                        "$exportFailedPrefix ${com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(context, e)}".trim(),
                         Toast.LENGTH_SHORT
                     ).show()
                 }

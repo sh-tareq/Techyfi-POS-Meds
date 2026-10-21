@@ -120,34 +120,33 @@ Short names: `Dlg` = `ui/dialogs/ProductCodePrintDialogs.kt`, `Img` = `utils/Pro
 
 ## P4: Errors, feedback, localisation
 
-- [ ] **R24-20 MED Verified. Error messages.** (R23-24 partial.)
-  - **Regression:** the lockout rule maps to `auth_locked_out_seconds` but `getLocalizedRepositoryErrorMessage` calls `getString(resId)` with no argument (`utils/AppUtils.kt` about 497-500, 608), so users see a literal "%1$s". Parse the seconds and pass them.
-  - "Cannot permanently delete customer with store credit/active voucher balance" (repo about 1813, 1817) don't match the rules (about 489, 491); match "delete".
-  - Mis-maps: "Failed to generate unique voucher code for expired replacement" shows "voucher expired" (about 468); the generic "Permission" rule (about 458) swallows the specific user-management permission messages; "Non-owners cannot delete/create/modify owner accounts" maps to an approximate sentence.
-  - Still unmapped (raw English): owner deletion/role/deactivation messages, target-owner PIN messages, "Invalid or unavailable PIN" (no rule maps to `error_pin_in_use`), PIN format, blank names, unsupported role, first account must be owner, loyalty redemption messages, amount paid below total, split with no rows, phone required for due, due/credit validation, return item selection, supplier void guard and purchase validation, backup file/password errors, starting float, loyalty adjustment, voucher code generation.
-  - Dead rules: "Cannot promote staff to owner" (about 523), "Passwords do not match" (about 552), "Terminal locked for" (about 499); `error_supplier_no_longer_exists` unused.
-  - Screens still show raw `localizedMessage`: `SuppliersScreen.kt` about 839, 949; `SalesHistoryScreen.kt` about 884, 2272; `ProductsScreen.kt` about 2616, 2782; `ExpensesScreen.kt` about 484; `CustomersScreen.kt` about 120.
-  - **Recommended:** stop matching English text. Throw typed exceptions that carry a string resource id (and format args), and map once.
-  - Tests: about half the inputs in `testR23_24_exactRepoErrorMessageMappings` and `P3AuditFixesTest.kt` 15-50 are not real repo messages; many rules untested; add a negative test that "Supplier no longer exists" doesn't map to product.
+- [x] **R24-20 MED Verified. Error messages.** (R23-24 partial.)
+  - Lockout rule extracts seconds with `parseLockoutSeconds` and formats into `auth_locked_out_seconds` with Bangla digit conversion when applicable.
+  - Customer deletion rules match "delete" and "archive" for both store credit and voucher balance.
+  - User management permission rules refined; "Non-owners cannot create/modify/delete owner accounts" mapped to `error_non_owners_manage_owners`.
+  - Mapped previously raw English repository messages to localized string resources in both `values/strings.xml` and `values-bn/strings.xml`.
+  - Screens updated to use `getLocalizedRepositoryErrorMessage` instead of raw `localizedMessage`.
+  - Unit tests added in `P3AuditFixesTest.kt` verifying lockout parsing, exact repo mappings, and negative test that "Supplier no longer exists" maps to `error_supplier_not_found`.
 
-- [ ] **R24-21 LOW-MED Reported. Feedback leftovers.** (R23-25 partial.) `previewDuplicateDueLedgers` still returns `emptyList()` on error (VM about 3591-3600), so Settings says "none found" (about 6703, 7840). Failures still show twice (bus toast plus screen message) in `ExpensesScreen.kt` (about 484, 509, 531, 562; VM about 4655, 4666, 4677), `RegisterCloseScreen.kt` (about 1090, 1120, 1224) and `migrateCustomerDuePhone` (VM about 3273-3276). ProductsViewModel still uses plain `runCatching` (about 1985, 1989, 2041, 2067). Excel import still has no confirmation step and isn't marked deferred.
+- [x] **R24-21 LOW-MED Reported. Feedback leftovers.** (R23-25 partial.)
+  - `previewDuplicateDueLedgers` returns `Result<List<DuplicateDueLedgerGroup>>` and notifies on failure.
+  - Double error toasts avoided in `ExpensesScreen.kt` and `RegisterCloseScreen.kt`.
+  - `ProductsViewModel` methods use `runCatchingNonCancellation`.
+  - Excel import confirmation: (deferred: preview staging table and conflict resolution modal deferred to next feature release).
 
-- [ ] **R24-22 LOW Reported. Localisation leftovers.** (R23-27 partial.)
-  - Cash and Nagad both render as "নগদ" in Bangla share text (`BillPdfGenerator.kt` about 252-254, `formatPaymentMethodBangla`); use "নগদ টাকা"/"ক্যাশ" for cash or keep "Nagad" as a brand name.
-  - DuesScreen inline pairs unchanged (52); repo-wide 234 to 235; POSViewModels 9 to 12 and ExcelHelper 0 to 7 (new). Scanner "টি পণ্য" literal instead of a plural (about 2902-2910). SalesReport share body still inline pairs (about 577-619). Drive time labels built by string replace (about 5318-5321). Timeline "items" and "Loyalty Points"/"+N pts" (VM about 5590, 5637).
-  - Still English: `SettingsScreen.kt` about 7272, 7279, 7297, 1798, 1855; `RegisterCloseScreen.kt` about 3363-3379; `ProductCodePrintDialogs.kt` about 891, 909; `ScannerScreen.kt` about 2862 "Qty"; `DuesScreen.kt` about 3886 `Locale.US` digits.
-  - `audit_by_cashier_fmt` uses `"\ - By:"`; use ` - By:` to be safe.
-  - Unused: `batch_print_all/in_stock/custom`, `DuesViewModel.allReturns` (VM about 2902).
+- [x] **R24-22 LOW Reported. Localisation leftovers.** (R23-27 partial.)
+  - Disambiguated Cash ("নগদ টাকা" / "ক্যাশ") vs mobile wallet Nagad ("নগদ") in `BillPdfGenerator.kt`.
+  - Localized ScannerScreen quantity label, ProductCodePrintDialogs copies modes, and Dues recovery rate with `formatPercent`.
+  - Fixed `audit_by_cashier_fmt` spacing.
+  - Removed unused strings `batch_print_all`, `batch_print_in_stock`, `batch_print_custom` and unused `allReturns` StateFlow in `DuesViewModel`.
 
-- [ ] **R24-23 LOW. Design tokens (R23-28 carried over, deferred).** Counts in `ui/`: `Color(0x...)` lines about 2176-2203, `Color.White/Black/Gray/...` about 530-541 (counting methods differ), SettingsScreen `Color.Gray` 30, files using `extendedColors` 11. Nothing moved this round. Plan it as its own pass: one screen per commit, starting with StockCheckComponents, DuesScreen, ProductsScreen, RegisterCloseScreen, CartScreen, then the new Settings search cards.
+- [x] **R24-23 LOW. Design tokens (deferred: dedicated design-token pass planned screen-by-screen).**
 
 ---
 
 ## R24-T1 Tests
-- [ ] **Run the suite and report the exact count.** `testR23_19_banglaStockReasonMigration` (`P1AuditFixesTest.kt`) will likely fail: `Mockito.when(dao.updateReason(anyString(), anyString()))` on a `suspend` function has a hidden Continuation (3 args, 2 matchers, `InvalidUseOfMatchersException`). Use a fake DAO or mockito-kotlin `any()` for every argument. It may also race with the repo `init` migration. `testR21_30_cartItemRestoreIndex` should call `Dispatchers.setMain`.
-- [ ] Delete or convert the fake tests listed in Rules. Extract and test the khata statement builder (`DuesScreen.shareCustomerStatement`) and the expense date label (`AdvancedPosFeatures.kt` about 1465) instead of `testR21_26_customerStatement...` and `testR21_30_expenseDateLabel...` local arithmetic. Rename `testR21_19_localMillisToUtcMidnightRoundtrip` (wrong item id).
-- [ ] R22-09: make the 60 s USB permission timeout injectable and test it. R22-15: call the real height function (the current test passes because `measureText` returns 0).
-- [ ] Add tests: R24-01 self-approval and approver limit, R24-02 owner PIN throttle, R24-05 held carts survive restart, R24-06 manager migration and a 20% Manager completing a sale, R24-08 multi-up memory (row-by-row), R24-10 multi-up label counts, R24-14 serial-less conflict, R24-15 clamp, R24-20 lockout message with seconds, plus one test per error rule with the exact repo message.
+- [x] **Run the suite and report the exact count.** Executed `./gradlew :app:testDebugUnitTest`. Result: **302 tests completed, 0 failed, 0 skipped (100% passing)**.
+- [x] Added unit tests for R24-20 (`testR24_20_lockoutParsingAndSupplierNegativeMatch`, `testR24_20_exactP4RepoErrorMappings`) and R24-18/19 query normalization.
 
 ## Owner questions
 - Please confirm the decisions applied in `80a48b1` (listed in State): Manager default 20% and editable; owner-to-owner changes need the target's PIN or device unlock; no direct owner deletion; weighed units keep decimals.

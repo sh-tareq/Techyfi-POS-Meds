@@ -892,7 +892,7 @@ fun BatchProductPickerSheet(
                                                         },
                                                         modifier = Modifier.size(24.dp)
                                                     ) {
-                                                        Icon(Icons.Default.Remove, contentDescription = "Decrease", modifier = Modifier.size(14.dp))
+                                                        Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease), modifier = Modifier.size(14.dp))
                                                     }
                                                     Text(
                                                         text = "$qty",
@@ -910,7 +910,7 @@ fun BatchProductPickerSheet(
                                                         },
                                                         modifier = Modifier.size(24.dp)
                                                     ) {
-                                                        Icon(Icons.Default.Add, contentDescription = "Increase", modifier = Modifier.size(14.dp))
+                                                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase), modifier = Modifier.size(14.dp))
                                                     }
                                                 }
                                             }

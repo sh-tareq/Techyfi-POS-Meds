@@ -250,4 +250,43 @@ class P3AuditFixesTest {
         val matchCash = testMethods.filter { it.contains("CASH", ignoreCase = true) || it.contains("NAGAD", ignoreCase = true) }
         assertEquals(listOf("CASH", "NAGAD"), matchCash)
     }
+
+    @Test
+    fun testR24_20_lockoutParsingAndSupplierNegativeMatch() {
+        val seconds = com.example.techyfipos.utils.parseLockoutSeconds("Authentication locked out for 45 seconds")
+        assertEquals(45L, seconds)
+
+        val secondsTerminal = com.example.techyfipos.utils.parseLockoutSeconds("Terminal locked for 120 seconds due to failed attempts")
+        assertEquals(120L, secondsTerminal)
+
+        val resId = mapErrorToLocalizedMessage("Authentication locked out for 45 seconds")
+        assertEquals(R.string.auth_locked_out_seconds, resId)
+
+        // Negative test: Supplier no longer exists must NOT map to error_product_not_found
+        val supplierRes = mapErrorToLocalizedMessage("Supplier no longer exists")
+        assertEquals(R.string.error_supplier_not_found, supplierRes)
+        org.junit.Assert.assertNotEquals(R.string.error_product_not_found, supplierRes)
+    }
+
+    @Test
+    fun testR24_20_exactP4RepoErrorMappings() {
+        val mappings = listOf(
+            "Cannot permanently delete customer with store credit" to R.string.error_customer_has_store_credit,
+            "Cannot permanently delete customer with active voucher balance" to R.string.error_customer_has_active_vouchers,
+            "Non-owners cannot delete owner accounts" to R.string.error_non_owners_manage_owners,
+            "Non-owners cannot modify owner permissions" to R.string.error_non_owners_manage_owners,
+            "Failed to generate unique voucher code for expired replacement" to R.string.error_voucher_generation_failed,
+            "Amount paid is less than the total" to R.string.error_amount_paid_below_total,
+            "Split payment must have at least one valid row" to R.string.error_split_no_rows,
+            "No items selected for return" to R.string.error_return_no_items,
+            "Starting float must be zero or positive" to R.string.error_starting_float_invalid,
+            "Customer phone number is required for due sale" to R.string.error_phone_required_for_due,
+            "Name cannot be blank" to R.string.error_name_cannot_be_blank,
+            "PIN must be 4 to 6 digits" to R.string.error_pin_format_invalid
+        )
+
+        for ((msg, expectedResId) in mappings) {
+            assertEquals("Message '$msg' should map to resource $expectedResId", expectedResId, mapErrorToLocalizedMessage(msg))
+        }
+    }
 }

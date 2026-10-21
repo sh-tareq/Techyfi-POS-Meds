@@ -7119,9 +7119,13 @@ fun SettingsScreen(
                     onRepairDuesClick = {
                         if (isOwner) {
                             isCheckingDuplicateLedgers = true
-                            settingsViewModel.previewDuplicateDueLedgers { groups ->
+                            settingsViewModel.previewDuplicateDueLedgers { result ->
                                 isCheckingDuplicateLedgers = false
-                                duplicateLedgerGroups = groups
+                                result.onSuccess { groups ->
+                                    duplicateLedgerGroups = groups
+                                }.onFailure { err ->
+                                    Toast.makeText(context, com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(context, err), Toast.LENGTH_LONG).show()
+                                }
                             }
                         } else {
                             Toast.makeText(context, context.getString(R.string.owner_only_settings), Toast.LENGTH_SHORT).show()

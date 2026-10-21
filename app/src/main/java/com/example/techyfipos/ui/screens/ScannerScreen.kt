@@ -2859,7 +2859,7 @@ private fun LastScannedItemCard(
                     lineHeight = 17.sp
                 )
                 val qStr = if (quantity % 1.0 == 0.0) quantity.toLong().toString() else String.format(Locale.US, "%.2f", quantity).trimEnd('0').trimEnd('.')
-                Text("${formatTaka(product.sellingPrice)} · Qty $qStr", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.scanner_qty_format, formatTaka(product.sellingPrice), qStr), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             TextButton(onClick = onUndo) {
                 Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(16.dp))

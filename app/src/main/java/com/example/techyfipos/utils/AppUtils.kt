@@ -174,6 +174,12 @@ fun formatUnitsSold(units: Double, isBangla: Boolean = isAppBangla()): String {
     return if (isBangla) toBanglaDigits(raw) else raw
 }
 
+fun formatPercent(percent: Double, isBangla: Boolean = isAppBangla()): String {
+    val raw = String.format(Locale.US, "%.1f", percent)
+    val formatted = if (isBangla) toBanglaDigits(raw) else raw
+    return "$formatted%"
+}
+
 /**
  * Checks whether a unit string represents a fractional/weighable quantity (e.g., Kg, Gram, Ltr, Mtr).
  * Case-insensitive and supports multiple aliases ("Gram", "gm", "g", "Kg", "Ltr", etc.).
@@ -454,50 +460,8 @@ fun mapErrorToLocalizedMessageResId(msg: String?): Int? {
             R.string.error_unauthorized_owner
         msg.contains("Supervisor", ignoreCase = true) ->
             R.string.error_unauthorized_supervisor
-        msg.contains("Staff management permission required", ignoreCase = true) ||
-            msg.contains("Permission", ignoreCase = true) ->
-            R.string.error_unauthorized_permission
         msg.contains("Insufficient stock", ignoreCase = true) ->
             R.string.error_insufficient_stock
-
-        // Voucher errors
-        msg.contains("not found", ignoreCase = true) && msg.contains("Voucher", ignoreCase = true) ->
-            R.string.error_voucher_not_found
-        msg.contains("Invalid store credit voucher", ignoreCase = true) ->
-            R.string.error_voucher_not_found
-        msg.contains("expired", ignoreCase = true) && msg.contains("Voucher", ignoreCase = true) ->
-            R.string.error_voucher_expired
-        msg.contains("Voucher has no remaining balance", ignoreCase = true) ||
-            msg.contains("is exhausted", ignoreCase = true) ||
-            (msg.contains("voucher", ignoreCase = true) && (msg.contains("not active", ignoreCase = true) || msg.contains("cancelled", ignoreCase = true))) ->
-            R.string.error_voucher_inactive_or_exhausted
-
-        // Store credit errors
-        msg.contains("Insufficient store credit balance", ignoreCase = true) ->
-            R.string.error_insufficient_store_credit
-        msg.contains("Customer phone number is required for store credit", ignoreCase = true) ||
-            msg.contains("Customer phone number is required for Store Credit", ignoreCase = true) ->
-            R.string.error_store_credit_phone_required
-
-        // Customer deletion blocks
-        msg.contains("Cannot delete sale", ignoreCase = true) && msg.contains("return", ignoreCase = true) ->
-            R.string.error_cannot_delete_sale_has_returns
-        msg.contains("Cannot delete or archive customer with outstanding dues", ignoreCase = true) ||
-            msg.contains("Cannot permanently delete customer with outstanding dues", ignoreCase = true) ||
-            msg.contains("Cannot delete due ledger with outstanding dues", ignoreCase = true) ->
-            R.string.error_customer_has_dues
-        msg.contains("store credit balance", ignoreCase = true) && (msg.contains("Cannot delete", ignoreCase = true) || msg.contains("archive", ignoreCase = true)) ->
-            R.string.error_customer_has_store_credit
-        msg.contains("voucher balance", ignoreCase = true) && (msg.contains("Cannot delete", ignoreCase = true) || msg.contains("archive", ignoreCase = true)) ->
-            R.string.error_customer_has_active_vouchers
-
-        msg.contains("Cannot delete supplier with active due balance", ignoreCase = true) ->
-            R.string.error_supplier_has_dues
-
-        // Lockout
-        msg.contains("Authentication locked out for", ignoreCase = true) ||
-            msg.contains("Terminal locked for", ignoreCase = true) ->
-            R.string.auth_locked_out_seconds
 
         // User management
         msg.contains("User not found", ignoreCase = true) ->
@@ -518,12 +482,69 @@ fun mapErrorToLocalizedMessageResId(msg: String?): Int? {
             R.string.error_cannot_delete_last_owner
         msg.contains("cannot be deactivated", ignoreCase = true) ->
             R.string.error_cannot_deactivate_last_owner
+        msg.contains("Non-owners cannot create owner accounts", ignoreCase = true) ||
+            msg.contains("Non-owners cannot delete owner accounts", ignoreCase = true) ||
+            msg.contains("Non-owners cannot modify owner accounts", ignoreCase = true) ||
+            msg.contains("Non-owners cannot modify owner permissions", ignoreCase = true) ->
+            R.string.error_non_owners_manage_owners
+        msg.contains("Non-owners cannot assign owner role", ignoreCase = true) ||
+            msg.contains("Cannot promote staff to owner", ignoreCase = true) ->
+            R.string.users_cannot_promote_to_owner
         msg.contains("Non-owners cannot", ignoreCase = true) ->
             R.string.error_non_owners_privilege_escalation
-        msg.contains("Cannot promote staff to owner", ignoreCase = true) ->
-            R.string.users_cannot_promote_to_owner
         msg.contains("Cannot grant maximum discount higher than your own", ignoreCase = true) ->
             R.string.error_cannot_grant_higher_discount
+        msg.contains("Staff management permission required", ignoreCase = true) ||
+            msg.contains("Permission", ignoreCase = true) ->
+            R.string.error_unauthorized_permission
+
+        // PIN and auth
+        msg.contains("Invalid or unavailable PIN", ignoreCase = true) ||
+            msg.contains("PIN is already in use", ignoreCase = true) ||
+            msg.contains("PIN already in use", ignoreCase = true) ->
+            R.string.error_pin_in_use
+        msg.contains("PIN must be", ignoreCase = true) ->
+            R.string.error_pin_format_invalid
+        msg.contains("Name cannot be blank", ignoreCase = true) ->
+            R.string.error_name_cannot_be_blank
+        msg.contains("Authentication locked out for", ignoreCase = true) ||
+            msg.contains("Terminal locked for", ignoreCase = true) ->
+            R.string.auth_locked_out_seconds
+
+        // Voucher errors
+        msg.contains("Failed to generate unique voucher code", ignoreCase = true) ->
+            R.string.error_voucher_generation_failed
+        msg.contains("not found", ignoreCase = true) && msg.contains("Voucher", ignoreCase = true) ->
+            R.string.error_voucher_not_found
+        msg.contains("Invalid store credit voucher", ignoreCase = true) ->
+            R.string.error_voucher_not_found
+        msg.contains("expired", ignoreCase = true) && msg.contains("Voucher", ignoreCase = true) ->
+            R.string.error_voucher_expired
+        msg.contains("Voucher has no remaining balance", ignoreCase = true) ||
+            msg.contains("is exhausted", ignoreCase = true) ||
+            (msg.contains("voucher", ignoreCase = true) && (msg.contains("not active", ignoreCase = true) || msg.contains("cancelled", ignoreCase = true))) ->
+            R.string.error_voucher_inactive_or_exhausted
+
+        // Store credit errors
+        msg.contains("Insufficient store credit balance", ignoreCase = true) ->
+            R.string.error_insufficient_store_credit
+        msg.contains("Customer phone number is required for store credit", ignoreCase = true) ||
+            msg.contains("Customer phone number is required for Store Credit", ignoreCase = true) ->
+            R.string.error_store_credit_phone_required
+        msg.contains("Customer phone number is required for due", ignoreCase = true) ->
+            R.string.error_phone_required_for_due
+
+        // Customer deletion blocks
+        msg.contains("Cannot delete sale", ignoreCase = true) && msg.contains("return", ignoreCase = true) ->
+            R.string.error_cannot_delete_sale_has_returns
+        msg.contains("outstanding dues", ignoreCase = true) && (msg.contains("delete", ignoreCase = true) || msg.contains("archive", ignoreCase = true)) ->
+            R.string.error_customer_has_dues
+        msg.contains("store credit", ignoreCase = true) && (msg.contains("delete", ignoreCase = true) || msg.contains("archive", ignoreCase = true)) ->
+            R.string.error_customer_has_store_credit
+        msg.contains("voucher", ignoreCase = true) && (msg.contains("delete", ignoreCase = true) || msg.contains("archive", ignoreCase = true)) ->
+            R.string.error_customer_has_active_vouchers
+        msg.contains("Cannot delete supplier with active due balance", ignoreCase = true) ->
+            R.string.error_supplier_has_dues
 
         // Supplier expense
         msg.contains("Supplier payment expenses are auto-generated", ignoreCase = true) ->
@@ -538,6 +559,8 @@ fun mapErrorToLocalizedMessageResId(msg: String?): Int? {
             R.string.error_product_not_in_sale
         msg.contains("Return quantity exceeds quantity sold", ignoreCase = true) ->
             R.string.error_return_quantity_exceeds_sold
+        msg.contains("No items selected for return", ignoreCase = true) ->
+            R.string.error_return_no_items
 
         // Cart & Barcode
         msg.contains("Product barcode already exists", ignoreCase = true) ->
@@ -566,12 +589,20 @@ fun mapErrorToLocalizedMessageResId(msg: String?): Int? {
             R.string.error_payment_details_required
         msg.contains("Split payment rows do not add up", ignoreCase = true) ->
             R.string.error_split_total_mismatch
+        msg.contains("Split payment must have at least one valid row", ignoreCase = true) ->
+            R.string.error_split_no_rows
+        msg.contains("Amount paid is less than the total", ignoreCase = true) ||
+            msg.contains("paid amount cannot be less than", ignoreCase = true) ->
+            R.string.error_amount_paid_below_total
+        msg.contains("Starting float must be", ignoreCase = true) ->
+            R.string.error_starting_float_invalid
 
         // Existing entities - ONLY match "Product ... no longer exists" so Supplier and Due ledger don't match!
         msg.contains("Product no longer exists", ignoreCase = true) ||
             (msg.contains("Product", ignoreCase = true) && msg.contains("no longer exists", ignoreCase = true)) ->
             R.string.error_product_not_found
-        msg.contains("Supplier no longer exists", ignoreCase = true) || msg.contains("Supplier not found", ignoreCase = true) ->
+        msg.contains("Supplier no longer exists", ignoreCase = true) ||
+            msg.contains("Supplier not found", ignoreCase = true) ->
             R.string.error_supplier_not_found
         msg.contains("Due ledger no longer exists", ignoreCase = true) ->
             R.string.error_due_ledger_no_longer_exists
@@ -599,6 +630,9 @@ fun mapErrorToLocalizedMessage(rawMessage: String?): Int? = mapErrorToLocalizedM
 fun mapErrorToLocalizedMessage(error: Throwable?): Int? =
     mapErrorToLocalizedMessageResId(error?.message ?: error?.localizedMessage)
 
+fun parseLockoutSeconds(rawMessage: String): Long? =
+    Regex("\\d+").find(rawMessage)?.value?.toLongOrNull()
+
 /**
  * Maps database and repository exception messages to localized, human-friendly string resources.
  */
@@ -607,6 +641,11 @@ fun getLocalizedRepositoryErrorMessage(context: Context, error: Throwable?): Str
     val msg = error.message ?: error.localizedMessage ?: ""
     val resId = mapErrorToLocalizedMessageResId(msg)
     return when {
+        resId == R.string.auth_locked_out_seconds -> {
+            val seconds = parseLockoutSeconds(msg)?.toString() ?: "30"
+            val displaySeconds = if (isAppBangla()) toBanglaDigits(seconds) else seconds
+            context.getString(R.string.auth_locked_out_seconds, displaySeconds)
+        }
         resId != null -> context.getString(resId)
         msg.isNotBlank() -> msg
         else -> context.getString(R.string.error_generic)

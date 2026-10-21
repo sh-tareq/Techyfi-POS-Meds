@@ -1983,11 +1983,11 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         updatedProduct: Product,
         adjustment: InventoryAdjustment? = null
     ): Result<Unit> =
-        runCatching { repository.replaceProductBarcode(oldBarcode, updatedProduct, adjustment) }
+        runCatchingNonCancellation { repository.replaceProductBarcode(oldBarcode, updatedProduct, adjustment) }
 
     fun updateProduct(product: Product, onResult: ((Result<Unit>) -> Unit)? = null) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            val res = runCatching { repository.updateProduct(product) }
+            val res = runCatchingNonCancellation { repository.updateProduct(product) }
             onResult?.invoke(res)
         }
     }
@@ -2039,7 +2039,7 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
         onResult: (Result<Unit>) -> Unit = {}
     ) {
         viewModelScope.launch {
-            val result = runCatching {
+            val result = runCatchingNonCancellation {
                 val resolvedCashier = cashierName.ifBlank { repository.sessionUserName.ifBlank { "Admin" } }
                 repository.updateProductWithInventoryAdjustment(
                     updatedProduct,
@@ -2065,7 +2065,7 @@ class ProductsViewModel(private val repository: DataRepository) : ViewModel() {
 
     fun deleteProduct(product: Product, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
-            val result = runCatching { repository.deleteProduct(product) }
+            val result = runCatchingNonCancellation { repository.deleteProduct(product) }
             onResult(result)
         }
     }
@@ -2901,8 +2901,6 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
     val allDueReminderLogs: StateFlow<List<com.example.techyfipos.data.db.DueReminderLog>> = repository.allDueReminderLogs
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allReturns: StateFlow<List<com.example.techyfipos.data.db.Return>> = repository.allReturns
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     suspend fun getCustomerDue(phone: String): CustomerDue? = repository.getCustomerDueByPhone(phone)
 
@@ -3273,7 +3271,6 @@ class DuesViewModel(private val repository: DataRepository) : ViewModel() {
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                com.example.techyfipos.utils.RepositoryErrorBus.report(e)
                 val locCtx = com.example.techyfipos.utils.getLocalizedContext(repository.context)
                 val msg = com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(locCtx, e)
                 onError(msg)
@@ -3592,15 +3589,15 @@ class SettingsViewModel(private val repository: DataRepository) : ViewModel() {
         }
     }
 
-    fun previewDuplicateDueLedgers(onResult: (List<DataRepository.DuplicateDueLedgerGroup>) -> Unit) {
+    fun previewDuplicateDueLedgers(onResult: (Result<List<DataRepository.DuplicateDueLedgerGroup>>) -> Unit) {
         viewModelScope.launch(com.example.techyfipos.utils.RepositoryErrorBus.handler) {
-            try {
-                onResult(repository.previewDuplicatePhoneDueLedgers())
-            } catch (e: Throwable) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                com.example.techyfipos.utils.RepositoryErrorBus.report(e)
-                onResult(emptyList())
+            val result = runCatchingNonCancellation {
+                repository.previewDuplicatePhoneDueLedgers()
             }
+            if (result.isFailure) {
+                result.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
+            }
+            onResult(result)
         }
     }
 
@@ -4671,7 +4668,6 @@ class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
             val result = runCatchingNonCancellation {
                 kotlinx.coroutines.withContext(Dispatchers.IO) { repository.deleteExpense(id) }
             }
-            result.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
             onResult(result)
         }
     }
@@ -4682,7 +4678,6 @@ class ExpenseViewModel(private val repository: DataRepository) : ViewModel() {
                 kotlinx.coroutines.withContext(Dispatchers.IO) { repository.updateExpense(expense) }
                 Unit
             }
-            result.exceptionOrNull()?.let { com.example.techyfipos.utils.RepositoryErrorBus.report(it) }
             onResult(result)
         }
     }

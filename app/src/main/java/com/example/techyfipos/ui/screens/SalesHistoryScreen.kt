@@ -896,7 +896,7 @@ fun SalesHistoryScreen(
                                 deleteReason = ""
                                 Toast.makeText(context, deletedMessage, Toast.LENGTH_SHORT).show()
                             } else {
-                                val err = deleteResult.exceptionOrNull()?.localizedMessage ?: deleteFailedMessage
+                                val err = deleteResult.exceptionOrNull()?.let { com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(context, it) } ?: deleteFailedMessage
                                 Toast.makeText(context, err, Toast.LENGTH_LONG).show()
                             }
                         }
@@ -2284,7 +2284,7 @@ private fun SaleDetailDialog(
                                 onDismiss()
                                 onNavigateToCart?.invoke()
                             } else {
-                                val err = voidResult?.exceptionOrNull()?.localizedMessage ?: resources.getString(R.string.sales_history_void_for_edit_failed)
+                                val err = voidResult?.exceptionOrNull()?.let { com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(context, it) } ?: resources.getString(R.string.sales_history_void_for_edit_failed)
                                 Toast.makeText(context, err, Toast.LENGTH_LONG).show()
                             }
                         }

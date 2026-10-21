@@ -1629,9 +1629,6 @@
     <string name="products_batch_print_labels">একসাথে বারকোড প্রিন্ট</string>
     <string name="batch_print_title">একসাথে বারকোড লেবেল প্রিন্ট</string>
     <string name="batch_print_scope">পণ্য নির্বাচন করুন</string>
-    <string name="batch_print_all">সকল (%1$d)</string>
-    <string name="batch_print_in_stock">স্টকে (%1$d)</string>
-    <string name="batch_print_custom">পছন্দমতো (%1$d)</string>
     <string name="batch_print_scope_all">সকল</string>
     <string name="batch_print_scope_in_stock">স্টকে</string>
     <string name="batch_print_scope_custom">পছন্দ</string>
@@ -3172,7 +3169,7 @@
     <string name="settings_drive_test_failed">গুগল ড্রাইভ পরীক্ষা ব্যর্থ হয়েছে। অনুগ্রহ করে পুনরায় প্রমাণীকরণ করুন।</string>
     <string name="error_credit_limit_exceeded_auth">ক্রেডিট সীমা অতিক্রম করেছে: সুপারভাইজার বা মালিকের অনুমোদন প্রয়োজন</string>
     <string name="store_credit_voucher_disabled_msg">এই ভাউচারটি %1$s এবং এটি প্রিন্ট, শেয়ার বা ব্যবহার করা যাবে না।</string>
-    <string name="audit_by_cashier_fmt">\ - দ্বারা: %1$s</string>
+    <string name="audit_by_cashier_fmt">" - দ্বারা: %1$s"</string>
     <string name="print_unable_to_write_document">প্রিন্ট ডকুমেন্ট লেখা সম্ভব হয়নি</string>
     <string name="scanner_banner_cart_total">• মোট কার্ট: %1$s</string>
     <string name="scanner_banner_added_to_cart">✓ পণ্য কার্টে যোগ করা হয়েছে</string>
@@ -3365,4 +3362,30 @@
 
     <!-- P3 Dues Payments Search (R24-19) -->
     <string name="dues_no_payments_match">\'%1$s\'-এর সাথে মিলে এমন কোনো পেমেন্ট নেই</string>
+
+    <!-- P4 Localized Error Messages & Cleanups (R24-20 & R24-22) -->
+    <string name="error_non_owners_manage_owners">মালিক ব্যতীত অন্য কেউ মালিক অ্যাকাউন্ট তৈরি, সংশোধন বা মুছে ফেলতে পারেন না</string>
+    <string name="error_voucher_generation_failed">অনন্য ভাউচার কোড তৈরি করতে ব্যর্থ হয়েছে</string>
+    <string name="error_pin_format_invalid">পিন অবশ্যই ৪ থেকে ৬ ডিজিটের হতে হবে</string>
+    <string name="error_name_cannot_be_blank">নাম ফাঁকা রাখা যাবে না</string>
+    <string name="error_phone_required_for_due">বাকি বিক্রির জন্য গ্রাহকের ফোন নম্বর আবশ্যক</string>
+    <string name="error_amount_paid_below_total">প্রদত্ত টাকা মোট মূল্যের চেয়ে কম</string>
+    <string name="error_split_no_rows">স্প্লিট পেমেন্টে কমপক্ষে একটি বৈধ মাধ্যম থাকতে হবে</string>
+    <string name="error_return_no_items">ফেরতের জন্য কোনো পণ্য নির্বাচন করা হয়নি</string>
+    <string name="error_starting_float_invalid">প্রারম্ভিক ক্যাশ শূন্য বা ধনাত্মক হতে হবে</string>
+    <string name="cart_qty_short">পরিমাণ %1$s</string>
+    <string name="items_count_fractional">%1$sটি পণ্য</string>
+    <string name="timeline_items_count_fmt">%1$dটি পণ্য</string>
+    <string name="timeline_loyalty_points">লয়্যালটি পয়েন্ট</string>
+    <string name="timeline_loyalty_pts_gain_fmt">+%1$d পয়েন্ট</string>
+    <string name="timeline_loyalty_pts_loss_fmt">%1$d পয়েন্ট</string>
+    <string name="settings_backup_time_12am">১২:০০ এএম</string>
+    <string name="settings_backup_time_2am">০২:০০ এএম</string>
+    <string name="settings_backup_time_4am">০৪:০০ এএম</string>
+    <string name="settings_backup_time_11pm">১১:০০ পিএম</string>
+    <string name="sales_report_share_header">=== টেকিফাই পিওএস বিক্রয় রিপোর্ট ===</string>
+    <string name="sales_report_bills_count_fmt">%1$s টি বিল</string>
+    <string name="sales_report_sold_units_fmt">%1$s টি বিক্রয়</string>
+    <string name="sales_report_net_sales_label">নিট বিক্রয়</string>
+    <string name="scanner_qty_format">%1$s · পরিমাণ %2$s</string>
 </resources>

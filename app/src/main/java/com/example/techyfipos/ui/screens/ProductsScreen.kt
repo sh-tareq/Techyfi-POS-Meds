@@ -2613,7 +2613,7 @@ fun ProductsScreen(
                                 snackbarHostState.showSnackbar(
                                     result.fold(
                                         onSuccess = { deleteSuccessMessage },
-                                        onFailure = { it.localizedMessage ?: deleteFailedMessage }
+                                        onFailure = { com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(context, it) }
                                     ),
                                     duration = SnackbarDuration.Short
                                 )
@@ -2779,7 +2779,7 @@ fun ProductsScreen(
                         }
                         .onFailure { error ->
                             onResult?.invoke(false)
-                            val message = error.message ?: context.getString(R.string.products_unable_to_update)
+                            val message = com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(context, error)
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Long)
                         }

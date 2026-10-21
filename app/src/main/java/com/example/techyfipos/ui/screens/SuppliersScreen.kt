@@ -836,7 +836,7 @@ fun SuppliersScreen(
                         onClick = {
                             supplierViewModel.deleteSupplier(s) { result ->
                                 result.onFailure {
-                                    Toast.makeText(context, it.message ?: context.getString(R.string.supplier_delete_failed), Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(context, it), Toast.LENGTH_LONG).show()
                                 }
                             }
                             supplierToDelete = null
@@ -946,7 +946,7 @@ fun SuppliersScreen(
                                         showAddSupplierDialog = false
                                         android.widget.Toast.makeText(context, supplierSavedMessage, android.widget.Toast.LENGTH_SHORT).show()
                                     }.onFailure {
-                                        android.widget.Toast.makeText(context, it.localizedMessage ?: supplierOperationFailedMessage, android.widget.Toast.LENGTH_LONG).show()
+                                        android.widget.Toast.makeText(context, com.example.techyfipos.utils.getLocalizedRepositoryErrorMessage(context, it), android.widget.Toast.LENGTH_LONG).show()
                                     }
                                 }
                             )

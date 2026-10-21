@@ -1633,9 +1633,6 @@
     <string name="products_batch_print_labels">Batch Print Labels</string>
     <string name="batch_print_title">Batch Print Barcode Labels</string>
     <string name="batch_print_scope">Select Products</string>
-    <string name="batch_print_all">All (%1$d)</string>
-    <string name="batch_print_in_stock">In-Stock (%1$d)</string>
-    <string name="batch_print_custom">Custom (%1$d)</string>
     <string name="batch_print_scope_all">All</string>
     <string name="batch_print_scope_in_stock">In-Stock</string>
     <string name="batch_print_scope_custom">Custom</string>
@@ -3170,7 +3167,7 @@
     <string name="settings_drive_test_failed">Google Drive test failed. Please re-authenticate.</string>
     <string name="error_credit_limit_exceeded_auth">Credit limit exceeded: Supervisor or Owner authorization required</string>
     <string name="store_credit_voucher_disabled_msg">This voucher is %1$s and cannot be printed, shared, or redeemed.</string>
-    <string name="audit_by_cashier_fmt">\ - By: %1$s</string>
+    <string name="audit_by_cashier_fmt">" - By: %1$s"</string>
     <string name="print_unable_to_write_document">Unable to write print document</string>
     <string name="scanner_banner_cart_total">• Cart Total: %1$s</string>
     <string name="scanner_banner_added_to_cart">✓ PRODUCT ADDED TO CART</string>
@@ -3363,6 +3360,32 @@
 
     <!-- P3 Dues Payments Search (R24-19) -->
     <string name="dues_no_payments_match">No payments match \'%1$s\'</string>
+
+    <!-- P4 Localized Error Messages & Cleanups (R24-20 & R24-22) -->
+    <string name="error_non_owners_manage_owners">Non-owners cannot create, modify, or delete owner accounts</string>
+    <string name="error_voucher_generation_failed">Failed to generate unique voucher code</string>
+    <string name="error_pin_format_invalid">PIN must be 4 to 6 digits</string>
+    <string name="error_name_cannot_be_blank">Name cannot be blank</string>
+    <string name="error_phone_required_for_due">Customer phone number is required for due sale</string>
+    <string name="error_amount_paid_below_total">Amount paid is less than the total</string>
+    <string name="error_split_no_rows">Split payment must have at least one valid row</string>
+    <string name="error_return_no_items">No items selected for return</string>
+    <string name="error_starting_float_invalid">Starting float must be zero or positive</string>
+    <string name="cart_qty_short">Qty %1$s</string>
+    <string name="items_count_fractional">%1$s items</string>
+    <string name="timeline_items_count_fmt">%1$d items</string>
+    <string name="timeline_loyalty_points">Loyalty Points</string>
+    <string name="timeline_loyalty_pts_gain_fmt">+%1$d pts</string>
+    <string name="timeline_loyalty_pts_loss_fmt">%1$d pts</string>
+    <string name="settings_backup_time_12am">12:00 AM</string>
+    <string name="settings_backup_time_2am">02:00 AM</string>
+    <string name="settings_backup_time_4am">04:00 AM</string>
+    <string name="settings_backup_time_11pm">11:00 PM</string>
+    <string name="sales_report_share_header">=== Techyfi POS Sales Report ===</string>
+    <string name="sales_report_bills_count_fmt">%1$s bills</string>
+    <string name="sales_report_sold_units_fmt">%1$s sold</string>
+    <string name="sales_report_net_sales_label">Net Sales</string>
+    <string name="scanner_qty_format">%1$s · Qty %2$s</string>
 </resources>
 
 
