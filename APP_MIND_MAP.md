@@ -1,6 +1,6 @@
 # Techyfi POS - App Mind Map
 
-Last updated: 2026-10-22 (app version 2.6.97-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220978; DB schema version 38)
+Last updated: 2026-10-22 (app version 2.6.99-Final-V22-10-2026, build `Techyfi-POS-Final-V22-10-2026.apk`; versionCode 220980; DB schema version 38)
 
 This document is the durable project memory for the app's current structure, workflows, data model, and critical business rules.
 
@@ -3294,6 +3294,21 @@ mindmap
     - Zoom Inspect: Tap-to-zoom sticker preview modal with high-res simulation.
 - **Release Deliverable**:
   - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220979, versionName "2.6.98-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with update-compatible keystore and verified live on device.
+
+### Release Final-V22-10-2026-R4: Product Code & Label Studio Vibrant Aesthetic Overhaul (Version 2.6.99-Final-V22-10-2026, Build Final-V22-10-2026)
+- **Aesthetic Refactor Matching Interactive HTML Preview (`generate_code_image_redesign_preview.html`)**:
+  - **Eliminated Flat Washout**: Removed default flat Material 3 tonal elevation (`tonalElevation = 0.dp`) in favor of crisp `#F8FAFC` elevated surfaces, high contrast cards with 1.2dp border stroke, and subtle 1dp/2dp elevation.
+  - **3D Gradient Badges & Header**: Upgraded dialog icon header to a 3D rounded badge with rich Teal POS linear gradient (`#0F766E` to `#14B8A6`), accompanied by crisp dark title and subtitle tags.
+  - **Hero Product Switcher Card**: Rendered 3D package avatar, monospace barcode chip `#846656005286`, live stock status badge (`In Stock: 3 pcs`), and circular carousel stepper (`< 1 of 621 >`).
+  - **Physical Sticker Paper Canvas**: Elevated sticker canvas with physical paper texture, realistic 8dp drop shadow, 1.5dp rounded border, 50x30 mm 203 DPI tag, and high-contrast Zoom Inspect action.
+  - **Quick Template Presets Carousel**: Horizontal preset chips (*Standard Retail*, *Grocery & Expiry*, *Jewelry Mini*) with active teal outline and background glow.
+  - **Pill Segmented Tab Bar**: Full teal gradient active indicator with bold white typography across Tab 1 (*🏷️ Label Setup*), Tab 2 (*🏢 Store & Fields*), and Tab 3 (*📅 Dates & Scale*).
+  - **Vibrant Price Tier & Controls**: Elevated price tier selector with selling price (৳520), MRP (৳550), wholesale status, dual display strike-through, and thermal DPI toggle chips.
+  - **Floating Action Dock**: Full-width Teal POS gradient Print CTA button (`Print (1)`) with 4dp elevation, paired with elevated circular action buttons for sharing and download.
+- **Physical Device Live Verification (Xiaomi Device `cb5fdfb5`)**:
+  - Verified live on device display (1080x2248): captured and confirmed visual fidelity across Tab 1, Tab 2, and Tab 3.
+- **Release Deliverable**:
+  - `Techyfi-POS-Final-V22-10-2026.apk` (versionCode 220980, versionName "2.6.99-Final-V22-10-2026"), compiled with full R8 code minification (`isMinifyEnabled = true`) and resource shrinking (`isShrinkResources = true`), signed with update-compatible keystore, deployed and verified on Xiaomi device.
 
 ## Maintenance note
 
